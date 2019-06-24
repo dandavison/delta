@@ -21,7 +21,8 @@ fn main() {
     let mut patch_set = PatchSet::new();
     patch_set.parse(&mut input).ok().expect("Error parsing input as a diff");
     for patched_file in patch_set {
-        let path = Path::new(&patched_file.source_file);
+        // TODO: use both source and target to determine language
+        let path = Path::new(&patched_file.target_file);
         let extension = path.extension()
             .expect(format!("Error determining file type: {}", path.to_str().unwrap()).as_str());
         let extension_str = extension.to_str().unwrap();
