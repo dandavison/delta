@@ -9,9 +9,12 @@ use syntect::parsing::SyntaxSet;
 use syntect::util::{as_24_bit_terminal_escaped, LinesWithEndings};
 use unidiff::PatchSet;
 
+pub const DELTA_THEME_DEFAULT: &str = "InspiredGitHub";  // base16-mocha.dark
+
 fn main() {
     let ps = SyntaxSet::load_defaults_newlines();
     let ts = ThemeSet::load_defaults();
+    let theme = &ts.themes[DELTA_THEME_DEFAULT];
 
     let mut input = String::new();
     io::stdin().read_to_string(&mut input).expect("Error reading input");
@@ -26,7 +29,7 @@ fn main() {
 
         match syntax {
             Some(syntax) => {
-                let mut highlighter = HighlightLines::new(syntax, &ts.themes["base16-ocean.dark"]);
+                let mut highlighter = HighlightLines::new(syntax, theme);
                 for hunk in patched_file {
                     for line in LinesWithEndings::from(&hunk.to_string()) {
                         let ranges: Vec<(Style, &str)> = highlighter.highlight(line, &ps);
