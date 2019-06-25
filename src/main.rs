@@ -5,12 +5,26 @@ use std::io::{self, Read};
 use std::path::Path;
 
 use syntect::easy::HighlightLines;
-use syntect::highlighting::{ThemeSet, Style};
+use syntect::highlighting::{Color, Style, ThemeSet};
 use syntect::parsing::SyntaxSet;
 use syntect::util::{LinesWithEndings};
 use unidiff::PatchSet;
 
 pub const DELTA_THEME_DEFAULT: &str = "InspiredGitHub";  // base16-mocha.dark
+
+const GREEN: Color = Color {
+    r: 0xd0,
+    g: 0xff,
+    b: 0xd0,
+    a: 0x00,
+};
+
+const RED: Color = Color {
+    r: 0xff,
+    g: 0xd0,
+    b: 0xd0,
+    a: 0x00,
+};
 
 fn main() {
     let ps = SyntaxSet::load_defaults_newlines();
@@ -34,8 +48,13 @@ fn main() {
                 let mut highlighter = HighlightLines::new(syntax, theme);
                 for hunk in patched_file {
                     for line in LinesWithEndings::from(&hunk.to_string()) {
+                        let background_color = match line.chars().next() {
+                            Some('+') => Some(GREEN),
+                            Some('-') => Some(RED),
+                            _ => None,
+                        };
                         let ranges: Vec<(Style, &str)> = highlighter.highlight(line, &ps);
-                        let escaped = my_as_24_bit_terminal_escaped(&ranges[..], false);
+                        let escaped = my_as_24_bit_terminal_escaped(&ranges[..], background_color);
                         print!("{}", escaped);
                     }
                 }
@@ -52,16 +71,16 @@ fn main() {
     println!("");
 }
 
-fn my_as_24_bit_terminal_escaped(v: &[(Style, &str)], bg: bool) -> String {
+fn my_as_24_bit_terminal_escaped(v: &[(Style, &str)], background_color: Option<Color>) -> String {
     let mut s: String = String::new();
     for &(ref style, text) in v.iter() {
-        if bg {
-            write!(s,
-                   "\x1b[48;2;{};{};{}m",
-                   style.background.r,
-                   style.background.g,
-                   style.background.b)
-                .unwrap();
+        match background_color {
+            Some(background_color) => write!(s,
+                                             "\x1b[48;2;{};{};{}m",
+                                             background_color.r,
+                                             background_color.g,
+                                             background_color.b).unwrap(),
+            None => (),
         }
         write!(s,
                "\x1b[38;2;{};{};{}m{}",
@@ -71,6 +90,6 @@ fn my_as_24_bit_terminal_escaped(v: &[(Style, &str)], bg: bool) -> String {
                text)
             .unwrap();
     }
-    // s.push_str("\x1b[0m");
+    s.push_str("\x1b[0m");
     s
 }
