@@ -51,6 +51,12 @@ fn main() {
         let extension_str = extension.to_str().unwrap();
         let syntax = ps.find_syntax_by_extension(extension_str);
 
+        print!(
+            "\n{}\n{}\n\n",
+            "__________________________________________________________________",
+            path.display(),
+        );
+
         match syntax {
             Some(syntax) => {
                 let mut highlighter = HighlightLines::new(syntax, theme);
