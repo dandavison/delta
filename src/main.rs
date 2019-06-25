@@ -1,12 +1,13 @@
 extern crate unidiff;
 
+use std::fmt::Write;
 use std::io::{self, Read};
 use std::path::Path;
 
 use syntect::easy::HighlightLines;
 use syntect::highlighting::{ThemeSet, Style};
 use syntect::parsing::SyntaxSet;
-use syntect::util::{as_24_bit_terminal_escaped, LinesWithEndings};
+use syntect::util::{LinesWithEndings};
 use unidiff::PatchSet;
 
 pub const DELTA_THEME_DEFAULT: &str = "InspiredGitHub";  // base16-mocha.dark
@@ -34,7 +35,7 @@ fn main() {
                 for hunk in patched_file {
                     for line in LinesWithEndings::from(&hunk.to_string()) {
                         let ranges: Vec<(Style, &str)> = highlighter.highlight(line, &ps);
-                        let escaped = as_24_bit_terminal_escaped(&ranges[..], true);
+                        let escaped = my_as_24_bit_terminal_escaped(&ranges[..], false);
                         print!("{}", escaped);
                     }
                 }
@@ -49,4 +50,27 @@ fn main() {
         }
     }
     println!("");
+}
+
+fn my_as_24_bit_terminal_escaped(v: &[(Style, &str)], bg: bool) -> String {
+    let mut s: String = String::new();
+    for &(ref style, text) in v.iter() {
+        if bg {
+            write!(s,
+                   "\x1b[48;2;{};{};{}m",
+                   style.background.r,
+                   style.background.g,
+                   style.background.b)
+                .unwrap();
+        }
+        write!(s,
+               "\x1b[38;2;{};{};{}m{}",
+               style.foreground.r,
+               style.foreground.g,
+               style.foreground.b,
+               text)
+            .unwrap();
+    }
+    // s.push_str("\x1b[0m");
+    s
 }
