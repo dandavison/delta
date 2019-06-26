@@ -37,9 +37,11 @@ fn main() {
     let mut output = String::new();
     let mut state = State::Unknown;
     let mut syntax: Option<&SyntaxReference> = None;
+    let mut have_printed_line: bool;
 
     for _line in io::stdin().lock().lines() {
-        let line = _line.unwrap();
+        let line = _line.unwrap(); // TODO: handle None
+        have_printed_line = false;
         if line.starts_with("diff --") {
             state = State::DiffMeta;
             syntax = match get_file_extension_from_diff_line(&line) {
@@ -63,9 +65,13 @@ fn main() {
                     my_as_24_bit_terminal_escaped(&ranges[..], background_color, &mut output);
                     println!("{}", output);
                     output.truncate(0);
+                    have_printed_line = true;
                 }
-                None => println!("{}", line),
+                None => (),
             }
+        }
+        if !have_printed_line {
+            println!("{}", line);
         }
     }
 }
