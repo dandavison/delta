@@ -5,7 +5,7 @@
 
 ## Installation
 
-#### 1. Rust development environment.
+#### 1. Install the Rust development environment.
   See https://www.rust-lang.org/tools/install.
 
 #### 2. Clone this repo.
