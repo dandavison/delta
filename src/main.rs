@@ -83,6 +83,9 @@ fn delta() -> std::io::Result<()> {
                         line = line[1..].to_string();
                         output.push_str(" ");
                     }
+                    if line.len() < 100 {
+                        line = format!("{}{}", line, " ".repeat(100 - line.len()));
+                    }
                     let ranges: Vec<(Style, &str)> = highlighter.highlight(&line, &ps);
                     my_as_24_bit_terminal_escaped(&ranges[..], background_color, &mut output);
                     writeln!(stdout, "{}", output)?;
