@@ -57,7 +57,7 @@ fn delta() -> std::io::Result<()> {
 
     for _line in stdin.lock().lines() {
         let raw_line = _line.unwrap(); // TODO: handle None
-        let line = strip_ansi_codes(&raw_line).to_string();
+        let mut line = strip_ansi_codes(&raw_line).to_string();
         did_emit_line = false;
         if line.starts_with("diff --") {
             state = State::DiffMeta;
@@ -73,16 +73,19 @@ fn delta() -> std::io::Result<()> {
             match syntax {
                 Some(syntax) => {
                     let mut highlighter = HighlightLines::new(syntax, theme);
-                    let background_color = match line.chars().next() {
+                    let first_char = line.chars().next();
+                    let background_color = match first_char {
                         Some('+') => Some(GREEN),
                         Some('-') => Some(RED),
                         _ => None,
                     };
-                    let line_without_plus_minus = if line.len() > 0 { &line[1..] } else { &line };
-                    let ranges: Vec<(Style, &str)> =
-                        highlighter.highlight(line_without_plus_minus, &ps);
+                    if first_char == Some('+') || first_char == Some('-') {
+                        line = line[1..].to_string();
+                        output.push_str(" ");
+                    }
+                    let ranges: Vec<(Style, &str)> = highlighter.highlight(&line, &ps);
                     my_as_24_bit_terminal_escaped(&ranges[..], background_color, &mut output);
-                    writeln!(stdout, " {}", output)?;
+                    writeln!(stdout, "{}", output)?;
                     output.truncate(0);
                     did_emit_line = true;
                 }
