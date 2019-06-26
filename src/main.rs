@@ -7,19 +7,19 @@ use syntect::easy::HighlightLines;
 use syntect::highlighting::{Color, Style, ThemeSet};
 use syntect::parsing::{SyntaxReference, SyntaxSet};
 
-pub const DELTA_THEME_DEFAULT: &str = "InspiredGitHub"; // base16-mocha.dark
+pub const DELTA_THEME_DEFAULT: &str = "base16-mocha.dark";
 
 const GREEN: Color = Color {
-    r: 0xd0,
-    g: 0xff,
-    b: 0xd0,
+    r: 0x01,
+    g: 0x18,
+    b: 0x00,
     a: 0x00,
 };
 
 const RED: Color = Color {
-    r: 0xff,
-    g: 0xd0,
-    b: 0xd0,
+    r: 0x24,
+    g: 0x00,
+    b: 0x01,
     a: 0x00,
 };
 
