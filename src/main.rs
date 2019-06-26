@@ -1,6 +1,6 @@
-use std::fmt::Write;
-use std::io::{self, BufRead};
+use std::io::{self, BufRead, ErrorKind};
 use std::path::Path;
+use std::process;
 
 use console::strip_ansi_codes;
 use syntect::easy::HighlightLines;
@@ -32,6 +32,19 @@ enum State {
 }
 
 fn main() {
+    match delta() {
+        Err(error) => {
+            match error.kind() {
+                ErrorKind::BrokenPipe => process::exit(0),
+                _ => eprintln!("{}", error),
+            }
+        }
+        _ => (),
+    }
+}
+
+fn delta() -> std::io::Result<()> {
+    use std::io::Write;
     let ps = SyntaxSet::load_defaults_newlines();
     let ts = ThemeSet::load_defaults();
     let theme = &ts.themes[DELTA_THEME_DEFAULT];
@@ -39,8 +52,10 @@ fn main() {
     let mut state = State::Unknown;
     let mut syntax: Option<&SyntaxReference> = None;
     let mut have_printed_line: bool;
+    let stdin = io::stdin();
+    let mut stdout = io::stdout();
 
-    for _line in io::stdin().lock().lines() {
+    for _line in stdin.lock().lines() {
         let raw_line = _line.unwrap(); // TODO: handle None
         let line = strip_ansi_codes(&raw_line).to_string();
         have_printed_line = false;
@@ -67,7 +82,7 @@ fn main() {
                     let ranges: Vec<(Style, &str)> =
                         highlighter.highlight(line_without_plus_minus, &ps);
                     my_as_24_bit_terminal_escaped(&ranges[..], background_color, &mut output);
-                    println!(" {}", output);
+                    writeln!(stdout, " {}", output)?;
                     output.truncate(0);
                     have_printed_line = true;
                 }
@@ -75,9 +90,10 @@ fn main() {
             }
         }
         if !have_printed_line {
-            println!("{}", raw_line);
+            writeln!(stdout, "{}", raw_line)?;
         }
     }
+    Ok(())
 }
 
 /// Based on as_24_bit_terminal_escaped from syntect
@@ -100,6 +116,7 @@ fn colorize(
     reset_color: bool,
     buf: &mut String,
 ) -> () {
+    use std::fmt::Write;
     match background_color {
         Some(background_color) => {
             write!(
