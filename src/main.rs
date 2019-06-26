@@ -178,7 +178,7 @@ fn get_file_extension_from_diff_line(line: &str) -> Option<&str> {
 }
 
 /// Given input like "diff --git a/src/main.rs b/src/main.rs"
-/// return ("src/main.rs", "src/main.rs").
+/// return ("rs", "rs").
 fn get_file_extensions_from_diff_line(line: &str) -> (Option<&str>, Option<&str>) {
     let mut iter = line.split(" ");
     iter.next(); // diff
