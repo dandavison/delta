@@ -45,9 +45,9 @@ fn main() {
 
 fn delta() -> std::io::Result<()> {
     use std::io::Write;
-    let ps = SyntaxSet::load_defaults_newlines();
-    let ts = ThemeSet::load_defaults();
-    let theme = &ts.themes[DELTA_THEME_DEFAULT];
+    let syntax_set = SyntaxSet::load_defaults_newlines();
+    let theme_set = ThemeSet::load_defaults();
+    let theme = &theme_set.themes[DELTA_THEME_DEFAULT];
     let mut output = String::new();
     let mut state = State::Unknown;
     let mut syntax: Option<&SyntaxReference> = None;
@@ -62,7 +62,7 @@ fn delta() -> std::io::Result<()> {
         if line.starts_with("diff --") {
             state = State::DiffMeta;
             syntax = match get_file_extension_from_diff_line(&line) {
-                Some(extension) => ps.find_syntax_by_extension(extension),
+                Some(extension) => syntax_set.find_syntax_by_extension(extension),
                 None => None,
             };
         } else if line.starts_with("commit") {
@@ -86,8 +86,8 @@ fn delta() -> std::io::Result<()> {
                     if line.len() < 100 {
                         line = format!("{}{}", line, " ".repeat(100 - line.len()));
                     }
-                    let ranges: Vec<(Style, &str)> = highlighter.highlight(&line, &ps);
-                    my_as_24_bit_terminal_escaped(&ranges[..], background_color, &mut output);
+                    let ranges: Vec<(Style, &str)> = highlighter.highlight(&line, &syntax_set);
+                    paint_ranges(&ranges[..], background_color, &mut output);
                     writeln!(stdout, "{}", output)?;
                     output.truncate(0);
                     did_emit_line = true;
@@ -103,19 +103,19 @@ fn delta() -> std::io::Result<()> {
 }
 
 /// Based on as_24_bit_terminal_escaped from syntect
-fn my_as_24_bit_terminal_escaped(
-    v: &[(Style, &str)],
+fn paint_ranges(
+    foreground_style_ranges: &[(Style, &str)],
     background_color: Option<Color>,
     buf: &mut String,
 ) -> () {
-    for &(ref style, text) in v.iter() {
-        colorize(text, Some(style.foreground), background_color, false, buf);
+    for &(ref style, text) in foreground_style_ranges.iter() {
+        paint(text, Some(style.foreground), background_color, false, buf);
     }
     buf.push_str("\x1b[0m");
 }
 
 /// Write text to buffer with color escape codes applied.
-fn colorize(
+fn paint(
     text: &str,
     foreground_color: Option<Color>,
     background_color: Option<Color>,
