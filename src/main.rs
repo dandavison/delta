@@ -63,9 +63,11 @@ fn main() {
                         Some('-') => Some(RED),
                         _ => None,
                     };
-                    let ranges: Vec<(Style, &str)> = highlighter.highlight(&line, &ps);
+                    let line_without_plus_minus = if line.len() > 0 { &line[1..] } else { &line };
+                    let ranges: Vec<(Style, &str)> =
+                        highlighter.highlight(line_without_plus_minus, &ps);
                     my_as_24_bit_terminal_escaped(&ranges[..], background_color, &mut output);
-                    println!("{}", output);
+                    println!(" {}", output);
                     output.truncate(0);
                     have_printed_line = true;
                 }
