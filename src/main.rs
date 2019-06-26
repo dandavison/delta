@@ -56,7 +56,7 @@ fn delta() -> std::io::Result<()> {
     let mut stdout = io::stdout();
 
     for _line in stdin.lock().lines() {
-        let raw_line = _line.unwrap(); // TODO: handle None
+        let raw_line = _line?;
         let mut line = strip_ansi_codes(&raw_line).to_string();
         did_emit_line = false;
         if line.starts_with("diff --") {
