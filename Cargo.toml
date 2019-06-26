@@ -5,5 +5,6 @@ authors = ["Dan Davison <dandavison7@gmail.com>"]
 edition = "2018"
 
 [dependencies]
+atty = "0.2.2"
 parsepatch = "0.2.0"
 syntect = "3.2"
