@@ -51,14 +51,14 @@ fn delta() -> std::io::Result<()> {
     let mut output = String::new();
     let mut state = State::Unknown;
     let mut syntax: Option<&SyntaxReference> = None;
-    let mut have_printed_line: bool;
+    let mut did_emit_line: bool;
     let stdin = io::stdin();
     let mut stdout = io::stdout();
 
     for _line in stdin.lock().lines() {
         let raw_line = _line.unwrap(); // TODO: handle None
         let line = strip_ansi_codes(&raw_line).to_string();
-        have_printed_line = false;
+        did_emit_line = false;
         if line.starts_with("diff --") {
             state = State::DiffMeta;
             syntax = match get_file_extension_from_diff_line(&line) {
@@ -84,12 +84,12 @@ fn delta() -> std::io::Result<()> {
                     my_as_24_bit_terminal_escaped(&ranges[..], background_color, &mut output);
                     writeln!(stdout, " {}", output)?;
                     output.truncate(0);
-                    have_printed_line = true;
+                    did_emit_line = true;
                 }
                 None => (),
             }
         }
-        if !have_printed_line {
+        if !did_emit_line {
             writeln!(stdout, "{}", raw_line)?;
         }
     }
