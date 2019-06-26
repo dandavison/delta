@@ -1,8 +1,11 @@
+extern crate structopt;
+
 use std::io::{self, BufRead, ErrorKind};
 use std::path::Path;
 use std::process;
 
 use console::strip_ansi_codes;
+use structopt::StructOpt;
 use syntect::easy::HighlightLines;
 use syntect::highlighting::{Color, Style, ThemeSet};
 use syntect::parsing::{SyntaxReference, SyntaxSet};
@@ -22,6 +25,26 @@ const RED: Color = Color {
     b: 0x01,
     a: 0x00,
 };
+
+#[derive(StructOpt, Debug)]
+#[structopt(name = "delta")]
+struct Opt {
+    /// Use diff highlighting colors appropriate for a light terminal
+    /// background
+    #[structopt(long = "light")]
+    light: bool,
+
+    /// Use diff highlighting colors appropriate for a dark terminal
+    /// background
+    #[structopt(long = "dark")]
+    dark: bool,
+
+    /// The width (in characters) of the diff highlighting. By
+    /// default, the highlighting extends to the last character on
+    /// each line
+    #[structopt(short = "-w", long = "width")]
+    width: Option<u16>,
+}
 
 #[derive(PartialEq)]
 enum State {
@@ -54,6 +77,7 @@ fn delta() -> std::io::Result<()> {
     let mut did_emit_line: bool;
     let stdin = io::stdin();
     let mut stdout = io::stdout();
+    let opt = Opt::from_args();
 
     for _line in stdin.lock().lines() {
         let raw_line = _line?;

@@ -7,4 +7,5 @@ edition = "2018"
 [dependencies]
 console = "0.7.7"
 parsepatch = "0.2.0"
+structopt = "0.2.16"
 syntect = "3.2"
