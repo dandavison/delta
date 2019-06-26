@@ -83,28 +83,52 @@ fn my_as_24_bit_terminal_escaped(
     buf: &mut String,
 ) -> () {
     for &(ref style, text) in v.iter() {
-        match background_color {
-            Some(background_color) => {
-                write!(
-                    buf,
-                    "\x1b[48;2;{};{};{}m",
-                    background_color.r,
-                    background_color.g,
-                    background_color.b
-                ).unwrap()
-            }
-            None => (),
-        }
-        write!(
-            buf,
-            "\x1b[38;2;{};{};{}m{}",
-            style.foreground.r,
-            style.foreground.g,
-            style.foreground.b,
-            text
-        ).unwrap();
+        colorize(text, Some(style.foreground), background_color, false, buf);
     }
     buf.push_str("\x1b[0m");
+}
+
+/// Write text to buffer with color escape codes applied.
+fn colorize(
+    text: &str,
+    foreground_color: Option<Color>,
+    background_color: Option<Color>,
+    reset_color: bool,
+    buf: &mut String,
+) -> () {
+    match background_color {
+        Some(background_color) => {
+            write!(
+                buf,
+                "\x1b[48;2;{};{};{}m",
+                background_color.r,
+                background_color.g,
+                background_color.b
+            ).unwrap();
+            if reset_color {
+                buf.push_str("\x1b[0m");
+            }
+        }
+        None => (),
+    }
+    match foreground_color {
+        Some(foreground_color) => {
+            write!(
+                buf,
+                "\x1b[38;2;{};{};{}m{}",
+                foreground_color.r,
+                foreground_color.g,
+                foreground_color.b,
+                text
+            ).unwrap();
+            if reset_color {
+                buf.push_str("\x1b[0m");
+            }
+        }
+        None => {
+            write!(buf, "{}", text).unwrap();
+        }
+    }
 }
 
 /// Given input like
