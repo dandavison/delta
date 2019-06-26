@@ -167,12 +167,8 @@ fn get_file_extension_from_diff_line(line: &str) -> Option<&str> {
             if ext1 == ext2 {
                 Some(ext1)
             } else {
-                // TODO: Just return None and output without color.
-                panic!(
-                    "Old and new files have different extensions: {} vs {}",
-                    ext1,
-                    ext2
-                );
+                // Unexpected: old and new files have different extensions.
+                None
             }
         }
         (Some(ext1), None) => Some(ext1),
