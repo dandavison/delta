@@ -4,7 +4,7 @@ use std::path::Path;
 
 use syntect::easy::HighlightLines;
 use syntect::highlighting::{Color, Style, ThemeSet};
-use syntect::parsing::SyntaxSet;
+use syntect::parsing::{SyntaxReference, SyntaxSet};
 
 pub const DELTA_THEME_DEFAULT: &str = "InspiredGitHub"; // base16-mocha.dark
 
@@ -35,26 +35,23 @@ fn main() {
     let ts = ThemeSet::load_defaults();
     let theme = &ts.themes[DELTA_THEME_DEFAULT];
     let mut output = String::new();
-
     let mut state = State::Unknown;
-    let mut highlighter: Option<HighlightLines> = None;
+    let mut syntax: Option<&SyntaxReference> = None;
 
     for _line in io::stdin().lock().lines() {
         let line = _line.unwrap();
         if line.starts_with("diff --") {
             state = State::DiffMeta;
             let extension = get_file_extension_from_diff_line(&line);
-            highlighter = match ps.find_syntax_by_extension(extension) {
-                Some(syntax) => Some(HighlightLines::new(syntax, theme)),
-                None => None,
-            }
+            syntax = ps.find_syntax_by_extension(extension);
         } else if line.starts_with("commit") {
             state = State::Commit;
         } else if line.starts_with("@@") {
             state = State::DiffHunk;
         } else if state == State::DiffHunk {
-            match highlighter {
-                Some(mut highlighter) => {
+            match syntax {
+                Some(syntax) => {
+                    let mut highlighter = HighlightLines::new(syntax, theme);
                     let background_color = match line.chars().next() {
                         Some('+') => Some(GREEN),
                         Some('-') => Some(RED),
@@ -62,14 +59,12 @@ fn main() {
                     };
                     let ranges: Vec<(Style, &str)> = highlighter.highlight(&line, &ps);
                     my_as_24_bit_terminal_escaped(&ranges[..], background_color, &mut output);
-                    print!("{}", output);
+                    println!("{}", output);
                     output.truncate(0);
                 }
-                None => {
-                    print!("{}", line);
-                }
+                None => println!("{}", line),
             }
-        };
+        }
     }
 }
 
@@ -114,5 +109,6 @@ fn get_file_extension_from_diff_line(line: &String) -> &str {
         path.extension().expect(
             format!("Error determining file type: {}", path.to_str().unwrap()).as_str(),
         );
-    extension.to_str().unwrap()
+    extension.to_str().unwrap();
+    "rs"
 }
