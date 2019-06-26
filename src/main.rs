@@ -2,6 +2,7 @@ use std::fmt::Write;
 use std::io::{self, BufRead};
 use std::path::Path;
 
+use console::strip_ansi_codes;
 use syntect::easy::HighlightLines;
 use syntect::highlighting::{Color, Style, ThemeSet};
 use syntect::parsing::{SyntaxReference, SyntaxSet};
@@ -40,7 +41,8 @@ fn main() {
     let mut have_printed_line: bool;
 
     for _line in io::stdin().lock().lines() {
-        let line = _line.unwrap(); // TODO: handle None
+        let raw_line = _line.unwrap(); // TODO: handle None
+        let line = strip_ansi_codes(&raw_line).to_string();
         have_printed_line = false;
         if line.starts_with("diff --") {
             state = State::DiffMeta;
@@ -71,7 +73,7 @@ fn main() {
             }
         }
         if !have_printed_line {
-            println!("{}", line);
+            println!("{}", raw_line);
         }
     }
 }
