@@ -58,6 +58,8 @@ OPTIONS:
     `/path/to/delta/target/debug/delta | less -R` in the next step.
 
 4. **Configure git to use delta:**<br>
+    (Note that delta defaults to a light theme, so if you're using a dark terminal background, you'll want to use `--dark` or `--theme <theme-name>`.)
+
     Edit your `~/.gitconfig`:
     ```
     [core]
