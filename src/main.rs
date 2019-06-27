@@ -24,6 +24,18 @@ struct Opt {
     #[structopt(long = "dark")]
     dark: bool,
 
+    #[structopt(long = "plus-color")]
+    /// The background color (RGB hex) to use for added lines. The
+    /// default is "#d0ffd0" if you are using --light, and "#013B01"
+    /// if you are using --dark.
+    plus_color: Option<String>,
+
+    #[structopt(long = "minus-color")]
+    /// The background color (RGB hex) to use for removed lines. The
+    /// default is "#ffd0d0" if you are using --light, and "#3f0001" if
+    /// you are using --dark.
+    minus_color: Option<String>,
+
     #[structopt(long = "theme")]
     /// The syntax highlighting theme to use. Options are Light:
     /// ("InspiredGitHub", "Solarized (light)", "base16-ocean.light"),
@@ -122,7 +134,16 @@ fn delta() -> std::io::Result<()> {
         } else if state == State::DiffHunk {
             match syntax {
                 Some(syntax) => {
-                    paint::paint_line(line, syntax, &syntax_set, theme, &theme_name, &mut output);
+                    paint::paint_line(
+                        line,
+                        syntax,
+                        &syntax_set,
+                        theme,
+                        &theme_name,
+                        &opt.minus_color,
+                        &opt.plus_color,
+                        &mut output,
+                    );
                     writeln!(stdout, "{}", output)?;
                     output.truncate(0);
                     did_emit_line = true;

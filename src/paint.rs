@@ -46,6 +46,8 @@ pub fn paint_line(
     syntax_set: &SyntaxSet,
     theme: &Theme,
     theme_name: &String,
+    minus_color: &Option<String>,
+    plus_color: &Option<String>,
     buf: &mut String,
 ) {
     let mut highlighter = HighlightLines::new(syntax, theme);
