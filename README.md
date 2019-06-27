@@ -1,5 +1,5 @@
 ## Δ
-  A syntax-highlighting pager for git.
+  A syntax-highlighter for git.
 
   _(This project is at a very early stage, but please feel free to open issues.)_
 
@@ -10,7 +10,7 @@
 ## Usage
 ```
 delta 0.1.0
-Adds language-specific syntax highlighting to git output. Use 'delta | less -R' as core.pager in .gitconfig
+A syntax-highlighter for git. Use 'delta | less -R' as core.pager in .gitconfig
 
 USAGE:
     delta [FLAGS] [OPTIONS]

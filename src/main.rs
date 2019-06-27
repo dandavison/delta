@@ -14,7 +14,7 @@ use syntect::parsing::{SyntaxReference, SyntaxSet};
 
 #[derive(StructOpt, Debug)]
 #[structopt(name = "delta",
-            about = "Adds language-specific syntax highlighting to git output. Use 'delta | less -R' as core.pager in .gitconfig")]
+            about = "A syntax-highlighter for git. Use 'delta | less -R' as core.pager in .gitconfig")]
 struct Opt {
     /// Use diff highlighting colors appropriate for a light terminal
     /// background. This is the default.
