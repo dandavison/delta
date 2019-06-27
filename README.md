@@ -3,6 +3,10 @@
 
   _(This project is at a very early stage, but please feel free to open issues.)_
 
+<img width=500px style="border: 1px solid black"
+    src="https://user-images.githubusercontent.com/52205/60282969-230d2c80-98d6-11e9-8656-09073c8a0985.png"
+    alt="image" />
+
 ## Usage
 ```
 delta 0.1.0
