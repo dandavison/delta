@@ -5,10 +5,11 @@ mod parse_diff;
 
 use std::io::{self, BufRead, ErrorKind};
 use std::process;
+use std::str::FromStr;
 
 use console::strip_ansi_codes;
 use structopt::StructOpt;
-use syntect::highlighting::ThemeSet;
+use syntect::highlighting::{Color, ThemeSet};
 use syntect::parsing::{SyntaxReference, SyntaxSet};
 
 #[derive(StructOpt, Debug)]
@@ -113,6 +114,12 @@ fn delta() -> std::io::Result<()> {
             }
         }
     }
+    let minus_color = opt.minus_color.as_ref().and_then(
+        |s| Color::from_str(s).ok(),
+    );
+    let plus_color = opt.plus_color.as_ref().and_then(
+        |s| Color::from_str(s).ok(),
+    );
     let theme_name = opt.theme.unwrap();
     let theme = &theme_set.themes[&theme_name];
 
@@ -140,8 +147,8 @@ fn delta() -> std::io::Result<()> {
                         &syntax_set,
                         theme,
                         &theme_name,
-                        &opt.minus_color,
-                        &opt.plus_color,
+                        plus_color,
+                        minus_color,
                         &mut output,
                     );
                     writeln!(stdout, "{}", output)?;

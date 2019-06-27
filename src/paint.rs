@@ -11,28 +11,28 @@ pub const DARK_THEMES: [&str; 4] = [
     "base16-ocean.dark",
 ];
 
-const LIGHT_THEME_GREEN: Color = Color {
+const LIGHT_THEME_PLUS_COLOR: Color = Color {
     r: 0xd0,
     g: 0xff,
     b: 0xd0,
     a: 0x00,
 };
 
-const LIGHT_THEME_RED: Color = Color {
+const LIGHT_THEME_MINUS_COLOR: Color = Color {
     r: 0xff,
     g: 0xd0,
     b: 0xd0,
     a: 0x00,
 };
 
-const DARK_THEME_GREEN: Color = Color {
+const DARK_THEME_PLUS_COLOR: Color = Color {
     r: 0x01,
     g: 0x18,
     b: 0x00,
     a: 0x00,
 };
 
-const DARK_THEME_RED: Color = Color {
+const DARK_THEME_MINUS_COLOR: Color = Color {
     r: 0x24,
     g: 0x00,
     b: 0x01,
@@ -46,18 +46,18 @@ pub fn paint_line(
     syntax_set: &SyntaxSet,
     theme: &Theme,
     theme_name: &String,
-    minus_color: &Option<String>,
-    plus_color: &Option<String>,
+    plus_color: Option<Color>,
+    minus_color: Option<Color>,
     buf: &mut String,
 ) {
     let mut highlighter = HighlightLines::new(syntax, theme);
     let first_char = line.chars().next();
     let is_dark = DARK_THEMES.contains(&theme_name.as_str());
     let background_color = match (first_char, is_dark) {
-        (Some('+'), true) => Some(DARK_THEME_GREEN),
-        (Some('-'), true) => Some(DARK_THEME_RED),
-        (Some('+'), false) => Some(LIGHT_THEME_GREEN),
-        (Some('-'), false) => Some(LIGHT_THEME_RED),
+        (Some('+'), true) => plus_color.or_else(|| Some(DARK_THEME_PLUS_COLOR)),
+        (Some('-'), true) => minus_color.or_else(|| Some(DARK_THEME_MINUS_COLOR)),
+        (Some('+'), false) => plus_color.or_else(|| Some(LIGHT_THEME_PLUS_COLOR)),
+        (Some('-'), false) => minus_color.or_else(|| Some(LIGHT_THEME_MINUS_COLOR)),
         _ => None,
     };
     if first_char == Some('+') || first_char == Some('-') {
