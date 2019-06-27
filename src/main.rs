@@ -1,7 +1,7 @@
 extern crate structopt;
 
 mod paint;
-mod parse;
+mod parse_diff;
 
 use std::io::{self, BufRead, ErrorKind};
 use std::process;
@@ -71,7 +71,7 @@ fn delta() -> std::io::Result<()> {
         did_emit_line = false;
         if line.starts_with("diff --") {
             state = State::DiffMeta;
-            syntax = match parse::get_file_extension_from_diff_line(&line) {
+            syntax = match parse_diff::get_file_extension_from_diff_line(&line) {
                 Some(extension) => syntax_set.find_syntax_by_extension(extension),
                 None => None,
             };
