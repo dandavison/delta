@@ -27,13 +27,13 @@ const LIGHT_THEME_MINUS_COLOR: Color = Color {
 
 const DARK_THEME_PLUS_COLOR: Color = Color {
     r: 0x01,
-    g: 0x18,
-    b: 0x00,
+    g: 0x3B,
+    b: 0x01,
     a: 0x00,
 };
 
 const DARK_THEME_MINUS_COLOR: Color = Color {
-    r: 0x24,
+    r: 0x3F,
     g: 0x00,
     b: 0x01,
     a: 0x00,
