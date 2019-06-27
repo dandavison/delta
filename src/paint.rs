@@ -2,14 +2,37 @@ use syntect::easy::HighlightLines;
 use syntect::highlighting::{Color, Style, Theme};
 use syntect::parsing::{SyntaxReference, SyntaxSet};
 
-const GREEN: Color = Color {
+pub const LIGHT_THEMES: [&str; 3] = ["InspiredGitHub", "Solarized (light)", "base16-ocean.light"];
+
+pub const DARK_THEMES: [&str; 4] = [
+    "Solarized (dark)",
+    "base16-eighties.dark",
+    "base16-mocha.dark",
+    "base16-ocean.dark",
+];
+
+const LIGHT_THEME_GREEN: Color = Color {
+    r: 0xd0,
+    g: 0xff,
+    b: 0xd0,
+    a: 0x00,
+};
+
+const LIGHT_THEME_RED: Color = Color {
+    r: 0xff,
+    g: 0xd0,
+    b: 0xd0,
+    a: 0x00,
+};
+
+const DARK_THEME_GREEN: Color = Color {
     r: 0x01,
     g: 0x18,
     b: 0x00,
     a: 0x00,
 };
 
-const RED: Color = Color {
+const DARK_THEME_RED: Color = Color {
     r: 0x24,
     g: 0x00,
     b: 0x01,
@@ -22,13 +45,17 @@ pub fn paint_line(
     syntax: &SyntaxReference,
     syntax_set: &SyntaxSet,
     theme: &Theme,
+    theme_name: &String,
     buf: &mut String,
 ) {
     let mut highlighter = HighlightLines::new(syntax, theme);
     let first_char = line.chars().next();
-    let background_color = match first_char {
-        Some('+') => Some(GREEN),
-        Some('-') => Some(RED),
+    let is_dark = DARK_THEMES.contains(&theme_name.as_str());
+    let background_color = match (first_char, is_dark) {
+        (Some('+'), true) => Some(DARK_THEME_GREEN),
+        (Some('-'), true) => Some(DARK_THEME_RED),
+        (Some('+'), false) => Some(LIGHT_THEME_GREEN),
+        (Some('-'), false) => Some(LIGHT_THEME_RED),
         _ => None,
     };
     if first_char == Some('+') || first_char == Some('-') {

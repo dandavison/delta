@@ -11,25 +11,30 @@ use structopt::StructOpt;
 use syntect::highlighting::ThemeSet;
 use syntect::parsing::{SyntaxReference, SyntaxSet};
 
-pub const DELTA_THEME_DEFAULT: &str = "base16-mocha.dark";
-
 #[derive(StructOpt, Debug)]
 #[structopt(name = "delta")]
 struct Opt {
     /// Use diff highlighting colors appropriate for a light terminal
-    /// background
+    /// background. This is the default.
     #[structopt(long = "light")]
     light: bool,
 
     /// Use diff highlighting colors appropriate for a dark terminal
-    /// background
+    /// background.
     #[structopt(long = "dark")]
     dark: bool,
+
+    #[structopt(long = "theme")]
+    /// The syntax highlighting theme to use. Options are Light:
+    /// ("InspiredGitHub", "Solarized (light)", "base16-ocean.light"),
+    /// Dark: ("Solarized, (dark)", "base16-eighties.dark",
+    /// "base16-mocha.dark", "base16-ocean.dark").
+    theme: Option<String>,
 
     /// The width (in characters) of the diff highlighting. By
     /// default, the highlighting extends to the last character on
     /// each line
-    #[structopt(short = "-w", long = "width")]
+    #[structopt(short = "w", long = "width")]
     width: Option<u16>,
 }
 
@@ -57,13 +62,48 @@ fn delta() -> std::io::Result<()> {
     use std::io::Write;
     let syntax_set = SyntaxSet::load_defaults_newlines();
     let theme_set = ThemeSet::load_defaults();
-    let theme = &theme_set.themes[DELTA_THEME_DEFAULT];
     let mut output = String::new();
     let mut state = State::Unknown;
     let mut syntax: Option<&SyntaxReference> = None;
     let mut did_emit_line: bool;
     let stdin = io::stdin();
     let mut stdout = io::stdout();
+    let mut opt = Opt::from_args();
+
+    if opt.light && opt.dark {
+        panic!("--light or --dark cannot be used together. Default is --light.")
+    }
+    match &opt.theme {
+        Some(theme) => {
+            if paint::LIGHT_THEMES.contains(&theme.as_str()) {
+                if opt.dark {
+                    panic!("--dark is invalid with light theme '{}'", theme);
+                } else {
+                    opt.light = true;
+                }
+            } else if paint::DARK_THEMES.contains(&theme.as_str()) {
+                if opt.light {
+                    panic!("--light is invalid with dark theme '{}'", theme);
+                } else {
+                    opt.dark = true;
+                }
+            } else {
+                panic!("Invalid theme: '{}'", theme);
+            }
+        }
+        None => {
+            if !(opt.light || opt.dark) {
+                opt.light = true;
+            }
+            opt.theme = match opt.light {
+                true => Some("InspiredGitHub".to_string()),
+                false => Some("base16-mocha.dark".to_string()),
+            }
+        }
+    }
+    let theme_name = opt.theme.unwrap();
+    let theme = &theme_set.themes[&theme_name];
+
 
     for _line in stdin.lock().lines() {
         let raw_line = _line?;
@@ -82,7 +122,7 @@ fn delta() -> std::io::Result<()> {
         } else if state == State::DiffHunk {
             match syntax {
                 Some(syntax) => {
-                    paint::paint_line(line, syntax, &syntax_set, theme, &mut output);
+                    paint::paint_line(line, syntax, &syntax_set, theme, &theme_name, &mut output);
                     writeln!(stdout, "{}", output)?;
                     output.truncate(0);
                     did_emit_line = true;
