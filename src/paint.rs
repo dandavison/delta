@@ -15,28 +15,28 @@ const LIGHT_THEME_PLUS_COLOR: Color = Color {
     r: 0xd0,
     g: 0xff,
     b: 0xd0,
-    a: 0x00,
+    a: 0xff,
 };
 
 const LIGHT_THEME_MINUS_COLOR: Color = Color {
     r: 0xff,
     g: 0xd0,
     b: 0xd0,
-    a: 0x00,
+    a: 0xff,
 };
 
 const DARK_THEME_PLUS_COLOR: Color = Color {
     r: 0x01,
     g: 0x3B,
     b: 0x01,
-    a: 0x00,
+    a: 0xff,
 };
 
 const DARK_THEME_MINUS_COLOR: Color = Color {
     r: 0x3F,
     g: 0x00,
     b: 0x01,
-    a: 0x00,
+    a: 0xff,
 };
 
 /// Write line to buffer with color escape codes applied.
