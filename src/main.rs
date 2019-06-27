@@ -48,7 +48,7 @@ struct Opt {
     /// default, the highlighting extends to the last character on
     /// each line
     #[structopt(short = "w", long = "width")]
-    width: Option<u16>,
+    width: Option<usize>,
 }
 
 #[derive(PartialEq)]
@@ -149,6 +149,7 @@ fn delta() -> std::io::Result<()> {
                         &theme_name,
                         plus_color,
                         minus_color,
+                        opt.width,
                         &mut output,
                     );
                     writeln!(stdout, "{}", output)?;

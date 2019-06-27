@@ -48,6 +48,7 @@ pub fn paint_line(
     theme_name: &String,
     plus_color: Option<Color>,
     minus_color: Option<Color>,
+    width: Option<usize>,
     buf: &mut String,
 ) {
     let mut highlighter = HighlightLines::new(syntax, theme);
@@ -64,8 +65,13 @@ pub fn paint_line(
         line = line[1..].to_string();
         buf.push_str(" ");
     }
-    if line.len() < 100 {
-        line = format!("{}{}", line, " ".repeat(100 - line.len()));
+    match width {
+        Some(width) => {
+            if line.len() < width {
+                line = format!("{}{}", line, " ".repeat(width - line.len()));
+            }
+        }
+        _ => (),
     }
     let ranges: Vec<(Style, &str)> = highlighter.highlight(&line, &syntax_set);
     paint_ranges(&ranges[..], background_color, buf);
