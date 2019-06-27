@@ -1,7 +1,8 @@
 extern crate structopt;
 
+mod parse;
+
 use std::io::{self, BufRead, ErrorKind};
-use std::path::Path;
 use std::process;
 
 use console::strip_ansi_codes;
@@ -85,7 +86,7 @@ fn delta() -> std::io::Result<()> {
         did_emit_line = false;
         if line.starts_with("diff --") {
             state = State::DiffMeta;
-            syntax = match get_file_extension_from_diff_line(&line) {
+            syntax = match parse::get_file_extension_from_diff_line(&line) {
                 Some(extension) => syntax_set.find_syntax_by_extension(extension),
                 None => None,
             };
@@ -180,40 +181,4 @@ fn paint(
             write!(buf, "{}", text).unwrap();
         }
     }
-}
-
-/// Given input like
-/// "diff --git a/src/main.rs b/src/main.rs"
-/// Return "rs", i.e. a single file extension consistent with both files.
-fn get_file_extension_from_diff_line(line: &str) -> Option<&str> {
-    match get_file_extensions_from_diff_line(line) {
-        (Some(ext1), Some(ext2)) => {
-            if ext1 == ext2 {
-                Some(ext1)
-            } else {
-                // Unexpected: old and new files have different extensions.
-                None
-            }
-        }
-        (Some(ext1), None) => Some(ext1),
-        (None, Some(ext2)) => Some(ext2),
-        (None, None) => None,
-    }
-}
-
-/// Given input like "diff --git a/src/main.rs b/src/main.rs"
-/// return ("rs", "rs").
-fn get_file_extensions_from_diff_line(line: &str) -> (Option<&str>, Option<&str>) {
-    let mut iter = line.split(" ");
-    iter.next(); // diff
-    iter.next(); // --git
-    (
-        iter.next().and_then(|s| get_extension(&s[2..])),
-        iter.next().and_then(|s| get_extension(&s[2..])),
-    )
-}
-
-/// Attempt to parse input as a file path and return extension as a &str.
-fn get_extension(s: &str) -> Option<&str> {
-    Path::new(s).extension().and_then(|e| e.to_str())
 }
