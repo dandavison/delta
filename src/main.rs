@@ -85,24 +85,14 @@ fn delta() -> std::io::Result<()> {
     let mut opt = Opt::from_args();
 
     if opt.light && opt.dark {
-        panic!("--light or --dark cannot be used together. Default is --light.")
+        eprintln!("--light or --dark cannot be used together. Default is --light.");
+        process::exit(1);
     }
     match &opt.theme {
         Some(theme) => {
-            if paint::LIGHT_THEMES.contains(&theme.as_str()) {
-                if opt.dark {
-                    panic!("--dark is invalid with light theme '{}'", theme);
-                } else {
-                    opt.light = true;
-                }
-            } else if paint::DARK_THEMES.contains(&theme.as_str()) {
-                if opt.light {
-                    panic!("--light is invalid with dark theme '{}'", theme);
-                } else {
-                    opt.dark = true;
-                }
-            } else {
-                panic!("Invalid theme: '{}'", theme);
+            if !theme_set.themes.contains_key(theme.as_str()) {
+                eprintln!("Invalid theme: '{}'", theme);
+                process::exit(1);
             }
         }
         None => {

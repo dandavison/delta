@@ -2,8 +2,6 @@ use syntect::easy::HighlightLines;
 use syntect::highlighting::{Color, Style, Theme};
 use syntect::parsing::{SyntaxReference, SyntaxSet};
 
-pub const LIGHT_THEMES: [&str; 3] = ["InspiredGitHub", "Solarized (light)", "base16-ocean.light"];
-
 pub const DARK_THEMES: [&str; 4] = [
     "Solarized (dark)",
     "base16-eighties.dark",
