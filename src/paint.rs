@@ -49,13 +49,13 @@ pub struct Config<'a> {
 
 pub fn get_config<'a>(
     theme: &'a Theme,
-    theme_name: &'a String,
+    theme_name: &'a str,
     plus_color: Option<Color>,
     minus_color: Option<Color>,
     width: Option<usize>,
 ) -> Config<'a> {
 
-    let is_dark = DARK_THEMES.contains(&theme_name.as_str());
+    let is_dark = DARK_THEMES.contains(&theme_name);
 
     Config {
         theme: theme,

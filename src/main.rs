@@ -73,50 +73,17 @@ fn main() {
 }
 
 fn delta() -> std::io::Result<()> {
+    let mut opt = Opt::from_args();
     let theme_set = ThemeSet::load_defaults();
-    let mut output = String::new();
-    let mut state = State::Unknown;
-    let mut syntax: Option<&SyntaxReference> = None;
-    let mut did_emit_line: bool;
+    let paint_config = parse_args(&theme_set, &mut opt);
+
     let stdin = io::stdin();
     let mut stdout = io::stdout();
-    let mut opt = Opt::from_args();
 
-    if opt.light && opt.dark {
-        eprintln!("--light or --dark cannot be used together. Default is --light.");
-        process::exit(1);
-    }
-    match &opt.theme {
-        Some(theme) => {
-            if !theme_set.themes.contains_key(theme.as_str()) {
-                eprintln!("Invalid theme: '{}'", theme);
-                process::exit(1);
-            }
-        }
-        None => {
-            if !(opt.light || opt.dark) {
-                opt.light = true;
-            }
-            opt.theme = match opt.light {
-                true => Some("InspiredGitHub".to_string()),
-                false => Some("base16-mocha.dark".to_string()),
-            }
-        }
-    }
-    let minus_color = opt.minus_color.as_ref().and_then(
-        |s| Color::from_str(s).ok(),
-    );
-    let plus_color = opt.plus_color.as_ref().and_then(
-        |s| Color::from_str(s).ok(),
-    );
-    let theme_name = opt.theme.unwrap();
-    let paint_config = paint::get_config(
-        &theme_set.themes[&theme_name],
-        &theme_name,
-        plus_color,
-        minus_color,
-        opt.width,
-    );
+    let mut syntax: Option<&SyntaxReference> = None;
+    let mut output = String::new();
+    let mut state = State::Unknown;
+    let mut did_emit_line: bool;
 
     for _line in stdin.lock().lines() {
         let raw_line = _line?;
@@ -148,4 +115,43 @@ fn delta() -> std::io::Result<()> {
         }
     }
     Ok(())
+}
+
+fn parse_args<'a>(theme_set: &'a ThemeSet, opt: &'a mut Opt) -> paint::Config<'a> {
+
+    if opt.light && opt.dark {
+        eprintln!("--light or --dark cannot be used together. Default is --light.");
+        process::exit(1);
+    }
+    let theme_name = match opt.theme {
+        Some(ref theme) => {
+            if !theme_set.themes.contains_key(theme.as_str()) {
+                eprintln!("Invalid theme: '{}'", theme);
+                process::exit(1);
+            }
+            theme
+        }
+        None => {
+            if !(opt.light || opt.dark) {
+                opt.light = true;
+            }
+            match opt.light {
+                true => "InspiredGitHub",
+                false => "base16-mocha.dark",
+            }
+        }
+    };
+    let minus_color = opt.minus_color.as_ref().and_then(
+        |s| Color::from_str(s).ok(),
+    );
+    let plus_color = opt.plus_color.as_ref().and_then(
+        |s| Color::from_str(s).ok(),
+    );
+    paint::get_config(
+        &theme_set.themes[theme_name],
+        theme_name,
+        plus_color,
+        minus_color,
+        opt.width,
+    )
 }
