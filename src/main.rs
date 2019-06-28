@@ -10,7 +10,7 @@ use std::str::FromStr;
 use console::strip_ansi_codes;
 use structopt::StructOpt;
 use syntect::highlighting::{Color, ThemeSet};
-use syntect::parsing::{SyntaxReference, SyntaxSet};
+use syntect::parsing::SyntaxReference;
 
 #[derive(StructOpt, Debug)]
 #[structopt(name = "delta",
@@ -110,12 +110,7 @@ fn delta() -> std::io::Result<()> {
         |s| Color::from_str(s).ok(),
     );
     let theme_name = opt.theme.unwrap();
-
-    let paint_config = paint::Config {
-        theme: &theme_set.themes[&theme_name],
-        width: opt.width,
-        syntax_set: SyntaxSet::load_defaults_newlines(),
-    };
+    let paint_config = paint::get_config(&theme_set.themes[&theme_name], &theme_name, opt.width);
 
     for _line in stdin.lock().lines() {
         let raw_line = _line?;

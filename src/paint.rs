@@ -45,6 +45,18 @@ pub struct Config<'a> {
     pub width: Option<usize>,
 }
 
+pub fn get_config<'a>(
+    theme: &'a Theme,
+    theme_name: &'a String,
+    width: Option<usize>,
+) -> Config<'a> {
+    Config {
+        theme: theme,
+        width: width,
+        syntax_set: SyntaxSet::load_defaults_newlines(),
+    }
+}
+
 /// Write line to buffer with color escape codes applied.
 pub fn paint_line(
     mut line: String,
