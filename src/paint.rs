@@ -41,6 +41,8 @@ const DARK_THEME_MINUS_COLOR: Color = Color {
 
 pub struct Config<'a> {
     pub theme: &'a Theme,
+    plus_color: Color,
+    minus_color: Color,
     pub syntax_set: SyntaxSet,
     pub width: Option<usize>,
 }
@@ -48,33 +50,37 @@ pub struct Config<'a> {
 pub fn get_config<'a>(
     theme: &'a Theme,
     theme_name: &'a String,
+    plus_color: Option<Color>,
+    minus_color: Option<Color>,
     width: Option<usize>,
 ) -> Config<'a> {
+
+    let is_dark = DARK_THEMES.contains(&theme_name.as_str());
+
     Config {
         theme: theme,
+        plus_color: plus_color.unwrap_or_else(|| if is_dark {
+            DARK_THEME_PLUS_COLOR
+        } else {
+            LIGHT_THEME_PLUS_COLOR
+        }),
+        minus_color: minus_color.unwrap_or_else(|| if is_dark {
+            DARK_THEME_MINUS_COLOR
+        } else {
+            LIGHT_THEME_MINUS_COLOR
+        }),
         width: width,
         syntax_set: SyntaxSet::load_defaults_newlines(),
     }
 }
 
 /// Write line to buffer with color escape codes applied.
-pub fn paint_line(
-    mut line: String,
-    syntax: &SyntaxReference,
-    theme_name: &String,
-    plus_color: Option<Color>,
-    minus_color: Option<Color>,
-    config: &Config,
-    buf: &mut String,
-) {
+pub fn paint_line(mut line: String, syntax: &SyntaxReference, config: &Config, buf: &mut String) {
     let mut highlighter = HighlightLines::new(syntax, config.theme);
     let first_char = line.chars().next();
-    let is_dark = DARK_THEMES.contains(&theme_name.as_str());
-    let background_color = match (first_char, is_dark) {
-        (Some('+'), true) => plus_color.or_else(|| Some(DARK_THEME_PLUS_COLOR)),
-        (Some('-'), true) => minus_color.or_else(|| Some(DARK_THEME_MINUS_COLOR)),
-        (Some('+'), false) => plus_color.or_else(|| Some(LIGHT_THEME_PLUS_COLOR)),
-        (Some('-'), false) => minus_color.or_else(|| Some(LIGHT_THEME_MINUS_COLOR)),
+    let background_color = match first_char {
+        Some('+') => Some(config.plus_color),
+        Some('-') => Some(config.minus_color),
         _ => None,
     };
     if first_char == Some('+') || first_char == Some('-') {

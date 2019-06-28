@@ -110,7 +110,13 @@ fn delta() -> std::io::Result<()> {
         |s| Color::from_str(s).ok(),
     );
     let theme_name = opt.theme.unwrap();
-    let paint_config = paint::get_config(&theme_set.themes[&theme_name], &theme_name, opt.width);
+    let paint_config = paint::get_config(
+        &theme_set.themes[&theme_name],
+        &theme_name,
+        plus_color,
+        minus_color,
+        opt.width,
+    );
 
     for _line in stdin.lock().lines() {
         let raw_line = _line?;
@@ -129,15 +135,7 @@ fn delta() -> std::io::Result<()> {
         } else if state == State::DiffHunk {
             match syntax {
                 Some(syntax) => {
-                    paint::paint_line(
-                        line,
-                        syntax,
-                        &theme_name,
-                        plus_color,
-                        minus_color,
-                        &paint_config,
-                        &mut output,
-                    );
+                    paint::paint_line(line, syntax, &paint_config, &mut output);
                     writeln!(stdout, "{}", output)?;
                     output.truncate(0);
                     did_emit_line = true;
