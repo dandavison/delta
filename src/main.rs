@@ -6,7 +6,7 @@ mod parse_diff;
 use std::io::{self, BufRead, ErrorKind, Write};
 use std::process;
 
-use console::strip_ansi_codes;
+use console::{strip_ansi_codes, Term};
 use structopt::StructOpt;
 use syntect::highlighting::ThemeSet;
 use syntect::parsing::SyntaxReference;
@@ -46,9 +46,10 @@ struct Opt {
 
     /// The width (in characters) of the diff highlighting. By
     /// default, the highlighting extends to the last character on
-    /// each line
+    /// each line. Use --width=max to set width equal to current
+    /// terminal width.
     #[structopt(short = "w", long = "width")]
-    width: Option<usize>,
+    width: Option<String>,
 }
 
 #[derive(PartialEq)]
@@ -123,12 +124,22 @@ fn parse_args<'a>(theme_set: &'a ThemeSet, opt: &'a mut Opt) -> paint::Config<'a
         process::exit(1);
     }
 
+    let width = match opt.width.as_ref().map(String::as_str) {
+        Some("max") => Some(Term::stdout().size().1 as usize),
+        Some(width) => {
+            Some(width.parse::<usize>().unwrap_or_else(
+                |_| panic!("Invalid width: {}", width),
+            ))
+        }
+        None => None,
+    };
+
     paint::get_config(
         &opt.theme,
         theme_set,
         opt.dark,
         &opt.plus_color,
         &opt.minus_color,
-        opt.width,
+        width,
     )
 }
