@@ -39,19 +39,23 @@ const DARK_THEME_MINUS_COLOR: Color = Color {
     a: 0xff,
 };
 
+pub struct Config<'a> {
+    pub theme: &'a Theme,
+    pub syntax_set: SyntaxSet,
+    pub width: Option<usize>,
+}
+
 /// Write line to buffer with color escape codes applied.
 pub fn paint_line(
-    mut line: String, // TODO: pass reference
+    mut line: String,
     syntax: &SyntaxReference,
-    syntax_set: &SyntaxSet,
-    theme: &Theme,
     theme_name: &String,
     plus_color: Option<Color>,
     minus_color: Option<Color>,
-    width: Option<usize>,
+    config: &Config,
     buf: &mut String,
 ) {
-    let mut highlighter = HighlightLines::new(syntax, theme);
+    let mut highlighter = HighlightLines::new(syntax, config.theme);
     let first_char = line.chars().next();
     let is_dark = DARK_THEMES.contains(&theme_name.as_str());
     let background_color = match (first_char, is_dark) {
@@ -65,7 +69,7 @@ pub fn paint_line(
         line = line[1..].to_string();
         buf.push_str(" ");
     }
-    match width {
+    match config.width {
         Some(width) => {
             if line.len() < width {
                 line = format!("{}{}", line, " ".repeat(width - line.len()));
@@ -73,7 +77,7 @@ pub fn paint_line(
         }
         _ => (),
     }
-    let ranges: Vec<(Style, &str)> = highlighter.highlight(&line, &syntax_set);
+    let ranges: Vec<(Style, &str)> = highlighter.highlight(&line, &config.syntax_set);
     paint_ranges(&ranges[..], background_color, buf);
 }
 

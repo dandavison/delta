@@ -73,7 +73,6 @@ fn main() {
 }
 
 fn delta() -> std::io::Result<()> {
-    let syntax_set = SyntaxSet::load_defaults_newlines();
     let theme_set = ThemeSet::load_defaults();
     let mut output = String::new();
     let mut state = State::Unknown;
@@ -111,8 +110,12 @@ fn delta() -> std::io::Result<()> {
         |s| Color::from_str(s).ok(),
     );
     let theme_name = opt.theme.unwrap();
-    let theme = &theme_set.themes[&theme_name];
 
+    let paint_config = paint::Config {
+        theme: &theme_set.themes[&theme_name],
+        width: opt.width,
+        syntax_set: SyntaxSet::load_defaults_newlines(),
+    };
 
     for _line in stdin.lock().lines() {
         let raw_line = _line?;
@@ -121,7 +124,7 @@ fn delta() -> std::io::Result<()> {
         if line.starts_with("diff --") {
             state = State::DiffMeta;
             syntax = match parse_diff::get_file_extension_from_diff_line(&line) {
-                Some(extension) => syntax_set.find_syntax_by_extension(extension),
+                Some(extension) => paint_config.syntax_set.find_syntax_by_extension(extension),
                 None => None,
             };
         } else if line.starts_with("commit") {
@@ -134,12 +137,10 @@ fn delta() -> std::io::Result<()> {
                     paint::paint_line(
                         line,
                         syntax,
-                        &syntax_set,
-                        theme,
                         &theme_name,
                         plus_color,
                         minus_color,
-                        opt.width,
+                        &paint_config,
                         &mut output,
                     );
                     writeln!(stdout, "{}", output)?;
