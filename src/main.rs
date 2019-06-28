@@ -5,11 +5,10 @@ mod parse_diff;
 
 use std::io::{self, BufRead, ErrorKind, Write};
 use std::process;
-use std::str::FromStr;
 
 use console::strip_ansi_codes;
 use structopt::StructOpt;
-use syntect::highlighting::{Color, ThemeSet};
+use syntect::highlighting::ThemeSet;
 use syntect::parsing::SyntaxReference;
 
 #[derive(StructOpt, Debug)]
@@ -123,35 +122,13 @@ fn parse_args<'a>(theme_set: &'a ThemeSet, opt: &'a mut Opt) -> paint::Config<'a
         eprintln!("--light or --dark cannot be used together. Default is --light.");
         process::exit(1);
     }
-    let theme_name = match opt.theme {
-        Some(ref theme) => {
-            if !theme_set.themes.contains_key(theme.as_str()) {
-                eprintln!("Invalid theme: '{}'", theme);
-                process::exit(1);
-            }
-            theme
-        }
-        None => {
-            if !(opt.light || opt.dark) {
-                opt.light = true;
-            }
-            match opt.light {
-                true => "InspiredGitHub",
-                false => "base16-mocha.dark",
-            }
-        }
-    };
-    let minus_color = opt.minus_color.as_ref().and_then(
-        |s| Color::from_str(s).ok(),
-    );
-    let plus_color = opt.plus_color.as_ref().and_then(
-        |s| Color::from_str(s).ok(),
-    );
+
     paint::get_config(
-        &theme_set.themes[theme_name],
-        theme_name,
-        plus_color,
-        minus_color,
+        &opt.theme,
+        theme_set,
+        opt.dark,
+        &opt.plus_color,
+        &opt.minus_color,
         opt.width,
     )
 }

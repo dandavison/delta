@@ -1,7 +1,9 @@
 use std::fmt::Write;
+use std::process;
+use std::str::FromStr;
 
 use syntect::easy::HighlightLines;
-use syntect::highlighting::{Color, Style, Theme};
+use syntect::highlighting::{Color, Style, Theme, ThemeSet};
 use syntect::parsing::{SyntaxReference, SyntaxSet};
 
 pub const DARK_THEMES: [&str; 4] = [
@@ -40,31 +42,54 @@ const DARK_THEME_MINUS_COLOR: Color = Color {
 };
 
 pub struct Config<'a> {
-    pub theme: &'a Theme,
+    theme: &'a Theme,
     plus_color: Color,
     minus_color: Color,
     pub syntax_set: SyntaxSet,
-    pub width: Option<usize>,
+    width: Option<usize>,
 }
 
 pub fn get_config<'a>(
-    theme: &'a Theme,
-    theme_name: &'a str,
-    plus_color: Option<Color>,
-    minus_color: Option<Color>,
+    theme: &Option<String>,
+    theme_set: &'a ThemeSet,
+    dark: bool,
+    plus_color_str: &Option<String>,
+    minus_color_str: &Option<String>,
     width: Option<usize>,
 ) -> Config<'a> {
 
-    let is_dark = DARK_THEMES.contains(&theme_name);
+    let theme_name = match theme {
+        Some(ref theme) => {
+            if !theme_set.themes.contains_key(theme.as_str()) {
+                eprintln!("Invalid theme: '{}'", theme);
+                process::exit(1);
+            }
+            theme
+        }
+        None => {
+            match dark {
+                true => "base16-mocha.dark",
+                false => "InspiredGitHub",
+            }
+        }
+    };
+    let minus_color = minus_color_str.as_ref().and_then(
+        |s| Color::from_str(s).ok(),
+    );
+    let plus_color = plus_color_str.as_ref().and_then(
+        |s| Color::from_str(s).ok(),
+    );
+
+    let is_dark_theme = DARK_THEMES.contains(&theme_name);
 
     Config {
-        theme: theme,
-        plus_color: plus_color.unwrap_or_else(|| if is_dark {
+        theme: &theme_set.themes[theme_name],
+        plus_color: plus_color.unwrap_or_else(|| if is_dark_theme {
             DARK_THEME_PLUS_COLOR
         } else {
             LIGHT_THEME_PLUS_COLOR
         }),
-        minus_color: minus_color.unwrap_or_else(|| if is_dark {
+        minus_color: minus_color.unwrap_or_else(|| if is_dark_theme {
             DARK_THEME_MINUS_COLOR
         } else {
             LIGHT_THEME_MINUS_COLOR
