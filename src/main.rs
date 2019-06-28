@@ -3,7 +3,7 @@ extern crate structopt;
 mod paint;
 mod parse_diff;
 
-use std::io::{self, BufRead, ErrorKind};
+use std::io::{self, BufRead, ErrorKind, Write};
 use std::process;
 use std::str::FromStr;
 
@@ -73,7 +73,6 @@ fn main() {
 }
 
 fn delta() -> std::io::Result<()> {
-    use std::io::Write;
     let syntax_set = SyntaxSet::load_defaults_newlines();
     let theme_set = ThemeSet::load_defaults();
     let mut output = String::new();

@@ -1,3 +1,5 @@
+use std::fmt::Write;
+
 use syntect::easy::HighlightLines;
 use syntect::highlighting::{Color, Style, Theme};
 use syntect::parsing::{SyntaxReference, SyntaxSet};
@@ -95,7 +97,6 @@ fn paint(
     reset_color: bool,
     buf: &mut String,
 ) -> () {
-    use std::fmt::Write;
     match background_color {
         Some(background_color) => {
             write!(
