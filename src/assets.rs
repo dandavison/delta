@@ -116,3 +116,35 @@ pub fn list_languages() -> std::io::Result<()> {
 
     Ok(())
 }
+
+pub fn list_themes(cfg: &Config) -> Result<()> {
+    let assets = HighlightingAssets::new();
+    let themes = &assets.theme_set.themes;
+    let mut config = cfg.clone();
+    let mut style = HashSet::new();
+    style.insert(OutputComponent::Plain);
+    config.files = vec![InputFile::ThemePreviewFile];
+    config.output_components = OutputComponents(style);
+
+    let stdout = io::stdout();
+    let mut stdout = stdout.lock();
+
+    if config.colored_output {
+        for (theme, _) in themes.iter() {
+            writeln!(
+                stdout,
+                "Theme: {}\n",
+                Style::new().bold().paint(theme.to_string())
+            )?;
+            config.theme = theme.to_string();
+            let _controller = Controller::new(&config, &assets).run();
+            writeln!(stdout)?;
+        }
+    } else {
+        for (theme, _) in themes.iter() {
+            writeln!(stdout, "{}", theme)?;
+        }
+    }
+
+    Ok(())
+}
