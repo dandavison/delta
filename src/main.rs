@@ -1,3 +1,4 @@
+mod assets;
 mod paint;
 mod parse_diff;
 
@@ -5,9 +6,10 @@ use std::io::{self, BufRead, ErrorKind, Write};
 use std::process;
 
 use console::strip_ansi_codes;
+use assets::HighlightingAssets;
 use structopt::StructOpt;
 use syntect::highlighting::ThemeSet;
-use syntect::parsing::SyntaxReference;
+use syntect::parsing::{SyntaxReference, SyntaxSet};
 
 #[derive(StructOpt, Debug)]
 #[structopt(name = "delta",
@@ -72,8 +74,9 @@ fn main() {
 
 fn delta() -> std::io::Result<()> {
     let mut opt = Opt::from_args();
+    let assets = HighlightingAssets::new();
     let theme_set = ThemeSet::load_defaults();
-    let paint_config = parse_args(&theme_set, &mut opt);
+    let paint_config = parse_args(&assets.syntax_set, &theme_set, &mut opt);
 
     let stdin = io::stdin();
     let mut stdout = io::stdout();
@@ -90,7 +93,8 @@ fn delta() -> std::io::Result<()> {
         if line.starts_with("diff --") {
             state = State::DiffMeta;
             syntax = match parse_diff::get_file_extension_from_diff_line(&line) {
-                Some(extension) => paint_config.syntax_set.find_syntax_by_extension(extension),
+                // TODO: cache syntaxes?
+                Some(extension) => assets.syntax_set.find_syntax_by_extension(extension),
                 None => None,
             };
         } else if line.starts_with("commit") {
@@ -115,7 +119,11 @@ fn delta() -> std::io::Result<()> {
     Ok(())
 }
 
-fn parse_args<'a>(theme_set: &'a ThemeSet, opt: &'a mut Opt) -> paint::Config<'a> {
+fn parse_args<'a>(
+    syntax_set: &'a SyntaxSet,
+    theme_set: &'a ThemeSet,
+    opt: &'a mut Opt,
+) -> paint::Config<'a> {
 
     if opt.light && opt.dark {
         eprintln!("--light or --dark cannot be used together. Default is --light.");
@@ -132,6 +140,7 @@ fn parse_args<'a>(theme_set: &'a ThemeSet, opt: &'a mut Opt) -> paint::Config<'a
     };
 
     paint::get_config(
+        syntax_set,
         &opt.theme,
         theme_set,
         opt.dark,

@@ -45,11 +45,12 @@ pub struct Config<'a> {
     theme: &'a Theme,
     plus_color: Color,
     minus_color: Color,
-    pub syntax_set: SyntaxSet,
+    pub syntax_set: &'a SyntaxSet,
     width: Option<usize>,
 }
 
 pub fn get_config<'a>(
+    syntax_set: &'a SyntaxSet,
     theme: &Option<String>,
     theme_set: &'a ThemeSet,
     dark: bool,
@@ -95,7 +96,7 @@ pub fn get_config<'a>(
             LIGHT_THEME_MINUS_COLOR
         }),
         width: width,
-        syntax_set: SyntaxSet::load_defaults_newlines(),
+        syntax_set: &syntax_set,
     }
 }
 
