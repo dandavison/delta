@@ -1,5 +1,3 @@
-extern crate structopt;
-
 mod paint;
 mod parse_diff;
 
@@ -13,7 +11,8 @@ use syntect::parsing::SyntaxReference;
 
 #[derive(StructOpt, Debug)]
 #[structopt(name = "delta",
-            about = "A syntax-highlighter for git. Use 'delta | less -R' as core.pager in .gitconfig")]
+            about = "A syntax-highlighter for git. \
+                     Use 'delta | less -R' as core.pager in .gitconfig")]
 struct Opt {
     /// Use diff highlighting colors appropriate for a light terminal
     /// background. This is the default.
