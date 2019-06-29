@@ -6,7 +6,7 @@ use std::io::{self, BufRead, ErrorKind, Write};
 use std::process;
 
 use console::strip_ansi_codes;
-use assets::{HighlightingAssets, list_languages};
+use assets::{HighlightingAssets, list_languages, list_themes};
 use structopt::StructOpt;
 use syntect::highlighting::ThemeSet;
 use syntect::parsing::{SyntaxReference, SyntaxSet};
@@ -54,6 +54,10 @@ struct Opt {
     /// List supported languages and associated file extensions.
     #[structopt(long = "list-languages")]
     list_languages: bool,
+
+    /// List available syntax highlighting themes.
+    #[structopt(long = "list-themes")]
+    list_themes: bool,
 }
 
 #[derive(PartialEq)]
@@ -81,6 +85,9 @@ fn delta() -> std::io::Result<()> {
 
     if opt.list_languages {
         list_languages()?;
+        process::exit(0);
+    } else if opt.list_themes {
+        list_themes()?;
         process::exit(0);
     }
 
