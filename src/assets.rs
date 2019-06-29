@@ -12,6 +12,10 @@
 // The above copyright notice and this permission notice shall be included in all
 // copies or substantial portions of the Software.
 
+use std::io::{self, Write};
+
+use ansi_term::Colour::Green;
+use ansi_term::Style;
 use syntect::dumps::from_binary;
 use syntect::highlighting::ThemeSet;
 use syntect::parsing::SyntaxSet;
@@ -45,8 +49,7 @@ impl HighlightingAssets {
     }
 }
 
-
-pub fn list_languages(config: &Config) -> Result<()> {
+pub fn list_languages() -> std::io::Result<()> {
     let assets = HighlightingAssets::new();
     let mut languages = assets
         .syntax_set
@@ -58,10 +61,13 @@ pub fn list_languages(config: &Config) -> Result<()> {
         .collect::<Vec<_>>();
     languages.sort_by_key(|lang| lang.name.to_uppercase());
 
+    let loop_through = false;
+    let colored_output = true;
+
     let stdout = io::stdout();
     let mut stdout = stdout.lock();
 
-    if config.loop_through {
+    if loop_through {
         for lang in languages {
             write!(stdout, "{}:{}\n", lang.name, lang.file_extensions.join(","))?;
         }
@@ -75,9 +81,9 @@ pub fn list_languages(config: &Config) -> Result<()> {
         let comma_separator = ", ";
         let separator = " ";
         // Line-wrapping for the possible file extension overflow.
-        let desired_width = config.term_width - longest - separator.len();
+        let desired_width = 100;
 
-        let style = if config.colored_output {
+        let style = if colored_output {
             Green.normal()
         } else {
             Style::default()

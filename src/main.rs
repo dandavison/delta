@@ -6,7 +6,7 @@ use std::io::{self, BufRead, ErrorKind, Write};
 use std::process;
 
 use console::strip_ansi_codes;
-use assets::HighlightingAssets;
+use assets::{HighlightingAssets, list_languages};
 use structopt::StructOpt;
 use syntect::highlighting::ThemeSet;
 use syntect::parsing::{SyntaxReference, SyntaxSet};
@@ -50,6 +50,10 @@ struct Opt {
     /// each line.
     #[structopt(short = "w", long = "width")]
     width: Option<String>,
+
+    /// List supported languages and associated file extensions.
+    #[structopt(long = "list-languages")]
+    list_languages: bool,
 }
 
 #[derive(PartialEq)]
@@ -74,6 +78,12 @@ fn main() {
 
 fn delta() -> std::io::Result<()> {
     let mut opt = Opt::from_args();
+
+    if opt.list_languages {
+        list_languages()?;
+        process::exit(0);
+    }
+
     let assets = HighlightingAssets::new();
     let theme_set = ThemeSet::load_defaults();
     let paint_config = parse_args(&assets.syntax_set, &theme_set, &mut opt);
