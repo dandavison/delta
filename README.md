@@ -16,10 +16,13 @@ USAGE:
     delta [FLAGS] [OPTIONS]
 
 FLAGS:
-        --dark       Use diff highlighting colors appropriate for a dark terminal background.
-    -h, --help       Prints help information
-        --light      Use diff highlighting colors appropriate for a light terminal background. This is the default.
-    -V, --version    Prints version information
+        --dark              Use diff highlighting colors appropriate for a dark terminal background.
+    -h, --help              Prints help information
+        --light             Use diff highlighting colors appropriate for a light terminal background. This is the
+                            default.
+        --list-languages    List supported languages and associated file extensions.
+        --list-themes       List available syntax highlighting themes.
+    -V, --version           Prints version information
 
 OPTIONS:
         --minus-color <minus_color>    The background color (RGB hex) to use for removed lines. The default is "#ffd0d0"
@@ -30,7 +33,7 @@ OPTIONS:
                                        "Solarized (light)", "base16-ocean.light"), Dark: ("Solarized, (dark)", "base16-
                                        eighties.dark", "base16-mocha.dark", "base16-ocean.dark").
     -w, --width <width>                The width (in characters) of the diff highlighting. By default, the highlighting
-                                       extends to the last character on each line
+                                       extends to the last character on each line.
 ```
 
 ## Installation
