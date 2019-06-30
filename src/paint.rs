@@ -63,7 +63,7 @@ pub fn get_config<'a>(
         None => {
             match user_requests_theme_for_light_terminal_background {
                 true => "GitHub",
-                false => "base16",
+                false => "Monokai Extended",
             }
         }
     };
