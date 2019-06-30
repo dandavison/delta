@@ -16,22 +16,21 @@ USAGE:
     delta [FLAGS] [OPTIONS]
 
 FLAGS:
-        --dark              Use diff highlighting colors appropriate for a dark terminal background.
+        --compare-themes    Compare available syntax highlighting themes. To use this option, supply git diff output to
+                            delta on standard input. For example: `git show --color=always | delta --compare-themes`.
+        --dark              Use colors appropriate for a dark terminal background.  For more control, see --theme,
+                            --plus-color, and --minus-color.
     -h, --help              Prints help information
-        --light             Use diff highlighting colors appropriate for a light terminal background. This is the
-                            default.
+        --light             Use colors appropriate for a light terminal background. For more control, see --theme,
+                            --plus-color, and --minus-color.
         --list-languages    List supported languages and associated file extensions.
         --list-themes       List available syntax highlighting themes.
     -V, --version           Prints version information
 
 OPTIONS:
-        --minus-color <minus_color>    The background color (RGB hex) to use for removed lines. The default is "#ffd0d0"
-                                       if you are using --light, and "#3f0001" if you are using --dark.
-        --plus-color <plus_color>      The background color (RGB hex) to use for added lines. The default is "#d0ffd0"
-                                       if you are using --light, and "#013B01" if you are using --dark.
-        --theme <theme>                The syntax highlighting theme to use. Options are Light: ("InspiredGitHub",
-                                       "Solarized (light)", "base16-ocean.light"), Dark: ("Solarized, (dark)", "base16-
-                                       eighties.dark", "base16-mocha.dark", "base16-ocean.dark").
+        --minus-color <minus_color>    The background color (RGB hex) to use for removed lines.
+        --plus-color <plus_color>      The background color (RGB hex) to use for added lines.
+        --theme <theme>                The syntax highlighting theme to use.
     -w, --width <width>                The width (in characters) of the diff highlighting. By default, the highlighting
                                        extends to the last character on each line.
 ```

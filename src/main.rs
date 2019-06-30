@@ -20,29 +20,21 @@ struct Opt {
     #[structopt(long = "light")]
     light: bool,
 
-    /// Use diff highlighting colors appropriate for a dark terminal
-    /// background.  For more control, see --theme, --plus-color, and
-    /// --minus-color.
+    /// Use colors appropriate for a dark terminal background.  For
+    /// more control, see --theme, --plus-color, and --minus-color.
     #[structopt(long = "dark")]
     dark: bool,
 
     #[structopt(long = "plus-color")]
-    /// The background color (RGB hex) to use for added lines. The
-    /// default is "#d0ffd0" if you are using --light, and "#013B01"
-    /// if you are using --dark.
+    /// The background color (RGB hex) to use for added lines.
     plus_color: Option<String>,
 
     #[structopt(long = "minus-color")]
-    /// The background color (RGB hex) to use for removed lines. The
-    /// default is "#ffd0d0" if you are using --light, and "#3f0001" if
-    /// you are using --dark.
+    /// The background color (RGB hex) to use for removed lines.
     minus_color: Option<String>,
 
     #[structopt(long = "theme")]
-    /// The syntax highlighting theme to use. Options are Light:
-    /// ("InspiredGitHub", "Solarized (light)", "base16-ocean.light"),
-    /// Dark: ("Solarized, (dark)", "base16-eighties.dark",
-    /// "base16-mocha.dark", "base16-ocean.dark").
+    /// The syntax highlighting theme to use.
     theme: Option<String>,
 
     /// The width (in characters) of the diff highlighting. By
@@ -61,6 +53,7 @@ struct Opt {
 
     /// Compare available syntax highlighting themes. To use this
     /// option, supply git diff output to delta on standard input.
+    /// For example: `git show --color=always | delta --compare-themes`.
     #[structopt(long = "compare-themes")]
     compare_themes: bool,
 }
