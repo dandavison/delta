@@ -12,6 +12,10 @@ pub const LIGHT_THEMES: [&str; 4] = [
     "ansi-light",
 ];
 
+pub fn is_light_theme(theme: &str) -> bool {
+    LIGHT_THEMES.contains(&theme)
+}
+
 const LIGHT_THEME_PLUS_COLOR: Color = Color {
     r: 0xd0,
     g: 0xff,

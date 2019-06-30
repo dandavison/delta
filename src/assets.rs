@@ -116,16 +116,3 @@ pub fn list_languages() -> std::io::Result<()> {
 
     Ok(())
 }
-
-pub fn list_themes() -> std::io::Result<()> {
-    let assets = HighlightingAssets::new();
-    let themes = &assets.theme_set.themes;
-    let stdout = io::stdout();
-    let mut stdout = stdout.lock();
-
-    for (theme, _) in themes.iter() {
-        writeln!(stdout, "{}", theme)?;
-    }
-
-    Ok(())
-}

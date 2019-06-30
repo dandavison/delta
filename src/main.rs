@@ -5,7 +5,7 @@ mod parse_diff;
 use std::io::{self, BufRead, ErrorKind, Read, Write};
 use std::process;
 
-use assets::{HighlightingAssets, list_languages, list_themes};
+use assets::{HighlightingAssets, list_languages};
 use console::strip_ansi_codes;
 use structopt::StructOpt;
 use syntect::parsing::SyntaxReference;
@@ -216,5 +216,27 @@ fn compare_themes(assets: &HighlightingAssets) -> std::io::Result<()> {
         delta(input.split("\n").map(String::from), &paint_config, &assets)?;
     }
 
+    Ok(())
+}
+
+
+pub fn list_themes() -> std::io::Result<()> {
+    let assets = HighlightingAssets::new();
+    let themes = &assets.theme_set.themes;
+    let stdout = io::stdout();
+    let mut stdout = stdout.lock();
+
+    writeln!(stdout, "Light themes:")?;
+    for (theme, _) in themes.iter() {
+        if paint::is_light_theme(theme) {
+            writeln!(stdout, "    {}", theme)?;
+        }
+    }
+    writeln!(stdout, "Dark themes:")?;
+    for (theme, _) in themes.iter() {
+        if !paint::is_light_theme(theme) {
+            writeln!(stdout, "    {}", theme)?;
+        }
+    }
     Ok(())
 }
