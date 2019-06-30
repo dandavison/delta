@@ -88,7 +88,7 @@ fn main() -> std::io::Result<()> {
         process::exit(0);
     }
 
-    let paint_config = parse_args(&assets, &opt);
+    let paint_config = process_command_line_arguments(&assets, &opt);
 
     match delta(
         io::stdin().lock().lines().map(|l| l.unwrap()),
@@ -150,7 +150,10 @@ fn delta(
     Ok(())
 }
 
-fn parse_args<'a>(assets: &'a HighlightingAssets, opt: &'a Opt) -> paint::Config<'a> {
+fn process_command_line_arguments<'a>(
+    assets: &'a HighlightingAssets,
+    opt: &'a Opt,
+) -> paint::Config<'a> {
 
     if opt.light && opt.dark {
         eprintln!("--light and --dark cannot be used together.");
@@ -187,10 +190,10 @@ fn compare_themes(assets: &HighlightingAssets) -> std::io::Result<()> {
     let mut paint_config: paint::Config;
     let hline = "-".repeat(100);
 
-    for (theme_name, _) in assets.theme_set.themes.iter() {
-        writeln!(stdout, "{}\n{}\n{}\n", hline, theme_name, hline)?;
-        opt.theme = Some(theme_name.to_string());
-        paint_config = parse_args(&assets, &opt);
+    for (theme, _) in assets.theme_set.themes.iter() {
+        writeln!(stdout, "{}\n{}\n{}\n", hline, theme, hline)?;
+        opt.theme = Some(theme.to_string());
+        paint_config = process_command_line_arguments(&assets, &opt);
         delta(input.split("\n").map(String::from), &paint_config, &assets)?;
     }
 
