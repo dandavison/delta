@@ -2,7 +2,6 @@ mod assets;
 mod paint;
 mod parse_diff;
 
-use std::fmt::Display;
 use std::io::{self, BufRead, ErrorKind, Write};
 use std::process;
 
@@ -100,15 +99,11 @@ fn main() -> std::io::Result<()> {
     Ok(())
 }
 
-fn delta<I>(
-    lines: I,
+fn delta(
+    lines: impl Iterator<Item = String>,
     paint_config: &paint::Config,
     assets: &HighlightingAssets,
-) -> std::io::Result<()>
-where
-    I: Iterator,
-    I::Item: Display,
-{
+) -> std::io::Result<()> {
 
     let mut syntax: Option<&SyntaxReference> = None;
     let mut output = String::new();
