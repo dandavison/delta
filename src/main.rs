@@ -5,8 +5,8 @@ mod parse_diff;
 use std::io::{self, BufRead, ErrorKind, Write};
 use std::process;
 
-use console::strip_ansi_codes;
 use assets::{HighlightingAssets, list_languages, list_themes};
+use console::strip_ansi_codes;
 use structopt::StructOpt;
 use syntect::highlighting::ThemeSet;
 use syntect::parsing::{SyntaxReference, SyntaxSet};
@@ -93,7 +93,7 @@ fn delta() -> std::io::Result<()> {
 
     let assets = HighlightingAssets::new();
     let theme_set = ThemeSet::load_defaults();
-    let paint_config = parse_args(&assets.syntax_set, &theme_set, &mut opt);
+    let paint_config = parse_args(&assets.syntax_set, &theme_set, &opt);
 
     let stdin = io::stdin();
     let mut stdout = io::stdout();
@@ -139,11 +139,11 @@ fn delta() -> std::io::Result<()> {
 fn parse_args<'a>(
     syntax_set: &'a SyntaxSet,
     theme_set: &'a ThemeSet,
-    opt: &'a mut Opt,
+    opt: &'a Opt,
 ) -> paint::Config<'a> {
 
     if opt.light && opt.dark {
-        eprintln!("--light or --dark cannot be used together. Default is --light.");
+        eprintln!("--light and --dark cannot be used together.");
         process::exit(1);
     }
 
