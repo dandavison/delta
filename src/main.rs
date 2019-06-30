@@ -10,7 +10,7 @@ use std::io::{self, BufRead, ErrorKind, Read, Write};
 use std::process;
 
 use assets::{HighlightingAssets, list_languages};
-use console::strip_ansi_codes;
+use console::{Term, strip_ansi_codes};
 use output::{OutputType, PagingMode};
 use structopt::StructOpt;
 use syntect::parsing::SyntaxReference;
@@ -52,7 +52,8 @@ struct Opt {
 
     /// The width (in characters) of the diff highlighting. By
     /// default, the highlighting extends to the last character on
-    /// each line.
+    /// each line. Use --width=max to set width equal to current
+    /// terminal width.
     #[structopt(short = "w", long = "width")]
     width: Option<String>,
 
@@ -195,6 +196,7 @@ fn process_command_line_arguments<'a>(
     };
 
     let width = match opt.width.as_ref().map(String::as_str) {
+        Some("max") => Some((Term::stdout().size().1 - 1) as usize),
         Some(width) => {
             Some(width.parse::<usize>().unwrap_or_else(
                 |_| panic!("Invalid width: {}", width),
