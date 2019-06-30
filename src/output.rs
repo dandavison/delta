@@ -63,12 +63,13 @@ impl OutputType {
             replace_arguments_to_less = false;
         }
 
-        let pager = pager_from_config
-            .or(pager_from_env)
-            .unwrap_or_else(|| String::from("less"));
+        let pager = pager_from_config.or(pager_from_env).unwrap_or_else(
+            || String::from("less"),
+        );
 
-        let pagerflags =
-            shell_words::split(&pager).chain_err(|| "Could not parse pager command.")?;
+        let pagerflags = shell_words::split(&pager).chain_err(
+            || "Could not parse pager command.",
+        )?;
 
         match pagerflags.split_first() {
             Some((pager_name, args)) => {
@@ -98,11 +99,13 @@ impl OutputType {
                     p
                 };
 
-                Ok(process
-                    .stdin(Stdio::piped())
-                    .spawn()
-                    .map(OutputType::Pager)
-                    .unwrap_or_else(|_| OutputType::stdout()))
+                Ok(
+                    process
+                        .stdin(Stdio::piped())
+                        .spawn()
+                        .map(OutputType::Pager)
+                        .unwrap_or_else(|_| OutputType::stdout()),
+                )
             }
             None => Ok(OutputType::stdout()),
         }
@@ -114,10 +117,11 @@ impl OutputType {
 
     pub fn handle(&mut self) -> Result<&mut Write> {
         Ok(match *self {
-            OutputType::Pager(ref mut command) => command
-                .stdin
-                .as_mut()
-                .chain_err(|| "Could not open stdin for pager")?,
+            OutputType::Pager(ref mut command) => {
+                command.stdin.as_mut().chain_err(
+                    || "Could not open stdin for pager",
+                )?
+            }
             OutputType::Stdout(ref mut handle) => handle,
         })
     }
