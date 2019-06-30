@@ -210,6 +210,11 @@ fn compare_themes(assets: &HighlightingAssets) -> std::io::Result<()> {
     let hline = "-".repeat(100);
 
     for (theme, _) in assets.theme_set.themes.iter() {
+
+        if opt.light && !paint::is_light_theme(theme) || opt.dark && paint::is_light_theme(theme) {
+            continue;
+        }
+
         writeln!(stdout, "{}\n{}\n{}\n", hline, theme, hline)?;
         opt.theme = Some(theme.to_string());
         paint_config = process_command_line_arguments(&assets, &opt);
