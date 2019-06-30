@@ -68,20 +68,8 @@ enum State {
     Unknown,
 }
 
-fn main() {
-    match delta() {
-        Err(error) => {
-            match error.kind() {
-                ErrorKind::BrokenPipe => process::exit(0),
-                _ => eprintln!("{}", error),
-            }
-        }
-        _ => (),
-    }
-}
-
-fn delta() -> std::io::Result<()> {
-    let mut opt = Opt::from_args();
+fn main() -> std::io::Result<()> {
+    let opt = Opt::from_args();
 
     if opt.list_languages {
         list_languages()?;
@@ -95,17 +83,36 @@ fn delta() -> std::io::Result<()> {
     let theme_set = ThemeSet::load_defaults();
     let paint_config = parse_args(&assets.syntax_set, &theme_set, &opt);
 
-    let stdin = io::stdin();
-    let mut stdout = io::stdout();
+    match delta(
+        io::stdin().lock().lines().map(|l| l.unwrap()),
+        &paint_config,
+        &assets,
+    ) {
+        Err(error) => {
+            match error.kind() {
+                ErrorKind::BrokenPipe => process::exit(0),
+                _ => eprintln!("{}", error),
+            }
+        }
+        _ => (),
+    };
+    Ok(())
+}
+
+fn delta(
+    lines: impl Iterator<Item = String>,
+    paint_config: &paint::Config,
+    assets: &HighlightingAssets,
+) -> std::io::Result<()> {
 
     let mut syntax: Option<&SyntaxReference> = None;
     let mut output = String::new();
+    let mut stdout = io::stdout();
     let mut state = State::Unknown;
     let mut did_emit_line: bool;
 
-    for _line in stdin.lock().lines() {
-        let raw_line = _line?;
-        let line: String = strip_ansi_codes(&raw_line).to_string();
+    for raw_line in lines {
+        let line = strip_ansi_codes(&raw_line).to_string();
         did_emit_line = false;
         if line.starts_with("diff --") {
             state = State::DiffMeta;
