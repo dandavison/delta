@@ -1,5 +1,6 @@
 // https://github.com/sharkdp/bat a1b9334a44a2c652f52dddaa83dbacba57372468
 // src/output.rs
+// with minor modifications (see git history).
 //
 // Copyright (c) 2018 bat-developers (https://github.com/sharkdp/bat).
 
@@ -20,7 +21,13 @@ use std::process::{Child, Command, Stdio};
 
 use shell_words;
 
-use crate::app::PagingMode;
+#[derive(Debug, Clone, Copy, PartialEq)]
+#[allow(dead_code)]
+pub enum PagingMode {
+    Always,
+    QuitIfOneScreen,
+    Never,
+}
 use crate::errors::*;
 
 pub enum OutputType {

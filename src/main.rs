@@ -1,4 +1,8 @@
+#[macro_use]
+extern crate error_chain;
+
 mod assets;
+mod output;
 mod paint;
 mod parse_diff;
 
@@ -7,13 +11,22 @@ use std::process;
 
 use assets::{HighlightingAssets, list_languages};
 use console::strip_ansi_codes;
+use output::{OutputType, PagingMode};
 use structopt::StructOpt;
 use syntect::parsing::SyntaxReference;
 
+mod errors {
+    error_chain! {
+        foreign_links {
+            Io(::std::io::Error);
+            SyntectError(::syntect::LoadingError);
+            ParseIntError(::std::num::ParseIntError);
+        }
+    }
+}
+
 #[derive(StructOpt, Debug)]
-#[structopt(name = "delta",
-            about = "A syntax-highlighter for git. \
-                     Use 'delta | less -R' as core.pager in .gitconfig")]
+#[structopt(name = "delta", about = "A syntax-highlighter for git.")]
 struct Opt {
     /// Use colors appropriate for a light terminal background. For
     /// more control, see --theme, --plus-color, and --minus-color.
@@ -108,7 +121,9 @@ fn delta(
 
     let mut syntax: Option<&SyntaxReference> = None;
     let mut output = String::new();
-    let mut stdout = io::stdout();
+    let mut output_type =
+        OutputType::from_mode(PagingMode::QuitIfOneScreen, Some(paint_config.pager)).unwrap();
+    let writer = output_type.handle().unwrap();
     let mut state = State::Unknown;
     let mut did_emit_line: bool;
 
@@ -130,7 +145,7 @@ fn delta(
             match syntax {
                 Some(syntax) => {
                     paint::paint_line(line, syntax, &paint_config, &mut output);
-                    writeln!(stdout, "{}", output)?;
+                    writeln!(writer, "{}", output)?;
                     output.truncate(0);
                     did_emit_line = true;
                 }
@@ -138,7 +153,7 @@ fn delta(
             }
         }
         if !did_emit_line {
-            writeln!(stdout, "{}", raw_line)?;
+            writeln!(writer, "{}", raw_line)?;
         }
     }
     Ok(())

@@ -10,7 +10,8 @@
 ## Usage
 ```
 delta 0.1.0
-A syntax-highlighter for git. Use 'delta | less -R' as core.pager in .gitconfig
+Dan Davison <dandavison7@gmail.com>
+A syntax-highlighter for git.
 
 USAGE:
     delta [FLAGS] [OPTIONS]
@@ -32,7 +33,8 @@ OPTIONS:
         --plus-color <plus_color>      The background color (RGB hex) to use for added lines.
         --theme <theme>                The syntax highlighting theme to use.
     -w, --width <width>                The width (in characters) of the diff highlighting. By default, the highlighting
-                                       extends to the last character on each line.
+                                       extends to the last character on each line. Use --width=max to set width equal to
+                                       current terminal width.
 ```
 
 ## Installation
@@ -57,7 +59,7 @@ OPTIONS:
     ```
 
     Alternatively, you can ignore `$PATH` and use
-    `/path/to/delta/target/debug/delta | less -R` in the next step.
+    `/path/to/delta/target/debug/delta` in the next step.
 
 4. **Configure git to use delta:**<br>
     (Note that delta defaults to a light theme, so if you're using a dark terminal background, you'll want to use `--dark` or `--theme=<theme-name>`.)
@@ -65,17 +67,17 @@ OPTIONS:
     Edit your `~/.gitconfig`:
     ```
     [core]
-        pager = delta | less -R
+        pager = delta
     ```
     Alternatively, run this command:
     ```
-    git config --global core.pager 'delta | less -R'
+    git config --global core.pager 'delta'
     ```
 
     You can pass arguments to delta in your `.gitconfig`. An example is
     ```
     [core]
-        pager = delta --width=100 --plus-color="#012800" --minus-color="#340001" --theme="base16-ocean.dark" | less -R
+        pager = delta --width=100 --plus-color="#012800" --minus-color="#340001" --theme="base16-ocean.dark"
     ```
     Please include the `=` characters; I'm not sure why yet, but they're necessary when writing a delta command line in `.gitconfig`!
 

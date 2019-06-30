@@ -50,6 +50,7 @@ pub struct Config<'a> {
     minus_color: Color,
     pub syntax_set: &'a SyntaxSet,
     width: Option<usize>,
+    pub pager: &'a str,
 }
 
 pub fn get_config<'a>(
@@ -94,6 +95,7 @@ pub fn get_config<'a>(
         }),
         width: width,
         syntax_set: &syntax_set,
+        pager: "less",
     }
 }
 
