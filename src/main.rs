@@ -2,7 +2,7 @@ mod assets;
 mod paint;
 mod parse_diff;
 
-use std::io::{self, BufRead, ErrorKind, Write};
+use std::io::{self, BufRead, ErrorKind, Read, Write};
 use std::process;
 
 use assets::{HighlightingAssets, list_languages, list_themes};
@@ -57,6 +57,11 @@ struct Opt {
     /// List available syntax highlighting themes.
     #[structopt(long = "list-themes")]
     list_themes: bool,
+
+    /// Compare available syntax highlighting themes. To use this
+    /// option, supply git diff output to delta on standard input.
+    #[structopt(long = "compare-themes")]
+    compare_themes: bool,
 }
 
 #[derive(PartialEq)]
@@ -70,15 +75,19 @@ enum State {
 fn main() -> std::io::Result<()> {
     let opt = Opt::from_args();
 
+    let assets = HighlightingAssets::new();
+
     if opt.list_languages {
         list_languages()?;
         process::exit(0);
     } else if opt.list_themes {
         list_themes()?;
         process::exit(0);
+    } else if opt.compare_themes {
+        compare_themes(&assets)?;
+        process::exit(0);
     }
 
-    let assets = HighlightingAssets::new();
     let paint_config = parse_args(&assets, &opt);
 
     match delta(
@@ -166,4 +175,24 @@ fn parse_args<'a>(assets: &'a HighlightingAssets, opt: &'a Opt) -> paint::Config
         &opt.minus_color,
         width,
     )
+}
+
+fn compare_themes(assets: &HighlightingAssets) -> std::io::Result<()> {
+    let mut opt = Opt::from_args();
+    let mut input = String::new();
+    io::stdin().read_to_string(&mut input)?;
+
+    let stdout = io::stdout();
+    let mut stdout = stdout.lock();
+    let mut paint_config: paint::Config;
+    let hline = "-".repeat(100);
+
+    for (theme_name, _) in assets.theme_set.themes.iter() {
+        writeln!(stdout, "{}\n{}\n{}\n", hline, theme_name, hline)?;
+        opt.theme = Some(theme_name.to_string());
+        paint_config = parse_args(&assets, &opt);
+        delta(input.split("\n").map(String::from), &paint_config, &assets)?;
+    }
+
+    Ok(())
 }
