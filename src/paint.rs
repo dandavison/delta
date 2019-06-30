@@ -6,11 +6,11 @@ use syntect::easy::HighlightLines;
 use syntect::highlighting::{Color, Style, Theme, ThemeSet};
 use syntect::parsing::{SyntaxReference, SyntaxSet};
 
-pub const DARK_THEMES: [&str; 4] = [
-    "Solarized (dark)",
-    "base16-eighties.dark",
-    "base16-mocha.dark",
-    "base16-ocean.dark",
+pub const LIGHT_THEMES: [&str; 4] = [
+    "GitHub",
+    "Monokai Extended Light",
+    "OneHalfLight",
+    "ansi-light",
 ];
 
 const LIGHT_THEME_PLUS_COLOR: Color = Color {
@@ -53,7 +53,7 @@ pub fn get_config<'a>(
     syntax_set: &'a SyntaxSet,
     theme: &Option<String>,
     theme_set: &'a ThemeSet,
-    dark: bool,
+    light: bool,
     plus_color_str: &Option<String>,
     minus_color_str: &Option<String>,
     width: Option<usize>,
@@ -68,9 +68,9 @@ pub fn get_config<'a>(
             theme
         }
         None => {
-            match dark {
-                true => "base16-mocha.dark",
-                false => "InspiredGitHub",
+            match light {
+                true => "GitHub",
+                false => "base16",
             }
         }
     };
@@ -81,19 +81,19 @@ pub fn get_config<'a>(
         |s| Color::from_str(s).ok(),
     );
 
-    let is_dark_theme = DARK_THEMES.contains(&theme_name);
+    let is_light_theme = LIGHT_THEMES.contains(&theme_name);
 
     Config {
         theme: &theme_set.themes[theme_name],
-        plus_color: plus_color.unwrap_or_else(|| if is_dark_theme {
-            DARK_THEME_PLUS_COLOR
-        } else {
+        plus_color: plus_color.unwrap_or_else(|| if is_light_theme {
             LIGHT_THEME_PLUS_COLOR
-        }),
-        minus_color: minus_color.unwrap_or_else(|| if is_dark_theme {
-            DARK_THEME_MINUS_COLOR
         } else {
+            DARK_THEME_PLUS_COLOR
+        }),
+        minus_color: minus_color.unwrap_or_else(|| if is_light_theme {
             LIGHT_THEME_MINUS_COLOR
+        } else {
+            DARK_THEME_MINUS_COLOR
         }),
         width: width,
         syntax_set: &syntax_set,

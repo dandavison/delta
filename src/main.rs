@@ -8,8 +8,7 @@ use std::process;
 use assets::{HighlightingAssets, list_languages, list_themes};
 use console::strip_ansi_codes;
 use structopt::StructOpt;
-use syntect::highlighting::ThemeSet;
-use syntect::parsing::{SyntaxReference, SyntaxSet};
+use syntect::parsing::SyntaxReference;
 
 #[derive(StructOpt, Debug)]
 #[structopt(name = "delta",
@@ -80,8 +79,7 @@ fn main() -> std::io::Result<()> {
     }
 
     let assets = HighlightingAssets::new();
-    let theme_set = ThemeSet::load_defaults();
-    let paint_config = parse_args(&assets.syntax_set, &theme_set, &opt);
+    let paint_config = parse_args(&assets, &opt);
 
     match delta(
         io::stdin().lock().lines().map(|l| l.unwrap()),
@@ -143,11 +141,7 @@ fn delta(
     Ok(())
 }
 
-fn parse_args<'a>(
-    syntax_set: &'a SyntaxSet,
-    theme_set: &'a ThemeSet,
-    opt: &'a Opt,
-) -> paint::Config<'a> {
+fn parse_args<'a>(assets: &'a HighlightingAssets, opt: &'a Opt) -> paint::Config<'a> {
 
     if opt.light && opt.dark {
         eprintln!("--light and --dark cannot be used together.");
@@ -164,10 +158,10 @@ fn parse_args<'a>(
     };
 
     paint::get_config(
-        syntax_set,
+        &assets.syntax_set,
         &opt.theme,
-        theme_set,
-        opt.dark,
+        &assets.theme_set,
+        opt.light,
         &opt.plus_color,
         &opt.minus_color,
         width,
