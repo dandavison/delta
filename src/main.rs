@@ -15,13 +15,14 @@ use syntect::parsing::SyntaxReference;
             about = "A syntax-highlighter for git. \
                      Use 'delta | less -R' as core.pager in .gitconfig")]
 struct Opt {
-    /// Use diff highlighting colors appropriate for a light terminal
-    /// background. This is the default.
+    /// Use colors appropriate for a light terminal background. For
+    /// more control, see --theme, --plus-color, and --minus-color.
     #[structopt(long = "light")]
     light: bool,
 
     /// Use diff highlighting colors appropriate for a dark terminal
-    /// background.
+    /// background.  For more control, see --theme, --plus-color, and
+    /// --minus-color.
     #[structopt(long = "dark")]
     dark: bool,
 
@@ -159,6 +160,31 @@ fn process_command_line_arguments<'a>(
         eprintln!("--light and --dark cannot be used together.");
         process::exit(1);
     }
+    match &opt.theme {
+        Some(theme) => {
+            if !assets.theme_set.themes.contains_key(theme.as_str()) {
+                eprintln!("Invalid theme: '{}'", theme);
+                process::exit(1);
+            }
+            let is_light_theme = paint::LIGHT_THEMES.contains(&theme.as_str());
+            if is_light_theme && opt.dark {
+                eprintln!(
+                    "{} is a light theme, but you supplied --dark. \
+                     If you use --theme, you do not need to supply --light or --dark.",
+                    theme
+                );
+                process::exit(1);
+            } else if !is_light_theme && opt.light {
+                eprintln!(
+                    "{} is a dark theme, but you supplied --light. \
+                     If you use --theme, you do not need to supply --light or --dark.",
+                    theme
+                );
+                process::exit(1);
+            }
+        }
+        None => (),
+    };
 
     let width = match opt.width.as_ref().map(String::as_str) {
         Some(width) => {

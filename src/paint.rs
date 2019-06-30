@@ -1,5 +1,4 @@
 use std::fmt::Write;
-use std::process;
 use std::str::FromStr;
 
 use syntect::easy::HighlightLines;
@@ -53,22 +52,16 @@ pub fn get_config<'a>(
     syntax_set: &'a SyntaxSet,
     theme: &Option<String>,
     theme_set: &'a ThemeSet,
-    light: bool,
+    user_requests_theme_for_light_terminal_background: bool,
     plus_color_str: &Option<String>,
     minus_color_str: &Option<String>,
     width: Option<usize>,
 ) -> Config<'a> {
 
     let theme_name = match theme {
-        Some(ref theme) => {
-            if !theme_set.themes.contains_key(theme.as_str()) {
-                eprintln!("Invalid theme: '{}'", theme);
-                process::exit(1);
-            }
-            theme
-        }
+        Some(ref theme) => theme,
         None => {
-            match light {
+            match user_requests_theme_for_light_terminal_background {
                 true => "GitHub",
                 false => "base16",
             }
