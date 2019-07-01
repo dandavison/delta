@@ -74,13 +74,13 @@ OPTIONS:
     ```
     Alternatively, run this command:
     ```
-    git config --global core.pager 'delta'
+    git config --global core.pager delta
     ```
 
     You can pass arguments to delta in your `.gitconfig`. An example is
     ```
     [core]
-        pager = delta --width=100 --plus-color="#012800" --minus-color="#340001" --theme="base16-ocean.dark"
+        pager = delta --plus-color="#012800" --minus-color="#340001" --theme="base16-ocean.dark"
     ```
     Please include the `=` characters; I'm not sure why yet, but they're necessary when writing a delta command line in `.gitconfig`!
 
