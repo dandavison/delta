@@ -114,52 +114,6 @@ fn main() -> std::io::Result<()> {
     Ok(())
 }
 
-fn delta(
-    lines: impl Iterator<Item = String>,
-    paint_config: &paint::Config,
-    assets: &HighlightingAssets,
-) -> std::io::Result<()> {
-
-    let mut syntax: Option<&SyntaxReference> = None;
-    let mut output = String::new();
-    let mut output_type =
-        OutputType::from_mode(PagingMode::QuitIfOneScreen, Some(paint_config.pager)).unwrap();
-    let writer = output_type.handle().unwrap();
-    let mut state = State::Unknown;
-    let mut did_emit_line: bool;
-
-    for raw_line in lines {
-        let line = strip_ansi_codes(&raw_line).to_string();
-        did_emit_line = false;
-        if line.starts_with("diff --") {
-            state = State::DiffMeta;
-            syntax = match parse_diff::get_file_extension_from_diff_line(&line) {
-                // TODO: cache syntaxes?
-                Some(extension) => assets.syntax_set.find_syntax_by_extension(extension),
-                None => None,
-            };
-        } else if line.starts_with("commit") {
-            state = State::Commit;
-        } else if line.starts_with("@@") {
-            state = State::DiffHunk;
-        } else if state == State::DiffHunk {
-            match syntax {
-                Some(syntax) => {
-                    paint::paint_line(line, syntax, &paint_config, &mut output);
-                    writeln!(writer, "{}", output)?;
-                    output.truncate(0);
-                    did_emit_line = true;
-                }
-                None => (),
-            }
-        }
-        if !did_emit_line {
-            writeln!(writer, "{}", raw_line)?;
-        }
-    }
-    Ok(())
-}
-
 fn process_command_line_arguments<'a>(
     assets: &'a HighlightingAssets,
     opt: &'a Opt,
@@ -204,6 +158,52 @@ fn process_command_line_arguments<'a>(
         &opt.minus_color,
         opt.width,
     )
+}
+
+fn delta(
+    lines: impl Iterator<Item = String>,
+    paint_config: &paint::Config,
+    assets: &HighlightingAssets,
+) -> std::io::Result<()> {
+
+    let mut syntax: Option<&SyntaxReference> = None;
+    let mut output = String::new();
+    let mut output_type =
+        OutputType::from_mode(PagingMode::QuitIfOneScreen, Some(paint_config.pager)).unwrap();
+    let writer = output_type.handle().unwrap();
+    let mut state = State::Unknown;
+    let mut did_emit_line: bool;
+
+    for raw_line in lines {
+        let line = strip_ansi_codes(&raw_line).to_string();
+        did_emit_line = false;
+        if line.starts_with("diff --") {
+            state = State::DiffMeta;
+            syntax = match parse_diff::get_file_extension_from_diff_line(&line) {
+                // TODO: cache syntaxes?
+                Some(extension) => assets.syntax_set.find_syntax_by_extension(extension),
+                None => None,
+            };
+        } else if line.starts_with("commit") {
+            state = State::Commit;
+        } else if line.starts_with("@@") {
+            state = State::DiffHunk;
+        } else if state == State::DiffHunk {
+            match syntax {
+                Some(syntax) => {
+                    paint::paint_line(line, syntax, &paint_config, &mut output);
+                    writeln!(writer, "{}", output)?;
+                    output.truncate(0);
+                    did_emit_line = true;
+                }
+                None => (),
+            }
+        }
+        if !did_emit_line {
+            writeln!(writer, "{}", raw_line)?;
+        }
+    }
+    Ok(())
 }
 
 fn compare_themes(assets: &HighlightingAssets) -> std::io::Result<()> {
