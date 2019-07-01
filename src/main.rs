@@ -173,7 +173,7 @@ fn delta(
 ) -> std::io::Result<()> {
 
     let mut syntax: Option<&SyntaxReference> = None;
-    let mut output = String::new();
+    let mut output_buffer = String::new();
     let mut output_type =
         OutputType::from_mode(PagingMode::QuitIfOneScreen, Some(paint_config.pager)).unwrap();
     let writer = output_type.handle().unwrap();
@@ -197,9 +197,9 @@ fn delta(
         } else if state == State::DiffHunk {
             match syntax {
                 Some(syntax) => {
-                    paint::paint_line(line, syntax, &paint_config, &mut output);
-                    writeln!(writer, "{}", output)?;
-                    output.truncate(0);
+                    paint::paint_line(line, syntax, &paint_config, &mut output_buffer);
+                    writeln!(writer, "{}", output_buffer)?;
+                    output_buffer.truncate(0);
                     did_emit_line = true;
                 }
                 None => (),
