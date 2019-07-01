@@ -3,9 +3,21 @@
 
   _(This project is at an early stage, but please feel free to open issues.)_
 
-<img width=500px style="border: 1px solid black"
-    src="https://user-images.githubusercontent.com/52205/60282969-230d2c80-98d6-11e9-8656-09073c8a0985.png"
-    alt="image" />
+<table>
+  <tr>
+    <td>
+      <img width=500px style="border: 1px solid black"
+           src="https://user-images.githubusercontent.com/52205/60282969-230d2c80-98d6-11e9-8656-09073c8a0985.png"
+           alt="image" />
+    </td>
+    <td>
+      <img width=518px style="border: 1px solid black"
+           src="https://user-images.githubusercontent.com/52205/60410484-8cbb5e00-9b96-11e9-9d56-bb84ac0bce82.png"
+           alt="image" />
+    </td>
+  </tr>
+</table>
+
 
 ## Usage
 ```
