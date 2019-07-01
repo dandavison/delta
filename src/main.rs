@@ -50,6 +50,11 @@ struct Opt {
     /// The syntax highlighting theme to use.
     theme: Option<String>,
 
+    #[structopt(long = "highlight-removed")]
+    /// Apply syntax highlighting to removed lines. The default is to
+    /// apply syntax highlighting to unchanged and new lines only.
+    highlight_removed: bool,
+
     /// The width (in characters) of the diff highlighting. By
     /// default, the highlighting extends to the last character on
     /// each line. By default, the width is equal to the current
@@ -156,6 +161,7 @@ fn process_command_line_arguments<'a>(
         opt.light,
         &opt.plus_color,
         &opt.minus_color,
+        opt.highlight_removed,
         opt.width,
     )
 }

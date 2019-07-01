@@ -51,6 +51,7 @@ pub struct Config<'a> {
     minus_color: Color,
     pub syntax_set: &'a SyntaxSet,
     width: Option<usize>,
+    highlight_removed: bool,
     pub pager: &'a str,
 }
 
@@ -61,6 +62,7 @@ pub fn get_config<'a>(
     user_requests_theme_for_light_terminal_background: bool,
     plus_color_str: &Option<String>,
     minus_color_str: &Option<String>,
+    highlight_removed: bool,
     width: Option<usize>,
 ) -> Config<'a> {
 
@@ -95,6 +97,7 @@ pub fn get_config<'a>(
             DARK_THEME_MINUS_COLOR
         }),
         width: width.or_else(|| Some((Term::stdout().size().1 - 1) as usize)),
+        highlight_removed: highlight_removed,
         syntax_set: &syntax_set,
         pager: "less",
     }
@@ -109,6 +112,7 @@ pub fn paint_line(mut line: String, syntax: &SyntaxReference, config: &Config, b
         Some('-') => Some(config.minus_color),
         _ => None,
     };
+    let apply_syntax_highlighting = first_char != Some('-') || config.highlight_removed;
     if first_char == Some('+') || first_char == Some('-') {
         line = line[1..].to_string();
         buf.push_str(" ");
@@ -122,17 +126,33 @@ pub fn paint_line(mut line: String, syntax: &SyntaxReference, config: &Config, b
         _ => (),
     }
     let ranges: Vec<(Style, &str)> = highlighter.highlight(&line, &config.syntax_set);
-    paint_ranges(&ranges[..], background_color, buf);
+    paint_ranges(
+        &ranges[..],
+        background_color,
+        apply_syntax_highlighting,
+        buf,
+    );
 }
 
 /// Based on as_24_bit_terminal_escaped from syntect
 fn paint_ranges(
     foreground_style_ranges: &[(Style, &str)],
     background_color: Option<Color>,
+    apply_syntax_highlighting: bool,
     buf: &mut String,
 ) -> () {
     for &(ref style, text) in foreground_style_ranges.iter() {
-        paint(text, Some(style.foreground), background_color, false, buf);
+        paint(
+            text,
+            if apply_syntax_highlighting {
+                Some(style.foreground)
+            } else {
+                None
+            },
+            background_color,
+            false,
+            buf,
+        );
     }
     buf.push_str("\x1b[0m");
 }
