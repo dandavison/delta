@@ -14,6 +14,14 @@
            alt="image" />
     </td>
   </tr>
+  <tr>
+    <td>
+      delta --dark (default)
+    </td>
+    <td>
+      delta --light --width=variable --highlight-removed
+    </td>
+  </tr>
 </table>
 
 
