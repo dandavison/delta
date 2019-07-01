@@ -1,7 +1,6 @@
 use std::fmt::Write;
 use std::str::FromStr;
 
-use console::Term;
 use syntect::easy::HighlightLines;
 use syntect::highlighting::{Color, Style, Theme, ThemeSet};
 use syntect::parsing::{SyntaxReference, SyntaxSet};
@@ -96,7 +95,7 @@ pub fn get_config<'a>(
         } else {
             DARK_THEME_MINUS_COLOR
         }),
-        width: width.or_else(|| Some((Term::stdout().size().1 - 1) as usize)),
+        width: width,
         highlight_removed: highlight_removed,
         syntax_set: &syntax_set,
         pager: "less",

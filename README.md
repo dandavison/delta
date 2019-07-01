@@ -45,9 +45,9 @@ OPTIONS:
         --minus-color <minus_color>    The background color (RGB hex) to use for removed lines.
         --plus-color <plus_color>      The background color (RGB hex) to use for added lines.
         --theme <theme>                The syntax highlighting theme to use.
-    -w, --width <width>                The width (in characters) of the diff highlighting. By default, the highlighting
-                                       extends to the last character on each line. By default, the width is equal to the
-                                       current terminal width.
+    -w, --width <width>                The width (in characters) of the background color highlighting. By default, the
+                                       width is the current terminal width. Use --width=variable to apply background
+                                       colors to the end of each line, without right padding to equal width.
 ```
 
 ## Installation
