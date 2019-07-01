@@ -1,7 +1,7 @@
 ## Δ
   A syntax-highlighter for git.
 
-  _(This project is at a very early stage, but please feel free to open issues.)_
+  _(This project is at an early stage, but please feel free to open issues.)_
 
 <img width=500px style="border: 1px solid black"
     src="https://user-images.githubusercontent.com/52205/60282969-230d2c80-98d6-11e9-8656-09073c8a0985.png"
@@ -17,23 +17,26 @@ USAGE:
     delta [FLAGS] [OPTIONS]
 
 FLAGS:
-        --compare-themes    Compare available syntax highlighting themes. To use this option, supply git diff output to
-                            delta on standard input. For example: `git show --color=always | delta --compare-themes`.
-        --dark              Use colors appropriate for a dark terminal background.  For more control, see --theme,
-                            --plus-color, and --minus-color.
-    -h, --help              Prints help information
-        --light             Use colors appropriate for a light terminal background. For more control, see --theme,
-                            --plus-color, and --minus-color.
-        --list-languages    List supported languages and associated file extensions.
-        --list-themes       List available syntax highlighting themes.
-    -V, --version           Prints version information
+        --compare-themes       Compare available syntax highlighting themes. To use this option, supply git diff output
+                               to delta on standard input. For example: `git show --color=always | delta --compare-
+                               themes`.
+        --dark                 Use colors appropriate for a dark terminal background.  For more control, see --theme,
+                               --plus-color, and --minus-color.
+    -h, --help                 Prints help information
+        --highlight-removed    Apply syntax highlighting to removed lines. The default is to apply syntax highlighting
+                               to unchanged and new lines only.
+        --light                Use colors appropriate for a light terminal background. For more control, see --theme,
+                               --plus-color, and --minus-color.
+        --list-languages       List supported languages and associated file extensions.
+        --list-themes          List available syntax highlighting themes.
+    -V, --version              Prints version information
 
 OPTIONS:
         --minus-color <minus_color>    The background color (RGB hex) to use for removed lines.
         --plus-color <plus_color>      The background color (RGB hex) to use for added lines.
         --theme <theme>                The syntax highlighting theme to use.
     -w, --width <width>                The width (in characters) of the diff highlighting. By default, the highlighting
-                                       extends to the last character on each line. Use --width=max to set width equal to
+                                       extends to the last character on each line. By default, the width is equal to the
                                        current terminal width.
 ```
 
