@@ -10,7 +10,7 @@ use std::io::{self, BufRead, ErrorKind, Read, Write};
 use std::process;
 
 use assets::{HighlightingAssets, list_languages};
-use console::{Term, strip_ansi_codes};
+use console::strip_ansi_codes;
 use output::{OutputType, PagingMode};
 use structopt::StructOpt;
 use syntect::parsing::SyntaxReference;
@@ -52,10 +52,10 @@ struct Opt {
 
     /// The width (in characters) of the diff highlighting. By
     /// default, the highlighting extends to the last character on
-    /// each line. Use --width=max to set width equal to current
+    /// each line. By default, the width is equal to the current
     /// terminal width.
     #[structopt(short = "w", long = "width")]
-    width: Option<String>,
+    width: Option<usize>,
 
     /// List supported languages and associated file extensions.
     #[structopt(long = "list-languages")]
@@ -195,16 +195,6 @@ fn process_command_line_arguments<'a>(
         None => (),
     };
 
-    let width = match opt.width.as_ref().map(String::as_str) {
-        Some("max") => Some((Term::stdout().size().1 - 1) as usize),
-        Some(width) => {
-            Some(width.parse::<usize>().unwrap_or_else(
-                |_| panic!("Invalid width: {}", width),
-            ))
-        }
-        None => None,
-    };
-
     paint::get_config(
         &assets.syntax_set,
         &opt.theme,
@@ -212,7 +202,7 @@ fn process_command_line_arguments<'a>(
         opt.light,
         &opt.plus_color,
         &opt.minus_color,
-        width,
+        opt.width,
     )
 }
 
