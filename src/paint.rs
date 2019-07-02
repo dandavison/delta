@@ -64,36 +64,37 @@ pub fn get_config<'a>(
     highlight_removed: bool,
     width: Option<usize>,
 ) -> Config<'a> {
-
     let theme_name = match theme {
         Some(ref theme) => theme,
-        None => {
-            match user_requests_theme_for_light_terminal_background {
-                true => "GitHub",
-                false => "Monokai Extended",
-            }
-        }
+        None => match user_requests_theme_for_light_terminal_background {
+            true => "GitHub",
+            false => "Monokai Extended",
+        },
     };
-    let minus_color = minus_color_str.as_ref().and_then(
-        |s| Color::from_str(s).ok(),
-    );
-    let plus_color = plus_color_str.as_ref().and_then(
-        |s| Color::from_str(s).ok(),
-    );
+    let minus_color = minus_color_str
+        .as_ref()
+        .and_then(|s| Color::from_str(s).ok());
+    let plus_color = plus_color_str
+        .as_ref()
+        .and_then(|s| Color::from_str(s).ok());
 
     let is_light_theme = LIGHT_THEMES.contains(&theme_name);
 
     Config {
         theme: &theme_set.themes[theme_name],
-        plus_color: plus_color.unwrap_or_else(|| if is_light_theme {
-            LIGHT_THEME_PLUS_COLOR
-        } else {
-            DARK_THEME_PLUS_COLOR
+        plus_color: plus_color.unwrap_or_else(|| {
+            if is_light_theme {
+                LIGHT_THEME_PLUS_COLOR
+            } else {
+                DARK_THEME_PLUS_COLOR
+            }
         }),
-        minus_color: minus_color.unwrap_or_else(|| if is_light_theme {
-            LIGHT_THEME_MINUS_COLOR
-        } else {
-            DARK_THEME_MINUS_COLOR
+        minus_color: minus_color.unwrap_or_else(|| {
+            if is_light_theme {
+                LIGHT_THEME_MINUS_COLOR
+            } else {
+                DARK_THEME_MINUS_COLOR
+            }
         }),
         width: width,
         highlight_removed: highlight_removed,
@@ -169,10 +170,9 @@ fn paint(
             write!(
                 buf,
                 "\x1b[48;2;{};{};{}m",
-                background_color.r,
-                background_color.g,
-                background_color.b
-            ).unwrap();
+                background_color.r, background_color.g, background_color.b
+            )
+            .unwrap();
             if reset_color {
                 buf.push_str("\x1b[0m");
             }
@@ -184,11 +184,9 @@ fn paint(
             write!(
                 buf,
                 "\x1b[38;2;{};{};{}m{}",
-                foreground_color.r,
-                foreground_color.g,
-                foreground_color.b,
-                text
-            ).unwrap();
+                foreground_color.r, foreground_color.g, foreground_color.b, text
+            )
+            .unwrap();
             if reset_color {
                 buf.push_str("\x1b[0m");
             }

@@ -9,12 +9,12 @@ mod parse_diff;
 use std::io::{self, BufRead, ErrorKind, Read, Write};
 use std::process;
 
-use assets::{HighlightingAssets, list_languages};
-use console::{Term, strip_ansi_codes};
-use output::{OutputType, PagingMode};
+use console::{strip_ansi_codes, Term};
 use structopt::StructOpt;
 use syntect::parsing::SyntaxReference;
 
+use crate::assets::{list_languages, HighlightingAssets};
+use crate::output::{OutputType, PagingMode};
 mod errors {
     error_chain! {
         foreign_links {
@@ -108,12 +108,10 @@ fn main() -> std::io::Result<()> {
         &paint_config,
         &assets,
     ) {
-        Err(error) => {
-            match error.kind() {
-                ErrorKind::BrokenPipe => process::exit(0),
-                _ => eprintln!("{}", error),
-            }
-        }
+        Err(error) => match error.kind() {
+            ErrorKind::BrokenPipe => process::exit(0),
+            _ => eprintln!("{}", error),
+        },
         _ => (),
     };
     Ok(())
@@ -123,7 +121,6 @@ fn process_command_line_arguments<'a>(
     assets: &'a HighlightingAssets,
     opt: &'a Opt,
 ) -> paint::Config<'a> {
-
     if opt.light && opt.dark {
         eprintln!("--light and --dark cannot be used together.");
         process::exit(1);
@@ -156,11 +153,11 @@ fn process_command_line_arguments<'a>(
 
     let width = match opt.width.as_ref().map(String::as_str) {
         Some("variable") => None,
-        Some(width) => {
-            Some(width.parse::<usize>().unwrap_or_else(
-                |_| panic!("Invalid width: {}", width),
-            ))
-        }
+        Some(width) => Some(
+            width
+                .parse::<usize>()
+                .unwrap_or_else(|_| panic!("Invalid width: {}", width)),
+        ),
         None => Some((Term::stdout().size().1 - 1) as usize),
     };
 
@@ -181,7 +178,6 @@ fn delta(
     paint_config: &paint::Config,
     assets: &HighlightingAssets,
 ) -> std::io::Result<()> {
-
     let mut syntax: Option<&SyntaxReference> = None;
     let mut output_buffer = String::new();
     let mut output_type =
@@ -233,7 +229,6 @@ fn compare_themes(assets: &HighlightingAssets) -> std::io::Result<()> {
     let hline = "-".repeat(100);
 
     for (theme, _) in assets.theme_set.themes.iter() {
-
         if opt.light && !paint::is_light_theme(theme) || opt.dark && paint::is_light_theme(theme) {
             continue;
         }
@@ -246,7 +241,6 @@ fn compare_themes(assets: &HighlightingAssets) -> std::io::Result<()> {
 
     Ok(())
 }
-
 
 pub fn list_themes() -> std::io::Result<()> {
     let assets = HighlightingAssets::new();
