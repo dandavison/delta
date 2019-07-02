@@ -5,16 +5,17 @@ mod assets;
 mod output;
 mod paint;
 mod parse_diff;
+mod state_machine;
 
 use std::io::{self, BufRead, ErrorKind, Read, Write};
 use std::process;
 
-use console::{strip_ansi_codes, Term};
+use console::Term;
 use structopt::StructOpt;
-use syntect::parsing::SyntaxReference;
 
 use crate::assets::{list_languages, HighlightingAssets};
-use crate::output::{OutputType, PagingMode};
+use crate::state_machine::delta;
+
 mod errors {
     error_chain! {
         foreign_links {
@@ -75,14 +76,6 @@ struct Opt {
     /// For example: `git show --color=always | delta --compare-themes`.
     #[structopt(long = "compare-themes")]
     compare_themes: bool,
-}
-
-#[derive(PartialEq)]
-enum State {
-    Commit,
-    DiffMeta,
-    DiffHunk,
-    Unknown,
 }
 
 fn main() -> std::io::Result<()> {
@@ -171,51 +164,6 @@ fn process_command_line_arguments<'a>(
         opt.highlight_removed,
         width,
     )
-}
-
-fn delta(
-    lines: impl Iterator<Item = String>,
-    paint_config: &paint::Config,
-    assets: &HighlightingAssets,
-) -> std::io::Result<()> {
-    let mut syntax: Option<&SyntaxReference> = None;
-    let mut output_buffer = String::new();
-    let mut output_type =
-        OutputType::from_mode(PagingMode::QuitIfOneScreen, Some(paint_config.pager)).unwrap();
-    let writer = output_type.handle().unwrap();
-    let mut state = State::Unknown;
-    let mut did_emit_line: bool;
-
-    for raw_line in lines {
-        let line = strip_ansi_codes(&raw_line).to_string();
-        did_emit_line = false;
-        if line.starts_with("diff --") {
-            state = State::DiffMeta;
-            syntax = match parse_diff::get_file_extension_from_diff_line(&line) {
-                // TODO: cache syntaxes?
-                Some(extension) => assets.syntax_set.find_syntax_by_extension(extension),
-                None => None,
-            };
-        } else if line.starts_with("commit") {
-            state = State::Commit;
-        } else if line.starts_with("@@") {
-            state = State::DiffHunk;
-        } else if state == State::DiffHunk {
-            match syntax {
-                Some(syntax) => {
-                    paint::paint_line(line, syntax, &paint_config, &mut output_buffer);
-                    writeln!(writer, "{}", output_buffer)?;
-                    output_buffer.truncate(0);
-                    did_emit_line = true;
-                }
-                None => (),
-            }
-        }
-        if !did_emit_line {
-            writeln!(writer, "{}", raw_line)?;
-        }
-    }
-    Ok(())
 }
 
 fn compare_themes(assets: &HighlightingAssets) -> std::io::Result<()> {

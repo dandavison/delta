@@ -5,6 +5,8 @@ use syntect::easy::HighlightLines;
 use syntect::highlighting::{Color, Style, Theme, ThemeSet};
 use syntect::parsing::{SyntaxReference, SyntaxSet};
 
+use crate::state_machine::State;
+
 pub const LIGHT_THEMES: [&str; 4] = [
     "GitHub",
     "Monokai Extended Light",
@@ -104,18 +106,36 @@ pub fn get_config<'a>(
 }
 
 /// Write line to buffer with color escape codes applied.
-pub fn paint_line(mut line: String, syntax: &SyntaxReference, config: &Config, buf: &mut String) {
+pub fn paint_line(
+    mut line: String,
+    state: &State,
+    syntax: &SyntaxReference,
+    config: &Config,
+    buf: &mut String,
+) {
     let mut highlighter = HighlightLines::new(syntax, config.theme);
-    let first_char = line.chars().next();
-    let background_color = match first_char {
-        Some('+') => Some(config.plus_color),
-        Some('-') => Some(config.minus_color),
-        _ => None,
-    };
-    let apply_syntax_highlighting = first_char != Some('-') || config.highlight_removed;
-    if first_char == Some('+') || first_char == Some('-') {
-        line = line[1..].to_string();
-        buf.push_str(" ");
+
+    let background_color: Option<Color>;
+    let apply_syntax_highlighting: bool;
+
+    match state {
+        State::HunkZero => {
+            background_color = None;
+            apply_syntax_highlighting = true;
+        }
+        State::HunkMinus => {
+            background_color = Some(config.minus_color);
+            apply_syntax_highlighting = config.highlight_removed;
+            line = line[1..].to_string();
+            buf.push_str(" ");
+        }
+        State::HunkPlus => {
+            background_color = Some(config.plus_color);
+            apply_syntax_highlighting = true;
+            line = line[1..].to_string();
+            buf.push_str(" ");
+        }
+        _ => panic!("Invalid state: {:?}", state),
     }
     match config.width {
         Some(width) => {
