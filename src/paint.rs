@@ -170,11 +170,9 @@ fn paint_ranges(
                 None
             },
             background_color,
-            false,
             buf,
         );
     }
-    buf.push_str("\x1b[0m");
 }
 
 /// Write text to buffer with color escape codes applied.
@@ -182,7 +180,6 @@ fn paint(
     text: &str,
     foreground_color: Option<Color>,
     background_color: Option<Color>,
-    reset_color: bool,
     buf: &mut String,
 ) -> () {
     match background_color {
@@ -193,9 +190,6 @@ fn paint(
                 background_color.r, background_color.g, background_color.b
             )
             .unwrap();
-            if reset_color {
-                buf.push_str("\x1b[0m");
-            }
         }
         None => (),
     }
@@ -207,9 +201,6 @@ fn paint(
                 foreground_color.r, foreground_color.g, foreground_color.b, text
             )
             .unwrap();
-            if reset_color {
-                buf.push_str("\x1b[0m");
-            }
         }
         None => {
             write!(buf, "{}", text).unwrap();
