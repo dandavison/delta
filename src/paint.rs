@@ -145,13 +145,19 @@ pub fn paint_line(
         }
         _ => (),
     }
+    match background_color {
+        Some(background_color) => {
+            write!(
+                buf,
+                "\x1b[48;2;{};{};{}m",
+                background_color.r, background_color.g, background_color.b
+            )
+            .unwrap();
+        }
+        None => (),
+    }
     let ranges: Vec<(Style, &str)> = highlighter.highlight(&line, &config.syntax_set);
-    paint_ranges(
-        &ranges[..],
-        background_color,
-        apply_syntax_highlighting,
-        buf,
-    );
+    paint_ranges(&ranges[..], None, apply_syntax_highlighting, buf);
 }
 
 /// Based on as_24_bit_terminal_escaped from syntect
