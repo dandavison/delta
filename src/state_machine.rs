@@ -5,7 +5,7 @@ use syntect::parsing::SyntaxReference;
 
 use crate::assets::HighlightingAssets;
 use crate::output::{OutputType, PagingMode};
-use crate::paint::{paint_line, Config};
+use crate::paint::{paint_line, paint_text, Config};
 use crate::parse_diff::get_file_extension_from_diff_line;
 
 #[derive(Debug, PartialEq)]
@@ -36,6 +36,43 @@ struct LineBuffer {
     plus_lines: Vec<String>,
 }
 
+impl LineBuffer {
+    fn is_empty(&self) -> bool {
+        return self.minus_lines.len() == 0 && self.plus_lines.len() == 0;
+    }
+
+    fn flush(
+        &mut self,
+        syntax: &SyntaxReference,
+        config: &Config,
+        output_buffer: &mut String,
+        writer: &mut Write,
+    ) -> std::io::Result<()> {
+        paint_text(
+            self.minus_lines.join("\n"),
+            syntax,
+            Some(config.minus_color),
+            config,
+            config.highlight_removed,
+            output_buffer,
+        );
+        writeln!(writer, "{}", output_buffer)?;
+        output_buffer.truncate(0);
+
+        paint_text(
+            self.plus_lines.join("\n"),
+            syntax,
+            Some(config.plus_color),
+            config,
+            true,
+            output_buffer,
+        );
+        writeln!(writer, "{}", output_buffer)?;
+        output_buffer.truncate(0);
+        Ok(())
+    }
+}
+
 pub fn delta(
     lines: impl Iterator<Item = String>,
     paint_config: &Config,
@@ -56,15 +93,11 @@ pub fn delta(
     for raw_line in lines {
         line = strip_ansi_codes(&raw_line).to_string();
         if line.starts_with("diff --") {
-            if (state == State::HunkMinus || state == State::HunkPlus) && syntax.is_some() {
-                flush(
-                    &mut line_buffer.minus_lines,
-                    &mut line_buffer.plus_lines,
-                    syntax.unwrap(),
-                    &paint_config,
-                    &mut output_buffer,
-                    writer,
-                )?;
+            if (state == State::HunkMinus || state == State::HunkPlus)
+                && syntax.is_some()
+                && !line_buffer.is_empty()
+            {
+                line_buffer.flush(syntax.unwrap(), &paint_config, &mut output_buffer, writer)?;
                 line_buffer.minus_lines.clear();
                 line_buffer.plus_lines.clear();
             };
@@ -75,15 +108,11 @@ pub fn delta(
                 None => None,
             };
         } else if line.starts_with("commit") {
-            if (state == State::HunkMinus || state == State::HunkPlus) && syntax.is_some() {
-                flush(
-                    &mut line_buffer.minus_lines,
-                    &mut line_buffer.plus_lines,
-                    syntax.unwrap(),
-                    &paint_config,
-                    &mut output_buffer,
-                    writer,
-                )?;
+            if (state == State::HunkMinus || state == State::HunkPlus)
+                && syntax.is_some()
+                && !line_buffer.is_empty()
+            {
+                line_buffer.flush(syntax.unwrap(), &paint_config, &mut output_buffer, writer)?;
                 line_buffer.minus_lines.clear();
                 line_buffer.plus_lines.clear();
             };
@@ -98,9 +127,7 @@ pub fn delta(
         {
             match line.chars().next() {
                 None | Some(' ') => {
-                    flush(
-                        &mut line_buffer.minus_lines,
-                        &mut line_buffer.plus_lines,
+                    line_buffer.flush(
                         syntax.unwrap(),
                         &paint_config,
                         &mut output_buffer,
@@ -120,9 +147,7 @@ pub fn delta(
                 }
                 Some('-') => {
                     if state == State::HunkPlus {
-                        flush(
-                            &mut line_buffer.minus_lines,
-                            &mut line_buffer.plus_lines,
+                        line_buffer.flush(
                             syntax.unwrap(),
                             &paint_config,
                             &mut output_buffer,
@@ -144,15 +169,11 @@ pub fn delta(
         }
         writeln!(writer, "{}", raw_line)?;
     }
-    if (state == State::HunkMinus || state == State::HunkPlus) && syntax.is_some() {
-        flush(
-            &mut line_buffer.minus_lines,
-            &mut line_buffer.plus_lines,
-            syntax.unwrap(),
-            &paint_config,
-            &mut output_buffer,
-            writer,
-        )?;
+    if (state == State::HunkMinus || state == State::HunkPlus)
+        && syntax.is_some()
+        && !line_buffer.is_empty()
+    {
+        line_buffer.flush(syntax.unwrap(), &paint_config, &mut output_buffer, writer)?;
         line_buffer.minus_lines.clear();
         line_buffer.plus_lines.clear();
     };
@@ -172,36 +193,5 @@ fn emit(
     paint_line(line, state, syntax, config, output_buffer);
     writeln!(writer, "{}", output_buffer)?;
     output_buffer.truncate(0);
-    Ok(())
-}
-
-fn flush(
-    minus_lines: &mut Vec<String>,
-    plus_lines: &mut Vec<String>,
-    syntax: &SyntaxReference,
-    config: &Config,
-    output_buffer: &mut String,
-    writer: &mut Write,
-) -> std::io::Result<()> {
-    for line in minus_lines {
-        emit(
-            line.to_string(),
-            &State::HunkMinus,
-            syntax,
-            config,
-            output_buffer,
-            writer,
-        )?;
-    }
-    for line in plus_lines {
-        emit(
-            line.to_string(),
-            &State::HunkPlus,
-            syntax,
-            config,
-            output_buffer,
-            writer,
-        )?;
-    }
     Ok(())
 }

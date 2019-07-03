@@ -5,6 +5,7 @@ use std::str::FromStr;
 use syntect::easy::HighlightLines;
 use syntect::highlighting::{Color, Style, Theme, ThemeSet};
 use syntect::parsing::{SyntaxReference, SyntaxSet};
+use syntect::util::LinesWithEndings;
 
 use crate::state_machine::State;
 
@@ -167,19 +168,21 @@ pub fn paint_text(
 ) {
     let mut highlighter = HighlightLines::new(syntax, config.theme);
 
-    match background_color {
-        Some(background_color) => {
-            write!(
-                buf,
-                "\x1b[48;2;{};{};{}m",
-                background_color.r, background_color.g, background_color.b
-            )
-            .unwrap();
+    for line in LinesWithEndings::from(&text) {
+        match background_color {
+            Some(background_color) => {
+                write!(
+                    buf,
+                    "\x1b[48;2;{};{};{}m",
+                    background_color.r, background_color.g, background_color.b
+                )
+                .unwrap();
+            }
+            None => (),
         }
-        None => (),
+        let ranges: Vec<(Style, &str)> = highlighter.highlight(line, &config.syntax_set);
+        paint_ranges(&ranges[..], None, apply_syntax_highlighting, buf)
     }
-    let ranges: Vec<(Style, &str)> = highlighter.highlight(&text, &config.syntax_set);
-    paint_ranges(&ranges[..], None, apply_syntax_highlighting, buf);
 }
 
 /// Based on as_24_bit_terminal_escaped from syntect
