@@ -114,8 +114,6 @@ pub fn paint_line(
     config: &Config,
     buf: &mut String,
 ) {
-    let mut highlighter = HighlightLines::new(syntax, config.theme);
-
     let background_color: Option<Color>;
     let apply_syntax_highlighting: bool;
 
@@ -146,6 +144,29 @@ pub fn paint_line(
         }
         _ => (),
     }
+    paint_text(
+        line,
+        syntax,
+        background_color,
+        config,
+        apply_syntax_highlighting,
+        buf,
+    );
+}
+
+// TODO: If apply_syntax_highlighting is false, then don't do
+// operations related to syntax highlighting.
+
+pub fn paint_text(
+    text: String,
+    syntax: &SyntaxReference,
+    background_color: Option<Color>,
+    config: &Config,
+    apply_syntax_highlighting: bool,
+    buf: &mut String,
+) {
+    let mut highlighter = HighlightLines::new(syntax, config.theme);
+
     match background_color {
         Some(background_color) => {
             write!(
@@ -157,7 +178,7 @@ pub fn paint_line(
         }
         None => (),
     }
-    let ranges: Vec<(Style, &str)> = highlighter.highlight(&line, &config.syntax_set);
+    let ranges: Vec<(Style, &str)> = highlighter.highlight(&text, &config.syntax_set);
     paint_ranges(&ranges[..], None, apply_syntax_highlighting, buf);
 }
 
