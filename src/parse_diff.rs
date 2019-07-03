@@ -33,5 +33,9 @@ fn get_file_extensions_from_diff_line(line: &str) -> (Option<&str>, Option<&str>
 
 /// Attempt to parse input as a file path and return extension as a &str.
 fn get_extension(s: &str) -> Option<&str> {
-    Path::new(s).extension().and_then(|e| e.to_str())
+    let path = Path::new(s);
+    path.extension()
+        .and_then(|e| e.to_str())
+        // E.g. 'Makefile' is the file name and also the extension
+        .or_else(|| path.file_name().and_then(|s| s.to_str()))
 }
