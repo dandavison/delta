@@ -48,12 +48,12 @@ const DARK_THEME_MINUS_COLOR: Color = Color {
 };
 
 pub struct Config<'a> {
-    theme: &'a Theme,
-    plus_color: Color,
-    minus_color: Color,
+    pub theme: &'a Theme,
+    pub plus_color: Color,
+    pub minus_color: Color,
     pub syntax_set: &'a SyntaxSet,
-    width: Option<usize>,
-    highlight_removed: bool,
+    pub width: Option<usize>,
+    pub highlight_removed: bool,
     pub pager: &'a str,
 }
 
