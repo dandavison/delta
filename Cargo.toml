@@ -7,7 +7,6 @@ edition = "2018"
 [dependencies]
 ansi_term = "0.11"
 console = "0.7.7"
-parsepatch = "0.2.0"
 shell-words = "0.1.0"
 structopt = "0.2.16"
 syntect = "3.2"
