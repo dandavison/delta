@@ -333,4 +333,69 @@ mod superimpose_style_sections {
         coalesced
     }
 
+    #[cfg(test)]
+    mod tests {
+        use super::*;
+        use syntect::highlighting::{Color, FontStyle, Style, StyleModifier};
+
+        const STYLE: Style = Style {
+            foreground: Color::BLACK,
+            background: Color::BLACK,
+            font_style: FontStyle::BOLD,
+        };
+        const STYLE_MODIFIER: StyleModifier = StyleModifier {
+            foreground: Some(Color::WHITE),
+            background: Some(Color::WHITE),
+            font_style: Some(FontStyle::UNDERLINE),
+        };
+        const SUPERIMPOSED_STYLE: Style = Style {
+            foreground: Color::WHITE,
+            background: Color::WHITE,
+            font_style: FontStyle::UNDERLINE,
+        };
+
+        #[test]
+        fn test_superimpose_style_sections_1() {
+            let string = String::from("ab");
+            let sections_1 = vec![(STYLE, string.clone())];
+            let sections_2 = vec![(STYLE_MODIFIER, string.clone())];
+            let superimposed = vec![(SUPERIMPOSED_STYLE, string.clone())];
+            assert_eq!(
+                superimpose_style_sections(sections_1, sections_2),
+                superimposed
+            );
+        }
+
+        #[test]
+        fn test_superimpose_style_sections_2() {
+            let sections_1 = vec![(STYLE, String::from("ab"))];
+            let sections_2 = vec![
+                (STYLE_MODIFIER, String::from("a")),
+                (STYLE_MODIFIER, String::from("b")),
+            ];
+            let superimposed = vec![(SUPERIMPOSED_STYLE, String::from("ab"))];
+            assert_eq!(
+                superimpose_style_sections(sections_1, sections_2),
+                superimposed
+            );
+        }
+
+        #[test]
+        fn test_explode() {
+            let arbitrary = 0;
+            let string = String::from("ab");
+            assert_eq!(
+                explode(vec![(arbitrary, string)]),
+                vec![(arbitrary, 'a'), (arbitrary, 'b')]
+            )
+        }
+
+        #[test]
+        fn test_superimpose() {
+            let x = (STYLE, 'a');
+            let pairs = vec![(&x, (STYLE_MODIFIER, 'a'))];
+            assert_eq!(superimpose(pairs), vec![(SUPERIMPOSED_STYLE, 'a')]);
+        }
+    }
+
 }
