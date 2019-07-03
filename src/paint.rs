@@ -1,5 +1,6 @@
 use std::fmt::Write;
 use std::str::FromStr;
+// TODO: Functions in this module should return Result and use ? syntax.
 
 use syntect::easy::HighlightLines;
 use syntect::highlighting::{Color, Style, Theme, ThemeSet};
