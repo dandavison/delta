@@ -125,18 +125,6 @@ pub fn delta(
             && line_buffer.syntax.is_some()
         {
             match line.chars().next() {
-                None | Some(' ') => {
-                    line_buffer.flush()?;
-                    state = State::HunkZero;
-                    emit(
-                        line,
-                        &state,
-                        line_buffer.syntax.unwrap(),
-                        &line_buffer.config,
-                        &mut line_buffer.output_buffer,
-                        line_buffer.writer,
-                    )?;
-                }
                 Some('-') => {
                     if state == State::HunkPlus {
                         line_buffer.flush()?;
@@ -148,7 +136,18 @@ pub fn delta(
                     line_buffer.plus_lines.push(line);
                     state = State::HunkPlus;
                 }
-                _ => panic!("Error parsing diff at line: '{}'", line),
+                _ => {
+                    line_buffer.flush()?;
+                    state = State::HunkZero;
+                    emit(
+                        line,
+                        &state,
+                        line_buffer.syntax.unwrap(),
+                        &line_buffer.config,
+                        &mut line_buffer.output_buffer,
+                        line_buffer.writer,
+                    )?;
+                }
             };
             continue;
         }
