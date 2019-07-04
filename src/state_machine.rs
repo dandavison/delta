@@ -1,11 +1,12 @@
 use std::io::Write;
 
 use console::strip_ansi_codes;
+use syntect::highlighting::Color;
 use syntect::parsing::SyntaxReference;
 
 use crate::assets::HighlightingAssets;
 use crate::output::{OutputType, PagingMode};
-use crate::paint::{paint_line, paint_text, Config};
+use crate::paint::{paint_text, Config};
 use crate::parse_diff::get_file_extension_from_diff_line;
 
 #[derive(Debug, PartialEq)]
@@ -31,7 +32,7 @@ pub enum State {
 // | HunkMinus | flush, emit | flush, emit | flush, emit | flush, emit | push        | push     |
 // | HunkPlus  | flush, emit | flush, emit | flush, emit | flush, emit | flush, push | push     |
 
-struct LineBuffer<'a> {
+struct Painter<'a> {
     minus_lines: Vec<String>,
     plus_lines: Vec<String>,
     output_buffer: String,
@@ -40,39 +41,46 @@ struct LineBuffer<'a> {
     config: &'a Config<'a>,
 }
 
-impl<'a> LineBuffer<'a> {
+impl<'a> Painter<'a> {
     fn is_empty(&self) -> bool {
         return self.minus_lines.len() == 0 && self.plus_lines.len() == 0;
     }
 
-    fn flush(&mut self) -> std::io::Result<()> {
+    fn paint_and_emit_buffered_lines(&mut self) -> std::io::Result<()> {
         if self.is_empty() {
             return Ok(());
         }
-        paint_text(
+        self.paint_and_emit_text(
             self.minus_lines.join("\n"),
-            self.syntax.unwrap(),
             Some(self.config.minus_color),
-            self.config,
             self.config.highlight_removed,
-            &mut self.output_buffer,
         );
-        writeln!(self.writer, "{}", self.output_buffer)?;
-        self.output_buffer.truncate(0);
         self.minus_lines.clear();
-
-        paint_text(
+        self.paint_and_emit_text(
             self.plus_lines.join("\n"),
-            self.syntax.unwrap(),
             Some(self.config.plus_color),
-            self.config,
             true,
+        );
+        self.plus_lines.clear();
+        Ok(())
+    }
+
+    fn paint_and_emit_text(
+        &mut self,
+        text: String,
+        background_color: Option<Color>,
+        apply_syntax_highlighting: bool,
+    ) -> std::io::Result<()> {
+        paint_text(
+            text,
+            self.syntax.unwrap(),
+            background_color,
+            self.config,
+            apply_syntax_highlighting,
             &mut self.output_buffer,
         );
         writeln!(self.writer, "{}", self.output_buffer)?;
         self.output_buffer.truncate(0);
-        self.plus_lines.clear();
-
         Ok(())
     }
 }
@@ -85,7 +93,7 @@ pub fn delta(
     let mut line: String;
     let mut output_type =
         OutputType::from_mode(PagingMode::QuitIfOneScreen, Some(config.pager)).unwrap();
-    let mut line_buffer = LineBuffer {
+    let mut painter = Painter {
         minus_lines: Vec::new(),
         plus_lines: Vec::new(),
         output_buffer: String::new(),
@@ -99,15 +107,15 @@ pub fn delta(
     for raw_line in lines {
         line = strip_ansi_codes(&raw_line).to_string();
         if line.starts_with("diff --") {
-            line_buffer.flush()?;
+            painter.paint_and_emit_buffered_lines()?;
             state = State::DiffMeta;
-            line_buffer.syntax = match get_file_extension_from_diff_line(&line) {
+            painter.syntax = match get_file_extension_from_diff_line(&line) {
                 // TODO: cache syntaxes?
                 Some(extension) => assets.syntax_set.find_syntax_by_extension(extension),
                 None => None,
             };
         } else if line.starts_with("commit") {
-            line_buffer.flush()?;
+            painter.paint_and_emit_buffered_lines()?;
             state = State::Commit;
         } else if line.starts_with("@@") {
             state = State::HunkMeta;
@@ -115,51 +123,30 @@ pub fn delta(
             || state == State::HunkZero
             || state == State::HunkMinus
             || state == State::HunkPlus)
-            && line_buffer.syntax.is_some()
+            && painter.syntax.is_some()
         {
             match line.chars().next() {
                 Some('-') => {
                     if state == State::HunkPlus {
-                        line_buffer.flush()?;
+                        painter.paint_and_emit_buffered_lines()?;
                     }
-                    line_buffer.minus_lines.push(line);
+                    painter.minus_lines.push(line);
                     state = State::HunkMinus;
                 }
                 Some('+') => {
-                    line_buffer.plus_lines.push(line);
+                    painter.plus_lines.push(line);
                     state = State::HunkPlus;
                 }
                 _ => {
-                    line_buffer.flush()?;
+                    painter.paint_and_emit_buffered_lines()?;
                     state = State::HunkZero;
-                    emit(
-                        line,
-                        &state,
-                        line_buffer.syntax.unwrap(),
-                        &line_buffer.config,
-                        &mut line_buffer.output_buffer,
-                        line_buffer.writer,
-                    )?;
+                    painter.paint_and_emit_text(line, None, true)?;
                 }
             };
             continue;
         }
-        writeln!(line_buffer.writer, "{}", raw_line)?;
+        writeln!(painter.writer, "{}", raw_line)?;
     }
-    line_buffer.flush()?;
-    Ok(())
-}
-
-fn emit(
-    line: String,
-    state: &State,
-    syntax: &SyntaxReference,
-    config: &Config,
-    output_buffer: &mut String,
-    writer: &mut Write,
-) -> std::io::Result<()> {
-    paint_line(line, state, syntax, config, output_buffer);
-    writeln!(writer, "{}", output_buffer)?;
-    output_buffer.truncate(0);
+    painter.paint_and_emit_buffered_lines()?;
     Ok(())
 }

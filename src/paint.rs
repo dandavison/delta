@@ -7,8 +7,6 @@ use syntect::highlighting::{Color, Style, Theme, ThemeSet};
 use syntect::parsing::{SyntaxReference, SyntaxSet};
 use syntect::util::LinesWithEndings;
 
-use crate::state_machine::State;
-
 pub const LIGHT_THEMES: [&str; 4] = [
     "GitHub",
     "Monokai Extended Light",
@@ -107,54 +105,6 @@ pub fn get_config<'a>(
     }
 }
 
-/// Write line to buffer with color escape codes applied.
-pub fn paint_line(
-    mut line: String,
-    state: &State,
-    syntax: &SyntaxReference,
-    config: &Config,
-    buf: &mut String,
-) {
-    let background_color: Option<Color>;
-    let apply_syntax_highlighting: bool;
-
-    match state {
-        State::HunkZero => {
-            background_color = None;
-            apply_syntax_highlighting = true;
-        }
-        State::HunkMinus => {
-            background_color = Some(config.minus_color);
-            apply_syntax_highlighting = config.highlight_removed;
-            line = line[1..].to_string();
-            buf.push_str(" ");
-        }
-        State::HunkPlus => {
-            background_color = Some(config.plus_color);
-            apply_syntax_highlighting = true;
-            line = line[1..].to_string();
-            buf.push_str(" ");
-        }
-        _ => panic!("Invalid state: {:?}", state),
-    }
-    match config.width {
-        Some(width) => {
-            if line.len() < width {
-                line = format!("{}{}", line, " ".repeat(width - line.len()));
-            }
-        }
-        _ => (),
-    }
-    paint_text(
-        line,
-        syntax,
-        background_color,
-        config,
-        apply_syntax_highlighting,
-        buf,
-    );
-}
-
 // TODO: If apply_syntax_highlighting is false, then don't do
 // operations related to syntax highlighting.
 
@@ -169,6 +119,9 @@ pub fn paint_text(
     let mut highlighter = HighlightLines::new(syntax, config.theme);
 
     for line in LinesWithEndings::from(&text) {
+        // TODO:
+        // 1. pad right
+        // 2. remove +- in first column
         match background_color {
             Some(background_color) => {
                 write!(
