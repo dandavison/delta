@@ -4,8 +4,7 @@ extern crate error_chain;
 mod assets;
 mod output;
 mod paint;
-mod parse_diff;
-mod state_machine;
+mod parse;
 
 use std::io::{self, BufRead, ErrorKind, Read, Write};
 use std::process;
@@ -14,7 +13,7 @@ use console::Term;
 use structopt::StructOpt;
 
 use crate::assets::{list_languages, HighlightingAssets};
-use crate::state_machine::delta;
+use crate::parse::delta;
 
 mod errors {
     error_chain! {
