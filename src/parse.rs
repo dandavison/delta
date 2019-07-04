@@ -33,7 +33,6 @@ pub fn delta(
     config: &Config,
     assets: &HighlightingAssets,
 ) -> std::io::Result<()> {
-    let mut line: String;
     let mut output_type =
         OutputType::from_mode(PagingMode::QuitIfOneScreen, Some(config.pager)).unwrap();
     let mut painter = Painter {
@@ -48,7 +47,7 @@ pub fn delta(
     let mut state = State::Unknown;
 
     for raw_line in lines {
-        line = strip_ansi_codes(&raw_line).to_string();
+        let line = strip_ansi_codes(&raw_line).to_string();
         if line.starts_with("diff --") {
             painter.paint_and_emit_buffered_lines()?;
             state = State::DiffMeta;
