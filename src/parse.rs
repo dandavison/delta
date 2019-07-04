@@ -1,7 +1,7 @@
 use console::strip_ansi_codes;
 
-use crate::assets::HighlightingAssets;
-use crate::output::{OutputType, PagingMode};
+use crate::bat::assets::HighlightingAssets;
+use crate::bat::output::{OutputType, PagingMode};
 use crate::paint::{Config, Painter};
 use crate::parse::parse_git_diff::get_file_extension_from_diff_line;
 

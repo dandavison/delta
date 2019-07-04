@@ -1,8 +1,7 @@
 #[macro_use]
 extern crate error_chain;
 
-mod assets;
-mod output;
+mod bat;
 mod paint;
 mod parse;
 
@@ -12,7 +11,7 @@ use std::process;
 use console::Term;
 use structopt::StructOpt;
 
-use crate::assets::{list_languages, HighlightingAssets};
+use crate::bat::assets::{list_languages, HighlightingAssets};
 use crate::parse::delta;
 
 mod errors {
