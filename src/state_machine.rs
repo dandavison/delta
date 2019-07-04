@@ -31,90 +31,89 @@ pub enum State {
 // | HunkMinus | flush, emit | flush, emit | flush, emit | flush, emit | push        | push     |
 // | HunkPlus  | flush, emit | flush, emit | flush, emit | flush, emit | flush, push | push     |
 
-struct LineBuffer {
+struct LineBuffer<'a> {
     minus_lines: Vec<String>,
     plus_lines: Vec<String>,
+    output_buffer: String,
+    writer: &'a mut Write,
+    syntax: Option<&'a SyntaxReference>,
+    config: &'a Config<'a>,
 }
 
-impl LineBuffer {
+impl<'a> LineBuffer<'a> {
     fn is_empty(&self) -> bool {
         return self.minus_lines.len() == 0 && self.plus_lines.len() == 0;
     }
 
-    fn flush(
-        &mut self,
-        syntax: &SyntaxReference,
-        config: &Config,
-        output_buffer: &mut String,
-        writer: &mut Write,
-    ) -> std::io::Result<()> {
+    fn flush(&mut self) -> std::io::Result<()> {
         paint_text(
             self.minus_lines.join("\n"),
-            syntax,
-            Some(config.minus_color),
-            config,
-            config.highlight_removed,
-            output_buffer,
+            self.syntax.unwrap(),
+            Some(self.config.minus_color),
+            self.config,
+            self.config.highlight_removed,
+            &mut self.output_buffer,
         );
-        writeln!(writer, "{}", output_buffer)?;
-        output_buffer.truncate(0);
+        writeln!(self.writer, "{}", self.output_buffer)?;
+        self.output_buffer.truncate(0);
+        self.minus_lines.clear();
 
         paint_text(
             self.plus_lines.join("\n"),
-            syntax,
-            Some(config.plus_color),
-            config,
+            self.syntax.unwrap(),
+            Some(self.config.plus_color),
+            self.config,
             true,
-            output_buffer,
+            &mut self.output_buffer,
         );
-        writeln!(writer, "{}", output_buffer)?;
-        output_buffer.truncate(0);
+        writeln!(self.writer, "{}", self.output_buffer)?;
+        self.output_buffer.truncate(0);
+        self.plus_lines.clear();
+
         Ok(())
     }
 }
 
 pub fn delta(
     lines: impl Iterator<Item = String>,
-    paint_config: &Config,
+    config: &Config,
     assets: &HighlightingAssets,
 ) -> std::io::Result<()> {
-    let mut syntax: Option<&SyntaxReference> = None;
-    let mut output_buffer = String::new();
     let mut line: String;
     let mut output_type =
-        OutputType::from_mode(PagingMode::QuitIfOneScreen, Some(paint_config.pager)).unwrap();
+        OutputType::from_mode(PagingMode::QuitIfOneScreen, Some(config.pager)).unwrap();
     let mut line_buffer = LineBuffer {
         minus_lines: Vec::new(),
         plus_lines: Vec::new(),
+        output_buffer: String::new(),
+        writer: output_type.handle().unwrap(),
+        syntax: None,
+        config: config,
     };
-    let writer = output_type.handle().unwrap();
+
     let mut state = State::Unknown;
 
     for raw_line in lines {
         line = strip_ansi_codes(&raw_line).to_string();
         if line.starts_with("diff --") {
             if (state == State::HunkMinus || state == State::HunkPlus)
-                && syntax.is_some()
+                && line_buffer.syntax.is_some()
                 && !line_buffer.is_empty()
             {
-                line_buffer.flush(syntax.unwrap(), &paint_config, &mut output_buffer, writer)?;
-                line_buffer.minus_lines.clear();
-                line_buffer.plus_lines.clear();
+                line_buffer.flush()?;
             };
             state = State::DiffMeta;
-            syntax = match get_file_extension_from_diff_line(&line) {
+            line_buffer.syntax = match get_file_extension_from_diff_line(&line) {
                 // TODO: cache syntaxes?
                 Some(extension) => assets.syntax_set.find_syntax_by_extension(extension),
                 None => None,
             };
         } else if line.starts_with("commit") {
             if (state == State::HunkMinus || state == State::HunkPlus)
-                && syntax.is_some()
+                && line_buffer.syntax.is_some()
                 && !line_buffer.is_empty()
             {
-                line_buffer.flush(syntax.unwrap(), &paint_config, &mut output_buffer, writer)?;
-                line_buffer.minus_lines.clear();
-                line_buffer.plus_lines.clear();
+                line_buffer.flush()?;
             };
             state = State::Commit;
         } else if line.starts_with("@@") {
@@ -123,38 +122,24 @@ pub fn delta(
             || state == State::HunkZero
             || state == State::HunkMinus
             || state == State::HunkPlus)
-            && syntax.is_some()
+            && line_buffer.syntax.is_some()
         {
             match line.chars().next() {
                 None | Some(' ') => {
-                    line_buffer.flush(
-                        syntax.unwrap(),
-                        &paint_config,
-                        &mut output_buffer,
-                        writer,
-                    )?;
-                    line_buffer.minus_lines.clear();
-                    line_buffer.plus_lines.clear();
+                    line_buffer.flush()?;
                     state = State::HunkZero;
                     emit(
                         line,
                         &state,
-                        syntax.unwrap(),
-                        &paint_config,
-                        &mut output_buffer,
-                        writer,
+                        line_buffer.syntax.unwrap(),
+                        &line_buffer.config,
+                        &mut line_buffer.output_buffer,
+                        line_buffer.writer,
                     )?;
                 }
                 Some('-') => {
                     if state == State::HunkPlus {
-                        line_buffer.flush(
-                            syntax.unwrap(),
-                            &paint_config,
-                            &mut output_buffer,
-                            writer,
-                        )?;
-                        line_buffer.minus_lines.clear();
-                        line_buffer.plus_lines.clear();
+                        line_buffer.flush()?;
                     }
                     line_buffer.minus_lines.push(line);
                     state = State::HunkMinus;
@@ -167,15 +152,13 @@ pub fn delta(
             };
             continue;
         }
-        writeln!(writer, "{}", raw_line)?;
+        writeln!(line_buffer.writer, "{}", raw_line)?;
     }
     if (state == State::HunkMinus || state == State::HunkPlus)
-        && syntax.is_some()
+        && line_buffer.syntax.is_some()
         && !line_buffer.is_empty()
     {
-        line_buffer.flush(syntax.unwrap(), &paint_config, &mut output_buffer, writer)?;
-        line_buffer.minus_lines.clear();
-        line_buffer.plus_lines.clear();
+        line_buffer.flush()?;
     };
     line_buffer.minus_lines.clear();
     line_buffer.plus_lines.clear();
