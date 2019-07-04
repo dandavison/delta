@@ -1,4 +1,4 @@
-use std::fmt::Write;
+use std::io::Write;
 use std::str::FromStr;
 // TODO: Functions in this module should return Result and use ? syntax.
 
@@ -105,6 +105,59 @@ pub fn get_config<'a>(
     }
 }
 
+pub struct Painter<'a> {
+    pub minus_lines: Vec<String>,
+    pub plus_lines: Vec<String>,
+    pub writer: &'a mut Write,
+    pub syntax: Option<&'a SyntaxReference>,
+    pub config: &'a Config<'a>,
+    pub output_buffer: String,
+}
+
+impl<'a> Painter<'a> {
+    fn is_empty(&self) -> bool {
+        return self.minus_lines.len() == 0 && self.plus_lines.len() == 0;
+    }
+
+    pub fn paint_and_emit_buffered_lines(&mut self) -> std::io::Result<()> {
+        if self.is_empty() {
+            return Ok(());
+        }
+        self.paint_and_emit_text(
+            self.minus_lines.join("\n"),
+            Some(self.config.minus_color),
+            self.config.highlight_removed,
+        )?;
+        self.minus_lines.clear();
+        self.paint_and_emit_text(
+            self.plus_lines.join("\n"),
+            Some(self.config.plus_color),
+            true,
+        )?;
+        self.plus_lines.clear();
+        Ok(())
+    }
+
+    pub fn paint_and_emit_text(
+        &mut self,
+        text: String,
+        background_color: Option<Color>,
+        apply_syntax_highlighting: bool,
+    ) -> std::io::Result<()> {
+        paint_text(
+            text,
+            self.syntax.unwrap(),
+            background_color,
+            self.config,
+            apply_syntax_highlighting,
+            &mut self.output_buffer,
+        );
+        writeln!(self.writer, "{}", self.output_buffer)?;
+        self.output_buffer.truncate(0);
+        Ok(())
+    }
+}
+
 // TODO: If apply_syntax_highlighting is false, then don't do
 // operations related to syntax highlighting.
 
@@ -116,6 +169,7 @@ pub fn paint_text(
     apply_syntax_highlighting: bool,
     buf: &mut String,
 ) {
+    use std::fmt::Write;
     let mut highlighter = HighlightLines::new(syntax, config.theme);
 
     for line in LinesWithEndings::from(&text) {
@@ -166,6 +220,7 @@ fn paint(
     background_color: Option<Color>,
     buf: &mut String,
 ) -> () {
+    use std::fmt::Write;
     match background_color {
         Some(background_color) => {
             write!(

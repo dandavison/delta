@@ -1,12 +1,8 @@
-use std::io::Write;
-
 use console::strip_ansi_codes;
-use syntect::highlighting::Color;
-use syntect::parsing::SyntaxReference;
 
 use crate::assets::HighlightingAssets;
 use crate::output::{OutputType, PagingMode};
-use crate::paint::{paint_text, Config};
+use crate::paint::{Config, Painter};
 use crate::parse_diff::get_file_extension_from_diff_line;
 
 #[derive(Debug, PartialEq)]
@@ -31,59 +27,6 @@ pub enum State {
 // | HunkZero  | emit        |             | emit        | emit        | push        | push     |
 // | HunkMinus | flush, emit | flush, emit | flush, emit | flush, emit | push        | push     |
 // | HunkPlus  | flush, emit | flush, emit | flush, emit | flush, emit | flush, push | push     |
-
-struct Painter<'a> {
-    minus_lines: Vec<String>,
-    plus_lines: Vec<String>,
-    output_buffer: String,
-    writer: &'a mut Write,
-    syntax: Option<&'a SyntaxReference>,
-    config: &'a Config<'a>,
-}
-
-impl<'a> Painter<'a> {
-    fn is_empty(&self) -> bool {
-        return self.minus_lines.len() == 0 && self.plus_lines.len() == 0;
-    }
-
-    fn paint_and_emit_buffered_lines(&mut self) -> std::io::Result<()> {
-        if self.is_empty() {
-            return Ok(());
-        }
-        self.paint_and_emit_text(
-            self.minus_lines.join("\n"),
-            Some(self.config.minus_color),
-            self.config.highlight_removed,
-        );
-        self.minus_lines.clear();
-        self.paint_and_emit_text(
-            self.plus_lines.join("\n"),
-            Some(self.config.plus_color),
-            true,
-        );
-        self.plus_lines.clear();
-        Ok(())
-    }
-
-    fn paint_and_emit_text(
-        &mut self,
-        text: String,
-        background_color: Option<Color>,
-        apply_syntax_highlighting: bool,
-    ) -> std::io::Result<()> {
-        paint_text(
-            text,
-            self.syntax.unwrap(),
-            background_color,
-            self.config,
-            apply_syntax_highlighting,
-            &mut self.output_buffer,
-        );
-        writeln!(self.writer, "{}", self.output_buffer)?;
-        self.output_buffer.truncate(0);
-        Ok(())
-    }
-}
 
 pub fn delta(
     lines: impl Iterator<Item = String>,
