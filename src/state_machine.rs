@@ -46,6 +46,9 @@ impl<'a> LineBuffer<'a> {
     }
 
     fn flush(&mut self) -> std::io::Result<()> {
+        if self.is_empty() {
+            return Ok(());
+        }
         paint_text(
             self.minus_lines.join("\n"),
             self.syntax.unwrap(),
@@ -96,12 +99,7 @@ pub fn delta(
     for raw_line in lines {
         line = strip_ansi_codes(&raw_line).to_string();
         if line.starts_with("diff --") {
-            if (state == State::HunkMinus || state == State::HunkPlus)
-                && line_buffer.syntax.is_some()
-                && !line_buffer.is_empty()
-            {
-                line_buffer.flush()?;
-            };
+            line_buffer.flush()?;
             state = State::DiffMeta;
             line_buffer.syntax = match get_file_extension_from_diff_line(&line) {
                 // TODO: cache syntaxes?
@@ -109,12 +107,7 @@ pub fn delta(
                 None => None,
             };
         } else if line.starts_with("commit") {
-            if (state == State::HunkMinus || state == State::HunkPlus)
-                && line_buffer.syntax.is_some()
-                && !line_buffer.is_empty()
-            {
-                line_buffer.flush()?;
-            };
+            line_buffer.flush()?;
             state = State::Commit;
         } else if line.starts_with("@@") {
             state = State::HunkMeta;
@@ -153,14 +146,7 @@ pub fn delta(
         }
         writeln!(line_buffer.writer, "{}", raw_line)?;
     }
-    if (state == State::HunkMinus || state == State::HunkPlus)
-        && line_buffer.syntax.is_some()
-        && !line_buffer.is_empty()
-    {
-        line_buffer.flush()?;
-    };
-    line_buffer.minus_lines.clear();
-    line_buffer.plus_lines.clear();
+    line_buffer.flush()?;
     Ok(())
 }
 
