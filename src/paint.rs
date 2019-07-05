@@ -115,26 +115,23 @@ pub struct Painter<'a> {
 }
 
 impl<'a> Painter<'a> {
-    fn is_empty(&self) -> bool {
-        return self.minus_lines.len() == 0 && self.plus_lines.len() == 0;
-    }
-
     pub fn paint_and_emit_buffered_lines(&mut self) -> std::io::Result<()> {
-        if self.is_empty() {
-            return Ok(());
+        if self.minus_lines.len() > 0 {
+            self.paint_and_emit_text(
+                self.minus_lines.join("\n"),
+                Some(self.config.minus_color),
+                self.config.highlight_removed,
+            )?;
+            self.minus_lines.clear();
         }
-        self.paint_and_emit_text(
-            self.minus_lines.join("\n"),
-            Some(self.config.minus_color),
-            self.config.highlight_removed,
-        )?;
-        self.minus_lines.clear();
-        self.paint_and_emit_text(
-            self.plus_lines.join("\n"),
-            Some(self.config.plus_color),
-            true,
-        )?;
-        self.plus_lines.clear();
+        if self.plus_lines.len() > 0 {
+            self.paint_and_emit_text(
+                self.plus_lines.join("\n"),
+                Some(self.config.plus_color),
+                true,
+            )?;
+            self.plus_lines.clear();
+        }
         Ok(())
     }
 

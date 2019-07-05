@@ -57,20 +57,7 @@ pub fn delta(
 
     for raw_line in lines {
         let line = strip_ansi_codes(&raw_line).to_string();
-        if line.starts_with("diff --") {
-            painter.paint_and_emit_buffered_lines()?;
-            state = State::DiffMeta;
-            painter.syntax = match get_file_extension_from_diff_line(&line) {
-                // TODO: cache syntaxes?
-                Some(extension) => assets.syntax_set.find_syntax_by_extension(extension),
-                None => None,
-            };
-        } else if line.starts_with("commit") {
-            painter.paint_and_emit_buffered_lines()?;
-            state = State::Commit;
-        } else if line.starts_with("@@") {
-            state = State::HunkMeta;
-        } else if state.is_in_hunk() && painter.syntax.is_some() {
+        if state.is_in_hunk() && painter.syntax.is_some() {
             match line.chars().next() {
                 Some('-') => {
                     if state == State::HunkPlus {
@@ -89,10 +76,24 @@ pub fn delta(
                     painter.paint_and_emit_text(line, None, true)?;
                 }
             };
-            continue;
+        } else {
+            painter.paint_and_emit_buffered_lines()?;
+            if line.starts_with("diff --") {
+                state = State::DiffMeta;
+                painter.syntax = match get_file_extension_from_diff_line(&line) {
+                    // TODO: cache syntaxes?
+                    Some(extension) => assets.syntax_set.find_syntax_by_extension(extension),
+                    None => None,
+                };
+            } else if line.starts_with("commit") {
+                state = State::Commit;
+            } else if line.starts_with("@@") {
+                state = State::HunkMeta;
+            }
+            writeln!(painter.writer, "{}", raw_line)?;
         }
-        writeln!(painter.writer, "{}", raw_line)?;
     }
+
     painter.paint_and_emit_buffered_lines()?;
     Ok(())
 }
