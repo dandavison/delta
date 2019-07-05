@@ -16,6 +16,15 @@ pub enum State {
     Unknown,
 }
 
+impl State {
+    fn is_in_hunk(&self) -> bool {
+        match *self {
+            State::HunkMeta | State::HunkZero | State::HunkMinus | State::HunkPlus => true,
+            _ => false,
+        }
+    }
+}
+
 // Possible transitions, with actions on entry:
 //
 //
@@ -61,12 +70,7 @@ pub fn delta(
             state = State::Commit;
         } else if line.starts_with("@@") {
             state = State::HunkMeta;
-        } else if (state == State::HunkMeta
-            || state == State::HunkZero
-            || state == State::HunkMinus
-            || state == State::HunkPlus)
-            && painter.syntax.is_some()
-        {
+        } else if state.is_in_hunk() && painter.syntax.is_some() {
             match line.chars().next() {
                 Some('-') => {
                     if state == State::HunkPlus {
