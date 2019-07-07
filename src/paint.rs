@@ -164,7 +164,7 @@ pub fn paint_text(
     background_color: Option<Color>,
     config: &Config,
     apply_syntax_highlighting: bool,
-    buf: &mut String,
+    output_buffer: &mut String,
 ) {
     use std::fmt::Write;
     let mut highlighter = HighlightLines::new(syntax, config.theme);
@@ -176,7 +176,7 @@ pub fn paint_text(
         match background_color {
             Some(background_color) => {
                 write!(
-                    buf,
+                    output_buffer,
                     "\x1b[48;2;{};{};{}m",
                     background_color.r, background_color.g, background_color.b
                 )
@@ -184,20 +184,26 @@ pub fn paint_text(
             }
             None => (),
         }
-        let ranges: Vec<(Style, &str)> = highlighter.highlight(line, &config.syntax_set);
-        paint_ranges(&ranges[..], None, apply_syntax_highlighting, buf)
+        let sections: Vec<(Style, &str)> = highlighter.highlight(line, &config.syntax_set);
+        paint_sections(
+            &sections[..],
+            None,
+            apply_syntax_highlighting,
+            output_buffer,
+        )
     }
 }
 
-/// Based on as_24_bit_terminal_escaped from syntect
-fn paint_ranges(
-    foreground_style_ranges: &[(Style, &str)],
+/// Write sections text to buffer with color escape codes.
+// Based on as_24_bit_terminal_escaped from syntect
+fn paint_sections(
+    foreground_style_sections: &[(Style, &str)],
     background_color: Option<Color>,
     apply_syntax_highlighting: bool,
-    buf: &mut String,
+    output_buffer: &mut String,
 ) -> () {
-    for &(ref style, text) in foreground_style_ranges.iter() {
-        paint(
+    for &(ref style, text) in foreground_style_sections.iter() {
+        paint_section(
             text,
             if apply_syntax_highlighting {
                 Some(style.foreground)
@@ -205,23 +211,23 @@ fn paint_ranges(
                 None
             },
             background_color,
-            buf,
+            output_buffer,
         );
     }
 }
 
-/// Write text to buffer with color escape codes applied.
-fn paint(
+/// Write section text to buffer with color escape codes applied.
+fn paint_section(
     text: &str,
     foreground_color: Option<Color>,
     background_color: Option<Color>,
-    buf: &mut String,
+    output_buffer: &mut String,
 ) -> () {
     use std::fmt::Write;
     match background_color {
         Some(background_color) => {
             write!(
-                buf,
+                output_buffer,
                 "\x1b[48;2;{};{};{}m",
                 background_color.r, background_color.g, background_color.b
             )
@@ -232,14 +238,14 @@ fn paint(
     match foreground_color {
         Some(foreground_color) => {
             write!(
-                buf,
+                output_buffer,
                 "\x1b[38;2;{};{};{}m{}",
                 foreground_color.r, foreground_color.g, foreground_color.b, text
             )
             .unwrap();
         }
         None => {
-            write!(buf, "{}", text).unwrap();
+            write!(output_buffer, "{}", text).unwrap();
         }
     }
 }

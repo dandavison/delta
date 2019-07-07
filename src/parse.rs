@@ -44,6 +44,8 @@ pub fn delta(
 ) -> std::io::Result<()> {
     let mut output_type =
         OutputType::from_mode(PagingMode::QuitIfOneScreen, Some(config.pager)).unwrap();
+
+    // TODO: Painter::new(config)
     let mut painter = Painter {
         minus_lines: Vec::new(),
         plus_lines: Vec::new(),
