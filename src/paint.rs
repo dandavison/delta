@@ -5,7 +5,6 @@ use std::str::FromStr;
 use syntect::easy::HighlightLines;
 use syntect::highlighting::{Color, Style, Theme, ThemeSet};
 use syntect::parsing::{SyntaxReference, SyntaxSet};
-use syntect::util::LinesWithEndings;
 
 pub const LIGHT_THEMES: [&str; 4] = [
     "GitHub",
@@ -124,16 +123,16 @@ impl<'a> Painter<'a> {
     pub fn paint_and_emit_buffered_lines(&mut self) -> std::io::Result<()> {
         self.set_background_color_sections();
         if self.minus_lines.len() > 0 {
-            self.paint_and_emit_text(
-                self.minus_lines.join("\n"),
+            self.paint_and_emit_lines(
+                self.minus_lines.iter().cloned().collect(), // TODO: don't clone
                 Some(self.config.minus_color),
                 self.config.highlight_removed,
             )?;
             self.minus_lines.clear();
         }
         if self.plus_lines.len() > 0 {
-            self.paint_and_emit_text(
-                self.plus_lines.join("\n"),
+            self.paint_and_emit_lines(
+                self.plus_lines.iter().cloned().collect(), // TODO: don't clone
                 Some(self.config.plus_color),
                 true,
             )?;
@@ -142,21 +141,21 @@ impl<'a> Painter<'a> {
         Ok(())
     }
 
-    pub fn paint_and_emit_text(
+    pub fn paint_and_emit_lines(
         &mut self,
-        text: String,
+        lines: Vec<String>,
         background_color: Option<Color>,
         apply_syntax_highlighting: bool,
     ) -> std::io::Result<()> {
-        paint_text(
-            text,
+        paint_lines(
+            lines,
             self.syntax.unwrap(),
             background_color,
             self.config,
             apply_syntax_highlighting,
             &mut self.output_buffer,
         );
-        writeln!(self.writer, "{}", self.output_buffer)?;
+        write!(self.writer, "{}", self.output_buffer)?;
         self.output_buffer.truncate(0);
         Ok(())
     }
@@ -177,8 +176,8 @@ impl<'a> Painter<'a> {
 // TODO: If apply_syntax_highlighting is false, then don't do
 // operations related to syntax highlighting.
 
-pub fn paint_text(
-    text: String,
+pub fn paint_lines(
+    lines: Vec<String>,
     syntax: &SyntaxReference,
     background_color: Option<Color>,
     config: &Config,
@@ -188,7 +187,7 @@ pub fn paint_text(
     use std::fmt::Write;
     let mut highlighter = HighlightLines::new(syntax, config.theme);
 
-    for line in LinesWithEndings::from(&text) {
+    for line in lines {
         // TODO:
         // 1. pad right
         // 2. remove +- in first column
@@ -203,13 +202,14 @@ pub fn paint_text(
             }
             None => (),
         }
-        let sections: Vec<(Style, &str)> = highlighter.highlight(line, &config.syntax_set);
+        let sections: Vec<(Style, &str)> = highlighter.highlight(&line, &config.syntax_set);
         paint_sections(
             &sections[..],
             None,
             apply_syntax_highlighting,
             output_buffer,
-        )
+        );
+        output_buffer.push_str("\n");
     }
 }
 

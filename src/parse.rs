@@ -92,7 +92,7 @@ pub fn delta(
                 _ => {
                     painter.paint_and_emit_buffered_lines()?;
                     state = State::HunkZero;
-                    painter.paint_and_emit_text(line, None, true)?;
+                    painter.paint_and_emit_lines(vec![line], None, true)?;
                 }
             };
             continue;
