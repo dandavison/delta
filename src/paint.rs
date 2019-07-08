@@ -141,20 +141,43 @@ impl<'a> Painter<'a> {
         Ok(())
     }
 
+    // TODO: If apply_syntax_highlighting is false, then don't do
+    // operations related to syntax highlighting.
+
     pub fn paint_and_emit_lines(
         &mut self,
         lines: Vec<String>,
         background_color: Option<Color>,
         apply_syntax_highlighting: bool,
     ) -> std::io::Result<()> {
-        paint_lines(
-            lines,
-            self.syntax.unwrap(),
-            background_color,
-            self.config,
-            apply_syntax_highlighting,
-            &mut self.output_buffer,
-        );
+        use std::fmt::Write;
+        let mut highlighter = HighlightLines::new(self.syntax.unwrap(), self.config.theme);
+
+        for line in lines {
+            // TODO:
+            // 1. pad right
+            // 2. remove +- in first column
+            match background_color {
+                Some(background_color) => {
+                    write!(
+                        self.output_buffer,
+                        "\x1b[48;2;{};{};{}m",
+                        background_color.r, background_color.g, background_color.b
+                    )
+                    .unwrap();
+                }
+                None => (),
+            }
+            let sections: Vec<(Style, &str)> =
+                highlighter.highlight(&line, &self.config.syntax_set);
+            paint_sections(
+                &sections[..],
+                None,
+                apply_syntax_highlighting,
+                &mut self.output_buffer,
+            );
+            self.output_buffer.push_str("\n");
+        }
         write!(self.writer, "{}", self.output_buffer)?;
         self.output_buffer.truncate(0);
         Ok(())
@@ -170,46 +193,6 @@ impl<'a> Painter<'a> {
             self.plus_background_sections
                 .push((style, line.to_string()));
         }
-    }
-}
-
-// TODO: If apply_syntax_highlighting is false, then don't do
-// operations related to syntax highlighting.
-
-pub fn paint_lines(
-    lines: Vec<String>,
-    syntax: &SyntaxReference,
-    background_color: Option<Color>,
-    config: &Config,
-    apply_syntax_highlighting: bool,
-    output_buffer: &mut String,
-) {
-    use std::fmt::Write;
-    let mut highlighter = HighlightLines::new(syntax, config.theme);
-
-    for line in lines {
-        // TODO:
-        // 1. pad right
-        // 2. remove +- in first column
-        match background_color {
-            Some(background_color) => {
-                write!(
-                    output_buffer,
-                    "\x1b[48;2;{};{};{}m",
-                    background_color.r, background_color.g, background_color.b
-                )
-                .unwrap();
-            }
-            None => (),
-        }
-        let sections: Vec<(Style, &str)> = highlighter.highlight(&line, &config.syntax_set);
-        paint_sections(
-            &sections[..],
-            None,
-            apply_syntax_highlighting,
-            output_buffer,
-        );
-        output_buffer.push_str("\n");
     }
 }
 
