@@ -108,14 +108,21 @@ pub fn get_config<'a>(
 pub struct Painter<'a> {
     pub minus_lines: Vec<String>,
     pub plus_lines: Vec<String>,
+
+    // TODO: store slice references instead of creating Strings
+    pub minus_background_sections: Vec<(Style, String)>,
+    pub plus_background_sections: Vec<(Style, String)>,
+
     pub writer: &'a mut Write,
     pub syntax: Option<&'a SyntaxReference>,
+    pub default_style: Style,
     pub config: &'a Config<'a>,
     pub output_buffer: String,
 }
 
 impl<'a> Painter<'a> {
     pub fn paint_and_emit_buffered_lines(&mut self) -> std::io::Result<()> {
+        self.set_background_color_sections();
         if self.minus_lines.len() > 0 {
             self.paint_and_emit_text(
                 self.minus_lines.join("\n"),
@@ -152,6 +159,18 @@ impl<'a> Painter<'a> {
         writeln!(self.writer, "{}", self.output_buffer)?;
         self.output_buffer.truncate(0);
         Ok(())
+    }
+
+    fn set_background_color_sections(&mut self) {
+        let style = self.default_style;
+        for line in self.minus_lines.iter() {
+            self.minus_background_sections
+                .push((style, line.to_string()));
+        }
+        for line in self.plus_lines.iter() {
+            self.plus_background_sections
+                .push((style, line.to_string()));
+        }
     }
 }
 

@@ -1,5 +1,7 @@
 use console::strip_ansi_codes;
 
+use syntect::highlighting::Highlighter;
+
 use crate::bat::assets::HighlightingAssets;
 use crate::bat::output::{OutputType, PagingMode};
 use crate::paint::{Config, Painter};
@@ -49,10 +51,13 @@ pub fn delta(
     let mut painter = Painter {
         minus_lines: Vec::new(),
         plus_lines: Vec::new(),
+        minus_background_sections: Vec::new(),
+        plus_background_sections: Vec::new(),
         output_buffer: String::new(),
         writer: output_type.handle().unwrap(),
         syntax: None,
         config: config,
+        default_style: Highlighter::new(config.theme).get_default(),
     };
 
     let mut state = State::Unknown;
