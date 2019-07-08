@@ -120,36 +120,35 @@ pub struct Painter<'a> {
 }
 
 impl<'a> Painter<'a> {
-    pub fn paint_and_emit_buffered_lines(&mut self) -> std::io::Result<()> {
+    pub fn paint_buffered_lines(&mut self) {
         self.set_background_color_sections();
         if self.minus_lines.len() > 0 {
-            self.paint_and_emit_lines(
+            self.paint_lines(
                 self.minus_lines.iter().cloned().collect(), // TODO: don't clone
                 Some(self.config.minus_color),
                 self.config.highlight_removed,
-            )?;
+            );
             self.minus_lines.clear();
         }
         if self.plus_lines.len() > 0 {
-            self.paint_and_emit_lines(
+            self.paint_lines(
                 self.plus_lines.iter().cloned().collect(), // TODO: don't clone
                 Some(self.config.plus_color),
                 true,
-            )?;
+            );
             self.plus_lines.clear();
         }
-        Ok(())
     }
 
     // TODO: If apply_syntax_highlighting is false, then don't do
     // operations related to syntax highlighting.
 
-    pub fn paint_and_emit_lines(
+    pub fn paint_lines(
         &mut self,
         lines: Vec<String>,
         background_color: Option<Color>,
         apply_syntax_highlighting: bool,
-    ) -> std::io::Result<()> {
+    ) {
         use std::fmt::Write;
         let mut highlighter = HighlightLines::new(self.syntax.unwrap(), self.config.theme);
 
@@ -178,6 +177,9 @@ impl<'a> Painter<'a> {
             );
             self.output_buffer.push_str("\n");
         }
+    }
+
+    pub fn emit(&mut self) -> std::io::Result<()> {
         write!(self.writer, "{}", self.output_buffer)?;
         self.output_buffer.truncate(0);
         Ok(())

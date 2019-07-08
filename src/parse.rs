@@ -65,14 +65,14 @@ pub fn delta(
     for raw_line in lines {
         let line = strip_ansi_codes(&raw_line).to_string();
         if line.starts_with("diff --") {
-            painter.paint_and_emit_buffered_lines()?;
+            painter.paint_buffered_lines();
             state = State::DiffMeta;
             painter.syntax = match get_file_extension_from_diff_line(&line) {
                 Some(extension) => assets.syntax_set.find_syntax_by_extension(extension),
                 None => None,
             }
         } else if line.starts_with("commit") {
-            painter.paint_and_emit_buffered_lines()?;
+            painter.paint_buffered_lines();
             state = State::Commit;
         } else if line.starts_with("@@") {
             state = State::HunkMeta;
@@ -80,7 +80,7 @@ pub fn delta(
             match line.chars().next() {
                 Some('-') => {
                     if state == State::HunkPlus {
-                        painter.paint_and_emit_buffered_lines()?;
+                        painter.paint_buffered_lines();
                     }
                     painter.minus_lines.push(line);
                     state = State::HunkMinus;
@@ -90,17 +90,20 @@ pub fn delta(
                     state = State::HunkPlus;
                 }
                 _ => {
-                    painter.paint_and_emit_buffered_lines()?;
+                    painter.paint_buffered_lines();
                     state = State::HunkZero;
-                    painter.paint_and_emit_lines(vec![line], None, true)?;
+                    painter.paint_lines(vec![line], None, true);
                 }
             };
+            painter.emit()?;
             continue;
         }
+        painter.emit()?;
         writeln!(painter.writer, "{}", raw_line)?;
     }
 
-    painter.paint_and_emit_buffered_lines()?;
+    painter.paint_buffered_lines();
+    painter.emit()?;
     Ok(())
 }
 
