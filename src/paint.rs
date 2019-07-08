@@ -3,8 +3,10 @@ use std::str::FromStr;
 // TODO: Functions in this module should return Result and use ? syntax.
 
 use syntect::easy::HighlightLines;
-use syntect::highlighting::{Color, Style, Theme, ThemeSet};
+use syntect::highlighting::{Color, Style, StyleModifier, Theme, ThemeSet};
 use syntect::parsing::{SyntaxReference, SyntaxSet};
+
+use crate::paint::superimpose_style_sections::superimpose_style_sections;
 
 pub const LIGHT_THEMES: [&str; 4] = [
     "GitHub",
@@ -109,19 +111,19 @@ pub struct Painter<'a> {
     pub plus_lines: Vec<String>,
 
     // TODO: store slice references instead of creating Strings
-    pub minus_line_style_sections: Vec<Vec<(Style, String)>>,
-    pub plus_line_style_sections: Vec<Vec<(Style, String)>>,
+    pub minus_line_style_sections: Vec<Vec<(StyleModifier, String)>>,
+    pub plus_line_style_sections: Vec<Vec<(StyleModifier, String)>>,
 
     pub writer: &'a mut Write,
     pub syntax: Option<&'a SyntaxReference>,
-    pub default_style: Style,
+    pub default_style_modifier: StyleModifier,
     pub config: &'a Config<'a>,
     pub output_buffer: String,
 }
 
 impl<'a> Painter<'a> {
     pub fn paint_buffered_lines(&mut self) {
-        self.set_background_color_sections();
+        self.set_style_sections();
         if self.minus_lines.len() > 0 {
             self.paint_lines(
                 // TODO: don't clone
@@ -152,7 +154,7 @@ impl<'a> Painter<'a> {
     pub fn paint_lines(
         &mut self,
         lines: Vec<String>,
-        line_style_sections: Vec<Vec<(Style, String)>>,
+        line_style_sections: Vec<Vec<(StyleModifier, String)>>,
         background_color: Option<Color>,
         apply_syntax_highlighting: bool,
     ) {
@@ -180,7 +182,7 @@ impl<'a> Painter<'a> {
                 .map(|(style, s)| (*style, s.to_string()))
                 .collect::<Vec<(Style, String)>>();
             let combined_style_sections =
-                combine_style_sections(style_sections, syntax_highlighting_style_sections);
+                superimpose_style_sections(syntax_highlighting_style_sections, style_sections);
             paint_sections(
                 combined_style_sections,
                 None,
@@ -197,15 +199,14 @@ impl<'a> Painter<'a> {
         Ok(())
     }
 
-    fn set_background_color_sections(&mut self) {
-        let style = self.default_style;
+    fn set_style_sections(&mut self) {
         for line in self.minus_lines.iter() {
             self.minus_line_style_sections
-                .push(vec![(style, line.to_string())]);
+                .push(vec![(self.default_style_modifier, line.to_string())]);
         }
         for line in self.plus_lines.iter() {
             self.plus_line_style_sections
-                .push(vec![(style, line.to_string())]);
+                .push(vec![(self.default_style_modifier, line.to_string())]);
         }
     }
 }
@@ -266,9 +267,70 @@ fn paint_section(
     }
 }
 
-fn combine_style_sections(
-    sections_1: Vec<(Style, String)>,
-    sections_2: Vec<(Style, String)>,
-) -> Vec<(Style, String)> {
-    sections_2
+mod superimpose_style_sections {
+    use syntect::highlighting::{Style, StyleModifier};
+
+    pub fn superimpose_style_sections(
+        sections_1: Vec<(Style, String)>,
+        sections_2: Vec<(StyleModifier, String)>,
+    ) -> Vec<(Style, String)> {
+        coalesce(superimpose(
+            explode(sections_1)
+                .iter()
+                .zip(explode(sections_2))
+                .collect::<Vec<(&(Style, char), (StyleModifier, char))>>(),
+        ))
+    }
+
+    fn explode<T>(style_sections: Vec<(T, String)>) -> Vec<(T, char)>
+    where
+        T: Copy,
+    {
+        let mut exploded: Vec<(T, char)> = Vec::new();
+        for (style, string) in style_sections {
+            for c in string.chars() {
+                exploded.push((style, c));
+            }
+        }
+        exploded
+    }
+
+    fn superimpose(
+        style_section_pairs: Vec<(&(Style, char), (StyleModifier, char))>,
+    ) -> Vec<(Style, char)> {
+        let mut superimposed: Vec<(Style, char)> = Vec::new();
+        for ((style, char_1), (modifier, char_2)) in style_section_pairs {
+            if *char_1 != char_2 {
+                panic!(
+                    "String mismatch encountered while superimposing style sections: '{}' vs '{}'",
+                    *char_1, char_2
+                )
+            }
+            superimposed.push((style.apply(modifier), *char_1));
+        }
+        superimposed
+    }
+
+    fn coalesce(style_sections: Vec<(Style, char)>) -> Vec<(Style, String)> {
+        let mut coalesced: Vec<(Style, String)> = Vec::new();
+        let mut style_sections = style_sections.iter();
+        match style_sections.next() {
+            Some((style, c)) => {
+                let mut current_string = c.to_string();
+                let mut current_style = style;
+                for (style, c) in style_sections {
+                    if style != current_style {
+                        coalesced.push((*current_style, current_string));
+                        current_string = String::new();
+                        current_style = style;
+                    }
+                    current_string.push(*c);
+                }
+                coalesced.push((*current_style, current_string));
+            }
+            None => (),
+        }
+        coalesced
+    }
+
 }

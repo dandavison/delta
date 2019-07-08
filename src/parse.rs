@@ -1,6 +1,6 @@
 use console::strip_ansi_codes;
 
-use syntect::highlighting::Highlighter;
+use syntect::highlighting::{Highlighter, StyleModifier};
 
 use crate::bat::assets::HighlightingAssets;
 use crate::bat::output::{OutputType, PagingMode};
@@ -48,6 +48,7 @@ pub fn delta(
         OutputType::from_mode(PagingMode::QuitIfOneScreen, Some(config.pager)).unwrap();
 
     // TODO: Painter::new(config)
+    let default_style = Highlighter::new(config.theme).get_default();
     let mut painter = Painter {
         minus_lines: Vec::new(),
         plus_lines: Vec::new(),
@@ -57,7 +58,11 @@ pub fn delta(
         writer: output_type.handle().unwrap(),
         syntax: None,
         config: config,
-        default_style: Highlighter::new(config.theme).get_default(),
+        default_style_modifier: StyleModifier {
+            foreground: Some(default_style.foreground),
+            background: Some(default_style.background),
+            font_style: Some(default_style.font_style),
+        },
     };
 
     let mut state = State::Unknown;
@@ -94,7 +99,7 @@ pub fn delta(
                     state = State::HunkZero;
                     painter.paint_lines(
                         vec![line.clone()],
-                        vec![vec![(painter.default_style, line.clone())]],
+                        vec![vec![(painter.default_style_modifier, line.clone())]],
                         None,
                         true,
                     );
