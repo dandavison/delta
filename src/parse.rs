@@ -33,7 +33,7 @@ impl State {
 // | Commit    | emit        | emit        |             |             |             |          |
 // | DiffMeta  |             | emit        | emit        |             |             |          |
 // | HunkMeta  |             |             |             | emit        | push        | push     |
-// | HunkZero  | emit        |             | emit        | emit        | push        | push     |
+// | HunkZero  | emit        | emit        | emit        | emit        | push        | push     |
 // | HunkMinus | flush, emit | flush, emit | flush, emit | flush, emit | push        | push     |
 // | HunkPlus  | flush, emit | flush, emit | flush, emit | flush, emit | flush, push | push     |
 
