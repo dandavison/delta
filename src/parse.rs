@@ -51,8 +51,8 @@ pub fn delta(
     let mut painter = Painter {
         minus_lines: Vec::new(),
         plus_lines: Vec::new(),
-        minus_background_sections: Vec::new(),
-        plus_background_sections: Vec::new(),
+        minus_line_style_sections: Vec::new(),
+        plus_line_style_sections: Vec::new(),
         output_buffer: String::new(),
         writer: output_type.handle().unwrap(),
         syntax: None,
@@ -94,7 +94,7 @@ pub fn delta(
                     state = State::HunkZero;
                     painter.paint_lines(
                         vec![line.clone()],
-                        vec![(painter.default_style, line.clone())],
+                        vec![vec![(painter.default_style, line.clone())]],
                         None,
                         true,
                     );

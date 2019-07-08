@@ -109,8 +109,8 @@ pub struct Painter<'a> {
     pub plus_lines: Vec<String>,
 
     // TODO: store slice references instead of creating Strings
-    pub minus_background_sections: Vec<(Style, String)>,
-    pub plus_background_sections: Vec<(Style, String)>,
+    pub minus_line_style_sections: Vec<Vec<(Style, String)>>,
+    pub plus_line_style_sections: Vec<Vec<(Style, String)>>,
 
     pub writer: &'a mut Write,
     pub syntax: Option<&'a SyntaxReference>,
@@ -126,7 +126,7 @@ impl<'a> Painter<'a> {
             self.paint_lines(
                 // TODO: don't clone
                 self.minus_lines.iter().cloned().collect(),
-                self.minus_background_sections.iter().cloned().collect(),
+                self.minus_line_style_sections.iter().cloned().collect(),
                 Some(self.config.minus_color),
                 self.config.highlight_removed,
             );
@@ -137,7 +137,7 @@ impl<'a> Painter<'a> {
             self.paint_lines(
                 // TODO: don't clone
                 self.plus_lines.iter().cloned().collect(),
-                self.plus_background_sections.iter().cloned().collect(),
+                self.plus_line_style_sections.iter().cloned().collect(),
                 Some(self.config.plus_color),
                 true,
             );
@@ -152,7 +152,7 @@ impl<'a> Painter<'a> {
     pub fn paint_lines(
         &mut self,
         lines: Vec<String>,
-        line_style_sections: Vec<(Style, String)>,
+        line_style_sections: Vec<Vec<(Style, String)>>,
         background_color: Option<Color>,
         apply_syntax_highlighting: bool,
     ) {
@@ -195,12 +195,12 @@ impl<'a> Painter<'a> {
     fn set_background_color_sections(&mut self) {
         let style = self.default_style;
         for line in self.minus_lines.iter() {
-            self.minus_background_sections
-                .push((style, line.to_string()));
+            self.minus_line_style_sections
+                .push(vec![(style, line.to_string())]);
         }
         for line in self.plus_lines.iter() {
-            self.plus_background_sections
-                .push((style, line.to_string()));
+            self.plus_line_style_sections
+                .push(vec![(style, line.to_string())]);
         }
     }
 }
