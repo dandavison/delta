@@ -92,7 +92,12 @@ pub fn delta(
                 _ => {
                     painter.paint_buffered_lines();
                     state = State::HunkZero;
-                    painter.paint_lines(vec![line], None, true);
+                    painter.paint_lines(
+                        vec![line.clone()],
+                        vec![(painter.default_style, line.clone())],
+                        None,
+                        true,
+                    );
                 }
             };
             painter.emit()?;

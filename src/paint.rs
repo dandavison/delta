@@ -124,19 +124,25 @@ impl<'a> Painter<'a> {
         self.set_background_color_sections();
         if self.minus_lines.len() > 0 {
             self.paint_lines(
-                self.minus_lines.iter().cloned().collect(), // TODO: don't clone
+                // TODO: don't clone
+                self.minus_lines.iter().cloned().collect(),
+                self.minus_background_sections.iter().cloned().collect(),
                 Some(self.config.minus_color),
                 self.config.highlight_removed,
             );
             self.minus_lines.clear();
+            self.minus_line_style_sections.clear();
         }
         if self.plus_lines.len() > 0 {
             self.paint_lines(
-                self.plus_lines.iter().cloned().collect(), // TODO: don't clone
+                // TODO: don't clone
+                self.plus_lines.iter().cloned().collect(),
+                self.plus_background_sections.iter().cloned().collect(),
                 Some(self.config.plus_color),
                 true,
             );
             self.plus_lines.clear();
+            self.plus_line_style_sections.clear();
         }
     }
 
@@ -146,13 +152,14 @@ impl<'a> Painter<'a> {
     pub fn paint_lines(
         &mut self,
         lines: Vec<String>,
+        line_style_sections: Vec<(Style, String)>,
         background_color: Option<Color>,
         apply_syntax_highlighting: bool,
     ) {
         use std::fmt::Write;
         let mut highlighter = HighlightLines::new(self.syntax.unwrap(), self.config.theme);
 
-        for line in lines {
+        for (line, style_sections) in lines.iter().zip(line_style_sections) {
             // TODO:
             // 1. pad right
             // 2. remove +- in first column
