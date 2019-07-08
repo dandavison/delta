@@ -174,10 +174,12 @@ impl<'a> Painter<'a> {
                 }
                 None => (),
             }
-            let sections: Vec<(Style, &str)> =
+            let syntax_highlighting_style_sections: Vec<(Style, &str)> =
                 highlighter.highlight(&line, &self.config.syntax_set);
+            let combined_style_sections =
+                combine_style_sections(style_sections, syntax_highlighting_style_sections);
             paint_sections(
-                &sections[..],
+                &combined_style_sections[..],
                 None,
                 apply_syntax_highlighting,
                 &mut self.output_buffer,
@@ -259,4 +261,11 @@ fn paint_section(
             write!(output_buffer, "{}", text).unwrap();
         }
     }
+}
+
+fn combine_style_sections<'a>(
+    sections_1: Vec<(Style, String)>,
+    sections_2: Vec<(Style, &'a str)>,
+) -> Vec<(Style, &'a str)> {
+    sections_2
 }
