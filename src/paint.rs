@@ -174,12 +174,15 @@ impl<'a> Painter<'a> {
                 }
                 None => (),
             }
-            let syntax_highlighting_style_sections: Vec<(Style, &str)> =
-                highlighter.highlight(&line, &self.config.syntax_set);
+            let syntax_highlighting_style_sections: Vec<(Style, String)> = highlighter
+                .highlight(&line, &self.config.syntax_set)
+                .iter()
+                .map(|(style, s)| (*style, s.to_string()))
+                .collect::<Vec<(Style, String)>>();
             let combined_style_sections =
                 combine_style_sections(style_sections, syntax_highlighting_style_sections);
             paint_sections(
-                &combined_style_sections[..],
+                combined_style_sections,
                 None,
                 apply_syntax_highlighting,
                 &mut self.output_buffer,
@@ -210,14 +213,14 @@ impl<'a> Painter<'a> {
 /// Write sections text to buffer with color escape codes.
 // Based on as_24_bit_terminal_escaped from syntect
 fn paint_sections(
-    foreground_style_sections: &[(Style, &str)],
+    foreground_style_sections: Vec<(Style, String)>,
     background_color: Option<Color>,
     apply_syntax_highlighting: bool,
     output_buffer: &mut String,
 ) -> () {
-    for &(ref style, text) in foreground_style_sections.iter() {
+    for (style, text) in foreground_style_sections {
         paint_section(
-            text,
+            &text,
             if apply_syntax_highlighting {
                 Some(style.foreground)
             } else {
@@ -263,9 +266,9 @@ fn paint_section(
     }
 }
 
-fn combine_style_sections<'a>(
+fn combine_style_sections(
     sections_1: Vec<(Style, String)>,
-    sections_2: Vec<(Style, &'a str)>,
-) -> Vec<(Style, &'a str)> {
+    sections_2: Vec<(Style, String)>,
+) -> Vec<(Style, String)> {
     sections_2
 }
