@@ -157,8 +157,8 @@ fn process_command_line_arguments<'a>(
         &opt.theme,
         &assets.theme_set,
         opt.light,
-        &opt.plus_color,
         &opt.minus_color,
+        &opt.plus_color,
         opt.highlight_removed,
         width,
     )
