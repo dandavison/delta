@@ -1,4 +1,5 @@
 use std::io::Write;
+use std::iter::Peekable;
 use std::str::FromStr;
 // TODO: Functions in this module should return Result and use ? syntax.
 
@@ -26,10 +27,24 @@ const LIGHT_THEME_PLUS_COLOR: Color = Color {
     a: 0xff,
 };
 
+const LIGHT_THEME_PLUS_EMPH_COLOR: Color = Color {
+    r: 0xa0,
+    g: 0xef,
+    b: 0xa0,
+    a: 0xff,
+};
+
 const LIGHT_THEME_MINUS_COLOR: Color = Color {
     r: 0xff,
     g: 0xd0,
     b: 0xd0,
+    a: 0xff,
+};
+
+const LIGHT_THEME_MINUS_EMPH_COLOR: Color = Color {
+    r: 0xef,
+    g: 0xa0,
+    b: 0xa0,
     a: 0xff,
 };
 
@@ -40,10 +55,24 @@ const DARK_THEME_PLUS_COLOR: Color = Color {
     a: 0xff,
 };
 
+const DARK_THEME_PLUS_EMPH_COLOR: Color = Color {
+    r: 0x11,
+    g: 0x6B,
+    b: 0x11,
+    a: 0xff,
+};
+
 const DARK_THEME_MINUS_COLOR: Color = Color {
     r: 0x3F,
     g: 0x00,
     b: 0x01,
+    a: 0xff,
+};
+
+const DARK_THEME_MINUS_EMPH_COLOR: Color = Color {
+    r: 0x90,
+    g: 0x10,
+    b: 0x11,
     a: 0xff,
 };
 
@@ -57,6 +86,8 @@ pub struct Config<'a> {
     pub theme: &'a Theme,
     pub minus_style_modifier: StyleModifier,
     pub plus_style_modifier: StyleModifier,
+    pub minus_emph_style_modifier: StyleModifier,
+    pub plus_emph_style_modifier: StyleModifier,
     pub syntax_set: &'a SyntaxSet,
     pub width: Option<usize>,
     pub highlight_removed: bool,
@@ -104,10 +135,32 @@ pub fn get_config<'a>(
         font_style: None,
     };
 
+    let minus_emph_style_modifier = StyleModifier {
+        background: if is_light_theme {
+            Some(LIGHT_THEME_MINUS_EMPH_COLOR)
+        } else {
+            Some(DARK_THEME_MINUS_EMPH_COLOR)
+        },
+        foreground: None,
+        font_style: None,
+    };
+
+    let plus_emph_style_modifier = StyleModifier {
+        background: if is_light_theme {
+            Some(LIGHT_THEME_PLUS_EMPH_COLOR)
+        } else {
+            Some(DARK_THEME_PLUS_EMPH_COLOR)
+        },
+        foreground: None,
+        font_style: None,
+    };
+
     Config {
         theme: &theme_set.themes[theme_name],
         minus_style_modifier: minus_style_modifier,
         plus_style_modifier: plus_style_modifier,
+        minus_emph_style_modifier: minus_emph_style_modifier,
+        plus_emph_style_modifier: plus_emph_style_modifier,
         width: width,
         highlight_removed: highlight_removed,
         syntax_set: &syntax_set,
@@ -203,6 +256,14 @@ impl<'a> Painter<'a> {
 
     /// Set background styles for minus and plus lines in buffer.
     fn set_background_style_sections(&mut self) {
+        if self.minus_lines.len() == self.plus_lines.len() {
+            self.set_background_style_sections_diff_detail();
+        } else {
+            self.set_background_style_sections_plain();
+        }
+    }
+
+    fn set_background_style_sections_plain(&mut self) {
         for line in self.minus_lines.iter() {
             self.minus_line_style_sections
                 .push(vec![(self.config.minus_style_modifier, line.to_string())]);
@@ -211,6 +272,138 @@ impl<'a> Painter<'a> {
             self.plus_line_style_sections
                 .push(vec![(self.config.plus_style_modifier, line.to_string())]);
         }
+    }
+
+    /// Create background style sections for a region of removed/added lines.
+    /*
+      This function is called iff a region of n minus lines followed
+      by n plus lines is encountered, e.g. n successive lines have
+      been partially changed.
+
+      Consider the i-th such line and let m, p be the i-th minus and
+      i-th plus line, respectively.  The following cases exist:
+
+      1. Whitespace deleted at line beginning.
+         => The deleted section is highlighted in m; p is unstyled.
+
+      2. Whitespace inserted at line beginning.
+         => The inserted section is highlighted in p; m is unstyled.
+
+      3. An internal section of the line containing a non-whitespace character has been deleted.
+         => The deleted section is highlighted in m; p is unstyled.
+
+      4. An internal section of the line containing a non-whitespace character has been changed.
+         => The original section is highlighted in m; the replacement is highlighted in p.
+
+      5. An internal section of the line containing a non-whitespace character has been inserted.
+         => The inserted section is highlighted in p; m is unstyled.
+
+      Note that whitespace can be neither deleted nor inserted at the
+      end of the line: the line by definition has no trailing
+      whitespace.
+    */
+    fn set_background_style_sections_diff_detail(&mut self) {
+        for (minus, plus) in self.minus_lines.iter().zip(self.plus_lines.iter()) {
+            let string_pair = StringPair::new(minus, plus);
+            let change_begin = string_pair.common_prefix_length;
+            let minus_change_end = string_pair.lengths[0] - string_pair.common_suffix_length;
+            let plus_change_end = string_pair.lengths[1] - string_pair.common_suffix_length;
+
+            self.minus_line_style_sections.push(vec![
+                (
+                    self.config.minus_style_modifier,
+                    minus[0..change_begin].to_string(),
+                ),
+                (
+                    self.config.minus_emph_style_modifier,
+                    minus[change_begin..minus_change_end].to_string(),
+                ),
+                (
+                    self.config.minus_style_modifier,
+                    minus[minus_change_end..].to_string(),
+                ),
+            ]);
+            self.plus_line_style_sections.push(vec![
+                (
+                    self.config.plus_style_modifier,
+                    plus[0..change_begin].to_string(),
+                ),
+                (
+                    self.config.plus_emph_style_modifier,
+                    plus[change_begin..plus_change_end].to_string(),
+                ),
+                (
+                    self.config.plus_style_modifier,
+                    plus[plus_change_end..].to_string(),
+                ),
+            ]);
+        }
+    }
+}
+
+/// A pair of right-trimmed strings.
+struct StringPair {
+    common_prefix_length: usize,
+    common_suffix_length: usize,
+    lengths: [usize; 2],
+}
+
+impl StringPair {
+    pub fn new(s0: &str, s1: &str) -> StringPair {
+        let common_prefix_length = StringPair::common_prefix_length(s0.chars(), s1.chars());
+        let (common_suffix_length, trailing_whitespace) =
+            StringPair::suffix_data(s0.chars(), s1.chars());
+        StringPair {
+            common_prefix_length,
+            common_suffix_length,
+            lengths: [
+                s0.len() - trailing_whitespace[0],
+                s1.len() - trailing_whitespace[1],
+            ],
+        }
+    }
+
+    fn common_prefix_length(
+        s0: impl Iterator<Item = char>,
+        s1: impl Iterator<Item = char>,
+    ) -> usize {
+        let mut i = 0;
+        for (c0, c1) in s0.zip(s1) {
+            if c0 != c1 {
+                break;
+            } else {
+                i += 1;
+            }
+        }
+        i
+    }
+
+    /// Return common suffix length and number of trailing whitespace characters on each string.
+    fn suffix_data(
+        s0: impl DoubleEndedIterator<Item = char>,
+        s1: impl DoubleEndedIterator<Item = char>,
+    ) -> (usize, [usize; 2]) {
+        let mut s0 = s0.rev().peekable();
+        let mut s1 = s1.rev().peekable();
+        let n0 = StringPair::consume_whitespace(&mut s0);
+        let n1 = StringPair::consume_whitespace(&mut s1);
+
+        (StringPair::common_prefix_length(s0, s1), [n0, n1])
+    }
+
+    /// Consume leading whitespace; return number of characters consumed.
+    fn consume_whitespace(s: &mut Peekable<impl Iterator<Item = char>>) -> usize {
+        let mut i = 0;
+        loop {
+            match s.peek() {
+                Some(' ') => {
+                    s.next();
+                    i += 1;
+                }
+                _ => break,
+            }
+        }
+        i
     }
 }
 
@@ -361,4 +554,64 @@ mod superimpose_style_sections {
         }
     }
 
+}
+
+#[cfg(test)]
+mod tests {
+    fn common_prefix_length(s1: &str, s2: &str) -> usize {
+        super::StringPair::new(s1, s2).common_prefix_length
+    }
+
+    fn common_suffix_length(s1: &str, s2: &str) -> usize {
+        super::StringPair::new(s1, s2).common_suffix_length
+    }
+
+    #[test]
+    fn test_common_prefix_length() {
+        assert_eq!(common_prefix_length("", ""), 0);
+        assert_eq!(common_prefix_length("", "a"), 0);
+        assert_eq!(common_prefix_length("a", ""), 0);
+        assert_eq!(common_prefix_length("a", "b"), 0);
+        assert_eq!(common_prefix_length("a", "a"), 1);
+        assert_eq!(common_prefix_length("a", "ab"), 1);
+        assert_eq!(common_prefix_length("ab", "a"), 1);
+        assert_eq!(common_prefix_length("ab", "aba"), 2);
+        assert_eq!(common_prefix_length("aba", "ab"), 2);
+    }
+
+    #[test]
+    fn test_common_prefix_length_with_leading_whitespace() {
+        assert_eq!(common_prefix_length(" ", ""), 0);
+        assert_eq!(common_prefix_length(" ", " "), 1);
+        assert_eq!(common_prefix_length(" a", " a"), 2);
+        assert_eq!(common_prefix_length(" a", "a"), 0);
+    }
+
+    #[test]
+    fn test_common_suffix_length() {
+        assert_eq!(common_suffix_length("", ""), 0);
+        assert_eq!(common_suffix_length("", "a"), 0);
+        assert_eq!(common_suffix_length("a", ""), 0);
+        assert_eq!(common_suffix_length("a", "b"), 0);
+        assert_eq!(common_suffix_length("a", "a"), 1);
+        assert_eq!(common_suffix_length("a", "ab"), 0);
+        assert_eq!(common_suffix_length("ab", "a"), 0);
+        assert_eq!(common_suffix_length("ab", "b"), 1);
+        assert_eq!(common_suffix_length("ab", "aab"), 2);
+        assert_eq!(common_suffix_length("aba", "ba"), 2);
+    }
+
+    #[test]
+    fn test_common_suffix_length_with_trailing_whitespace() {
+        assert_eq!(common_suffix_length("", "  "), 0);
+        assert_eq!(common_suffix_length("  ", "a"), 0);
+        assert_eq!(common_suffix_length("a  ", ""), 0);
+        assert_eq!(common_suffix_length("a", "b  "), 0);
+        assert_eq!(common_suffix_length("a", "a  "), 1);
+        assert_eq!(common_suffix_length("a  ", "ab  "), 0);
+        assert_eq!(common_suffix_length("ab", "a  "), 0);
+        assert_eq!(common_suffix_length("ab  ", "b "), 1);
+        assert_eq!(common_suffix_length("ab ", "aab  "), 2);
+        assert_eq!(common_suffix_length("aba ", "ba"), 2);
+    }
 }
