@@ -79,18 +79,17 @@ pub fn delta(
                     if state == State::HunkPlus {
                         painter.paint_buffered_lines();
                     }
-                    painter
-                        .minus_lines
-                        .push(replace_first_character(&line, ' '));
+                    painter.minus_lines.push(prepare(&line, config));
                     state = State::HunkMinus;
                 }
                 Some('+') => {
-                    painter.plus_lines.push(replace_first_character(&line, ' '));
+                    painter.plus_lines.push(prepare(&line, config));
                     state = State::HunkPlus;
                 }
                 _ => {
                     painter.paint_buffered_lines();
                     state = State::HunkZero;
+                    let line = prepare(&line, config);
                     painter.paint_lines(
                         vec![line.clone()],
                         vec![vec![(NULL_STYLE_MODIFIER, line.clone())]],
@@ -109,10 +108,22 @@ pub fn delta(
     Ok(())
 }
 
-fn replace_first_character(s: &str, replacement: char) -> String {
-    let mut new = replacement.to_string();
-    new.push_str(&s[1..]);
-    new
+/// Replace initial -/+ character with ' ' and pad to width.
+fn prepare(_line: &str, config: &Config) -> String {
+    let mut line = String::new();
+    if _line.len() > 0 {
+        line.push_str(" ");
+        line.push_str(&_line[1..]);
+    }
+    match config.width {
+        Some(width) => {
+            if line.len() < width {
+                line = format!("{}{}", line, " ".repeat(width - line.len()));
+            }
+        }
+        _ => (),
+    }
+    line
 }
 
 mod parse_git_diff {

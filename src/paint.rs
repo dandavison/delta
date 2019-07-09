@@ -180,8 +180,6 @@ impl<'a> Painter<'a> {
         let mut highlighter = HighlightLines::new(self.syntax.unwrap(), self.config.theme);
 
         for (line, style_sections) in lines.iter().zip(line_style_sections) {
-            // TODO:
-            // 1. pad right
             let syntax_highlighting_style_sections: Vec<(Style, String)> = highlighter
                 .highlight(&line, &self.config.syntax_set)
                 .iter()
