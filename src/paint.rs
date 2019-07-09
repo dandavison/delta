@@ -74,36 +74,49 @@ pub fn get_config<'a>(
             false => "Monokai Extended",
         },
     };
-    let minus_color = minus_color_str
-        .as_ref()
-        .and_then(|s| Color::from_str(s).ok());
-    let plus_color = plus_color_str
-        .as_ref()
-        .and_then(|s| Color::from_str(s).ok());
-
     let is_light_theme = LIGHT_THEMES.contains(&theme_name);
+
+    let minus_color = color_from_string(
+        minus_color_str,
+        is_light_theme,
+        LIGHT_THEME_MINUS_COLOR,
+        DARK_THEME_MINUS_COLOR,
+    );
+
+    let plus_color = color_from_string(
+        plus_color_str,
+        is_light_theme,
+        LIGHT_THEME_PLUS_COLOR,
+        DARK_THEME_PLUS_COLOR,
+    );
 
     Config {
         theme: &theme_set.themes[theme_name],
-        plus_color: plus_color.unwrap_or_else(|| {
-            if is_light_theme {
-                LIGHT_THEME_PLUS_COLOR
-            } else {
-                DARK_THEME_PLUS_COLOR
-            }
-        }),
-        minus_color: minus_color.unwrap_or_else(|| {
-            if is_light_theme {
-                LIGHT_THEME_MINUS_COLOR
-            } else {
-                DARK_THEME_MINUS_COLOR
-            }
-        }),
+        minus_color: minus_color,
+        plus_color: plus_color,
         width: width,
         highlight_removed: highlight_removed,
         syntax_set: &syntax_set,
         pager: "less",
     }
+}
+
+fn color_from_string(
+    string: &Option<String>,
+    is_light_theme: bool,
+    light_theme_default: Color,
+    dark_theme_default: Color,
+) -> Color {
+    string
+        .as_ref()
+        .and_then(|s| Color::from_str(s).ok())
+        .unwrap_or_else(|| {
+            if is_light_theme {
+                light_theme_default
+            } else {
+                dark_theme_default
+            }
+        })
 }
 
 pub struct Painter<'a> {
