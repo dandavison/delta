@@ -79,11 +79,13 @@ pub fn delta(
                     if state == State::HunkPlus {
                         painter.paint_buffered_lines();
                     }
-                    painter.minus_lines.push(line);
+                    painter
+                        .minus_lines
+                        .push(replace_first_character(&line, ' '));
                     state = State::HunkMinus;
                 }
                 Some('+') => {
-                    painter.plus_lines.push(line);
+                    painter.plus_lines.push(replace_first_character(&line, ' '));
                     state = State::HunkPlus;
                 }
                 _ => {
@@ -105,6 +107,12 @@ pub fn delta(
     painter.paint_buffered_lines();
     painter.emit()?;
     Ok(())
+}
+
+fn replace_first_character(s: &str, replacement: char) -> String {
+    let mut new = replacement.to_string();
+    new.push_str(&s[1..]);
+    new
 }
 
 mod parse_git_diff {

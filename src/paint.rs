@@ -182,7 +182,6 @@ impl<'a> Painter<'a> {
         for (line, style_sections) in lines.iter().zip(line_style_sections) {
             // TODO:
             // 1. pad right
-            // 2. remove +- in first column
             let syntax_highlighting_style_sections: Vec<(Style, String)> = highlighter
                 .highlight(&line, &self.config.syntax_set)
                 .iter()
