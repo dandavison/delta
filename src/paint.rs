@@ -96,6 +96,7 @@ pub struct Config<'a> {
     pub terminal_width: usize,
     pub width: Option<usize>,
     pub highlight_removed: bool,
+    pub no_structural_changes: bool,
     pub pager: &'a str,
 }
 
@@ -109,6 +110,7 @@ pub fn get_config<'a>(
     plus_color: &Option<String>,
     plus_emph_color: &Option<String>,
     highlight_removed: bool,
+    no_structural_changes: bool,
     terminal_width: usize,
     width: Option<usize>,
 ) -> Config<'a> {
@@ -182,6 +184,7 @@ pub fn get_config<'a>(
         terminal_width: terminal_width,
         width: width,
         highlight_removed: highlight_removed,
+        no_structural_changes: no_structural_changes,
         syntax_set: &syntax_set,
         pager: "less",
     }

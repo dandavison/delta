@@ -62,6 +62,11 @@ struct Opt {
     /// apply syntax highlighting to unchanged and new lines only.
     highlight_removed: bool,
 
+    #[structopt(long = "no-structural-changes")]
+    /// Do not modify input text; only add colors. This disables
+    /// prettification of metadata sections in the git diff output.
+    no_structural_changes: bool,
+
     /// The width (in characters) of the background color
     /// highlighting. By default, the width is the current terminal
     /// width. Use --width=variable to apply background colors to the
@@ -171,6 +176,7 @@ fn process_command_line_arguments<'a>(
         &opt.plus_color,
         &opt.plus_emph_color,
         opt.highlight_removed,
+        opt.no_structural_changes,
         terminal_width,
         width,
     )

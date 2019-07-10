@@ -71,20 +71,22 @@ pub fn delta(
                 Some(extension) => assets.syntax_set.find_syntax_by_extension(extension),
                 None => None,
             };
-            painter.emit()?;
-            let hline = "─".repeat(config.terminal_width);
-            let file_paths = get_file_paths_from_diff_line(&line);
+            if !config.no_structural_changes {
+                painter.emit()?;
+                let hline = "─".repeat(config.terminal_width);
+                let file_paths = get_file_paths_from_diff_line(&line);
 
-            let ansi_style = Blue.bold();
-            writeln!(
-                painter.writer,
-                "{}\n{}{}\n{}",
-                ansi_style.paint(&hline),
-                ansi_style.paint("modified: "),
-                ansi_style.paint(file_paths.0.unwrap_or("?")),
-                ansi_style.paint(&hline)
-            )?;
-            continue;
+                let ansi_style = Blue.bold();
+                writeln!(
+                    painter.writer,
+                    "{}\n{}{}\n{}",
+                    ansi_style.paint(&hline),
+                    ansi_style.paint("modified: "),
+                    ansi_style.paint(file_paths.0.unwrap_or("?")),
+                    ansi_style.paint(&hline)
+                )?;
+                continue;
+            }
         } else if line.starts_with("commit") {
             painter.paint_buffered_lines();
             state = State::Commit;
@@ -116,7 +118,7 @@ pub fn delta(
             painter.emit()?;
             continue;
         }
-        if state == State::DiffMeta {
+        if state == State::DiffMeta && !config.no_structural_changes {
             continue;
         } else {
             painter.emit()?;
