@@ -31,11 +31,11 @@ impl HighlightingAssets {
     }
 
     fn get_integrated_syntaxset() -> SyntaxSet {
-        from_binary(include_bytes!("../assets/syntaxes.bin"))
+        from_binary(include_bytes!("../../assets/syntaxes.bin"))
     }
 
     fn get_integrated_themeset() -> ThemeSet {
-        from_binary(include_bytes!("../assets/themes.bin"))
+        from_binary(include_bytes!("../../assets/themes.bin"))
     }
 
     fn from_binary() -> Self {
@@ -55,9 +55,7 @@ pub fn list_languages() -> std::io::Result<()> {
         .syntax_set
         .syntaxes()
         .iter()
-        .filter(|syntax| {
-            !syntax.hidden && !syntax.file_extensions.is_empty()
-        })
+        .filter(|syntax| !syntax.hidden && !syntax.file_extensions.is_empty())
         .collect::<Vec<_>>();
     languages.sort_by_key(|lang| lang.name.to_uppercase());
 
