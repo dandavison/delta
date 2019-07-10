@@ -1,3 +1,4 @@
+use std::cmp::max;
 use std::io::Write;
 use std::iter::Peekable;
 use std::str::FromStr;
@@ -306,8 +307,26 @@ impl<'a> Painter<'a> {
         for (minus, plus) in self.minus_lines.iter().zip(self.plus_lines.iter()) {
             let string_pair = StringPair::new(minus, plus);
             let change_begin = string_pair.common_prefix_length;
-            let minus_change_end = string_pair.lengths[0] - string_pair.common_suffix_length;
-            let plus_change_end = string_pair.lengths[1] - string_pair.common_suffix_length;
+
+            // We require that (right-trimmed length) >= (common prefix length). Consider:
+            // minus = "a    "
+            // plus  = "a b  "
+            // Here, the right-trimmed length of minus is 1, yet the common prefix length is
+            // 2. We resolve this by taking the following maxima:
+            let minus_length = max(string_pair.lengths[0], string_pair.common_prefix_length);
+            let plus_length = max(string_pair.lengths[1], string_pair.common_prefix_length);
+
+            // We require that change_begin <= change_end. Consider:
+            // minus = "a c"
+            // plus  = "a b c"
+            // Here, the common prefix length is 2, and the common suffix length is 2, yet the
+            // length of minus is 3. This overlap between prefix and suffix leads to a violation of
+            // the requirement. We resolve this by taking the following maxima:
+            let minus_change_end = max(
+                minus_length - string_pair.common_suffix_length,
+                change_begin,
+            );
+            let plus_change_end = max(plus_length - string_pair.common_suffix_length, change_begin);
 
             self.minus_line_style_sections.push(vec![
                 (
