@@ -93,6 +93,7 @@ pub struct Config<'a> {
     pub plus_style_modifier: StyleModifier,
     pub plus_emph_style_modifier: StyleModifier,
     pub syntax_set: &'a SyntaxSet,
+    pub terminal_width: usize,
     pub width: Option<usize>,
     pub highlight_removed: bool,
     pub pager: &'a str,
@@ -108,6 +109,7 @@ pub fn get_config<'a>(
     plus_color: &Option<String>,
     plus_emph_color: &Option<String>,
     highlight_removed: bool,
+    terminal_width: usize,
     width: Option<usize>,
 ) -> Config<'a> {
     let theme_name = match theme {
@@ -177,6 +179,7 @@ pub fn get_config<'a>(
         minus_emph_style_modifier: minus_emph_style_modifier,
         plus_style_modifier: plus_style_modifier,
         plus_emph_style_modifier: plus_emph_style_modifier,
+        terminal_width: terminal_width,
         width: width,
         highlight_removed: highlight_removed,
         syntax_set: &syntax_set,

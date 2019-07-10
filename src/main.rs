@@ -150,6 +150,7 @@ fn process_command_line_arguments<'a>(
         None => (),
     };
 
+    let terminal_width = Term::stdout().size().1 as usize;
     let width = match opt.width.as_ref().map(String::as_str) {
         Some("variable") => None,
         Some(width) => Some(
@@ -157,7 +158,7 @@ fn process_command_line_arguments<'a>(
                 .parse::<usize>()
                 .unwrap_or_else(|_| panic!("Invalid width: {}", width)),
         ),
-        None => Some((Term::stdout().size().1 - 1) as usize),
+        None => Some(terminal_width - 1),
     };
 
     paint::get_config(
@@ -170,6 +171,7 @@ fn process_command_line_arguments<'a>(
         &opt.plus_color,
         &opt.plus_emph_color,
         opt.highlight_removed,
+        terminal_width,
         width,
     )
 }
