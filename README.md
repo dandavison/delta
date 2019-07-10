@@ -120,4 +120,5 @@ All git commands that display diff output should now display syntax-highlighted 
 
 ## Credit
   https://github.com/trishume/syntect<br>
-  https://github.com/sharkdp/bat
+  https://github.com/sharkdp/bat<br>
+  https://github.com/so-fancy/diff-so-fancy

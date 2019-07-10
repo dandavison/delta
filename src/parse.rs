@@ -1,9 +1,12 @@
+use ansi_term::Colour::Blue;
 use console::strip_ansi_codes;
 
 use crate::bat::assets::HighlightingAssets;
 use crate::bat::output::{OutputType, PagingMode};
 use crate::paint::{Config, Painter, NO_BACKGROUND_COLOR_STYLE_MODIFIER};
-use crate::parse::parse_git_diff::get_file_extension_from_diff_line;
+use crate::parse::parse_git_diff::{
+    get_file_extension_from_diff_line, get_file_paths_from_diff_line,
+};
 
 #[derive(Debug, PartialEq)]
 pub enum State {
@@ -67,7 +70,21 @@ pub fn delta(
             painter.syntax = match get_file_extension_from_diff_line(&line) {
                 Some(extension) => assets.syntax_set.find_syntax_by_extension(extension),
                 None => None,
-            }
+            };
+            painter.emit()?;
+            let hline = "─".repeat(config.terminal_width);
+            let file_paths = get_file_paths_from_diff_line(&line);
+
+            let ansi_style = Blue.bold();
+            writeln!(
+                painter.writer,
+                "{}\n{}{}\n{}",
+                ansi_style.paint(&hline),
+                ansi_style.paint("modified: "),
+                ansi_style.paint(file_paths.0.unwrap_or("?")),
+                ansi_style.paint(&hline)
+            )?;
+            continue;
         } else if line.starts_with("commit") {
             painter.paint_buffered_lines();
             state = State::Commit;
@@ -99,8 +116,12 @@ pub fn delta(
             painter.emit()?;
             continue;
         }
-        painter.emit()?;
-        writeln!(painter.writer, "{}", raw_line)?;
+        if state == State::DiffMeta {
+            continue;
+        } else {
+            painter.emit()?;
+            writeln!(painter.writer, "{}", raw_line)?;
+        }
     }
 
     painter.paint_buffered_lines();
@@ -146,6 +167,17 @@ mod parse_git_diff {
             (None, Some(ext2)) => Some(ext2),
             (None, None) => None,
         }
+    }
+
+    // TODO: Don't parse the line twice (once for file paths and once for  extensions).
+    pub fn get_file_paths_from_diff_line(line: &str) -> (Option<&str>, Option<&str>) {
+        let mut iter = line.split(" ");
+        iter.next(); // diff
+        iter.next(); // --git
+        (
+            iter.next().and_then(|s| Some(&s[2..])),
+            iter.next().and_then(|s| Some(&s[2..])),
+        )
     }
 
     /// Given input like "diff --git a/src/main.rs b/src/main.rs"
