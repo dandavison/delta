@@ -77,9 +77,12 @@ const DARK_THEME_MINUS_EMPH_COLOR: Color = Color {
     a: 0xff,
 };
 
-pub const NULL_STYLE_MODIFIER: StyleModifier = StyleModifier {
+/// A special color to specify that no color escape codes should be emitted.
+const NO_COLOR: Color = Color::BLACK;
+
+pub const NO_BACKGROUND_COLOR_STYLE_MODIFIER: StyleModifier = StyleModifier {
     foreground: None,
-    background: None,
+    background: Some(NO_COLOR),
     font_style: None,
 };
 
@@ -429,16 +432,22 @@ impl StringPair {
 /// Write section text to buffer with color escape codes.
 fn paint_section(text: &str, style: Style, output_buffer: &mut String) -> std::fmt::Result {
     use std::fmt::Write;
-    write!(
-        output_buffer,
-        "\x1b[48;2;{};{};{}m",
-        style.background.r, style.background.g, style.background.b
-    )?;
-    write!(
-        output_buffer,
-        "\x1b[38;2;{};{};{}m{}",
-        style.foreground.r, style.foreground.g, style.foreground.b, text
-    )?;
+    match style.background {
+        NO_COLOR => (),
+        _ => write!(
+            output_buffer,
+            "\x1b[48;2;{};{};{}m",
+            style.background.r, style.background.g, style.background.b
+        )?,
+    }
+    match style.foreground {
+        NO_COLOR => write!(output_buffer, "{}", text)?,
+        _ => write!(
+            output_buffer,
+            "\x1b[38;2;{};{};{}m{}",
+            style.foreground.r, style.foreground.g, style.foreground.b, text
+        )?,
+    };
     Ok(())
 }
 

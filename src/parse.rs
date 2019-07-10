@@ -2,7 +2,7 @@ use console::strip_ansi_codes;
 
 use crate::bat::assets::HighlightingAssets;
 use crate::bat::output::{OutputType, PagingMode};
-use crate::paint::{Config, Painter, NULL_STYLE_MODIFIER};
+use crate::paint::{Config, Painter, NO_BACKGROUND_COLOR_STYLE_MODIFIER};
 use crate::parse::parse_git_diff::get_file_extension_from_diff_line;
 
 #[derive(Debug, PartialEq)]
@@ -92,7 +92,7 @@ pub fn delta(
                     let line = prepare(&line, config);
                     painter.paint_lines(
                         vec![line.clone()],
-                        vec![vec![(NULL_STYLE_MODIFIER, line.clone())]],
+                        vec![vec![(NO_BACKGROUND_COLOR_STYLE_MODIFIER, line.clone())]],
                     );
                 }
             };
