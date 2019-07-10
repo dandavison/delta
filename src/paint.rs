@@ -107,7 +107,7 @@ pub fn get_config<'a>(
     minus_emph_color: &Option<String>,
     plus_color: &Option<String>,
     plus_emph_color: &Option<String>,
-    highlight_removed: bool, // TODO: honor
+    highlight_removed: bool,
     width: Option<usize>,
 ) -> Config<'a> {
     let theme_name = match theme {
@@ -126,7 +126,11 @@ pub fn get_config<'a>(
             LIGHT_THEME_MINUS_COLOR,
             DARK_THEME_MINUS_COLOR,
         )),
-        foreground: None,
+        foreground: if highlight_removed {
+            None
+        } else {
+            Some(NO_COLOR)
+        },
         font_style: None,
     };
 
@@ -137,7 +141,11 @@ pub fn get_config<'a>(
             LIGHT_THEME_MINUS_EMPH_COLOR,
             DARK_THEME_MINUS_EMPH_COLOR,
         )),
-        foreground: None,
+        foreground: if highlight_removed {
+            None
+        } else {
+            Some(NO_COLOR)
+        },
         font_style: None,
     };
 
