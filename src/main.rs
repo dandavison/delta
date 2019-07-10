@@ -37,14 +37,6 @@ struct Opt {
     #[structopt(long = "dark")]
     dark: bool,
 
-    #[structopt(long = "plus-color")]
-    /// The background color (RGB hex) to use for added lines.
-    plus_color: Option<String>,
-
-    #[structopt(long = "plus-emph-color")]
-    /// The background color (RGB hex) to use for emphasized sections of added lines.
-    plus_emph_color: Option<String>,
-
     #[structopt(long = "minus-color")]
     /// The background color (RGB hex) to use for removed lines.
     minus_color: Option<String>,
@@ -52,6 +44,14 @@ struct Opt {
     #[structopt(long = "minus-emph-color")]
     /// The background color (RGB hex) to use for emphasized sections of removed lines.
     minus_emph_color: Option<String>,
+
+    #[structopt(long = "plus-color")]
+    /// The background color (RGB hex) to use for added lines.
+    plus_color: Option<String>,
+
+    #[structopt(long = "plus-emph-color")]
+    /// The background color (RGB hex) to use for emphasized sections of added lines.
+    plus_emph_color: Option<String>,
 
     #[structopt(long = "theme")]
     /// The syntax highlighting theme to use.

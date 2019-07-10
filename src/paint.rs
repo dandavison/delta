@@ -21,20 +21,6 @@ pub fn is_light_theme(theme: &str) -> bool {
     LIGHT_THEMES.contains(&theme)
 }
 
-const LIGHT_THEME_PLUS_COLOR: Color = Color {
-    r: 0xd0,
-    g: 0xff,
-    b: 0xd0,
-    a: 0xff,
-};
-
-const LIGHT_THEME_PLUS_EMPH_COLOR: Color = Color {
-    r: 0xa0,
-    g: 0xef,
-    b: 0xa0,
-    a: 0xff,
-};
-
 const LIGHT_THEME_MINUS_COLOR: Color = Color {
     r: 0xff,
     g: 0xd0,
@@ -49,17 +35,17 @@ const LIGHT_THEME_MINUS_EMPH_COLOR: Color = Color {
     a: 0xff,
 };
 
-const DARK_THEME_PLUS_COLOR: Color = Color {
-    r: 0x01,
-    g: 0x3B,
-    b: 0x01,
+const LIGHT_THEME_PLUS_COLOR: Color = Color {
+    r: 0xd0,
+    g: 0xff,
+    b: 0xd0,
     a: 0xff,
 };
 
-const DARK_THEME_PLUS_EMPH_COLOR: Color = Color {
-    r: 0x11,
-    g: 0x6B,
-    b: 0x11,
+const LIGHT_THEME_PLUS_EMPH_COLOR: Color = Color {
+    r: 0xa0,
+    g: 0xef,
+    b: 0xa0,
     a: 0xff,
 };
 
@@ -73,6 +59,20 @@ const DARK_THEME_MINUS_COLOR: Color = Color {
 const DARK_THEME_MINUS_EMPH_COLOR: Color = Color {
     r: 0x90,
     g: 0x10,
+    b: 0x11,
+    a: 0xff,
+};
+
+const DARK_THEME_PLUS_COLOR: Color = Color {
+    r: 0x01,
+    g: 0x3B,
+    b: 0x01,
+    a: 0xff,
+};
+
+const DARK_THEME_PLUS_EMPH_COLOR: Color = Color {
+    r: 0x11,
+    g: 0x6B,
     b: 0x11,
     a: 0xff,
 };
@@ -174,8 +174,8 @@ pub fn get_config<'a>(
     Config {
         theme: &theme_set.themes[theme_name],
         minus_style_modifier: minus_style_modifier,
-        plus_style_modifier: plus_style_modifier,
         minus_emph_style_modifier: minus_emph_style_modifier,
+        plus_style_modifier: plus_style_modifier,
         plus_emph_style_modifier: plus_emph_style_modifier,
         width: width,
         highlight_removed: highlight_removed,
