@@ -89,8 +89,8 @@ pub const NO_BACKGROUND_COLOR_STYLE_MODIFIER: StyleModifier = StyleModifier {
 pub struct Config<'a> {
     pub theme: &'a Theme,
     pub minus_style_modifier: StyleModifier,
-    pub plus_style_modifier: StyleModifier,
     pub minus_emph_style_modifier: StyleModifier,
+    pub plus_style_modifier: StyleModifier,
     pub plus_emph_style_modifier: StyleModifier,
     pub syntax_set: &'a SyntaxSet,
     pub width: Option<usize>,
@@ -104,7 +104,9 @@ pub fn get_config<'a>(
     theme_set: &'a ThemeSet,
     user_requests_theme_for_light_terminal_background: bool,
     minus_color: &Option<String>,
+    minus_emph_color: &Option<String>,
     plus_color: &Option<String>,
+    plus_emph_color: &Option<String>,
     highlight_removed: bool, // TODO: honor
     width: Option<usize>,
 ) -> Config<'a> {
@@ -128,6 +130,17 @@ pub fn get_config<'a>(
         font_style: None,
     };
 
+    let minus_emph_style_modifier = StyleModifier {
+        background: Some(color_from_arg(
+            minus_emph_color,
+            is_light_theme,
+            LIGHT_THEME_MINUS_EMPH_COLOR,
+            DARK_THEME_MINUS_EMPH_COLOR,
+        )),
+        foreground: None,
+        font_style: None,
+    };
+
     let plus_style_modifier = StyleModifier {
         background: Some(color_from_arg(
             plus_color,
@@ -139,22 +152,13 @@ pub fn get_config<'a>(
         font_style: None,
     };
 
-    let minus_emph_style_modifier = StyleModifier {
-        background: if is_light_theme {
-            Some(LIGHT_THEME_MINUS_EMPH_COLOR)
-        } else {
-            Some(DARK_THEME_MINUS_EMPH_COLOR)
-        },
-        foreground: None,
-        font_style: None,
-    };
-
     let plus_emph_style_modifier = StyleModifier {
-        background: if is_light_theme {
-            Some(LIGHT_THEME_PLUS_EMPH_COLOR)
-        } else {
-            Some(DARK_THEME_PLUS_EMPH_COLOR)
-        },
+        background: Some(color_from_arg(
+            plus_emph_color,
+            is_light_theme,
+            LIGHT_THEME_PLUS_EMPH_COLOR,
+            DARK_THEME_PLUS_EMPH_COLOR,
+        )),
         foreground: None,
         font_style: None,
     };

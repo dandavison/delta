@@ -41,9 +41,17 @@ struct Opt {
     /// The background color (RGB hex) to use for added lines.
     plus_color: Option<String>,
 
+    #[structopt(long = "plus-emph-color")]
+    /// The background color (RGB hex) to use for emphasized sections of added lines.
+    plus_emph_color: Option<String>,
+
     #[structopt(long = "minus-color")]
     /// The background color (RGB hex) to use for removed lines.
     minus_color: Option<String>,
+
+    #[structopt(long = "minus-emph-color")]
+    /// The background color (RGB hex) to use for emphasized sections of removed lines.
+    minus_emph_color: Option<String>,
 
     #[structopt(long = "theme")]
     /// The syntax highlighting theme to use.
@@ -158,7 +166,9 @@ fn process_command_line_arguments<'a>(
         &assets.theme_set,
         opt.light,
         &opt.minus_color,
+        &opt.minus_emph_color,
         &opt.plus_color,
+        &opt.plus_emph_color,
         opt.highlight_removed,
         width,
     )
