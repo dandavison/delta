@@ -72,7 +72,7 @@ const DARK_THEME_PLUS_COLOR: Color = Color {
 
 const DARK_THEME_PLUS_EMPH_COLOR: Color = Color {
     r: 0x11,
-    g: 0x6B,
+    g: 0x80,
     b: 0x11,
     a: 0xff,
 };
