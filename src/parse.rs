@@ -95,7 +95,7 @@ pub fn delta(
                 painter.emit()?;
                 let hline = "─".repeat(config.terminal_width); // U+2500
 
-                let code_fragment = parse_hunk_metadata(&line);
+                let (code_fragment, line_number) = parse_hunk_metadata(&line);
                 painter.paint_lines(
                     vec![code_fragment.clone()],
                     vec![vec![(
@@ -107,10 +107,11 @@ pub fn delta(
                 let ansi_style = Blue;
                 writeln!(
                     painter.writer,
-                    "{}\n{}{}",
+                    "{}\n{}{}\n{}",
                     ansi_style.paint(&hline),
                     painter.output_buffer,
-                    ansi_style.paint(&hline)
+                    ansi_style.paint(&hline),
+                    ansi_style.paint(&line_number),
                 )?;
                 painter.output_buffer.truncate(0);
                 continue;
@@ -208,8 +209,20 @@ mod parse_git_diff {
     /// Given input like
     /// "@@ -74,15 +74,14 @@ pub fn delta("
     /// Return " pub fn delta("
-    pub fn parse_hunk_metadata(line: &str) -> String {
-        line.split("@@").skip(2).next().unwrap_or("").to_string()
+    pub fn parse_hunk_metadata(line: &str) -> (String, String) {
+        let mut iter = line.split("@@").skip(1);
+        let line_number = iter
+            .next()
+            .and_then(|s| {
+                s.split("+")
+                    .skip(1)
+                    .next()
+                    .and_then(|s| s.split(",").next())
+            })
+            .unwrap_or("")
+            .to_string();
+        let code_fragment = iter.next().unwrap_or("").to_string();
+        (code_fragment, line_number)
     }
 
     fn get_file_paths_from_diff_line(line: &str) -> (Option<&str>, Option<&str>) {
@@ -268,8 +281,8 @@ mod parse_git_diff {
         #[test]
         fn test_parse_hunk_metadata() {
             assert_eq!(
-                parse_hunk_metadata("@@ -74,15 +74,14 @@ pub fn delta(\n"),
-                " pub fn delta(\n"
+                parse_hunk_metadata("@@ -74,15 +75,14 @@ pub fn delta(\n"),
+                (" pub fn delta(\n".to_string(), "75".to_string())
             );
         }
     }
