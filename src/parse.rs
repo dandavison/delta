@@ -6,6 +6,7 @@ use crate::bat::output::{OutputType, PagingMode};
 use crate::paint::{Config, Painter, NO_BACKGROUND_COLOR_STYLE_MODIFIER};
 use crate::parse::parse_git_diff::{
     get_file_change_description_from_diff_line, get_file_extension_from_diff_line,
+    parse_hunk_metadata,
 };
 
 #[derive(Debug, PartialEq)]
@@ -91,6 +92,30 @@ pub fn delta(
             state = State::Commit;
         } else if line.starts_with("@@") {
             state = State::HunkMeta;
+            if !config.no_structural_changes {
+                painter.emit()?;
+                let hline = "─".repeat(config.terminal_width); // U+2500
+
+                let code_fragment = parse_hunk_metadata(&line);
+                painter.paint_lines(
+                    vec![code_fragment.clone()],
+                    vec![vec![(
+                        NO_BACKGROUND_COLOR_STYLE_MODIFIER,
+                        code_fragment.clone(),
+                    )]],
+                );
+
+                let ansi_style = Blue;
+                writeln!(
+                    painter.writer,
+                    "{}\n{}{}",
+                    ansi_style.paint(&hline),
+                    painter.output_buffer,
+                    ansi_style.paint(&hline)
+                )?;
+                painter.output_buffer.truncate(0);
+                continue;
+            }
         } else if state.is_in_hunk() && painter.syntax.is_some() {
             match line.chars().next() {
                 Some('-') => {
@@ -179,6 +204,13 @@ mod parse_git_diff {
             (Some(file_1), Some(file_2)) => format!("renamed: {} ⟶  {}", file_1, file_2),
             _ => format!("?"),
         }
+    }
+
+    /// Given input like
+    /// "@@ -74,15 +74,14 @@ pub fn delta("
+    /// Return "pub fn delta("
+    pub fn parse_hunk_metadata(line: &str) -> String {
+        line.split("@@").skip(2).next().unwrap_or("").to_string()
     }
 
     fn get_file_paths_from_diff_line(line: &str) -> (Option<&str>, Option<&str>) {
