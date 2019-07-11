@@ -197,7 +197,7 @@ mod parse_git_diff {
     // TODO: Don't parse the line twice (once for change description and once for extensions).
     pub fn get_file_change_description_from_diff_line(line: &str) -> String {
         match get_file_paths_from_diff_line(line) {
-            (Some(file_1), Some(file_2)) if file_1 == file_2 => format!("modified: {}", file_1),
+            (Some(file_1), Some(file_2)) if file_1 == file_2 => format!("{}", file_1),
             (Some(file), Some("/dev/null")) => format!("deleted: {}", file),
             (Some("/dev/null"), Some(file)) => format!("added: {}", file),
             (Some(file_1), Some(file_2)) => format!("renamed: {} ⟶  {}", file_1, file_2),
@@ -261,7 +261,7 @@ mod parse_git_diff {
                 get_file_change_description_from_diff_line(
                     "diff --git a/src/main.rs b/src/main.rs"
                 ),
-                "modified: src/main.rs"
+                "src/main.rs"
             );
         }
 
