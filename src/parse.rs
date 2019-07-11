@@ -1,8 +1,9 @@
+use std::io::Write;
+
 use ansi_term::Colour::Blue;
 use console::strip_ansi_codes;
 
 use crate::bat::assets::HighlightingAssets;
-use crate::bat::output::{OutputType, PagingMode};
 use crate::paint::{Config, Painter, NO_BACKGROUND_COLOR_STYLE_MODIFIER};
 use crate::parse::parse_git_diff::{
     get_file_change_description_from_diff_line, get_file_extension_from_diff_line,
@@ -45,10 +46,8 @@ pub fn delta(
     lines: impl Iterator<Item = String>,
     config: &Config,
     assets: &HighlightingAssets,
+    writer: &mut Write,
 ) -> std::io::Result<()> {
-    let mut output_type =
-        OutputType::from_mode(PagingMode::QuitIfOneScreen, Some(config.pager)).unwrap();
-
     // TODO: Painter::new(config)
     let mut painter = Painter {
         minus_lines: Vec::new(),
@@ -56,7 +55,7 @@ pub fn delta(
         minus_line_style_sections: Vec::new(),
         plus_line_style_sections: Vec::new(),
         output_buffer: String::new(),
-        writer: output_type.handle().unwrap(),
+        writer: writer,
         syntax: None,
         config: config,
     };

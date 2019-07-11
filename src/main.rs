@@ -12,6 +12,7 @@ use console::Term;
 use structopt::StructOpt;
 
 use crate::bat::assets::{list_languages, HighlightingAssets};
+use crate::bat::output::{OutputType, PagingMode};
 use crate::parse::delta;
 
 mod errors {
@@ -107,10 +108,15 @@ fn main() -> std::io::Result<()> {
 
     let paint_config = process_command_line_arguments(&assets, &opt);
 
+    let mut output_type =
+        OutputType::from_mode(PagingMode::QuitIfOneScreen, Some(paint_config.pager)).unwrap();
+    let mut writer = output_type.handle().unwrap();
+
     match delta(
         io::stdin().lock().lines().map(|l| l.unwrap()),
         &paint_config,
         &assets,
+        &mut writer,
     ) {
         Err(error) => match error.kind() {
             ErrorKind::BrokenPipe => process::exit(0),
@@ -190,6 +196,7 @@ fn compare_themes(assets: &HighlightingAssets) -> std::io::Result<()> {
     let stdout = io::stdout();
     let mut stdout = stdout.lock();
     let mut paint_config: paint::Config;
+
     let hline = "-".repeat(100);
 
     for (theme, _) in assets.theme_set.themes.iter() {
@@ -200,7 +207,16 @@ fn compare_themes(assets: &HighlightingAssets) -> std::io::Result<()> {
         writeln!(stdout, "{}\n{}\n{}\n", hline, theme, hline)?;
         opt.theme = Some(theme.to_string());
         paint_config = process_command_line_arguments(&assets, &opt);
-        delta(input.split("\n").map(String::from), &paint_config, &assets)?;
+        let mut output_type =
+            OutputType::from_mode(PagingMode::QuitIfOneScreen, Some(paint_config.pager)).unwrap();
+        let mut writer = output_type.handle().unwrap();
+
+        delta(
+            input.split("\n").map(String::from),
+            &paint_config,
+            &assets,
+            &mut writer,
+        )?;
     }
 
     Ok(())
