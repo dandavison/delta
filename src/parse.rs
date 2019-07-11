@@ -208,7 +208,7 @@ mod parse_git_diff {
 
     /// Given input like
     /// "@@ -74,15 +74,14 @@ pub fn delta("
-    /// Return "pub fn delta("
+    /// Return " pub fn delta("
     pub fn parse_hunk_metadata(line: &str) -> String {
         line.split("@@").skip(2).next().unwrap_or("").to_string()
     }
@@ -243,4 +243,36 @@ mod parse_git_diff {
             // E.g. 'Makefile' is the file name and also the extension
             .or_else(|| path.file_name().and_then(|s| s.to_str()))
     }
+
+    #[cfg(test)]
+    mod tests {
+        use super::*;
+
+        #[test]
+        fn test_get_file_extension_from_diff_line() {
+            assert_eq!(
+                get_file_extension_from_diff_line("diff --git a/src/main.rs b/src/main.rs"),
+                Some("rs")
+            );
+        }
+
+        #[test]
+        fn test_get_file_change_description_from_diff_line() {
+            assert_eq!(
+                get_file_change_description_from_diff_line(
+                    "diff --git a/src/main.rs b/src/main.rs"
+                ),
+                "modified: src/main.rs"
+            );
+        }
+
+        #[test]
+        fn test_parse_hunk_metadata() {
+            assert_eq!(
+                parse_hunk_metadata("@@ -74,15 +74,14 @@ pub fn delta(\n"),
+                " pub fn delta(\n"
+            );
+        }
+    }
+
 }
