@@ -93,8 +93,6 @@ pub fn delta(
             state = State::HunkMeta;
             if !config.no_structural_changes {
                 painter.emit()?;
-                let hline = "─".repeat(config.terminal_width); // U+2500
-
                 let (code_fragment, line_number) = parse_hunk_metadata(&line);
                 painter.paint_lines(
                     vec![code_fragment.clone()],
@@ -103,14 +101,25 @@ pub fn delta(
                         code_fragment.clone(),
                     )]],
                 );
+                painter.output_buffer.pop(); // trim newline
 
+                let hline_char = "─"; // U+2500
+                let vline_char = "│"; // U+2502
+                let top_right_corner_char = "┐"; // U+2510
+                let bottom_right_corner_char = "┘"; // U+2518
+                let hline_top = hline_char.repeat(code_fragment.len() + 1);
+                let hline_bottom = hline_char.repeat(code_fragment.len() + 1);
+                // let hline_bottom = hline_char.repeat(config.terminal_width);
                 let ansi_style = Blue;
                 writeln!(
                     painter.writer,
-                    "{}\n{}{}\n{}",
-                    ansi_style.paint(&hline),
+                    "{}{}\n{} {}\n{}{}\n{}",
+                    ansi_style.paint(&hline_top),
+                    ansi_style.paint(top_right_corner_char),
                     painter.output_buffer,
-                    ansi_style.paint(&hline),
+                    ansi_style.paint(vline_char),
+                    ansi_style.paint(&hline_bottom),
+                    ansi_style.paint(bottom_right_corner_char),
                     ansi_style.paint(&line_number),
                 )?;
                 painter.output_buffer.truncate(0);
