@@ -73,7 +73,7 @@ pub fn delta(
             };
             if !config.no_structural_changes {
                 painter.emit()?;
-                let hline = "─".repeat(config.terminal_width); // U+2500
+                let hline = "━".repeat(config.terminal_width); // U+2501
                 let file_change_description = get_file_change_description_from_diff_line(&line);
 
                 let ansi_style = Blue.bold();
