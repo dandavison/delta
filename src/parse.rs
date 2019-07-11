@@ -5,7 +5,7 @@ use crate::bat::assets::HighlightingAssets;
 use crate::bat::output::{OutputType, PagingMode};
 use crate::paint::{Config, Painter, NO_BACKGROUND_COLOR_STYLE_MODIFIER};
 use crate::parse::parse_git_diff::{
-    get_file_extension_from_diff_line, get_file_paths_from_diff_line,
+    get_file_change_description_from_diff_line, get_file_extension_from_diff_line,
 };
 
 #[derive(Debug, PartialEq)]
@@ -74,15 +74,14 @@ pub fn delta(
             if !config.no_structural_changes {
                 painter.emit()?;
                 let hline = "─".repeat(config.terminal_width);
-                let file_paths = get_file_paths_from_diff_line(&line);
+                let file_change_description = get_file_change_description_from_diff_line(&line);
 
                 let ansi_style = Blue.bold();
                 writeln!(
                     painter.writer,
-                    "{}\n{}{}\n{}",
+                    "{}\n{}\n{}",
                     ansi_style.paint(&hline),
-                    ansi_style.paint("modified: "),
-                    ansi_style.paint(file_paths.0.unwrap_or("?")),
+                    ansi_style.paint(&file_change_description),
                     ansi_style.paint(&hline)
                 )?;
                 continue;
@@ -171,8 +170,18 @@ mod parse_git_diff {
         }
     }
 
-    // TODO: Don't parse the line twice (once for file paths and once for  extensions).
-    pub fn get_file_paths_from_diff_line(line: &str) -> (Option<&str>, Option<&str>) {
+    // TODO: Don't parse the line twice (once for change description and once for extensions).
+    pub fn get_file_change_description_from_diff_line(line: &str) -> String {
+        match get_file_paths_from_diff_line(line) {
+            (Some(file_1), Some(file_2)) if file_1 == file_2 => format!("modified: {}", file_1),
+            (Some(file), Some("/dev/null")) => format!("deleted: {}", file),
+            (Some("/dev/null"), Some(file)) => format!("added: {}", file),
+            (Some(file_1), Some(file_2)) => format!("renamed: {} ⟶  {}", file_1, file_2),
+            _ => format!("?"),
+        }
+    }
+
+    fn get_file_paths_from_diff_line(line: &str) -> (Option<&str>, Option<&str>) {
         let mut iter = line.split(" ");
         iter.next(); // diff
         iter.next(); // --git
