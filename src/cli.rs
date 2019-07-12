@@ -1,4 +1,6 @@
 use std::process;
+use std::str::FromStr;
+use std::string::ToString;
 
 use console::Term;
 use structopt::StructOpt;
@@ -44,10 +46,20 @@ pub struct Opt {
     /// apply syntax highlighting to unchanged and new lines only.
     pub highlight_removed: bool,
 
-    #[structopt(long = "no-structural-changes")]
-    /// Do not modify input text; only add colors. This disables
-    /// prettification of metadata sections in the git diff output.
-    pub no_structural_changes: bool,
+    #[structopt(long = "commit-style", default_value = "plain")]
+    /// Formatting style for commit section of git output. Options
+    /// are: plain, box.
+    pub commit_style: SectionStyle,
+
+    #[structopt(long = "file-style", default_value = "underline")]
+    /// Formatting style for file section of git output. Options
+    /// are: plain, box, underline.
+    pub file_style: SectionStyle,
+
+    #[structopt(long = "hunk-style", default_value = "box")]
+    /// Formatting style for hunk section of git output. Options
+    /// are: plain, box.
+    pub hunk_style: SectionStyle,
 
     /// The width (in characters) of the background color
     /// highlighting. By default, the width is the current terminal
@@ -69,6 +81,38 @@ pub struct Opt {
     /// For example: `git show --color=always | delta --compare-themes`.
     #[structopt(long = "compare-themes")]
     pub compare_themes: bool,
+}
+
+#[derive(Debug, PartialEq)]
+pub enum SectionStyle {
+    Box,
+    Plain,
+    Underline,
+}
+
+// TODO: clean up enum parsing and error handling
+
+#[derive(Debug)]
+pub enum Error {
+    SectionStyleParseError,
+}
+
+impl FromStr for SectionStyle {
+    type Err = Error;
+    fn from_str(s: &str) -> Result<SectionStyle, Error> {
+        match s.to_lowercase().as_str() {
+            "box" => Ok(SectionStyle::Box),
+            "plain" => Ok(SectionStyle::Plain),
+            "underline" => Ok(SectionStyle::Underline),
+            _ => Err(Error::SectionStyleParseError),
+        }
+    }
+}
+
+impl ToString for Error {
+    fn to_string(&self) -> String {
+        "".to_string()
+    }
 }
 
 pub fn process_command_line_arguments<'a>(
