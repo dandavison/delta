@@ -117,16 +117,9 @@ pub fn process_command_line_arguments<'a>(
     };
 
     paint::get_config(
+        opt,
         &assets.syntax_set,
-        &opt.theme,
         &assets.theme_set,
-        opt.light,
-        &opt.minus_color,
-        &opt.minus_emph_color,
-        &opt.plus_color,
-        &opt.plus_emph_color,
-        opt.highlight_removed,
-        opt.no_structural_changes,
         terminal_width,
         width,
     )

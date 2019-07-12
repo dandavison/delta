@@ -8,6 +8,7 @@ use syntect::easy::HighlightLines;
 use syntect::highlighting::{Color, Style, StyleModifier, Theme, ThemeSet};
 use syntect::parsing::{SyntaxReference, SyntaxSet};
 
+use crate::cli;
 use crate::paint::superimpose_style_sections::superimpose_style_sections;
 
 pub const LIGHT_THEMES: [&str; 4] = [
@@ -101,22 +102,15 @@ pub struct Config<'a> {
 }
 
 pub fn get_config<'a>(
+    opt: &cli::Opt,
     syntax_set: &'a SyntaxSet,
-    theme: &Option<String>,
     theme_set: &'a ThemeSet,
-    user_requests_theme_for_light_terminal_background: bool,
-    minus_color: &Option<String>,
-    minus_emph_color: &Option<String>,
-    plus_color: &Option<String>,
-    plus_emph_color: &Option<String>,
-    highlight_removed: bool,
-    no_structural_changes: bool,
     terminal_width: usize,
     width: Option<usize>,
 ) -> Config<'a> {
-    let theme_name = match theme {
+    let theme_name = match opt.theme {
         Some(ref theme) => theme,
-        None => match user_requests_theme_for_light_terminal_background {
+        None => match opt.light {
             true => "GitHub",
             false => "Monokai Extended",
         },
@@ -125,12 +119,12 @@ pub fn get_config<'a>(
 
     let minus_style_modifier = StyleModifier {
         background: Some(color_from_arg(
-            minus_color,
+            &opt.minus_color,
             is_light_theme,
             LIGHT_THEME_MINUS_COLOR,
             DARK_THEME_MINUS_COLOR,
         )),
-        foreground: if highlight_removed {
+        foreground: if opt.highlight_removed {
             None
         } else {
             Some(NO_COLOR)
@@ -140,12 +134,12 @@ pub fn get_config<'a>(
 
     let minus_emph_style_modifier = StyleModifier {
         background: Some(color_from_arg(
-            minus_emph_color,
+            &opt.minus_emph_color,
             is_light_theme,
             LIGHT_THEME_MINUS_EMPH_COLOR,
             DARK_THEME_MINUS_EMPH_COLOR,
         )),
-        foreground: if highlight_removed {
+        foreground: if opt.highlight_removed {
             None
         } else {
             Some(NO_COLOR)
@@ -155,7 +149,7 @@ pub fn get_config<'a>(
 
     let plus_style_modifier = StyleModifier {
         background: Some(color_from_arg(
-            plus_color,
+            &opt.plus_color,
             is_light_theme,
             LIGHT_THEME_PLUS_COLOR,
             DARK_THEME_PLUS_COLOR,
@@ -166,7 +160,7 @@ pub fn get_config<'a>(
 
     let plus_emph_style_modifier = StyleModifier {
         background: Some(color_from_arg(
-            plus_emph_color,
+            &opt.plus_emph_color,
             is_light_theme,
             LIGHT_THEME_PLUS_EMPH_COLOR,
             DARK_THEME_PLUS_EMPH_COLOR,
@@ -183,8 +177,8 @@ pub fn get_config<'a>(
         plus_emph_style_modifier: plus_emph_style_modifier,
         terminal_width: terminal_width,
         width: width,
-        highlight_removed: highlight_removed,
-        no_structural_changes: no_structural_changes,
+        highlight_removed: opt.highlight_removed,
+        no_structural_changes: opt.no_structural_changes,
         syntax_set: &syntax_set,
         pager: "less",
     }
