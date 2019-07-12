@@ -73,7 +73,7 @@ pub fn delta(
                 Some(extension) => assets.syntax_set.find_syntax_by_extension(extension),
                 None => None,
             };
-            if !config.no_structural_changes {
+            if !config.opt.no_structural_changes {
                 painter.emit()?;
                 let file_change_description = get_file_change_description_from_diff_line(&line);
 
@@ -99,7 +99,7 @@ pub fn delta(
         } else if line.starts_with("commit") {
             painter.paint_buffered_lines();
             state = State::Commit;
-            if !config.no_structural_changes {
+            if !config.opt.no_structural_changes {
                 painter.emit()?;
                 let ansi_style = Yellow.normal();
                 let box_width = line.len() + 1;
@@ -122,7 +122,7 @@ pub fn delta(
             }
         } else if line.starts_with("@@") {
             state = State::HunkMeta;
-            if !config.no_structural_changes {
+            if !config.opt.no_structural_changes {
                 painter.emit()?;
                 let (code_fragment, line_number) = parse_hunk_metadata(&line);
                 let ansi_style = Blue.normal();
@@ -173,7 +173,7 @@ pub fn delta(
             painter.emit()?;
             continue;
         }
-        if state == State::DiffMeta && !config.no_structural_changes {
+        if state == State::DiffMeta && !config.opt.no_structural_changes {
             continue;
         } else {
             painter.emit()?;

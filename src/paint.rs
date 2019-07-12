@@ -96,13 +96,12 @@ pub struct Config<'a> {
     pub syntax_set: &'a SyntaxSet,
     pub terminal_width: usize,
     pub width: Option<usize>,
-    pub highlight_removed: bool,
-    pub no_structural_changes: bool,
     pub pager: &'a str,
+    pub opt: &'a cli::Opt,
 }
 
 pub fn get_config<'a>(
-    opt: &cli::Opt,
+    opt: &'a cli::Opt,
     syntax_set: &'a SyntaxSet,
     theme_set: &'a ThemeSet,
     terminal_width: usize,
@@ -177,10 +176,9 @@ pub fn get_config<'a>(
         plus_emph_style_modifier: plus_emph_style_modifier,
         terminal_width: terminal_width,
         width: width,
-        highlight_removed: opt.highlight_removed,
-        no_structural_changes: opt.no_structural_changes,
         syntax_set: &syntax_set,
         pager: "less",
+        opt,
     }
 }
 
