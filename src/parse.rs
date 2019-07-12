@@ -83,13 +83,14 @@ pub fn delta(
                     &file_change_description,
                     box_width,
                     ansi_style,
+                    true,
                     painter.writer,
                 )?;
                 write!(
                     painter.writer,
                     "{}",
                     ansi_style.paint(
-                        box_drawing::light::HORIZONTAL
+                        box_drawing::heavy::HORIZONTAL
                             .repeat(config.terminal_width - box_width - 1),
                     )
                 )?;
@@ -117,6 +118,7 @@ pub fn delta(
                         &painter.output_buffer,
                         code_fragment.len() + 1,
                         ansi_style,
+                        false,
                         &mut painter.writer,
                     )?;
                 }
