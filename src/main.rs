@@ -2,6 +2,7 @@
 extern crate error_chain;
 
 mod bat;
+mod draw;
 mod paint;
 mod parse;
 

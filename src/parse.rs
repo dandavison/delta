@@ -1,9 +1,11 @@
 use std::io::Write;
 
 use ansi_term::Colour::Blue;
+use box_drawing;
 use console::strip_ansi_codes;
 
 use crate::bat::assets::HighlightingAssets;
+use crate::draw;
 use crate::paint::{Config, Painter, NO_BACKGROUND_COLOR_STYLE_MODIFIER};
 use crate::parse::parse_git_diff::{
     get_file_change_description_from_diff_line, get_file_extension_from_diff_line,
@@ -73,16 +75,23 @@ pub fn delta(
             };
             if !config.no_structural_changes {
                 painter.emit()?;
-                let hline = "━".repeat(config.terminal_width); // U+2501
                 let file_change_description = get_file_change_description_from_diff_line(&line);
 
                 let ansi_style = Blue.bold();
-                writeln!(
+                let box_width = file_change_description.len() + 1;
+                draw::write_boxed_with_line(
+                    &file_change_description,
+                    box_width,
+                    ansi_style,
                     painter.writer,
-                    "{}\n{}\n{}",
-                    ansi_style.paint(&hline),
-                    ansi_style.paint(&file_change_description),
-                    ansi_style.paint(&hline)
+                )?;
+                write!(
+                    painter.writer,
+                    "{}",
+                    ansi_style.paint(
+                        box_drawing::light::HORIZONTAL
+                            .repeat(config.terminal_width - box_width - 1),
+                    )
                 )?;
                 continue;
             }
@@ -94,34 +103,24 @@ pub fn delta(
             if !config.no_structural_changes {
                 painter.emit()?;
                 let (code_fragment, line_number) = parse_hunk_metadata(&line);
-                painter.paint_lines(
-                    vec![code_fragment.clone()],
-                    vec![vec![(
-                        NO_BACKGROUND_COLOR_STYLE_MODIFIER,
-                        code_fragment.clone(),
-                    )]],
-                );
-                painter.output_buffer.pop(); // trim newline
-
-                let hline_char = "─"; // U+2500
-                let vline_char = "│"; // U+2502
-                let top_right_corner_char = "┐"; // U+2510
-                let bottom_right_corner_char = "┘"; // U+2518
-                let hline_top = hline_char.repeat(code_fragment.len() + 1);
-                let hline_bottom = hline_char.repeat(code_fragment.len() + 1);
-                // let hline_bottom = hline_char.repeat(config.terminal_width);
-                let ansi_style = Blue;
-                writeln!(
-                    painter.writer,
-                    "{}{}\n{} {}\n{}{}\n{}",
-                    ansi_style.paint(&hline_top),
-                    ansi_style.paint(top_right_corner_char),
-                    painter.output_buffer,
-                    ansi_style.paint(vline_char),
-                    ansi_style.paint(&hline_bottom),
-                    ansi_style.paint(bottom_right_corner_char),
-                    ansi_style.paint(&line_number),
-                )?;
+                let ansi_style = Blue.normal();
+                if code_fragment.len() > 0 {
+                    painter.paint_lines(
+                        vec![code_fragment.clone()],
+                        vec![vec![(
+                            NO_BACKGROUND_COLOR_STYLE_MODIFIER,
+                            code_fragment.clone(),
+                        )]],
+                    );
+                    painter.output_buffer.pop(); // trim newline
+                    draw::write_boxed(
+                        &painter.output_buffer,
+                        code_fragment.len() + 1,
+                        ansi_style,
+                        &mut painter.writer,
+                    )?;
+                }
+                writeln!(painter.writer, "\n{}", ansi_style.paint(line_number))?;
                 painter.output_buffer.truncate(0);
                 continue;
             }
