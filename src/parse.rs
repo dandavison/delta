@@ -1,6 +1,6 @@
 use std::io::Write;
 
-use ansi_term::Colour::Blue;
+use ansi_term::Colour::{Blue, Yellow};
 use box_drawing;
 use console::strip_ansi_codes;
 
@@ -99,6 +99,27 @@ pub fn delta(
         } else if line.starts_with("commit") {
             painter.paint_buffered_lines();
             state = State::Commit;
+            if !config.no_structural_changes {
+                painter.emit()?;
+                let ansi_style = Yellow.normal();
+                let box_width = line.len() + 1;
+                draw::write_boxed_with_line(
+                    &raw_line,
+                    box_width,
+                    ansi_style,
+                    true,
+                    painter.writer,
+                )?;
+                write!(
+                    painter.writer,
+                    "{}",
+                    ansi_style.paint(
+                        box_drawing::heavy::HORIZONTAL
+                            .repeat(config.terminal_width - box_width - 1),
+                    )
+                )?;
+                continue;
+            }
         } else if line.starts_with("@@") {
             state = State::HunkMeta;
             if !config.no_structural_changes {
