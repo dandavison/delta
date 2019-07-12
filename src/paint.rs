@@ -170,13 +170,13 @@ pub fn get_config<'a>(
 
     Config {
         theme: &theme_set.themes[theme_name],
-        minus_style_modifier: minus_style_modifier,
-        minus_emph_style_modifier: minus_emph_style_modifier,
-        plus_style_modifier: plus_style_modifier,
-        plus_emph_style_modifier: plus_emph_style_modifier,
-        terminal_width: terminal_width,
-        width: width,
-        syntax_set: &syntax_set,
+        minus_style_modifier,
+        minus_emph_style_modifier,
+        plus_style_modifier,
+        plus_emph_style_modifier,
+        terminal_width,
+        width,
+        syntax_set,
         pager: "less",
         opt,
     }
