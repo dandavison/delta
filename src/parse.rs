@@ -16,7 +16,7 @@ use crate::parse::parse_git_diff::{
 #[derive(Debug, PartialEq)]
 pub enum State {
     Commit,    // In commit metadata section
-    DiffMeta,  // In diff metadata section, between commit metadata and first hunk
+    FileMeta,  // In diff metadata section, between commit metadata and first hunk
     HunkMeta,  // In hunk metadata line
     HunkZero,  // In hunk; unchanged line
     HunkMinus, // In hunk; removed line
@@ -36,10 +36,10 @@ impl State {
 // Possible transitions, with actions on entry:
 //
 //
-// | from \ to | Commit      | DiffMeta    | HunkMeta    | HunkZero    | HunkMinus   | HunkPlus |
+// | from \ to | Commit      | FileMeta    | HunkMeta    | HunkZero    | HunkMinus   | HunkPlus |
 // |-----------+-------------+-------------+-------------+-------------+-------------+----------|
 // | Commit    | emit        | emit        |             |             |             |          |
-// | DiffMeta  |             | emit        | emit        |             |             |          |
+// | FileMeta  |             | emit        | emit        |             |             |          |
 // | HunkMeta  |             |             |             | emit        | push        | push     |
 // | HunkZero  | emit        | emit        | emit        | emit        | push        | push     |
 // | HunkMinus | flush, emit | flush, emit | flush, emit | flush, emit | push        | push     |
@@ -99,7 +99,7 @@ pub fn delta(
             }
         } else if line.starts_with("diff --") {
             painter.paint_buffered_lines();
-            state = State::DiffMeta;
+            state = State::FileMeta;
             painter.syntax = match get_file_extension_from_diff_line(&line) {
                 Some(extension) => assets.syntax_set.find_syntax_by_extension(extension),
                 None => None,
@@ -203,7 +203,7 @@ pub fn delta(
             painter.emit()?;
             continue;
         }
-        if state == State::DiffMeta && config.opt.file_style != cli::SectionStyle::Plain {
+        if state == State::FileMeta && config.opt.file_style != cli::SectionStyle::Plain {
             // The file metadata section is 4 lines. Skip them under non-plain file-styles.
             continue;
         } else {
