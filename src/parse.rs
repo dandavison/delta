@@ -67,7 +67,37 @@ pub fn delta(
 
     for raw_line in lines {
         let line = strip_ansi_codes(&raw_line).to_string();
-        if line.starts_with("diff --") {
+        if line.starts_with("commit") {
+            painter.paint_buffered_lines();
+            state = State::Commit;
+            match config.opt.commit_style {
+                cli::SectionStyle::Plain => (),
+                cli::SectionStyle::Box => {
+                    painter.emit()?;
+                    let ansi_style = Yellow.normal();
+                    let box_width = line.len() + 1;
+                    draw::write_boxed_with_line(
+                        &raw_line,
+                        box_width,
+                        ansi_style,
+                        true,
+                        painter.writer,
+                    )?;
+                    write!(
+                        painter.writer,
+                        "{}",
+                        ansi_style.paint(
+                            box_drawing::heavy::HORIZONTAL
+                                .repeat(config.terminal_width - box_width - 1),
+                        )
+                    )?;
+                    continue;
+                }
+                cli::SectionStyle::Underline => {
+                    panic!("--commit-style underline is not implemented!") // TODO
+                }
+            }
+        } else if line.starts_with("diff --") {
             painter.paint_buffered_lines();
             state = State::DiffMeta;
             painter.syntax = match get_file_extension_from_diff_line(&line) {
@@ -112,36 +142,6 @@ pub fn delta(
                             .paint(box_drawing::heavy::HORIZONTAL.repeat(config.terminal_width))
                     )?;
                     continue;
-                }
-            }
-        } else if line.starts_with("commit") {
-            painter.paint_buffered_lines();
-            state = State::Commit;
-            match config.opt.commit_style {
-                cli::SectionStyle::Plain => (),
-                cli::SectionStyle::Box => {
-                    painter.emit()?;
-                    let ansi_style = Yellow.normal();
-                    let box_width = line.len() + 1;
-                    draw::write_boxed_with_line(
-                        &raw_line,
-                        box_width,
-                        ansi_style,
-                        true,
-                        painter.writer,
-                    )?;
-                    write!(
-                        painter.writer,
-                        "{}",
-                        ansi_style.paint(
-                            box_drawing::heavy::HORIZONTAL
-                                .repeat(config.terminal_width - box_width - 1),
-                        )
-                    )?;
-                    continue;
-                }
-                cli::SectionStyle::Underline => {
-                    panic!("--commit-style underline is not implemented!") // TODO
                 }
             }
         } else if line.starts_with("@@") {
