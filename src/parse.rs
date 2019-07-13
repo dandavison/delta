@@ -14,12 +14,12 @@ use crate::parse::parse_git_diff::{
 
 #[derive(Debug, PartialEq)]
 pub enum State {
-    Commit,    // In commit metadata section
-    FileMeta,  // In diff metadata section, between commit metadata and first hunk
-    HunkMeta,  // In hunk metadata line
-    HunkZero,  // In hunk; unchanged line
-    HunkMinus, // In hunk; removed line
-    HunkPlus,  // In hunk; added line
+    CommitMeta, // In commit metadata section
+    FileMeta,   // In diff metadata section, between commit metadata and first hunk
+    HunkMeta,   // In hunk metadata line
+    HunkZero,   // In hunk; unchanged line
+    HunkMinus,  // In hunk; removed line
+    HunkPlus,   // In hunk; added line
     Unknown,
 }
 
@@ -35,14 +35,14 @@ impl State {
 // Possible transitions, with actions on entry:
 //
 //
-// | from \ to | Commit      | FileMeta    | HunkMeta    | HunkZero    | HunkMinus   | HunkPlus |
-// |-----------+-------------+-------------+-------------+-------------+-------------+----------|
-// | Commit    | emit        | emit        |             |             |             |          |
-// | FileMeta  |             | emit        | emit        |             |             |          |
-// | HunkMeta  |             |             |             | emit        | push        | push     |
-// | HunkZero  | emit        | emit        | emit        | emit        | push        | push     |
-// | HunkMinus | flush, emit | flush, emit | flush, emit | flush, emit | push        | push     |
-// | HunkPlus  | flush, emit | flush, emit | flush, emit | flush, emit | flush, push | push     |
+// | from \ to  | CommitMeta  | FileMeta    | HunkMeta    | HunkZero    | HunkMinus   | HunkPlus |
+// |------------+-------------+-------------+-------------+-------------+-------------+----------|
+// | CommitMeta | emit        | emit        |             |             |             |          |
+// | FileMeta   |             | emit        | emit        |             |             |          |
+// | HunkMeta   |             |             |             | emit        | push        | push     |
+// | HunkZero   | emit        | emit        | emit        | emit        | push        | push     |
+// | HunkMinus  | flush, emit | flush, emit | flush, emit | flush, emit | push        | push     |
+// | HunkPlus   | flush, emit | flush, emit | flush, emit | flush, emit | flush, push | push     |
 
 pub fn delta(
     lines: impl Iterator<Item = String>,
@@ -68,7 +68,7 @@ pub fn delta(
         let line = strip_ansi_codes(&raw_line).to_string();
         if line.starts_with("commit") {
             painter.paint_buffered_lines();
-            state = State::Commit;
+            state = State::CommitMeta;
             if config.opt.commit_style != cli::SectionStyle::Plain {
                 let draw_fn = match config.opt.commit_style {
                     cli::SectionStyle::Box => draw::write_boxed_with_line,
