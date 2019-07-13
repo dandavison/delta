@@ -20,11 +20,16 @@ pub struct Painter<'a> {
 
     pub writer: &'a mut Write,
     pub syntax: Option<&'a SyntaxReference>,
+    pub highlighter: HighlightLines<'a>,
     pub config: &'a config::Config<'a>,
     pub output_buffer: String,
 }
 
 impl<'a> Painter<'a> {
+    pub fn reset_highlighter(&mut self) {
+        self.highlighter = HighlightLines::new(self.syntax.unwrap(), self.config.theme);
+    }
+
     pub fn paint_buffered_lines(&mut self) {
         self.set_background_style_sections();
         // TODO: lines and style sections contain identical line text
@@ -55,10 +60,9 @@ impl<'a> Painter<'a> {
         lines: Vec<String>,
         line_style_sections: Vec<Vec<(StyleModifier, String)>>,
     ) {
-        let mut highlighter = HighlightLines::new(self.syntax.unwrap(), self.config.theme);
-
         for (line, style_sections) in lines.iter().zip(line_style_sections) {
-            let syntax_highlighting_style_sections: Vec<(Style, String)> = highlighter
+            let syntax_highlighting_style_sections: Vec<(Style, String)> = self
+                .highlighter
                 .highlight(&line, &self.config.syntax_set)
                 .iter()
                 .map(|(style, s)| (*style, s.to_string()))

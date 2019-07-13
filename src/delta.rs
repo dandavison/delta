@@ -2,6 +2,7 @@ use std::io::Write;
 
 use ansi_term::Colour::{Blue, Yellow};
 use console::strip_ansi_codes;
+use syntect::easy::HighlightLines;
 
 use crate::bat::assets::HighlightingAssets;
 use crate::cli;
@@ -58,6 +59,10 @@ pub fn delta(
         output_buffer: String::new(),
         writer: writer,
         syntax: None,
+        highlighter: HighlightLines::new(
+            assets.syntax_set.find_syntax_by_extension("txt").unwrap(),
+            config.theme,
+        ),
         config: config,
     };
 
@@ -87,6 +92,9 @@ pub fn delta(
             }
         } else if line.starts_with("@@") {
             state = State::HunkMeta;
+            if painter.syntax.is_some() {
+                painter.reset_highlighter();
+            }
             if config.opt.hunk_style != cli::SectionStyle::Plain {
                 painter.emit()?;
                 write_hunk_meta_line(&mut painter, &line, config)?;
