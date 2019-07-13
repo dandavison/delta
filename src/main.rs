@@ -3,6 +3,7 @@ extern crate error_chain;
 
 mod bat;
 mod cli;
+mod delta;
 mod draw;
 mod paint;
 mod parse;
@@ -14,7 +15,7 @@ use structopt::StructOpt;
 
 use crate::bat::assets::{list_languages, HighlightingAssets};
 use crate::bat::output::{OutputType, PagingMode};
-use crate::parse::delta;
+use crate::delta::delta;
 
 mod errors {
     error_chain! {
