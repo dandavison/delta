@@ -6,7 +6,8 @@ use console::Term;
 use structopt::StructOpt;
 
 use crate::bat::assets::HighlightingAssets;
-use crate::paint;
+use crate::config;
+use crate::style;
 
 #[derive(StructOpt, Debug)]
 #[structopt(name = "delta", about = "A syntax-highlighter for git.")]
@@ -118,7 +119,7 @@ impl ToString for Error {
 pub fn process_command_line_arguments<'a>(
     assets: &'a HighlightingAssets,
     opt: &'a Opt,
-) -> paint::Config<'a> {
+) -> config::Config<'a> {
     if opt.light && opt.dark {
         eprintln!("--light and --dark cannot be used together.");
         process::exit(1);
@@ -129,7 +130,7 @@ pub fn process_command_line_arguments<'a>(
                 eprintln!("Invalid theme: '{}'", theme);
                 process::exit(1);
             }
-            let is_light_theme = paint::LIGHT_THEMES.contains(&theme.as_str());
+            let is_light_theme = style::LIGHT_THEMES.contains(&theme.as_str());
             if is_light_theme && opt.dark {
                 eprintln!(
                     "{} is a light theme, but you supplied --dark. \
@@ -160,7 +161,7 @@ pub fn process_command_line_arguments<'a>(
         None => Some(terminal_width - 1),
     };
 
-    paint::get_config(
+    config::get_config(
         opt,
         &assets.syntax_set,
         &assets.theme_set,

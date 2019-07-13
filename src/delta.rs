@@ -5,12 +5,11 @@ use console::strip_ansi_codes;
 
 use crate::bat::assets::HighlightingAssets;
 use crate::cli;
+use crate::config::Config;
 use crate::draw;
-use crate::paint::{Config, Painter, NO_BACKGROUND_COLOR_STYLE_MODIFIER};
-use crate::parse::{
-    get_file_change_description_from_diff_line, get_file_extension_from_diff_line,
-    parse_hunk_metadata,
-};
+use crate::paint::Painter;
+use crate::parse;
+use crate::style;
 
 #[derive(Debug, PartialEq)]
 pub enum State {
@@ -77,7 +76,7 @@ pub fn delta(
         } else if line.starts_with("diff --") {
             painter.paint_buffered_lines();
             state = State::FileMeta;
-            painter.syntax = match get_file_extension_from_diff_line(&line) {
+            painter.syntax = match parse::get_file_extension_from_diff_line(&line) {
                 Some(extension) => assets.syntax_set.find_syntax_by_extension(extension),
                 None => None,
             };
@@ -145,7 +144,7 @@ fn write_file_meta_header_line(
     let ansi_style = Blue.bold();
     draw_fn(
         painter.writer,
-        &ansi_style.paint(get_file_change_description_from_diff_line(&line)),
+        &ansi_style.paint(parse::get_file_change_description_from_diff_line(&line)),
         config.terminal_width,
         ansi_style,
         true,
@@ -160,12 +159,12 @@ fn write_hunk_meta_line(painter: &mut Painter, line: &str, config: &Config) -> s
         cli::SectionStyle::Plain => panic!(),
     };
     let ansi_style = Blue.normal();
-    let (code_fragment, line_number) = parse_hunk_metadata(&line);
+    let (code_fragment, line_number) = parse::parse_hunk_metadata(&line);
     if code_fragment.len() > 0 {
         painter.paint_lines(
             vec![code_fragment.clone()],
             vec![vec![(
-                NO_BACKGROUND_COLOR_STYLE_MODIFIER,
+                style::NO_BACKGROUND_COLOR_STYLE_MODIFIER,
                 code_fragment.clone(),
             )]],
         );
@@ -201,7 +200,10 @@ fn paint_hunk_line(state: State, painter: &mut Painter, line: &str, config: &Con
             let line = prepare(&line, config);
             painter.paint_lines(
                 vec![line.clone()],
-                vec![vec![(NO_BACKGROUND_COLOR_STYLE_MODIFIER, line.clone())]],
+                vec![vec![(
+                    style::NO_BACKGROUND_COLOR_STYLE_MODIFIER,
+                    line.clone(),
+                )]],
             );
             State::HunkZero
         }

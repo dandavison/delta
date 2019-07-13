@@ -3,10 +3,12 @@ extern crate error_chain;
 
 mod bat;
 mod cli;
+mod config;
 mod delta;
 mod draw;
 mod paint;
 mod parse;
+mod style;
 
 use std::io::{self, BufRead, ErrorKind, Read, Write};
 use std::process;
@@ -71,25 +73,25 @@ fn compare_themes(assets: &HighlightingAssets) -> std::io::Result<()> {
 
     let stdout = io::stdout();
     let mut stdout = stdout.lock();
-    let mut paint_config: paint::Config;
+    let mut config: config::Config;
 
     let hline = "-".repeat(100);
 
     for (theme, _) in assets.theme_set.themes.iter() {
-        if opt.light && !paint::is_light_theme(theme) || opt.dark && paint::is_light_theme(theme) {
+        if opt.light && !style::is_light_theme(theme) || opt.dark && style::is_light_theme(theme) {
             continue;
         }
 
         writeln!(stdout, "{}\n{}\n{}\n", hline, theme, hline)?;
         opt.theme = Some(theme.to_string());
-        paint_config = cli::process_command_line_arguments(&assets, &opt);
+        config = cli::process_command_line_arguments(&assets, &opt);
         let mut output_type =
-            OutputType::from_mode(PagingMode::QuitIfOneScreen, Some(paint_config.pager)).unwrap();
+            OutputType::from_mode(PagingMode::QuitIfOneScreen, Some(config.pager)).unwrap();
         let mut writer = output_type.handle().unwrap();
 
         delta(
             input.split("\n").map(String::from),
-            &paint_config,
+            &config,
             &assets,
             &mut writer,
         )?;
@@ -106,13 +108,13 @@ pub fn list_themes() -> std::io::Result<()> {
 
     writeln!(stdout, "Light themes:")?;
     for (theme, _) in themes.iter() {
-        if paint::is_light_theme(theme) {
+        if style::is_light_theme(theme) {
             writeln!(stdout, "    {}", theme)?;
         }
     }
     writeln!(stdout, "Dark themes:")?;
     for (theme, _) in themes.iter() {
-        if !paint::is_light_theme(theme) {
+        if !style::is_light_theme(theme) {
             writeln!(stdout, "    {}", theme)?;
         }
     }

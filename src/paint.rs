@@ -1,203 +1,14 @@
 use std::cmp::max;
 use std::io::Write;
 use std::iter::Peekable;
-use std::str::FromStr;
-// TODO: Functions in this module should return Result and use ? syntax.
 
 use syntect::easy::HighlightLines;
-use syntect::highlighting::{Color, Style, StyleModifier, Theme, ThemeSet};
-use syntect::parsing::{SyntaxReference, SyntaxSet};
+use syntect::highlighting::{Style, StyleModifier};
+use syntect::parsing::SyntaxReference;
 
-use crate::cli;
+use crate::config;
 use crate::paint::superimpose_style_sections::superimpose_style_sections;
-
-pub const LIGHT_THEMES: [&str; 4] = [
-    "GitHub",
-    "Monokai Extended Light",
-    "OneHalfLight",
-    "ansi-light",
-];
-
-pub fn is_light_theme(theme: &str) -> bool {
-    LIGHT_THEMES.contains(&theme)
-}
-
-const LIGHT_THEME_MINUS_COLOR: Color = Color {
-    r: 0xff,
-    g: 0xd0,
-    b: 0xd0,
-    a: 0xff,
-};
-
-const LIGHT_THEME_MINUS_EMPH_COLOR: Color = Color {
-    r: 0xef,
-    g: 0xa0,
-    b: 0xa0,
-    a: 0xff,
-};
-
-const LIGHT_THEME_PLUS_COLOR: Color = Color {
-    r: 0xd0,
-    g: 0xff,
-    b: 0xd0,
-    a: 0xff,
-};
-
-const LIGHT_THEME_PLUS_EMPH_COLOR: Color = Color {
-    r: 0xa0,
-    g: 0xef,
-    b: 0xa0,
-    a: 0xff,
-};
-
-const DARK_THEME_MINUS_COLOR: Color = Color {
-    r: 0x3F,
-    g: 0x00,
-    b: 0x01,
-    a: 0xff,
-};
-
-const DARK_THEME_MINUS_EMPH_COLOR: Color = Color {
-    r: 0x90,
-    g: 0x10,
-    b: 0x11,
-    a: 0xff,
-};
-
-const DARK_THEME_PLUS_COLOR: Color = Color {
-    r: 0x01,
-    g: 0x3B,
-    b: 0x01,
-    a: 0xff,
-};
-
-const DARK_THEME_PLUS_EMPH_COLOR: Color = Color {
-    r: 0x11,
-    g: 0x80,
-    b: 0x11,
-    a: 0xff,
-};
-
-/// A special color to specify that no color escape codes should be emitted.
-const NO_COLOR: Color = Color::BLACK;
-
-pub const NO_BACKGROUND_COLOR_STYLE_MODIFIER: StyleModifier = StyleModifier {
-    foreground: None,
-    background: Some(NO_COLOR),
-    font_style: None,
-};
-
-pub struct Config<'a> {
-    pub theme: &'a Theme,
-    pub minus_style_modifier: StyleModifier,
-    pub minus_emph_style_modifier: StyleModifier,
-    pub plus_style_modifier: StyleModifier,
-    pub plus_emph_style_modifier: StyleModifier,
-    pub syntax_set: &'a SyntaxSet,
-    pub terminal_width: usize,
-    pub width: Option<usize>,
-    pub pager: &'a str,
-    pub opt: &'a cli::Opt,
-}
-
-pub fn get_config<'a>(
-    opt: &'a cli::Opt,
-    syntax_set: &'a SyntaxSet,
-    theme_set: &'a ThemeSet,
-    terminal_width: usize,
-    width: Option<usize>,
-) -> Config<'a> {
-    let theme_name = match opt.theme {
-        Some(ref theme) => theme,
-        None => match opt.light {
-            true => "GitHub",
-            false => "Monokai Extended",
-        },
-    };
-    let is_light_theme = LIGHT_THEMES.contains(&theme_name);
-
-    let minus_style_modifier = StyleModifier {
-        background: Some(color_from_arg(
-            &opt.minus_color,
-            is_light_theme,
-            LIGHT_THEME_MINUS_COLOR,
-            DARK_THEME_MINUS_COLOR,
-        )),
-        foreground: if opt.highlight_removed {
-            None
-        } else {
-            Some(NO_COLOR)
-        },
-        font_style: None,
-    };
-
-    let minus_emph_style_modifier = StyleModifier {
-        background: Some(color_from_arg(
-            &opt.minus_emph_color,
-            is_light_theme,
-            LIGHT_THEME_MINUS_EMPH_COLOR,
-            DARK_THEME_MINUS_EMPH_COLOR,
-        )),
-        foreground: if opt.highlight_removed {
-            None
-        } else {
-            Some(NO_COLOR)
-        },
-        font_style: None,
-    };
-
-    let plus_style_modifier = StyleModifier {
-        background: Some(color_from_arg(
-            &opt.plus_color,
-            is_light_theme,
-            LIGHT_THEME_PLUS_COLOR,
-            DARK_THEME_PLUS_COLOR,
-        )),
-        foreground: None,
-        font_style: None,
-    };
-
-    let plus_emph_style_modifier = StyleModifier {
-        background: Some(color_from_arg(
-            &opt.plus_emph_color,
-            is_light_theme,
-            LIGHT_THEME_PLUS_EMPH_COLOR,
-            DARK_THEME_PLUS_EMPH_COLOR,
-        )),
-        foreground: None,
-        font_style: None,
-    };
-
-    Config {
-        theme: &theme_set.themes[theme_name],
-        minus_style_modifier,
-        minus_emph_style_modifier,
-        plus_style_modifier,
-        plus_emph_style_modifier,
-        terminal_width,
-        width,
-        syntax_set,
-        pager: "less",
-        opt,
-    }
-}
-
-fn color_from_arg(
-    arg: &Option<String>,
-    is_light_theme: bool,
-    light_theme_default: Color,
-    dark_theme_default: Color,
-) -> Color {
-    arg.as_ref()
-        .and_then(|s| Color::from_str(s).ok())
-        .unwrap_or_else(|| {
-            if is_light_theme {
-                light_theme_default
-            } else {
-                dark_theme_default
-            }
-        })
-}
+use crate::style;
 
 pub struct Painter<'a> {
     pub minus_lines: Vec<String>,
@@ -209,7 +20,7 @@ pub struct Painter<'a> {
 
     pub writer: &'a mut Write,
     pub syntax: Option<&'a SyntaxReference>,
-    pub config: &'a Config<'a>,
+    pub config: &'a config::Config<'a>,
     pub output_buffer: String,
 }
 
@@ -443,7 +254,7 @@ impl StringPair {
 fn paint_section(text: &str, style: Style, output_buffer: &mut String) -> std::fmt::Result {
     use std::fmt::Write;
     match style.background {
-        NO_COLOR => (),
+        style::NO_COLOR => (),
         _ => write!(
             output_buffer,
             "\x1b[48;2;{};{};{}m",
@@ -451,7 +262,7 @@ fn paint_section(text: &str, style: Style, output_buffer: &mut String) -> std::f
         )?,
     }
     match style.foreground {
-        NO_COLOR => write!(output_buffer, "{}", text)?,
+        style::NO_COLOR => write!(output_buffer, "{}", text)?,
         _ => write!(
             output_buffer,
             "\x1b[38;2;{};{};{}m{}",
