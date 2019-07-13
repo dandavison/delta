@@ -70,19 +70,8 @@ pub fn delta(
             painter.paint_buffered_lines();
             state = State::CommitMeta;
             if config.opt.commit_style != cli::SectionStyle::Plain {
-                let draw_fn = match config.opt.commit_style {
-                    cli::SectionStyle::Box => draw::write_boxed_with_line,
-                    cli::SectionStyle::Underline => draw::write_underlined,
-                    cli::SectionStyle::Plain => panic!(),
-                };
                 painter.emit()?;
-                draw_fn(
-                    painter.writer,
-                    &raw_line,
-                    config.terminal_width,
-                    Yellow.normal(),
-                    true,
-                )?;
+                write_commit_meta_header_line(&mut painter, &raw_line, config)?;
                 continue;
             }
         } else if line.starts_with("diff --") {
@@ -93,77 +82,19 @@ pub fn delta(
                 None => None,
             };
             if config.opt.file_style != cli::SectionStyle::Plain {
-                let draw_fn = match config.opt.file_style {
-                    cli::SectionStyle::Box => draw::write_boxed_with_line,
-                    cli::SectionStyle::Underline => draw::write_underlined,
-                    cli::SectionStyle::Plain => panic!(),
-                };
                 painter.emit()?;
-                let ansi_style = Blue.bold();
-                draw_fn(
-                    painter.writer,
-                    &ansi_style.paint(get_file_change_description_from_diff_line(&line)),
-                    config.terminal_width,
-                    ansi_style,
-                    true,
-                )?;
+                write_file_meta_header_line(&mut painter, &raw_line, config)?;
                 continue;
             }
         } else if line.starts_with("@@") {
             state = State::HunkMeta;
             if config.opt.hunk_style != cli::SectionStyle::Plain {
-                let draw_fn = match config.opt.hunk_style {
-                    cli::SectionStyle::Box => draw::write_boxed,
-                    cli::SectionStyle::Underline => draw::write_underlined,
-                    cli::SectionStyle::Plain => panic!(),
-                };
                 painter.emit()?;
-                let ansi_style = Blue.normal();
-                let (code_fragment, line_number) = parse_hunk_metadata(&line);
-                if code_fragment.len() > 0 {
-                    painter.paint_lines(
-                        vec![code_fragment.clone()],
-                        vec![vec![(
-                            NO_BACKGROUND_COLOR_STYLE_MODIFIER,
-                            code_fragment.clone(),
-                        )]],
-                    );
-                    painter.output_buffer.pop(); // trim newline
-                    draw_fn(
-                        painter.writer,
-                        &painter.output_buffer,
-                        config.terminal_width,
-                        ansi_style,
-                        false,
-                    )?;
-                    painter.output_buffer.truncate(0);
-                }
-                writeln!(painter.writer, "\n{}", ansi_style.paint(line_number))?;
+                write_hunk_meta_line(&mut painter, &line, config)?;
                 continue;
             }
         } else if state.is_in_hunk() && painter.syntax.is_some() {
-            match line.chars().next() {
-                Some('-') => {
-                    if state == State::HunkPlus {
-                        painter.paint_buffered_lines();
-                    }
-                    painter.minus_lines.push(prepare(&line, config));
-                    state = State::HunkMinus;
-                }
-                Some('+') => {
-                    painter.plus_lines.push(prepare(&line, config));
-                    state = State::HunkPlus;
-                }
-                _ => {
-                    painter.paint_buffered_lines();
-                    state = State::HunkZero;
-                    let line = prepare(&line, config);
-                    painter.paint_lines(
-                        vec![line.clone()],
-                        vec![vec![(NO_BACKGROUND_COLOR_STYLE_MODIFIER, line.clone())]],
-                    );
-                }
-            };
+            state = paint_hunk_line(state, &mut painter, &line, config);
             painter.emit()?;
             continue;
         }
@@ -179,6 +110,102 @@ pub fn delta(
     painter.paint_buffered_lines();
     painter.emit()?;
     Ok(())
+}
+
+fn write_commit_meta_header_line(
+    painter: &mut Painter,
+    line: &str,
+    config: &Config,
+) -> std::io::Result<()> {
+    let draw_fn = match config.opt.commit_style {
+        cli::SectionStyle::Box => draw::write_boxed_with_line,
+        cli::SectionStyle::Underline => draw::write_underlined,
+        cli::SectionStyle::Plain => panic!(),
+    };
+    draw_fn(
+        painter.writer,
+        line,
+        config.terminal_width,
+        Yellow.normal(),
+        true,
+    )?;
+    Ok(())
+}
+
+fn write_file_meta_header_line(
+    painter: &mut Painter,
+    line: &str,
+    config: &Config,
+) -> std::io::Result<()> {
+    let draw_fn = match config.opt.file_style {
+        cli::SectionStyle::Box => draw::write_boxed_with_line,
+        cli::SectionStyle::Underline => draw::write_underlined,
+        cli::SectionStyle::Plain => panic!(),
+    };
+    let ansi_style = Blue.bold();
+    draw_fn(
+        painter.writer,
+        &ansi_style.paint(get_file_change_description_from_diff_line(&line)),
+        config.terminal_width,
+        ansi_style,
+        true,
+    )?;
+    Ok(())
+}
+
+fn write_hunk_meta_line(painter: &mut Painter, line: &str, config: &Config) -> std::io::Result<()> {
+    let draw_fn = match config.opt.hunk_style {
+        cli::SectionStyle::Box => draw::write_boxed,
+        cli::SectionStyle::Underline => draw::write_underlined,
+        cli::SectionStyle::Plain => panic!(),
+    };
+    let ansi_style = Blue.normal();
+    let (code_fragment, line_number) = parse_hunk_metadata(&line);
+    if code_fragment.len() > 0 {
+        painter.paint_lines(
+            vec![code_fragment.clone()],
+            vec![vec![(
+                NO_BACKGROUND_COLOR_STYLE_MODIFIER,
+                code_fragment.clone(),
+            )]],
+        );
+        painter.output_buffer.pop(); // trim newline
+        draw_fn(
+            painter.writer,
+            &painter.output_buffer,
+            config.terminal_width,
+            ansi_style,
+            false,
+        )?;
+        painter.output_buffer.truncate(0);
+    }
+    writeln!(painter.writer, "\n{}", ansi_style.paint(line_number))?;
+    Ok(())
+}
+
+fn paint_hunk_line(state: State, painter: &mut Painter, line: &str, config: &Config) -> State {
+    match line.chars().next() {
+        Some('-') => {
+            if state == State::HunkPlus {
+                painter.paint_buffered_lines();
+            }
+            painter.minus_lines.push(prepare(&line, config));
+            State::HunkMinus
+        }
+        Some('+') => {
+            painter.plus_lines.push(prepare(&line, config));
+            State::HunkPlus
+        }
+        _ => {
+            painter.paint_buffered_lines();
+            let line = prepare(&line, config);
+            painter.paint_lines(
+                vec![line.clone()],
+                vec![vec![(NO_BACKGROUND_COLOR_STYLE_MODIFIER, line.clone())]],
+            );
+            State::HunkZero
+        }
+    }
 }
 
 /// Replace initial -/+ character with ' ' and pad to width.
