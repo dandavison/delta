@@ -2,49 +2,96 @@ use std::io::Write;
 
 use ansi_term::Style;
 use box_drawing;
+use console::strip_ansi_codes;
 
 /// Write text to stream, surrounded by a box, leaving the cursor just
 /// beyond the bottom right corner.
 pub fn write_boxed(
+    writer: &mut Write,
     text: &str,
-    box_width: usize,
+    _line_width: usize, // ignored
     line_style: Style,
     heavy: bool,
-    writer: &mut Write,
 ) -> std::io::Result<()> {
-    _write_boxed_partial(text, box_width, line_style, heavy, writer)?;
     let up_left = if heavy {
         box_drawing::heavy::UP_LEFT
     } else {
         box_drawing::light::UP_LEFT
     };
+    let box_width = strip_ansi_codes(text).len() + 1;
+    write_boxed_partial(writer, text, box_width, line_style, heavy)?;
     write!(writer, "{}", line_style.paint(up_left))?;
     Ok(())
 }
 
+/// Write text to stream, surrounded by a box, and extend a line from
+/// the bottom right corner.
 pub fn write_boxed_with_line(
+    writer: &mut Write,
+    text: &str,
+    line_width: usize,
+    line_style: Style,
+    heavy: bool,
+) -> std::io::Result<()> {
+    let box_width = strip_ansi_codes(text).len() + 1;
+    write_boxed_with_horizontal_whisker(writer, text, box_width, line_style, heavy)?;
+    write_horizontal_line(writer, line_width - box_width - 1, line_style, heavy)?;
+    Ok(())
+}
+
+pub fn write_underlined(
+    writer: &mut Write,
+    text: &str,
+    line_width: usize,
+    line_style: Style,
+    heavy: bool,
+) -> std::io::Result<()> {
+    writeln!(writer, "{}", text)?;
+    write_horizontal_line(writer, line_width, line_style, heavy)?;
+    Ok(())
+}
+
+fn write_horizontal_line(
+    writer: &mut Write,
+    line_width: usize,
+    line_style: Style,
+    heavy: bool,
+) -> std::io::Result<()> {
+    let horizontal = if heavy {
+        box_drawing::heavy::HORIZONTAL
+    } else {
+        box_drawing::light::HORIZONTAL
+    };
+    write!(
+        writer,
+        "{}",
+        line_style.paint(horizontal.repeat(line_width),)
+    )
+}
+
+pub fn write_boxed_with_horizontal_whisker(
+    writer: &mut Write,
     text: &str,
     box_width: usize,
     line_style: Style,
     heavy: bool,
-    writer: &mut Write,
 ) -> std::io::Result<()> {
-    _write_boxed_partial(text, box_width, line_style, heavy, writer)?;
     let up_horizontal = if heavy {
         box_drawing::heavy::UP_HORIZONTAL
     } else {
         box_drawing::light::UP_HORIZONTAL
     };
+    write_boxed_partial(writer, text, box_width, line_style, heavy)?;
     write!(writer, "{}", line_style.paint(up_horizontal))?;
     Ok(())
 }
 
-fn _write_boxed_partial(
+fn write_boxed_partial(
+    writer: &mut Write,
     text: &str,
     box_width: usize,
     line_style: Style,
     heavy: bool,
-    writer: &mut Write,
 ) -> std::io::Result<()> {
     let horizontal = if heavy {
         box_drawing::heavy::HORIZONTAL

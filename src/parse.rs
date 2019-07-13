@@ -1,7 +1,6 @@
 use std::io::Write;
 
 use ansi_term::Colour::{Blue, Yellow};
-use box_drawing;
 use console::strip_ansi_codes;
 
 use crate::bat::assets::HighlightingAssets;
@@ -70,32 +69,21 @@ pub fn delta(
         if line.starts_with("commit") {
             painter.paint_buffered_lines();
             state = State::Commit;
-            match config.opt.commit_style {
-                cli::SectionStyle::Plain => (),
-                cli::SectionStyle::Box => {
-                    painter.emit()?;
-                    let ansi_style = Yellow.normal();
-                    let box_width = line.len() + 1;
-                    draw::write_boxed_with_line(
-                        &raw_line,
-                        box_width,
-                        ansi_style,
-                        true,
-                        painter.writer,
-                    )?;
-                    write!(
-                        painter.writer,
-                        "{}",
-                        ansi_style.paint(
-                            box_drawing::heavy::HORIZONTAL
-                                .repeat(config.terminal_width - box_width - 1),
-                        )
-                    )?;
-                    continue;
-                }
-                cli::SectionStyle::Underline => {
-                    panic!("--commit-style underline is not implemented!") // TODO
-                }
+            if config.opt.commit_style != cli::SectionStyle::Plain {
+                let draw_fn = match config.opt.commit_style {
+                    cli::SectionStyle::Box => draw::write_boxed_with_line,
+                    cli::SectionStyle::Underline => draw::write_underlined,
+                    cli::SectionStyle::Plain => panic!(),
+                };
+                painter.emit()?;
+                draw_fn(
+                    painter.writer,
+                    &raw_line,
+                    config.terminal_width,
+                    Yellow.normal(),
+                    true,
+                )?;
+                continue;
             }
         } else if line.starts_with("diff --") {
             painter.paint_buffered_lines();
@@ -104,78 +92,54 @@ pub fn delta(
                 Some(extension) => assets.syntax_set.find_syntax_by_extension(extension),
                 None => None,
             };
-            match config.opt.file_style {
-                cli::SectionStyle::Plain => (),
-                cli::SectionStyle::Box => {
-                    painter.emit()?;
-                    let file_change_description = get_file_change_description_from_diff_line(&line);
-
-                    let ansi_style = Blue.bold();
-                    let box_width = file_change_description.len() + 1;
-                    draw::write_boxed_with_line(
-                        &file_change_description,
-                        box_width,
-                        ansi_style,
-                        true,
-                        painter.writer,
-                    )?;
-                    write!(
-                        painter.writer,
-                        "{}",
-                        ansi_style.paint(
-                            box_drawing::heavy::HORIZONTAL
-                                .repeat(config.terminal_width - box_width - 1),
-                        )
-                    )?;
-                    continue;
-                }
-                cli::SectionStyle::Underline => {
-                    painter.emit()?;
-                    let file_change_description = get_file_change_description_from_diff_line(&line);
-
-                    let ansi_style = Blue.bold();
-                    writeln!(
-                        painter.writer,
-                        "\n{}\n{}",
-                        ansi_style.paint(file_change_description),
-                        ansi_style
-                            .paint(box_drawing::heavy::HORIZONTAL.repeat(config.terminal_width))
-                    )?;
-                    continue;
-                }
+            if config.opt.file_style != cli::SectionStyle::Plain {
+                let draw_fn = match config.opt.file_style {
+                    cli::SectionStyle::Box => draw::write_boxed_with_line,
+                    cli::SectionStyle::Underline => draw::write_underlined,
+                    cli::SectionStyle::Plain => panic!(),
+                };
+                painter.emit()?;
+                let ansi_style = Blue.bold();
+                draw_fn(
+                    painter.writer,
+                    &ansi_style.paint(get_file_change_description_from_diff_line(&line)),
+                    config.terminal_width,
+                    ansi_style,
+                    true,
+                )?;
+                continue;
             }
         } else if line.starts_with("@@") {
             state = State::HunkMeta;
-            match config.opt.hunk_style {
-                cli::SectionStyle::Plain => (),
-                cli::SectionStyle::Box => {
-                    painter.emit()?;
-                    let (code_fragment, line_number) = parse_hunk_metadata(&line);
-                    let ansi_style = Blue.normal();
-                    if code_fragment.len() > 0 {
-                        painter.paint_lines(
-                            vec![code_fragment.clone()],
-                            vec![vec![(
-                                NO_BACKGROUND_COLOR_STYLE_MODIFIER,
-                                code_fragment.clone(),
-                            )]],
-                        );
-                        painter.output_buffer.pop(); // trim newline
-                        draw::write_boxed(
-                            &painter.output_buffer,
-                            code_fragment.len() + 1,
-                            ansi_style,
-                            false,
-                            &mut painter.writer,
-                        )?;
-                    }
-                    writeln!(painter.writer, "\n{}", ansi_style.paint(line_number))?;
+            if config.opt.hunk_style != cli::SectionStyle::Plain {
+                let draw_fn = match config.opt.hunk_style {
+                    cli::SectionStyle::Box => draw::write_boxed,
+                    cli::SectionStyle::Underline => draw::write_underlined,
+                    cli::SectionStyle::Plain => panic!(),
+                };
+                painter.emit()?;
+                let ansi_style = Blue.normal();
+                let (code_fragment, line_number) = parse_hunk_metadata(&line);
+                if code_fragment.len() > 0 {
+                    painter.paint_lines(
+                        vec![code_fragment.clone()],
+                        vec![vec![(
+                            NO_BACKGROUND_COLOR_STYLE_MODIFIER,
+                            code_fragment.clone(),
+                        )]],
+                    );
+                    painter.output_buffer.pop(); // trim newline
+                    draw_fn(
+                        painter.writer,
+                        &painter.output_buffer,
+                        config.terminal_width,
+                        ansi_style,
+                        false,
+                    )?;
                     painter.output_buffer.truncate(0);
-                    continue;
                 }
-                cli::SectionStyle::Underline => {
-                    panic!("--hunk-style underline is not implemented!") // TODO
-                }
+                writeln!(painter.writer, "\n{}", ansi_style.paint(line_number))?;
+                continue;
             }
         } else if state.is_in_hunk() && painter.syntax.is_some() {
             match line.chars().next() {
