@@ -38,6 +38,7 @@ impl<'a> Painter<'a> {
                 // TODO: don't clone
                 self.minus_lines.iter().cloned().collect(),
                 self.minus_line_style_sections.iter().cloned().collect(),
+                self.config.opt.highlight_removed,
             );
             self.minus_lines.clear();
             self.minus_line_style_sections.clear();
@@ -47,6 +48,7 @@ impl<'a> Painter<'a> {
                 // TODO: don't clone
                 self.plus_lines.iter().cloned().collect(),
                 self.plus_line_style_sections.iter().cloned().collect(),
+                true,
             );
             self.plus_lines.clear();
             self.plus_line_style_sections.clear();
@@ -59,14 +61,18 @@ impl<'a> Painter<'a> {
         &mut self,
         lines: Vec<String>,
         line_style_sections: Vec<Vec<(StyleModifier, String)>>,
+        syntax_highlight: bool,
     ) {
         for (line, style_sections) in lines.iter().zip(line_style_sections) {
-            let syntax_highlighting_style_sections: Vec<(Style, String)> = self
-                .highlighter
-                .highlight(&line, &self.config.syntax_set)
-                .iter()
-                .map(|(style, s)| (*style, s.to_string()))
-                .collect::<Vec<(Style, String)>>();
+            let syntax_highlighting_style_sections: Vec<(Style, String)> = match syntax_highlight {
+                true => self
+                    .highlighter
+                    .highlight(&line, &self.config.syntax_set)
+                    .iter()
+                    .map(|(style, s)| (*style, s.to_string()))
+                    .collect::<Vec<(Style, String)>>(),
+                false => vec![(self.config.no_style, line.to_string())],
+            };
             let superimposed_style_sections =
                 superimpose_style_sections(syntax_highlighting_style_sections, style_sections);
             for (style, text) in superimposed_style_sections {

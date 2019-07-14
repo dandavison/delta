@@ -175,6 +175,7 @@ fn write_hunk_meta_line(painter: &mut Painter, line: &str, config: &Config) -> s
                 style::NO_BACKGROUND_COLOR_STYLE_MODIFIER,
                 code_fragment.clone(),
             )]],
+            true,
         );
         painter.output_buffer.pop(); // trim newline
         draw_fn(
@@ -212,6 +213,7 @@ fn paint_hunk_line(state: State, painter: &mut Painter, line: &str, config: &Con
                     style::NO_BACKGROUND_COLOR_STYLE_MODIFIER,
                     line.clone(),
                 )]],
+                true,
             );
             State::HunkZero
         }

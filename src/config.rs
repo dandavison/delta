@@ -1,6 +1,6 @@
 use std::str::FromStr;
 
-use syntect::highlighting::{Color, StyleModifier, Theme, ThemeSet};
+use syntect::highlighting::{Color, Style, StyleModifier, Theme, ThemeSet};
 use syntect::parsing::SyntaxSet;
 
 use crate::cli;
@@ -17,6 +17,7 @@ pub struct Config<'a> {
     pub width: Option<usize>,
     pub pager: &'a str,
     pub opt: &'a cli::Opt,
+    pub no_style: Style,
 }
 
 pub fn get_config<'a>(
@@ -98,6 +99,7 @@ pub fn get_config<'a>(
         syntax_set,
         pager: "less",
         opt,
+        no_style: style::get_no_style(),
     }
 }
 

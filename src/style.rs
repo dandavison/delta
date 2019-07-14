@@ -1,4 +1,4 @@
-use syntect::highlighting::{Color, StyleModifier};
+use syntect::highlighting::{Color, FontStyle, Style, StyleModifier};
 
 pub const LIGHT_THEMES: [&str; 4] = [
     "GitHub",
@@ -72,6 +72,14 @@ pub const DARK_THEME_PLUS_EMPH_COLOR: Color = Color {
 
 /// A special color to specify that no color escape codes should be emitted.
 pub const NO_COLOR: Color = Color::BLACK;
+
+pub fn get_no_style() -> Style {
+    Style {
+        foreground: NO_COLOR,
+        background: NO_COLOR,
+        font_style: FontStyle::empty(),
+    }
+}
 
 pub const NO_BACKGROUND_COLOR_STYLE_MODIFIER: StyleModifier = StyleModifier {
     foreground: None,
