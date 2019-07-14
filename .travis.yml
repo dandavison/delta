@@ -1,0 +1,11 @@
+language: rust
+deploy:
+  provider: releases
+  api_key:
+    secure: HLd8A4j/Z+4jrTZmzRAMX+Ko7igvARr0kO1YBQ9goB3m+RLtt77adaZUXrQI6EMHxohSjmtcOsX2HmWBH0hZPk39q8fRmHxIgvzqFM/DmQFIPmmlxgPgOeImJApy9hPxLDJoy1aAtpOEA1Ra33bA98W7CQ+WH9qF3qgTz08+ucq+mdTwV7pA+7bYLNRSzbU+sofPfZxMs97Lvv+c/n7gPJwA6eFrP/I97vux6RU1+RqyJ/Sg8hA19EEaAvLu4oYijuKFR2W6s/k4ODnDIUdF59dgROs7vccMLYNFmx4ECFAhzPtO18htJpyvmWHfRfByw/yFkLAalQIhGxoyILNEeaFSq1pJGRJllGNtmoqeXZctJcbWxt0N7/30PBrzjashxCzpvvjhpzJ9EYu2VBRme7RtLsSRE+R3NVpz4NfmJHEJWnE32Ds+saFJ7ixUcKk6xFG2rJ7/F9vG7x2LluJghDwMky50Glvi79YccrgudmKNY7bAJMVkffgG8r0FlR7HZ2piPa+mEHWGnnVRpWWm0aTQZFYR7GEsPl10LIsjRoVEwUdHVjDA+NiuH3my4FGdu8BKj8JDpEEQrvT1bPkX+M6mfbkr76YoL7GyCx86jLNt1B1uCjUzQW1166YHL11U+UIsrw2RKcYftCzyON4wxelkjafynlI1MOM6XffWKJs=
+  file: target/release/delta
+  on:
+    repo: dandavison/delta
+    branches:
+      only:
+        - master

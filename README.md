@@ -1,3 +1,5 @@
+[![Build Status](https://travis-ci.com/dandavison/delta.svg?branch=master)](https://travis-ci.com/dandavison/delta)
+
 ## Δ
   A syntax-highlighter for git.
 
