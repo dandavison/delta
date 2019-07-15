@@ -1,7 +1,8 @@
 use std::cmp::max;
-use std::iter::Peekable;
 
 use syntect::highlighting::StyleModifier;
+
+use crate::detail::string_pair::StringPair;
 
 /// Create background style sections for a region of removed/added lines.
 /*
@@ -89,128 +90,132 @@ pub fn get_diff_style_sections(
     (minus_line_sections, plus_line_sections)
 }
 
-/// A pair of right-trimmed strings.
-struct StringPair {
-    common_prefix_length: usize,
-    common_suffix_length: usize,
-    lengths: [usize; 2],
-}
+mod string_pair {
+    use std::iter::Peekable;
 
-impl StringPair {
-    pub fn new(s0: &str, s1: &str) -> StringPair {
-        let common_prefix_length = StringPair::common_prefix_length(s0.chars(), s1.chars());
-        let (common_suffix_length, trailing_whitespace) =
-            StringPair::suffix_data(s0.chars(), s1.chars());
-        StringPair {
-            common_prefix_length,
-            common_suffix_length,
-            lengths: [
-                s0.len() - trailing_whitespace[0],
-                s1.len() - trailing_whitespace[1],
-            ],
-        }
+    /// A pair of right-trimmed strings.
+    pub struct StringPair {
+        pub common_prefix_length: usize,
+        pub common_suffix_length: usize,
+        pub lengths: [usize; 2],
     }
 
-    fn common_prefix_length(
-        s0: impl Iterator<Item = char>,
-        s1: impl Iterator<Item = char>,
-    ) -> usize {
-        let mut i = 0;
-        for (c0, c1) in s0.zip(s1) {
-            if c0 != c1 {
-                break;
-            } else {
-                i += 1;
+    impl StringPair {
+        pub fn new(s0: &str, s1: &str) -> StringPair {
+            let common_prefix_length = StringPair::common_prefix_length(s0.chars(), s1.chars());
+            let (common_suffix_length, trailing_whitespace) =
+                StringPair::suffix_data(s0.chars(), s1.chars());
+            StringPair {
+                common_prefix_length,
+                common_suffix_length,
+                lengths: [
+                    s0.len() - trailing_whitespace[0],
+                    s1.len() - trailing_whitespace[1],
+                ],
             }
         }
-        i
-    }
 
-    /// Return common suffix length and number of trailing whitespace characters on each string.
-    fn suffix_data(
-        s0: impl DoubleEndedIterator<Item = char>,
-        s1: impl DoubleEndedIterator<Item = char>,
-    ) -> (usize, [usize; 2]) {
-        let mut s0 = s0.rev().peekable();
-        let mut s1 = s1.rev().peekable();
-        let n0 = StringPair::consume_whitespace(&mut s0);
-        let n1 = StringPair::consume_whitespace(&mut s1);
-
-        (StringPair::common_prefix_length(s0, s1), [n0, n1])
-    }
-
-    /// Consume leading whitespace; return number of characters consumed.
-    fn consume_whitespace(s: &mut Peekable<impl Iterator<Item = char>>) -> usize {
-        let mut i = 0;
-        loop {
-            match s.peek() {
-                Some('\n') | Some(' ') => {
-                    s.next();
+        fn common_prefix_length(
+            s0: impl Iterator<Item = char>,
+            s1: impl Iterator<Item = char>,
+        ) -> usize {
+            let mut i = 0;
+            for (c0, c1) in s0.zip(s1) {
+                if c0 != c1 {
+                    break;
+                } else {
                     i += 1;
                 }
-                _ => break,
             }
+            i
         }
-        i
-    }
-}
 
-#[cfg(test)]
-mod tests {
-    fn common_prefix_length(s1: &str, s2: &str) -> usize {
-        super::StringPair::new(s1, s2).common_prefix_length
-    }
+        /// Return common suffix length and number of trailing whitespace characters on each string.
+        fn suffix_data(
+            s0: impl DoubleEndedIterator<Item = char>,
+            s1: impl DoubleEndedIterator<Item = char>,
+        ) -> (usize, [usize; 2]) {
+            let mut s0 = s0.rev().peekable();
+            let mut s1 = s1.rev().peekable();
+            let n0 = StringPair::consume_whitespace(&mut s0);
+            let n1 = StringPair::consume_whitespace(&mut s1);
 
-    fn common_suffix_length(s1: &str, s2: &str) -> usize {
-        super::StringPair::new(s1, s2).common_suffix_length
-    }
+            (StringPair::common_prefix_length(s0, s1), [n0, n1])
+        }
 
-    #[test]
-    fn test_common_prefix_length() {
-        assert_eq!(common_prefix_length("", ""), 0);
-        assert_eq!(common_prefix_length("", "a"), 0);
-        assert_eq!(common_prefix_length("a", ""), 0);
-        assert_eq!(common_prefix_length("a", "b"), 0);
-        assert_eq!(common_prefix_length("a", "a"), 1);
-        assert_eq!(common_prefix_length("a", "ab"), 1);
-        assert_eq!(common_prefix_length("ab", "a"), 1);
-        assert_eq!(common_prefix_length("ab", "aba"), 2);
-        assert_eq!(common_prefix_length("aba", "ab"), 2);
-    }
-
-    #[test]
-    fn test_common_prefix_length_with_leading_whitespace() {
-        assert_eq!(common_prefix_length(" ", ""), 0);
-        assert_eq!(common_prefix_length(" ", " "), 1);
-        assert_eq!(common_prefix_length(" a", " a"), 2);
-        assert_eq!(common_prefix_length(" a", "a"), 0);
+        /// Consume leading whitespace; return number of characters consumed.
+        fn consume_whitespace(s: &mut Peekable<impl Iterator<Item = char>>) -> usize {
+            let mut i = 0;
+            loop {
+                match s.peek() {
+                    Some('\n') | Some(' ') => {
+                        s.next();
+                        i += 1;
+                    }
+                    _ => break,
+                }
+            }
+            i
+        }
     }
 
-    #[test]
-    fn test_common_suffix_length() {
-        assert_eq!(common_suffix_length("", ""), 0);
-        assert_eq!(common_suffix_length("", "a"), 0);
-        assert_eq!(common_suffix_length("a", ""), 0);
-        assert_eq!(common_suffix_length("a", "b"), 0);
-        assert_eq!(common_suffix_length("a", "a"), 1);
-        assert_eq!(common_suffix_length("a", "ab"), 0);
-        assert_eq!(common_suffix_length("ab", "a"), 0);
-        assert_eq!(common_suffix_length("ab", "b"), 1);
-        assert_eq!(common_suffix_length("ab", "aab"), 2);
-        assert_eq!(common_suffix_length("aba", "ba"), 2);
-    }
+    #[cfg(test)]
+    mod tests {
+        fn common_prefix_length(s1: &str, s2: &str) -> usize {
+            super::StringPair::new(s1, s2).common_prefix_length
+        }
 
-    #[test]
-    fn test_common_suffix_length_with_trailing_whitespace() {
-        assert_eq!(common_suffix_length("", "  "), 0);
-        assert_eq!(common_suffix_length("  ", "a"), 0);
-        assert_eq!(common_suffix_length("a  ", ""), 0);
-        assert_eq!(common_suffix_length("a", "b  "), 0);
-        assert_eq!(common_suffix_length("a", "a  "), 1);
-        assert_eq!(common_suffix_length("a  ", "ab  "), 0);
-        assert_eq!(common_suffix_length("ab", "a  "), 0);
-        assert_eq!(common_suffix_length("ab  ", "b "), 1);
-        assert_eq!(common_suffix_length("ab ", "aab  "), 2);
-        assert_eq!(common_suffix_length("aba ", "ba"), 2);
+        fn common_suffix_length(s1: &str, s2: &str) -> usize {
+            super::StringPair::new(s1, s2).common_suffix_length
+        }
+
+        #[test]
+        fn test_common_prefix_length() {
+            assert_eq!(common_prefix_length("", ""), 0);
+            assert_eq!(common_prefix_length("", "a"), 0);
+            assert_eq!(common_prefix_length("a", ""), 0);
+            assert_eq!(common_prefix_length("a", "b"), 0);
+            assert_eq!(common_prefix_length("a", "a"), 1);
+            assert_eq!(common_prefix_length("a", "ab"), 1);
+            assert_eq!(common_prefix_length("ab", "a"), 1);
+            assert_eq!(common_prefix_length("ab", "aba"), 2);
+            assert_eq!(common_prefix_length("aba", "ab"), 2);
+        }
+
+        #[test]
+        fn test_common_prefix_length_with_leading_whitespace() {
+            assert_eq!(common_prefix_length(" ", ""), 0);
+            assert_eq!(common_prefix_length(" ", " "), 1);
+            assert_eq!(common_prefix_length(" a", " a"), 2);
+            assert_eq!(common_prefix_length(" a", "a"), 0);
+        }
+
+        #[test]
+        fn test_common_suffix_length() {
+            assert_eq!(common_suffix_length("", ""), 0);
+            assert_eq!(common_suffix_length("", "a"), 0);
+            assert_eq!(common_suffix_length("a", ""), 0);
+            assert_eq!(common_suffix_length("a", "b"), 0);
+            assert_eq!(common_suffix_length("a", "a"), 1);
+            assert_eq!(common_suffix_length("a", "ab"), 0);
+            assert_eq!(common_suffix_length("ab", "a"), 0);
+            assert_eq!(common_suffix_length("ab", "b"), 1);
+            assert_eq!(common_suffix_length("ab", "aab"), 2);
+            assert_eq!(common_suffix_length("aba", "ba"), 2);
+        }
+
+        #[test]
+        fn test_common_suffix_length_with_trailing_whitespace() {
+            assert_eq!(common_suffix_length("", "  "), 0);
+            assert_eq!(common_suffix_length("  ", "a"), 0);
+            assert_eq!(common_suffix_length("a  ", ""), 0);
+            assert_eq!(common_suffix_length("a", "b  "), 0);
+            assert_eq!(common_suffix_length("a", "a  "), 1);
+            assert_eq!(common_suffix_length("a  ", "ab  "), 0);
+            assert_eq!(common_suffix_length("ab", "a  "), 0);
+            assert_eq!(common_suffix_length("ab  ", "b "), 1);
+            assert_eq!(common_suffix_length("ab ", "aab  "), 2);
+            assert_eq!(common_suffix_length("aba ", "ba"), 2);
+        }
     }
 }
