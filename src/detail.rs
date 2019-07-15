@@ -90,6 +90,126 @@ pub fn get_diff_style_sections(
     (minus_line_sections, plus_line_sections)
 }
 
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use syntect::highlighting::{Color, FontStyle};
+
+    #[test]
+    fn test_get_diff_style_sections() {
+        assert_eq!(
+            get_diff_style_sections(
+                &vec!["aaa\n".to_string()],
+                &vec!["aba\n".to_string()],
+                MINUS,
+                MINUS_EMPH,
+                PLUS,
+                PLUS_EMPH,
+            ),
+            (
+                vec![as_strings(vec![
+                    (MINUS, "a"),
+                    (MINUS_EMPH, "a"),
+                    (MINUS, "a\n"),
+                ])],
+                vec![as_strings(vec![
+                    (PLUS, "a"),
+                    (PLUS_EMPH, "b"),
+                    (PLUS, "a\n"),
+                ])],
+            ),
+        );
+    }
+
+    const RED: Color = Color::BLACK;
+    const GREEN: Color = Color::WHITE;
+
+    const MINUS: StyleModifier = StyleModifier {
+        foreground: None,
+        background: Some(RED),
+        font_style: None,
+    };
+
+    const MINUS_EMPH: StyleModifier = StyleModifier {
+        foreground: None,
+        background: Some(RED),
+        font_style: Some(FontStyle::BOLD),
+    };
+
+    const PLUS: StyleModifier = StyleModifier {
+        foreground: None,
+        background: Some(GREEN),
+        font_style: None,
+    };
+
+    const PLUS_EMPH: StyleModifier = StyleModifier {
+        foreground: None,
+        background: Some(GREEN),
+        font_style: Some(FontStyle::BOLD),
+    };
+
+    fn as_strings(sections: Vec<(StyleModifier, &str)>) -> Vec<(StyleModifier, String)> {
+        let mut new_sections = Vec::new();
+        for (style, s) in sections {
+            new_sections.push((style, s.to_string()));
+        }
+        new_sections
+    }
+
+    // For debugging test failures:
+
+    #[allow(dead_code)]
+    fn compare_style_sections(
+        actual: (
+            Vec<Vec<(StyleModifier, String)>>,
+            Vec<Vec<(StyleModifier, String)>>,
+        ),
+        expected: (
+            Vec<Vec<(StyleModifier, String)>>,
+            Vec<Vec<(StyleModifier, String)>>,
+        ),
+    ) {
+        let (minus, plus) = actual;
+        println!("actual minus:");
+        print_line_style_sections(minus);
+        println!("actual plus:");
+        print_line_style_sections(plus);
+
+        let (minus, plus) = expected;
+        println!("expected minus:");
+        print_line_style_sections(minus);
+        println!("expected plus:");
+        print_line_style_sections(plus);
+    }
+
+    #[allow(dead_code)]
+    fn print_line_style_sections(line_style_sections: Vec<Vec<(StyleModifier, String)>>) {
+        for style_sections in line_style_sections {
+            print_style_sections(style_sections);
+        }
+    }
+
+    #[allow(dead_code)]
+    fn print_style_sections(style_sections: Vec<(StyleModifier, String)>) {
+        for (style, s) in style_sections {
+            print!("({} {}), ", fmt_style(style), s);
+        }
+        print!("\n");
+    }
+
+    #[allow(dead_code)]
+    fn fmt_style(style: StyleModifier) -> &'static str {
+        match (style.background.unwrap(), style.font_style) {
+            (RED, None) => "MINUS",
+            (RED, _) => "MINUS_EMPH",
+            (GREEN, None) => "PLUS",
+            (GREEN, _) => "PLUS_EMPH",
+            _ => panic!(),
+        }
+    }
+
+}
+
 mod string_pair {
     use std::iter::Peekable;
 
