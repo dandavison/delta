@@ -1,23 +1,17 @@
-use std::cmp::max;
 use std::io::Write;
-use std::iter::Peekable;
 
 use syntect::easy::HighlightLines;
 use syntect::highlighting::{Style, StyleModifier};
 use syntect::parsing::SyntaxReference;
 
 use crate::config;
+use crate::detail;
 use crate::paint::superimpose_style_sections::superimpose_style_sections;
 use crate::style;
 
 pub struct Painter<'a> {
     pub minus_lines: Vec<String>,
     pub plus_lines: Vec<String>,
-
-    // TODO: store slice references instead of creating Strings
-    pub minus_line_style_sections: Vec<Vec<(StyleModifier, String)>>,
-    pub plus_line_style_sections: Vec<Vec<(StyleModifier, String)>>,
-
     pub writer: &'a mut Write,
     pub syntax: Option<&'a SyntaxReference>,
     pub highlighter: HighlightLines<'a>,
@@ -31,52 +25,41 @@ impl<'a> Painter<'a> {
     }
 
     pub fn paint_buffered_lines(&mut self) {
-        self.set_background_style_sections();
+        let (minus_line_syntax_style_sections, plus_line_syntax_style_sections) =
+            self.get_syntax_style_sections();
+        let (minus_line_diff_style_sections, plus_line_diff_style_sections) =
+            self.get_diff_style_sections();
         // TODO: lines and style sections contain identical line text
         if self.minus_lines.len() > 0 {
-            self.paint_lines(
-                // TODO: don't clone
-                self.minus_lines.iter().cloned().collect(),
-                self.minus_line_style_sections.iter().cloned().collect(),
-                self.config.opt.highlight_removed,
+            Painter::paint_lines(
+                &mut self.output_buffer,
+                &minus_line_syntax_style_sections,
+                &minus_line_diff_style_sections,
             );
             self.minus_lines.clear();
-            self.minus_line_style_sections.clear();
         }
         if self.plus_lines.len() > 0 {
-            self.paint_lines(
-                // TODO: don't clone
-                self.plus_lines.iter().cloned().collect(),
-                self.plus_line_style_sections.iter().cloned().collect(),
-                true,
+            Painter::paint_lines(
+                &mut self.output_buffer,
+                &plus_line_syntax_style_sections,
+                &plus_line_diff_style_sections,
             );
             self.plus_lines.clear();
-            self.plus_line_style_sections.clear();
         }
     }
 
     /// Superimpose background styles and foreground syntax
     /// highlighting styles, and write colored lines to output buffer.
     pub fn paint_lines(
-        &mut self,
-        lines: Vec<String>,
-        line_style_sections: Vec<Vec<(StyleModifier, String)>>,
-        syntax_highlight: bool,
+        output_buffer: &mut String,
+        syntax_style_sections: &Vec<Vec<(Style, String)>>,
+        diff_style_sections: &Vec<Vec<(StyleModifier, String)>>,
     ) {
-        for (line, style_sections) in lines.iter().zip(line_style_sections) {
-            let syntax_highlighting_style_sections: Vec<(Style, String)> = match syntax_highlight {
-                true => self
-                    .highlighter
-                    .highlight(&line, &self.config.syntax_set)
-                    .iter()
-                    .map(|(style, s)| (*style, s.to_string()))
-                    .collect::<Vec<(Style, String)>>(),
-                false => vec![(self.config.no_style, line.to_string())],
-            };
-            let superimposed_style_sections =
-                superimpose_style_sections(syntax_highlighting_style_sections, style_sections);
-            for (style, text) in superimposed_style_sections {
-                paint_section(&text, style, &mut self.output_buffer).unwrap();
+        for (syntax_sections, diff_sections) in
+            syntax_style_sections.iter().zip(diff_style_sections)
+        {
+            for (style, text) in superimpose_style_sections(syntax_sections, diff_sections) {
+                paint_section(&text, style, output_buffer).unwrap();
             }
         }
     }
@@ -88,174 +71,84 @@ impl<'a> Painter<'a> {
         Ok(())
     }
 
-    /// Set background styles for minus and plus lines in buffer.
-    fn set_background_style_sections(&mut self) {
-        if self.minus_lines.len() == self.plus_lines.len() {
-            self.set_background_style_sections_diff_detail();
-        } else {
-            self.set_background_style_sections_plain();
-        }
-    }
-
-    fn set_background_style_sections_plain(&mut self) {
+    /// Perform syntax highlighting for minus and plus lines in buffer.
+    fn get_syntax_style_sections(
+        &mut self,
+    ) -> (Vec<Vec<(Style, String)>>, Vec<Vec<(Style, String)>>) {
+        let mut minus_line_sections = Vec::new();
         for line in self.minus_lines.iter() {
-            self.minus_line_style_sections
-                .push(vec![(self.config.minus_style_modifier, line.to_string())]);
+            minus_line_sections.push(Painter::get_line_syntax_style_sections(
+                &line,
+                &mut self.highlighter,
+                &self.config,
+                self.config.opt.highlight_removed,
+            ));
         }
+        let mut plus_line_sections = Vec::new();
         for line in self.plus_lines.iter() {
-            self.plus_line_style_sections
-                .push(vec![(self.config.plus_style_modifier, line.to_string())]);
+            plus_line_sections.push(Painter::get_line_syntax_style_sections(
+                &line,
+                &mut self.highlighter,
+                &self.config,
+                true,
+            ));
+        }
+        (minus_line_sections, plus_line_sections)
+    }
+
+    pub fn get_line_syntax_style_sections(
+        line: &str,
+        highlighter: &mut HighlightLines,
+        config: &config::Config,
+        should_syntax_highlight: bool,
+    ) -> Vec<(Style, String)> {
+        if should_syntax_highlight {
+            highlighter
+                .highlight(line, &config.syntax_set)
+                .iter()
+                .map(|(style, s)| (*style, s.to_string()))
+                .collect::<Vec<(Style, String)>>()
+        } else {
+            vec![(config.no_style, line.to_string())]
         }
     }
 
-    /// Create background style sections for a region of removed/added lines.
-    /*
-      This function is called iff a region of n minus lines followed
-      by n plus lines is encountered, e.g. n successive lines have
-      been partially changed.
-
-      Consider the i-th such line and let m, p be the i-th minus and
-      i-th plus line, respectively.  The following cases exist:
-
-      1. Whitespace deleted at line beginning.
-         => The deleted section is highlighted in m; p is unstyled.
-
-      2. Whitespace inserted at line beginning.
-         => The inserted section is highlighted in p; m is unstyled.
-
-      3. An internal section of the line containing a non-whitespace character has been deleted.
-         => The deleted section is highlighted in m; p is unstyled.
-
-      4. An internal section of the line containing a non-whitespace character has been changed.
-         => The original section is highlighted in m; the replacement is highlighted in p.
-
-      5. An internal section of the line containing a non-whitespace character has been inserted.
-         => The inserted section is highlighted in p; m is unstyled.
-
-      Note that whitespace can be neither deleted nor inserted at the
-      end of the line: the line by definition has no trailing
-      whitespace.
-    */
-    fn set_background_style_sections_diff_detail(&mut self) {
-        for (minus, plus) in self.minus_lines.iter().zip(self.plus_lines.iter()) {
-            let string_pair = StringPair::new(minus, plus);
-            let change_begin = string_pair.common_prefix_length;
-
-            // We require that (right-trimmed length) >= (common prefix length). Consider:
-            // minus = "a    "
-            // plus  = "a b  "
-            // Here, the right-trimmed length of minus is 1, yet the common prefix length is
-            // 2. We resolve this by taking the following maxima:
-            let minus_length = max(string_pair.lengths[0], string_pair.common_prefix_length);
-            let plus_length = max(string_pair.lengths[1], string_pair.common_prefix_length);
-
-            // We require that change_begin <= change_end. Consider:
-            // minus = "a c"
-            // plus  = "a b c"
-            // Here, the common prefix length is 2, and the common suffix length is 2, yet the
-            // length of minus is 3. This overlap between prefix and suffix leads to a violation of
-            // the requirement. We resolve this by taking the following maxima:
-            let minus_change_end = max(
-                minus_length - string_pair.common_suffix_length,
-                change_begin,
-            );
-            let plus_change_end = max(plus_length - string_pair.common_suffix_length, change_begin);
-
-            self.minus_line_style_sections.push(vec![
-                (
-                    self.config.minus_style_modifier,
-                    minus[0..change_begin].to_string(),
-                ),
-                (
-                    self.config.minus_emph_style_modifier,
-                    minus[change_begin..minus_change_end].to_string(),
-                ),
-                (
-                    self.config.minus_style_modifier,
-                    minus[minus_change_end..].to_string(),
-                ),
-            ]);
-            self.plus_line_style_sections.push(vec![
-                (
-                    self.config.plus_style_modifier,
-                    plus[0..change_begin].to_string(),
-                ),
-                (
-                    self.config.plus_emph_style_modifier,
-                    plus[change_begin..plus_change_end].to_string(),
-                ),
-                (
-                    self.config.plus_style_modifier,
-                    plus[plus_change_end..].to_string(),
-                ),
-            ]);
-        }
-    }
-}
-
-/// A pair of right-trimmed strings.
-struct StringPair {
-    common_prefix_length: usize,
-    common_suffix_length: usize,
-    lengths: [usize; 2],
-}
-
-impl StringPair {
-    pub fn new(s0: &str, s1: &str) -> StringPair {
-        let common_prefix_length = StringPair::common_prefix_length(s0.chars(), s1.chars());
-        let (common_suffix_length, trailing_whitespace) =
-            StringPair::suffix_data(s0.chars(), s1.chars());
-        StringPair {
-            common_prefix_length,
-            common_suffix_length,
-            lengths: [
-                s0.len() - trailing_whitespace[0],
-                s1.len() - trailing_whitespace[1],
-            ],
+    /// Set background styles to represent diff for minus and plus lines in buffer.
+    fn get_diff_style_sections(
+        &mut self,
+    ) -> (
+        Vec<Vec<(StyleModifier, String)>>,
+        Vec<Vec<(StyleModifier, String)>>,
+    ) {
+        if self.minus_lines.len() == self.plus_lines.len() {
+            detail::get_diff_style_sections(
+                &self.minus_lines,
+                &self.plus_lines,
+                self.config.minus_style_modifier,
+                self.config.minus_emph_style_modifier,
+                self.config.plus_style_modifier,
+                self.config.plus_emph_style_modifier,
+            )
+        } else {
+            self.get_diff_style_sections_plain()
         }
     }
 
-    fn common_prefix_length(
-        s0: impl Iterator<Item = char>,
-        s1: impl Iterator<Item = char>,
-    ) -> usize {
-        let mut i = 0;
-        for (c0, c1) in s0.zip(s1) {
-            if c0 != c1 {
-                break;
-            } else {
-                i += 1;
-            }
+    fn get_diff_style_sections_plain(
+        &mut self,
+    ) -> (
+        Vec<Vec<(StyleModifier, String)>>,
+        Vec<Vec<(StyleModifier, String)>>,
+    ) {
+        let mut minus_line_sections = Vec::new();
+        for line in self.minus_lines.iter() {
+            minus_line_sections.push(vec![(self.config.minus_style_modifier, line.to_string())]);
         }
-        i
-    }
-
-    /// Return common suffix length and number of trailing whitespace characters on each string.
-    fn suffix_data(
-        s0: impl DoubleEndedIterator<Item = char>,
-        s1: impl DoubleEndedIterator<Item = char>,
-    ) -> (usize, [usize; 2]) {
-        let mut s0 = s0.rev().peekable();
-        let mut s1 = s1.rev().peekable();
-        let n0 = StringPair::consume_whitespace(&mut s0);
-        let n1 = StringPair::consume_whitespace(&mut s1);
-
-        (StringPair::common_prefix_length(s0, s1), [n0, n1])
-    }
-
-    /// Consume leading whitespace; return number of characters consumed.
-    fn consume_whitespace(s: &mut Peekable<impl Iterator<Item = char>>) -> usize {
-        let mut i = 0;
-        loop {
-            match s.peek() {
-                Some('\n') | Some(' ') => {
-                    s.next();
-                    i += 1;
-                }
-                _ => break,
-            }
+        let mut plus_line_sections = Vec::new();
+        for line in self.plus_lines.iter() {
+            plus_line_sections.push(vec![(self.config.plus_style_modifier, line.to_string())]);
         }
-        i
+        (minus_line_sections, plus_line_sections)
     }
 }
 
@@ -285,8 +178,8 @@ mod superimpose_style_sections {
     use syntect::highlighting::{Style, StyleModifier};
 
     pub fn superimpose_style_sections(
-        sections_1: Vec<(Style, String)>,
-        sections_2: Vec<(StyleModifier, String)>,
+        sections_1: &Vec<(Style, String)>,
+        sections_2: &Vec<(StyleModifier, String)>,
     ) -> Vec<(Style, String)> {
         coalesce(superimpose(
             explode(sections_1)
@@ -296,14 +189,14 @@ mod superimpose_style_sections {
         ))
     }
 
-    fn explode<T>(style_sections: Vec<(T, String)>) -> Vec<(T, char)>
+    fn explode<T>(style_sections: &Vec<(T, String)>) -> Vec<(T, char)>
     where
         T: Copy,
     {
         let mut exploded: Vec<(T, char)> = Vec::new();
         for (style, string) in style_sections {
             for c in string.chars() {
-                exploded.push((style, c));
+                exploded.push((*style, c));
             }
         }
         exploded
@@ -375,7 +268,7 @@ mod superimpose_style_sections {
             let sections_2 = vec![(STYLE_MODIFIER, string.clone())];
             let superimposed = vec![(SUPERIMPOSED_STYLE, string.clone())];
             assert_eq!(
-                superimpose_style_sections(sections_1, sections_2),
+                superimpose_style_sections(&sections_1, &sections_2),
                 superimposed
             );
         }
@@ -389,7 +282,7 @@ mod superimpose_style_sections {
             ];
             let superimposed = vec![(SUPERIMPOSED_STYLE, String::from("ab"))];
             assert_eq!(
-                superimpose_style_sections(sections_1, sections_2),
+                superimpose_style_sections(&sections_1, &sections_2),
                 superimposed
             );
         }
@@ -399,7 +292,7 @@ mod superimpose_style_sections {
             let arbitrary = 0;
             let string = String::from("ab");
             assert_eq!(
-                explode(vec![(arbitrary, string)]),
+                explode(&vec![(arbitrary, string)]),
                 vec![(arbitrary, 'a'), (arbitrary, 'b')]
             )
         }
@@ -412,64 +305,4 @@ mod superimpose_style_sections {
         }
     }
 
-}
-
-#[cfg(test)]
-mod tests {
-    fn common_prefix_length(s1: &str, s2: &str) -> usize {
-        super::StringPair::new(s1, s2).common_prefix_length
-    }
-
-    fn common_suffix_length(s1: &str, s2: &str) -> usize {
-        super::StringPair::new(s1, s2).common_suffix_length
-    }
-
-    #[test]
-    fn test_common_prefix_length() {
-        assert_eq!(common_prefix_length("", ""), 0);
-        assert_eq!(common_prefix_length("", "a"), 0);
-        assert_eq!(common_prefix_length("a", ""), 0);
-        assert_eq!(common_prefix_length("a", "b"), 0);
-        assert_eq!(common_prefix_length("a", "a"), 1);
-        assert_eq!(common_prefix_length("a", "ab"), 1);
-        assert_eq!(common_prefix_length("ab", "a"), 1);
-        assert_eq!(common_prefix_length("ab", "aba"), 2);
-        assert_eq!(common_prefix_length("aba", "ab"), 2);
-    }
-
-    #[test]
-    fn test_common_prefix_length_with_leading_whitespace() {
-        assert_eq!(common_prefix_length(" ", ""), 0);
-        assert_eq!(common_prefix_length(" ", " "), 1);
-        assert_eq!(common_prefix_length(" a", " a"), 2);
-        assert_eq!(common_prefix_length(" a", "a"), 0);
-    }
-
-    #[test]
-    fn test_common_suffix_length() {
-        assert_eq!(common_suffix_length("", ""), 0);
-        assert_eq!(common_suffix_length("", "a"), 0);
-        assert_eq!(common_suffix_length("a", ""), 0);
-        assert_eq!(common_suffix_length("a", "b"), 0);
-        assert_eq!(common_suffix_length("a", "a"), 1);
-        assert_eq!(common_suffix_length("a", "ab"), 0);
-        assert_eq!(common_suffix_length("ab", "a"), 0);
-        assert_eq!(common_suffix_length("ab", "b"), 1);
-        assert_eq!(common_suffix_length("ab", "aab"), 2);
-        assert_eq!(common_suffix_length("aba", "ba"), 2);
-    }
-
-    #[test]
-    fn test_common_suffix_length_with_trailing_whitespace() {
-        assert_eq!(common_suffix_length("", "  "), 0);
-        assert_eq!(common_suffix_length("  ", "a"), 0);
-        assert_eq!(common_suffix_length("a  ", ""), 0);
-        assert_eq!(common_suffix_length("a", "b  "), 0);
-        assert_eq!(common_suffix_length("a", "a  "), 1);
-        assert_eq!(common_suffix_length("a  ", "ab  "), 0);
-        assert_eq!(common_suffix_length("ab", "a  "), 0);
-        assert_eq!(common_suffix_length("ab  ", "b "), 1);
-        assert_eq!(common_suffix_length("ab ", "aab  "), 2);
-        assert_eq!(common_suffix_length("aba ", "ba"), 2);
-    }
 }

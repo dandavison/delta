@@ -54,8 +54,6 @@ pub fn delta(
     let mut painter = Painter {
         minus_lines: Vec::new(),
         plus_lines: Vec::new(),
-        minus_line_style_sections: Vec::new(),
-        plus_line_style_sections: Vec::new(),
         output_buffer: String::new(),
         writer: writer,
         syntax: None,
@@ -174,13 +172,19 @@ fn write_hunk_meta_line(painter: &mut Painter, line: &str, config: &Config) -> s
     let ansi_style = Blue.normal();
     let (code_fragment, line_number) = parse::parse_hunk_metadata(&line);
     if code_fragment.len() > 0 {
-        painter.paint_lines(
-            vec![code_fragment.clone()],
-            vec![vec![(
+        let syntax_style_sections = Painter::get_line_syntax_style_sections(
+            &code_fragment,
+            &mut painter.highlighter,
+            &painter.config,
+            true,
+        );
+        Painter::paint_lines(
+            &mut painter.output_buffer,
+            &vec![syntax_style_sections],
+            &vec![vec![(
                 style::NO_BACKGROUND_COLOR_STYLE_MODIFIER,
                 code_fragment.clone(),
             )]],
-            true,
         );
         painter.output_buffer.pop(); // trim newline
         draw_fn(
@@ -212,13 +216,19 @@ fn paint_hunk_line(state: State, painter: &mut Painter, line: &str, config: &Con
         _ => {
             painter.paint_buffered_lines();
             let line = prepare(&line, config);
-            painter.paint_lines(
-                vec![line.clone()],
-                vec![vec![(
+            let syntax_style_sections = Painter::get_line_syntax_style_sections(
+                &line,
+                &mut painter.highlighter,
+                &painter.config,
+                true,
+            );
+            Painter::paint_lines(
+                &mut painter.output_buffer,
+                &vec![syntax_style_sections],
+                &vec![vec![(
                     style::NO_BACKGROUND_COLOR_STYLE_MODIFIER,
                     line.clone(),
                 )]],
-                true,
             );
             State::HunkZero
         }

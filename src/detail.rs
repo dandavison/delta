@@ -1,0 +1,216 @@
+use std::cmp::max;
+use std::iter::Peekable;
+
+use syntect::highlighting::StyleModifier;
+
+/// Create background style sections for a region of removed/added lines.
+/*
+  This function is called iff a region of n minus lines followed
+  by n plus lines is encountered, e.g. n successive lines have
+  been partially changed.
+
+  Consider the i-th such line and let m, p be the i-th minus and
+  i-th plus line, respectively.  The following cases exist:
+
+  1. Whitespace deleted at line beginning.
+     => The deleted section is highlighted in m; p is unstyled.
+
+  2. Whitespace inserted at line beginning.
+     => The inserted section is highlighted in p; m is unstyled.
+
+  3. An internal section of the line containing a non-whitespace character has been deleted.
+     => The deleted section is highlighted in m; p is unstyled.
+
+  4. An internal section of the line containing a non-whitespace character has been changed.
+     => The original section is highlighted in m; the replacement is highlighted in p.
+
+  5. An internal section of the line containing a non-whitespace character has been inserted.
+     => The inserted section is highlighted in p; m is unstyled.
+
+  Note that whitespace can be neither deleted nor inserted at the
+  end of the line: the line by definition has no trailing
+  whitespace.
+*/
+pub fn get_diff_style_sections(
+    minus_lines: &Vec<String>,
+    plus_lines: &Vec<String>,
+    minus_style_modifier: StyleModifier,
+    minus_emph_style_modifier: StyleModifier,
+    plus_style_modifier: StyleModifier,
+    plus_emph_style_modifier: StyleModifier,
+) -> (
+    Vec<Vec<(StyleModifier, String)>>,
+    Vec<Vec<(StyleModifier, String)>>,
+) {
+    let mut minus_line_sections = Vec::new();
+    let mut plus_line_sections = Vec::new();
+
+    for (minus, plus) in minus_lines.iter().zip(plus_lines.iter()) {
+        let string_pair = StringPair::new(minus, plus);
+        let change_begin = string_pair.common_prefix_length;
+
+        // We require that (right-trimmed length) >= (common prefix length). Consider:
+        // minus = "a    "
+        // plus  = "a b  "
+        // Here, the right-trimmed length of minus is 1, yet the common prefix length is
+        // 2. We resolve this by taking the following maxima:
+        let minus_length = max(string_pair.lengths[0], string_pair.common_prefix_length);
+        let plus_length = max(string_pair.lengths[1], string_pair.common_prefix_length);
+
+        // We require that change_begin <= change_end. Consider:
+        // minus = "a c"
+        // plus  = "a b c"
+        // Here, the common prefix length is 2, and the common suffix length is 2, yet the
+        // length of minus is 3. This overlap between prefix and suffix leads to a violation of
+        // the requirement. We resolve this by taking the following maxima:
+        let minus_change_end = max(
+            minus_length - string_pair.common_suffix_length,
+            change_begin,
+        );
+        let plus_change_end = max(plus_length - string_pair.common_suffix_length, change_begin);
+
+        minus_line_sections.push(vec![
+            (minus_style_modifier, minus[0..change_begin].to_string()),
+            (
+                minus_emph_style_modifier,
+                minus[change_begin..minus_change_end].to_string(),
+            ),
+            (minus_style_modifier, minus[minus_change_end..].to_string()),
+        ]);
+        plus_line_sections.push(vec![
+            (plus_style_modifier, plus[0..change_begin].to_string()),
+            (
+                plus_emph_style_modifier,
+                plus[change_begin..plus_change_end].to_string(),
+            ),
+            (plus_style_modifier, plus[plus_change_end..].to_string()),
+        ]);
+    }
+    (minus_line_sections, plus_line_sections)
+}
+
+/// A pair of right-trimmed strings.
+struct StringPair {
+    common_prefix_length: usize,
+    common_suffix_length: usize,
+    lengths: [usize; 2],
+}
+
+impl StringPair {
+    pub fn new(s0: &str, s1: &str) -> StringPair {
+        let common_prefix_length = StringPair::common_prefix_length(s0.chars(), s1.chars());
+        let (common_suffix_length, trailing_whitespace) =
+            StringPair::suffix_data(s0.chars(), s1.chars());
+        StringPair {
+            common_prefix_length,
+            common_suffix_length,
+            lengths: [
+                s0.len() - trailing_whitespace[0],
+                s1.len() - trailing_whitespace[1],
+            ],
+        }
+    }
+
+    fn common_prefix_length(
+        s0: impl Iterator<Item = char>,
+        s1: impl Iterator<Item = char>,
+    ) -> usize {
+        let mut i = 0;
+        for (c0, c1) in s0.zip(s1) {
+            if c0 != c1 {
+                break;
+            } else {
+                i += 1;
+            }
+        }
+        i
+    }
+
+    /// Return common suffix length and number of trailing whitespace characters on each string.
+    fn suffix_data(
+        s0: impl DoubleEndedIterator<Item = char>,
+        s1: impl DoubleEndedIterator<Item = char>,
+    ) -> (usize, [usize; 2]) {
+        let mut s0 = s0.rev().peekable();
+        let mut s1 = s1.rev().peekable();
+        let n0 = StringPair::consume_whitespace(&mut s0);
+        let n1 = StringPair::consume_whitespace(&mut s1);
+
+        (StringPair::common_prefix_length(s0, s1), [n0, n1])
+    }
+
+    /// Consume leading whitespace; return number of characters consumed.
+    fn consume_whitespace(s: &mut Peekable<impl Iterator<Item = char>>) -> usize {
+        let mut i = 0;
+        loop {
+            match s.peek() {
+                Some('\n') | Some(' ') => {
+                    s.next();
+                    i += 1;
+                }
+                _ => break,
+            }
+        }
+        i
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    fn common_prefix_length(s1: &str, s2: &str) -> usize {
+        super::StringPair::new(s1, s2).common_prefix_length
+    }
+
+    fn common_suffix_length(s1: &str, s2: &str) -> usize {
+        super::StringPair::new(s1, s2).common_suffix_length
+    }
+
+    #[test]
+    fn test_common_prefix_length() {
+        assert_eq!(common_prefix_length("", ""), 0);
+        assert_eq!(common_prefix_length("", "a"), 0);
+        assert_eq!(common_prefix_length("a", ""), 0);
+        assert_eq!(common_prefix_length("a", "b"), 0);
+        assert_eq!(common_prefix_length("a", "a"), 1);
+        assert_eq!(common_prefix_length("a", "ab"), 1);
+        assert_eq!(common_prefix_length("ab", "a"), 1);
+        assert_eq!(common_prefix_length("ab", "aba"), 2);
+        assert_eq!(common_prefix_length("aba", "ab"), 2);
+    }
+
+    #[test]
+    fn test_common_prefix_length_with_leading_whitespace() {
+        assert_eq!(common_prefix_length(" ", ""), 0);
+        assert_eq!(common_prefix_length(" ", " "), 1);
+        assert_eq!(common_prefix_length(" a", " a"), 2);
+        assert_eq!(common_prefix_length(" a", "a"), 0);
+    }
+
+    #[test]
+    fn test_common_suffix_length() {
+        assert_eq!(common_suffix_length("", ""), 0);
+        assert_eq!(common_suffix_length("", "a"), 0);
+        assert_eq!(common_suffix_length("a", ""), 0);
+        assert_eq!(common_suffix_length("a", "b"), 0);
+        assert_eq!(common_suffix_length("a", "a"), 1);
+        assert_eq!(common_suffix_length("a", "ab"), 0);
+        assert_eq!(common_suffix_length("ab", "a"), 0);
+        assert_eq!(common_suffix_length("ab", "b"), 1);
+        assert_eq!(common_suffix_length("ab", "aab"), 2);
+        assert_eq!(common_suffix_length("aba", "ba"), 2);
+    }
+
+    #[test]
+    fn test_common_suffix_length_with_trailing_whitespace() {
+        assert_eq!(common_suffix_length("", "  "), 0);
+        assert_eq!(common_suffix_length("  ", "a"), 0);
+        assert_eq!(common_suffix_length("a  ", ""), 0);
+        assert_eq!(common_suffix_length("a", "b  "), 0);
+        assert_eq!(common_suffix_length("a", "a  "), 1);
+        assert_eq!(common_suffix_length("a  ", "ab  "), 0);
+        assert_eq!(common_suffix_length("ab", "a  "), 0);
+        assert_eq!(common_suffix_length("ab  ", "b "), 1);
+        assert_eq!(common_suffix_length("ab ", "aab  "), 2);
+        assert_eq!(common_suffix_length("aba ", "ba"), 2);
+    }
+}

@@ -5,6 +5,7 @@ mod bat;
 mod cli;
 mod config;
 mod delta;
+mod detail;
 mod draw;
 mod paint;
 mod parse;
