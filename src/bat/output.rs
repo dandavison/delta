@@ -1,18 +1,6 @@
 // https://github.com/sharkdp/bat a1b9334a44a2c652f52dddaa83dbacba57372468
 // src/output.rs
-// with minor modifications (see git history).
-//
-// Copyright (c) 2018 bat-developers (https://github.com/sharkdp/bat).
-
-// Permission is hereby granted, free of charge, to any person obtaining a copy
-// of this software and associated documentation files (the "Software"), to deal
-// in the Software without restriction, including without limitation the rights
-// to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
-// copies of the Software, and to permit persons to whom the Software is
-// furnished to do so, subject to the following conditions:
-
-// The above copyright notice and this permission notice shall be included in all
-// copies or substantial portions of the Software.
+// See src/bat/LICENSE
 use std::env;
 use std::ffi::OsString;
 use std::io::{self, Write};
@@ -70,13 +58,12 @@ impl OutputType {
             replace_arguments_to_less = false;
         }
 
-        let pager = pager_from_config.or(pager_from_env).unwrap_or_else(
-            || String::from("less"),
-        );
+        let pager = pager_from_config
+            .or(pager_from_env)
+            .unwrap_or_else(|| String::from("less"));
 
-        let pagerflags = shell_words::split(&pager).chain_err(
-            || "Could not parse pager command.",
-        )?;
+        let pagerflags =
+            shell_words::split(&pager).chain_err(|| "Could not parse pager command.")?;
 
         match pagerflags.split_first() {
             Some((pager_name, args)) => {
@@ -106,13 +93,11 @@ impl OutputType {
                     p
                 };
 
-                Ok(
-                    process
-                        .stdin(Stdio::piped())
-                        .spawn()
-                        .map(OutputType::Pager)
-                        .unwrap_or_else(|_| OutputType::stdout()),
-                )
+                Ok(process
+                    .stdin(Stdio::piped())
+                    .spawn()
+                    .map(OutputType::Pager)
+                    .unwrap_or_else(|_| OutputType::stdout()))
             }
             None => Ok(OutputType::stdout()),
         }
@@ -124,11 +109,10 @@ impl OutputType {
 
     pub fn handle(&mut self) -> Result<&mut Write> {
         Ok(match *self {
-            OutputType::Pager(ref mut command) => {
-                command.stdin.as_mut().chain_err(
-                    || "Could not open stdin for pager",
-                )?
-            }
+            OutputType::Pager(ref mut command) => command
+                .stdin
+                .as_mut()
+                .chain_err(|| "Could not open stdin for pager")?,
             OutputType::Stdout(ref mut handle) => handle,
         })
     }
