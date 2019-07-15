@@ -66,6 +66,8 @@ pub fn delta(
         config: config,
     };
 
+    let mut minus_file = "".to_string();
+    let mut plus_file;
     let mut state = State::Unknown;
 
     for raw_line in lines {
@@ -85,11 +87,11 @@ pub fn delta(
                 Some(extension) => assets.syntax_set.find_syntax_by_extension(extension),
                 None => None,
             };
-            if config.opt.file_style != cli::SectionStyle::Plain {
-                painter.emit()?;
-                write_file_meta_header_line(&mut painter, &raw_line, config)?;
-                continue;
-            }
+        } else if line.starts_with("---") && config.opt.file_style != cli::SectionStyle::Plain {
+            minus_file = parse::get_file_path_from_triple_minus_or_plus_line(&line);
+        } else if line.starts_with("+++") && config.opt.file_style != cli::SectionStyle::Plain {
+            plus_file = parse::get_file_path_from_triple_minus_or_plus_line(&line);
+            write_file_meta_header_line(&mut painter, &minus_file, &plus_file, config)?;
         } else if line.starts_with("@@") {
             state = State::HunkMeta;
             if painter.syntax.is_some() {
@@ -141,7 +143,8 @@ fn write_commit_meta_header_line(
 
 fn write_file_meta_header_line(
     painter: &mut Painter,
-    line: &str,
+    minus_file: &str,
+    plus_file: &str,
     config: &Config,
 ) -> std::io::Result<()> {
     let draw_fn = match config.opt.file_style {
@@ -152,7 +155,9 @@ fn write_file_meta_header_line(
     let ansi_style = Blue.bold();
     draw_fn(
         painter.writer,
-        &ansi_style.paint(parse::get_file_change_description_from_diff_line(&line)),
+        &ansi_style.paint(parse::get_file_change_description_from_file_paths(
+            minus_file, plus_file,
+        )),
         config.terminal_width,
         ansi_style,
         true,

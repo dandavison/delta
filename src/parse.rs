@@ -19,14 +19,21 @@ pub fn get_file_extension_from_diff_line(line: &str) -> Option<&str> {
     }
 }
 
-// TODO: Don't parse the line twice (once for change description and once for extensions).
-pub fn get_file_change_description_from_diff_line(line: &str) -> String {
-    match get_file_paths_from_diff_line(line) {
-        (Some(file_1), Some(file_2)) if file_1 == file_2 => format!("{}", file_1),
-        (Some(file), Some("/dev/null")) => format!("deleted: {}", file),
-        (Some("/dev/null"), Some(file)) => format!("added: {}", file),
-        (Some(file_1), Some(file_2)) => format!("renamed: {} ⟶  {}", file_1, file_2),
-        _ => format!("?"),
+pub fn get_file_path_from_triple_minus_or_plus_line(line: &str) -> String {
+    match line.split(" ").skip(1).next() {
+        Some("/dev/null") => "/dev/null",
+        Some(path) => &path[2..],
+        _ => "",
+    }
+    .to_string()
+}
+
+pub fn get_file_change_description_from_file_paths(minus_file: &str, plus_file: &str) -> String {
+    match (minus_file, plus_file) {
+        (minus_file, plus_file) if minus_file == plus_file => format!("{}", minus_file),
+        (minus_file, "/dev/null") => format!("deleted: {}", minus_file),
+        ("/dev/null", plus_file) => format!("added: {}", plus_file),
+        (minus_file, plus_file) => format!("renamed: {} ⟶  {}", minus_file, plus_file),
     }
 }
 
@@ -47,16 +54,6 @@ pub fn parse_hunk_metadata(line: &str) -> (String, String) {
         .to_string();
     let code_fragment = iter.next().unwrap_or("").to_string();
     (code_fragment, line_number)
-}
-
-fn get_file_paths_from_diff_line(line: &str) -> (Option<&str>, Option<&str>) {
-    let mut iter = line.split(" ");
-    iter.next(); // diff
-    iter.next(); // --git
-    (
-        iter.next().and_then(|s| Some(&s[2..])),
-        iter.next().and_then(|s| Some(&s[2..])),
-    )
 }
 
 /// Given input like "diff --git a/src/main.rs b/src/main.rs"
@@ -93,10 +90,14 @@ mod tests {
     }
 
     #[test]
-    fn test_get_file_change_description_from_diff_line() {
+    fn test_get_file_path_from_triple_minus_or_plus_line() {
         assert_eq!(
-            get_file_change_description_from_diff_line("diff --git a/src/main.rs b/src/main.rs"),
-            "src/main.rs"
+            get_file_path_from_triple_minus_or_plus_line("--- a/src/delta.rs"),
+            "src/delta.rs"
+        );
+        assert_eq!(
+            get_file_path_from_triple_minus_or_plus_line("+++ b/src/delta.rs"),
+            "src/delta.rs"
         );
     }
 
