@@ -78,7 +78,6 @@ impl<'a> Painter<'a> {
             for (style, text) in superimposed_style_sections {
                 paint_section(&text, style, &mut self.output_buffer).unwrap();
             }
-            self.output_buffer.push_str("\n");
         }
     }
 
@@ -249,7 +248,7 @@ impl StringPair {
         let mut i = 0;
         loop {
             match s.peek() {
-                Some(' ') => {
+                Some('\n') | Some(' ') => {
                     s.next();
                     i += 1;
                 }

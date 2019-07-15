@@ -220,7 +220,7 @@ fn paint_hunk_line(state: State, painter: &mut Painter, line: &str, config: &Con
     }
 }
 
-/// Replace initial -/+ character with ' ' and pad to width.
+/// Replace initial -/+ character with ' ', pad to width, and terminate with newline character.
 fn prepare(_line: &str, config: &Config) -> String {
     let mut line = String::new();
     if _line.len() > 0 {
@@ -228,12 +228,9 @@ fn prepare(_line: &str, config: &Config) -> String {
         line.push_str(&_line[1..]);
     }
     match config.width {
-        Some(width) => {
-            if line.len() < width {
-                line = format!("{}{}", line, " ".repeat(width - line.len()));
-            }
+        Some(width) if width > line.len() => {
+            format!("{}{}\n", line, " ".repeat(width - line.len()))
         }
-        _ => (),
+        _ => format!("{}\n", line),
     }
-    line
 }
