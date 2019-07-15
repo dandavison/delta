@@ -62,7 +62,7 @@ env:
     # Used as conditional check in the install stage
     - HOST=x86_64-unknown-linux-gnu
     # Used on the deployment script
-    - PROJECT_NAME=bat
+    - PROJECT_NAME=delta
 
 install:
   # prevent target re-add error from rustup
@@ -82,7 +82,7 @@ deploy:
   # - encrypt it using: `travis encrypt API_KEY_HERE`
   # - paste the output below
   api_key:
-    secure: "GZL8nYk+/MZGEqejpP0UMMGVmwUEdxiF9CflFIGccu+/tznDyHnHOpyJmbH3M5IKWIxa7xFgqOE8pHuD4oQXt4mzyJGB0KMKKEFLW7ckbTYKya5bw0heKznaqGnS0Yz+vpfqYR25eiPFYCz7mDsGsCzH5QZqt3cdn9MDQGu1D0IaxPjuBNH3T9kBblR0ifBd3Diy0JYhiVcMSI3V1rkel18F1yBHO2GQ95hkWxVgjANQnefq5+zdzbx4ki539ewYENShA8N0w6ULJVY9LmWRWJIp90ggOD3JCH6Nz/fBpYBqwfABO6Dr7Csw7IRm7pM4IVkFZS1taiDYFX9thxZh3UTmI4YYtSTPxH9NGV47kxPipbf4vAXFwW+1VcHKMpBzz+5IVsHnk1Pfx9/GZsXbqXM3PUWCStec36Xtqh5vQapDKEg9khkEs4b1X7/E73gvpRuQl9gbnyufSVWgDsXIWqM+0aDbqQz1FpLmVxz6eij0cB9vR+8kbNoe/CEPHPO9ZllvAHseukOeHPzSBd8rILORXaaGmQausXz2wWgSsffUSYz4705P8joI0zFCfmkHjL+kA1ZUx5SxLCc1ID7CFFZChhAxHoPL7xc21snswwr8QeheERdwvuzKNaerBGZEw8dmMMx98YkjftIj65DDySr2mRZuufBQeQpmMhFyIT4="
+    secure: "HLd8A4j/Z+4jrTZmzRAMX+Ko7igvARr0kO1YBQ9goB3m+RLtt77adaZUXrQI6EMHxohSjmtcOsX2HmWBH0hZPk39q8fRmHxIgvzqFM/DmQFIPmmlxgPgOeImJApy9hPxLDJoy1aAtpOEA1Ra33bA98W7CQ+WH9qF3qgTz08+ucq+mdTwV7pA+7bYLNRSzbU+sofPfZxMs97Lvv+c/n7gPJwA6eFrP/I97vux6RU1+RqyJ/Sg8hA19EEaAvLu4oYijuKFR2W6s/k4ODnDIUdF59dgROs7vccMLYNFmx4ECFAhzPtO18htJpyvmWHfRfByw/yFkLAalQIhGxoyILNEeaFSq1pJGRJllGNtmoqeXZctJcbWxt0N7/30PBrzjashxCzpvvjhpzJ9EYu2VBRme7RtLsSRE+R3NVpz4NfmJHEJWnE32Ds+saFJ7ixUcKk6xFG2rJ7/F9vG7x2LluJghDwMky50Glvi79YccrgudmKNY7bAJMVkffgG8r0FlR7HZ2piPa+mEHWGnnVRpWWm0aTQZFYR7GEsPl10LIsjRoVEwUdHVjDA+NiuH3my4FGdu8BKj8JDpEEQrvT1bPkX+M6mfbkr76YoL7GyCx86jLNt1B1uCjUzQW1166YHL11U+UIsrw2RKcYftCzyON4wxelkjafynlI1MOM6XffWKJs="
   # for uploading multiple files
   file_glob: true
   # NOTE explanation on each env variable

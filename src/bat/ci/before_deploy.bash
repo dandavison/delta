@@ -27,24 +27,14 @@ pack() {
 
     # create a "staging" directory
     mkdir "$tempdir/$package_name"
-    mkdir "$tempdir/$package_name/autocomplete"
 
     # copying the main binary
     cp "target/$TARGET/release/$PROJECT_NAME" "$tempdir/$package_name/"
     "${gcc_prefix}"strip "$tempdir/$package_name/$PROJECT_NAME"
 
     # manpage, readme and license
-    cp "doc/$PROJECT_NAME.1" "$tempdir/$package_name"
     cp README.md "$tempdir/$package_name"
-    cp LICENSE-MIT "$tempdir/$package_name"
-    cp LICENSE-APACHE "$tempdir/$package_name"
-
-    # various autocomplete
-    # TODO: disabled for now, see issue #372
-    # cp target/"$TARGET"/release/build/"$PROJECT_NAME"-*/out/"$PROJECT_NAME".bash "$tempdir/$package_name/autocomplete/${PROJECT_NAME}.bash-completion"
-    # cp target/"$TARGET"/release/build/"$PROJECT_NAME"-*/out/"$PROJECT_NAME".fish "$tempdir/$package_name/autocomplete"
-    cp assets/completions/bat.fish "$tempdir/$package_name/autocomplete"
-    # cp target/"$TARGET"/release/build/"$PROJECT_NAME"-*/out/_"$PROJECT_NAME" "$tempdir/$package_name/autocomplete"
+    cp LICENSE "$tempdir/$package_name"
 
     # archiving
     pushd "$tempdir"
@@ -63,8 +53,8 @@ make_deb() {
     local homepage
     local maintainer
 
-    homepage="https://github.com/sharkdp/bat"
-    maintainer="David Peter <mail@david-peter.de>"
+    homepage="https://github.com/dandavison/delta"
+    maintainer="Dan Davison <dandavison7@gmail.com>"
 
     case $TARGET in
         x86_64*)
@@ -79,9 +69,9 @@ make_deb() {
             architecture=arm64
             gcc_prefix="aarch64-linux-gnu-"
             ;;
-        arm*hf) 
-            architecture=armhf  
-            gcc_prefix="arm-linux-gnueabihf-"   
+        arm*hf)
+            architecture=armhf
+            gcc_prefix="arm-linux-gnueabihf-"
             ;;
         *)
             echo "make_deb: skipping target '${TARGET}'" >&2
@@ -103,14 +93,9 @@ make_deb() {
     install -Dm755 "target/$TARGET/release/$PROJECT_NAME" "$tempdir/usr/bin/$PROJECT_NAME"
     "${gcc_prefix}"strip "$tempdir/usr/bin/$PROJECT_NAME"
 
-    # manpage
-    install -Dm644 "doc/$PROJECT_NAME.1" "$tempdir/usr/share/man/man1/$PROJECT_NAME.1"
-    gzip --best "$tempdir/usr/share/man/man1/$PROJECT_NAME.1"
-
     # readme and license
     install -Dm644 README.md "$tempdir/usr/share/doc/$PROJECT_NAME/README.md"
-    install -Dm644 LICENSE-MIT "$tempdir/usr/share/doc/$PROJECT_NAME/LICENSE-MIT"
-    install -Dm644 LICENSE-APACHE "$tempdir/usr/share/doc/$PROJECT_NAME/LICENSE-APACHE"
+    install -Dm644 LICENSE "$tempdir/usr/share/doc/$PROJECT_NAME/LICENSE"
     cat > "$tempdir/usr/share/doc/$PROJECT_NAME/copyright" <<EOF
 Format: http://www.debian.org/doc/packaging-manuals/copyright-format/1.0/
 Upstream-Name: $PROJECT_NAME
@@ -118,11 +103,7 @@ Source: $homepage
 
 Files: *
 Copyright: $maintainer
-License: Apache-2.0 or MIT
-
-License: Apache-2.0
- On Debian systems, the complete text of the Apache-2.0 can be found in the
- file /usr/share/common-licenses/Apache-2.0.
+License: MIT
 
 License: MIT
  Permission is hereby granted, free of charge, to any
@@ -157,12 +138,11 @@ Package: $dpkgname
 Version: $version
 Section: utils
 Priority: optional
-Maintainer: David Peter <mail@david-peter.de>
+Maintainer: Dan Davison <dandavison7@gmail.com>
 Architecture: $architecture
 Provides: $PROJECT_NAME
 Conflicts: $conflictname
-Description: A cat(1) clone with wings.
- A cat(1) clone with syntax highlighting and Git integration.
+Description: A syntax highlighter for git.
 EOF
 
     fakeroot dpkg-deb --build "$tempdir" "${dpkgname}_${version}_${architecture}.deb"
