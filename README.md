@@ -38,7 +38,7 @@ Alternatively, executables for your platform can be downloaded at https://github
 ## Configure git to use delta
 
 ```sh
-git config --global core.pager delta  # --light for light terminal backgrounds
+git config --global core.pager "delta --dark"  # --light for light terminal backgrounds
 ```
 
 Alternatively, you can edit your `.gitconfig` directly. An example is
