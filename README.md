@@ -1,7 +1,7 @@
 [![Build Status](https://travis-ci.com/dandavison/delta.svg?branch=master)](https://travis-ci.com/dandavison/delta)
 
 ## Δ
-  A syntax-highlighter for git.
+  A syntax-highlighting pager for git.
 
 <table>
   <tr>
@@ -26,13 +26,36 @@
   </tr>
 </table>
 
+## Installation
+
+```sh
+brew tap dandavison/delta https://github.com/dandavison/delta
+brew install dandavison/delta/git-delta
+```
+
+Alternatively, executables for your platform can be downloaded at https://github.com/dandavison/delta/releases.
+
+## Configure git to use delta
+
+```sh
+git config --global core.pager delta  # --light for light terminal backgrounds
+```
+
+Alternatively, you can edit your `.gitconfig` directly. An example is
+```
+[core]
+    pager = delta --plus-color="#012800" --minus-color="#340001" --theme="base16-ocean.dark"
+```
+
+All git commands that display diff output should now display syntax-highlighted output. For example:
+  - `git diff`
+  - `git show`
+  - `git log -p`
+  - `git stash show -p`
+
 
 ## Usage
 ```
-delta 0.1.0
-Dan Davison <dandavison7@gmail.com>
-A syntax-highlighter for git.
-
 USAGE:
     delta [FLAGS] [OPTIONS]
 
@@ -52,63 +75,29 @@ FLAGS:
     -V, --version              Prints version information
 
 OPTIONS:
-        --minus-color <minus_color>    The background color (RGB hex) to use for removed lines.
-        --plus-color <plus_color>      The background color (RGB hex) to use for added lines.
-        --theme <theme>                The syntax highlighting theme to use.
-    -w, --width <width>                The width (in characters) of the background color highlighting. By default, the
-                                       width is the current terminal width. Use --width=variable to apply background
-                                       colors to the end of each line, without right padding to equal width.
+        --commit-style <commit_style>
+            Formatting style for commit section of git output. Options are: plain, box. [default: plain]
+
+        --file-style <file_style>
+            Formatting style for file section of git output. Options are: plain, box, underline. [default: underline]
+
+        --hunk-style <hunk_style>
+            Formatting style for hunk section of git output. Options are: plain, box. [default: box]
+
+        --minus-color <minus_color>              The background color (RGB hex) to use for removed lines.
+        --minus-emph-color <minus_emph_color>
+            The background color (RGB hex) to use for emphasized sections of removed lines.
+
+        --plus-color <plus_color>                The background color (RGB hex) to use for added lines.
+        --plus-emph-color <plus_emph_color>
+            The background color (RGB hex) to use for emphasized sections of added lines.
+
+        --theme <theme>                          The syntax highlighting theme to use.
+    -w, --width <width>
+            The width (in characters) of the background color highlighting. By default, the width is the current
+            terminal width. Use --width=variable to apply background colors to the end of each line, without right
+            padding to equal width.
 ```
-
-## Installation
-
-1. **Install the Rust development environment:**<br>
-    See https://www.rust-lang.org/tools/install.
-
-2. **Clone this repo**<br>
-
-3. **Build the executable:**<br>
-    ```sh
-    cd delta
-    cargo build
-    ```
-    This creates an executable inside the repo at `target/debug/delta`. Make sure this executable is found on your shell
-    `$PATH`.
-
-    For example, if `~/bin` is in your `$PATH`, then you could use a symlink:
-    ```
-    cd ~/bin
-    ln -s /path/to/delta/target/debug/delta delta
-    ```
-
-    Alternatively, you can ignore `$PATH` and use
-    `/path/to/delta/target/debug/delta` in the next step.
-
-4. **Configure git to use delta:**<br>
-    (Note that delta defaults to a dark theme, so if you're using a light terminal background, you'll want to use `--light` or `--theme=<theme-name>`.)
-
-    Edit your `~/.gitconfig`:
-    ```
-    [core]
-        pager = delta
-    ```
-    Alternatively, run this command:
-    ```
-    git config --global core.pager delta
-    ```
-
-    You can pass arguments to delta in your `.gitconfig`. An example is
-    ```
-    [core]
-        pager = delta --plus-color="#012800" --minus-color="#340001" --theme="base16-ocean.dark"
-    ```
-    Please include the `=` characters; I'm not sure why yet, but they're necessary when writing a delta command line in `.gitconfig`!
-
-All git commands that display diff output should now display syntax-highlighted output. For example:
-  - `git diff`
-  - `git show`
-  - `git log -p`
-  - `git stash show -p`
 
 ## 24 bit color
 
