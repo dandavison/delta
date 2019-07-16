@@ -16,15 +16,15 @@ pub fn is_light_theme(theme: &str) -> bool {
 
 pub const LIGHT_THEME_MINUS_COLOR: Color = Color {
     r: 0xff,
-    g: 0xd0,
-    b: 0xd0,
+    g: 0xe0,
+    b: 0xe0,
     a: 0xff,
 };
 
 pub const LIGHT_THEME_MINUS_EMPH_COLOR: Color = Color {
-    r: 0xef,
-    g: 0xa0,
-    b: 0xa0,
+    r: 0xff,
+    g: 0xb0,
+    b: 0xb0,
     a: 0xff,
 };
 
