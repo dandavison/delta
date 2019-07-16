@@ -1,5 +1,5 @@
 class GitDelta < Formula
-  version "v0.0.1"
+  version "0.0.1"
   desc "A syntax-highlighting pager for git"
   homepage "https://github.com/dandavison/delta"
 
@@ -15,5 +15,11 @@ class GitDelta < Formula
 
   def install
     bin.install "delta"
+    ohai "To configure git to use delta, run:"
+    ohai "git config --global core.pager \"delta --dark\"  # --light for light terminal backgrounds"
+  end
+
+  test do
+    shell_output "#{bin}/delta --help"
   end
 end
