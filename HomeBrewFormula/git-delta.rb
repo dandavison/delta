@@ -1,5 +1,5 @@
 class GitDelta < Formula
-  version "0.0.1"
+  version "0.0.2"
   desc "A syntax-highlighting pager for git"
   homepage "https://github.com/dandavison/delta"
 
