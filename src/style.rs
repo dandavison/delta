@@ -23,8 +23,8 @@ pub const LIGHT_THEME_MINUS_COLOR: Color = Color {
 
 pub const LIGHT_THEME_MINUS_EMPH_COLOR: Color = Color {
     r: 0xff,
-    g: 0xb0,
-    b: 0xb0,
+    g: 0xc0,
+    b: 0xc0,
     a: 0xff,
 };
 
