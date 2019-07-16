@@ -1,4 +1,4 @@
-use std::cmp::max;
+use std::cmp::{max, min};
 
 use syntect::highlighting::StyleModifier;
 
@@ -48,7 +48,6 @@ pub fn get_diff_style_sections(
 
     for (minus, plus) in minus_lines.iter().zip(plus_lines.iter()) {
         let string_pair = StringPair::new(minus, plus);
-        let change_begin = string_pair.common_prefix_length;
 
         // We require that (right-trimmed length) >= (common prefix length). Consider:
         // minus = "a    "
@@ -58,17 +57,18 @@ pub fn get_diff_style_sections(
         let minus_length = max(string_pair.lengths[0], string_pair.common_prefix_length);
         let plus_length = max(string_pair.lengths[1], string_pair.common_prefix_length);
 
-        // We require that change_begin <= change_end. Consider:
-        // minus = "a c"
-        // plus  = "a b c"
-        // Here, the common prefix length is 2, and the common suffix length is 2, yet the
-        // length of minus is 3. This overlap between prefix and suffix leads to a violation of
-        // the requirement. We resolve this by taking the following maxima:
-        let minus_change_end = max(
-            minus_length - string_pair.common_suffix_length,
-            change_begin,
+        // Work backwards from the end of the strings. The end of the
+        // change region is equal to the start of their common
+        // suffix. To find the start of the change region, start with
+        // the end of their common prefix, and then move leftwards
+        // until it is before the start of the common suffix in both
+        // strings.
+        let minus_change_end = minus_length - string_pair.common_suffix_length;
+        let plus_change_end = plus_length - string_pair.common_suffix_length;
+        let change_begin = min(
+            string_pair.common_prefix_length,
+            min(minus_change_end, plus_change_end),
         );
-        let plus_change_end = max(plus_length - string_pair.common_suffix_length, change_begin);
 
         minus_line_sections.push(vec![
             (minus_style_modifier, minus[0..change_begin].to_string()),
