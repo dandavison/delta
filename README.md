@@ -6,13 +6,13 @@
 <table>
   <tr>
     <td>
-      <img width=518px style="border: 1px solid black"
-           src="https://user-images.githubusercontent.com/52205/60410484-8cbb5e00-9b96-11e9-9d56-bb84ac0bce82.png"
+      <img width=500px style="border: 1px solid black"
+           src="https://user-images.githubusercontent.com/52205/61316245-8fd95f80-a7ce-11e9-9a26-607eefbeed45.png"
            alt="image" />
     </td>
     <td>
       <img width=500px style="border: 1px solid black"
-           src="https://user-images.githubusercontent.com/52205/60282969-230d2c80-98d6-11e9-8656-09073c8a0985.png"
+           src="https://user-images.githubusercontent.com/52205/61316175-602a5780-a7ce-11e9-87a6-05ffa09c7475.png"
            alt="image" />
     </td>
   </tr>
@@ -21,7 +21,7 @@
       delta --dark (default)
     </td>
     <td>
-      delta --light --width=variable --highlight-removed
+      delta --light
     </td>
   </tr>
 </table>
