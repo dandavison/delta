@@ -96,29 +96,87 @@ mod tests {
     use syntect::highlighting::{Color, FontStyle};
 
     #[test]
-    fn test_get_diff_style_sections() {
-        assert_eq!(
-            get_diff_style_sections(
-                &vec!["aaa\n".to_string()],
-                &vec!["aba\n".to_string()],
-                MINUS,
-                MINUS_EMPH,
-                PLUS,
-                PLUS_EMPH,
-            ),
-            (
-                vec![as_strings(vec![
-                    (MINUS, "a"),
-                    (MINUS_EMPH, "a"),
-                    (MINUS, "a\n"),
-                ])],
-                vec![as_strings(vec![
-                    (PLUS, "a"),
-                    (PLUS_EMPH, "b"),
-                    (PLUS, "a\n"),
-                ])],
-            ),
+    fn test_get_diff_style_sections_1() {
+        let actual_edits = get_diff_style_sections(
+            &vec!["aaa\n".to_string()],
+            &vec!["aba\n".to_string()],
+            MINUS,
+            MINUS_EMPH,
+            PLUS,
+            PLUS_EMPH,
         );
+        let expected_edits = (
+            vec![as_strings(vec![
+                (MINUS, "a"),
+                (MINUS_EMPH, "a"),
+                (MINUS, "a\n"),
+            ])],
+            vec![as_strings(vec![
+                (PLUS, "a"),
+                (PLUS_EMPH, "b"),
+                (PLUS, "a\n"),
+            ])],
+        );
+
+        assert_consistent(&expected_edits);
+        assert_consistent(&actual_edits);
+        assert_eq!(actual_edits, expected_edits);
+    }
+
+    #[test]
+    fn test_get_diff_style_sections_2() {
+        let actual_edits = get_diff_style_sections(
+            &vec!["d.iteritems()\n".to_string()],
+            &vec!["d.items()\n".to_string()],
+            MINUS,
+            MINUS_EMPH,
+            PLUS,
+            PLUS_EMPH,
+        );
+        let expected_edits = (
+            vec![as_strings(vec![
+                (MINUS, "d."),
+                (MINUS_EMPH, "iter"),
+                (MINUS, "items()\n"),
+            ])],
+            vec![as_strings(vec![
+                (PLUS, "d."),
+                (PLUS_EMPH, ""),
+                (PLUS, "items()\n"),
+            ])],
+        );
+        assert_consistent(&expected_edits);
+        assert_consistent(&actual_edits);
+        assert_eq!(actual_edits, expected_edits);
+    }
+
+    type StyleSection = (StyleModifier, String);
+    type StyleSections = Vec<StyleSection>;
+    type LineStyleSections = Vec<StyleSections>;
+    type Edits = (LineStyleSections, LineStyleSections);
+
+    fn assert_consistent(edits: &Edits) {
+        let (minus_line_style_sections, plus_line_style_sections) = edits;
+        for (minus_style_sections, plus_style_sections) in minus_line_style_sections
+            .iter()
+            .zip(plus_line_style_sections)
+        {
+            let (minus_total, minus_delta) = summarize_style_sections(minus_style_sections);
+            let (plus_total, plus_delta) = summarize_style_sections(plus_style_sections);
+            assert_eq!(minus_total - minus_delta, plus_total - plus_delta);
+        }
+    }
+
+    fn summarize_style_sections(sections: &StyleSections) -> (usize, usize) {
+        let mut total = 0;
+        let mut delta = 0;
+        for (style, s) in sections {
+            total += s.len();
+            if is_emph(style) {
+                delta += s.len();
+            }
+        }
+        (total, delta)
     }
 
     const RED: Color = Color::BLACK;
@@ -148,7 +206,7 @@ mod tests {
         font_style: Some(FontStyle::BOLD),
     };
 
-    fn as_strings(sections: Vec<(StyleModifier, &str)>) -> Vec<(StyleModifier, String)> {
+    fn as_strings(sections: Vec<(StyleModifier, &str)>) -> StyleSections {
         let mut new_sections = Vec::new();
         for (style, s) in sections {
             new_sections.push((style, s.to_string()));
@@ -159,16 +217,7 @@ mod tests {
     // For debugging test failures:
 
     #[allow(dead_code)]
-    fn compare_style_sections(
-        actual: (
-            Vec<Vec<(StyleModifier, String)>>,
-            Vec<Vec<(StyleModifier, String)>>,
-        ),
-        expected: (
-            Vec<Vec<(StyleModifier, String)>>,
-            Vec<Vec<(StyleModifier, String)>>,
-        ),
-    ) {
+    fn compare_style_sections(actual: Edits, expected: Edits) {
         let (minus, plus) = actual;
         println!("actual minus:");
         print_line_style_sections(minus);
@@ -183,14 +232,14 @@ mod tests {
     }
 
     #[allow(dead_code)]
-    fn print_line_style_sections(line_style_sections: Vec<Vec<(StyleModifier, String)>>) {
+    fn print_line_style_sections(line_style_sections: LineStyleSections) {
         for style_sections in line_style_sections {
             print_style_sections(style_sections);
         }
     }
 
     #[allow(dead_code)]
-    fn print_style_sections(style_sections: Vec<(StyleModifier, String)>) {
+    fn print_style_sections(style_sections: StyleSections) {
         for (style, s) in style_sections {
             print!("({} {}), ", fmt_style(style), s);
         }
@@ -206,6 +255,10 @@ mod tests {
             (GREEN, _) => "PLUS_EMPH",
             _ => panic!(),
         }
+    }
+
+    fn is_emph(style: &StyleModifier) -> bool {
+        style.font_style.is_some()
     }
 
 }
