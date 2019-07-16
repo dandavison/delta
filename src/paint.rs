@@ -5,7 +5,7 @@ use syntect::highlighting::{Style, StyleModifier};
 use syntect::parsing::SyntaxReference;
 
 use crate::config;
-use crate::detail;
+use crate::edits;
 use crate::paint::superimpose_style_sections::superimpose_style_sections;
 use crate::style;
 
@@ -121,7 +121,7 @@ impl<'a> Painter<'a> {
         Vec<Vec<(StyleModifier, String)>>,
     ) {
         if self.minus_lines.len() == self.plus_lines.len() {
-            detail::get_diff_style_sections(
+            edits::get_diff_style_sections(
                 &self.minus_lines,
                 &self.plus_lines,
                 self.config.minus_style_modifier,

@@ -2,7 +2,7 @@ use std::cmp::max;
 
 use syntect::highlighting::StyleModifier;
 
-use crate::detail::string_pair::StringPair;
+use crate::edits::string_pair::StringPair;
 
 /// Create background style sections for a region of removed/added lines.
 /*
