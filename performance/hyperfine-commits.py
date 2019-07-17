@@ -5,8 +5,8 @@ import subprocess
 
 parser = argparse.ArgumentParser()
 parser.add_argument("input_file", help="Input file for each command")
-parser.add_argument("output_file", help="File to receive JSON output")
 parser.add_argument("executables_dir", help="Directory of executables to be benchmarked")
+parser.add_argument("output_file", help="File to receive JSON output")
 args = parser.parse_args()
 
 runs = 5

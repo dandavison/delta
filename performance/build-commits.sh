@@ -15,7 +15,7 @@ build () {
 }
 
 original_head=$(git rev-parse --abbrev-ref HEAD)
-outdir=/tmp/delta
+outdir=$1
 mkdir -p $outdir
 i=1
 git rev-list $@ | tac | while read commit; do build $commit $i; ((i+=1)); done

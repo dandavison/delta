@@ -1,0 +1,22 @@
+{
+  "$schema": "https://vega.github.io/schema/vega-lite/v3.json",
+  "data": {
+    "url": "data/hyperfine-processed-output.json"
+  },
+  "mark": {"type": "boxplot", "extent": "min-max", "size": 5},
+  "width": 1400,
+  "height": 500,
+  "encoding": {
+    "y": {"field": "time", "type": "quantitative", "axis": {"title": "Time"}},
+    "x": {
+      "field": "commit",
+      "type": "ordinal",
+      "axis": {
+        "title": "Commit",
+        "labels": false,
+        "ticks": false
+      }
+    },
+    "tooltip": {"field": "message", "type": "ordinal", "aggregate": "min"}
+  }
+}
