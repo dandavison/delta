@@ -14,6 +14,8 @@ input = json.load(sys.stdin)
 
 output = []
 for row in input["results"]:
+    if row["command"].endswith("[ERROR]"):
+        continue
     dir, num, commit = re.match("([^/]+/)?([0-9]+)-([0-9a-f]+) .*", row["command"]).groups()
     for time in row["times"]:
         output_row = row.copy()
