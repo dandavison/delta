@@ -70,24 +70,53 @@ pub fn get_diff_style_sections(
             min(minus_change_end, plus_change_end),
         );
 
-        minus_line_sections.push(vec![
-            (minus_style_modifier, minus[0..change_begin].to_string()),
-            (
-                minus_emph_style_modifier,
-                minus[change_begin..minus_change_end].to_string(),
-            ),
-            (minus_style_modifier, minus[minus_change_end..].to_string()),
-        ]);
-        plus_line_sections.push(vec![
-            (plus_style_modifier, plus[0..change_begin].to_string()),
-            (
-                plus_emph_style_modifier,
-                plus[change_begin..plus_change_end].to_string(),
-            ),
-            (plus_style_modifier, plus[plus_change_end..].to_string()),
-        ]);
+        let minus_edit = Edit {
+            change_begin,
+            change_end: minus_change_end,
+            string_length: minus_length,
+        };
+        let plus_edit = Edit {
+            change_begin,
+            change_end: plus_change_end,
+            string_length: plus_length,
+        };
+
+        if minus_edit.appears_genuine() && plus_edit.appears_genuine() {
+            minus_line_sections.push(vec![
+                (minus_style_modifier, minus[0..change_begin].to_string()),
+                (
+                    minus_emph_style_modifier,
+                    minus[change_begin..minus_change_end].to_string(),
+                ),
+                (minus_style_modifier, minus[minus_change_end..].to_string()),
+            ]);
+            plus_line_sections.push(vec![
+                (plus_style_modifier, plus[0..change_begin].to_string()),
+                (
+                    plus_emph_style_modifier,
+                    plus[change_begin..plus_change_end].to_string(),
+                ),
+                (plus_style_modifier, plus[plus_change_end..].to_string()),
+            ]);
+        } else {
+            minus_line_sections.push(vec![(minus_style_modifier, minus.to_string())]);
+            plus_line_sections.push(vec![(plus_style_modifier, plus.to_string())]);
+        }
     }
     (minus_line_sections, plus_line_sections)
+}
+
+struct Edit {
+    change_begin: usize,
+    change_end: usize,
+    string_length: usize,
+}
+
+impl Edit {
+    // TODO: exclude leading whitespace in this calculation
+    fn appears_genuine(&self) -> bool {
+        ((self.change_end - self.change_begin) as f64 / self.string_length as f64) < 0.66
+    }
 }
 
 #[cfg(test)]
