@@ -14,6 +14,8 @@ mod style;
 use std::io::{self, BufRead, ErrorKind, Read, Write};
 use std::process;
 
+use ansi_term;
+use atty;
 use structopt::StructOpt;
 
 use crate::bat::assets::{list_languages, HighlightingAssets};
@@ -70,20 +72,35 @@ fn main() -> std::io::Result<()> {
 fn compare_themes(assets: &HighlightingAssets) -> std::io::Result<()> {
     let mut opt = cli::Opt::from_args();
     let mut input = String::new();
-    io::stdin().read_to_string(&mut input)?;
+    if atty::is(atty::Stream::Stdin) {
+        input = "\
+diff --git a/tests/data/hello.c b/tests/data/hello.c
+index 541e930..e23bef1 100644
+--- a/tests/data/hello.c
++++ b/tests/data/hello.c
+@@ -1,5 +1,5 @@
+ #include <stdio.h>
+
+ int main(int argc, char **argv) {
+-    printf(\"Hello!\\n\");
++    printf(\"Hello world!\\n\");
+ }"
+        .to_string()
+    } else {
+        io::stdin().read_to_string(&mut input)?;
+    }
 
     let stdout = io::stdout();
     let mut stdout = stdout.lock();
     let mut config: config::Config;
-
-    let hline = "-".repeat(100);
+    let style = ansi_term::Style::new().bold();
 
     for (theme, _) in assets.theme_set.themes.iter() {
         if opt.light && !style::is_light_theme(theme) || opt.dark && style::is_light_theme(theme) {
             continue;
         }
 
-        writeln!(stdout, "{}\n{}\n{}\n", hline, theme, hline)?;
+        writeln!(stdout, "\nTheme: {}\n", style.paint(theme))?;
         opt.theme = Some(theme.to_string());
         config = cli::process_command_line_arguments(&assets, &opt);
         let mut output_type =
