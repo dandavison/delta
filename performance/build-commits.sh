@@ -11,7 +11,7 @@ build () {
     git checkout --quiet $commit
     cargo build --release 2>&1 > /dev/null && \
         mv target/release/delta $outfile || \
-        echo build failed: $commit
+        echo build failed: $commit 1>&2
 }
 
 original_head=$(git rev-parse --abbrev-ref HEAD)
