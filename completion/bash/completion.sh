@@ -16,14 +16,21 @@ _delta() {
     shopt -s extglob
 
     local commands=(
+        --commit-style
         --compare-themes
         --dark
+        --file-style
         --help
+        --highlight-removed
+        --hunk-style
         --light
         --list-languages
         --list-themes
         --minus-color
+        --minus-emph-color
         --plus-color
+        --plus-emph-color
+        --show-colors
         --theme
         --version
         --width
