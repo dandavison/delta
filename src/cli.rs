@@ -10,7 +10,7 @@ use crate::config;
 use crate::style;
 
 #[derive(StructOpt, Debug)]
-#[structopt(name = "delta", about = "A syntax-highlighter for git.")]
+#[structopt(name = "delta", about = "A syntax-highlighting pager for git")]
 pub struct Opt {
     /// Use colors appropriate for a light terminal background. For
     /// more control, see --theme, --plus-color, and --minus-color.

@@ -72,6 +72,7 @@ FLAGS:
                                --plus-color, and --minus-color.
         --list-languages       List supported languages and associated file extensions.
         --list-themes          List available syntax highlighting themes.
+        --show-colors          Show the command-line arguments for the current colors.
     -V, --version              Prints version information
 
 OPTIONS:
