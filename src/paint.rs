@@ -59,7 +59,7 @@ impl<'a> Painter<'a> {
             syntax_style_sections.iter().zip(diff_style_sections)
         {
             for (style, text) in superimpose_style_sections(syntax_sections, diff_sections) {
-                paint_section(&text, style, output_buffer).unwrap();
+                paint_text(&text, style, output_buffer).unwrap();
             }
         }
     }
@@ -152,8 +152,8 @@ impl<'a> Painter<'a> {
     }
 }
 
-/// Write section text to buffer with color escape codes.
-fn paint_section(text: &str, style: Style, output_buffer: &mut String) -> std::fmt::Result {
+/// Write text to buffer with color escape codes.
+fn paint_text(text: &str, style: Style, output_buffer: &mut String) -> std::fmt::Result {
     use std::fmt::Write;
     match style.background {
         style::NO_COLOR => (),
