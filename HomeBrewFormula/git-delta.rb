@@ -1,14 +1,14 @@
 class GitDelta < Formula
-  version "0.0.2"
+  version "0.0.3"
   desc "A syntax-highlighting pager for git"
   homepage "https://github.com/dandavison/delta"
 
   if OS.mac?
       url "https://github.com/dandavison/delta/releases/download/#{version}/delta-#{version}-x86_64-apple-darwin.tar.gz"
-      sha256 "32ef2f3c894206ebd11dd5d4a15a7337125f8d58efceca163d27d041ef64042c"
+      sha256 "b1cb6107e5ef8faf6c6f30e321f2b53791a1d088e08558d29b1e681faa8f26db"
   elsif OS.linux?
       url "https://github.com/dandavison/delta/releases/download/#{version}/delta-#{version}-x86_64-unknown-linux-musl.tar.gz"
-      sha256 "f7253dab9e689e96b72ca1b935f84aeee5eb03223217826bd8339ae87f37982e"
+      sha256 "e05338929ee79e7b97a49c5e2cc7608bdf1281d26c777af230bbc48300b26d56"
   end
 
   conflicts_with "delta"
@@ -20,6 +20,6 @@ class GitDelta < Formula
   end
 
   test do
-    shell_output "#{bin}/delta --help"
+    shell_output "#{bin}/delta --compare-themes"
   end
 end
