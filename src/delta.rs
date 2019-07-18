@@ -70,7 +70,7 @@ pub fn delta(
 
     for raw_line in lines {
         let line = strip_ansi_codes(&raw_line).to_string();
-        if line.starts_with("commit") {
+        if line.starts_with("commit ") {
             painter.paint_buffered_lines();
             state = State::CommitMeta;
             if config.opt.commit_style != cli::SectionStyle::Plain {
@@ -78,23 +78,23 @@ pub fn delta(
                 write_commit_meta_header_line(&mut painter, &raw_line, config)?;
                 continue;
             }
-        } else if line.starts_with("diff --") {
+        } else if line.starts_with("diff --git ") {
             painter.paint_buffered_lines();
             state = State::FileMeta;
             painter.syntax = match parse::get_file_extension_from_diff_line(&line) {
                 Some(extension) => assets.syntax_set.find_syntax_by_extension(extension),
                 None => None,
             };
-        } else if (line.starts_with("---") || line.starts_with("rename from"))
+        } else if (line.starts_with("--- ") || line.starts_with("rename from "))
             && config.opt.file_style != cli::SectionStyle::Plain
         {
             minus_file = parse::get_file_path_from_file_meta_line(&line);
-        } else if (line.starts_with("+++") || line.starts_with("rename to"))
+        } else if (line.starts_with("+++ ") || line.starts_with("rename to "))
             && config.opt.file_style != cli::SectionStyle::Plain
         {
             plus_file = parse::get_file_path_from_file_meta_line(&line);
             write_file_meta_header_line(&mut painter, &minus_file, &plus_file, config)?;
-        } else if line.starts_with("@@") {
+        } else if line.starts_with("@@ ") {
             state = State::HunkMeta;
             if painter.syntax.is_some() {
                 painter.reset_highlighter();
