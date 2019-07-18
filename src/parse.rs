@@ -19,13 +19,21 @@ pub fn get_file_extension_from_diff_line(line: &str) -> Option<&str> {
     }
 }
 
-pub fn get_file_path_from_triple_minus_or_plus_line(line: &str) -> String {
-    match line.split(" ").skip(1).next() {
-        Some("/dev/null") => "/dev/null",
-        Some(path) => &path[2..],
-        _ => "",
+pub fn get_file_path_from_file_meta_line(line: &str) -> String {
+    if line.starts_with("rename") {
+        match line.split(" ").skip(2).next() {
+            Some(path) => path,
+            _ => "",
+        }
+        .to_string()
+    } else {
+        match line.split(" ").skip(1).next() {
+            Some("/dev/null") => "/dev/null",
+            Some(path) => &path[2..],
+            _ => "",
+        }
+        .to_string()
     }
-    .to_string()
 }
 
 pub fn get_file_change_description_from_file_paths(minus_file: &str, plus_file: &str) -> String {
@@ -33,7 +41,7 @@ pub fn get_file_change_description_from_file_paths(minus_file: &str, plus_file: 
         (minus_file, plus_file) if minus_file == plus_file => format!("{}", minus_file),
         (minus_file, "/dev/null") => format!("deleted: {}", minus_file),
         ("/dev/null", plus_file) => format!("added: {}", plus_file),
-        (minus_file, plus_file) => format!("renamed: {} ⟶  {}", minus_file, plus_file),
+        (minus_file, plus_file) => format!("renamed: {} ⟶   {}", minus_file, plus_file),
     }
 }
 
@@ -90,13 +98,13 @@ mod tests {
     }
 
     #[test]
-    fn test_get_file_path_from_triple_minus_or_plus_line() {
+    fn test_get_file_path_from_file_meta_line() {
         assert_eq!(
-            get_file_path_from_triple_minus_or_plus_line("--- a/src/delta.rs"),
+            get_file_path_from_file_meta_line("--- a/src/delta.rs"),
             "src/delta.rs"
         );
         assert_eq!(
-            get_file_path_from_triple_minus_or_plus_line("+++ b/src/delta.rs"),
+            get_file_path_from_file_meta_line("+++ b/src/delta.rs"),
             "src/delta.rs"
         );
     }

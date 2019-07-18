@@ -85,10 +85,14 @@ pub fn delta(
                 Some(extension) => assets.syntax_set.find_syntax_by_extension(extension),
                 None => None,
             };
-        } else if line.starts_with("---") && config.opt.file_style != cli::SectionStyle::Plain {
-            minus_file = parse::get_file_path_from_triple_minus_or_plus_line(&line);
-        } else if line.starts_with("+++") && config.opt.file_style != cli::SectionStyle::Plain {
-            plus_file = parse::get_file_path_from_triple_minus_or_plus_line(&line);
+        } else if (line.starts_with("---") || line.starts_with("rename from"))
+            && config.opt.file_style != cli::SectionStyle::Plain
+        {
+            minus_file = parse::get_file_path_from_file_meta_line(&line);
+        } else if (line.starts_with("+++") || line.starts_with("rename to"))
+            && config.opt.file_style != cli::SectionStyle::Plain
+        {
+            plus_file = parse::get_file_path_from_file_meta_line(&line);
             write_file_meta_header_line(&mut painter, &minus_file, &plus_file, config)?;
         } else if line.starts_with("@@") {
             state = State::HunkMeta;

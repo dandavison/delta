@@ -185,4 +185,34 @@ added: a.py
         }
     }
 
+    #[test]
+    fn test_renamed_file() {
+        let input = "\
+commit 1281650789680f1009dfff2497d5ccfbe7b96526
+Author: Dan Davison <dandavison7@gmail.com>
+Date:   Wed Jul 17 20:40:23 2019 -0400
+
+    rename
+
+diff --git a/a.py b/b.py
+similarity index 100%
+rename from a.py
+rename to b.py
+";
+
+        let mut opt = cli::Opt::from_args();
+        opt.width = Some("variable".to_string());
+        let assets = HighlightingAssets::new();
+        let paint_config = cli::process_command_line_arguments(&assets, &opt);
+        let mut writer: Vec<u8> = Vec::new();
+        delta(
+            input.split("\n").map(String::from),
+            &paint_config,
+            &assets,
+            &mut writer,
+        )
+        .unwrap();
+        let output = strip_ansi_codes(&String::from_utf8(writer).unwrap()).to_string();
+        assert!(output.contains("\nrenamed: a.py ⟶   b.py\n"));
+    }
 }
