@@ -17,6 +17,7 @@ use std::process;
 use ansi_term;
 use atty;
 use structopt::StructOpt;
+use syntect::highlighting::{Color, FontStyle, Style};
 
 use crate::bat::assets::{list_languages, HighlightingAssets};
 use crate::bat::output::{OutputType, PagingMode};
@@ -50,6 +51,11 @@ fn main() -> std::io::Result<()> {
 
     let config = cli::process_command_line_arguments(&assets, &opt);
 
+    if opt.show_colors {
+        show_colors(&config);
+        process::exit(0);
+    }
+
     let mut output_type =
         OutputType::from_mode(PagingMode::QuitIfOneScreen, Some(config.pager)).unwrap();
     let mut writer = output_type.handle().unwrap();
@@ -67,6 +73,39 @@ fn main() -> std::io::Result<()> {
         _ => (),
     };
     Ok(())
+}
+
+fn show_colors(config: &config::Config) {
+    println!(
+        "delta \
+         --theme=\"{theme}\" \
+         --minus-color=\"{minus_color}\" \
+         --minus-emph-color=\"{minus_emph_color}\" \
+         --plus-color=\"{plus_color}\" \
+         --plus-emph-color=\"{plus_emph_color}\"",
+        theme = config.theme_name,
+        minus_color = color_to_hex(config.minus_style_modifier.background.unwrap()),
+        minus_emph_color = color_to_hex(config.minus_emph_style_modifier.background.unwrap()),
+        plus_color = color_to_hex(config.plus_style_modifier.background.unwrap()),
+        plus_emph_color = color_to_hex(config.plus_emph_style_modifier.background.unwrap()),
+    )
+}
+
+fn color_to_hex(color: Color) -> String {
+    let mut string = String::new();
+    let style = Style {
+        foreground: style::NO_COLOR,
+        background: color,
+        font_style: FontStyle::empty(),
+    };
+    paint::paint_text(
+        &format!("#{:x?}{:x?}{:x?}", color.r, color.g, color.b),
+        style,
+        &mut string,
+    )
+    .unwrap();
+    string.push_str("\x1b[0m"); // reset
+    string
 }
 
 fn compare_themes(assets: &HighlightingAssets) -> std::io::Result<()> {

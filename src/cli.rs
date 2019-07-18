@@ -69,6 +69,10 @@ pub struct Opt {
     #[structopt(short = "w", long = "width")]
     pub width: Option<String>,
 
+    /// Show the command-line arguments for the current colors.
+    #[structopt(long = "show-colors")]
+    pub show_colors: bool,
+
     /// List supported languages and associated file extensions.
     #[structopt(long = "list-languages")]
     pub list_languages: bool,

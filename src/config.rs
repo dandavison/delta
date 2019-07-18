@@ -8,6 +8,7 @@ use crate::style;
 
 pub struct Config<'a> {
     pub theme: &'a Theme,
+    pub theme_name: &'a str,
     pub minus_style_modifier: StyleModifier,
     pub minus_emph_style_modifier: StyleModifier,
     pub plus_style_modifier: StyleModifier,
@@ -90,6 +91,7 @@ pub fn get_config<'a>(
 
     Config {
         theme: &theme_set.themes[theme_name],
+        theme_name: theme_name,
         minus_style_modifier,
         minus_emph_style_modifier,
         plus_style_modifier,

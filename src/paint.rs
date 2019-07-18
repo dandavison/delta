@@ -152,8 +152,8 @@ impl<'a> Painter<'a> {
     }
 }
 
-/// Write text to buffer with color escape codes.
-fn paint_text(text: &str, style: Style, output_buffer: &mut String) -> std::fmt::Result {
+/// Write section text to buffer with color escape codes.
+pub fn paint_text(text: &str, style: Style, output_buffer: &mut String) -> std::fmt::Result {
     use std::fmt::Write;
     match style.background {
         style::NO_COLOR => (),
