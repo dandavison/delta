@@ -430,5 +430,19 @@ mod string_pair {
             assert_eq!(common_suffix_length("ab ", "aab  "), 2);
             assert_eq!(common_suffix_length("aba ", "ba"), 2);
         }
+
+        #[test]
+        fn test_common_suffix_length_with_trailing_whitespace_nonascii() {
+            assert_eq!(common_suffix_length("  ", "á"), 0);
+            assert_eq!(common_suffix_length("á  ", ""), 0);
+            assert_eq!(common_suffix_length("á", "b  "), 0);
+            assert_eq!(common_suffix_length("á", "á  "), 1);
+            assert_eq!(common_suffix_length("a  ", "áb  "), 0);
+            assert_eq!(common_suffix_length("ab", "á  "), 0);
+            assert_eq!(common_suffix_length("áb  ", "b "), 1);
+            assert_eq!(common_suffix_length("áb ", "aáb  "), 2);
+            assert_eq!(common_suffix_length("abá ", "bá"), 2);
+            assert_eq!(common_suffix_length("áaáabá ", "ááabá   "), 4);
+        }
     }
 }
