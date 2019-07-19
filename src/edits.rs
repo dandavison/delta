@@ -158,6 +158,35 @@ mod tests {
     }
 
     #[test]
+    fn test_get_diff_style_sections_1_nonascii() {
+        let actual_edits = get_diff_style_sections(
+            &vec!["áaa\n".to_string()],
+            &vec!["ááb\n".to_string()],
+            MINUS,
+            MINUS_EMPH,
+            PLUS,
+            PLUS_EMPH,
+            1.0,
+        );
+        let expected_edits = (
+            vec![as_strings(vec![
+                (MINUS, "á"),
+                (MINUS_EMPH, "aa"),
+                (MINUS, "\n"),
+            ])],
+            vec![as_strings(vec![
+                (PLUS, "á"),
+                (PLUS_EMPH, "áb"),
+                (PLUS, "\n"),
+            ])],
+        );
+
+        assert_consistent(&expected_edits);
+        assert_consistent(&actual_edits);
+        assert_eq!(actual_edits, expected_edits);
+    }
+
+    #[test]
     fn test_get_diff_style_sections_2() {
         let actual_edits = get_diff_style_sections(
             &vec!["d.iteritems()\n".to_string()],
