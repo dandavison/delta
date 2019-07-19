@@ -39,6 +39,7 @@ pub fn get_diff_style_sections(
     minus_emph_style_modifier: StyleModifier,
     plus_style_modifier: StyleModifier,
     plus_emph_style_modifier: StyleModifier,
+    similarity_threshold: f64,
 ) -> (
     Vec<Vec<(StyleModifier, String)>>,
     Vec<Vec<(StyleModifier, String)>>,
@@ -81,7 +82,9 @@ pub fn get_diff_style_sections(
             string_length: plus_length,
         };
 
-        if minus_edit.appears_genuine() && plus_edit.appears_genuine() {
+        if minus_edit.appears_genuine(similarity_threshold)
+            && plus_edit.appears_genuine(similarity_threshold)
+        {
             minus_line_sections.push(vec![
                 (minus_style_modifier, minus[0..change_begin].to_string()),
                 (
@@ -114,8 +117,9 @@ struct Edit {
 
 impl Edit {
     // TODO: exclude leading whitespace in this calculation
-    fn appears_genuine(&self) -> bool {
-        ((self.change_end - self.change_begin) as f64 / self.string_length as f64) < 0.66
+    fn appears_genuine(&self, similarity_threshold: f64) -> bool {
+        ((self.change_end - self.change_begin) as f64 / self.string_length as f64)
+            < similarity_threshold
     }
 }
 
@@ -133,6 +137,7 @@ mod tests {
             MINUS_EMPH,
             PLUS,
             PLUS_EMPH,
+            1.0,
         );
         let expected_edits = (
             vec![as_strings(vec![
@@ -161,6 +166,7 @@ mod tests {
             MINUS_EMPH,
             PLUS,
             PLUS_EMPH,
+            1.0,
         );
         let expected_edits = (
             vec![as_strings(vec![

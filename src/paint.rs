@@ -128,6 +128,7 @@ impl<'a> Painter<'a> {
                 self.config.minus_emph_style_modifier,
                 self.config.plus_style_modifier,
                 self.config.plus_emph_style_modifier,
+                0.66,
             )
         } else {
             self.get_diff_style_sections_plain()
