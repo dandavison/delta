@@ -3,6 +3,7 @@ use std::io::Write;
 use ansi_term::Colour::{Blue, Yellow};
 use console::strip_ansi_codes;
 use syntect::easy::HighlightLines;
+use unicode_segmentation::UnicodeSegmentation;
 
 use crate::bat::assets::HighlightingAssets;
 use crate::cli;
@@ -249,9 +250,10 @@ fn prepare(_line: &str, config: &Config) -> String {
         line.push_str(" ");
         line.push_str(&_line[1..]);
     }
+    let line_length = line.graphemes(true).count();
     match config.width {
-        Some(width) if width > line.len() => {
-            format!("{}{}\n", line, " ".repeat(width - line.len()))
+        Some(width) if width > line_length => {
+            format!("{}{}\n", line, " ".repeat(width - line_length))
         }
         _ => format!("{}\n", line),
     }

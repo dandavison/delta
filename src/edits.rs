@@ -305,6 +305,7 @@ mod tests {
 
 mod string_pair {
     use std::iter::Peekable;
+    use unicode_segmentation::UnicodeSegmentation;
 
     /// A pair of right-trimmed strings.
     pub struct StringPair {
@@ -315,9 +316,10 @@ mod string_pair {
 
     impl StringPair {
         pub fn new(s0: &str, s1: &str) -> StringPair {
-            let common_prefix_length = StringPair::common_prefix_length(s0.chars(), s1.chars());
-            let (common_suffix_length, trailing_whitespace) =
-                StringPair::suffix_data(s0.chars(), s1.chars());
+            let (g0, g1) = (s0.grapheme_indices(true), s1.grapheme_indices(true));
+            let common_prefix_length = StringPair::common_prefix_length(g0, g1); // TODO: pass references
+            let (g0, g1) = (s0.grapheme_indices(true), s1.grapheme_indices(true));
+            let (common_suffix_length, trailing_whitespace) = StringPair::suffix_data(g0, g1);
             StringPair {
                 common_prefix_length,
                 common_suffix_length,
@@ -328,26 +330,36 @@ mod string_pair {
             }
         }
 
-        fn common_prefix_length<I>(s0: I, s1: I) -> usize
+        /// Align the two strings at their left ends and consider only
+        /// the bytes up to the length of the shorter string. Return
+        /// the byte offset of the first differing grapheme cluster,
+        /// or the byte length of shorter string if they do not
+        /// differ.
+        fn common_prefix_length<'a, I>(s0: I, s1: I) -> usize
         where
-            I: Iterator,
-            I::Item: PartialEq,
+            I: Iterator<Item = (usize, &'a str)>,
         {
             let mut i = 0;
-            for (c0, c1) in s0.zip(s1) {
+            for ((_, c0), (_, c1)) in s0.zip(s1) {
                 if c0 != c1 {
                     break;
                 } else {
-                    i += 1;
+                    i += c0.len();
                 }
             }
             i
         }
 
-        /// Return common suffix length and number of trailing whitespace characters on each string.
-        fn suffix_data<I>(s0: I, s1: I) -> (usize, [usize; 2])
+        /// Trim trailing whitespace and align the two strings at
+        /// their right ends. Fix the origin at their right ends and,
+        /// looking left, consider only the bytes up to the length of
+        /// the shorter string. Return the byte offset of the first
+        /// differing grapheme cluster, or the byte length of the
+        /// shorter string if they do not differ. Also return the
+        /// number of bytes of whitespace trimmed from each string.
+        fn suffix_data<'a, I>(s0: I, s1: I) -> (usize, [usize; 2])
         where
-            I: DoubleEndedIterator<Item = char>,
+            I: DoubleEndedIterator<Item = (usize, &'a str)>,
         {
             let mut s0 = s0.rev().peekable();
             let mut s1 = s1.rev().peekable();
@@ -358,21 +370,24 @@ mod string_pair {
         }
 
         /// Consume leading whitespace; return number of characters consumed.
-        fn consume_whitespace<I>(s: &mut Peekable<I>) -> usize
+        fn consume_whitespace<'a, I>(s: &mut Peekable<I>) -> usize
         where
-            I: Iterator<Item = char>,
+            I: Iterator<Item = (usize, &'a str)>,
         {
-            let mut i = 0;
+            let mut n = 0;
             loop {
                 match s.peek() {
-                    Some('\n') | Some(' ') => {
+                    // TODO: Use a whitespace unicode character class?
+                    // Allow for whitespace grapheme clusters > 1
+                    // byte?
+                    Some(&(_, "\n")) | Some(&(_, " ")) => {
                         s.next();
-                        i += 1;
+                        n += 1;
                     }
                     _ => break,
                 }
             }
-            i
+            n
         }
     }
 
@@ -440,13 +455,16 @@ mod string_pair {
             assert_eq!(common_suffix_length("  ", "á"), 0);
             assert_eq!(common_suffix_length("á  ", ""), 0);
             assert_eq!(common_suffix_length("á", "b  "), 0);
-            assert_eq!(common_suffix_length("á", "á  "), 1);
+            assert_eq!(common_suffix_length("á", "á  "), "á".len());
             assert_eq!(common_suffix_length("a  ", "áb  "), 0);
             assert_eq!(common_suffix_length("ab", "á  "), 0);
             assert_eq!(common_suffix_length("áb  ", "b "), 1);
-            assert_eq!(common_suffix_length("áb ", "aáb  "), 2);
-            assert_eq!(common_suffix_length("abá ", "bá"), 2);
-            assert_eq!(common_suffix_length("áaáabá ", "ááabá   "), 4);
+            assert_eq!(common_suffix_length("áb ", "aáb  "), 1 + "á".len());
+            assert_eq!(common_suffix_length("abá ", "bá"), 1 + "á".len());
+            assert_eq!(
+                common_suffix_length("áaáabá ", "ááabá   "),
+                2 + 2 * "á".len()
+            );
         }
     }
 }
