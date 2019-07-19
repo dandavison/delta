@@ -121,7 +121,7 @@ impl<'a> Painter<'a> {
         Vec<Vec<(StyleModifier, String)>>,
     ) {
         if self.minus_lines.len() == self.plus_lines.len() {
-            edits::get_diff_style_sections(
+            edits::infer_edit_sections(
                 &self.minus_lines,
                 &self.plus_lines,
                 self.config.minus_style_modifier,

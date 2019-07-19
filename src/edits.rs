@@ -1,10 +1,9 @@
 use std::cmp::{max, min};
 
-use syntect::highlighting::StyleModifier;
-
 use crate::edits::string_pair::StringPair;
 
-/// Create background style sections for a region of removed/added lines.
+/// Infer the edit operations responsible for the differences between
+/// a collection of old and new lines.
 /*
   This function is called iff a region of n minus lines followed
   by n plus lines is encountered, e.g. n successive lines have
@@ -32,18 +31,21 @@ use crate::edits::string_pair::StringPair;
   end of the line: the line by definition has no trailing
   whitespace.
 */
-pub fn get_diff_style_sections(
+pub fn infer_edit_sections<EditOperationTag>(
     minus_lines: &Vec<String>,
     plus_lines: &Vec<String>,
-    minus_style_modifier: StyleModifier,
-    minus_emph_style_modifier: StyleModifier,
-    plus_style_modifier: StyleModifier,
-    plus_emph_style_modifier: StyleModifier,
+    minus_line_noop: EditOperationTag,
+    delete: EditOperationTag,
+    plus_line_noop: EditOperationTag,
+    insert: EditOperationTag,
     similarity_threshold: f64,
 ) -> (
-    Vec<Vec<(StyleModifier, String)>>,
-    Vec<Vec<(StyleModifier, String)>>,
-) {
+    Vec<Vec<(EditOperationTag, String)>>,
+    Vec<Vec<(EditOperationTag, String)>>,
+)
+where
+    EditOperationTag: Copy,
+{
     let mut minus_line_sections = Vec::new();
     let mut plus_line_sections = Vec::new();
 
@@ -86,24 +88,18 @@ pub fn get_diff_style_sections(
             && plus_edit.appears_genuine(similarity_threshold)
         {
             minus_line_sections.push(vec![
-                (minus_style_modifier, minus[0..change_begin].to_string()),
-                (
-                    minus_emph_style_modifier,
-                    minus[change_begin..minus_change_end].to_string(),
-                ),
-                (minus_style_modifier, minus[minus_change_end..].to_string()),
+                (minus_line_noop, minus[0..change_begin].to_string()),
+                (delete, minus[change_begin..minus_change_end].to_string()),
+                (minus_line_noop, minus[minus_change_end..].to_string()),
             ]);
             plus_line_sections.push(vec![
-                (plus_style_modifier, plus[0..change_begin].to_string()),
-                (
-                    plus_emph_style_modifier,
-                    plus[change_begin..plus_change_end].to_string(),
-                ),
-                (plus_style_modifier, plus[plus_change_end..].to_string()),
+                (plus_line_noop, plus[0..change_begin].to_string()),
+                (insert, plus[change_begin..plus_change_end].to_string()),
+                (plus_line_noop, plus[plus_change_end..].to_string()),
             ]);
         } else {
-            minus_line_sections.push(vec![(minus_style_modifier, minus.to_string())]);
-            plus_line_sections.push(vec![(plus_style_modifier, plus.to_string())]);
+            minus_line_sections.push(vec![(minus_line_noop, minus.to_string())]);
+            plus_line_sections.push(vec![(plus_line_noop, plus.to_string())]);
         }
     }
     (minus_line_sections, plus_line_sections)
@@ -126,29 +122,38 @@ impl Edit {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use syntect::highlighting::{Color, FontStyle};
+
+    #[derive(Clone, Copy, Debug, PartialEq)]
+    enum EditOperationTag {
+        MinusNoop,
+        PlusNoop,
+        Delete,
+        Insert,
+    }
+
+    use EditOperationTag::*;
 
     #[test]
-    fn test_get_diff_style_sections_1() {
-        let actual_edits = get_diff_style_sections(
+    fn test_infer_edit_sections_1() {
+        let actual_edits = infer_edit_sections(
             &vec!["aaa\n".to_string()],
             &vec!["aba\n".to_string()],
-            MINUS,
-            MINUS_EMPH,
-            PLUS,
-            PLUS_EMPH,
+            MinusNoop,
+            Delete,
+            PlusNoop,
+            Insert,
             1.0,
         );
         let expected_edits = (
             vec![as_strings(vec![
-                (MINUS, "a"),
-                (MINUS_EMPH, "a"),
-                (MINUS, "a\n"),
+                (MinusNoop, "a"),
+                (Delete, "a"),
+                (MinusNoop, "a\n"),
             ])],
             vec![as_strings(vec![
-                (PLUS, "a"),
-                (PLUS_EMPH, "b"),
-                (PLUS, "a\n"),
+                (PlusNoop, "a"),
+                (Insert, "b"),
+                (PlusNoop, "a\n"),
             ])],
         );
 
@@ -158,26 +163,26 @@ mod tests {
     }
 
     #[test]
-    fn test_get_diff_style_sections_1_nonascii() {
-        let actual_edits = get_diff_style_sections(
+    fn test_infer_edit_sections_1_nonascii() {
+        let actual_edits = infer_edit_sections(
             &vec!["áaa\n".to_string()],
             &vec!["ááb\n".to_string()],
-            MINUS,
-            MINUS_EMPH,
-            PLUS,
-            PLUS_EMPH,
+            MinusNoop,
+            Delete,
+            PlusNoop,
+            Insert,
             1.0,
         );
         let expected_edits = (
             vec![as_strings(vec![
-                (MINUS, "á"),
-                (MINUS_EMPH, "aa"),
-                (MINUS, "\n"),
+                (MinusNoop, "á"),
+                (Delete, "aa"),
+                (MinusNoop, "\n"),
             ])],
             vec![as_strings(vec![
-                (PLUS, "á"),
-                (PLUS_EMPH, "áb"),
-                (PLUS, "\n"),
+                (PlusNoop, "á"),
+                (Insert, "áb"),
+                (PlusNoop, "\n"),
             ])],
         );
 
@@ -187,26 +192,26 @@ mod tests {
     }
 
     #[test]
-    fn test_get_diff_style_sections_2() {
-        let actual_edits = get_diff_style_sections(
+    fn test_infer_edit_sections_2() {
+        let actual_edits = infer_edit_sections(
             &vec!["d.iteritems()\n".to_string()],
             &vec!["d.items()\n".to_string()],
-            MINUS,
-            MINUS_EMPH,
-            PLUS,
-            PLUS_EMPH,
+            MinusNoop,
+            Delete,
+            PlusNoop,
+            Insert,
             1.0,
         );
         let expected_edits = (
             vec![as_strings(vec![
-                (MINUS, "d."),
-                (MINUS_EMPH, "iter"),
-                (MINUS, "items()\n"),
+                (MinusNoop, "d."),
+                (Delete, "iter"),
+                (MinusNoop, "items()\n"),
             ])],
             vec![as_strings(vec![
-                (PLUS, "d."),
-                (PLUS_EMPH, ""),
-                (PLUS, "items()\n"),
+                (PlusNoop, "d."),
+                (Insert, ""),
+                (PlusNoop, "items()\n"),
             ])],
         );
         assert_consistent(&expected_edits);
@@ -214,66 +219,38 @@ mod tests {
         assert_eq!(actual_edits, expected_edits);
     }
 
-    type StyleSection = (StyleModifier, String);
-    type StyleSections = Vec<StyleSection>;
-    type LineStyleSections = Vec<StyleSections>;
-    type Edits = (LineStyleSections, LineStyleSections);
+    type EditSection = (EditOperationTag, String);
+    type EditSections = Vec<EditSection>;
+    type LineEditSections = Vec<EditSections>;
+    type Edits = (LineEditSections, LineEditSections);
 
     fn assert_consistent(edits: &Edits) {
-        let (minus_line_style_sections, plus_line_style_sections) = edits;
-        for (minus_style_sections, plus_style_sections) in minus_line_style_sections
-            .iter()
-            .zip(plus_line_style_sections)
+        let (minus_line_edit_sections, plus_line_edit_sections) = edits;
+        for (minus_edit_sections, plus_edit_sections) in
+            minus_line_edit_sections.iter().zip(plus_line_edit_sections)
         {
-            let (minus_total, minus_delta) = summarize_style_sections(minus_style_sections);
-            let (plus_total, plus_delta) = summarize_style_sections(plus_style_sections);
+            let (minus_total, minus_delta) = summarize_edit_sections(minus_edit_sections);
+            let (plus_total, plus_delta) = summarize_edit_sections(plus_edit_sections);
             assert_eq!(minus_total - minus_delta, plus_total - plus_delta);
         }
     }
 
-    fn summarize_style_sections(sections: &StyleSections) -> (usize, usize) {
+    fn summarize_edit_sections(sections: &EditSections) -> (usize, usize) {
         let mut total = 0;
         let mut delta = 0;
-        for (style, s) in sections {
+        for (edit, s) in sections {
             total += s.len();
-            if is_emph(style) {
+            if is_edit(edit) {
                 delta += s.len();
             }
         }
         (total, delta)
     }
 
-    const RED: Color = Color::BLACK;
-    const GREEN: Color = Color::WHITE;
-
-    const MINUS: StyleModifier = StyleModifier {
-        foreground: None,
-        background: Some(RED),
-        font_style: None,
-    };
-
-    const MINUS_EMPH: StyleModifier = StyleModifier {
-        foreground: None,
-        background: Some(RED),
-        font_style: Some(FontStyle::BOLD),
-    };
-
-    const PLUS: StyleModifier = StyleModifier {
-        foreground: None,
-        background: Some(GREEN),
-        font_style: None,
-    };
-
-    const PLUS_EMPH: StyleModifier = StyleModifier {
-        foreground: None,
-        background: Some(GREEN),
-        font_style: Some(FontStyle::BOLD),
-    };
-
-    fn as_strings(sections: Vec<(StyleModifier, &str)>) -> StyleSections {
+    fn as_strings(sections: Vec<(EditOperationTag, &str)>) -> EditSections {
         let mut new_sections = Vec::new();
-        for (style, s) in sections {
-            new_sections.push((style, s.to_string()));
+        for (edit, s) in sections {
+            new_sections.push((edit, s.to_string()));
         }
         new_sections
     }
@@ -281,48 +258,47 @@ mod tests {
     // For debugging test failures:
 
     #[allow(dead_code)]
-    fn compare_style_sections(actual: Edits, expected: Edits) {
+    fn compare_edit_sections(actual: Edits, expected: Edits) {
         let (minus, plus) = actual;
         println!("actual minus:");
-        print_line_style_sections(minus);
+        print_line_edit_sections(minus);
         println!("actual plus:");
-        print_line_style_sections(plus);
+        print_line_edit_sections(plus);
 
         let (minus, plus) = expected;
         println!("expected minus:");
-        print_line_style_sections(minus);
+        print_line_edit_sections(minus);
         println!("expected plus:");
-        print_line_style_sections(plus);
+        print_line_edit_sections(plus);
     }
 
     #[allow(dead_code)]
-    fn print_line_style_sections(line_style_sections: LineStyleSections) {
-        for style_sections in line_style_sections {
-            print_style_sections(style_sections);
+    fn print_line_edit_sections(line_edit_sections: LineEditSections) {
+        for edit_sections in line_edit_sections {
+            print_edit_sections(edit_sections);
         }
     }
 
     #[allow(dead_code)]
-    fn print_style_sections(style_sections: StyleSections) {
-        for (style, s) in style_sections {
-            print!("({} {}), ", fmt_style(style), s);
+    fn print_edit_sections(edit_sections: EditSections) {
+        for (edit, s) in edit_sections {
+            print!("({} {}), ", fmt_edit(edit), s);
         }
         print!("\n");
     }
 
     #[allow(dead_code)]
-    fn fmt_style(style: StyleModifier) -> &'static str {
-        match (style.background.unwrap(), style.font_style) {
-            (RED, None) => "MINUS",
-            (RED, _) => "MINUS_EMPH",
-            (GREEN, None) => "PLUS",
-            (GREEN, _) => "PLUS_EMPH",
-            _ => panic!(),
+    fn fmt_edit(edit: EditOperationTag) -> &'static str {
+        match edit {
+            MinusNoop => "MinusNoop",
+            Delete => "Delete",
+            PlusNoop => "PlusNoop",
+            Insert => "Insert",
         }
     }
 
-    fn is_emph(style: &StyleModifier) -> bool {
-        style.font_style.is_some()
+    fn is_edit(edit: &EditOperationTag) -> bool {
+        *edit == Delete || *edit == Insert
     }
 
 }
