@@ -328,10 +328,11 @@ mod string_pair {
             }
         }
 
-        fn common_prefix_length(
-            s0: impl Iterator<Item = char>,
-            s1: impl Iterator<Item = char>,
-        ) -> usize {
+        fn common_prefix_length<I>(s0: I, s1: I) -> usize
+        where
+            I: Iterator,
+            I::Item: PartialEq,
+        {
             let mut i = 0;
             for (c0, c1) in s0.zip(s1) {
                 if c0 != c1 {
@@ -344,10 +345,10 @@ mod string_pair {
         }
 
         /// Return common suffix length and number of trailing whitespace characters on each string.
-        fn suffix_data(
-            s0: impl DoubleEndedIterator<Item = char>,
-            s1: impl DoubleEndedIterator<Item = char>,
-        ) -> (usize, [usize; 2]) {
+        fn suffix_data<I>(s0: I, s1: I) -> (usize, [usize; 2])
+        where
+            I: DoubleEndedIterator<Item = char>,
+        {
             let mut s0 = s0.rev().peekable();
             let mut s1 = s1.rev().peekable();
             let n0 = StringPair::consume_whitespace(&mut s0);
@@ -357,7 +358,10 @@ mod string_pair {
         }
 
         /// Consume leading whitespace; return number of characters consumed.
-        fn consume_whitespace(s: &mut Peekable<impl Iterator<Item = char>>) -> usize {
+        fn consume_whitespace<I>(s: &mut Peekable<I>) -> usize
+        where
+            I: Iterator<Item = char>,
+        {
             let mut i = 0;
             loop {
                 match s.peek() {

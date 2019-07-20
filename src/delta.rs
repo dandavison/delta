@@ -44,12 +44,15 @@ impl State {
 // | HunkMinus  | flush, emit | flush, emit | flush, emit | flush, emit | push        | push     |
 // | HunkPlus   | flush, emit | flush, emit | flush, emit | flush, emit | flush, push | push     |
 
-pub fn delta(
-    lines: impl Iterator<Item = String>,
+pub fn delta<I>(
+    lines: I,
     config: &Config,
     assets: &HighlightingAssets,
     writer: &mut Write,
-) -> std::io::Result<()> {
+) -> std::io::Result<()>
+where
+    I: Iterator<Item = String>,
+{
     // TODO: Painter::new(config)
     let mut painter = Painter {
         minus_lines: Vec::new(),
