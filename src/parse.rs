@@ -5,13 +5,9 @@ use std::path::Path;
 /// Return "rs", i.e. a single file extension consistent with both files.
 pub fn get_file_extension_from_diff_line(line: &str) -> Option<&str> {
     match get_file_extensions_from_diff_line(line) {
-        (Some(ext1), Some(ext2)) => {
-            if ext1 == ext2 {
-                Some(ext1)
-            } else {
-                // Unexpected: old and new files have different extensions.
-                None
-            }
+        (Some(_ext1), Some(ext2)) => {
+            // If they differ then it's a rename; use the new extension.
+            Some(ext2)
         }
         (Some(ext1), None) => Some(ext1),
         (None, Some(ext2)) => Some(ext2),
