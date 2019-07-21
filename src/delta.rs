@@ -79,7 +79,7 @@ where
             state = State::CommitMeta;
             if config.opt.commit_style != cli::SectionStyle::Plain {
                 painter.emit()?;
-                write_commit_meta_header_line(&mut painter, &raw_line, config)?;
+                handle_commit_meta_header_line(&mut painter, &raw_line, config)?;
                 continue;
             }
         } else if line.starts_with("diff --git ") {
@@ -97,7 +97,7 @@ where
             && config.opt.file_style != cli::SectionStyle::Plain
         {
             plus_file = parse::get_file_path_from_file_meta_line(&line);
-            write_file_meta_header_line(&mut painter, &minus_file, &plus_file, config)?;
+            handle_file_meta_header_line(&mut painter, &minus_file, &plus_file, config)?;
         } else if line.starts_with("@@ ") {
             state = State::HunkMeta;
             if painter.syntax.is_some() {
@@ -105,11 +105,11 @@ where
             }
             if config.opt.hunk_style != cli::SectionStyle::Plain {
                 painter.emit()?;
-                write_hunk_meta_line(&mut painter, &line, config)?;
+                handle_hunk_meta_line(&mut painter, &line, config)?;
                 continue;
             }
         } else if state.is_in_hunk() && painter.syntax.is_some() {
-            state = paint_hunk_line(state, &mut painter, &line, config);
+            state = handle_hunk_line(&mut painter, &line, state, config);
             painter.emit()?;
             continue;
         }
@@ -127,7 +127,7 @@ where
     Ok(())
 }
 
-fn write_commit_meta_header_line(
+fn handle_commit_meta_header_line(
     painter: &mut Painter,
     line: &str,
     config: &Config,
@@ -147,7 +147,7 @@ fn write_commit_meta_header_line(
     Ok(())
 }
 
-fn write_file_meta_header_line(
+fn handle_file_meta_header_line(
     painter: &mut Painter,
     minus_file: &str,
     plus_file: &str,
@@ -171,7 +171,11 @@ fn write_file_meta_header_line(
     Ok(())
 }
 
-fn write_hunk_meta_line(painter: &mut Painter, line: &str, config: &Config) -> std::io::Result<()> {
+fn handle_hunk_meta_line(
+    painter: &mut Painter,
+    line: &str,
+    config: &Config,
+) -> std::io::Result<()> {
     let draw_fn = match config.opt.hunk_style {
         cli::SectionStyle::Box => draw::write_boxed,
         cli::SectionStyle::Underline => draw::write_underlined,
@@ -208,7 +212,7 @@ fn write_hunk_meta_line(painter: &mut Painter, line: &str, config: &Config) -> s
     Ok(())
 }
 
-fn paint_hunk_line(state: State, painter: &mut Painter, line: &str, config: &Config) -> State {
+fn handle_hunk_line(painter: &mut Painter, line: &str, state: State, config: &Config) -> State {
     match line.chars().next() {
         Some('-') => {
             if state == State::HunkPlus {
