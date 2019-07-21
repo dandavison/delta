@@ -19,6 +19,7 @@ pub struct Config<'a> {
     pub pager: &'a str,
     pub opt: &'a cli::Opt,
     pub no_style: Style,
+    pub max_buffered_lines: usize,
 }
 
 pub fn get_config<'a>(
@@ -102,6 +103,7 @@ pub fn get_config<'a>(
         pager: "less",
         opt,
         no_style: style::get_no_style(),
+        max_buffered_lines: 16,
     }
 }
 

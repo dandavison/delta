@@ -212,7 +212,21 @@ fn handle_hunk_meta_line(
     Ok(())
 }
 
+/// Handle a hunk line, i.e. a minus line, a plus line, or an unchanged line.
+// In the case of a minus or plus line, we store the line in a
+// buffer. When we exit the changed region we process the collected
+// minus and plus lines jointly, in order to paint detailed
+// highlighting according to inferred edit operations. In the case of
+// an unchanged line, we paint it immediately.
 fn handle_hunk_line(painter: &mut Painter, line: &str, state: State, config: &Config) -> State {
+    // Don't let the line buffers become arbitrarily large -- if we
+    // were to allow that, then for a large deleted/added file we
+    // would process the entire file before painting anything.
+    if painter.minus_lines.len() > config.max_buffered_lines
+        || painter.plus_lines.len() > config.max_buffered_lines
+    {
+        painter.paint_buffered_lines();
+    }
     match line.chars().next() {
         Some('-') => {
             if state == State::HunkPlus {
