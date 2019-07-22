@@ -63,9 +63,7 @@ pub fn parse_hunk_metadata(line: &str) -> (String, String) {
 /// Given input like "diff --git a/src/main.rs b/src/main.rs"
 /// return ("rs", "rs").
 fn get_file_extensions_from_diff_line(line: &str) -> (Option<&str>, Option<&str>) {
-    let mut iter = line.split(" ");
-    iter.next(); // diff
-    iter.next(); // --git
+    let mut iter = line.split(" ").skip(2);
     (
         iter.next().and_then(|s| get_extension(&s[2..])),
         iter.next().and_then(|s| get_extension(&s[2..])),
