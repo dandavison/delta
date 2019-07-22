@@ -156,6 +156,11 @@ impl<'a> Painter<'a> {
 /// Write section text to buffer with color escape codes.
 pub fn paint_text(text: &str, style: Style, output_buffer: &mut String) -> std::fmt::Result {
     use std::fmt::Write;
+
+    if text.len() == 0 {
+        return Ok(());
+    }
+
     match style.background {
         style::NO_COLOR => (),
         _ => write!(
