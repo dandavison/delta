@@ -2,7 +2,6 @@ use std::io::Write;
 
 use ansi_term::Colour::{Blue, Yellow};
 use console::strip_ansi_codes;
-use syntect::easy::HighlightLines;
 use unicode_segmentation::UnicodeSegmentation;
 
 use crate::bat::assets::HighlightingAssets;
@@ -54,20 +53,7 @@ pub fn delta<I>(
 where
     I: Iterator<Item = String>,
 {
-    // TODO: Painter::new(config)
-    let mut painter = Painter {
-        minus_lines: Vec::new(),
-        plus_lines: Vec::new(),
-        output_buffer: String::new(),
-        writer: writer,
-        syntax: None,
-        highlighter: HighlightLines::new(
-            assets.syntax_set.find_syntax_by_extension("txt").unwrap(),
-            config.theme,
-        ),
-        config: config,
-    };
-
+    let mut painter = Painter::new(writer, config, assets);
     let mut minus_file = "".to_string();
     let mut plus_file;
     let mut state = State::Unknown;

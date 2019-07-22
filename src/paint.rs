@@ -4,6 +4,7 @@ use syntect::easy::HighlightLines;
 use syntect::highlighting::{Style, StyleModifier};
 use syntect::parsing::SyntaxReference;
 
+use crate::bat::assets::HighlightingAssets;
 use crate::config;
 use crate::edits;
 use crate::paint::superimpose_style_sections::superimpose_style_sections;
@@ -20,6 +21,25 @@ pub struct Painter<'a> {
 }
 
 impl<'a> Painter<'a> {
+    pub fn new(
+        writer: &'a mut Write,
+        config: &'a config::Config,
+        assets: &HighlightingAssets,
+    ) -> Self {
+        Self {
+            minus_lines: Vec::new(),
+            plus_lines: Vec::new(),
+            output_buffer: String::new(),
+            writer: writer,
+            syntax: None,
+            highlighter: HighlightLines::new(
+                assets.syntax_set.find_syntax_by_extension("txt").unwrap(),
+                config.theme,
+            ),
+            config: config,
+        }
+    }
+
     pub fn reset_highlighter(&mut self) {
         self.highlighter = HighlightLines::new(self.syntax.unwrap(), self.config.theme);
     }
