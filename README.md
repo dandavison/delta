@@ -28,12 +28,15 @@
 
 ## Installation
 
+Executables: [Linux](https://github.com/dandavison/delta/releases/download/0.0.5/delta-0.0.5-x86_64-unknown-linux-musl.tar.gz) | [MacOS](https://github.com/dandavison/delta/releases/download/0.0.5/delta-0.0.5-x86_64-apple-darwin.tar.gz) | [Windows](https://github.com/dandavison/delta/releases/download/0.0.5/delta-0.0.5-x86_64-pc-windows-msvc.zip)
+
+Homebrew:
 ```sh
 brew tap dandavison/delta https://github.com/dandavison/delta
 brew install dandavison/delta/git-delta
 ```
 
-Alternatively, executables for your platform can be downloaded at https://github.com/dandavison/delta/releases.
+All available executables: https://github.com/dandavison/delta/releases.
 
 ## Configure git to use delta
 
