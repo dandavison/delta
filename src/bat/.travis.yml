@@ -6,6 +6,9 @@ matrix:
     - os: linux
       rust: stable
       env: TARGET=x86_64-unknown-linux-gnu
+    - os: windows
+      rust: stable
+      env: TARGET=x86_64-pc-windows-msvc
     - os: linux
       rust: stable
       env:
@@ -54,7 +57,7 @@ matrix:
 sudo: required
 
 before_install:
-  - ci/before_install.bash
+  - ci/before_install.sh
 
 env:
   global:
@@ -69,10 +72,10 @@ install:
   - if [[ $TRAVIS_OS_NAME = linux && $HOST != $TARGET ]]; then rustup target add $TARGET; fi
 
 script:
-  - ci/script.bash
+  - ci/script.sh
 
 before_deploy:
-  - bash ci/before_deploy.bash
+  - bash ci/before_deploy.sh
 
 deploy:
   provider: releases

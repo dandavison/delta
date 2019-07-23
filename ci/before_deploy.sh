@@ -30,7 +30,9 @@ pack() {
 
     # copying the main binary
     cp "target/$TARGET/release/$PROJECT_NAME" "$tempdir/$package_name/"
-    "${gcc_prefix}"strip "$tempdir/$package_name/$PROJECT_NAME"
+    if [ "$TRAVIS_OS_NAME" != windows ]; then
+        "${gcc_prefix}"strip "$tempdir/$package_name/$PROJECT_NAME"
+    fi
 
     # manpage, readme and license
     cp README.md "$tempdir/$package_name"
@@ -38,7 +40,11 @@ pack() {
 
     # archiving
     pushd "$tempdir"
-    tar czf "$out_dir/$package_name.tar.gz" "$package_name"/*
+    if [ "$TRAVIS_OS_NAME" = windows ]; then
+        7z a "$out_dir/$package_name.zip" "$package_name"/*
+    else
+        tar czf "$out_dir/$package_name.tar.gz" "$package_name"/*
+    fi
     popd
     rm -r "$tempdir"
 }
