@@ -1,7 +1,6 @@
 [![Build Status](https://travis-ci.com/dandavison/delta.svg?branch=master)](https://travis-ci.com/dandavison/delta)
 
-## Δ
-  A syntax-highlighting pager for git.
+## A syntax-highlighting pager for git
 
 <table>
   <tr>
@@ -26,6 +25,8 @@
   </tr>
 </table>
 
+<br>
+
 ## Installation
 
 Executables: [Linux](https://github.com/dandavison/delta/releases/download/0.0.5/delta-0.0.5-x86_64-unknown-linux-musl.tar.gz) | [MacOS](https://github.com/dandavison/delta/releases/download/0.0.5/delta-0.0.5-x86_64-apple-darwin.tar.gz) | [Windows](https://github.com/dandavison/delta/releases/download/0.0.5/delta-0.0.5-x86_64-pc-windows-msvc.zip)
@@ -36,7 +37,9 @@ brew tap dandavison/delta https://github.com/dandavison/delta
 brew install dandavison/delta/git-delta
 ```
 
-All available executables: https://github.com/dandavison/delta/releases.
+All available executables: https://github.com/dandavison/delta/releases
+
+<br>
 
 ## Configure git to use delta
 
@@ -56,6 +59,8 @@ All git commands that display diff output should now display syntax-highlighted 
   - `git log -p`
   - `git stash show -p`
 
+
+<br>
 
 ## Usage
 ```
@@ -103,6 +108,8 @@ OPTIONS:
             padding to equal width.
 ```
 
+<br>
+
 ## 24 bit color
 
   delta works best if your terminal application supports 24 bit colors. See https://gist.github.com/XVilka/8346728. For example, on macos, iTerm2 works but Terminal.app does not.
@@ -112,6 +119,8 @@ OPTIONS:
   set -ga terminal-overrides ",xterm-256color:Tc"
   ```
   and you may then  need to quit tmux completely for it to take effect.
+
+<br>
 
 ## Credit
   https://github.com/trishume/syntect<br>
