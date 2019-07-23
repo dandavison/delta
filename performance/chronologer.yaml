@@ -1,0 +1,9 @@
+benchmarks_dir: /tmp/chronologer/delta/benchmarks
+benchmark_runs: 5
+benchmark_task: "{executable} < /tmp/chronologer/delta/input.gitdiff > /dev/null"
+build_command: cargo build --release
+built_executable: ./target/release/delta
+combined_benchmark_file: ./performance/all-benchmarks.json
+executables_dir: /tmp/chronologer/delta/executables/
+html_output_file: ./performance/index.html
+revision_range: master

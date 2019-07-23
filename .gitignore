@@ -1,3 +1,5 @@
-/target
-**/*.rs.bk
 Cargo.lock
+performance/all-benchmarks.json
+performance/index.html
+**/*.rs.bk
+/target
