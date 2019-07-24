@@ -146,6 +146,7 @@ fn handle_file_meta_header_line(
         cli::SectionStyle::Plain => panic!(),
     };
     let ansi_style = Blue.bold();
+    write!(painter.writer, "\n")?;
     draw_fn(
         painter.writer,
         &ansi_style.paint(parse::get_file_change_description_from_file_paths(
