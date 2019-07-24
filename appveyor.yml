@@ -16,7 +16,7 @@ install:
 build: false
 test_script:
   - cargo test --target %TARGET% --verbose
-  - cargo run --target %TARGET% --compare-themes
+  - cargo run --target %TARGET% -- --compare-themes
 
 before_deploy:
   # Generate artifacts for release
