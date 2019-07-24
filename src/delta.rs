@@ -83,6 +83,7 @@ where
             && config.opt.file_style != cli::SectionStyle::Plain
         {
             plus_file = parse::get_file_path_from_file_meta_line(&line);
+            painter.emit()?;
             handle_file_meta_header_line(&mut painter, &minus_file, &plus_file, config)?;
         } else if line.starts_with("@@ ") {
             state = State::HunkMeta;
