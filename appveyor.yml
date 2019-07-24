@@ -32,7 +32,7 @@ deploy:
   # - Then go to 'https://ci.appveyor.com/tools/encrypt' and enter the newly generated token.
   # - Enter the "encrypted value" below
   auth_token:
-    secure: 01gPn/k82D9RFxImvXuhCKP1ELXArEYhibt2kYaZnyfPPrcylBQLD+l1Cl5lLSa3
+    secure: cXYUTdv/KNy1SLsiKzp5+0W/roNCgQJOpAw2CA0CFzkvHC1XoLts88VBSBAZn7yU
   provider: GitHub
   on:
     RUST_VERSION: stable
