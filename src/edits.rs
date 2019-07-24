@@ -300,7 +300,10 @@ mod string_pair {
     impl StringPair {
         pub fn new(s0: &str, s1: &str) -> StringPair {
             let (g0, g1) = (s0.grapheme_indices(true), s1.grapheme_indices(true));
-            let common_prefix_length = StringPair::common_prefix_length(g0, g1); // TODO: pass references
+            let common_prefix_length = StringPair::common_prefix_length(g0, g1);
+            // Watch out! take_while has consumed one additional
+            // grapheme, so that needs dealing with if we're going to
+            // re-use the same iterators.
             let (g0, g1) = (s0.grapheme_indices(true), s1.grapheme_indices(true));
             let (common_suffix_length, trailing_whitespace) = StringPair::suffix_data(g0, g1);
             StringPair {
@@ -322,15 +325,9 @@ mod string_pair {
         where
             I: Iterator<Item = (usize, &'a str)>,
         {
-            let mut i = 0;
-            for ((_, c0), (_, c1)) in s0.zip(s1) {
-                if c0 != c1 {
-                    break;
-                } else {
-                    i += c0.len();
-                }
-            }
-            i
+            s0.zip(s1)
+                .take_while(|((_, c0), (_, c1))| c0 == c1) // TODO: Don't consume one-past-the-end!
+                .fold(0, |offset, ((_, c0), (_, _))| offset + c0.len())
         }
 
         /// Trim trailing whitespace and align the two strings at
