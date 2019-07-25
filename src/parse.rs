@@ -44,7 +44,7 @@ pub fn get_file_change_description_from_file_paths(minus_file: &str, plus_file: 
 /// Given input like
 /// "@@ -74,15 +74,14 @@ pub fn delta("
 /// Return " pub fn delta("
-pub fn parse_hunk_metadata(line: &str) -> (String, String) {
+pub fn parse_hunk_metadata(line: &str) -> (&str, &str) {
     let mut iter = line.split("@@").skip(1);
     let line_number = iter
         .next()
@@ -54,9 +54,8 @@ pub fn parse_hunk_metadata(line: &str) -> (String, String) {
                 .next()
                 .and_then(|s| s.split(",").next())
         })
-        .unwrap_or("")
-        .to_string();
-    let code_fragment = iter.next().unwrap_or("").to_string();
+        .unwrap_or("");
+    let code_fragment = iter.next().unwrap_or("");
     (code_fragment, line_number)
 }
 
@@ -107,7 +106,7 @@ mod tests {
     fn test_parse_hunk_metadata() {
         assert_eq!(
             parse_hunk_metadata("@@ -74,15 +75,14 @@ pub fn delta(\n"),
-            (" pub fn delta(\n".to_string(), "75".to_string())
+            (" pub fn delta(\n", "75")
         );
     }
 }

@@ -46,23 +46,28 @@ impl<'a> Painter<'a> {
 
     pub fn paint_buffered_lines(&mut self) {
         let (minus_line_syntax_style_sections, plus_line_syntax_style_sections) =
-            self.get_syntax_style_sections();
+            Self::get_syntax_style_sections(
+                &self.minus_lines,
+                &self.plus_lines,
+                &mut self.highlighter,
+                self.config,
+            );
         let (minus_line_diff_style_sections, plus_line_diff_style_sections) =
-            self.get_diff_style_sections();
+            Self::get_diff_style_sections(&self.minus_lines, &self.plus_lines, self.config);
         // TODO: lines and style sections contain identical line text
         if self.minus_lines.len() > 0 {
             Painter::paint_lines(
                 &mut self.output_buffer,
-                &minus_line_syntax_style_sections,
-                &minus_line_diff_style_sections,
+                minus_line_syntax_style_sections,
+                minus_line_diff_style_sections,
             );
             self.minus_lines.clear();
         }
         if self.plus_lines.len() > 0 {
             Painter::paint_lines(
                 &mut self.output_buffer,
-                &plus_line_syntax_style_sections,
-                &plus_line_diff_style_sections,
+                plus_line_syntax_style_sections,
+                plus_line_diff_style_sections,
             );
             self.plus_lines.clear();
         }
@@ -72,11 +77,11 @@ impl<'a> Painter<'a> {
     /// highlighting styles, and write colored lines to output buffer.
     pub fn paint_lines(
         output_buffer: &mut String,
-        syntax_style_sections: &Vec<Vec<(Style, String)>>,
-        diff_style_sections: &Vec<Vec<(StyleModifier, String)>>,
+        syntax_style_sections: Vec<Vec<(Style, &str)>>,
+        diff_style_sections: Vec<Vec<(StyleModifier, &str)>>,
     ) {
         for (syntax_sections, diff_sections) in
-            syntax_style_sections.iter().zip(diff_style_sections)
+            syntax_style_sections.iter().zip(diff_style_sections.iter())
         {
             for (style, text) in superimpose_style_sections(syntax_sections, diff_sections) {
                 paint_text(&text, style, output_buffer).unwrap();
@@ -92,24 +97,27 @@ impl<'a> Painter<'a> {
     }
 
     /// Perform syntax highlighting for minus and plus lines in buffer.
-    fn get_syntax_style_sections(
-        &mut self,
-    ) -> (Vec<Vec<(Style, String)>>, Vec<Vec<(Style, String)>>) {
+    fn get_syntax_style_sections<'m, 'p>(
+        minus_lines: &'m Vec<String>,
+        plus_lines: &'p Vec<String>,
+        highlighter: &mut HighlightLines,
+        config: &config::Config,
+    ) -> (Vec<Vec<(Style, &'m str)>>, Vec<Vec<(Style, &'p str)>>) {
         let mut minus_line_sections = Vec::new();
-        for line in self.minus_lines.iter() {
+        for line in minus_lines.iter() {
             minus_line_sections.push(Painter::get_line_syntax_style_sections(
                 &line,
-                &mut self.highlighter,
-                &self.config,
-                self.config.opt.highlight_removed,
+                highlighter,
+                &config,
+                config.opt.highlight_removed,
             ));
         }
         let mut plus_line_sections = Vec::new();
-        for line in self.plus_lines.iter() {
+        for line in plus_lines.iter() {
             plus_line_sections.push(Painter::get_line_syntax_style_sections(
                 &line,
-                &mut self.highlighter,
-                &self.config,
+                highlighter,
+                &config,
                 true,
             ));
         }
@@ -117,57 +125,57 @@ impl<'a> Painter<'a> {
     }
 
     pub fn get_line_syntax_style_sections(
-        line: &str,
+        line: &'a str,
         highlighter: &mut HighlightLines,
         config: &config::Config,
         should_syntax_highlight: bool,
-    ) -> Vec<(Style, String)> {
+    ) -> Vec<(Style, &'a str)> {
         if should_syntax_highlight {
-            highlighter
-                .highlight(line, &config.syntax_set)
-                .iter()
-                .map(|(style, s)| (*style, s.to_string()))
-                .collect::<Vec<(Style, String)>>()
+            highlighter.highlight(line, &config.syntax_set)
         } else {
-            vec![(config.no_style, line.to_string())]
+            vec![(config.no_style, line)]
         }
     }
 
     /// Set background styles to represent diff for minus and plus lines in buffer.
-    fn get_diff_style_sections(
-        &mut self,
+    fn get_diff_style_sections<'m, 'p>(
+        minus_lines: &'m Vec<String>,
+        plus_lines: &'p Vec<String>,
+        config: &config::Config,
     ) -> (
-        Vec<Vec<(StyleModifier, String)>>,
-        Vec<Vec<(StyleModifier, String)>>,
+        Vec<Vec<(StyleModifier, &'m str)>>,
+        Vec<Vec<(StyleModifier, &'p str)>>,
     ) {
-        if self.minus_lines.len() == self.plus_lines.len() {
+        if minus_lines.len() == plus_lines.len() {
             edits::infer_edit_sections(
-                &self.minus_lines,
-                &self.plus_lines,
-                self.config.minus_style_modifier,
-                self.config.minus_emph_style_modifier,
-                self.config.plus_style_modifier,
-                self.config.plus_emph_style_modifier,
+                minus_lines,
+                plus_lines,
+                config.minus_style_modifier,
+                config.minus_emph_style_modifier,
+                config.plus_style_modifier,
+                config.plus_emph_style_modifier,
                 0.66,
             )
         } else {
-            self.get_diff_style_sections_plain()
+            Self::get_diff_style_sections_plain(minus_lines, plus_lines, config)
         }
     }
 
-    fn get_diff_style_sections_plain(
-        &mut self,
+    fn get_diff_style_sections_plain<'m, 'p>(
+        minus_lines: &'m Vec<String>,
+        plus_lines: &'p Vec<String>,
+        config: &config::Config,
     ) -> (
-        Vec<Vec<(StyleModifier, String)>>,
-        Vec<Vec<(StyleModifier, String)>>,
+        Vec<Vec<(StyleModifier, &'m str)>>,
+        Vec<Vec<(StyleModifier, &'p str)>>,
     ) {
         let mut minus_line_sections = Vec::new();
-        for line in self.minus_lines.iter() {
-            minus_line_sections.push(vec![(self.config.minus_style_modifier, line.to_string())]);
+        for line in minus_lines.iter() {
+            minus_line_sections.push(vec![(config.minus_style_modifier, &line[..])]);
         }
         let mut plus_line_sections = Vec::new();
-        for line in self.plus_lines.iter() {
-            plus_line_sections.push(vec![(self.config.plus_style_modifier, line.to_string())]);
+        for line in plus_lines.iter() {
+            plus_line_sections.push(vec![(config.plus_style_modifier, &line[..])]);
         }
         (minus_line_sections, plus_line_sections)
     }
@@ -204,8 +212,8 @@ mod superimpose_style_sections {
     use syntect::highlighting::{Style, StyleModifier};
 
     pub fn superimpose_style_sections(
-        sections_1: &Vec<(Style, String)>,
-        sections_2: &Vec<(StyleModifier, String)>,
+        sections_1: &Vec<(Style, &str)>,
+        sections_2: &Vec<(StyleModifier, &str)>,
     ) -> Vec<(Style, String)> {
         coalesce(superimpose(
             explode(sections_1)
@@ -215,13 +223,13 @@ mod superimpose_style_sections {
         ))
     }
 
-    fn explode<T>(style_sections: &Vec<(T, String)>) -> Vec<(T, char)>
+    fn explode<T>(style_sections: &Vec<(T, &str)>) -> Vec<(T, char)>
     where
         T: Copy,
     {
         let mut exploded: Vec<(T, char)> = Vec::new();
-        for (style, string) in style_sections {
-            for c in string.chars() {
+        for (style, s) in style_sections {
+            for c in s.chars() {
                 exploded.push((*style, c));
             }
         }
@@ -289,10 +297,9 @@ mod superimpose_style_sections {
 
         #[test]
         fn test_superimpose_style_sections_1() {
-            let string = String::from("ab");
-            let sections_1 = vec![(STYLE, string.clone())];
-            let sections_2 = vec![(STYLE_MODIFIER, string.clone())];
-            let superimposed = vec![(SUPERIMPOSED_STYLE, string.clone())];
+            let sections_1 = vec![(STYLE, "ab")];
+            let sections_2 = vec![(STYLE_MODIFIER, "ab")];
+            let superimposed = vec![(SUPERIMPOSED_STYLE, "ab".to_string())];
             assert_eq!(
                 superimpose_style_sections(&sections_1, &sections_2),
                 superimposed
@@ -301,11 +308,8 @@ mod superimpose_style_sections {
 
         #[test]
         fn test_superimpose_style_sections_2() {
-            let sections_1 = vec![(STYLE, String::from("ab"))];
-            let sections_2 = vec![
-                (STYLE_MODIFIER, String::from("a")),
-                (STYLE_MODIFIER, String::from("b")),
-            ];
+            let sections_1 = vec![(STYLE, "ab")];
+            let sections_2 = vec![(STYLE_MODIFIER, "a"), (STYLE_MODIFIER, "b")];
             let superimposed = vec![(SUPERIMPOSED_STYLE, String::from("ab"))];
             assert_eq!(
                 superimpose_style_sections(&sections_1, &sections_2),
@@ -316,9 +320,8 @@ mod superimpose_style_sections {
         #[test]
         fn test_explode() {
             let arbitrary = 0;
-            let string = String::from("ab");
             assert_eq!(
-                explode(&vec![(arbitrary, string)]),
+                explode(&vec![(arbitrary, "ab")]),
                 vec![(arbitrary, 'a'), (arbitrary, 'b')]
             )
         }

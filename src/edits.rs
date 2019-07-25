@@ -31,17 +31,17 @@ use crate::edits::string_pair::StringPair;
   end of the line: the line by definition has no trailing
   whitespace.
 */
-pub fn infer_edit_sections<EditOperationTag>(
-    minus_lines: &Vec<String>,
-    plus_lines: &Vec<String>,
+pub fn infer_edit_sections<'m, 'p, EditOperationTag>(
+    minus_lines: &'m Vec<String>,
+    plus_lines: &'p Vec<String>,
     minus_line_noop: EditOperationTag,
     delete: EditOperationTag,
     plus_line_noop: EditOperationTag,
     insert: EditOperationTag,
     similarity_threshold: f64,
 ) -> (
-    Vec<Vec<(EditOperationTag, String)>>,
-    Vec<Vec<(EditOperationTag, String)>>,
+    Vec<Vec<(EditOperationTag, &'m str)>>,
+    Vec<Vec<(EditOperationTag, &'p str)>>,
 )
 where
     EditOperationTag: Copy,
@@ -88,18 +88,18 @@ where
             && plus_edit.appears_genuine(similarity_threshold)
         {
             minus_line_sections.push(vec![
-                (minus_line_noop, minus[0..change_begin].to_string()),
-                (delete, minus[change_begin..minus_change_end].to_string()),
-                (minus_line_noop, minus[minus_change_end..].to_string()),
+                (minus_line_noop, &minus[0..change_begin]),
+                (delete, &minus[change_begin..minus_change_end]),
+                (minus_line_noop, &minus[minus_change_end..]),
             ]);
             plus_line_sections.push(vec![
-                (plus_line_noop, plus[0..change_begin].to_string()),
-                (insert, plus[change_begin..plus_change_end].to_string()),
-                (plus_line_noop, plus[plus_change_end..].to_string()),
+                (plus_line_noop, &plus[0..change_begin]),
+                (insert, &plus[change_begin..plus_change_end]),
+                (plus_line_noop, &plus[plus_change_end..]),
             ]);
         } else {
-            minus_line_sections.push(vec![(minus_line_noop, minus.to_string())]);
-            plus_line_sections.push(vec![(plus_line_noop, plus.to_string())]);
+            minus_line_sections.push(vec![(minus_line_noop, minus)]);
+            plus_line_sections.push(vec![(plus_line_noop, plus)]);
         }
     }
     (minus_line_sections, plus_line_sections)
@@ -135,9 +135,11 @@ mod tests {
 
     #[test]
     fn test_infer_edit_sections_1() {
+        let minus_lines = vec!["aaa\n".to_string()];
+        let plus_lines = vec!["aba\n".to_string()];
         let actual_edits = infer_edit_sections(
-            &vec!["aaa\n".to_string()],
-            &vec!["aba\n".to_string()],
+            &minus_lines,
+            &plus_lines,
             MinusNoop,
             Delete,
             PlusNoop,
@@ -145,16 +147,8 @@ mod tests {
             1.0,
         );
         let expected_edits = (
-            vec![as_strings(vec![
-                (MinusNoop, "a"),
-                (Delete, "a"),
-                (MinusNoop, "a\n"),
-            ])],
-            vec![as_strings(vec![
-                (PlusNoop, "a"),
-                (Insert, "b"),
-                (PlusNoop, "a\n"),
-            ])],
+            vec![vec![(MinusNoop, "a"), (Delete, "a"), (MinusNoop, "a\n")]],
+            vec![vec![(PlusNoop, "a"), (Insert, "b"), (PlusNoop, "a\n")]],
         );
 
         assert_consistent(&expected_edits);
@@ -164,9 +158,11 @@ mod tests {
 
     #[test]
     fn test_infer_edit_sections_1_nonascii() {
+        let minus_lines = vec!["áaa\n".to_string()];
+        let plus_lines = vec!["ááb\n".to_string()];
         let actual_edits = infer_edit_sections(
-            &vec!["áaa\n".to_string()],
-            &vec!["ááb\n".to_string()],
+            &minus_lines,
+            &plus_lines,
             MinusNoop,
             Delete,
             PlusNoop,
@@ -174,16 +170,8 @@ mod tests {
             1.0,
         );
         let expected_edits = (
-            vec![as_strings(vec![
-                (MinusNoop, "á"),
-                (Delete, "aa"),
-                (MinusNoop, "\n"),
-            ])],
-            vec![as_strings(vec![
-                (PlusNoop, "á"),
-                (Insert, "áb"),
-                (PlusNoop, "\n"),
-            ])],
+            vec![vec![(MinusNoop, "á"), (Delete, "aa"), (MinusNoop, "\n")]],
+            vec![vec![(PlusNoop, "á"), (Insert, "áb"), (PlusNoop, "\n")]],
         );
 
         assert_consistent(&expected_edits);
@@ -193,9 +181,12 @@ mod tests {
 
     #[test]
     fn test_infer_edit_sections_2() {
+        let minus_lines = vec!["d.iteritems()\n".to_string()];
+        let plus_lines = vec!["d.items()\n".to_string()];
+
         let actual_edits = infer_edit_sections(
-            &vec!["d.iteritems()\n".to_string()],
-            &vec!["d.items()\n".to_string()],
+            &minus_lines,
+            &plus_lines,
             MinusNoop,
             Delete,
             PlusNoop,
@@ -203,26 +194,26 @@ mod tests {
             1.0,
         );
         let expected_edits = (
-            vec![as_strings(vec![
+            vec![vec![
                 (MinusNoop, "d."),
                 (Delete, "iter"),
                 (MinusNoop, "items()\n"),
-            ])],
-            vec![as_strings(vec![
+            ]],
+            vec![vec![
                 (PlusNoop, "d."),
                 (Insert, ""),
                 (PlusNoop, "items()\n"),
-            ])],
+            ]],
         );
         assert_consistent(&expected_edits);
         assert_consistent(&actual_edits);
         assert_eq!(actual_edits, expected_edits);
     }
 
-    type EditSection = (EditOperationTag, String);
-    type EditSections = Vec<EditSection>;
-    type LineEditSections = Vec<EditSections>;
-    type Edits = (LineEditSections, LineEditSections);
+    type EditSection<'a> = (EditOperationTag, &'a str);
+    type EditSections<'a> = Vec<EditSection<'a>>;
+    type LineEditSections<'a> = Vec<EditSections<'a>>;
+    type Edits<'a> = (LineEditSections<'a>, LineEditSections<'a>);
 
     fn assert_consistent(edits: &Edits) {
         let (minus_line_edit_sections, plus_line_edit_sections) = edits;
@@ -245,14 +236,6 @@ mod tests {
             }
         }
         (total, delta)
-    }
-
-    fn as_strings(sections: Vec<(EditOperationTag, &str)>) -> EditSections {
-        let mut new_sections = Vec::new();
-        for (edit, s) in sections {
-            new_sections.push((edit, s.to_string()));
-        }
-        new_sections
     }
 
     // For debugging test failures:

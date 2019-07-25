@@ -173,17 +173,17 @@ fn handle_hunk_meta_line(
     let (code_fragment, line_number) = parse::parse_hunk_metadata(&line);
     if code_fragment.len() > 0 {
         let syntax_style_sections = Painter::get_line_syntax_style_sections(
-            &code_fragment,
+            code_fragment,
             &mut painter.highlighter,
             &painter.config,
             true,
         );
         Painter::paint_lines(
             &mut painter.output_buffer,
-            &vec![syntax_style_sections],
-            &vec![vec![(
+            vec![syntax_style_sections],
+            vec![vec![(
                 style::NO_BACKGROUND_COLOR_STYLE_MODIFIER,
-                code_fragment.clone(),
+                code_fragment,
             )]],
         );
         painter.output_buffer.pop(); // trim newline
@@ -238,11 +238,8 @@ fn handle_hunk_line(painter: &mut Painter, line: &str, state: State, config: &Co
             );
             Painter::paint_lines(
                 &mut painter.output_buffer,
-                &vec![syntax_style_sections],
-                &vec![vec![(
-                    style::NO_BACKGROUND_COLOR_STYLE_MODIFIER,
-                    line.clone(),
-                )]],
+                vec![syntax_style_sections],
+                vec![vec![(style::NO_BACKGROUND_COLOR_STYLE_MODIFIER, &line)]],
             );
             State::HunkZero
         }
