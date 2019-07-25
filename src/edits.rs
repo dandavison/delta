@@ -301,9 +301,7 @@ mod string_pair {
         pub fn new(s0: &str, s1: &str) -> StringPair {
             let (g0, g1) = (s0.grapheme_indices(true), s1.grapheme_indices(true));
             let common_prefix_length = StringPair::common_prefix_length(g0, g1);
-            // Watch out! take_while has consumed one additional
-            // grapheme, so that needs dealing with if we're going to
-            // re-use the same iterators.
+            // TODO: Don't compute grapheme segmentation twice?
             let (g0, g1) = (s0.grapheme_indices(true), s1.grapheme_indices(true));
             let (common_suffix_length, trailing_whitespace) = StringPair::suffix_data(g0, g1);
             StringPair {
@@ -324,9 +322,11 @@ mod string_pair {
         fn common_prefix_length<'a, I>(s0: I, s1: I) -> usize
         where
             I: Iterator<Item = (usize, &'a str)>,
+            I: Itertools,
         {
             s0.zip(s1)
-                .take_while(|((_, c0), (_, c1))| c0 == c1) // TODO: Don't consume one-past-the-end!
+                .peekable()
+                .peeking_take_while(|((_, c0), (_, c1))| c0 == c1)
                 .fold(0, |offset, ((_, c0), (_, _))| offset + c0.len())
         }
 
