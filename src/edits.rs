@@ -287,7 +287,7 @@ mod tests {
 }
 
 mod string_pair {
-    use std::iter::Peekable;
+    use itertools::Itertools;
     use unicode_segmentation::UnicodeSegmentation;
 
     /// A pair of right-trimmed strings.
@@ -340,34 +340,16 @@ mod string_pair {
         fn suffix_data<'a, I>(s0: I, s1: I) -> (usize, [usize; 2])
         where
             I: DoubleEndedIterator<Item = (usize, &'a str)>,
+            I: Itertools,
         {
             let mut s0 = s0.rev().peekable();
             let mut s1 = s1.rev().peekable();
-            let n0 = StringPair::consume_whitespace(&mut s0);
-            let n1 = StringPair::consume_whitespace(&mut s1);
+
+            let is_whitespace = |(_, c): &(usize, &str)| *c == " " || *c == "\n";
+            let n0 = (&mut s0).peeking_take_while(is_whitespace).count();
+            let n1 = (&mut s1).peeking_take_while(is_whitespace).count();
 
             (StringPair::common_prefix_length(s0, s1), [n0, n1])
-        }
-
-        /// Consume leading whitespace; return number of characters consumed.
-        fn consume_whitespace<'a, I>(s: &mut Peekable<I>) -> usize
-        where
-            I: Iterator<Item = (usize, &'a str)>,
-        {
-            let mut n = 0;
-            loop {
-                match s.peek() {
-                    // TODO: Use a whitespace unicode character class?
-                    // Allow for whitespace grapheme clusters > 1
-                    // byte?
-                    Some(&(_, "\n")) | Some(&(_, " ")) => {
-                        s.next();
-                        n += 1;
-                    }
-                    _ => break,
-                }
-            }
-            n
         }
     }
 
