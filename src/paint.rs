@@ -87,7 +87,7 @@ impl<'a> Painter<'a> {
     /// Write output buffer to output stream, and clear the buffer.
     pub fn emit(&mut self) -> std::io::Result<()> {
         write!(self.writer, "{}", self.output_buffer)?;
-        self.output_buffer.truncate(0);
+        self.output_buffer.clear();
         Ok(())
     }
 

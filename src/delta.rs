@@ -194,7 +194,7 @@ fn handle_hunk_meta_line(
             ansi_style,
             false,
         )?;
-        painter.output_buffer.truncate(0);
+        painter.output_buffer.clear();
     }
     writeln!(painter.writer, "\n{}", ansi_style.paint(line_number))?;
     Ok(())
