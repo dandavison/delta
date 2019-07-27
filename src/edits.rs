@@ -1,4 +1,5 @@
 use crate::edits::line_pair::LinePair;
+use crate::interleavings;
 
 /// Infer the edit operations responsible for the differences between a collection of old and new
 /// lines.
@@ -27,17 +28,17 @@ use crate::edits::line_pair::LinePair;
   Note that whitespace can be neither deleted nor inserted at the end of the line: the line by
   definition has no trailing whitespace.
 */
-pub fn infer_edit_sections<'m, 'p, EditOperationTag>(
-    minus_lines: &'m Vec<String>,
-    plus_lines: &'p Vec<String>,
+pub fn infer_edit_sections<'a, EditOperationTag>(
+    minus_lines: &'a Vec<String>,
+    plus_lines: &'a Vec<String>,
     non_deletion: EditOperationTag,
     deletion: EditOperationTag,
     non_insertion: EditOperationTag,
     insertion: EditOperationTag,
-    similarity_threshold: f64,
+    distance_threshold: f64,
 ) -> (
-    Vec<Vec<(EditOperationTag, &'m str)>>,
-    Vec<Vec<(EditOperationTag, &'p str)>>,
+    Vec<Vec<(EditOperationTag, &'a str)>>,
+    Vec<Vec<(EditOperationTag, &'a str)>>,
 )
 where
     EditOperationTag: Copy,
@@ -45,27 +46,123 @@ where
     let mut minus_line_sections = Vec::new();
     let mut plus_line_sections = Vec::new();
 
-    for (minus, plus) in minus_lines.iter().zip(plus_lines.iter()) {
-        let line_pair = LinePair::new(minus, plus);
-
-        if line_pair.is_homologous_pair(similarity_threshold) {
-            let (minus_edit, plus_edit) = (line_pair.minus_edit, line_pair.plus_edit);
-            minus_line_sections.push(vec![
-                (non_deletion, &minus[0..minus_edit.start]),
-                (deletion, &minus[minus_edit.start..minus_edit.end]),
-                (non_deletion, &minus[minus_edit.end..]),
-            ]);
-            plus_line_sections.push(vec![
-                (non_insertion, &plus[0..plus_edit.start]),
-                (insertion, &plus[plus_edit.start..plus_edit.end]),
-                (non_insertion, &plus[plus_edit.end..]),
-            ]);
-        } else {
-            minus_line_sections.push(vec![(non_deletion, minus)]);
-            plus_line_sections.push(vec![(non_insertion, plus)]);
+    for assignment in LineAssignments::infer(minus_lines, plus_lines).assignments {
+        match assignment {
+            LineAssignment::LinePair(LinePair {
+                minus_line,
+                plus_line,
+                minus_edit,
+                plus_edit,
+                distance,
+            }) => {
+                if distance < distance_threshold {
+                    minus_line_sections.push(vec![
+                        (non_deletion, &minus_line[0..minus_edit.start]),
+                        (deletion, &minus_line[minus_edit.start..minus_edit.end]),
+                        (non_deletion, &minus_line[minus_edit.end..]),
+                    ]);
+                    plus_line_sections.push(vec![
+                        (non_insertion, &plus_line[0..plus_edit.start]),
+                        (insertion, &plus_line[plus_edit.start..plus_edit.end]),
+                        (non_insertion, &plus_line[plus_edit.end..]),
+                    ]);
+                } else {
+                    minus_line_sections.push(vec![(non_deletion, minus_line)]);
+                    plus_line_sections.push(vec![(non_insertion, plus_line)]);
+                }
+            }
+            LineAssignment::Line(Minus(line)) => {
+                minus_line_sections.push(vec![(non_deletion, line)])
+            }
+            LineAssignment::Line(Plus(line)) => {
+                plus_line_sections.push(vec![(non_insertion, line)])
+            }
         }
     }
     (minus_line_sections, plus_line_sections)
+}
+
+pub enum PolarizedLine<'a> {
+    Minus(&'a str),
+    Plus(&'a str),
+}
+
+use PolarizedLine::*;
+
+enum LineAssignment<'a> {
+    LinePair(LinePair<'a>),
+    Line(PolarizedLine<'a>),
+}
+
+struct LineAssignments<'a> {
+    assignments: Vec<LineAssignment<'a>>,
+}
+
+impl<'a> LineAssignments<'a> {
+    fn infer(minus_lines: &'a Vec<String>, plus_lines: &'a Vec<String>) -> Self {
+        interleavings::interleavings(
+            &minus_lines
+                .iter()
+                .map(|line| Minus(line))
+                .collect::<Vec<PolarizedLine>>(),
+            &plus_lines
+                .iter()
+                .map(|line| Plus(line))
+                .collect::<Vec<PolarizedLine>>(),
+        )
+        .iter()
+        .map(LineAssignments::from_interleaving)
+        .min_by(|las_1, las_2| las_1.distance().partial_cmp(&las_2.distance()).unwrap())
+        .unwrap()
+    }
+
+    // In the interleaving, a Minus followed by a Plus is a pair of lines to be scored for homology
+    // and thus possibly painted according to their inferred edits. All other lines in the
+    // interleaving should be emitted as normal.
+    // For example, suppose the interleaving is
+    // m p m m p
+    // This should be emitted as
+    // [(m,p), m, (m,p)]
+    // To do so we iterate over windows of size two:
+    // [mp, pm, mm, mp]
+    //  2,  -,  1, 2
+    // Where the annotations mean
+    // 2: emit a LinePair containing this window of 2 lines
+    // 1: emit the first line of the window, alone
+    // -: skip this window of lines
+    pub fn from_interleaving(interleaving: &Vec<&PolarizedLine<'a>>) -> Self {
+        let mut assignments = Vec::with_capacity(interleaving.len());
+        let windows = interleaving.windows(2);
+        let mut skip = false;
+        for window in windows {
+            if skip {
+                skip = false;
+                continue;
+            }
+            match window {
+                [Minus(minus), Plus(plus)] => {
+                    assignments.push(LineAssignment::LinePair(LinePair::new(minus, plus)));
+                    // We've consumed both lines in this window, so we've consumed the first line of
+                    // the next window, so we must skip it.
+                    skip = true;
+                }
+                [Minus(minus), _] => assignments.push(LineAssignment::Line(Minus(minus))),
+                [Plus(plus), _] => assignments.push(LineAssignment::Line(Plus(plus))),
+                _ => panic!("Impossible"),
+            }
+        }
+        Self { assignments }
+    }
+
+    pub fn distance(&self) -> f64 {
+        self.assignments
+            .iter()
+            .map(|la| match la {
+                LineAssignment::LinePair(lp) => lp.distance,
+                _ => 1f64,
+            })
+            .sum()
+    }
 }
 
 mod line_pair {
@@ -75,9 +172,12 @@ mod line_pair {
     use unicode_segmentation::UnicodeSegmentation;
 
     /// A pair of right-trimmed strings.
-    pub struct LinePair {
+    pub struct LinePair<'a> {
+        pub minus_line: &'a str,
+        pub plus_line: &'a str,
         pub minus_edit: Edit,
         pub plus_edit: Edit,
+        pub distance: f64,
     }
 
     pub struct Edit {
@@ -88,13 +188,13 @@ mod line_pair {
 
     impl Edit {
         // TODO: exclude leading whitespace in this calculation
-        fn appears_genuine(&self, similarity_threshold: f64) -> bool {
-            ((self.end - self.start) as f64 / self.string_length as f64) < similarity_threshold
+        fn distance(&self) -> f64 {
+            (self.end - self.start) as f64 / self.string_length as f64
         }
     }
 
-    impl LinePair {
-        pub fn new(s0: &str, s1: &str) -> LinePair {
+    impl<'a> LinePair<'a> {
+        pub fn new(s0: &'a str, s1: &'a str) -> Self {
             let (g0, g1) = (s0.grapheme_indices(true), s1.grapheme_indices(true));
             let common_prefix_length = LinePair::common_prefix_length(g0, g1);
             // TODO: Don't compute grapheme segmentation twice?
@@ -121,31 +221,32 @@ mod line_pair {
             let plus_change_end = plus_length - common_suffix_length;
             let change_begin = min(common_prefix_length, min(minus_change_end, plus_change_end));
 
+            let minus_edit = Edit {
+                start: change_begin,
+                end: minus_change_end,
+                string_length: minus_length,
+            };
+            let plus_edit = Edit {
+                start: change_begin,
+                end: plus_change_end,
+                string_length: plus_length,
+            };
+            let distance = minus_edit.distance() + plus_edit.distance();
             LinePair {
-                minus_edit: Edit {
-                    start: change_begin,
-                    end: minus_change_end,
-                    string_length: minus_length,
-                },
-                plus_edit: Edit {
-                    start: change_begin,
-                    end: plus_change_end,
-                    string_length: plus_length,
-                },
+                minus_line: s0,
+                plus_line: s1,
+                minus_edit,
+                plus_edit,
+                distance,
             }
-        }
-
-        pub fn is_homologous_pair(&self, similarity_threshold: f64) -> bool {
-            self.minus_edit.appears_genuine(similarity_threshold)
-                && self.plus_edit.appears_genuine(similarity_threshold)
         }
 
         /// Align the two strings at their left ends and consider only the bytes up to the length of
         /// the shorter string. Return the byte offset of the first differing grapheme cluster, or
         /// the byte length of shorter string if they do not differ.
-        fn common_prefix_length<'a, I>(s0: I, s1: I) -> usize
+        fn common_prefix_length<'b, I>(s0: I, s1: I) -> usize
         where
-            I: Iterator<Item = (usize, &'a str)>,
+            I: Iterator<Item = (usize, &'b str)>,
             I: Itertools,
         {
             s0.zip(s1)
@@ -159,9 +260,9 @@ mod line_pair {
         /// shorter string. Return the byte offset of the first differing grapheme cluster, or the
         /// byte length of the shorter string if they do not differ. Also return the number of bytes
         /// of whitespace trimmed from each string.
-        fn suffix_data<'a, I>(s0: I, s1: I) -> (usize, [usize; 2])
+        fn suffix_data<'b, I>(s0: I, s1: I) -> (usize, [usize; 2])
         where
-            I: DoubleEndedIterator<Item = (usize, &'a str)>,
+            I: DoubleEndedIterator<Item = (usize, &'b str)>,
             I: Itertools,
         {
             let mut s0 = s0.rev().peekable();
@@ -272,6 +373,8 @@ mod tests {
 
     use EditOperationTag::*;
 
+    const DISTANCE_MAX: f64 = 2.0;
+
     #[test]
     fn test_infer_edit_sections_1() {
         let minus_lines = vec!["aaa\n".to_string()];
@@ -283,7 +386,7 @@ mod tests {
             Deletion,
             PlusNoop,
             Insertion,
-            1.0,
+            DISTANCE_MAX,
         );
         let expected_edits = (
             vec![vec![(MinusNoop, "a"), (Deletion, "a"), (MinusNoop, "a\n")]],
@@ -306,7 +409,7 @@ mod tests {
             Deletion,
             PlusNoop,
             Insertion,
-            1.0,
+            DISTANCE_MAX,
         );
         let expected_edits = (
             vec![vec![(MinusNoop, "á"), (Deletion, "aa"), (MinusNoop, "\n")]],
@@ -330,7 +433,7 @@ mod tests {
             Deletion,
             PlusNoop,
             Insertion,
-            1.0,
+            DISTANCE_MAX,
         );
         let expected_edits = (
             vec![vec![

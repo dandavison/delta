@@ -146,38 +146,15 @@ impl<'a> Painter<'a> {
         Vec<Vec<(StyleModifier, &'b str)>>,
         Vec<Vec<(StyleModifier, &'b str)>>,
     ) {
-        if minus_lines.len() == plus_lines.len() {
-            edits::infer_edit_sections(
-                minus_lines,
-                plus_lines,
-                config.minus_style_modifier,
-                config.minus_emph_style_modifier,
-                config.plus_style_modifier,
-                config.plus_emph_style_modifier,
-                0.66,
-            )
-        } else {
-            Self::get_diff_style_sections_plain(minus_lines, plus_lines, config)
-        }
-    }
-
-    fn get_diff_style_sections_plain<'m, 'p>(
-        minus_lines: &'m Vec<String>,
-        plus_lines: &'p Vec<String>,
-        config: &config::Config,
-    ) -> (
-        Vec<Vec<(StyleModifier, &'m str)>>,
-        Vec<Vec<(StyleModifier, &'p str)>>,
-    ) {
-        let mut minus_line_sections = Vec::new();
-        for line in minus_lines.iter() {
-            minus_line_sections.push(vec![(config.minus_style_modifier, &line[..])]);
-        }
-        let mut plus_line_sections = Vec::new();
-        for line in plus_lines.iter() {
-            plus_line_sections.push(vec![(config.plus_style_modifier, &line[..])]);
-        }
-        (minus_line_sections, plus_line_sections)
+        edits::infer_edit_sections(
+            minus_lines,
+            plus_lines,
+            config.minus_style_modifier,
+            config.minus_emph_style_modifier,
+            config.plus_style_modifier,
+            config.plus_emph_style_modifier,
+            0.66,
+        )
     }
 }
 
