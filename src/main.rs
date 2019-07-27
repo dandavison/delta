@@ -7,6 +7,7 @@ mod config;
 mod delta;
 mod draw;
 mod edits;
+mod interleavings;
 mod paint;
 mod parse;
 mod style;
