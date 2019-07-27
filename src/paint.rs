@@ -61,7 +61,6 @@ impl<'a> Painter<'a> {
                 minus_line_syntax_style_sections,
                 minus_line_diff_style_sections,
             );
-            self.minus_lines.clear();
         }
         if self.plus_lines.len() > 0 {
             Painter::paint_lines(
@@ -69,8 +68,9 @@ impl<'a> Painter<'a> {
                 plus_line_syntax_style_sections,
                 plus_line_diff_style_sections,
             );
-            self.plus_lines.clear();
         }
+        self.minus_lines.clear();
+        self.plus_lines.clear();
     }
 
     /// Superimpose background styles and foreground syntax
@@ -138,13 +138,13 @@ impl<'a> Painter<'a> {
     }
 
     /// Set background styles to represent diff for minus and plus lines in buffer.
-    fn get_diff_style_sections<'m, 'p>(
-        minus_lines: &'m Vec<String>,
-        plus_lines: &'p Vec<String>,
+    fn get_diff_style_sections<'b>(
+        minus_lines: &'b Vec<String>,
+        plus_lines: &'b Vec<String>,
         config: &config::Config,
     ) -> (
-        Vec<Vec<(StyleModifier, &'m str)>>,
-        Vec<Vec<(StyleModifier, &'p str)>>,
+        Vec<Vec<(StyleModifier, &'b str)>>,
+        Vec<Vec<(StyleModifier, &'b str)>>,
     ) {
         if minus_lines.len() == plus_lines.len() {
             edits::infer_edit_sections(
