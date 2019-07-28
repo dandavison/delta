@@ -124,6 +124,23 @@ mod line_pair {
             }
         }
 
+        #[allow(dead_code)]
+        pub fn format(&self) -> String {
+            format!(
+                "LinePair\n \
+                 \t{} {} {}\n \
+                 \t{} {} {}\n \
+                 \t{}",
+                self.minus_line.trim_end(),
+                self.minus_edit.start,
+                self.minus_edit.end,
+                self.plus_line.trim_end(),
+                self.plus_edit.start,
+                self.plus_edit.end,
+                self.distance
+            )
+        }
+
         /// Align the two strings at their left ends and consider only the bytes up to the length of
         /// the shorter string. Return the byte offset of the first differing grapheme cluster, or
         /// the byte length of shorter string if they do not differ.
