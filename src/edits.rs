@@ -1,5 +1,4 @@
 use crate::edits::line_pair::LinePair;
-use crate::interleavings;
 
 /// Infer the edit operations responsible for the differences between a collection of old and new
 /// lines.
@@ -46,123 +45,7 @@ where
     let mut minus_line_sections = Vec::new();
     let mut plus_line_sections = Vec::new();
 
-    for assignment in LineAssignments::infer(minus_lines, plus_lines).assignments {
-        match assignment {
-            LineAssignment::LinePair(LinePair {
-                minus_line,
-                plus_line,
-                minus_edit,
-                plus_edit,
-                distance,
-            }) => {
-                if distance < distance_threshold {
-                    minus_line_sections.push(vec![
-                        (non_deletion, &minus_line[0..minus_edit.start]),
-                        (deletion, &minus_line[minus_edit.start..minus_edit.end]),
-                        (non_deletion, &minus_line[minus_edit.end..]),
-                    ]);
-                    plus_line_sections.push(vec![
-                        (non_insertion, &plus_line[0..plus_edit.start]),
-                        (insertion, &plus_line[plus_edit.start..plus_edit.end]),
-                        (non_insertion, &plus_line[plus_edit.end..]),
-                    ]);
-                } else {
-                    minus_line_sections.push(vec![(non_deletion, minus_line)]);
-                    plus_line_sections.push(vec![(non_insertion, plus_line)]);
-                }
-            }
-            LineAssignment::Line(Minus(line)) => {
-                minus_line_sections.push(vec![(non_deletion, line)])
-            }
-            LineAssignment::Line(Plus(line)) => {
-                plus_line_sections.push(vec![(non_insertion, line)])
-            }
-        }
-    }
     (minus_line_sections, plus_line_sections)
-}
-
-pub enum PolarizedLine<'a> {
-    Minus(&'a str),
-    Plus(&'a str),
-}
-
-use PolarizedLine::*;
-
-enum LineAssignment<'a> {
-    LinePair(LinePair<'a>),
-    Line(PolarizedLine<'a>),
-}
-
-struct LineAssignments<'a> {
-    assignments: Vec<LineAssignment<'a>>,
-}
-
-impl<'a> LineAssignments<'a> {
-    fn infer(minus_lines: &'a Vec<String>, plus_lines: &'a Vec<String>) -> Self {
-        interleavings::interleavings(
-            &minus_lines
-                .iter()
-                .map(|line| Minus(line))
-                .collect::<Vec<PolarizedLine>>(),
-            &plus_lines
-                .iter()
-                .map(|line| Plus(line))
-                .collect::<Vec<PolarizedLine>>(),
-        )
-        .iter()
-        .map(LineAssignments::from_interleaving)
-        .min_by(|las_1, las_2| las_1.distance().partial_cmp(&las_2.distance()).unwrap())
-        .unwrap()
-    }
-
-    // In the interleaving, a Minus followed by a Plus is a pair of lines to be scored for homology
-    // and thus possibly painted according to their inferred edits. All other lines in the
-    // interleaving should be emitted as normal.
-    // For example, suppose the interleaving is
-    // m p m m p
-    // This should be emitted as
-    // [(m,p), m, (m,p)]
-    // To do so we iterate over windows of size two:
-    // [mp, pm, mm, mp]
-    //  2,  -,  1, 2
-    // Where the annotations mean
-    // 2: emit a LinePair containing this window of 2 lines
-    // 1: emit the first line of the window, alone
-    // -: skip this window of lines
-    pub fn from_interleaving(interleaving: &Vec<&PolarizedLine<'a>>) -> Self {
-        let mut assignments = Vec::with_capacity(interleaving.len());
-        let windows = interleaving.windows(2);
-        let mut skip = false;
-        for window in windows {
-            if skip {
-                skip = false;
-                continue;
-            }
-            match window {
-                [Minus(minus), Plus(plus)] => {
-                    assignments.push(LineAssignment::LinePair(LinePair::new(minus, plus)));
-                    // We've consumed both lines in this window, so we've consumed the first line of
-                    // the next window, so we must skip it.
-                    skip = true;
-                }
-                [Minus(minus), _] => assignments.push(LineAssignment::Line(Minus(minus))),
-                [Plus(plus), _] => assignments.push(LineAssignment::Line(Plus(plus))),
-                _ => panic!("Impossible"),
-            }
-        }
-        Self { assignments }
-    }
-
-    pub fn distance(&self) -> f64 {
-        self.assignments
-            .iter()
-            .map(|la| match la {
-                LineAssignment::LinePair(lp) => lp.distance,
-                _ => 1f64,
-            })
-            .sum()
-    }
 }
 
 mod line_pair {
