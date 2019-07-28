@@ -106,6 +106,7 @@ mod line_pair {
         pub distance: f64,
     }
 
+    #[derive(Debug)]
     pub struct Edit {
         pub start: usize,
         pub end: usize,
@@ -305,6 +306,7 @@ mod line_pair {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use unicode_segmentation::UnicodeSegmentation;
 
     #[derive(Clone, Copy, Debug, PartialEq)]
     enum EditOperationTag {
@@ -320,85 +322,75 @@ mod tests {
 
     #[test]
     fn test_infer_edit_sections_1() {
-        let minus_lines = vec!["aaa\n".to_string()];
-        let plus_lines = vec!["aba\n".to_string()];
-        let actual_edits = infer_edit_sections(
-            &minus_lines,
-            &plus_lines,
-            MinusNoop,
-            Deletion,
-            PlusNoop,
-            Insertion,
-            DISTANCE_MAX,
-        );
-        let expected_edits = (
-            vec![vec![(MinusNoop, "a"), (Deletion, "a"), (MinusNoop, "a\n")]],
-            vec![vec![(PlusNoop, "a"), (Insertion, "b"), (PlusNoop, "a\n")]],
-        );
-
-        assert_consistent(&expected_edits);
-        assert_consistent(&actual_edits);
-        assert_eq!(actual_edits, expected_edits);
+        assert_edits(
+            vec!["aaa\n"],
+            vec!["aba\n"],
+            (
+                vec![vec![(MinusNoop, "a"), (Deletion, "a"), (MinusNoop, "a\n")]],
+                vec![vec![(PlusNoop, "a"), (Insertion, "b"), (PlusNoop, "a\n")]],
+            ),
+        )
     }
 
     #[test]
     fn test_infer_edit_sections_1_nonascii() {
-        let minus_lines = vec!["áaa\n".to_string()];
-        let plus_lines = vec!["ááb\n".to_string()];
-        let actual_edits = infer_edit_sections(
-            &minus_lines,
-            &plus_lines,
-            MinusNoop,
-            Deletion,
-            PlusNoop,
-            Insertion,
-            DISTANCE_MAX,
-        );
-        let expected_edits = (
-            vec![vec![(MinusNoop, "á"), (Deletion, "aa"), (MinusNoop, "\n")]],
-            vec![vec![(PlusNoop, "á"), (Insertion, "áb"), (PlusNoop, "\n")]],
-        );
-
-        assert_consistent(&expected_edits);
-        assert_consistent(&actual_edits);
-        assert_eq!(actual_edits, expected_edits);
+        assert_edits(
+            vec!["áaa\n"],
+            vec!["ááb\n"],
+            (
+                vec![vec![(MinusNoop, "á"), (Deletion, "aa"), (MinusNoop, "\n")]],
+                vec![vec![(PlusNoop, "á"), (Insertion, "áb"), (PlusNoop, "\n")]],
+            ),
+        )
     }
 
     #[test]
     fn test_infer_edit_sections_2() {
-        let minus_lines = vec!["d.iteritems()\n".to_string()];
-        let plus_lines = vec!["d.items()\n".to_string()];
-
-        let actual_edits = infer_edit_sections(
-            &minus_lines,
-            &plus_lines,
-            MinusNoop,
-            Deletion,
-            PlusNoop,
-            Insertion,
-            DISTANCE_MAX,
-        );
-        let expected_edits = (
-            vec![vec![
-                (MinusNoop, "d."),
-                (Deletion, "iter"),
-                (MinusNoop, "items()\n"),
-            ]],
-            vec![vec![
-                (PlusNoop, "d."),
-                (Insertion, ""),
-                (PlusNoop, "items()\n"),
-            ]],
-        );
-        assert_consistent(&expected_edits);
-        assert_consistent(&actual_edits);
-        assert_eq!(actual_edits, expected_edits);
+        assert_edits(
+            vec!["d.iteritems()\n"],
+            vec!["d.items()\n"],
+            (
+                vec![vec![
+                    (MinusNoop, "d."),
+                    (Deletion, "iter"),
+                    (MinusNoop, "items()\n"),
+                ]],
+                vec![vec![
+                    (PlusNoop, "d."),
+                    (Insertion, ""),
+                    (PlusNoop, "items()\n"),
+                ]],
+            ),
+        )
     }
 
     type EditSection<'a> = (EditOperationTag, &'a str);
     type EditSections<'a> = Vec<EditSection<'a>>;
     type LineEditSections<'a> = Vec<EditSections<'a>>;
     type Edits<'a> = (LineEditSections<'a>, LineEditSections<'a>);
+
+    fn assert_edits(minus_lines: Vec<&str>, plus_lines: Vec<&str>, expected_edits: Edits) {
+        let minus_lines = minus_lines
+            .into_iter()
+            .map(|s| s.to_string())
+            .collect::<Vec<String>>();
+        let plus_lines = plus_lines
+            .into_iter()
+            .map(|s| s.to_string())
+            .collect::<Vec<String>>();
+        let actual_edits = infer_edit_sections(
+            &minus_lines,
+            &plus_lines,
+            MinusNoop,
+            Deletion,
+            PlusNoop,
+            Insertion,
+            DISTANCE_MAX,
+        );
+        assert_consistent(&expected_edits);
+        assert_consistent(&actual_edits);
+        assert_eq!(actual_edits, expected_edits);
+    }
 
     fn assert_consistent(edits: &Edits) {
         let (minus_line_edit_sections, plus_line_edit_sections) = edits;
@@ -407,7 +399,23 @@ mod tests {
         {
             let (minus_total, minus_delta) = summarize_edit_sections(minus_edit_sections);
             let (plus_total, plus_delta) = summarize_edit_sections(plus_edit_sections);
-            assert_eq!(minus_total - minus_delta, plus_total - plus_delta);
+            assert_eq!(
+                minus_total - minus_delta,
+                plus_total - plus_delta,
+                "\nInconsistent edits:\n \
+                 {:?}\n \
+                 \tminus_total - minus_delta = {} - {} = {}\n \
+                 {:?}\n \
+                 \tplus_total  - plus_delta  = {} - {} = {}\n",
+                minus_edit_sections,
+                minus_total,
+                minus_delta,
+                minus_total - minus_delta,
+                plus_edit_sections,
+                plus_total,
+                plus_delta,
+                plus_total - plus_delta
+            );
         }
     }
 
@@ -415,9 +423,10 @@ mod tests {
         let mut total = 0;
         let mut delta = 0;
         for (edit, s) in sections {
-            total += s.len();
+            let length = s.graphemes(true).count();
+            total += length;
             if is_edit(edit) {
-                delta += s.len();
+                delta += length;
             }
         }
         (total, delta)
