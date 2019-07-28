@@ -42,8 +42,51 @@ pub fn infer_edit_sections<'a, EditOperationTag>(
 where
     EditOperationTag: Copy,
 {
-    let mut minus_line_sections = Vec::new();
-    let mut plus_line_sections = Vec::new();
+    let mut minus_line_sections = Vec::<Vec<(EditOperationTag, &'a str)>>::new();
+    let mut plus_line_sections = Vec::<Vec<(EditOperationTag, &'a str)>>::new();
+
+    let mut emitted = 0; // plus lines emitted so far
+
+    'minus_lines_loop: for minus_line in minus_lines {
+        let mut considered = 0; // plus lines considered so far as match for minus_line
+        for plus_line in &plus_lines[emitted..] {
+            let line_pair = LinePair::new(minus_line, plus_line);
+            if line_pair.distance < distance_threshold {
+                // minus_line and plus_line are inferred to be a homologous pair.
+
+                // Emit as unpaired the plus lines already considered and rejected
+                for plus_line in &plus_lines[emitted..(emitted + considered)] {
+                    plus_line_sections.push(vec![(non_insertion, plus_line)]);
+                }
+                emitted += considered;
+
+                // Emit the homologous pair.
+                let (minus_edit, plus_edit) = (line_pair.minus_edit, line_pair.plus_edit);
+                minus_line_sections.push(vec![
+                    (non_deletion, &minus_line[0..minus_edit.start]),
+                    (deletion, &minus_line[minus_edit.start..minus_edit.end]),
+                    (non_deletion, &minus_line[minus_edit.end..]),
+                ]);
+                plus_line_sections.push(vec![
+                    (non_insertion, &plus_line[0..plus_edit.start]),
+                    (insertion, &plus_line[plus_edit.start..plus_edit.end]),
+                    (non_insertion, &plus_line[plus_edit.end..]),
+                ]);
+                emitted += 1;
+
+                // Move on to the next minus line.
+                continue 'minus_lines_loop;
+            } else {
+                considered += 1;
+            }
+        }
+        // No homolog was found for minus i; emit as unpaired.
+        minus_line_sections.push(vec![(non_deletion, minus_line)]);
+    }
+    // Emit any remaining plus lines
+    for plus_line in &plus_lines[emitted..] {
+        plus_line_sections.push(vec![(non_insertion, plus_line)]);
+    }
 
     (minus_line_sections, plus_line_sections)
 }
