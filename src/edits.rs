@@ -113,7 +113,6 @@ mod line_pair {
     }
 
     impl Edit {
-        // TODO: exclude leading whitespace in this calculation
         fn distance(&self) -> f64 {
             (self.end - self.start) as f64 / self.string_length as f64
         }
@@ -163,12 +162,12 @@ mod line_pair {
             let minus_edit = Edit {
                 start: change_begin[0],
                 end: minus_change_end,
-                string_length: minus_length,
+                string_length: minus_length - leading_whitespace[0],
             };
             let plus_edit = Edit {
                 start: change_begin[1],
                 end: plus_change_end,
-                string_length: plus_length,
+                string_length: plus_length - leading_whitespace[1],
             };
             let distance = minus_edit.distance() + plus_edit.distance();
             LinePair {
