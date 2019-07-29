@@ -544,7 +544,7 @@ mod tests {
     #[allow(dead_code)]
     fn print_annotated_line(annotated_line: AnnotatedLine) {
         for (edit, s) in annotated_line {
-            print!("({} {}), ", fmt_edit(edit), s);
+            print!("({} {}), ", fmt_edit(edit), s.trim_end());
         }
         print!("\n");
     }
