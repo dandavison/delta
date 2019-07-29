@@ -413,6 +413,27 @@ mod tests {
         )
     }
 
+    #[test]
+    fn test_infer_edits_6() {
+        assert_no_edits(
+            vec![
+                "             let mut i = 0;\n",
+                "             for ((_, c0), (_, c1)) in s0.zip(s1) {\n",
+                "                 if c0 != c1 {\n",
+                "                     break;\n",
+                "                 } else {\n",
+                "                     i += c0.len();\n",
+                "                 }\n",
+                "             }\n",
+                "             i\n",
+            ],
+            vec![
+                "             s0.zip(s1)\n",
+                "                 .take_while(|((_, c0), (_, c1))| c0 == c1) // TODO: Don't consume one-past-the-end!\n",
+                "                 .fold(0, |offset, ((_, c0), (_, _))| offset + c0.len())\n"
+            ], 0.66)
+    }
+
     fn assert_edits(
         minus_lines: Vec<&str>,
         plus_lines: Vec<&str>,
@@ -437,6 +458,15 @@ mod tests {
             distance_threshold,
         );
         assert_eq!(actual_edits, expected_edits);
+    }
+
+    // Assert that no edits are inferred for the supplied minus and plus lines.
+    fn assert_no_edits(minus_lines: Vec<&str>, plus_lines: Vec<&str>, distance_threshold: f64) {
+        let expected_edits = (
+            minus_lines.iter().map(|s| vec![(MinusNoop, *s)]).collect(),
+            plus_lines.iter().map(|s| vec![(PlusNoop, *s)]).collect(),
+        );
+        assert_edits(minus_lines, plus_lines, expected_edits, distance_threshold)
     }
 
     // Assertions for a single pair of lines, considered as a homologous pair. We set
