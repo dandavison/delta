@@ -1,13 +1,7 @@
 use crate::edits::line_pair::LinePair;
 
-/// Infer the edit operations responsible for the differences between a collection of old and new
-/// lines.
 /*
-  This function is called iff a region of n minus lines followed by n plus lines is encountered,
-  e.g. n successive lines have been partially changed.
-
-  Consider the i-th such line and let m, p be the i-th minus and i-th plus line, respectively.  The
-  following cases exist:
+  Consider minus line m and paired plus line p, respectively.  The following cases exist:
 
   1. Whitespace deleted at line beginning.
      => The deleted section is highlighted in m; p is unstyled.
@@ -27,23 +21,28 @@ use crate::edits::line_pair::LinePair;
   Note that whitespace can be neither deleted nor inserted at the end of the line: the line by
   definition has no trailing whitespace.
 */
-pub fn infer_edit_sections<'a, EditOperationTag>(
+
+type AnnotatedLine<'a, EditOperation> = Vec<(EditOperation, &'a str)>;
+
+/// Infer the edit operations responsible for the differences between a collection of old and new
+/// lines. Return the input minus and plus lines, in annotated form.
+pub fn infer_edits<'a, EditOperation>(
     minus_lines: &'a Vec<String>,
     plus_lines: &'a Vec<String>,
-    non_deletion: EditOperationTag,
-    deletion: EditOperationTag,
-    non_insertion: EditOperationTag,
-    insertion: EditOperationTag,
+    non_deletion: EditOperation,
+    deletion: EditOperation,
+    non_insertion: EditOperation,
+    insertion: EditOperation,
     distance_threshold: f64,
 ) -> (
-    Vec<Vec<(EditOperationTag, &'a str)>>,
-    Vec<Vec<(EditOperationTag, &'a str)>>,
+    Vec<AnnotatedLine<'a, EditOperation>>,
+    Vec<AnnotatedLine<'a, EditOperation>>,
 )
 where
-    EditOperationTag: Copy,
+    EditOperation: Copy,
 {
-    let mut minus_line_sections = Vec::<Vec<(EditOperationTag, &'a str)>>::new();
-    let mut plus_line_sections = Vec::<Vec<(EditOperationTag, &'a str)>>::new();
+    let mut annotated_minus_lines = Vec::<AnnotatedLine<EditOperation>>::new();
+    let mut annotated_plus_lines = Vec::<AnnotatedLine<EditOperation>>::new();
 
     let mut emitted = 0; // plus lines emitted so far
 
@@ -56,18 +55,18 @@ where
 
                 // Emit as unpaired the plus lines already considered and rejected
                 for plus_line in &plus_lines[emitted..(emitted + considered)] {
-                    plus_line_sections.push(vec![(non_insertion, plus_line)]);
+                    annotated_plus_lines.push(vec![(non_insertion, plus_line)]);
                 }
                 emitted += considered;
 
                 // Emit the homologous pair.
                 let (minus_edit, plus_edit) = (line_pair.minus_edit, line_pair.plus_edit);
-                minus_line_sections.push(vec![
+                annotated_minus_lines.push(vec![
                     (non_deletion, &minus_line[0..minus_edit.start]),
                     (deletion, &minus_line[minus_edit.start..minus_edit.end]),
                     (non_deletion, &minus_line[minus_edit.end..]),
                 ]);
-                plus_line_sections.push(vec![
+                annotated_plus_lines.push(vec![
                     (non_insertion, &plus_line[0..plus_edit.start]),
                     (insertion, &plus_line[plus_edit.start..plus_edit.end]),
                     (non_insertion, &plus_line[plus_edit.end..]),
@@ -81,14 +80,14 @@ where
             }
         }
         // No homolog was found for minus i; emit as unpaired.
-        minus_line_sections.push(vec![(non_deletion, minus_line)]);
+        annotated_minus_lines.push(vec![(non_deletion, minus_line)]);
     }
     // Emit any remaining plus lines
     for plus_line in &plus_lines[emitted..] {
-        plus_line_sections.push(vec![(non_insertion, plus_line)]);
+        annotated_plus_lines.push(vec![(non_insertion, plus_line)]);
     }
 
-    (minus_line_sections, plus_line_sections)
+    (annotated_minus_lines, annotated_plus_lines)
 }
 
 mod line_pair {
@@ -309,20 +308,25 @@ mod tests {
     use unicode_segmentation::UnicodeSegmentation;
 
     #[derive(Clone, Copy, Debug, PartialEq)]
-    enum EditOperationTag {
+    enum EditOperation {
         MinusNoop,
         PlusNoop,
         Deletion,
         Insertion,
     }
 
-    use EditOperationTag::*;
+    type Annotation<'a> = (EditOperation, &'a str);
+    type AnnotatedLine<'a> = Vec<Annotation<'a>>;
+    type AnnotatedLines<'a> = Vec<AnnotatedLine<'a>>;
+    type Edits<'a> = (AnnotatedLines<'a>, AnnotatedLines<'a>);
+
+    use EditOperation::*;
 
     const DISTANCE_MAX: f64 = 2.0;
 
     #[test]
-    fn test_infer_edit_sections_1() {
-        assert_edits(
+    fn test_infer_edits_1() {
+        assert_paired_edits(
             vec!["aaa\n"],
             vec!["aba\n"],
             (
@@ -333,8 +337,8 @@ mod tests {
     }
 
     #[test]
-    fn test_infer_edit_sections_1_nonascii() {
-        assert_edits(
+    fn test_infer_edits_2() {
+        assert_paired_edits(
             vec!["áaa\n"],
             vec!["ááb\n"],
             (
@@ -345,8 +349,8 @@ mod tests {
     }
 
     #[test]
-    fn test_infer_edit_sections_2() {
-        assert_edits(
+    fn test_infer_edits_3() {
+        assert_paired_edits(
             vec!["d.iteritems()\n"],
             vec!["d.items()\n"],
             (
@@ -364,12 +368,12 @@ mod tests {
         )
     }
 
-    type EditSection<'a> = (EditOperationTag, &'a str);
-    type EditSections<'a> = Vec<EditSection<'a>>;
-    type LineEditSections<'a> = Vec<EditSections<'a>>;
-    type Edits<'a> = (LineEditSections<'a>, LineEditSections<'a>);
-
-    fn assert_edits(minus_lines: Vec<&str>, plus_lines: Vec<&str>, expected_edits: Edits) {
+    fn assert_edits(
+        minus_lines: Vec<&str>,
+        plus_lines: Vec<&str>,
+        expected_edits: Edits,
+        distance_threshold: f64,
+    ) {
         let minus_lines = minus_lines
             .into_iter()
             .map(|s| s.to_string())
@@ -378,27 +382,33 @@ mod tests {
             .into_iter()
             .map(|s| s.to_string())
             .collect::<Vec<String>>();
-        let actual_edits = infer_edit_sections(
+        let actual_edits = infer_edits(
             &minus_lines,
             &plus_lines,
             MinusNoop,
             Deletion,
             PlusNoop,
             Insertion,
-            DISTANCE_MAX,
+            distance_threshold,
         );
-        assert_consistent(&expected_edits);
-        assert_consistent(&actual_edits);
         assert_eq!(actual_edits, expected_edits);
     }
 
-    fn assert_consistent(edits: &Edits) {
-        let (minus_line_edit_sections, plus_line_edit_sections) = edits;
-        for (minus_edit_sections, plus_edit_sections) in
-            minus_line_edit_sections.iter().zip(plus_line_edit_sections)
+    // Assertions for a single pair of lines, considered as a homologous pair. We set
+    // distance_threshold = DISTANCE_MAX in order that the pair will be inferred to be homologous.
+    fn assert_paired_edits(minus_lines: Vec<&str>, plus_lines: Vec<&str>, expected_edits: Edits) {
+        assert_consistent_pairs(&expected_edits);
+        assert_edits(minus_lines, plus_lines, expected_edits, DISTANCE_MAX);
+    }
+
+    fn assert_consistent_pairs(edits: &Edits) {
+        let (minus_annotated_lines, plus_annotated_lines) = edits;
+
+        for (minus_annotated_line, plus_annotated_line) in
+            minus_annotated_lines.iter().zip(plus_annotated_lines)
         {
-            let (minus_total, minus_delta) = summarize_edit_sections(minus_edit_sections);
-            let (plus_total, plus_delta) = summarize_edit_sections(plus_edit_sections);
+            let (minus_total, minus_delta) = summarize_annotated_line(minus_annotated_line);
+            let (plus_total, plus_delta) = summarize_annotated_line(plus_annotated_line);
             assert_eq!(
                 minus_total - minus_delta,
                 plus_total - plus_delta,
@@ -407,11 +417,11 @@ mod tests {
                  \tminus_total - minus_delta = {} - {} = {}\n \
                  {:?}\n \
                  \tplus_total  - plus_delta  = {} - {} = {}\n",
-                minus_edit_sections,
+                minus_annotated_line,
                 minus_total,
                 minus_delta,
                 minus_total - minus_delta,
-                plus_edit_sections,
+                plus_annotated_line,
                 plus_total,
                 plus_delta,
                 plus_total - plus_delta
@@ -419,7 +429,7 @@ mod tests {
         }
     }
 
-    fn summarize_edit_sections(sections: &EditSections) -> (usize, usize) {
+    fn summarize_annotated_line(sections: &AnnotatedLine) -> (usize, usize) {
         let mut total = 0;
         let mut delta = 0;
         for (edit, s) in sections {
@@ -435,37 +445,37 @@ mod tests {
     // For debugging test failures:
 
     #[allow(dead_code)]
-    fn compare_edit_sections(actual: Edits, expected: Edits) {
+    fn compare_annotated_lines(actual: Edits, expected: Edits) {
         let (minus, plus) = actual;
-        println!("actual minus:");
-        print_line_edit_sections(minus);
-        println!("actual plus:");
-        print_line_edit_sections(plus);
+        println!("\n\nactual minus:");
+        print_annotated_lines(minus);
+        println!("\nactual plus:");
+        print_annotated_lines(plus);
 
         let (minus, plus) = expected;
-        println!("expected minus:");
-        print_line_edit_sections(minus);
-        println!("expected plus:");
-        print_line_edit_sections(plus);
+        println!("\n\nexpected minus:");
+        print_annotated_lines(minus);
+        println!("\nexpected plus:");
+        print_annotated_lines(plus);
     }
 
     #[allow(dead_code)]
-    fn print_line_edit_sections(line_edit_sections: LineEditSections) {
-        for edit_sections in line_edit_sections {
-            print_edit_sections(edit_sections);
+    fn print_annotated_lines(annotated_lines: AnnotatedLines) {
+        for annotated_line in annotated_lines {
+            print_annotated_line(annotated_line);
         }
     }
 
     #[allow(dead_code)]
-    fn print_edit_sections(edit_sections: EditSections) {
-        for (edit, s) in edit_sections {
+    fn print_annotated_line(annotated_line: AnnotatedLine) {
+        for (edit, s) in annotated_line {
             print!("({} {}), ", fmt_edit(edit), s);
         }
         print!("\n");
     }
 
     #[allow(dead_code)]
-    fn fmt_edit(edit: EditOperationTag) -> &'static str {
+    fn fmt_edit(edit: EditOperation) -> &'static str {
         match edit {
             MinusNoop => "MinusNoop",
             Deletion => "Deletion",
@@ -474,7 +484,7 @@ mod tests {
         }
     }
 
-    fn is_edit(edit: &EditOperationTag) -> bool {
+    fn is_edit(edit: &EditOperation) -> bool {
         *edit == Deletion || *edit == Insertion
     }
 

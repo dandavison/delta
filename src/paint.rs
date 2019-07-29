@@ -146,7 +146,7 @@ impl<'a> Painter<'a> {
         Vec<Vec<(StyleModifier, &'b str)>>,
         Vec<Vec<(StyleModifier, &'b str)>>,
     ) {
-        edits::infer_edit_sections(
+        edits::infer_edits(
             minus_lines,
             plus_lines,
             config.minus_style_modifier,
