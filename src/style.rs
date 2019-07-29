@@ -57,16 +57,16 @@ pub const DARK_THEME_MINUS_EMPH_COLOR: Color = Color {
 };
 
 pub const DARK_THEME_PLUS_COLOR: Color = Color {
-    r: 0x01,
-    g: 0x3B,
-    b: 0x01,
+    r: 0x00,
+    g: 0x28,
+    b: 0x00,
     a: 0xff,
 };
 
 pub const DARK_THEME_PLUS_EMPH_COLOR: Color = Color {
-    r: 0x11,
-    g: 0x80,
-    b: 0x11,
+    r: 0x0E,
+    g: 0x7C,
+    b: 0x0E,
     a: 0xff,
 };
 
