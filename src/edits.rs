@@ -368,6 +368,51 @@ mod tests {
         )
     }
 
+    #[test]
+    fn test_infer_edits_4() {
+        assert_edits(
+            vec!["áaaáaaáaa\n", "áábáábááb\n"],
+            vec!["áábáácááb\n"],
+            (
+                vec![
+                    vec![(MinusNoop, "áaaáaaáaa\n")],
+                    vec![
+                        (MinusNoop, "áábáá"),
+                        (Deletion, "b"),
+                        (MinusNoop, "ááb\n"),
+                    ],
+                ],
+                vec![vec![
+                    (PlusNoop, "áábáá"),
+                    (Insertion, "c"),
+                    (PlusNoop, "ááb\n"),
+                ]],
+            ),
+            0.66,
+        )
+    }
+
+    #[test]
+    fn test_infer_edits_5() {
+        assert_edits(
+            vec!["aaaaaaaa\n", "bbbbbbbb\n", "cccccccc\n"],
+            vec!["bbbb!bbb\n", "dddddddd\n", "cccc!ccc\n"],
+            (
+                vec![
+                    vec![(MinusNoop, "aaaaaaaa\n")],
+                    vec![(MinusNoop, "bbbb"), (Deletion, "b"), (MinusNoop, "bbb\n")],
+                    vec![(MinusNoop, "cccc"), (Deletion, "c"), (MinusNoop, "ccc\n")],
+                ],
+                vec![
+                    vec![(PlusNoop, "bbbb"), (Insertion, "!"), (PlusNoop, "bbb\n")],
+                    vec![(PlusNoop, "dddddddd\n")],
+                    vec![(PlusNoop, "cccc"), (Insertion, "!"), (PlusNoop, "ccc\n")],
+                ],
+            ),
+            0.66,
+        )
+    }
+
     fn assert_edits(
         minus_lines: Vec<&str>,
         plus_lines: Vec<&str>,
