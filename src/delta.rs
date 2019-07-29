@@ -145,7 +145,7 @@ fn handle_file_meta_header_line(
         cli::SectionStyle::Underline => draw::write_underlined,
         cli::SectionStyle::Plain => panic!(),
     };
-    let ansi_style = Blue.bold();
+    let ansi_style = Blue.normal();
     write!(painter.writer, "\n")?;
     draw_fn(
         painter.writer,
@@ -154,7 +154,7 @@ fn handle_file_meta_header_line(
         )),
         config.terminal_width,
         ansi_style,
-        true,
+        false,
     )?;
     Ok(())
 }

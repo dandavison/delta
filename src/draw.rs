@@ -47,7 +47,7 @@ pub fn write_underlined(
     line_style: Style,
     heavy: bool,
 ) -> std::io::Result<()> {
-    writeln!(writer, "{}", text)?;
+    writeln!(writer, "{}", line_style.paint(text))?;
     write_horizontal_line(writer, line_width, line_style, heavy)?;
     Ok(())
 }
@@ -116,7 +116,7 @@ fn write_boxed_partial(
         "{}{}\n{} {}\n{}",
         line_style.paint(&horizontal_edge),
         line_style.paint(down_left),
-        text,
+        line_style.paint(text),
         line_style.paint(vertical),
         line_style.paint(&horizontal_edge),
     )
