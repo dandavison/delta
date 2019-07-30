@@ -80,12 +80,14 @@ impl<'a> Painter<'a> {
         syntax_style_sections: Vec<Vec<(Style, &str)>>,
         diff_style_sections: Vec<Vec<(StyleModifier, &str)>>,
     ) {
+        use std::fmt::Write;
         for (syntax_sections, diff_sections) in
             syntax_style_sections.iter().zip(diff_style_sections.iter())
         {
             for (style, text) in superimpose_style_sections(syntax_sections, diff_sections) {
                 paint_text(&text, style, output_buffer).unwrap();
             }
+            write!(output_buffer, "\n").unwrap();
         }
     }
 

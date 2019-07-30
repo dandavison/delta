@@ -1,31 +1,11 @@
-use crate::edits::line_pair::LinePair;
+use unicode_segmentation::UnicodeSegmentation;
 
-/*
-  Consider minus line m and paired plus line p, respectively.  The following cases exist:
-
-  1. Whitespace deleted at line beginning.
-     => The deleted section is highlighted in m; p is unstyled.
-
-  2. Whitespace inserted at line beginning.
-     => The inserted section is highlighted in p; m is unstyled.
-
-  3. An internal section of the line containing a non-whitespace character has been deleted.
-     => The deleted section is highlighted in m; p is unstyled.
-
-  4. An internal section of the line containing a non-whitespace character has been changed.
-     => The original section is highlighted in m; the replacement is highlighted in p.
-
-  5. An internal section of the line containing a non-whitespace character has been inserted.
-     => The inserted section is highlighted in p; m is unstyled.
-
-  Note that whitespace can be neither deleted nor inserted at the end of the line: the line by
-  definition has no trailing whitespace.
-*/
-
-type AnnotatedLine<'a, EditOperation> = Vec<(EditOperation, &'a str)>;
+use crate::align;
 
 /// Infer the edit operations responsible for the differences between a collection of old and new
-/// lines. Return the input minus and plus lines, in annotated form.
+/// lines. A "line" is a string. An annotated line is a Vec of (op, &str) pairs, where the &str
+/// slices are slices of the line, and their concatenation equals the line. Return the input minus
+/// and plus lines, in annotated form.
 pub fn infer_edits<'a, EditOperation>(
     minus_lines: &'a Vec<String>,
     plus_lines: &'a Vec<String>,
@@ -35,42 +15,58 @@ pub fn infer_edits<'a, EditOperation>(
     insertion: EditOperation,
     distance_threshold: f64,
 ) -> (
-    Vec<AnnotatedLine<'a, EditOperation>>,
-    Vec<AnnotatedLine<'a, EditOperation>>,
+    Vec<Vec<(EditOperation, &'a str)>>, // annotated minus lines
+    Vec<Vec<(EditOperation, &'a str)>>, // annotated plus lines
 )
 where
     EditOperation: Copy,
+    EditOperation: PartialEq,
 {
-    let mut annotated_minus_lines = Vec::<AnnotatedLine<EditOperation>>::new();
-    let mut annotated_plus_lines = Vec::<AnnotatedLine<EditOperation>>::new();
+    let mut annotated_minus_lines = Vec::<Vec<(EditOperation, &str)>>::new();
+    let mut annotated_plus_lines = Vec::<Vec<(EditOperation, &str)>>::new();
 
     let mut emitted = 0; // plus lines emitted so far
 
     'minus_lines_loop: for minus_line in minus_lines {
         let mut considered = 0; // plus lines considered so far as match for minus_line
+        let minus_line = minus_line.trim_end();
         for plus_line in &plus_lines[emitted..] {
-            let line_pair = LinePair::new(minus_line, plus_line);
-            if line_pair.distance < distance_threshold {
+            let plus_line = plus_line.trim_end();
+            let alignment = align::Alignment::new(
+                minus_line
+                    .grapheme_indices(true)
+                    .collect::<Vec<(usize, &str)>>(),
+                plus_line
+                    .grapheme_indices(true)
+                    .collect::<Vec<(usize, &str)>>(),
+            );
+
+            if alignment.normalized_edit_distance() < distance_threshold {
                 // minus_line and plus_line are inferred to be a homologous pair.
 
                 // Emit as unpaired the plus lines already considered and rejected
                 for plus_line in &plus_lines[emitted..(emitted + considered)] {
-                    annotated_plus_lines.push(vec![(non_insertion, plus_line)]);
+                    annotated_plus_lines.push(vec![(non_insertion, plus_line.trim_end())]);
                 }
                 emitted += considered;
 
                 // Emit the homologous pair.
-                let (minus_edit, plus_edit) = (line_pair.minus_edit, line_pair.plus_edit);
-                annotated_minus_lines.push(vec![
-                    (non_deletion, &minus_line[0..minus_edit.start]),
-                    (deletion, &minus_line[minus_edit.start..minus_edit.end]),
-                    (non_deletion, &minus_line[minus_edit.end..]),
-                ]);
-                annotated_plus_lines.push(vec![
-                    (non_insertion, &plus_line[0..plus_edit.start]),
-                    (insertion, &plus_line[plus_edit.start..plus_edit.end]),
-                    (non_insertion, &plus_line[plus_edit.end..]),
-                ]);
+                annotated_minus_lines.push(coalesce_minus_edits(
+                    &alignment,
+                    minus_line,
+                    non_deletion,
+                    deletion,
+                    non_insertion,
+                    insertion,
+                ));
+                annotated_plus_lines.push(coalesce_plus_edits(
+                    &alignment,
+                    plus_line,
+                    non_deletion,
+                    deletion,
+                    non_insertion,
+                    insertion,
+                ));
                 emitted += 1;
 
                 // Move on to the next minus line.
@@ -80,260 +76,85 @@ where
             }
         }
         // No homolog was found for minus i; emit as unpaired.
-        annotated_minus_lines.push(vec![(non_deletion, minus_line)]);
+        annotated_minus_lines.push(vec![(non_deletion, minus_line.trim_end())]);
     }
     // Emit any remaining plus lines
     for plus_line in &plus_lines[emitted..] {
-        annotated_plus_lines.push(vec![(non_insertion, plus_line)]);
+        annotated_plus_lines.push(vec![(non_insertion, plus_line.trim_end())]);
     }
 
     (annotated_minus_lines, annotated_plus_lines)
 }
 
-mod line_pair {
-    use std::cmp::{max, min};
+pub fn coalesce_minus_edits<'a, EditOperation>(
+    alignment: &align::Alignment<'a>,
+    line: &'a str,
+    non_deletion: EditOperation,
+    deletion: EditOperation,
+    _non_insertion: EditOperation,
+    insertion: EditOperation,
+) -> Vec<(EditOperation, &'a str)>
+where
+    EditOperation: Copy,
+    EditOperation: PartialEq,
+{
+    coalesce_edits(
+        alignment.edit_operations(non_deletion, deletion, deletion, insertion, true),
+        line,
+        insertion,
+    )
+}
 
-    use itertools::{Itertools, PeekingNext};
-    use unicode_segmentation::UnicodeSegmentation;
+pub fn coalesce_plus_edits<'a, EditOperation>(
+    alignment: &align::Alignment<'a>,
+    line: &'a str,
+    _non_deletion: EditOperation,
+    deletion: EditOperation,
+    non_insertion: EditOperation,
+    insertion: EditOperation,
+) -> Vec<(EditOperation, &'a str)>
+where
+    EditOperation: Copy,
+    EditOperation: PartialEq,
+{
+    coalesce_edits(
+        alignment.edit_operations(non_insertion, insertion, deletion, insertion, false),
+        line,
+        deletion,
+    )
+}
 
-    /// A pair of right-trimmed strings.
-    pub struct LinePair<'a> {
-        pub minus_line: &'a str,
-        pub plus_line: &'a str,
-        pub minus_edit: Edit,
-        pub plus_edit: Edit,
-        pub distance: f64,
+fn coalesce_edits<'a, 'b, EditOperation>(
+    operations: Vec<(EditOperation, (usize, &'b str))>,
+    line: &'a str,
+    irrelevant: EditOperation,
+) -> Vec<(EditOperation, &'a str)>
+where
+    EditOperation: Copy,
+    EditOperation: PartialEq,
+{
+    let mut edits = Vec::new(); // TODO capacity
+    let mut operations = operations.iter().filter(|(op, _)| *op != irrelevant);
+    let next = operations.next();
+    if next.is_none() {
+        return edits;
     }
-
-    #[derive(Debug)]
-    pub struct Edit {
-        pub start: usize,
-        pub end: usize,
-        string_length: usize,
-    }
-
-    impl Edit {
-        fn distance(&self) -> f64 {
-            (self.end - self.start) as f64 / self.string_length as f64
-        }
-    }
-
-    impl<'a> LinePair<'a> {
-        pub fn new(s0: &'a str, s1: &'a str) -> Self {
-            let (g0, g1) = (s0.grapheme_indices(true), s1.grapheme_indices(true));
-            let (prefix_length, leading_whitespace) = LinePair::prefix_data(g0, g1);
-            let common_prefix_length = [
-                leading_whitespace[0] + prefix_length,
-                leading_whitespace[1] + prefix_length,
-            ];
-            // TODO: Don't compute grapheme segmentation twice?
-            let (g0, g1) = (s0.grapheme_indices(true), s1.grapheme_indices(true));
-            let (common_suffix_length, trailing_whitespace) = LinePair::suffix_data(g0, g1);
-            let lengths = [
-                s0.len() - trailing_whitespace[0],
-                s1.len() - trailing_whitespace[1],
-            ];
-
-            // We require that (right-trimmed length) >= (common prefix length). Consider:
-            // minus = "a    "
-            // plus  = "a b  "
-            // Here, the right-trimmed length of minus is 1, yet the common prefix length is 2. We
-            // resolve this by taking the following maxima:
-            let minus_length = max(lengths[0], common_prefix_length[0]);
-            let plus_length = max(lengths[1], common_prefix_length[1]);
-
-            // Work backwards from the end of the strings. The end of the change region is equal to
-            // the start of their common suffix. To find the start of the change region, start with
-            // the end of their common prefix, and then move leftwards until it is before the start
-            // of the common suffix in both strings.
-            let minus_change_end = minus_length - common_suffix_length;
-            let plus_change_end = plus_length - common_suffix_length;
-            let change_begin = [
-                min(
-                    common_prefix_length[0],
-                    min(minus_change_end, plus_change_end),
-                ),
-                min(
-                    common_prefix_length[1],
-                    min(minus_change_end, plus_change_end),
-                ),
-            ];
-
-            let minus_edit = Edit {
-                start: change_begin[0],
-                end: minus_change_end,
-                string_length: minus_length - leading_whitespace[0],
-            };
-            let plus_edit = Edit {
-                start: change_begin[1],
-                end: plus_change_end,
-                string_length: plus_length - leading_whitespace[1],
-            };
-            let distance = minus_edit.distance() + plus_edit.distance();
-            LinePair {
-                minus_line: s0,
-                plus_line: s1,
-                minus_edit,
-                plus_edit,
-                distance,
-            }
-        }
-
-        #[allow(dead_code)]
-        pub fn format(&self) -> String {
-            format!(
-                "LinePair\n \
-                 \t{} {} {}\n \
-                 \t{} {} {}\n \
-                 \t{}",
-                self.minus_line.trim_end(),
-                self.minus_edit.start,
-                self.minus_edit.end,
-                self.plus_line.trim_end(),
-                self.plus_edit.start,
-                self.plus_edit.end,
-                self.distance
-            )
-        }
-
-        /// Align the two strings at their left ends and consider only the bytes up to the length of
-        /// the shorter string. Return the byte offset of the first differing grapheme cluster, or
-        /// the byte length of shorter string if they do not differ.
-        fn prefix_data<'b, I>(s0: I, s1: I) -> (usize, [usize; 2])
-        where
-            I: Iterator<Item = (usize, &'b str)>,
-            I: Itertools,
-        {
-            let mut s0 = s0.peekable();
-            let mut s1 = s1.peekable();
-
-            let w0 = consume_whitespace(&mut s0);
-            let w1 = consume_whitespace(&mut s1);
-
-            (
-                s0.zip(s1)
-                    .peekable()
-                    .peeking_take_while(|((_, c0), (_, c1))| c0 == c1)
-                    .fold(0, |offset, ((_, c0), (_, _))| offset + c0.len()),
-                [w0, w1],
-            )
-        }
-
-        /// Trim trailing whitespace and align the two strings at their right ends. Fix the origin
-        /// at their right ends and, looking left, consider only the bytes up to the length of the
-        /// shorter string. Return the byte offset of the first differing grapheme cluster, or the
-        /// byte length of the shorter string if they do not differ. Also return the number of bytes
-        /// of whitespace trimmed from each string.
-        fn suffix_data<'b, I>(s0: I, s1: I) -> (usize, [usize; 2])
-        where
-            I: DoubleEndedIterator<Item = (usize, &'b str)>,
-            I: Itertools,
-        {
-            let mut s0 = s0.rev().peekable();
-            let mut s1 = s1.rev().peekable();
-
-            let w0 = consume_whitespace(&mut s0);
-            let w1 = consume_whitespace(&mut s1);
-
-            let (suffix_length, [_, _]) = LinePair::prefix_data(s0, s1);
-            (suffix_length, [w0, w1])
+    let (mut last_op, (mut last_offset, _)) = next.unwrap();
+    let mut curr_op = last_op;
+    let mut curr_offset;
+    for (op, (offset, _)) in operations {
+        curr_op = *op;
+        curr_offset = *offset;
+        if curr_op != last_op {
+            edits.push((last_op, &line[last_offset..*offset]));
+            last_offset = curr_offset;
+            last_op = curr_op;
         }
     }
-
-    fn consume_whitespace<'b, I>(s: &mut I) -> usize
-    where
-        I: Iterator<Item = (usize, &'b str)>,
-        I: Itertools,
-        I: PeekingNext,
-    {
-        let is_whitespace = |(_, c): &(usize, &str)| *c == " " || *c == "\n";
-        s.peeking_take_while(is_whitespace).count()
+    if curr_op == last_op {
+        edits.push((last_op, &line[last_offset..]));
     }
-
-    #[cfg(test)]
-    mod tests {
-        use super::*;
-
-        fn common_prefix_length(s1: &str, s2: &str) -> usize {
-            let (prefix_length, [w0, w1]) =
-                super::LinePair::prefix_data(s1.grapheme_indices(true), s2.grapheme_indices(true));
-            assert_eq!(
-                w0, w1,
-                "Lines with different amounts of leading whitespace are not supported"
-            );
-            w0 + prefix_length
-        }
-
-        fn common_suffix_length(s1: &str, s2: &str) -> usize {
-            super::LinePair::suffix_data(s1.grapheme_indices(true), s2.grapheme_indices(true)).0
-        }
-
-        #[test]
-        fn test_common_prefix_length() {
-            assert_eq!(common_prefix_length("", ""), 0);
-            assert_eq!(common_prefix_length("", "a"), 0);
-            assert_eq!(common_prefix_length("a", ""), 0);
-            assert_eq!(common_prefix_length("a", "b"), 0);
-            assert_eq!(common_prefix_length("a", "a"), 1);
-            assert_eq!(common_prefix_length("a", "ab"), 1);
-            assert_eq!(common_prefix_length("ab", "a"), 1);
-            assert_eq!(common_prefix_length("ab", "aba"), 2);
-            assert_eq!(common_prefix_length("aba", "ab"), 2);
-        }
-
-        #[test]
-        fn test_common_prefix_length_with_leading_whitespace() {
-            // assert_eq!(common_prefix_length(" ", ""), 0);
-            assert_eq!(common_prefix_length(" ", " "), 1);
-            assert_eq!(common_prefix_length(" a", " a"), 2);
-            // assert_eq!(common_prefix_length(" a", "a"), 0);
-        }
-
-        #[test]
-        fn test_common_suffix_length() {
-            assert_eq!(common_suffix_length("", ""), 0);
-            assert_eq!(common_suffix_length("", "a"), 0);
-            assert_eq!(common_suffix_length("a", ""), 0);
-            assert_eq!(common_suffix_length("a", "b"), 0);
-            assert_eq!(common_suffix_length("a", "a"), 1);
-            assert_eq!(common_suffix_length("a", "ab"), 0);
-            assert_eq!(common_suffix_length("ab", "a"), 0);
-            assert_eq!(common_suffix_length("ab", "b"), 1);
-            assert_eq!(common_suffix_length("ab", "aab"), 2);
-            assert_eq!(common_suffix_length("aba", "ba"), 2);
-        }
-
-        #[test]
-        fn test_common_suffix_length_with_trailing_whitespace() {
-            assert_eq!(common_suffix_length("", "  "), 0);
-            assert_eq!(common_suffix_length("  ", "a"), 0);
-            assert_eq!(common_suffix_length("a  ", ""), 0);
-            assert_eq!(common_suffix_length("a", "b  "), 0);
-            assert_eq!(common_suffix_length("a", "a  "), 1);
-            assert_eq!(common_suffix_length("a  ", "ab  "), 0);
-            assert_eq!(common_suffix_length("ab", "a  "), 0);
-            assert_eq!(common_suffix_length("ab  ", "b "), 1);
-            assert_eq!(common_suffix_length("ab ", "aab  "), 2);
-            assert_eq!(common_suffix_length("aba ", "ba"), 2);
-        }
-
-        #[test]
-        fn test_common_suffix_length_with_trailing_whitespace_nonascii() {
-            assert_eq!(common_suffix_length("  ", "á"), 0);
-            assert_eq!(common_suffix_length("á  ", ""), 0);
-            assert_eq!(common_suffix_length("á", "b  "), 0);
-            assert_eq!(common_suffix_length("á", "á  "), "á".len());
-            assert_eq!(common_suffix_length("a  ", "áb  "), 0);
-            assert_eq!(common_suffix_length("ab", "á  "), 0);
-            assert_eq!(common_suffix_length("áb  ", "b "), 1);
-            assert_eq!(common_suffix_length("áb ", "aáb  "), 1 + "á".len());
-            assert_eq!(common_suffix_length("abá ", "bá"), 1 + "á".len());
-            assert_eq!(
-                common_suffix_length("áaáabá ", "ááabá   "),
-                2 + 2 * "á".len()
-            );
-        }
-    }
+    edits
 }
 
 #[cfg(test)]
@@ -359,13 +180,25 @@ mod tests {
     const DISTANCE_MAX: f64 = 2.0;
 
     #[test]
+    fn test_coalesce_edits_1() {
+        assert_eq!(
+            coalesce_edits(
+                vec![(MinusNoop, (0, "a")), (MinusNoop, (1, "b"))],
+                "ab",
+                Insertion
+            ),
+            vec![(MinusNoop, "ab")]
+        )
+    }
+
+    #[test]
     fn test_infer_edits_1() {
         assert_paired_edits(
             vec!["aaa\n"],
             vec!["aba\n"],
             (
-                vec![vec![(MinusNoop, "a"), (Deletion, "a"), (MinusNoop, "a\n")]],
-                vec![vec![(PlusNoop, "a"), (Insertion, "b"), (PlusNoop, "a\n")]],
+                vec![vec![(MinusNoop, "a"), (Deletion, "a"), (MinusNoop, "a")]],
+                vec![vec![(PlusNoop, "a"), (Insertion, "b"), (PlusNoop, "a")]],
             ),
         )
     }
@@ -376,8 +209,8 @@ mod tests {
             vec!["áaa\n"],
             vec!["ááb\n"],
             (
-                vec![vec![(MinusNoop, "á"), (Deletion, "aa"), (MinusNoop, "\n")]],
-                vec![vec![(PlusNoop, "á"), (Insertion, "áb"), (PlusNoop, "\n")]],
+                vec![vec![(MinusNoop, "á"), (Deletion, "aa")]],
+                vec![vec![(PlusNoop, "á"), (Insertion, "áb")]],
             ),
         )
     }
@@ -391,13 +224,9 @@ mod tests {
                 vec![vec![
                     (MinusNoop, "d."),
                     (Deletion, "iter"),
-                    (MinusNoop, "items()\n"),
+                    (MinusNoop, "items()"),
                 ]],
-                vec![vec![
-                    (PlusNoop, "d."),
-                    (Insertion, ""),
-                    (PlusNoop, "items()\n"),
-                ]],
+                vec![vec![(PlusNoop, "d.items()")]],
             ),
         )
     }
@@ -409,17 +238,17 @@ mod tests {
             vec!["áábáácááb\n"],
             (
                 vec![
-                    vec![(MinusNoop, "áaaáaaáaa\n")],
+                    vec![(MinusNoop, "áaaáaaáaa")],
                     vec![
                         (MinusNoop, "áábáá"),
                         (Deletion, "b"),
-                        (MinusNoop, "ááb\n"),
+                        (MinusNoop, "ááb"),
                     ],
                 ],
                 vec![vec![
                     (PlusNoop, "áábáá"),
                     (Insertion, "c"),
-                    (PlusNoop, "ááb\n"),
+                    (PlusNoop, "ááb"),
                 ]],
             ),
             0.66,
@@ -433,14 +262,14 @@ mod tests {
             vec!["bbbb!bbb\n", "dddddddd\n", "cccc!ccc\n"],
             (
                 vec![
-                    vec![(MinusNoop, "aaaaaaaa\n")],
-                    vec![(MinusNoop, "bbbb"), (Deletion, "b"), (MinusNoop, "bbb\n")],
-                    vec![(MinusNoop, "cccc"), (Deletion, "c"), (MinusNoop, "ccc\n")],
+                    vec![(MinusNoop, "aaaaaaaa")],
+                    vec![(MinusNoop, "bbbb"), (Deletion, "b"), (MinusNoop, "bbb")],
+                    vec![(MinusNoop, "cccc"), (Deletion, "c"), (MinusNoop, "ccc")],
                 ],
                 vec![
-                    vec![(PlusNoop, "bbbb"), (Insertion, "!"), (PlusNoop, "bbb\n")],
-                    vec![(PlusNoop, "dddddddd\n")],
-                    vec![(PlusNoop, "cccc"), (Insertion, "!"), (PlusNoop, "ccc\n")],
+                    vec![(PlusNoop, "bbbb"), (Insertion, "!"), (PlusNoop, "bbb")],
+                    vec![(PlusNoop, "dddddddd")],
+                    vec![(PlusNoop, "cccc"), (Insertion, "!"), (PlusNoop, "ccc")],
                 ],
             ),
             0.66,

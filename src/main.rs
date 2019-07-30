@@ -1,6 +1,7 @@
 #[macro_use]
 extern crate error_chain;
 
+mod align;
 mod bat;
 mod cli;
 mod config;
