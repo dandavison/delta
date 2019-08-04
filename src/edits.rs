@@ -81,11 +81,19 @@ where
 }
 
 fn tokenize(line: &str) -> Vec<(usize, &str)> {
-    let regex = Regex::new("[^ ]*( +|$)").unwrap();
-    regex
-        .find_iter(line)
-        .map(|m| (m.start(), m.as_str()))
-        .collect()
+    let separators = Regex::new(r"[ ,;.:()\[\]<>]+").unwrap();
+    let mut tokens = Vec::new();
+    let mut offset = 0;
+    for m in separators.find_iter(line) {
+        let (start, end) = (m.start(), m.end());
+        tokens.push((offset, &line[offset..start]));
+        tokens.push((start, m.as_str()));
+        offset = end;
+    }
+    if offset < line.len() {
+        tokens.push((offset, &line[offset..line.len()]));
+    }
+    tokens
 }
 
 pub fn coalesce_minus_edits<'a, EditOperation>(
@@ -183,14 +191,26 @@ mod tests {
 
     #[test]
     fn test_tokenize_1() {
-        assert_eq!(tokenize("aaa bbb"), vec![(0, "aaa "), (4, "bbb")])
+        assert_eq!(
+            tokenize("aaa bbb"),
+            substring_indices(vec!["aaa", " ", "bbb"])
+        )
     }
 
     #[test]
     fn test_tokenize_2() {
         assert_eq!(
             tokenize("fn coalesce_edits<'a, EditOperation>("),
-            substring_indices(vec!["fn ", "coalesce_edits<'a, ", "EditOperation>("])
+            substring_indices(vec![
+                "fn",
+                " ",
+                "coalesce_edits",
+                "<",
+                "'a",
+                ", ",
+                "EditOperation",
+                ">("
+            ])
         );
     }
 
@@ -199,10 +219,35 @@ mod tests {
         assert_eq!(
             tokenize("fn coalesce_edits<'a, 'b, EditOperation>("),
             substring_indices(vec![
-                "fn ",
-                "coalesce_edits<'a, ",
-                "'b, ",
-                "EditOperation>("
+                "fn",
+                " ",
+                "coalesce_edits",
+                "<",
+                "'a",
+                ", ",
+                "'b",
+                ", ",
+                "EditOperation",
+                ">("
+            ])
+        );
+    }
+
+    #[test]
+    fn test_tokenize_4() {
+        assert_eq!(
+            tokenize("annotated_plus_lines.push(vec![(non_insertion, plus_line)]);"),
+            substring_indices(vec![
+                "annotated_plus_lines",
+                ".",
+                "push",
+                "(",
+                "vec!",
+                "[(",
+                "non_insertion",
+                ", ",
+                "plus_line",
+                ")]);"
             ])
         );
     }
