@@ -134,7 +134,7 @@ impl<'a> Alignment<'a> {
         let noop = 0;
         let (mut numer, mut denom) = (0, 0);
         for (op, (_, s)) in self.edit_operations(0, 1, 1, 1, true) {
-            let n = s.graphemes(true).count();
+            let n = s.trim().graphemes(true).count();
             if op != noop {
                 numer += n;
             }
