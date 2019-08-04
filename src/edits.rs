@@ -190,11 +190,7 @@ mod tests {
     fn test_tokenize_2() {
         assert_eq!(
             tokenize("fn coalesce_edits<'a, EditOperation>("),
-            vec![
-                (0, "fn "),
-                (3, "coalesce_edits<'a, "),
-                (22, "EditOperation>(")
-            ]
+            substring_indices(vec!["fn ", "coalesce_edits<'a, ", "EditOperation>("])
         );
     }
 
@@ -202,16 +198,24 @@ mod tests {
     fn test_tokenize_3() {
         assert_eq!(
             tokenize("fn coalesce_edits<'a, 'b, EditOperation>("),
-            vec![
-                (0, "fn "),
-                (3, "coalesce_edits<'a, "),
-                (22, "'b, "),
-                (26, "EditOperation>(")
-            ]
+            substring_indices(vec![
+                "fn ",
+                "coalesce_edits<'a, ",
+                "'b, ",
+                "EditOperation>("
+            ])
         );
     }
 
-    // vec!["fn coalesce_edits<'a, 'b, EditOperation>("],
+    fn substring_indices(substrings: Vec<&str>) -> Vec<(usize, &str)> {
+        let mut offset = 0;
+        let mut with_offsets = Vec::new();
+        for s in substrings {
+            with_offsets.push((offset, s));
+            offset += s.len();
+        }
+        with_offsets
+    }
 
     #[test]
     fn test_coalesce_edits_1() {
