@@ -130,7 +130,7 @@ impl<'a> Alignment<'a> {
         (numer as f64) / (denom as f64)
     }
 
-    fn distance_parts(&self) -> (usize, usize) {
+    pub fn distance_parts(&self) -> (usize, usize) {
         let noop = 0;
         let (mut numer, mut denom) = (0, 0);
         for (op, (_, s)) in self.edit_operations(0, 1, 1, 1, true) {
@@ -218,6 +218,16 @@ mod tests {
                 NoOp,         // A A
                 NoOp          // Y Y
             ]
+        );
+    }
+
+    #[test]
+    fn test_3() {
+        let (before, after) = ("aaabbb", "bbbbbb");
+        // assert_string_distance_parts(before, after, (6, 6));
+        assert_eq!(
+            edit_operations(before, after),
+            vec![Deletion, Deletion, Deletion, NoOp, NoOp, NoOp, Insertion, Insertion, Insertion,]
         );
     }
 

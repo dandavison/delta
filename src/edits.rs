@@ -286,8 +286,8 @@ mod tests {
             vec!["aaa ccc"],
             vec!["aba ccc"],
             (
-                vec![vec![(Deletion, "aaa "), (MinusNoop, "ccc")]],
-                vec![vec![(Insertion, "aba "), (PlusNoop, "ccc")]],
+                vec![vec![(Deletion, "aaa"), (MinusNoop, " ccc")]],
+                vec![vec![(Insertion, "aba"), (PlusNoop, " ccc")]],
             ),
         )
     }
@@ -312,10 +312,14 @@ mod tests {
             (
                 vec![vec![
                     (MinusNoop, "d."),
-                    (Deletion, "iter"),
-                    (MinusNoop, "items()"),
+                    (Deletion, "iteritems"),
+                    (MinusNoop, "()"),
                 ]],
-                vec![vec![(PlusNoop, "d.items()")]],
+                vec![vec![
+                    (PlusNoop, "d."),
+                    (Insertion, "items"),
+                    (PlusNoop, "()"),
+                ]],
             ),
         )
     }
@@ -323,21 +327,21 @@ mod tests {
     #[test]
     fn test_infer_edits_4() {
         assert_edits(
-            vec!["áaaáaaáaa", "áábáábááb"],
-            vec!["áábáácááb"],
+            vec!["á a a á a a á a a", "á á b á á b á á b"],
+            vec!["á á b á á c á á b"],
             (
                 vec![
-                    vec![(MinusNoop, "áaaáaaáaa")],
+                    vec![(MinusNoop, "á a a á a a á a a")],
                     vec![
-                        (MinusNoop, "áábáá"),
+                        (MinusNoop, "á á b á á "),
                         (Deletion, "b"),
-                        (MinusNoop, "ááb"),
+                        (MinusNoop, " á á b"),
                     ],
                 ],
                 vec![vec![
-                    (PlusNoop, "áábáá"),
+                    (PlusNoop, "á á b á á "),
                     (Insertion, "c"),
-                    (PlusNoop, "ááb"),
+                    (PlusNoop, " á á b"),
                 ]],
             ),
             0.66,
@@ -347,18 +351,18 @@ mod tests {
     #[test]
     fn test_infer_edits_5() {
         assert_edits(
-            vec!["aaaaaaaa", "bbbbbbbb", "cccccccc"],
-            vec!["bbbb!bbb", "dddddddd", "cccc!ccc"],
+            vec!["aaaa a aaa", "bbbb b bbb", "cccc c ccc"],
+            vec!["bbbb ! bbb", "dddd d ddd", "cccc ! ccc"],
             (
                 vec![
-                    vec![(MinusNoop, "aaaaaaaa")],
-                    vec![(MinusNoop, "bbbb"), (Deletion, "b"), (MinusNoop, "bbb")],
-                    vec![(MinusNoop, "cccc"), (Deletion, "c"), (MinusNoop, "ccc")],
+                    vec![(MinusNoop, "aaaa a aaa")],
+                    vec![(MinusNoop, "bbbb "), (Deletion, "b"), (MinusNoop, " bbb")],
+                    vec![(MinusNoop, "cccc "), (Deletion, "c"), (MinusNoop, " ccc")],
                 ],
                 vec![
-                    vec![(PlusNoop, "bbbb"), (Insertion, "!"), (PlusNoop, "bbb")],
-                    vec![(PlusNoop, "dddddddd")],
-                    vec![(PlusNoop, "cccc"), (Insertion, "!"), (PlusNoop, "ccc")],
+                    vec![(PlusNoop, "bbbb "), (Insertion, "!"), (PlusNoop, " bbb")],
+                    vec![(PlusNoop, "dddd d ddd")],
+                    vec![(PlusNoop, "cccc "), (Insertion, "!"), (PlusNoop, " ccc")],
                 ],
             ),
             0.66,
@@ -384,6 +388,22 @@ mod tests {
                 "                 .take_while(|((_, c0), (_, c1))| c0 == c1) // TODO: Don't consume one-past-the-end!",
                 "                 .fold(0, |offset, ((_, c0), (_, _))| offset + c0.len())"
             ], 0.66)
+    }
+
+    #[test]
+    fn test_infer_edits_6_1() {
+        let (after, before) = (
+            "                     i += c0.len();",
+            "                 .fold(0, |offset, ((_, c0), (_, _))| offset + c0.len())",
+        );
+        println!("          before: {}", before);
+        println!("          after : {}", after);
+        println!("tokenized before: {:?}", tokenize(before));
+        println!("tokenized after : {:?}", tokenize(after));
+        println!(
+            "distance: {:?}",
+            align::Alignment::new(tokenize(before), tokenize(after)).distance_parts()
+        );
     }
 
     #[test]
