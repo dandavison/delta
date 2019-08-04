@@ -2,7 +2,6 @@ use std::io::Write;
 
 use ansi_term::Colour::{Blue, Yellow};
 use console::strip_ansi_codes;
-use unicode_segmentation::UnicodeSegmentation;
 
 use crate::bat::assets::HighlightingAssets;
 use crate::cli;
@@ -220,16 +219,16 @@ fn handle_hunk_line(painter: &mut Painter, line: &str, state: State, config: &Co
             if state == State::HunkPlus {
                 painter.paint_buffered_lines();
             }
-            painter.minus_lines.push(prepare(&line, config));
+            painter.minus_lines.push(prepare(&line));
             State::HunkMinus
         }
         Some('+') => {
-            painter.plus_lines.push(prepare(&line, config));
+            painter.plus_lines.push(prepare(&line));
             State::HunkPlus
         }
         _ => {
             painter.paint_buffered_lines();
-            let line = prepare(&line, config);
+            let line = prepare(&line);
             let syntax_style_sections = Painter::get_line_syntax_style_sections(
                 &line,
                 &mut painter.highlighter,
@@ -246,19 +245,12 @@ fn handle_hunk_line(painter: &mut Painter, line: &str, state: State, config: &Co
     }
 }
 
-/// Replace initial -/+ character with ' ', pad to width, and terminate with newline character.
-fn prepare(_line: &str, config: &Config) -> String {
-    let mut line = String::new();
-    if _line.len() > 0 {
-        line.push_str(" ");
-        line.push_str(&_line[1..]);
-    }
-    let line_length = line.graphemes(true).count();
-    match config.width {
-        Some(width) if width > line_length => {
-            format!("{}{}\n", line, " ".repeat(width - line_length))
-        }
-        _ => format!("{}\n", line),
+/// Replace initial -/+ character with ' '
+fn prepare(line: &str) -> String {
+    if line.len() > 0 {
+        format!(" {}", &line[1..])
+    } else {
+        line.to_string()
     }
 }
 

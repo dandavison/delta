@@ -29,17 +29,14 @@ where
 
     'minus_lines_loop: for minus_line in minus_lines {
         let mut considered = 0; // plus lines considered so far as match for minus_line
-        let minus_line = minus_line.trim_end();
         for plus_line in &plus_lines[emitted..] {
-            let plus_line = plus_line.trim_end();
-
             let alignment = align::Alignment::new(tokenize(minus_line), tokenize(plus_line));
             if alignment.distance() <= max_line_distance {
                 // minus_line and plus_line are inferred to be a homologous pair.
 
                 // Emit as unpaired the plus lines already considered and rejected
                 for plus_line in &plus_lines[emitted..(emitted + considered)] {
-                    annotated_plus_lines.push(vec![(non_insertion, plus_line.trim_end())]);
+                    annotated_plus_lines.push(vec![(non_insertion, plus_line)]);
                 }
                 emitted += considered;
 
@@ -69,11 +66,11 @@ where
             }
         }
         // No homolog was found for minus i; emit as unpaired.
-        annotated_minus_lines.push(vec![(non_deletion, minus_line.trim_end())]);
+        annotated_minus_lines.push(vec![(non_deletion, minus_line)]);
     }
     // Emit any remaining plus lines
     for plus_line in &plus_lines[emitted..] {
-        annotated_plus_lines.push(vec![(non_insertion, plus_line.trim_end())]);
+        annotated_plus_lines.push(vec![(non_insertion, plus_line)]);
     }
 
     (annotated_minus_lines, annotated_plus_lines)
@@ -274,8 +271,8 @@ mod tests {
     #[test]
     fn test_infer_edits_1() {
         assert_paired_edits(
-            vec!["aaa\n"],
-            vec!["aba\n"],
+            vec!["aaa"],
+            vec!["aba"],
             (
                 vec![vec![(Deletion, "aaa")]],
                 vec![vec![(Insertion, "aba")]],
@@ -286,8 +283,8 @@ mod tests {
     #[test]
     fn test_infer_edits_1_2() {
         assert_paired_edits(
-            vec!["aaa ccc\n"],
-            vec!["aba ccc\n"],
+            vec!["aaa ccc"],
+            vec!["aba ccc"],
             (
                 vec![vec![(Deletion, "aaa "), (MinusNoop, "ccc")]],
                 vec![vec![(Insertion, "aba "), (PlusNoop, "ccc")]],
@@ -298,8 +295,8 @@ mod tests {
     #[test]
     fn test_infer_edits_2() {
         assert_paired_edits(
-            vec!["áaa\n"],
-            vec!["ááb\n"],
+            vec!["áaa"],
+            vec!["ááb"],
             (
                 vec![vec![(Deletion, "áaa")]],
                 vec![vec![(Insertion, "ááb")]],
@@ -310,8 +307,8 @@ mod tests {
     #[test]
     fn test_infer_edits_3() {
         assert_paired_edits(
-            vec!["d.iteritems()\n"],
-            vec!["d.items()\n"],
+            vec!["d.iteritems()"],
+            vec!["d.items()"],
             (
                 vec![vec![
                     (MinusNoop, "d."),
@@ -326,8 +323,8 @@ mod tests {
     #[test]
     fn test_infer_edits_4() {
         assert_edits(
-            vec!["áaaáaaáaa\n", "áábáábááb\n"],
-            vec!["áábáácááb\n"],
+            vec!["áaaáaaáaa", "áábáábááb"],
+            vec!["áábáácááb"],
             (
                 vec![
                     vec![(MinusNoop, "áaaáaaáaa")],
@@ -350,8 +347,8 @@ mod tests {
     #[test]
     fn test_infer_edits_5() {
         assert_edits(
-            vec!["aaaaaaaa\n", "bbbbbbbb\n", "cccccccc\n"],
-            vec!["bbbb!bbb\n", "dddddddd\n", "cccc!ccc\n"],
+            vec!["aaaaaaaa", "bbbbbbbb", "cccccccc"],
+            vec!["bbbb!bbb", "dddddddd", "cccc!ccc"],
             (
                 vec![
                     vec![(MinusNoop, "aaaaaaaa")],
@@ -372,20 +369,20 @@ mod tests {
     fn test_infer_edits_6() {
         assert_no_edits(
             vec![
-                "             let mut i = 0;\n",
-                "             for ((_, c0), (_, c1)) in s0.zip(s1) {\n",
-                "                 if c0 != c1 {\n",
-                "                     break;\n",
-                "                 } else {\n",
-                "                     i += c0.len();\n",
-                "                 }\n",
-                "             }\n",
-                "             i\n",
+                "             let mut i = 0;",
+                "             for ((_, c0), (_, c1)) in s0.zip(s1) {",
+                "                 if c0 != c1 {",
+                "                     break;",
+                "                 } else {",
+                "                     i += c0.len();",
+                "                 }",
+                "             }",
+                "             i",
             ],
             vec![
-                "             s0.zip(s1)\n",
-                "                 .take_while(|((_, c0), (_, c1))| c0 == c1) // TODO: Don't consume one-past-the-end!\n",
-                "                 .fold(0, |offset, ((_, c0), (_, _))| offset + c0.len())\n"
+                "             s0.zip(s1)",
+                "                 .take_while(|((_, c0), (_, c1))| c0 == c1) // TODO: Don't consume one-past-the-end!",
+                "                 .fold(0, |offset, ((_, c0), (_, _))| offset + c0.len())"
             ], 0.66)
     }
 
