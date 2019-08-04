@@ -86,6 +86,12 @@ pub struct Opt {
     /// For example: `git show --color=always | delta --compare-themes`.
     #[structopt(long = "compare-themes")]
     pub compare_themes: bool,
+
+    /// The maximum distance between two lines for them to be inferred to be homologous. Homologous
+    /// line pairs are highlighted according to the deletion and insertion operations transforming
+    /// one into the other.
+    #[structopt(long = "max-line-distance", default_value = "0.3")]
+    pub max_line_distance: f64,
 }
 
 #[derive(Debug, PartialEq)]

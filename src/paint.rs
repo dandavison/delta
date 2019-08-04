@@ -155,7 +155,7 @@ impl<'a> Painter<'a> {
             config.minus_emph_style_modifier,
             config.plus_style_modifier,
             config.plus_emph_style_modifier,
-            0.66,
+            config.opt.max_line_distance,
         )
     }
 }

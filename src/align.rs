@@ -1,4 +1,6 @@
-use std::cmp::{max, min};
+use std::cmp::min;
+
+use unicode_segmentation::UnicodeSegmentation;
 
 /// Needleman-Wunsch / Wagner-Fischer table for computation of edit distance and associated
 /// alignment.
@@ -81,15 +83,6 @@ impl<'a> Alignment<'a> {
         }
     }
 
-    /// Read edit distance from the table.
-    pub fn edit_distance(&self) -> usize {
-        self.table[self.table.len() - 1]
-    }
-
-    pub fn normalized_edit_distance(&self) -> f64 {
-        self.edit_distance() as f64 / max(self.xx.len(), self.yy.len()) as f64
-    }
-
     /// Read edit operations from the table.
     pub fn edit_operations<EditOperation>(
         &self,
@@ -126,12 +119,40 @@ impl<'a> Alignment<'a> {
         }
         ops.into_iter().rev().collect()
     }
+
+    /// Compute custom distance metric from the filled table. The distance metric is
+    ///
+    /// (total length of edits) / (total length of longer string)
+    ///
+    /// where length is measured in number of unicode grapheme clusters.
+    pub fn distance(&self) -> f64 {
+        let (numer, denom) = self.distance_parts();
+        (numer as f64) / (denom as f64)
+    }
+
+    fn distance_parts(&self) -> (usize, usize) {
+        let noop = 0;
+        let (mut numer, mut denom) = (0, 0);
+        for (op, (_, s)) in self.edit_operations(0, 1, 1, 1, true) {
+            let n = s.graphemes(true).count();
+            if op != noop {
+                numer += n;
+            }
+            denom += n;
+        }
+        (numer, denom)
+    }
+
+    /// Compute levenshtein distance from the filled table.
+    #[allow(dead_code)]
+    pub fn levenshtein_distance(&self) -> usize {
+        self.table[self.table.len() - 1]
+    }
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
-    use unicode_segmentation::UnicodeSegmentation;
 
     #[derive(Copy, Clone, Debug, PartialEq)]
     enum EditOperation {
@@ -145,27 +166,30 @@ mod tests {
 
     #[test]
     fn test_0() {
-        assert_eq!(levenshtein_distance("aaa", "aba"), 1);
+        let (before, after) = ("aaa", "aba");
+        assert_string_distance_parts(before, after, (1, 3));
         assert_eq!(
-            edit_operations("aaa", "aba"),
+            edit_operations(before, after),
             vec![NoOp, Substitution, NoOp,]
         );
     }
 
     #[test]
     fn test_0_nonascii() {
-        assert_eq!(levenshtein_distance("áaa", "ááb"), 2);
+        let (before, after) = ("ááb", "áaa");
+        assert_string_distance_parts(before, after, (2, 3));
         assert_eq!(
-            edit_operations("áaa", "ááb"),
+            edit_operations(before, after),
             vec![NoOp, Substitution, Substitution,]
         );
     }
 
     #[test]
     fn test_1() {
-        assert_eq!(levenshtein_distance("kitten", "sitting"), 3);
+        let (before, after) = ("kitten", "sitting");
+        assert_string_distance_parts(before, after, (3, 7));
         assert_eq!(
-            edit_operations("kitten", "sitting"),
+            edit_operations(before, after),
             vec![
                 Substitution, // K S
                 NoOp,         // I I
@@ -180,9 +204,10 @@ mod tests {
 
     #[test]
     fn test_2() {
-        assert_eq!(levenshtein_distance("saturday", "sunday"), 3);
+        let (before, after) = ("saturday", "sunday");
+        assert_string_distance_parts(before, after, (3, 8));
         assert_eq!(
-            edit_operations("saturday", "sunday"),
+            edit_operations(before, after),
             vec![
                 NoOp,         // S S
                 Deletion,     // A -
@@ -196,12 +221,32 @@ mod tests {
         );
     }
 
-    fn levenshtein_distance(x: &str, y: &str) -> usize {
+    fn assert_string_distance_parts(s1: &str, s2: &str, parts: (usize, usize)) {
+        let (numer, _) = parts;
+        assert_string_levenshtein_distance(s1, s2, numer);
+        assert_eq!(string_distance_parts(s1, s2), parts);
+        assert_eq!(string_distance_parts(s2, s1), parts);
+    }
+
+    fn assert_string_levenshtein_distance(s1: &str, s2: &str, d: usize) {
+        assert_eq!(string_levenshtein_distance(s1, s2), d);
+        assert_eq!(string_levenshtein_distance(s2, s1), d);
+    }
+
+    fn string_distance_parts(x: &str, y: &str) -> (usize, usize) {
         let (x, y) = (
             x.grapheme_indices(true).collect::<Vec<(usize, &str)>>(),
             y.grapheme_indices(true).collect::<Vec<(usize, &str)>>(),
         );
-        Alignment::new(x, y).edit_distance()
+        Alignment::new(x, y).distance_parts()
+    }
+
+    fn string_levenshtein_distance(x: &str, y: &str) -> usize {
+        let (x, y) = (
+            x.grapheme_indices(true).collect::<Vec<(usize, &str)>>(),
+            y.grapheme_indices(true).collect::<Vec<(usize, &str)>>(),
+        );
+        Alignment::new(x, y).levenshtein_distance()
     }
 
     fn edit_operations<'a>(x: &'a str, y: &'a str) -> Vec<EditOperation> {

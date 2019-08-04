@@ -13,7 +13,7 @@ pub fn infer_edits<'a, EditOperation>(
     deletion: EditOperation,
     non_insertion: EditOperation,
     insertion: EditOperation,
-    distance_threshold: f64,
+    max_line_distance: f64,
 ) -> (
     Vec<Vec<(EditOperation, &'a str)>>, // annotated minus lines
     Vec<Vec<(EditOperation, &'a str)>>, // annotated plus lines
@@ -34,8 +34,7 @@ where
             let plus_line = plus_line.trim_end();
 
             let alignment = align::Alignment::new(tokenize(minus_line), tokenize(plus_line));
-
-            if alignment.normalized_edit_distance() < distance_threshold {
+            if alignment.distance() <= max_line_distance {
                 // minus_line and plus_line are inferred to be a homologous pair.
 
                 // Emit as unpaired the plus lines already considered and rejected
@@ -186,8 +185,6 @@ mod tests {
     type Edits<'a> = (AnnotatedLines<'a>, AnnotatedLines<'a>);
 
     use EditOperation::*;
-
-    const DISTANCE_MAX: f64 = 2.0;
 
     #[test]
     fn test_tokenize_1() {
@@ -413,7 +410,7 @@ mod tests {
         minus_lines: Vec<&str>,
         plus_lines: Vec<&str>,
         expected_edits: Edits,
-        distance_threshold: f64,
+        max_line_distance: f64,
     ) {
         let minus_lines = minus_lines
             .into_iter()
@@ -430,25 +427,25 @@ mod tests {
             Deletion,
             PlusNoop,
             Insertion,
-            distance_threshold,
+            max_line_distance,
         );
         assert_eq!(actual_edits, expected_edits);
     }
 
     // Assert that no edits are inferred for the supplied minus and plus lines.
-    fn assert_no_edits(minus_lines: Vec<&str>, plus_lines: Vec<&str>, distance_threshold: f64) {
+    fn assert_no_edits(minus_lines: Vec<&str>, plus_lines: Vec<&str>, max_line_distance: f64) {
         let expected_edits = (
             minus_lines.iter().map(|s| vec![(MinusNoop, *s)]).collect(),
             plus_lines.iter().map(|s| vec![(PlusNoop, *s)]).collect(),
         );
-        assert_edits(minus_lines, plus_lines, expected_edits, distance_threshold)
+        assert_edits(minus_lines, plus_lines, expected_edits, max_line_distance)
     }
 
     // Assertions for a single pair of lines, considered as a homologous pair. We set
-    // distance_threshold = DISTANCE_MAX in order that the pair will be inferred to be homologous.
+    // max_line_distance = 1.0 in order that the pair will be inferred to be homologous.
     fn assert_paired_edits(minus_lines: Vec<&str>, plus_lines: Vec<&str>, expected_edits: Edits) {
         assert_consistent_pairs(&expected_edits);
-        assert_edits(minus_lines, plus_lines, expected_edits, DISTANCE_MAX);
+        assert_edits(minus_lines, plus_lines, expected_edits, 1.0);
     }
 
     fn assert_consistent_pairs(edits: &Edits) {
