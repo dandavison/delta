@@ -1,4 +1,4 @@
-use unicode_segmentation::UnicodeSegmentation;
+use regex::Regex;
 
 use crate::align;
 
@@ -32,14 +32,8 @@ where
         let minus_line = minus_line.trim_end();
         for plus_line in &plus_lines[emitted..] {
             let plus_line = plus_line.trim_end();
-            let alignment = align::Alignment::new(
-                minus_line
-                    .grapheme_indices(true)
-                    .collect::<Vec<(usize, &str)>>(),
-                plus_line
-                    .grapheme_indices(true)
-                    .collect::<Vec<(usize, &str)>>(),
-            );
+
+            let alignment = align::Alignment::new(tokenize(minus_line), tokenize(plus_line));
 
             if alignment.normalized_edit_distance() < distance_threshold {
                 // minus_line and plus_line are inferred to be a homologous pair.
@@ -84,6 +78,14 @@ where
     }
 
     (annotated_minus_lines, annotated_plus_lines)
+}
+
+fn tokenize(line: &str) -> Vec<(usize, &str)> {
+    let regex = Regex::new("[^ ]*( +|$)").unwrap();
+    regex
+        .find_iter(line)
+        .map(|m| (m.start(), m.as_str()))
+        .collect()
 }
 
 pub fn coalesce_minus_edits<'a, EditOperation>(
@@ -180,6 +182,38 @@ mod tests {
     const DISTANCE_MAX: f64 = 2.0;
 
     #[test]
+    fn test_tokenize_1() {
+        assert_eq!(tokenize("aaa bbb"), vec![(0, "aaa "), (4, "bbb")])
+    }
+
+    #[test]
+    fn test_tokenize_2() {
+        assert_eq!(
+            tokenize("fn coalesce_edits<'a, EditOperation>("),
+            vec![
+                (0, "fn "),
+                (3, "coalesce_edits<'a, "),
+                (22, "EditOperation>(")
+            ]
+        );
+    }
+
+    #[test]
+    fn test_tokenize_3() {
+        assert_eq!(
+            tokenize("fn coalesce_edits<'a, 'b, EditOperation>("),
+            vec![
+                (0, "fn "),
+                (3, "coalesce_edits<'a, "),
+                (22, "'b, "),
+                (26, "EditOperation>(")
+            ]
+        );
+    }
+
+    // vec!["fn coalesce_edits<'a, 'b, EditOperation>("],
+
+    #[test]
     fn test_coalesce_edits_1() {
         assert_eq!(
             coalesce_edits(
@@ -197,8 +231,20 @@ mod tests {
             vec!["aaa\n"],
             vec!["aba\n"],
             (
-                vec![vec![(MinusNoop, "a"), (Deletion, "a"), (MinusNoop, "a")]],
-                vec![vec![(PlusNoop, "a"), (Insertion, "b"), (PlusNoop, "a")]],
+                vec![vec![(Deletion, "aaa")]],
+                vec![vec![(Insertion, "aba")]],
+            ),
+        )
+    }
+
+    #[test]
+    fn test_infer_edits_1_2() {
+        assert_paired_edits(
+            vec!["aaa ccc\n"],
+            vec!["aba ccc\n"],
+            (
+                vec![vec![(Deletion, "aaa "), (MinusNoop, "ccc")]],
+                vec![vec![(Insertion, "aba "), (PlusNoop, "ccc")]],
             ),
         )
     }
@@ -209,8 +255,8 @@ mod tests {
             vec!["áaa\n"],
             vec!["ááb\n"],
             (
-                vec![vec![(MinusNoop, "á"), (Deletion, "aa")]],
-                vec![vec![(PlusNoop, "á"), (Insertion, "áb")]],
+                vec![vec![(Deletion, "áaa")]],
+                vec![vec![(Insertion, "ááb")]],
             ),
         )
     }
@@ -295,6 +341,23 @@ mod tests {
                 "                 .take_while(|((_, c0), (_, c1))| c0 == c1) // TODO: Don't consume one-past-the-end!\n",
                 "                 .fold(0, |offset, ((_, c0), (_, _))| offset + c0.len())\n"
             ], 0.66)
+    }
+
+    #[test]
+    fn test_infer_edits_7() {
+        assert_edits(
+            vec!["fn coalesce_edits<'a, EditOperation>("],
+            vec!["fn coalesce_edits<'a, 'b, EditOperation>("],
+            (
+                vec![vec![(MinusNoop, "fn coalesce_edits<'a, EditOperation>(")]],
+                vec![vec![
+                    (PlusNoop, "fn coalesce_edits<'a, "),
+                    (Insertion, "'b, "),
+                    (PlusNoop, "EditOperation>("),
+                ]],
+            ),
+            0.66,
+        )
     }
 
     fn assert_edits(

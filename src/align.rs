@@ -3,7 +3,6 @@ use std::cmp::{max, min};
 /// Needleman-Wunsch / Wagner-Fischer table for computation of edit distance and associated
 /// alignment.
 pub struct Alignment<'a> {
-    // Inputs to be aligned are vecs derived from grapheme_indices().
     pub xx: Vec<(usize, &'a str)>,
     pub yy: Vec<(usize, &'a str)>,
     table: Vec<usize>,
