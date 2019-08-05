@@ -131,11 +131,19 @@ impl<'a> Alignment<'a> {
     }
 
     pub fn distance_parts(&self) -> (usize, usize) {
-        let noop = 0;
+        #[derive(Copy, Clone, PartialEq)]
+        enum EditOperation {
+            NoOp,
+            Substitution,
+            Deletion,
+            Insertion,
+        }
+        use EditOperation::*;
+
         let (mut numer, mut denom) = (0, 0);
-        for (op, (_, s)) in self.edit_operations(0, 1, 1, 1, true) {
+        for (op, (_, s)) in self.edit_operations(NoOp, Substitution, Deletion, Insertion, true) {
             let n = s.trim().graphemes(true).count();
-            if op != noop {
+            if op != NoOp {
                 numer += n;
             }
             denom += n;

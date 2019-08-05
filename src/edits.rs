@@ -10,9 +10,9 @@ pub fn infer_edits<'a, EditOperation>(
     minus_lines: &'a Vec<String>,
     plus_lines: &'a Vec<String>,
     non_deletion: EditOperation,
-    deletion: EditOperation,
+    _deletion: EditOperation,
     non_insertion: EditOperation,
-    insertion: EditOperation,
+    _insertion: EditOperation,
     max_line_distance: f64,
 ) -> (
     Vec<Vec<(EditOperation, &'a str)>>, // annotated minus lines
@@ -39,24 +39,6 @@ where
                     annotated_plus_lines.push(vec![(non_insertion, plus_line)]);
                 }
                 emitted += considered;
-
-                // Emit the homologous pair.
-                annotated_minus_lines.push(coalesce_minus_edits(
-                    &alignment,
-                    minus_line,
-                    non_deletion,
-                    deletion,
-                    non_insertion,
-                    insertion,
-                ));
-                annotated_plus_lines.push(coalesce_plus_edits(
-                    &alignment,
-                    plus_line,
-                    non_deletion,
-                    deletion,
-                    non_insertion,
-                    insertion,
-                ));
                 emitted += 1;
 
                 // Move on to the next minus line.
@@ -90,77 +72,6 @@ fn tokenize(line: &str) -> Vec<(usize, &str)> {
         tokens.push((offset, &line[offset..line.len()]));
     }
     tokens
-}
-
-pub fn coalesce_minus_edits<'a, EditOperation>(
-    alignment: &align::Alignment<'a>,
-    line: &'a str,
-    non_deletion: EditOperation,
-    deletion: EditOperation,
-    _non_insertion: EditOperation,
-    insertion: EditOperation,
-) -> Vec<(EditOperation, &'a str)>
-where
-    EditOperation: Copy,
-    EditOperation: PartialEq,
-{
-    coalesce_edits(
-        alignment.edit_operations(non_deletion, deletion, deletion, insertion, true),
-        line,
-        insertion,
-    )
-}
-
-pub fn coalesce_plus_edits<'a, EditOperation>(
-    alignment: &align::Alignment<'a>,
-    line: &'a str,
-    _non_deletion: EditOperation,
-    deletion: EditOperation,
-    non_insertion: EditOperation,
-    insertion: EditOperation,
-) -> Vec<(EditOperation, &'a str)>
-where
-    EditOperation: Copy,
-    EditOperation: PartialEq,
-{
-    coalesce_edits(
-        alignment.edit_operations(non_insertion, insertion, deletion, insertion, false),
-        line,
-        deletion,
-    )
-}
-
-fn coalesce_edits<'a, 'b, EditOperation>(
-    operations: Vec<(EditOperation, (usize, &'b str))>,
-    line: &'a str,
-    irrelevant: EditOperation,
-) -> Vec<(EditOperation, &'a str)>
-where
-    EditOperation: Copy,
-    EditOperation: PartialEq,
-{
-    let mut edits = Vec::new(); // TODO capacity
-    let mut operations = operations.iter().filter(|(op, _)| *op != irrelevant);
-    let next = operations.next();
-    if next.is_none() {
-        return edits;
-    }
-    let (mut last_op, (mut last_offset, _)) = next.unwrap();
-    let mut curr_op = last_op;
-    let mut curr_offset;
-    for (op, (offset, _)) in operations {
-        curr_op = *op;
-        curr_offset = *offset;
-        if curr_op != last_op {
-            edits.push((last_op, &line[last_offset..*offset]));
-            last_offset = curr_offset;
-            last_op = curr_op;
-        }
-    }
-    if curr_op == last_op {
-        edits.push((last_op, &line[last_offset..]));
-    }
-    edits
 }
 
 #[cfg(test)]
@@ -254,18 +165,6 @@ mod tests {
             offset += s.len();
         }
         with_offsets
-    }
-
-    #[test]
-    fn test_coalesce_edits_1() {
-        assert_eq!(
-            coalesce_edits(
-                vec![(MinusNoop, (0, "a")), (MinusNoop, (1, "b"))],
-                "ab",
-                Insertion
-            ),
-            vec![(MinusNoop, "ab")]
-        )
     }
 
     #[test]
