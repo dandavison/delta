@@ -1,123 +1,118 @@
-use std::cmp::min;
+use std::cmp::max;
+use std::collections::VecDeque;
 
-use unicode_segmentation::UnicodeSegmentation;
+const SUBSTITUTION_COST: usize = 1;
+const DELETION_COST: usize = 1;
+const INSERTION_COST: usize = 1;
+
+#[derive(Clone, Debug, PartialEq)]
+pub enum Operation {
+    NoOp,
+    Substitution,
+    Deletion,
+    Insertion,
+}
+
+use Operation::*;
 
 /// Needleman-Wunsch / Wagner-Fischer table for computation of edit distance and associated
 /// alignment.
+#[derive(Clone)]
+struct Cell {
+    parent: usize,
+    operation: Operation,
+    cost: usize,
+}
+
 pub struct Alignment<'a> {
-    pub xx: Vec<(usize, &'a str)>,
-    pub yy: Vec<(usize, &'a str)>,
-    table: Vec<usize>,
-    path: Vec<usize>,
+    pub x: Vec<(usize, &'a str)>,
+    pub y: Vec<(usize, &'a str)>,
+    table: Vec<Cell>,
     dim: [usize; 2],
 }
 
 impl<'a> Alignment<'a> {
     /// Fill table for Levenshtein distance / alignment computation
-    pub fn new(xx: Vec<(usize, &'a str)>, yy: Vec<(usize, &'a str)>) -> Self {
-        let dim = [yy.len() + 1, xx.len() + 1];
-        let table = vec![0; dim[0] * dim[1]];
-        let path = vec![0; dim[0] * dim[1]];
-        let mut alignment = Self {
-            xx,
-            yy,
-            table,
-            path,
-            dim,
-        };
+    pub fn new(x: Vec<(usize, &'a str)>, y: Vec<(usize, &'a str)>) -> Self {
+        let dim = [y.len() + 1, x.len() + 1];
+        let table = vec![
+            Cell {
+                parent: 0,
+                operation: NoOp,
+                cost: 0
+            };
+            dim[0] * dim[1]
+        ];
+        let mut alignment = Self { x, y, table, dim };
         alignment.fill();
         alignment
     }
 
-    // Row-major storage of 2D array.
-    fn index(&self, i: usize, j: usize) -> usize {
-        j * self.dim[1] + i
-    }
-
-    fn reverse_index(&self, n: usize) -> (usize, usize) {
-        (n % self.dim[1], n / self.dim[1])
-    }
-
-    fn cell(&self, i: usize, j: usize) -> usize {
-        self.table[self.index(i, j)]
-    }
-
-    #[allow(dead_code)]
-    fn print(&self) {
-        for i in 0..self.dim[0] {
-            for j in 0..self.dim[1] {
-                print!("{} ", self.cell(j, i));
-            }
-            println!("");
-        }
-    }
-
     /// Fill table for Levenshtein distance / alignment computation
     pub fn fill(&mut self) {
-        // xx is written along the top of the table; yy is written down the left side of the
-        // table. Also, we insert a 0 in cell (0, 0) of the table, so xx and yy are shifted by one
-        // position. Therefore, the element corresponding to (xx[i], yy[j]) is in column (i + 1) and row
-        // (j + 1); the index of this element is given by index(i, j).
+        // x is written along the top of the table; y is written down the left side of the
+        // table. Also, we insert a 0 in cell (0, 0) of the table, so x and y are shifted by one
+        // position. Therefore, the element corresponding to (x[i], y[j]) is in column (i + 1) and
+        // row (j + 1); the index of this element is given by index(i, j).
         for i in 1..self.dim[1] {
-            self.table[i] = i;
+            self.table[i] = Cell {
+                parent: 0,
+                operation: Deletion,
+                cost: i,
+            };
         }
         for j in 1..self.dim[0] {
-            self.table[j * self.dim[1]] = j;
+            self.table[j * self.dim[1]] = Cell {
+                parent: 0,
+                operation: Insertion,
+                cost: j,
+            };
         }
-        let (xx, yy) = (&self.xx, &self.yy);
-        for (i, (_, x)) in (1..=xx.len()).zip(xx) {
-            for (j, (_, y)) in (1..=yy.len()).zip(yy) {
-                let substitution_cost = self.cell(i - 1, j - 1) + if x == y { 0 } else { 1 };
-                let deletion_cost = self.cell(i - 1, j) + 1;
-                let insertion_cost = self.cell(i, j - 1) + 1;
+
+        for (i, (_, x_i)) in (1..=self.x.len()).zip(self.x.iter()) {
+            for (j, (_, y_j)) in (1..=self.y.len()).zip(self.y.iter()) {
+                let (left, diag, up) = (
+                    self.index(i - 1, j),
+                    self.index(i - 1, j - 1),
+                    self.index(i, j - 1),
+                );
+                let candidates = [
+                    Cell {
+                        parent: left,
+                        operation: Deletion,
+                        cost: self.table[left].cost + DELETION_COST,
+                    },
+                    Cell {
+                        parent: diag,
+                        operation: if x_i == y_j { NoOp } else { Substitution },
+                        cost: self.table[diag].cost
+                            + if x_i == y_j { 0 } else { SUBSTITUTION_COST },
+                    },
+                    Cell {
+                        parent: up,
+                        operation: Insertion,
+                        cost: self.table[up].cost + INSERTION_COST,
+                    },
+                ];
                 let index = self.index(i, j);
-                self.table[index] = min(substitution_cost, min(deletion_cost, insertion_cost));
-                if self.table[index] == substitution_cost {
-                    self.path[index] = self.index(i - 1, j - 1)
-                } else if self.table[index] == deletion_cost {
-                    self.path[index] = self.index(i - 1, j)
-                } else {
-                    self.path[index] = self.index(i, j - 1)
-                }
+                self.table[index] =
+                    (*candidates.iter().min_by_key(|cell| cell.cost).unwrap()).clone();
             }
         }
     }
 
     /// Read edit operations from the table.
-    pub fn edit_operations<EditOperation>(
-        &self,
-        noop: EditOperation,
-        substitution: EditOperation,
-        deletion: EditOperation,
-        insertion: EditOperation,
-        forwards: bool,
-    ) -> Vec<(EditOperation, (usize, &'a str))>
-    where
-        EditOperation: Copy,
-        EditOperation: PartialEq,
-    {
-        let mut ops = Vec::new();
-        let (mut i, mut j) = (self.xx.len(), self.yy.len());
-
-        while i > 0 && j > 0 {
-            let x = self.xx[i - 1];
-            let y = self.yy[j - 1];
-            let (_i, _j) = self.reverse_index(self.path[self.index(i, j)]);
-
-            let op = if (_i, _j) == (i - 1, j) {
-                deletion
-            } else if x.1 == y.1 && (_i, _j) == (i - 1, j - 1) {
-                noop
-            } else if x.1 != y.1 && (_i, _j) == (i - 1, j - 1) {
-                substitution
-            } else {
-                insertion
-            };
-            ops.push((op, if forwards { x } else { y }));
-            i = _i;
-            j = _j;
+    pub fn operations(&self) -> Vec<Operation> {
+        let mut ops = VecDeque::with_capacity(max(self.x.len(), self.y.len()));
+        let mut cell = &self.table[self.index(self.x.len(), self.y.len())];
+        loop {
+            ops.push_front(cell.operation.clone());
+            if cell.parent == 0 {
+                break;
+            }
+            cell = &self.table[cell.parent];
         }
-        ops.into_iter().rev().collect()
+        Vec::from(ops)
     }
 
     /// Compute custom distance metric from the filled table. The distance metric is
@@ -131,22 +126,12 @@ impl<'a> Alignment<'a> {
     }
 
     pub fn distance_parts(&self) -> (usize, usize) {
-        #[derive(Copy, Clone, PartialEq)]
-        enum EditOperation {
-            NoOp,
-            Substitution,
-            Deletion,
-            Insertion,
-        }
-        use EditOperation::*;
-
         let (mut numer, mut denom) = (0, 0);
-        for (op, (_, s)) in self.edit_operations(NoOp, Substitution, Deletion, Insertion, true) {
-            let n = s.trim().graphemes(true).count();
+        for op in self.operations() {
             if op != NoOp {
-                numer += n;
+                numer += 1;
             }
-            denom += n;
+            denom += 1;
         }
         (numer, denom)
     }
@@ -154,7 +139,48 @@ impl<'a> Alignment<'a> {
     /// Compute levenshtein distance from the filled table.
     #[allow(dead_code)]
     pub fn levenshtein_distance(&self) -> usize {
-        self.table[self.table.len() - 1]
+        self.table[self.index(self.x.len(), self.y.len())].cost
+    }
+
+    // Row-major storage of 2D array.
+    fn index(&self, i: usize, j: usize) -> usize {
+        j * self.dim[1] + i
+    }
+
+    #[allow(dead_code)]
+    fn format_cell(&self, cell: &Cell) -> String {
+        let parent = &self.table[cell.parent];
+        let op = match cell.operation {
+            Deletion => "-",
+            Substitution => "*",
+            Insertion => "+",
+            NoOp => ".",
+        };
+        format!("{}{}{}", parent.cost, op, cell.cost)
+    }
+
+    #[allow(dead_code)]
+    fn print(&self) {
+        println!("x: {:?}", self.x);
+        println!("y: {:?}", self.y);
+        print!("\n");
+        print!("      ");
+        for j in 0..self.dim[1] {
+            print!("{}     ", if j > 0 { self.x[j - 1].1 } else { " " })
+        }
+        print!("\n");
+
+        for i in 0..self.dim[0] {
+            for j in 0..self.dim[1] {
+                if j == 0 {
+                    print!("{}     ", if i > 0 { self.y[i - 1].1 } else { " " })
+                }
+                let cell = &self.table[self.index(j, i)];
+                print!("{}   ", self.format_cell(cell));
+            }
+            print!("\n");
+        }
+        print!("\n");
     }
 }
 
@@ -162,24 +188,13 @@ impl<'a> Alignment<'a> {
 mod tests {
     use super::*;
 
-    #[derive(Copy, Clone, Debug, PartialEq)]
-    enum EditOperation {
-        NoOp,
-        Substitution,
-        Deletion,
-        Insertion,
-    }
-
-    use EditOperation::*;
+    use unicode_segmentation::UnicodeSegmentation;
 
     #[test]
     fn test_0() {
         let (before, after) = ("aaa", "aba");
         assert_string_distance_parts(before, after, (1, 3));
-        assert_eq!(
-            edit_operations(before, after),
-            vec![NoOp, Substitution, NoOp,]
-        );
+        assert_eq!(operations(before, after), vec![NoOp, Substitution, NoOp,]);
     }
 
     #[test]
@@ -187,7 +202,7 @@ mod tests {
         let (before, after) = ("ááb", "áaa");
         assert_string_distance_parts(before, after, (2, 3));
         assert_eq!(
-            edit_operations(before, after),
+            operations(before, after),
             vec![NoOp, Substitution, Substitution,]
         );
     }
@@ -197,7 +212,7 @@ mod tests {
         let (before, after) = ("kitten", "sitting");
         assert_string_distance_parts(before, after, (3, 7));
         assert_eq!(
-            edit_operations(before, after),
+            operations(before, after),
             vec![
                 Substitution, // K S
                 NoOp,         // I I
@@ -215,7 +230,7 @@ mod tests {
         let (before, after) = ("saturday", "sunday");
         assert_string_distance_parts(before, after, (3, 8));
         assert_eq!(
-            edit_operations(before, after),
+            operations(before, after),
             vec![
                 NoOp,         // S S
                 Deletion,     // A -
@@ -226,16 +241,6 @@ mod tests {
                 NoOp,         // A A
                 NoOp          // Y Y
             ]
-        );
-    }
-
-    #[test]
-    fn test_3() {
-        let (before, after) = ("aaabbb", "bbbbbb");
-        // assert_string_distance_parts(before, after, (6, 6));
-        assert_eq!(
-            edit_operations(before, after),
-            vec![Deletion, Deletion, Deletion, NoOp, NoOp, NoOp, Insertion, Insertion, Insertion,]
         );
     }
 
@@ -267,15 +272,11 @@ mod tests {
         Alignment::new(x, y).levenshtein_distance()
     }
 
-    fn edit_operations<'a>(x: &'a str, y: &'a str) -> Vec<EditOperation> {
+    fn operations<'a>(x: &'a str, y: &'a str) -> Vec<Operation> {
         let (x, y) = (
             x.grapheme_indices(true).collect::<Vec<(usize, &str)>>(),
             y.grapheme_indices(true).collect::<Vec<(usize, &str)>>(),
         );
-        Alignment::new(x, y)
-            .edit_operations(NoOp, Substitution, Deletion, Insertion, true)
-            .iter()
-            .map(|(op, _)| *op)
-            .collect()
+        Alignment::new(x, y).operations()
     }
 }
