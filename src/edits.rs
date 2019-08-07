@@ -144,7 +144,7 @@ where
         )
     };
 
-    for (op, n) in run_length_encode(alignment.operations()) {
+    for (op, n) in alignment.coalesced_operations() {
         match op {
             align::Operation::Deletion => {
                 annotated_minus_line.push((deletion, minus_section(n)));
@@ -163,34 +163,6 @@ where
         }
     }
     (annotated_minus_line, annotated_plus_line)
-}
-
-fn run_length_encode<T>(sequence: Vec<T>) -> Vec<(T, usize)>
-where
-    T: Copy,
-    T: PartialEq,
-{
-    let mut encoded = Vec::with_capacity(sequence.len());
-
-    if sequence.len() == 0 {
-        return encoded;
-    }
-
-    let end = sequence.len();
-    let (mut i, mut j) = (0, 1);
-    let mut curr = &sequence[i];
-    loop {
-        if j == end || sequence[j] != *curr {
-            encoded.push((*curr, j - i));
-            if j == end {
-                return encoded;
-            } else {
-                curr = &sequence[j];
-                i = j;
-            }
-        }
-        j += 1;
-    }
 }
 
 #[cfg(test)]
@@ -270,17 +242,6 @@ mod tests {
                 "plus_line",
                 ")]);"
             ]
-        );
-    }
-
-    #[test]
-    fn test_run_length_encode() {
-        assert_eq!(run_length_encode::<usize>(vec![]), vec![]);
-        assert_eq!(run_length_encode(vec![0]), vec![(0, 1)]);
-        assert_eq!(run_length_encode(vec!["0", "0"]), vec![("0", 2)]);
-        assert_eq!(
-            run_length_encode(vec![0, 0, 1, 2, 2, 2, 3, 4, 4, 4]),
-            vec![(0, 2), (1, 1), (2, 3), (3, 1), (4, 3)]
         );
     }
 
