@@ -428,11 +428,14 @@ mod tests {
             vec!["fn coalesce_edits<'a, EditOperation>("],
             vec!["fn coalesce_edits<'a, 'b, EditOperation>("],
             (
-                vec![vec![(MinusNoop, "fn coalesce_edits<'a, EditOperation>(")]],
                 vec![vec![
-                    (PlusNoop, "fn coalesce_edits<'a, "),
-                    (Insertion, "'b, "),
-                    (PlusNoop, "EditOperation>("),
+                    (MinusNoop, "fn coalesce_edits<'a"),
+                    (MinusNoop, ", EditOperation>("),
+                ]],
+                vec![vec![
+                    (PlusNoop, "fn coalesce_edits<'a"),
+                    (Insertion, ", 'b"),
+                    (PlusNoop, ", EditOperation>("),
                 ]],
             ),
             0.66,
