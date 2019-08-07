@@ -124,11 +124,13 @@ impl<'a> Alignment<'a> {
     /// (total length of edits) / (total length of longer string)
     ///
     /// where length is measured in number of unicode grapheme clusters.
+    #[allow(dead_code)]
     pub fn distance(&self) -> f64 {
         let (numer, denom) = self.distance_parts();
         (numer as f64) / (denom as f64)
     }
 
+    #[allow(dead_code)]
     pub fn distance_parts(&self) -> (usize, usize) {
         let (mut numer, mut denom) = (0, 0);
         for op in self.operations() {

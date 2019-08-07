@@ -1,5 +1,7 @@
 use regex::Regex;
 
+use unicode_segmentation::UnicodeSegmentation;
+
 use crate::align;
 
 /// Infer the edit operations responsible for the differences between a collection of old and new
@@ -31,7 +33,16 @@ where
         let mut considered = 0; // plus lines considered so far as match for minus_line
         for plus_line in &plus_lines[emitted..] {
             let alignment = align::Alignment::new(tokenize(minus_line), tokenize(plus_line));
-            if alignment.distance() <= max_line_distance {
+            let (annotated_minus_line, annotated_plus_line, distance) = annotate(
+                alignment,
+                noop_deletion,
+                deletion,
+                noop_insertion,
+                insertion,
+                minus_line,
+                plus_line,
+            );
+            if distance <= max_line_distance {
                 // minus_line and plus_line are inferred to be a homologous pair.
 
                 // Emit as unpaired the plus lines already considered and rejected
@@ -39,15 +50,6 @@ where
                     annotated_plus_lines.push(vec![(noop_insertion, plus_line)]);
                 }
                 emitted += considered;
-                let (annotated_minus_line, annotated_plus_line) = annotate(
-                    alignment,
-                    noop_deletion,
-                    deletion,
-                    noop_insertion,
-                    insertion,
-                    minus_line,
-                    plus_line,
-                );
                 annotated_minus_lines.push(annotated_minus_line);
                 annotated_plus_lines.push(annotated_plus_line);
                 emitted += 1;
@@ -95,7 +97,7 @@ fn annotate<'a, Annotation>(
     insertion: Annotation,
     minus_line: &'a str,
     plus_line: &'a str,
-) -> (Vec<(Annotation, &'a str)>, Vec<(Annotation, &'a str)>)
+) -> (Vec<(Annotation, &'a str)>, Vec<(Annotation, &'a str)>, f64)
 where
     Annotation: Copy,
 {
@@ -104,6 +106,7 @@ where
 
     let (mut x_offset, mut y_offset) = (0, 0);
     let (mut minus_line_offset, mut plus_line_offset) = (0, 0);
+    let (mut d_numer, mut d_denom) = (0, 0);
 
     // Note that the inputs to align::Alignment are not the original strings themselves, but
     // sequences of substrings derived from the tokenization process. We have just applied
@@ -143,26 +146,43 @@ where
             plus_line,
         )
     };
+    let distance_contribution = |section: &str| section.trim_start().graphemes(true).count();
 
     for (op, n) in alignment.coalesced_operations() {
         match op {
             align::Operation::Deletion => {
-                annotated_minus_line.push((deletion, minus_section(n)));
+                let minus_section = minus_section(n);
+                let n_d = distance_contribution(minus_section);
+                d_denom += n_d;
+                d_numer += n_d;
+                annotated_minus_line.push((deletion, minus_section));
             }
             align::Operation::NoOp => {
-                annotated_minus_line.push((noop_deletion, minus_section(n)));
+                let minus_section = minus_section(n);
+                let n_d = distance_contribution(minus_section);
+                d_denom += n_d; // TODO 2x ?
+                annotated_minus_line.push((noop_deletion, minus_section));
                 annotated_plus_line.push((noop_insertion, plus_section(n)));
             }
             align::Operation::Substitution => {
-                annotated_minus_line.push((deletion, minus_section(n)));
+                let minus_section = minus_section(n);
+                let n_d = distance_contribution(minus_section);
+                d_denom += n_d; // TODO 2x ?
+                d_numer += n_d; // TODO 2x?
+                annotated_minus_line.push((deletion, minus_section));
                 annotated_plus_line.push((insertion, plus_section(n)));
             }
             align::Operation::Insertion => {
-                annotated_plus_line.push((insertion, plus_section(n)));
+                let plus_section = plus_section(n);
+                let n_d = distance_contribution(plus_section);
+                d_denom += n_d;
+                d_numer += n_d;
+                annotated_plus_line.push((insertion, plus_section));
             }
         }
     }
-    (annotated_minus_line, annotated_plus_line)
+    let distance = (d_numer as f64) / (d_denom as f64);
+    (annotated_minus_line, annotated_plus_line, distance)
 }
 
 #[cfg(test)]
