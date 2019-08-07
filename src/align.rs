@@ -5,7 +5,7 @@ const SUBSTITUTION_COST: usize = 1;
 const DELETION_COST: usize = 1;
 const INSERTION_COST: usize = 1;
 
-#[derive(Clone, Debug, PartialEq)]
+#[derive(Clone, Copy, Debug, PartialEq)]
 pub enum Operation {
     NoOp,
     Substitution,
@@ -25,15 +25,15 @@ struct Cell {
 }
 
 pub struct Alignment<'a> {
-    pub x: Vec<(usize, &'a str)>,
-    pub y: Vec<(usize, &'a str)>,
+    pub x: Vec<&'a str>,
+    pub y: Vec<&'a str>,
     table: Vec<Cell>,
     dim: [usize; 2],
 }
 
 impl<'a> Alignment<'a> {
     /// Fill table for Levenshtein distance / alignment computation
-    pub fn new(x: Vec<(usize, &'a str)>, y: Vec<(usize, &'a str)>) -> Self {
+    pub fn new(x: Vec<&'a str>, y: Vec<&'a str>) -> Self {
         let dim = [y.len() + 1, x.len() + 1];
         let table = vec![
             Cell {
@@ -69,8 +69,8 @@ impl<'a> Alignment<'a> {
             };
         }
 
-        for (i, (_, x_i)) in (1..=self.x.len()).zip(self.x.iter()) {
-            for (j, (_, y_j)) in (1..=self.y.len()).zip(self.y.iter()) {
+        for (i, x_i) in (1..=self.x.len()).zip(self.x.iter()) {
+            for (j, y_j) in (1..=self.y.len()).zip(self.y.iter()) {
                 let (left, diag, up) = (
                     self.index(i - 1, j),
                     self.index(i - 1, j - 1),
@@ -166,14 +166,14 @@ impl<'a> Alignment<'a> {
         print!("\n");
         print!("      ");
         for j in 0..self.dim[1] {
-            print!("{}     ", if j > 0 { self.x[j - 1].1 } else { " " })
+            print!("{}     ", if j > 0 { self.x[j - 1] } else { " " })
         }
         print!("\n");
 
         for i in 0..self.dim[0] {
             for j in 0..self.dim[1] {
                 if j == 0 {
-                    print!("{}     ", if i > 0 { self.y[i - 1].1 } else { " " })
+                    print!("{}     ", if i > 0 { self.y[i - 1] } else { " " })
                 }
                 let cell = &self.table[self.index(j, i)];
                 print!("{}   ", self.format_cell(cell));
@@ -258,24 +258,24 @@ mod tests {
 
     fn string_distance_parts(x: &str, y: &str) -> (usize, usize) {
         let (x, y) = (
-            x.grapheme_indices(true).collect::<Vec<(usize, &str)>>(),
-            y.grapheme_indices(true).collect::<Vec<(usize, &str)>>(),
+            x.graphemes(true).collect::<Vec<&str>>(),
+            y.graphemes(true).collect::<Vec<&str>>(),
         );
         Alignment::new(x, y).distance_parts()
     }
 
     fn string_levenshtein_distance(x: &str, y: &str) -> usize {
         let (x, y) = (
-            x.grapheme_indices(true).collect::<Vec<(usize, &str)>>(),
-            y.grapheme_indices(true).collect::<Vec<(usize, &str)>>(),
+            x.graphemes(true).collect::<Vec<&str>>(),
+            y.graphemes(true).collect::<Vec<&str>>(),
         );
         Alignment::new(x, y).levenshtein_distance()
     }
 
     fn operations<'a>(x: &'a str, y: &'a str) -> Vec<Operation> {
         let (x, y) = (
-            x.grapheme_indices(true).collect::<Vec<(usize, &str)>>(),
-            y.grapheme_indices(true).collect::<Vec<(usize, &str)>>(),
+            x.graphemes(true).collect::<Vec<&str>>(),
+            y.graphemes(true).collect::<Vec<&str>>(),
         );
         Alignment::new(x, y).operations()
     }

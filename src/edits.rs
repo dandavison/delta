@@ -9,10 +9,10 @@ use crate::align;
 pub fn infer_edits<'a, EditOperation>(
     minus_lines: &'a Vec<String>,
     plus_lines: &'a Vec<String>,
-    non_deletion: EditOperation,
-    _deletion: EditOperation,
-    non_insertion: EditOperation,
-    _insertion: EditOperation,
+    noop_deletion: EditOperation,
+    deletion: EditOperation,
+    noop_insertion: EditOperation,
+    insertion: EditOperation,
     max_line_distance: f64,
 ) -> (
     Vec<Vec<(EditOperation, &'a str)>>, // annotated minus lines
@@ -36,42 +36,161 @@ where
 
                 // Emit as unpaired the plus lines already considered and rejected
                 for plus_line in &plus_lines[emitted..(emitted + considered)] {
-                    annotated_plus_lines.push(vec![(non_insertion, plus_line)]);
+                    annotated_plus_lines.push(vec![(noop_insertion, plus_line)]);
                 }
                 emitted += considered;
+                let (annotated_minus_line, annotated_plus_line) = annotate(
+                    alignment,
+                    noop_deletion,
+                    deletion,
+                    noop_insertion,
+                    insertion,
+                    minus_line,
+                    plus_line,
+                );
+                annotated_minus_lines.push(annotated_minus_line);
+                annotated_plus_lines.push(annotated_plus_line);
                 emitted += 1;
 
-                // Move on to the next minus line.
+                // Greedy: move on to the next minus line.
                 continue 'minus_lines_loop;
             } else {
                 considered += 1;
             }
         }
         // No homolog was found for minus i; emit as unpaired.
-        annotated_minus_lines.push(vec![(non_deletion, minus_line)]);
+        annotated_minus_lines.push(vec![(noop_deletion, minus_line)]);
     }
     // Emit any remaining plus lines
     for plus_line in &plus_lines[emitted..] {
-        annotated_plus_lines.push(vec![(non_insertion, plus_line)]);
+        annotated_plus_lines.push(vec![(noop_insertion, plus_line)]);
     }
 
     (annotated_minus_lines, annotated_plus_lines)
 }
 
-fn tokenize(line: &str) -> Vec<(usize, &str)> {
+fn tokenize(line: &str) -> Vec<&str> {
     let separators = Regex::new(r"[ ,;.:()\[\]<>]+").unwrap();
     let mut tokens = Vec::new();
     let mut offset = 0;
     for m in separators.find_iter(line) {
-        let (start, end) = (m.start(), m.end());
-        tokens.push((offset, &line[offset..start]));
-        tokens.push((start, m.as_str()));
-        offset = end;
+        tokens.push(&line[offset..m.start()]);
+        tokens.push(m.as_str());
+        offset = m.end();
     }
     if offset < line.len() {
-        tokens.push((offset, &line[offset..line.len()]));
+        tokens.push(&line[offset..line.len()]);
     }
     tokens
+}
+
+/// Use alignment to "annotate" minus and plus lines. An "annotated" line is a sequence of
+/// (s: &str, a: EditOperation) pairs, where the &strs reference the memory
+/// of the original line and their concatenation equals the line.
+fn annotate<'a, Annotation>(
+    alignment: align::Alignment<'a>,
+    noop_deletion: Annotation,
+    deletion: Annotation,
+    noop_insertion: Annotation,
+    insertion: Annotation,
+    minus_line: &'a str,
+    plus_line: &'a str,
+) -> (Vec<(Annotation, &'a str)>, Vec<(Annotation, &'a str)>)
+where
+    Annotation: Copy,
+{
+    let mut annotated_minus_line = Vec::new();
+    let mut annotated_plus_line = Vec::new();
+
+    let (mut x_offset, mut y_offset) = (0, 0);
+    let (mut minus_line_offset, mut plus_line_offset) = (0, 0);
+
+    // Note that the inputs to align::Alignment are not the original strings themselves, but
+    // sequences of substrings derived from the tokenization process. We have just applied
+    // run_length_encoding to "coalesce" runs of the same edit operation into a single
+    // operation. We now need to form a &str, pointing into the memory of the original line,
+    // identifying a "section" which is the concatenation of the substrings involved in this
+    // coalesced operation. That's what the following closures do. Note that they must be called
+    // once only since they advance offset pointers.
+    let get_section = |n: usize,
+                       line_offset: &mut usize,
+                       substrings_offset: &mut usize,
+                       substrings: &[&str],
+                       line: &'a str| {
+        let section_length = substrings[*substrings_offset..*substrings_offset + n]
+            .iter()
+            .fold(0, |n, s| n + s.len());
+        let old_offset = *line_offset;
+        *line_offset += section_length;
+        *substrings_offset += n;
+        &line[old_offset..*line_offset]
+    };
+    let mut minus_section = |n| {
+        get_section(
+            n,
+            &mut minus_line_offset,
+            &mut x_offset,
+            &alignment.x,
+            minus_line,
+        )
+    };
+    let mut plus_section = |n| {
+        get_section(
+            n,
+            &mut plus_line_offset,
+            &mut y_offset,
+            &alignment.y,
+            plus_line,
+        )
+    };
+
+    for (op, n) in run_length_encode(alignment.operations()) {
+        match op {
+            align::Operation::Deletion => {
+                annotated_minus_line.push((deletion, minus_section(n)));
+            }
+            align::Operation::NoOp => {
+                annotated_minus_line.push((noop_deletion, minus_section(n)));
+                annotated_plus_line.push((noop_insertion, plus_section(n)));
+            }
+            align::Operation::Substitution => {
+                annotated_minus_line.push((deletion, minus_section(n)));
+                annotated_plus_line.push((insertion, plus_section(n)));
+            }
+            align::Operation::Insertion => {
+                annotated_plus_line.push((insertion, plus_section(n)));
+            }
+        }
+    }
+    (annotated_minus_line, annotated_plus_line)
+}
+
+fn run_length_encode<T>(sequence: Vec<T>) -> Vec<(T, usize)>
+where
+    T: Copy,
+    T: PartialEq,
+{
+    let mut encoded = Vec::with_capacity(sequence.len());
+
+    if sequence.len() == 0 {
+        return encoded;
+    }
+
+    let end = sequence.len();
+    let (mut i, mut j) = (0, 1);
+    let mut curr = &sequence[i];
+    loop {
+        if j == end || sequence[j] != *curr {
+            encoded.push((*curr, j - i));
+            if j == end {
+                return encoded;
+            } else {
+                curr = &sequence[j];
+                i = j;
+            }
+        }
+        j += 1;
+    }
 }
 
 #[cfg(test)]
@@ -96,17 +215,14 @@ mod tests {
 
     #[test]
     fn test_tokenize_1() {
-        assert_eq!(
-            tokenize("aaa bbb"),
-            substring_indices(vec!["aaa", " ", "bbb"])
-        )
+        assert_eq!(tokenize("aaa bbb"), vec!["aaa", " ", "bbb"])
     }
 
     #[test]
     fn test_tokenize_2() {
         assert_eq!(
             tokenize("fn coalesce_edits<'a, EditOperation>("),
-            substring_indices(vec![
+            vec![
                 "fn",
                 " ",
                 "coalesce_edits",
@@ -115,7 +231,7 @@ mod tests {
                 ", ",
                 "EditOperation",
                 ">("
-            ])
+            ]
         );
     }
 
@@ -123,7 +239,7 @@ mod tests {
     fn test_tokenize_3() {
         assert_eq!(
             tokenize("fn coalesce_edits<'a, 'b, EditOperation>("),
-            substring_indices(vec![
+            vec![
                 "fn",
                 " ",
                 "coalesce_edits",
@@ -134,37 +250,38 @@ mod tests {
                 ", ",
                 "EditOperation",
                 ">("
-            ])
+            ]
         );
     }
 
     #[test]
     fn test_tokenize_4() {
         assert_eq!(
-            tokenize("annotated_plus_lines.push(vec![(non_insertion, plus_line)]);"),
-            substring_indices(vec![
+            tokenize("annotated_plus_lines.push(vec![(noop_insertion, plus_line)]);"),
+            vec![
                 "annotated_plus_lines",
                 ".",
                 "push",
                 "(",
                 "vec!",
                 "[(",
-                "non_insertion",
+                "noop_insertion",
                 ", ",
                 "plus_line",
                 ")]);"
-            ])
+            ]
         );
     }
 
-    fn substring_indices(substrings: Vec<&str>) -> Vec<(usize, &str)> {
-        let mut offset = 0;
-        let mut with_offsets = Vec::new();
-        for s in substrings {
-            with_offsets.push((offset, s));
-            offset += s.len();
-        }
-        with_offsets
+    #[test]
+    fn test_run_length_encode() {
+        assert_eq!(run_length_encode::<usize>(vec![]), vec![]);
+        assert_eq!(run_length_encode(vec![0]), vec![(0, 1)]);
+        assert_eq!(run_length_encode(vec!["0", "0"]), vec![("0", 2)]);
+        assert_eq!(
+            run_length_encode(vec![0, 0, 1, 2, 2, 2, 3, 4, 4, 4]),
+            vec![(0, 2), (1, 1), (2, 3), (3, 1), (4, 3)]
+        );
     }
 
     #[test]
