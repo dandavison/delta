@@ -31,13 +31,13 @@ impl<'a> Painter<'a> {
             minus_lines: Vec::new(),
             plus_lines: Vec::new(),
             output_buffer: String::new(),
-            writer: writer,
             syntax: None,
             highlighter: HighlightLines::new(
                 assets.syntax_set.find_syntax_by_extension("txt").unwrap(),
                 config.theme,
             ),
-            config: config,
+            writer,
+            config,
         }
     }
 
@@ -56,7 +56,7 @@ impl<'a> Painter<'a> {
         let (minus_line_diff_style_sections, plus_line_diff_style_sections) =
             Self::get_diff_style_sections(&self.minus_lines, &self.plus_lines, self.config);
         // TODO: lines and style sections contain identical line text
-        if self.minus_lines.len() > 0 {
+        if !self.minus_lines.is_empty() {
             Painter::paint_lines(
                 &mut self.output_buffer,
                 minus_line_syntax_style_sections,
@@ -65,7 +65,7 @@ impl<'a> Painter<'a> {
                 self.config.minus_style_modifier,
             );
         }
-        if self.plus_lines.len() > 0 {
+        if !self.plus_lines.is_empty() {
             Painter::paint_lines(
                 &mut self.output_buffer,
                 plus_line_syntax_style_sections,
@@ -114,7 +114,7 @@ impl<'a> Painter<'a> {
                 }
                 _ => (),
             }
-            write!(output_buffer, "\n").unwrap();
+            writeln!(output_buffer).unwrap();
         }
     }
 
@@ -127,8 +127,8 @@ impl<'a> Painter<'a> {
 
     /// Perform syntax highlighting for minus and plus lines in buffer.
     fn get_syntax_style_sections<'m, 'p>(
-        minus_lines: &'m Vec<String>,
-        plus_lines: &'p Vec<String>,
+        minus_lines: &'m [String],
+        plus_lines: &'p [String],
         highlighter: &mut HighlightLines,
         config: &config::Config,
     ) -> (Vec<Vec<(Style, &'m str)>>, Vec<Vec<(Style, &'p str)>>) {
@@ -168,8 +168,8 @@ impl<'a> Painter<'a> {
 
     /// Set background styles to represent diff for minus and plus lines in buffer.
     fn get_diff_style_sections<'b>(
-        minus_lines: &'b Vec<String>,
-        plus_lines: &'b Vec<String>,
+        minus_lines: &'b [String],
+        plus_lines: &'b [String],
         config: &config::Config,
     ) -> (
         Vec<Vec<(StyleModifier, &'b str)>>,
@@ -191,7 +191,7 @@ impl<'a> Painter<'a> {
 pub fn paint_text(text: &str, style: Style, output_buffer: &mut String) -> std::fmt::Result {
     use std::fmt::Write;
 
-    if text.len() == 0 {
+    if text.is_empty() {
         return Ok(());
     }
 
@@ -218,8 +218,8 @@ mod superimpose_style_sections {
     use syntect::highlighting::{Style, StyleModifier};
 
     pub fn superimpose_style_sections(
-        sections_1: &Vec<(Style, &str)>,
-        sections_2: &Vec<(StyleModifier, &str)>,
+        sections_1: &[(Style, &str)],
+        sections_2: &[(StyleModifier, &str)],
     ) -> Vec<(Style, String)> {
         coalesce(superimpose(
             explode(sections_1)
@@ -229,7 +229,7 @@ mod superimpose_style_sections {
         ))
     }
 
-    fn explode<T>(style_sections: &Vec<(T, &str)>) -> Vec<(T, char)>
+    fn explode<T>(style_sections: &[(T, &str)]) -> Vec<(T, char)>
     where
         T: Copy,
     {
@@ -261,21 +261,18 @@ mod superimpose_style_sections {
     fn coalesce(style_sections: Vec<(Style, char)>) -> Vec<(Style, String)> {
         let mut coalesced: Vec<(Style, String)> = Vec::new();
         let mut style_sections = style_sections.iter();
-        match style_sections.next() {
-            Some((style, c)) => {
-                let mut current_string = c.to_string();
-                let mut current_style = style;
-                for (style, c) in style_sections {
-                    if style != current_style {
-                        coalesced.push((*current_style, current_string));
-                        current_string = String::new();
-                        current_style = style;
-                    }
-                    current_string.push(*c);
+        if let Some((style, c)) = style_sections.next() {
+            let mut current_string = c.to_string();
+            let mut current_style = style;
+            for (style, c) in style_sections {
+                if style != current_style {
+                    coalesced.push((*current_style, current_string));
+                    current_string = String::new();
+                    current_style = style;
                 }
-                coalesced.push((*current_style, current_string));
+                current_string.push(*c);
             }
-            None => (),
+            coalesced.push((*current_style, current_string));
         }
         coalesced
     }

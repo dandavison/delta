@@ -31,10 +31,13 @@ pub fn get_config<'a>(
 ) -> Config<'a> {
     let theme_name = match opt.theme {
         Some(ref theme) => theme,
-        None => match opt.light {
-            true => style::DEFAULT_LIGHT_THEME,
-            false => style::DEFAULT_DARK_THEME,
-        },
+        None => {
+            if opt.light {
+                style::DEFAULT_LIGHT_THEME
+            } else {
+                style::DEFAULT_DARK_THEME
+            }
+        }
     };
     let is_light_theme = style::LIGHT_THEMES.contains(&theme_name);
 
@@ -92,7 +95,7 @@ pub fn get_config<'a>(
 
     Config {
         theme: &theme_set.themes[theme_name],
-        theme_name: theme_name,
+        theme_name,
         minus_style_modifier,
         minus_emph_style_modifier,
         plus_style_modifier,

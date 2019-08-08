@@ -17,13 +17,13 @@ pub fn get_file_extension_from_diff_line(line: &str) -> Option<&str> {
 
 pub fn get_file_path_from_file_meta_line(line: &str) -> String {
     if line.starts_with("rename") {
-        match line.split(" ").skip(2).next() {
+        match line.split(' ').nth(2) {
             Some(path) => path,
             _ => "",
         }
         .to_string()
     } else {
-        match line.split(" ").skip(1).next() {
+        match line.split(' ').nth(1) {
             Some("/dev/null") => "/dev/null",
             Some(path) => &path[2..],
             _ => "",
@@ -34,7 +34,7 @@ pub fn get_file_path_from_file_meta_line(line: &str) -> String {
 
 pub fn get_file_change_description_from_file_paths(minus_file: &str, plus_file: &str) -> String {
     match (minus_file, plus_file) {
-        (minus_file, plus_file) if minus_file == plus_file => format!("{}", minus_file),
+        (minus_file, plus_file) if minus_file == plus_file => minus_file.to_string(),
         (minus_file, "/dev/null") => format!("deleted: {}", minus_file),
         ("/dev/null", plus_file) => format!("added: {}", plus_file),
         (minus_file, plus_file) => format!("renamed: {} ⟶   {}", minus_file, plus_file),
@@ -48,12 +48,7 @@ pub fn parse_hunk_metadata(line: &str) -> (&str, &str) {
     let mut iter = line.split("@@").skip(1);
     let line_number = iter
         .next()
-        .and_then(|s| {
-            s.split("+")
-                .skip(1)
-                .next()
-                .and_then(|s| s.split(",").next())
-        })
+        .and_then(|s| s.split('+').nth(1).and_then(|s| s.split(',').next()))
         .unwrap_or("");
     let code_fragment = iter.next().unwrap_or("");
     (code_fragment, line_number)
@@ -62,7 +57,7 @@ pub fn parse_hunk_metadata(line: &str) -> (&str, &str) {
 /// Given input like "diff --git a/src/main.rs b/src/main.rs"
 /// return ("rs", "rs").
 fn get_file_extensions_from_diff_line(line: &str) -> (Option<&str>, Option<&str>) {
-    let mut iter = line.split(" ").skip(2);
+    let mut iter = line.split(' ').skip(2);
     (
         iter.next().and_then(|s| get_extension(&s[2..])),
         iter.next().and_then(|s| get_extension(&s[2..])),

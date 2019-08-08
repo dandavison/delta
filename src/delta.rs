@@ -145,7 +145,7 @@ fn handle_file_meta_header_line(
         cli::SectionStyle::Plain => panic!(),
     };
     let ansi_style = Blue.normal();
-    write!(painter.writer, "\n")?;
+    writeln!(painter.writer)?;
     draw_fn(
         painter.writer,
         &ansi_style.paint(parse::get_file_change_description_from_file_paths(
@@ -170,7 +170,7 @@ fn handle_hunk_meta_line(
     };
     let ansi_style = Blue.normal();
     let (code_fragment, line_number) = parse::parse_hunk_metadata(&line);
-    if code_fragment.len() > 0 {
+    if !code_fragment.is_empty() {
         let syntax_style_sections = Painter::get_line_syntax_style_sections(
             code_fragment,
             &mut painter.highlighter,
@@ -254,7 +254,7 @@ fn handle_hunk_line(painter: &mut Painter, line: &str, state: State, config: &Co
 // highlight correctly.
 // See https://docs.rs/syntect/3.2.0/syntect/parsing/struct.SyntaxSetBuilder.html#method.add_from_folder
 fn prepare(line: &str) -> String {
-    if line.len() > 0 {
+    if !line.is_empty() {
         format!(" {}\n", &line[1..])
     } else {
         "\n".to_string()

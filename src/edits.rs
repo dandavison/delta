@@ -9,8 +9,8 @@ use crate::align;
 /// slices are slices of the line, and their concatenation equals the line. Return the input minus
 /// and plus lines, in annotated form.
 pub fn infer_edits<'a, EditOperation>(
-    minus_lines: &'a Vec<String>,
-    plus_lines: &'a Vec<String>,
+    minus_lines: &'a [String],
+    plus_lines: &'a [String],
     noop_deletion: EditOperation,
     deletion: EditOperation,
     noop_insertion: EditOperation,
@@ -537,7 +537,7 @@ mod tests {
         for (edit, s) in annotated_line {
             print!("({} {}), ", fmt_edit(edit), s.trim_end());
         }
-        print!("\n");
+        println!();
     }
 
     #[allow(dead_code)]

@@ -106,7 +106,7 @@ impl<'a> Alignment<'a> {
         let mut ops = VecDeque::with_capacity(max(self.x.len(), self.y.len()));
         let mut cell = &self.table[self.index(self.x.len(), self.y.len())];
         loop {
-            ops.push_front(cell.operation.clone());
+            ops.push_front(cell.operation);
             if cell.parent == 0 {
                 break;
             }
@@ -169,12 +169,12 @@ impl<'a> Alignment<'a> {
     fn print(&self) {
         println!("x: {:?}", self.x);
         println!("y: {:?}", self.y);
-        print!("\n");
+        println!();
         print!("      ");
         for j in 0..self.dim[1] {
             print!("{}     ", if j > 0 { self.x[j - 1] } else { " " })
         }
-        print!("\n");
+        println!();
 
         for i in 0..self.dim[0] {
             for j in 0..self.dim[1] {
@@ -184,9 +184,9 @@ impl<'a> Alignment<'a> {
                 let cell = &self.table[self.index(j, i)];
                 print!("{}   ", self.format_cell(cell));
             }
-            print!("\n");
+            println!();
         }
-        print!("\n");
+        println!();
     }
 }
 
@@ -197,7 +197,7 @@ where
 {
     let mut encoded = Vec::with_capacity(sequence.len());
 
-    if sequence.len() == 0 {
+    if sequence.is_empty() {
         return encoded;
     }
 

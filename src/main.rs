@@ -61,17 +61,16 @@ fn main() -> std::io::Result<()> {
         OutputType::from_mode(PagingMode::QuitIfOneScreen, Some(config.pager)).unwrap();
     let mut writer = output_type.handle().unwrap();
 
-    match delta(
+    if let Err(error) = delta(
         io::stdin().lock().lines().map(|l| l.unwrap()),
         &config,
         &assets,
         &mut writer,
     ) {
-        Err(error) => match error.kind() {
+        match error.kind() {
             ErrorKind::BrokenPipe => process::exit(0),
             _ => eprintln!("{}", error),
-        },
-        _ => (),
+        }
     };
     Ok(())
 }
@@ -148,7 +147,7 @@ index 541e930..e23bef1 100644
         let mut writer = output_type.handle().unwrap();
 
         delta(
-            input.split("\n").map(String::from),
+            input.split('\n').map(String::from),
             &config,
             &assets,
             &mut writer,
