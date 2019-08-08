@@ -1,4 +1,3 @@
-Cargo.lock
 performance/all-benchmarks.json
 performance/index.html
 **/*.rs.bk
