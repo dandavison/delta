@@ -146,7 +146,7 @@ where
             plus_line,
         )
     };
-    let distance_contribution = |section: &str| section.trim_start().graphemes(true).count();
+    let distance_contribution = |section: &str| section.trim().graphemes(true).count();
 
     for (op, n) in alignment.coalesced_operations() {
         match op {
