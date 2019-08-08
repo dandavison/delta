@@ -3,6 +3,7 @@ use std::io::Write;
 use syntect::easy::HighlightLines;
 use syntect::highlighting::{Style, StyleModifier};
 use syntect::parsing::SyntaxReference;
+use unicode_segmentation::UnicodeSegmentation;
 
 use crate::bat::assets::HighlightingAssets;
 use crate::config;
@@ -60,6 +61,8 @@ impl<'a> Painter<'a> {
                 &mut self.output_buffer,
                 minus_line_syntax_style_sections,
                 minus_line_diff_style_sections,
+                self.config,
+                self.config.minus_style_modifier,
             );
         }
         if self.plus_lines.len() > 0 {
@@ -67,6 +70,8 @@ impl<'a> Painter<'a> {
                 &mut self.output_buffer,
                 plus_line_syntax_style_sections,
                 plus_line_diff_style_sections,
+                self.config,
+                self.config.plus_style_modifier,
             );
         }
         self.minus_lines.clear();
@@ -79,13 +84,35 @@ impl<'a> Painter<'a> {
         output_buffer: &mut String,
         syntax_style_sections: Vec<Vec<(Style, &str)>>,
         diff_style_sections: Vec<Vec<(StyleModifier, &str)>>,
+        config: &config::Config,
+        background_style_modifier: StyleModifier,
     ) {
         use std::fmt::Write;
         for (syntax_sections, diff_sections) in
             syntax_style_sections.iter().zip(diff_style_sections.iter())
         {
+            let mut text_width = 0;
             for (style, text) in superimpose_style_sections(syntax_sections, diff_sections) {
                 paint_text(&text, style, output_buffer).unwrap();
+                if config.width.is_some() {
+                    text_width += text.graphemes(true).count();
+                }
+            }
+            // Remove the terminating newline whose presence was necessary for the syntax
+            // highlighter to work correctly.
+            output_buffer.truncate(output_buffer.len() - 1);
+            match config.width {
+                Some(width) if width > text_width => {
+                    // Right pad to requested width with spaces.
+                    let background_style = config.no_style.apply(background_style_modifier);
+                    paint_text(
+                        &" ".repeat(width - text_width),
+                        background_style,
+                        output_buffer,
+                    )
+                    .unwrap();
+                }
+                _ => (),
             }
             write!(output_buffer, "\n").unwrap();
         }

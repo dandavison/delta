@@ -184,6 +184,8 @@ fn handle_hunk_meta_line(
                 style::NO_BACKGROUND_COLOR_STYLE_MODIFIER,
                 code_fragment,
             )]],
+            config,
+            style::NO_BACKGROUND_COLOR_STYLE_MODIFIER,
         );
         painter.output_buffer.pop(); // trim newline
         draw_fn(
@@ -239,18 +241,23 @@ fn handle_hunk_line(painter: &mut Painter, line: &str, state: State, config: &Co
                 &mut painter.output_buffer,
                 vec![syntax_style_sections],
                 vec![vec![(style::NO_BACKGROUND_COLOR_STYLE_MODIFIER, &line)]],
+                config,
+                style::NO_BACKGROUND_COLOR_STYLE_MODIFIER,
             );
             State::HunkZero
         }
     }
 }
 
-/// Replace initial -/+ character with ' '
+/// Replace initial -/+ character with ' ', and terminate with newline.
+// Terminating with newline character is necessary for many of the sublime syntax definitions to
+// highlight correctly.
+// See https://docs.rs/syntect/3.2.0/syntect/parsing/struct.SyntaxSetBuilder.html#method.add_from_folder
 fn prepare(line: &str) -> String {
     if line.len() > 0 {
-        format!(" {}", &line[1..])
+        format!(" {}\n", &line[1..])
     } else {
-        line.to_string()
+        "\n".to_string()
     }
 }
 
