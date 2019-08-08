@@ -71,6 +71,8 @@ where
     (annotated_minus_lines, annotated_plus_lines)
 }
 
+/// Split line into tokens for alignment. The alignment algorithm aligns sequences of substrings;
+/// not individual characters.
 fn tokenize(line: &str) -> Vec<&str> {
     let separators = Regex::new(r"[ ,;.:()\[\]<>]+").unwrap();
     let mut tokens = Vec::new();
@@ -87,7 +89,7 @@ fn tokenize(line: &str) -> Vec<&str> {
 }
 
 /// Use alignment to "annotate" minus and plus lines. An "annotated" line is a sequence of
-/// (s: &str, a: EditOperation) pairs, where the &strs reference the memory
+/// (s: &str, a: Annotation) pairs, where the &strs reference the memory
 /// of the original line and their concatenation equals the line.
 fn annotate<'a, Annotation>(
     alignment: align::Alignment<'a>,
