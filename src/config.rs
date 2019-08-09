@@ -106,7 +106,7 @@ pub fn get_config<'a>(
         pager: "less",
         opt,
         no_style: style::get_no_style(),
-        max_buffered_lines: 16,
+        max_buffered_lines: 32,
     }
 }
 
