@@ -162,15 +162,15 @@ where
             align::Operation::NoOp => {
                 let minus_section = minus_section(n);
                 let n_d = distance_contribution(minus_section);
-                d_denom += n_d; // TODO 2x ?
+                d_denom += n_d;
                 annotated_minus_line.push((noop_deletion, minus_section));
                 annotated_plus_line.push((noop_insertion, plus_section(n)));
             }
             align::Operation::Substitution => {
                 let minus_section = minus_section(n);
                 let n_d = distance_contribution(minus_section);
-                d_denom += n_d; // TODO 2x ?
-                d_numer += n_d; // TODO 2x?
+                d_denom += n_d;
+                d_numer += n_d;
                 annotated_minus_line.push((deletion, minus_section));
                 annotated_plus_line.push((insertion, plus_section(n)));
             }

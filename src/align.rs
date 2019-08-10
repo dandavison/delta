@@ -95,8 +95,11 @@ impl<'a> Alignment<'a> {
                     },
                 ];
                 let index = self.index(i, j);
-                self.table[index] =
-                    (*candidates.iter().min_by_key(|cell| cell.cost).unwrap()).clone();
+                self.table[index] = candidates
+                    .iter()
+                    .min_by_key(|cell| cell.cost)
+                    .unwrap()
+                    .clone();
             }
         }
     }
