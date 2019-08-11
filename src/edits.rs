@@ -461,6 +461,28 @@ mod tests {
         )
     }
 
+    #[test]
+    fn test_infer_edits_9() {
+        assert_edits(
+            vec!["a a"],
+            vec!["a b a"],
+            (
+                vec![vec![(MinusNoop, "a"), (MinusNoop, " a")]],
+                vec![vec![(PlusNoop, "a"), (Insertion, " b"), (PlusNoop, " a")]],
+            ),
+            1.0,
+        );
+        assert_edits(
+            vec!["a a"],
+            vec!["a b b a"],
+            (
+                vec![vec![(MinusNoop, "a"), (MinusNoop, " a")]],
+                vec![vec![(PlusNoop, "a"), (Insertion, " b b"), (PlusNoop, " a")]],
+            ),
+            1.0,
+        );
+    }
+
     fn assert_edits(
         minus_lines: Vec<&str>,
         plus_lines: Vec<&str>,
