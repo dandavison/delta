@@ -79,7 +79,10 @@ fn tokenize(line: &str) -> Vec<&str> {
     let mut offset = 0;
     for m in separators.find_iter(line) {
         tokens.push(&line[offset..m.start()]);
-        tokens.push(m.as_str());
+        // Align separating text as multiple single-character tokens.
+        for i in m.start()..m.end() {
+            tokens.push(&line[i..i + 1]);
+        }
         offset = m.end();
     }
     if offset < line.len() {
@@ -222,9 +225,11 @@ mod tests {
                 "coalesce_edits",
                 "<",
                 "'a",
-                ", ",
+                ",",
+                " ",
                 "EditOperation",
-                ">("
+                ">",
+                "("
             ]
         );
     }
@@ -239,11 +244,14 @@ mod tests {
                 "coalesce_edits",
                 "<",
                 "'a",
-                ", ",
+                ",",
+                " ",
                 "'b",
-                ", ",
+                ",",
+                " ",
                 "EditOperation",
-                ">("
+                ">",
+                "("
             ]
         );
     }
@@ -258,11 +266,16 @@ mod tests {
                 "push",
                 "(",
                 "vec!",
-                "[(",
+                "[",
+                "(",
                 "noop_insertion",
-                ", ",
+                ",",
+                " ",
                 "plus_line",
-                ")]);"
+                ")",
+                "]",
+                ")",
+                ";"
             ]
         );
     }
@@ -422,6 +435,29 @@ mod tests {
                 ]],
             ),
             0.66,
+        )
+    }
+
+    #[test]
+    fn test_infer_edits_8() {
+        assert_edits(
+            vec!["for _ in range(0, options[\"count\"]):"],
+            vec!["for _ in range(0, int(options[\"count\"])):"],
+            (
+                vec![vec![
+                    (MinusNoop, "for _ in range(0, "),
+                    (MinusNoop, "options[\"count\"]"),
+                    (MinusNoop, "):"),
+                ]],
+                vec![vec![
+                    (PlusNoop, "for _ in range(0, "),
+                    (Insertion, "int("),
+                    (PlusNoop, "options[\"count\"]"),
+                    (Insertion, ")"),
+                    (PlusNoop, "):"),
+                ]],
+            ),
+            0.3,
         )
     }
 
