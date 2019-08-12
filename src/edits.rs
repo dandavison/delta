@@ -551,6 +551,26 @@ mod tests {
         );
     }
 
+    #[test]
+    fn test_infer_edits_12() {
+        assert_edits(
+            vec!["                     (xxxxxxxxx, \"build info\"),"],
+            vec!["                     (xxxxxxxxx, \"build\"),"],
+            (
+                vec![vec![
+                    (MinusNoop, "                     (xxxxxxxxx, \"build"),
+                    (Deletion, " info"),
+                    (MinusNoop, "\"),"),
+                ]],
+                vec![vec![
+                    (PlusNoop, "                     (xxxxxxxxx, \"build"),
+                    (PlusNoop, "\"),"),
+                ]],
+            ),
+            1.0,
+        );
+    }
+
     fn assert_edits(
         minus_lines: Vec<&str>,
         plus_lines: Vec<&str>,
