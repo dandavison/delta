@@ -535,6 +535,22 @@ mod tests {
         );
     }
 
+    #[test]
+    fn test_infer_edits_11() {
+        assert_edits(
+            vec!["                 self.table[index] ="],
+            vec!["                 self.table[index] = candidates"],
+            (
+                vec![vec![(MinusNoop, "                 self.table[index] =")]],
+                vec![vec![
+                    (PlusNoop, "                 self.table[index] ="),
+                    (Insertion, " candidates"),
+                ]],
+            ),
+            1.0,
+        );
+    }
+
     fn assert_edits(
         minus_lines: Vec<&str>,
         plus_lines: Vec<&str>,
