@@ -483,6 +483,27 @@ mod tests {
         );
     }
 
+    #[test]
+    fn test_infer_edits_10() {
+        assert_edits(
+            vec!["so it is safe to read the commit number from any one of them."],
+            vec!["so it is safe to read build info from any one of them."],
+            (
+                vec![vec![
+                    (MinusNoop, "so it is safe to read"),
+                    (Deletion, "the commit number"),
+                    (MinusNoop, "from any one of them."),
+                ]],
+                vec![vec![
+                    (PlusNoop, "so it is safe to read"),
+                    (Insertion, "build info"),
+                    (PlusNoop, "from any one of them."),
+                ]],
+            ),
+            1.0,
+        );
+    }
+
     fn assert_edits(
         minus_lines: Vec<&str>,
         plus_lines: Vec<&str>,
