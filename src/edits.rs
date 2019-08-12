@@ -94,6 +94,7 @@ fn tokenize(line: &str) -> Vec<&str> {
 /// Use alignment to "annotate" minus and plus lines. An "annotated" line is a sequence of
 /// (s: &str, a: Annotation) pairs, where the &strs reference the memory
 /// of the original line and their concatenation equals the line.
+// TODO: Coalesce runs of the same operation.
 fn annotate<'a, Annotation>(
     alignment: align::Alignment<'a>,
     noop_deletion: Annotation,
@@ -153,6 +154,7 @@ where
     };
     let distance_contribution = |section: &str| section.trim().graphemes(true).count();
 
+    let (mut minus_op_prev, mut plus_op_prev) = (noop_deletion, noop_insertion);
     for (op, n) in alignment.coalesced_operations() {
         match op {
             align::Operation::Deletion => {
@@ -161,13 +163,31 @@ where
                 d_denom += n_d;
                 d_numer += n_d;
                 annotated_minus_line.push((deletion, minus_section));
+                minus_op_prev = deletion;
             }
             align::Operation::NoOp => {
                 let minus_section = minus_section(n);
                 let n_d = distance_contribution(minus_section);
                 d_denom += n_d;
-                annotated_minus_line.push((noop_deletion, minus_section));
-                annotated_plus_line.push((noop_insertion, plus_section(n)));
+                let is_space = minus_section.trim().is_empty();
+                annotated_minus_line.push((
+                    if is_space {
+                        minus_op_prev
+                    } else {
+                        noop_deletion
+                    },
+                    minus_section,
+                ));
+                annotated_plus_line.push((
+                    if is_space {
+                        plus_op_prev
+                    } else {
+                        noop_insertion
+                    },
+                    plus_section(n),
+                ));
+                minus_op_prev = noop_deletion;
+                plus_op_prev = noop_insertion;
             }
             align::Operation::Substitution => {
                 let minus_section = minus_section(n);
@@ -176,6 +196,8 @@ where
                 d_numer += n_d;
                 annotated_minus_line.push((deletion, minus_section));
                 annotated_plus_line.push((insertion, plus_section(n)));
+                minus_op_prev = deletion;
+                plus_op_prev = insertion;
             }
             align::Operation::Insertion => {
                 let plus_section = plus_section(n);
@@ -183,6 +205,7 @@ where
                 d_denom += n_d;
                 d_numer += n_d;
                 annotated_plus_line.push((insertion, plus_section));
+                plus_op_prev = insertion;
             }
         }
     }
@@ -489,14 +512,22 @@ mod tests {
             vec!["so it is safe to read the commit number from any one of them."],
             vec!["so it is safe to read build info from any one of them."],
             (
+                // TODO: Coalesce runs of the same operation.
                 vec![vec![
-                    (MinusNoop, "so it is safe to read"),
-                    (Deletion, "the commit number"),
+                    (MinusNoop, "so it is safe to read "),
+                    (Deletion, "the"),
+                    (Deletion, " "),
+                    (Deletion, "commit"),
+                    (Deletion, " "),
+                    (Deletion, "number "),
                     (MinusNoop, "from any one of them."),
                 ]],
                 vec![vec![
-                    (PlusNoop, "so it is safe to read"),
-                    (Insertion, "build info"),
+                    (PlusNoop, "so it is safe to read "),
+                    (Insertion, "build"),
+                    (Insertion, " "),
+                    (Insertion, "info"),
+                    (Insertion, " "),
                     (PlusNoop, "from any one of them."),
                 ]],
             ),
