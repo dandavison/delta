@@ -186,6 +186,7 @@ fn handle_hunk_meta_line(
             )]],
             config,
             style::NO_BACKGROUND_COLOR_STYLE_MODIFIER,
+            false,
         );
         painter.output_buffer.pop(); // trim newline
         draw_fn(
@@ -243,6 +244,7 @@ fn handle_hunk_line(painter: &mut Painter, line: &str, state: State, config: &Co
                 vec![vec![(style::NO_BACKGROUND_COLOR_STYLE_MODIFIER, &line)]],
                 config,
                 style::NO_BACKGROUND_COLOR_STYLE_MODIFIER,
+                true,
             );
             State::HunkZero
         }

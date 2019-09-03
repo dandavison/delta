@@ -63,6 +63,7 @@ impl<'a> Painter<'a> {
                 minus_line_diff_style_sections,
                 self.config,
                 self.config.minus_style_modifier,
+                true,
             );
         }
         if !self.plus_lines.is_empty() {
@@ -72,6 +73,7 @@ impl<'a> Painter<'a> {
                 plus_line_diff_style_sections,
                 self.config,
                 self.config.plus_style_modifier,
+                true,
             );
         }
         self.minus_lines.clear();
@@ -86,6 +88,7 @@ impl<'a> Painter<'a> {
         diff_style_sections: Vec<Vec<(StyleModifier, &str)>>,
         config: &config::Config,
         background_style_modifier: StyleModifier,
+        lines_have_terminating_newline_character: bool,
     ) {
         use std::fmt::Write;
         for (syntax_sections, diff_sections) in
@@ -98,9 +101,11 @@ impl<'a> Painter<'a> {
                     text_width += text.graphemes(true).count();
                 }
             }
-            // Remove the terminating newline whose presence was necessary for the syntax
-            // highlighter to work correctly.
-            output_buffer.truncate(output_buffer.len() - 1);
+            if lines_have_terminating_newline_character {
+                // Remove the terminating newline whose presence was necessary for the syntax
+                // highlighter to work correctly.
+                output_buffer.truncate(output_buffer.len() - 1);
+            }
             match config.width {
                 Some(width) if width > text_width => {
                     // Right pad to requested width with spaces.
