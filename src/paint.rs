@@ -88,7 +88,7 @@ impl<'a> Painter<'a> {
         diff_style_sections: Vec<Vec<(StyleModifier, &str)>>,
         config: &config::Config,
         background_style_modifier: StyleModifier,
-        lines_have_terminating_newline_character: bool,
+        should_trim_newline_and_right_pad: bool,
     ) {
         use std::fmt::Write;
         for (syntax_sections, diff_sections) in
@@ -101,23 +101,24 @@ impl<'a> Painter<'a> {
                     text_width += text.graphemes(true).count();
                 }
             }
-            if lines_have_terminating_newline_character {
+            if should_trim_newline_and_right_pad {
                 // Remove the terminating newline whose presence was necessary for the syntax
                 // highlighter to work correctly.
                 output_buffer.truncate(output_buffer.len() - 1);
-            }
-            match config.width {
-                Some(width) if width > text_width => {
-                    // Right pad to requested width with spaces.
-                    let background_style = config.no_style.apply(background_style_modifier);
-                    paint_text(
-                        &" ".repeat(width - text_width),
-                        background_style,
-                        output_buffer,
-                    )
-                    .unwrap();
+                // Right pad with background-highlighted white space.
+                match config.width {
+                    Some(width) if width > text_width => {
+                        // Right pad to requested width with spaces.
+                        let background_style = config.no_style.apply(background_style_modifier);
+                        paint_text(
+                            &" ".repeat(width - text_width),
+                            background_style,
+                            output_buffer,
+                        )
+                        .unwrap();
+                    }
+                    _ => (),
                 }
-                _ => (),
             }
             writeln!(output_buffer).unwrap();
         }
