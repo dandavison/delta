@@ -1,6 +1,6 @@
 [package]
 name = "delta"
-version = "0.0.8"
+version = "0.0.9"
 authors = ["Dan Davison <dandavison7@gmail.com>"]
 edition = "2018"
 

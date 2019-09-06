@@ -29,7 +29,7 @@
 
 ## Installation
 
-Executables: [Linux](https://github.com/dandavison/delta/releases/download/0.0.5/delta-0.0.5-x86_64-unknown-linux-musl.tar.gz) | [MacOS](https://github.com/dandavison/delta/releases/download/0.0.5/delta-0.0.5-x86_64-apple-darwin.tar.gz) | [Windows](https://github.com/dandavison/delta/releases/download/0.0.5/delta-0.0.5-x86_64-pc-windows-msvc.zip)
+Executables: [Linux](https://github.com/dandavison/delta/releases/download/0.0.9/delta-0.0.9-x86_64-unknown-linux-musl.tar.gz) | [MacOS](https://github.com/dandavison/delta/releases/download/0.0.9/delta-0.0.9-x86_64-apple-darwin.tar.gz)
 
 Homebrew:
 ```sh
