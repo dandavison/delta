@@ -155,27 +155,12 @@ OPTIONS:
 <table>
   <tr>
     <td>
-      Delta
+      delta vs. git
     </td>
     <td>
       <img width=500px style="border: 1px solid black"
            src="https://user-images.githubusercontent.com/52205/65248525-32250480-daea-11e9-9965-1a05c6a4bdf4.png"
            alt="image" />
-    </td>
-  </tr>
-  <tr>
-    <td>
-      Diff-so-fancy
-    </td>
-    <td>
-      <img width=500px style="border: 1px solid black"
-           src="https://user-images.githubusercontent.com/52205/65248407-07d34700-daea-11e9-9a8f-6d81f4021abf.png"
-           alt="image" />
-    </td>
-  </tr>
-  <tr>
-    <td>
-      Git
     </td>
     <td>
       <img width=500px style="border: 1px solid black"
@@ -185,7 +170,27 @@ OPTIONS:
   </tr>
   <tr>
     <td>
-      Github
+      delta vs. diff-so-fancy
+    </td>
+    <td>
+      <img width=500px style="border: 1px solid black"
+           src="https://user-images.githubusercontent.com/52205/65248525-32250480-daea-11e9-9965-1a05c6a4bdf4.png"
+           alt="image" />
+    </td>
+    <td>
+      <img width=500px style="border: 1px solid black"
+           src="https://user-images.githubusercontent.com/52205/65248407-07d34700-daea-11e9-9a8f-6d81f4021abf.png"
+           alt="image" />
+    </td>
+  </tr>
+  <tr>
+    <td>
+      delta vs. github
+    </td>
+    <td>
+      <img width=500px style="border: 1px solid black"
+           src="https://user-images.githubusercontent.com/52205/65248525-32250480-daea-11e9-9965-1a05c6a4bdf4.png"
+           alt="image" />
     </td>
     <td>
       <img width=500px style="border: 1px solid black"
