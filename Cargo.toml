@@ -1,12 +1,13 @@
 [package]
 name = "git-delta"
 authors = ["Dan Davison <dandavison7@gmail.com>"]
-categories = ["command-line-utilities", "git"]
+categories = ["command-line-utilities", "development-tools"]
 description = "A syntax-highlighting pager for git"
 documentation = "https://github.com/dandavison/delta"
 edition = "2018"
 homepage = "https://github.com/dandavison/delta"
 license = "MIT"
+readme = "README.md"
 repository = "https://github.com/dandavison/delta"
 version = "0.0.10"
 
