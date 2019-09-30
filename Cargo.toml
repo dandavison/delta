@@ -1,8 +1,18 @@
 [package]
-name = "delta"
-version = "0.0.10"
+name = "git-delta"
 authors = ["Dan Davison <dandavison7@gmail.com>"]
+categories = ["command-line-utilities", "git"]
+description = "A syntax-highlighting pager for git"
+documentation = "https://github.com/dandavison/delta"
 edition = "2018"
+homepage = "https://github.com/dandavison/delta"
+license = "MIT"
+repository = "https://github.com/dandavison/delta"
+version = "0.0.10"
+
+[[bin]]
+name = "delta"
+path = "src/main.rs"
 
 [dependencies]
 ansi_term = "0.11.0"

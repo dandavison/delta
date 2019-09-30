@@ -137,23 +137,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "delta"
-version = "0.0.10"
-dependencies = [
- "ansi_term 0.11.0 (registry+https://github.com/rust-lang/crates.io-index)",
- "atty 0.2.13 (registry+https://github.com/rust-lang/crates.io-index)",
- "box_drawing 0.1.2 (registry+https://github.com/rust-lang/crates.io-index)",
- "console 0.7.7 (registry+https://github.com/rust-lang/crates.io-index)",
- "error-chain 0.12.1 (registry+https://github.com/rust-lang/crates.io-index)",
- "itertools 0.8.0 (registry+https://github.com/rust-lang/crates.io-index)",
- "regex 1.2.1 (registry+https://github.com/rust-lang/crates.io-index)",
- "shell-words 0.1.0 (registry+https://github.com/rust-lang/crates.io-index)",
- "structopt 0.2.18 (registry+https://github.com/rust-lang/crates.io-index)",
- "syntect 3.2.0 (registry+https://github.com/rust-lang/crates.io-index)",
- "unicode-segmentation 1.3.0 (registry+https://github.com/rust-lang/crates.io-index)",
-]
-
-[[package]]
 name = "either"
 version = "1.5.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -186,6 +169,23 @@ dependencies = [
 name = "fnv"
 version = "1.0.6"
 source = "registry+https://github.com/rust-lang/crates.io-index"
+
+[[package]]
+name = "git-delta"
+version = "0.0.10"
+dependencies = [
+ "ansi_term 0.11.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "atty 0.2.13 (registry+https://github.com/rust-lang/crates.io-index)",
+ "box_drawing 0.1.2 (registry+https://github.com/rust-lang/crates.io-index)",
+ "console 0.7.7 (registry+https://github.com/rust-lang/crates.io-index)",
+ "error-chain 0.12.1 (registry+https://github.com/rust-lang/crates.io-index)",
+ "itertools 0.8.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "regex 1.2.1 (registry+https://github.com/rust-lang/crates.io-index)",
+ "shell-words 0.1.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "structopt 0.2.18 (registry+https://github.com/rust-lang/crates.io-index)",
+ "syntect 3.2.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "unicode-segmentation 1.3.0 (registry+https://github.com/rust-lang/crates.io-index)",
+]
 
 [[package]]
 name = "heck"
