@@ -47,7 +47,7 @@ where
 
                 // Emit as unpaired the plus lines already considered and rejected
                 for plus_line in &plus_lines[emitted..(emitted + considered)] {
-                    annotated_plus_lines.push(vec![(noop_insertion, plus_line)]);
+                    annotated_plus_lines.push(vec![(insertion, plus_line)]);
                 }
                 emitted += considered;
                 annotated_minus_lines.push(annotated_minus_line);
@@ -61,11 +61,11 @@ where
             }
         }
         // No homolog was found for minus i; emit as unpaired.
-        annotated_minus_lines.push(vec![(noop_deletion, minus_line)]);
+        annotated_minus_lines.push(vec![(deletion, minus_line)]);
     }
     // Emit any remaining plus lines
     for plus_line in &plus_lines[emitted..] {
-        annotated_plus_lines.push(vec![(noop_insertion, plus_line)]);
+        annotated_plus_lines.push(vec![(insertion, plus_line)]);
     }
 
     (annotated_minus_lines, annotated_plus_lines)
@@ -366,7 +366,7 @@ mod tests {
             vec!["á á b á á c á á b"],
             (
                 vec![
-                    vec![(MinusNoop, "á a a á a a á a a")],
+                    vec![(Deletion, "á a a á a a á a a")],
                     vec![
                         (MinusNoop, "á á b á á "),
                         (Deletion, "b"),
@@ -390,13 +390,13 @@ mod tests {
             vec!["bbbb ! bbb", "dddd d ddd", "cccc ! ccc"],
             (
                 vec![
-                    vec![(MinusNoop, "aaaa a aaa")],
+                    vec![(Deletion, "aaaa a aaa")],
                     vec![(MinusNoop, "bbbb "), (Deletion, "b"), (MinusNoop, " bbb")],
                     vec![(MinusNoop, "cccc "), (Deletion, "c"), (MinusNoop, " ccc")],
                 ],
                 vec![
                     vec![(PlusNoop, "bbbb "), (Insertion, "!"), (PlusNoop, " bbb")],
-                    vec![(PlusNoop, "dddd d ddd")],
+                    vec![(Insertion, "dddd d ddd")],
                     vec![(PlusNoop, "cccc "), (Insertion, "!"), (PlusNoop, " ccc")],
                 ],
             ),
@@ -601,8 +601,8 @@ mod tests {
     // Assert that no edits are inferred for the supplied minus and plus lines.
     fn assert_no_edits(minus_lines: Vec<&str>, plus_lines: Vec<&str>, max_line_distance: f64) {
         let expected_edits = (
-            minus_lines.iter().map(|s| vec![(MinusNoop, *s)]).collect(),
-            plus_lines.iter().map(|s| vec![(PlusNoop, *s)]).collect(),
+            minus_lines.iter().map(|s| vec![(Deletion, *s)]).collect(),
+            plus_lines.iter().map(|s| vec![(Insertion, *s)]).collect(),
         );
         assert_edits(minus_lines, plus_lines, expected_edits, max_line_distance)
     }
