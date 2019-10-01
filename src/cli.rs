@@ -39,7 +39,7 @@ pub struct Opt {
     pub plus_emph_color: Option<String>,
 
     #[structopt(long = "theme")]
-    /// The syntax highlighting theme to use.
+    /// The syntax highlighting theme to use. Use --theme=none to disable syntax highlighting.
     pub theme: Option<String>,
 
     #[structopt(long = "highlight-removed")]
@@ -135,7 +135,7 @@ pub fn process_command_line_arguments<'a>(
         process::exit(1);
     }
     match &opt.theme {
-        Some(theme) => {
+        Some(theme) if theme.to_lowercase() != "none" => {
             if !assets.theme_set.themes.contains_key(theme.as_str()) {
                 eprintln!("Invalid theme: '{}'", theme);
                 process::exit(1);
@@ -157,7 +157,7 @@ pub fn process_command_line_arguments<'a>(
                 process::exit(1);
             }
         }
-        None => (),
+        _ => (),
     };
 
     let terminal_width = Term::stdout().size().1 as usize;
