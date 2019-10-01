@@ -25,24 +25,27 @@ impl<'a> Painter<'a> {
     pub fn new(
         writer: &'a mut Write,
         config: &'a config::Config,
-        assets: &HighlightingAssets,
+        assets: &'a HighlightingAssets,
     ) -> Self {
+        let dummy_highlighter = HighlightLines::new(
+            assets.syntax_set.find_syntax_by_extension("txt").unwrap(),
+            &assets.theme_set.themes[style::DEFAULT_LIGHT_THEME],
+        );
         Self {
             minus_lines: Vec::new(),
             plus_lines: Vec::new(),
             output_buffer: String::new(),
             syntax: None,
-            highlighter: HighlightLines::new(
-                assets.syntax_set.find_syntax_by_extension("txt").unwrap(),
-                config.theme,
-            ),
+            highlighter: dummy_highlighter,
             writer,
             config,
         }
     }
 
     pub fn reset_highlighter(&mut self) {
-        self.highlighter = HighlightLines::new(self.syntax.unwrap(), self.config.theme);
+        if let Some(theme) = self.config.theme {
+            self.highlighter = HighlightLines::new(self.syntax.unwrap(), theme)
+        };
     }
 
     pub fn paint_buffered_lines(&mut self) {
@@ -165,7 +168,7 @@ impl<'a> Painter<'a> {
         config: &config::Config,
         should_syntax_highlight: bool,
     ) -> Vec<(Style, &'a str)> {
-        if should_syntax_highlight {
+        if should_syntax_highlight && config.theme.is_some() {
             highlighter.highlight(line, &config.syntax_set)
         } else {
             vec![(config.no_style, line)]

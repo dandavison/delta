@@ -7,7 +7,7 @@ use crate::cli;
 use crate::style;
 
 pub struct Config<'a> {
-    pub theme: &'a Theme,
+    pub theme: Option<&'a Theme>,
     pub theme_name: &'a str,
     pub minus_style_modifier: StyleModifier,
     pub minus_emph_style_modifier: StyleModifier,
@@ -39,7 +39,16 @@ pub fn get_config<'a>(
             }
         }
     };
-    let is_light_theme = style::LIGHT_THEMES.contains(&theme_name);
+    let theme = if theme_name.to_lowercase() == "none" {
+        None
+    } else {
+        Some(&theme_set.themes[theme_name])
+    };
+    let is_light_theme = if theme.is_none() {
+        !opt.dark
+    } else {
+        style::LIGHT_THEMES.contains(&theme_name)
+    };
 
     let minus_style_modifier = StyleModifier {
         background: Some(color_from_arg(
@@ -94,7 +103,7 @@ pub fn get_config<'a>(
     };
 
     Config {
-        theme: &theme_set.themes[theme_name],
+        theme,
         theme_name,
         minus_style_modifier,
         minus_emph_style_modifier,
