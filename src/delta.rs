@@ -2,6 +2,8 @@ use std::io::Write;
 
 use ansi_term::Colour::{Blue, Yellow};
 use console::strip_ansi_codes;
+use itertools::Itertools;
+use unicode_segmentation::UnicodeSegmentation;
 
 use crate::bat::assets::HighlightingAssets;
 use crate::cli;
@@ -222,16 +224,16 @@ fn handle_hunk_line(painter: &mut Painter, line: &str, state: State, config: &Co
             if state == State::HunkPlus {
                 painter.paint_buffered_lines();
             }
-            painter.minus_lines.push(prepare(&line));
+            painter.minus_lines.push(prepare(&line, config.tab_width));
             State::HunkMinus
         }
         Some('+') => {
-            painter.plus_lines.push(prepare(&line));
+            painter.plus_lines.push(prepare(&line, config.tab_width));
             State::HunkPlus
         }
         _ => {
             painter.paint_buffered_lines();
-            let line = prepare(&line);
+            let line = prepare(&line, config.tab_width);
             let syntax_style_sections = Painter::get_line_syntax_style_sections(
                 &line,
                 &mut painter.highlighter,
@@ -251,13 +253,28 @@ fn handle_hunk_line(painter: &mut Painter, line: &str, state: State, config: &Co
     }
 }
 
-/// Replace initial -/+ character with ' ', and terminate with newline.
+/// Replace initial -/+ character with ' ', expand tabs as spaces, and terminate with newline.
 // Terminating with newline character is necessary for many of the sublime syntax definitions to
 // highlight correctly.
 // See https://docs.rs/syntect/3.2.0/syntect/parsing/struct.SyntaxSetBuilder.html#method.add_from_folder
-fn prepare(line: &str) -> String {
+fn prepare(line: &str, tab_width: usize) -> String {
     if !line.is_empty() {
-        format!(" {}\n", &line[1..])
+        let mut line = line.graphemes(true).peekable();
+        let mut left_fill = "".to_string();
+
+        // The first column contains a -/+/space character, added by git. Replace it with a space.
+        left_fill.push_str(" ");
+        line.next();
+
+        // Expand tabs as spaces
+        if tab_width > 0 {
+            // tab_width = 0 is documented to mean do not replace tabs.
+            let n_tabs = line.peeking_take_while(|c| *c == "\t").count();
+            if n_tabs > 0 {
+                left_fill.push_str(&" ".repeat(tab_width * n_tabs));
+            }
+        }
+        format!("{}{}\n", &left_fill, line.collect::<String>())
     } else {
         "\n".to_string()
     }

@@ -9,6 +9,7 @@ test:
 	cargo test
 	bash -c "diff -u <(git log -p | cut -c 2-) \
                      <(git log -p | delta --width variable \
+                                          --tabs 0 \
                                           --commit-style plain \
                                           --file-style plain \
                                           --hunk-style plain \
