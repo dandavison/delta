@@ -49,7 +49,7 @@ pub fn delta<I>(
     lines: I,
     config: &Config,
     assets: &HighlightingAssets,
-    writer: &mut Write,
+    writer: &mut dyn Write,
 ) -> std::io::Result<()>
 where
     I: Iterator<Item = String>,

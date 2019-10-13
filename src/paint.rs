@@ -14,7 +14,7 @@ use crate::style;
 pub struct Painter<'a> {
     pub minus_lines: Vec<String>,
     pub plus_lines: Vec<String>,
-    pub writer: &'a mut Write,
+    pub writer: &'a mut dyn Write,
     pub syntax: Option<&'a SyntaxReference>,
     pub highlighter: HighlightLines<'a>,
     pub config: &'a config::Config<'a>,
@@ -23,7 +23,7 @@ pub struct Painter<'a> {
 
 impl<'a> Painter<'a> {
     pub fn new(
-        writer: &'a mut Write,
+        writer: &'a mut dyn Write,
         config: &'a config::Config,
         assets: &'a HighlightingAssets,
     ) -> Self {
