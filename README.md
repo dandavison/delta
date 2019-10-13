@@ -80,7 +80,14 @@ All git commands that display diff output should now display syntax-highlighted 
 
 
 ## Supported languages and themes
-Delta supports the same languages and themes as [bat](https://github.com/sharkdp/bat), included here as the files `assets/syntaxes.bin` and `assets/themes.bin`. Please see the [bat](https://github.com/sharkdp/bat) documentation for instructions on how to create new versions of these files.
+To add new laguages/color themes to delta, the process is
+
+1. Clone the delta repo
+2. Create new versions of the files `assets/syntaxes.bin` and/or `assets/themes.bin`. Please see the [bat](https://github.com/sharkdp/bat#adding-new-syntaxes--language-definitions) documentation for instructions on how to create new versions of these files. You will need to copy them into the `assets/` directory of the delta git repo after creating them.
+3. Recompile delta: `cargo build --release`
+4. Now you have a new delta executable at `target/release/delta` that should feature your new language/theme (use `--list-languages` / `--list-themes` to check).
+
+Delta does not currently support reading these files dynamically from `~/.config` as `bat` does, but this is a feature that could be added.
 
 
 ## 24 bit color
