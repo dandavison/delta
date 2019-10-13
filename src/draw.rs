@@ -8,7 +8,7 @@ use unicode_segmentation::UnicodeSegmentation;
 /// Write text to stream, surrounded by a box, leaving the cursor just
 /// beyond the bottom right corner.
 pub fn write_boxed(
-    writer: &mut Write,
+    writer: &mut dyn Write,
     text: &str,
     _line_width: usize, // ignored
     line_style: Style,
@@ -28,7 +28,7 @@ pub fn write_boxed(
 /// Write text to stream, surrounded by a box, and extend a line from
 /// the bottom right corner.
 pub fn write_boxed_with_line(
-    writer: &mut Write,
+    writer: &mut dyn Write,
     text: &str,
     line_width: usize,
     line_style: Style,
@@ -41,7 +41,7 @@ pub fn write_boxed_with_line(
 }
 
 pub fn write_underlined(
-    writer: &mut Write,
+    writer: &mut dyn Write,
     text: &str,
     line_width: usize,
     line_style: Style,
@@ -53,7 +53,7 @@ pub fn write_underlined(
 }
 
 fn write_horizontal_line(
-    writer: &mut Write,
+    writer: &mut dyn Write,
     line_width: usize,
     line_style: Style,
     heavy: bool,
@@ -71,7 +71,7 @@ fn write_horizontal_line(
 }
 
 pub fn write_boxed_with_horizontal_whisker(
-    writer: &mut Write,
+    writer: &mut dyn Write,
     text: &str,
     box_width: usize,
     line_style: Style,
@@ -88,7 +88,7 @@ pub fn write_boxed_with_horizontal_whisker(
 }
 
 fn write_boxed_partial(
-    writer: &mut Write,
+    writer: &mut dyn Write,
     text: &str,
     box_width: usize,
     line_style: Style,
