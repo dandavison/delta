@@ -36,7 +36,16 @@ pub fn write_boxed_with_line(
 ) -> std::io::Result<()> {
     let box_width = strip_ansi_codes(text).graphemes(true).count() + 1;
     write_boxed_with_horizontal_whisker(writer, text, box_width, line_style, heavy)?;
-    write_horizontal_line(writer, line_width - box_width - 1, line_style, heavy)?;
+    write_horizontal_line(
+        writer,
+        if line_width > box_width {
+            line_width - box_width - 1
+        } else {
+            0
+        },
+        line_style,
+        heavy,
+    )?;
     Ok(())
 }
 
