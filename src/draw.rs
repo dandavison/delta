@@ -48,7 +48,8 @@ pub fn write_underlined(
     heavy: bool,
 ) -> std::io::Result<()> {
     writeln!(writer, "{}", line_style.paint(text))?;
-    write_horizontal_line(writer, line_width, line_style, heavy)?;
+    write_horizontal_line(writer, line_width - 1, line_style, heavy)?;
+    write!(writer, "\n")?;
     Ok(())
 }
 

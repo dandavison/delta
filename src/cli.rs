@@ -175,7 +175,7 @@ pub fn process_command_line_arguments<'a>(
                 .parse::<usize>()
                 .unwrap_or_else(|_| panic!("Invalid width: {}", width)),
         ),
-        None => Some(terminal_width - 1),
+        None => Some(terminal_width),
     };
 
     config::get_config(
