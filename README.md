@@ -21,12 +21,8 @@ Executables: [Linux](https://github.com/dandavison/delta/releases/download/0.0.1
 
 Homebrew:
 ```sh
-brew tap dandavison/delta https://github.com/dandavison/delta
-brew install dandavison/delta/git-delta
-...
-brew upgrade git-delta
+brew install git-delta
 ```
-
 
 
 #### Configure git to use delta
