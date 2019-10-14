@@ -17,7 +17,7 @@ Delta brings language syntax highlighting, within-line insertion/deletion detect
 
 ## Installation
 
-Executables: [Linux](https://github.com/dandavison/delta/releases/download/0.0.12/delta-0.0.12-x86_64-unknown-linux-musl.tar.gz) | [MacOS](https://github.com/dandavison/delta/releases/download/0.0.12/delta-0.0.12-x86_64-apple-darwin.tar.gz) | [Windows](https://github.com/dandavison/delta/releases/download/0.0.12/delta-0.0.12-x86_64-pc-windows-msvc.zip) | [All](https://github.com/dandavison/delta/releases)
+Executables: [Linux](https://github.com/dandavison/delta/releases/download/0.0.13/delta-0.0.13-x86_64-unknown-linux-musl.tar.gz) | [MacOS](https://github.com/dandavison/delta/releases/download/0.0.13/delta-0.0.13-x86_64-apple-darwin.tar.gz) | [Windows](https://github.com/dandavison/delta/releases/download/0.0.13/delta-0.0.13-x86_64-pc-windows-msvc.zip) | [All](https://github.com/dandavison/delta/releases)
 
 Homebrew:
 ```sh
