@@ -74,7 +74,7 @@ where
 /// Split line into tokens for alignment. The alignment algorithm aligns sequences of substrings;
 /// not individual characters.
 fn tokenize(line: &str) -> Vec<&str> {
-    let separators = Regex::new(r"[ ,;.:()\[\]<>]+").unwrap();
+    let separators = Regex::new(r#"[\t ,;.:()\[\]<>/'"-]+"#).unwrap();
     let mut tokens = Vec::new();
     let mut offset = 0;
     for m in separators.find_iter(line) {
