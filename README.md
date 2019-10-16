@@ -46,6 +46,7 @@ All git commands that display diff output should now display syntax-highlighted 
   - `git show`
   - `git log -p`
   - `git stash show -p`
+  - `git reflog -p`
 
 
 <br>
