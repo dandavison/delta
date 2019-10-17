@@ -72,10 +72,7 @@ where
         } else if line.starts_with("diff --git ") {
             painter.paint_buffered_lines();
             state = State::FileMeta;
-            painter.syntax = match parse::get_file_extension_from_diff_line(&line) {
-                Some(extension) => assets.syntax_set.find_syntax_by_extension(extension),
-                None => None,
-            };
+            painter.set_syntax(parse::get_file_extension_from_diff_line(&line));
         } else if (line.starts_with("--- ") || line.starts_with("rename from "))
             && config.opt.file_style != cli::SectionStyle::Plain
         {
@@ -88,15 +85,13 @@ where
             handle_file_meta_header_line(&mut painter, &minus_file, &plus_file, config)?;
         } else if line.starts_with("@@ ") {
             state = State::HunkMeta;
-            if painter.syntax.is_some() {
-                painter.reset_highlighter();
-            }
+            painter.set_highlighter();
             if config.opt.hunk_style != cli::SectionStyle::Plain {
                 painter.emit()?;
                 handle_hunk_meta_line(&mut painter, &line, config)?;
                 continue;
             }
-        } else if state.is_in_hunk() && painter.syntax.is_some() {
+        } else if state.is_in_hunk() {
             state = handle_hunk_line(&mut painter, &line, state, config);
             painter.emit()?;
             continue;
