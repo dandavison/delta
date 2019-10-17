@@ -266,7 +266,6 @@ fn prepare(line: &str, tab_width: usize, append_newline: bool) -> String {
     let terminator = if append_newline { "\n" } else { "" };
     if !line.is_empty() {
         let mut line = line.graphemes(true);
-        let mut output_line;
 
         // The first column contains a -/+/space character, added by git. We skip it here and insert
         // a replacement space when formatting the line below.
@@ -274,14 +273,13 @@ fn prepare(line: &str, tab_width: usize, append_newline: bool) -> String {
 
         // Expand tabs as spaces.
         // tab_width = 0 is documented to mean do not replace tabs.
-        if tab_width > 0 {
+        let output_line = if tab_width > 0 {
             let tab_replacement = " ".repeat(tab_width);
-            output_line = line
-                .map(|s| if s == "\t" { &tab_replacement } else { s })
-                .collect::<String>();
+            line.map(|s| if s == "\t" { &tab_replacement } else { s })
+                .collect::<String>()
         } else {
-            output_line = line.collect::<String>();
-        }
+            line.collect::<String>()
+        };
         format!(" {}{}", output_line, terminator)
     } else {
         terminator.to_string()
