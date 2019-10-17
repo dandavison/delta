@@ -2,7 +2,6 @@ use std::io::Write;
 
 use ansi_term::Colour::{Blue, Yellow};
 use console::strip_ansi_codes;
-use itertools::Itertools;
 use unicode_segmentation::UnicodeSegmentation;
 
 use crate::bat::assets::HighlightingAssets;
@@ -171,10 +170,11 @@ fn handle_hunk_meta_line(
         cli::SectionStyle::Plain => panic!(),
     };
     let ansi_style = Blue.normal();
-    let (code_fragment, line_number) = parse::parse_hunk_metadata(&line);
+    let (raw_code_fragment, line_number) = parse::parse_hunk_metadata(&line);
+    let code_fragment = prepare(raw_code_fragment, config.tab_width, false);
     if !code_fragment.is_empty() {
         let syntax_style_sections = Painter::get_line_syntax_style_sections(
-            code_fragment,
+            &code_fragment,
             &mut painter.highlighter,
             &painter.config,
             true,
@@ -184,7 +184,7 @@ fn handle_hunk_meta_line(
             vec![syntax_style_sections],
             vec![vec![(
                 style::NO_BACKGROUND_COLOR_STYLE_MODIFIER,
-                code_fragment,
+                &code_fragment,
             )]],
             config,
             style::NO_BACKGROUND_COLOR_STYLE_MODIFIER,
@@ -224,16 +224,20 @@ fn handle_hunk_line(painter: &mut Painter, line: &str, state: State, config: &Co
             if state == State::HunkPlus {
                 painter.paint_buffered_lines();
             }
-            painter.minus_lines.push(prepare(&line, config.tab_width));
+            painter
+                .minus_lines
+                .push(prepare(&line, config.tab_width, true));
             State::HunkMinus
         }
         Some('+') => {
-            painter.plus_lines.push(prepare(&line, config.tab_width));
+            painter
+                .plus_lines
+                .push(prepare(&line, config.tab_width, true));
             State::HunkPlus
         }
         _ => {
             painter.paint_buffered_lines();
-            let line = prepare(&line, config.tab_width);
+            let line = prepare(&line, config.tab_width, true);
             let syntax_style_sections = Painter::get_line_syntax_style_sections(
                 &line,
                 &mut painter.highlighter,
@@ -253,30 +257,34 @@ fn handle_hunk_line(painter: &mut Painter, line: &str, state: State, config: &Co
     }
 }
 
-/// Replace initial -/+ character with ' ', expand tabs as spaces, and terminate with newline.
+/// Replace initial -/+ character with ' ', expand tabs as spaces, and optionally terminate with
+/// newline.
 // Terminating with newline character is necessary for many of the sublime syntax definitions to
 // highlight correctly.
 // See https://docs.rs/syntect/3.2.0/syntect/parsing/struct.SyntaxSetBuilder.html#method.add_from_folder
-fn prepare(line: &str, tab_width: usize) -> String {
+fn prepare(line: &str, tab_width: usize, append_newline: bool) -> String {
+    let terminator = if append_newline { "\n" } else { "" };
     if !line.is_empty() {
-        let mut line = line.graphemes(true).peekable();
-        let mut left_fill = "".to_string();
+        let mut line = line.graphemes(true);
+        let mut output_line;
 
-        // The first column contains a -/+/space character, added by git. Replace it with a space.
-        left_fill.push_str(" ");
+        // The first column contains a -/+/space character, added by git. We skip it here and insert
+        // a replacement space when formatting the line below.
         line.next();
 
-        // Expand tabs as spaces
+        // Expand tabs as spaces.
+        // tab_width = 0 is documented to mean do not replace tabs.
         if tab_width > 0 {
-            // tab_width = 0 is documented to mean do not replace tabs.
-            let n_tabs = line.peeking_take_while(|c| *c == "\t").count();
-            if n_tabs > 0 {
-                left_fill.push_str(&" ".repeat(tab_width * n_tabs));
-            }
+            let tab_replacement = " ".repeat(tab_width);
+            output_line = line
+                .map(|s| if s == "\t" { &tab_replacement } else { s })
+                .collect::<String>();
+        } else {
+            output_line = line.collect::<String>();
         }
-        format!("{}{}\n", &left_fill, line.collect::<String>())
+        format!(" {}{}", output_line, terminator)
     } else {
-        "\n".to_string()
+        terminator.to_string()
     }
 }
 
