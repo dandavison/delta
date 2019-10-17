@@ -52,8 +52,8 @@ fn main() -> std::io::Result<()> {
 
     let config = cli::process_command_line_arguments(&assets, &opt);
 
-    if opt.show_colors {
-        show_colors(&config);
+    if opt.show_background_colors {
+        show_background_colors(&config);
         process::exit(0);
     }
 
@@ -75,15 +75,13 @@ fn main() -> std::io::Result<()> {
     Ok(())
 }
 
-fn show_colors(config: &config::Config) {
+fn show_background_colors(config: &config::Config) {
     println!(
         "delta \
-         --theme=\"{theme}\" \
          --minus-color=\"{minus_color}\" \
          --minus-emph-color=\"{minus_emph_color}\" \
          --plus-color=\"{plus_color}\" \
          --plus-emph-color=\"{plus_emph_color}\"",
-        theme = config.theme_name,
         minus_color = color_to_hex(config.minus_style_modifier.background.unwrap()),
         minus_emph_color = color_to_hex(config.minus_emph_style_modifier.background.unwrap()),
         plus_color = color_to_hex(config.plus_style_modifier.background.unwrap()),
