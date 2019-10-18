@@ -279,11 +279,65 @@ fn prepare(line: &str, tab_width: usize) -> String {
 mod tests {
     use super::*;
     use console::strip_ansi_codes;
-    use structopt::StructOpt;
 
     #[test]
     fn test_added_file() {
-        let input = "\
+        let options = get_command_line_options();
+        let output = strip_ansi_codes(&run_delta(ADDED_FILE_INPUT, &options)).to_string();
+        assert!(output.contains("\nadded: a.py\n"));
+        if false {
+            // TODO: hline width
+            assert_eq!(output, ADDED_FILE_EXPECTED_OUTPUT);
+        }
+    }
+
+    #[test]
+    fn test_renamed_file() {
+        let options = get_command_line_options();
+        let output = strip_ansi_codes(&run_delta(RENAMED_FILE_INPUT, &options)).to_string();
+        assert!(output.contains("\nrenamed: a.py ⟶   b.py\n"));
+    }
+
+    fn run_delta(input: &str, options: &cli::Opt) -> String {
+        let mut writer: Vec<u8> = Vec::new();
+
+        let assets = HighlightingAssets::new();
+        let config = cli::process_command_line_arguments(&assets, &options);
+
+        delta(
+            input.split("\n").map(String::from),
+            &config,
+            &assets,
+            &mut writer,
+        )
+        .unwrap();
+        String::from_utf8(writer).unwrap()
+    }
+
+    fn get_command_line_options() -> cli::Opt {
+        cli::Opt {
+            light: true,
+            dark: false,
+            minus_color: None,
+            minus_emph_color: None,
+            plus_color: None,
+            plus_emph_color: None,
+            theme: Some("GitHub".to_string()),
+            highlight_removed: false,
+            commit_style: cli::SectionStyle::Plain,
+            file_style: cli::SectionStyle::Underline,
+            hunk_style: cli::SectionStyle::Box,
+            width: Some("variable".to_string()),
+            tab_width: 4,
+            show_background_colors: false,
+            list_languages: false,
+            list_themes: false,
+            compare_themes: false,
+            max_line_distance: 0.3,
+        }
+    }
+
+    const ADDED_FILE_INPUT: &str = "\
 commit d28dc1ac57e53432567ec5bf19ad49ff90f0f7a5
 Author: Dan Davison <dandavison7@gmail.com>
 Date:   Thu Jul 11 10:41:11 2019 -0400
@@ -300,7 +354,7 @@ index 0000000..8c55b7d
 +class X:
 +    pass";
 
-        let expected_output = "\
+    const ADDED_FILE_EXPECTED_OUTPUT: &str = "\
 commit d28dc1ac57e53432567ec5bf19ad49ff90f0f7a5
 Author: Dan Davison <dandavison7@gmail.com>
 Date:   Thu Jul 11 10:41:11 2019 -0400
@@ -318,29 +372,7 @@ added: a.py
      pass
 ";
 
-        let mut opt = cli::Opt::from_args();
-        opt.width = Some("variable".to_string());
-        let assets = HighlightingAssets::new();
-        let config = cli::process_command_line_arguments(&assets, &opt);
-        let mut writer: Vec<u8> = Vec::new();
-        delta(
-            input.split("\n").map(String::from),
-            &config,
-            &assets,
-            &mut writer,
-        )
-        .unwrap();
-        let output = strip_ansi_codes(&String::from_utf8(writer).unwrap()).to_string();
-        assert!(output.contains("\nadded: a.py\n"));
-        if false {
-            // TODO: hline width
-            assert_eq!(output, expected_output);
-        }
-    }
-
-    #[test]
-    fn test_renamed_file() {
-        let input = "\
+    const RENAMED_FILE_INPUT: &str = "\
 commit 1281650789680f1009dfff2497d5ccfbe7b96526
 Author: Dan Davison <dandavison7@gmail.com>
 Date:   Wed Jul 17 20:40:23 2019 -0400
@@ -352,20 +384,4 @@ similarity index 100%
 rename from a.py
 rename to b.py
 ";
-
-        let mut opt = cli::Opt::from_args();
-        opt.width = Some("variable".to_string());
-        let assets = HighlightingAssets::new();
-        let config = cli::process_command_line_arguments(&assets, &opt);
-        let mut writer: Vec<u8> = Vec::new();
-        delta(
-            input.split("\n").map(String::from),
-            &config,
-            &assets,
-            &mut writer,
-        )
-        .unwrap();
-        let output = strip_ansi_codes(&String::from_utf8(writer).unwrap()).to_string();
-        assert!(output.contains("\nrenamed: a.py ⟶   b.py\n"));
-    }
 }
