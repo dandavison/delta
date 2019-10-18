@@ -144,14 +144,18 @@ index 541e930..e23bef1 100644
             OutputType::from_mode(PagingMode::QuitIfOneScreen, Some(config.pager)).unwrap();
         let mut writer = output_type.handle().unwrap();
 
-        delta(
+        if let Err(error) = delta(
             input.split('\n').map(String::from),
             &config,
             &assets,
             &mut writer,
-        )?;
+        ) {
+            match error.kind() {
+                ErrorKind::BrokenPipe => process::exit(0),
+                _ => eprintln!("{}", error),
+            }
+        };
     }
-
     Ok(())
 }
 
