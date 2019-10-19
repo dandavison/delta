@@ -71,10 +71,7 @@ where
         } else if line.starts_with("diff --git ") {
             painter.paint_buffered_lines();
             state = State::FileMeta;
-            painter.syntax = match parse::get_file_extension_from_diff_line(&line) {
-                Some(extension) => assets.syntax_set.find_syntax_by_extension(extension),
-                None => None,
-            };
+            painter.set_syntax(parse::get_file_extension_from_diff_line(&line));
         } else if (line.starts_with("--- ") || line.starts_with("rename from "))
             && config.opt.file_style != cli::SectionStyle::Plain
         {
@@ -87,15 +84,13 @@ where
             handle_file_meta_header_line(&mut painter, &minus_file, &plus_file, config)?;
         } else if line.starts_with("@@ ") {
             state = State::HunkMeta;
-            if painter.syntax.is_some() {
-                painter.reset_highlighter();
-            }
+            painter.set_highlighter();
             if config.opt.hunk_style != cli::SectionStyle::Plain {
                 painter.emit()?;
                 handle_hunk_meta_line(&mut painter, &line, config)?;
                 continue;
             }
-        } else if state.is_in_hunk() && painter.syntax.is_some() {
+        } else if state.is_in_hunk() {
             state = handle_hunk_line(&mut painter, &line, state, config);
             painter.emit()?;
             continue;
@@ -290,11 +285,139 @@ fn prepare(line: &str, tab_width: usize, append_newline: bool) -> String {
 mod tests {
     use super::*;
     use console::strip_ansi_codes;
-    use structopt::StructOpt;
+    use syntect::highlighting::StyleModifier;
+
+    use crate::paint;
 
     #[test]
     fn test_added_file() {
-        let input = "\
+        let options = get_command_line_options();
+        let output = strip_ansi_codes(&run_delta(ADDED_FILE_INPUT, &options)).to_string();
+        assert!(output.contains("\nadded: a.py\n"));
+        if false {
+            // TODO: hline width
+            assert_eq!(output, ADDED_FILE_EXPECTED_OUTPUT);
+        }
+    }
+
+    #[test]
+    fn test_renamed_file() {
+        let options = get_command_line_options();
+        let output = strip_ansi_codes(&run_delta(RENAMED_FILE_INPUT, &options)).to_string();
+        assert!(output.contains("\nrenamed: a.py ⟶   b.py\n"));
+    }
+
+    #[test]
+    fn test_recognized_file_type() {
+        // In addition to the background color, the code has language syntax highlighting.
+        let options = get_command_line_options();
+        let input = ADDED_FILE_INPUT;
+        let output = get_line_of_code_from_delta(&input, &options);
+        assert_has_color_other_than_plus_color(&output, &options);
+    }
+
+    #[test]
+    fn test_unrecognized_file_type_with_theme() {
+        // In addition to the background color, the code has the foreground color using the default
+        // .txt syntax under the theme.
+        let options = get_command_line_options();
+        let input = ADDED_FILE_INPUT.replace("a.py", "a");
+        let output = get_line_of_code_from_delta(&input, &options);
+        assert_has_color_other_than_plus_color(&output, &options);
+    }
+
+    #[test]
+    fn test_unrecognized_file_type_no_theme() {
+        // The code has the background color only. (Since there is no theme, the code has no
+        // foreground ansi color codes.)
+        let mut options = get_command_line_options();
+        options.theme = Some("none".to_string());
+        let input = ADDED_FILE_INPUT.replace("a.py", "a");
+        let output = get_line_of_code_from_delta(&input, &options);
+        assert_has_plus_color_only(&output, &options);
+    }
+
+    fn assert_has_color_other_than_plus_color(string: &str, options: &cli::Opt) {
+        let (string_without_any_color, string_with_plus_color_only) =
+            get_color_variants(string, &options);
+        assert_ne!(string, string_without_any_color);
+        assert_ne!(string, string_with_plus_color_only);
+    }
+
+    fn assert_has_plus_color_only(string: &str, options: &cli::Opt) {
+        let (string_without_any_color, string_with_plus_color_only) =
+            get_color_variants(string, &options);
+        assert_ne!(string, string_without_any_color);
+        assert_eq!(string, string_with_plus_color_only);
+    }
+
+    fn get_color_variants(string: &str, options: &cli::Opt) -> (String, String) {
+        let assets = HighlightingAssets::new();
+        let config = cli::process_command_line_arguments(&assets, &options);
+
+        let string_without_any_color = strip_ansi_codes(string).to_string();
+        let string_with_plus_color_only = paint_text(
+            &string_without_any_color,
+            config.plus_style_modifier,
+            &config,
+        );
+        (string_without_any_color, string_with_plus_color_only)
+    }
+
+    fn paint_text(input: &str, style_modifier: StyleModifier, config: &Config) -> String {
+        let mut output = String::new();
+        let style = config.no_style.apply(style_modifier);
+        paint::paint_text(&input, style, &mut output).unwrap();
+        output
+    }
+
+    fn get_line_of_code_from_delta(input: &str, options: &cli::Opt) -> String {
+        let output = run_delta(&input, &options);
+        let line_of_code = output.lines().nth(12).unwrap();
+        assert!(strip_ansi_codes(line_of_code) == " class X:");
+        line_of_code.to_string()
+    }
+
+    fn run_delta(input: &str, options: &cli::Opt) -> String {
+        let mut writer: Vec<u8> = Vec::new();
+
+        let assets = HighlightingAssets::new();
+        let config = cli::process_command_line_arguments(&assets, &options);
+
+        delta(
+            input.split("\n").map(String::from),
+            &config,
+            &assets,
+            &mut writer,
+        )
+        .unwrap();
+        String::from_utf8(writer).unwrap()
+    }
+
+    fn get_command_line_options() -> cli::Opt {
+        cli::Opt {
+            light: true,
+            dark: false,
+            minus_color: None,
+            minus_emph_color: None,
+            plus_color: None,
+            plus_emph_color: None,
+            theme: Some("GitHub".to_string()),
+            highlight_removed: false,
+            commit_style: cli::SectionStyle::Plain,
+            file_style: cli::SectionStyle::Underline,
+            hunk_style: cli::SectionStyle::Box,
+            width: Some("variable".to_string()),
+            tab_width: 4,
+            show_background_colors: false,
+            list_languages: false,
+            list_themes: false,
+            compare_themes: false,
+            max_line_distance: 0.3,
+        }
+    }
+
+    const ADDED_FILE_INPUT: &str = "\
 commit d28dc1ac57e53432567ec5bf19ad49ff90f0f7a5
 Author: Dan Davison <dandavison7@gmail.com>
 Date:   Thu Jul 11 10:41:11 2019 -0400
@@ -311,7 +434,7 @@ index 0000000..8c55b7d
 +class X:
 +    pass";
 
-        let expected_output = "\
+    const ADDED_FILE_EXPECTED_OUTPUT: &str = "\
 commit d28dc1ac57e53432567ec5bf19ad49ff90f0f7a5
 Author: Dan Davison <dandavison7@gmail.com>
 Date:   Thu Jul 11 10:41:11 2019 -0400
@@ -329,29 +452,7 @@ added: a.py
      pass
 ";
 
-        let mut opt = cli::Opt::from_args();
-        opt.width = Some("variable".to_string());
-        let assets = HighlightingAssets::new();
-        let config = cli::process_command_line_arguments(&assets, &opt);
-        let mut writer: Vec<u8> = Vec::new();
-        delta(
-            input.split("\n").map(String::from),
-            &config,
-            &assets,
-            &mut writer,
-        )
-        .unwrap();
-        let output = strip_ansi_codes(&String::from_utf8(writer).unwrap()).to_string();
-        assert!(output.contains("\nadded: a.py\n"));
-        if false {
-            // TODO: hline width
-            assert_eq!(output, expected_output);
-        }
-    }
-
-    #[test]
-    fn test_renamed_file() {
-        let input = "\
+    const RENAMED_FILE_INPUT: &str = "\
 commit 1281650789680f1009dfff2497d5ccfbe7b96526
 Author: Dan Davison <dandavison7@gmail.com>
 Date:   Wed Jul 17 20:40:23 2019 -0400
@@ -363,20 +464,4 @@ similarity index 100%
 rename from a.py
 rename to b.py
 ";
-
-        let mut opt = cli::Opt::from_args();
-        opt.width = Some("variable".to_string());
-        let assets = HighlightingAssets::new();
-        let config = cli::process_command_line_arguments(&assets, &opt);
-        let mut writer: Vec<u8> = Vec::new();
-        delta(
-            input.split("\n").map(String::from),
-            &config,
-            &assets,
-            &mut writer,
-        )
-        .unwrap();
-        let output = strip_ansi_codes(&String::from_utf8(writer).unwrap()).to_string();
-        assert!(output.contains("\nrenamed: a.py ⟶   b.py\n"));
-    }
 }

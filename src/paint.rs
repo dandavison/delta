@@ -2,7 +2,7 @@ use std::io::Write;
 
 use syntect::easy::HighlightLines;
 use syntect::highlighting::{Style, StyleModifier};
-use syntect::parsing::SyntaxReference;
+use syntect::parsing::{SyntaxReference, SyntaxSet};
 use unicode_segmentation::UnicodeSegmentation;
 
 use crate::bat::assets::HighlightingAssets;
@@ -15,7 +15,7 @@ pub struct Painter<'a> {
     pub minus_lines: Vec<String>,
     pub plus_lines: Vec<String>,
     pub writer: &'a mut dyn Write,
-    pub syntax: Option<&'a SyntaxReference>,
+    pub syntax: &'a SyntaxReference,
     pub highlighter: HighlightLines<'a>,
     pub config: &'a config::Config<'a>,
     pub output_buffer: String,
@@ -27,24 +27,33 @@ impl<'a> Painter<'a> {
         config: &'a config::Config,
         assets: &'a HighlightingAssets,
     ) -> Self {
-        let dummy_highlighter = HighlightLines::new(
-            assets.syntax_set.find_syntax_by_extension("txt").unwrap(),
-            &assets.theme_set.themes[style::DEFAULT_LIGHT_THEME],
-        );
+        let default_syntax = Self::get_syntax(config.syntax_set, None);
+        let dummy_theme = &assets.theme_set.themes[style::DEFAULT_LIGHT_THEME];
+        let dummy_highlighter = HighlightLines::new(default_syntax, dummy_theme);
         Self {
             minus_lines: Vec::new(),
             plus_lines: Vec::new(),
             output_buffer: String::new(),
-            syntax: None,
+            syntax: default_syntax,
             highlighter: dummy_highlighter,
             writer,
             config,
         }
     }
 
-    pub fn reset_highlighter(&mut self) {
+    pub fn set_syntax(&mut self, extension: Option<&str>) {
+        self.syntax = Painter::get_syntax(self.config.syntax_set, extension);
+    }
+
+    fn get_syntax(syntax_set: &'a SyntaxSet, extension: Option<&str>) -> &'a SyntaxReference {
+        syntax_set
+            .find_syntax_by_extension(extension.unwrap_or("txt"))
+            .unwrap_or_else(|| Painter::get_syntax(syntax_set, Some("txt")))
+    }
+
+    pub fn set_highlighter(&mut self) {
         if let Some(theme) = self.config.theme {
-            self.highlighter = HighlightLines::new(self.syntax.unwrap(), theme)
+            self.highlighter = HighlightLines::new(self.syntax, theme)
         };
     }
 
