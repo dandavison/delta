@@ -279,6 +279,9 @@ fn prepare(line: &str, tab_width: usize) -> String {
 mod tests {
     use super::*;
     use console::strip_ansi_codes;
+    use syntect::highlighting::StyleModifier;
+
+    use crate::paint;
 
     #[test]
     fn test_added_file() {
@@ -296,6 +299,77 @@ mod tests {
         let options = get_command_line_options();
         let output = strip_ansi_codes(&run_delta(RENAMED_FILE_INPUT, &options)).to_string();
         assert!(output.contains("\nrenamed: a.py ⟶   b.py\n"));
+    }
+
+    #[test]
+    fn test_recognized_file_type() {
+        // In addition to the background color, the code has language syntax highlighting.
+        let options = get_command_line_options();
+        let input = ADDED_FILE_INPUT;
+        let output = get_line_of_code_from_delta(&input, &options);
+        assert_has_color_other_than_plus_color(&output, &options);
+    }
+
+    #[test]
+    fn test_unrecognized_file_type_with_theme() {
+        // In addition to the background color, the code has the foreground color using the default
+        // .txt syntax under the theme.
+        let options = get_command_line_options();
+        let input = ADDED_FILE_INPUT.replace("a.py", "a");
+        let output = get_line_of_code_from_delta(&input, &options);
+        assert_has_color_other_than_plus_color(&output, &options);
+    }
+
+    #[test]
+    fn test_unrecognized_file_type_no_theme() {
+        // The code has the background color only. (Since there is no theme, the code has no
+        // foreground ansi color codes.)
+        let mut options = get_command_line_options();
+        options.theme = Some("none".to_string());
+        let input = ADDED_FILE_INPUT.replace("a.py", "a");
+        let output = get_line_of_code_from_delta(&input, &options);
+        assert_has_plus_color_only(&output, &options);
+    }
+
+    fn assert_has_color_other_than_plus_color(string: &str, options: &cli::Opt) {
+        let (string_without_any_color, string_with_plus_color_only) =
+            get_color_variants(string, &options);
+        assert_ne!(string, string_without_any_color);
+        assert_ne!(string, string_with_plus_color_only);
+    }
+
+    fn assert_has_plus_color_only(string: &str, options: &cli::Opt) {
+        let (string_without_any_color, string_with_plus_color_only) =
+            get_color_variants(string, &options);
+        assert_ne!(string, string_without_any_color);
+        assert_eq!(string, string_with_plus_color_only);
+    }
+
+    fn get_color_variants(string: &str, options: &cli::Opt) -> (String, String) {
+        let assets = HighlightingAssets::new();
+        let config = cli::process_command_line_arguments(&assets, &options);
+
+        let string_without_any_color = strip_ansi_codes(string).to_string();
+        let string_with_plus_color_only = paint_text(
+            &string_without_any_color,
+            config.plus_style_modifier,
+            &config,
+        );
+        (string_without_any_color, string_with_plus_color_only)
+    }
+
+    fn paint_text(input: &str, style_modifier: StyleModifier, config: &Config) -> String {
+        let mut output = String::new();
+        let style = config.no_style.apply(style_modifier);
+        paint::paint_text(&input, style, &mut output).unwrap();
+        output
+    }
+
+    fn get_line_of_code_from_delta(input: &str, options: &cli::Opt) -> String {
+        let output = run_delta(&input, &options);
+        let line_of_code = output.lines().nth(12).unwrap();
+        assert!(strip_ansi_codes(line_of_code) == " class X:");
+        line_of_code.to_string()
     }
 
     fn run_delta(input: &str, options: &cli::Opt) -> String {
