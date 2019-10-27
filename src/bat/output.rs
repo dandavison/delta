@@ -23,6 +23,15 @@ pub enum OutputType {
     Stdout(io::Stdout),
 }
 
+/// If key is set and, after trimming whitespace, is not empty string, then return that trimmed
+/// string. Else None.
+pub fn get_env_var(key: &str) -> Option<String> {
+    match env::var(key).unwrap_or("".to_string()).trim() {
+        "" => None,
+        non_empty_string => Some(non_empty_string.to_string()),
+    }
+}
+
 impl OutputType {
     pub fn from_mode(mode: PagingMode, pager: Option<&str>) -> Result<Self> {
         use self::PagingMode::*;
@@ -37,9 +46,9 @@ impl OutputType {
     fn try_pager(quit_if_one_screen: bool, pager_from_config: Option<&str>) -> Result<Self> {
         let mut replace_arguments_to_less = false;
 
-        let pager_from_env = match (env::var("BAT_PAGER"), env::var("PAGER")) {
-            (Ok(bat_pager), _) => Some(bat_pager),
-            (_, Ok(pager)) => {
+        let pager_from_env = match (get_env_var("BAT_PAGER"), get_env_var("PAGER")) {
+            (Some(bat_pager), _) => Some(bat_pager),
+            (_, Some(pager)) => {
                 // less needs to be called with the '-R' option in order to properly interpret the
                 // ANSI color sequences printed by bat. If someone has set PAGER="less -F", we
                 // therefore need to overwrite the arguments and add '-R'.
