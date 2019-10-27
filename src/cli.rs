@@ -171,22 +171,27 @@ pub fn process_command_line_arguments<'a>(
         _ => (),
     };
 
-    let terminal_width = Term::stdout().size().1 as usize;
-    let width = match opt.width.as_ref().map(String::as_str) {
+    // We do not use the full width, in case `less --status-column` is in effect. See #41 and #10.
+
+    // TODO: There seems to be some confusion in the accounting: we are actually leaving 2
+    // characters unused for less at the right edge of the terminal, despite the subtraction of 1
+    // here.
+    let available_terminal_width = (Term::stdout().size().1 - 1) as usize;
+    let background_color_width = match opt.width.as_ref().map(String::as_str) {
         Some("variable") => None,
         Some(width) => Some(
             width
                 .parse::<usize>()
                 .unwrap_or_else(|_| panic!("Invalid width: {}", width)),
         ),
-        None => Some(terminal_width),
+        None => Some(available_terminal_width),
     };
 
     config::get_config(
         opt,
         &assets.syntax_set,
         &assets.theme_set,
-        terminal_width,
-        width,
+        available_terminal_width,
+        background_color_width,
     )
 }
