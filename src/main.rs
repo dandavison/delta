@@ -1,5 +1,7 @@
 #[macro_use]
 extern crate error_chain;
+#[macro_use]
+extern crate lazy_static;
 
 mod align;
 mod bat;
@@ -11,6 +13,7 @@ mod edits;
 mod paint;
 mod parse;
 mod style;
+mod xterm_256color;
 
 use std::io::{self, BufRead, ErrorKind, Read, Write};
 use std::process;

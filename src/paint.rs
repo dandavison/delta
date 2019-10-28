@@ -1,7 +1,8 @@
 use std::io::Write;
 
+use super::xterm_256color::{nearest_xterm_256color_index, IS_XTERM_256COLOR};
 use syntect::easy::HighlightLines;
-use syntect::highlighting::{Style, StyleModifier};
+use syntect::highlighting::{Color, Style, StyleModifier};
 use syntect::parsing::{SyntaxReference, SyntaxSet};
 use unicode_segmentation::UnicodeSegmentation;
 
@@ -205,6 +206,14 @@ impl<'a> Painter<'a> {
     }
 }
 
+fn ansi_color(color: &Color) -> String {
+    if *IS_XTERM_256COLOR {
+        return format!("5;{}", nearest_xterm_256color_index(color));
+    } else {
+        return format!("2;{};{};{}", color.r, color.g, color.b);
+    }
+}
+
 /// Write section text to buffer with color escape codes.
 pub fn paint_text(text: &str, style: Style, output_buffer: &mut String) -> std::fmt::Result {
     use std::fmt::Write;
@@ -215,18 +224,15 @@ pub fn paint_text(text: &str, style: Style, output_buffer: &mut String) -> std::
 
     match style.background {
         style::NO_COLOR => (),
-        _ => write!(
-            output_buffer,
-            "\x1b[48;2;{};{};{}m",
-            style.background.r, style.background.g, style.background.b
-        )?,
+        _ => write!(output_buffer, "\x1b[48;{}m", ansi_color(&style.background))?,
     }
     match style.foreground {
         style::NO_COLOR => write!(output_buffer, "{}", text)?,
         _ => write!(
             output_buffer,
-            "\x1b[38;2;{};{};{}m{}",
-            style.foreground.r, style.foreground.g, style.foreground.b, text
+            "\x1b[38;{}m{}",
+            ansi_color(&style.foreground),
+            text
         )?,
     };
     Ok(())
@@ -298,7 +304,7 @@ mod superimpose_style_sections {
     #[cfg(test)]
     mod tests {
         use super::*;
-        use syntect::highlighting::{Color, FontStyle, Style, StyleModifier};
+        use syntect::highlighting::{FontStyle, Style, StyleModifier};
 
         const STYLE: Style = Style {
             foreground: Color::BLACK,
