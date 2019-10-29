@@ -15,6 +15,7 @@ static XTERM_256_FIRST_GREY: usize = 232;
 
 lazy_static! {
     /// True if $TERM is xterm-256color, false otherwise
+    /// FIXME: should use terminfo instead
     pub static ref IS_XTERM_256COLOR: bool = match std::env::var("TERM") {
         Ok(ref term) if term == "xterm-256color" => true,
         _ => false,
@@ -36,7 +37,7 @@ lazy_static! {
     ///
     /// RGB values taken from https://jonasjacek.github.io/colors/
     ///
-    static ref XTERM_256_COLORS_LAB: Vec<colorspace::lab::Lab<f32>> = [
+    static ref XTERM_256_COLORS_LAB: Vec<Lab<f32>> = [
         (0, 0, 0),
         (128, 0, 0),
         (0, 128, 0),

@@ -304,7 +304,7 @@ mod superimpose_style_sections {
     #[cfg(test)]
     mod tests {
         use super::*;
-        use syntect::highlighting::{FontStyle, Style, StyleModifier};
+        use syntect::highlighting::{Color, FontStyle, Style, StyleModifier};
 
         const STYLE: Style = Style {
             foreground: Color::BLACK,
