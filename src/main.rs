@@ -8,6 +8,7 @@ mod config;
 mod delta;
 mod draw;
 mod edits;
+mod env;
 mod paint;
 mod parse;
 mod style;
