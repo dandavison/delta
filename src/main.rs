@@ -57,8 +57,7 @@ fn main() -> std::io::Result<()> {
         process::exit(0);
     }
 
-    let mut output_type =
-        OutputType::from_mode(PagingMode::QuitIfOneScreen, None).unwrap();
+    let mut output_type = OutputType::from_mode(PagingMode::QuitIfOneScreen, None).unwrap();
     let mut writer = output_type.handle().unwrap();
 
     if let Err(error) = delta(
@@ -140,8 +139,7 @@ index 541e930..e23bef1 100644
         writeln!(stdout, "\nTheme: {}\n", style.paint(theme))?;
         opt.theme = Some(theme.to_string());
         config = cli::process_command_line_arguments(&assets, &opt);
-        let mut output_type =
-            OutputType::from_mode(PagingMode::QuitIfOneScreen, None).unwrap();
+        let mut output_type = OutputType::from_mode(PagingMode::QuitIfOneScreen, None).unwrap();
         let mut writer = output_type.handle().unwrap();
 
         if let Err(error) = delta(
