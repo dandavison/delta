@@ -285,6 +285,7 @@ fn prepare(line: &str, tab_width: usize, append_newline: bool) -> String {
 mod tests {
     use super::*;
     use console::strip_ansi_codes;
+    use std::env;
     use syntect::highlighting::StyleModifier;
 
     use crate::paint;
@@ -335,6 +336,127 @@ mod tests {
         let input = ADDED_FILE_INPUT.replace("a.py", "a");
         let output = get_line_of_code_from_delta(&input, &options);
         assert_has_plus_color_only(&output, &options);
+    }
+
+    #[test]
+    fn test_theme_selection() {
+        enum Mode {
+            Light,
+            Dark,
+        };
+        let assets = HighlightingAssets::new();
+        for (
+            theme_option,
+            bat_theme_env_var,
+            mode_option, // (--light, --dark)
+            expected_theme,
+            expected_mode,
+        ) in vec![
+            (None, "", None, style::DEFAULT_DARK_THEME, Mode::Dark),
+            (Some("GitHub".to_string()), "", None, "GitHub", Mode::Light),
+            (
+                Some("GitHub".to_string()),
+                "1337",
+                None,
+                "GitHub",
+                Mode::Light,
+            ),
+            (None, "1337", None, "1337", Mode::Dark),
+            (
+                None,
+                "<not set>",
+                None,
+                style::DEFAULT_DARK_THEME,
+                Mode::Dark,
+            ),
+            (
+                None,
+                "",
+                Some(Mode::Light),
+                style::DEFAULT_LIGHT_THEME,
+                Mode::Light,
+            ),
+            (
+                None,
+                "",
+                Some(Mode::Dark),
+                style::DEFAULT_DARK_THEME,
+                Mode::Dark,
+            ),
+            (
+                None,
+                "<@@@@@>",
+                Some(Mode::Light),
+                style::DEFAULT_LIGHT_THEME,
+                Mode::Light,
+            ),
+            (None, "1337", Some(Mode::Light), "1337", Mode::Light),
+            (Some("none".to_string()), "", None, "none", Mode::Dark),
+            (
+                Some("None".to_string()),
+                "",
+                Some(Mode::Light),
+                "None",
+                Mode::Light,
+            ),
+        ] {
+            if bat_theme_env_var == "<not set>" {
+                env::remove_var("BAT_THEME")
+            } else {
+                env::set_var("BAT_THEME", bat_theme_env_var);
+            }
+            let mut options = get_command_line_options();
+            options.theme = theme_option;
+            match mode_option {
+                Some(Mode::Light) => {
+                    options.light = true;
+                    options.dark = false;
+                }
+                Some(Mode::Dark) => {
+                    options.light = false;
+                    options.dark = true;
+                }
+                None => {
+                    options.light = false;
+                    options.dark = false;
+                }
+            }
+            let config = cli::process_command_line_arguments(&assets, &options);
+            assert_eq!(config.theme_name, expected_theme);
+            if style::is_no_syntax_highlighting_theme_name(expected_theme) {
+                assert!(config.theme.is_none())
+            } else {
+                assert_eq!(config.theme.unwrap().name.as_ref().unwrap(), expected_theme);
+            }
+            assert_eq!(
+                config.minus_style_modifier.background.unwrap(),
+                match expected_mode {
+                    Mode::Light => style::LIGHT_THEME_MINUS_COLOR,
+                    Mode::Dark => style::DARK_THEME_MINUS_COLOR,
+                }
+            );
+            assert_eq!(
+                config.minus_emph_style_modifier.background.unwrap(),
+                match expected_mode {
+                    Mode::Light => style::LIGHT_THEME_MINUS_EMPH_COLOR,
+                    Mode::Dark => style::DARK_THEME_MINUS_EMPH_COLOR,
+                }
+            );
+            assert_eq!(
+                config.plus_style_modifier.background.unwrap(),
+                match expected_mode {
+                    Mode::Light => style::LIGHT_THEME_PLUS_COLOR,
+                    Mode::Dark => style::DARK_THEME_PLUS_COLOR,
+                }
+            );
+            assert_eq!(
+                config.plus_emph_style_modifier.background.unwrap(),
+                match expected_mode {
+                    Mode::Light => style::LIGHT_THEME_PLUS_EMPH_COLOR,
+                    Mode::Dark => style::DARK_THEME_PLUS_EMPH_COLOR,
+                }
+            );
+        }
     }
 
     fn assert_has_color_other_than_plus_color(string: &str, options: &cli::Opt) {
@@ -396,13 +518,13 @@ mod tests {
 
     fn get_command_line_options() -> cli::Opt {
         cli::Opt {
-            light: true,
+            light: false,
             dark: false,
             minus_color: None,
             minus_emph_color: None,
             plus_color: None,
             plus_emph_color: None,
-            theme: Some("GitHub".to_string()),
+            theme: None,
             highlight_removed: false,
             commit_style: cli::SectionStyle::Plain,
             file_style: cli::SectionStyle::Underline,

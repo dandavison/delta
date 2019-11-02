@@ -9,7 +9,7 @@ use crate::bat::assets::HighlightingAssets;
 use crate::config;
 use crate::style;
 
-#[derive(StructOpt, Debug)]
+#[derive(StructOpt, Clone, Debug)]
 #[structopt(name = "delta", about = "A syntax-highlighting pager for git")]
 pub struct Opt {
     /// Use colors appropriate for a light terminal background. For
@@ -38,8 +38,10 @@ pub struct Opt {
     /// The background color (RGB hex) to use for emphasized sections of added lines.
     pub plus_emph_color: Option<String>,
 
-    #[structopt(long = "theme")]
+    #[structopt(long = "theme", env = "BAT_THEME")]
     /// The syntax highlighting theme to use. Use --theme=none to disable syntax highlighting.
+    /// If the theme is not set using this option, it will be taken from the BAT_THEME environment variable,
+    /// if that contains a valid theme name. Use --list-themes and --compare-themes to view available themes.
     pub theme: Option<String>,
 
     #[structopt(long = "highlight-removed")]
@@ -105,7 +107,7 @@ pub struct Opt {
     pub max_line_distance: f64,
 }
 
-#[derive(Debug, PartialEq)]
+#[derive(Clone, Debug, PartialEq)]
 pub enum SectionStyle {
     Box,
     Plain,
@@ -146,12 +148,12 @@ pub fn process_command_line_arguments<'a>(
         process::exit(1);
     }
     match &opt.theme {
-        Some(theme) if theme.to_lowercase() != "none" => {
+        Some(theme) if !style::is_no_syntax_highlighting_theme_name(&theme) => {
             if !assets.theme_set.themes.contains_key(theme.as_str()) {
                 eprintln!("Invalid theme: '{}'", theme);
                 process::exit(1);
             }
-            let is_light_theme = style::LIGHT_THEMES.contains(&theme.as_str());
+            let is_light_theme = style::is_light_theme(&theme);
             if is_light_theme && opt.dark {
                 eprintln!(
                     "{} is a light theme, but you supplied --dark. \
