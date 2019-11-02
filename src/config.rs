@@ -52,7 +52,7 @@ pub fn get_config<'a>(
 
     let minus_style_modifier = StyleModifier {
         background: Some(color_from_arg(
-            &opt.minus_color,
+            opt.minus_color.as_ref(),
             is_light_theme,
             style::LIGHT_THEME_MINUS_COLOR,
             style::DARK_THEME_MINUS_COLOR,
@@ -67,7 +67,7 @@ pub fn get_config<'a>(
 
     let minus_emph_style_modifier = StyleModifier {
         background: Some(color_from_arg(
-            &opt.minus_emph_color,
+            opt.minus_emph_color.as_ref(),
             is_light_theme,
             style::LIGHT_THEME_MINUS_EMPH_COLOR,
             style::DARK_THEME_MINUS_EMPH_COLOR,
@@ -82,7 +82,7 @@ pub fn get_config<'a>(
 
     let plus_style_modifier = StyleModifier {
         background: Some(color_from_arg(
-            &opt.plus_color,
+            opt.plus_color.as_ref(),
             is_light_theme,
             style::LIGHT_THEME_PLUS_COLOR,
             style::DARK_THEME_PLUS_COLOR,
@@ -93,7 +93,7 @@ pub fn get_config<'a>(
 
     let plus_emph_style_modifier = StyleModifier {
         background: Some(color_from_arg(
-            &opt.plus_emph_color,
+            opt.plus_emph_color.as_ref(),
             is_light_theme,
             style::LIGHT_THEME_PLUS_EMPH_COLOR,
             style::DARK_THEME_PLUS_EMPH_COLOR,
@@ -120,13 +120,12 @@ pub fn get_config<'a>(
 }
 
 fn color_from_arg(
-    arg: &Option<String>,
+    arg: Option<&String>,
     is_light_theme: bool,
     light_theme_default: Color,
     dark_theme_default: Color,
 ) -> Color {
-    arg.as_ref()
-        .and_then(|s| Color::from_str(s).ok())
+    arg.and_then(|s| Color::from_str(s).ok())
         .unwrap_or_else(|| {
             if is_light_theme {
                 light_theme_default
