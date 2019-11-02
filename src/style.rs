@@ -14,6 +14,10 @@ pub fn is_light_theme(theme: &str) -> bool {
     LIGHT_THEMES.contains(&theme)
 }
 
+pub fn is_no_syntax_highlighting_theme_name(theme_name: &str) -> bool {
+    theme_name.to_lowercase() == "none"
+}
+
 pub const LIGHT_THEME_MINUS_COLOR: Color = Color {
     r: 0xff,
     g: 0xe0,

@@ -1,13 +1,14 @@
 // https://github.com/sharkdp/bat a1b9334a44a2c652f52dddaa83dbacba57372468
 // src/output.rs
 // See src/bat/LICENSE
-use std::env;
 use std::ffi::OsString;
 use std::io::{self, Write};
 use std::path::PathBuf;
 use std::process::{Child, Command, Stdio};
 
 use shell_words;
+
+use crate::env;
 
 #[derive(Debug, Clone, Copy, PartialEq)]
 #[allow(dead_code)]
@@ -21,15 +22,6 @@ use crate::errors::*;
 pub enum OutputType {
     Pager(Child),
     Stdout(io::Stdout),
-}
-
-/// If key is set and, after trimming whitespace, is not empty string, then return that trimmed
-/// string. Else None.
-pub fn get_env_var(key: &str) -> Option<String> {
-    match env::var(key).unwrap_or("".to_string()).trim() {
-        "" => None,
-        non_empty_string => Some(non_empty_string.to_string()),
-    }
 }
 
 impl OutputType {
@@ -46,7 +38,7 @@ impl OutputType {
     fn try_pager(quit_if_one_screen: bool, pager_from_config: Option<&str>) -> Result<Self> {
         let mut replace_arguments_to_less = false;
 
-        let pager_from_env = match (get_env_var("BAT_PAGER"), get_env_var("PAGER")) {
+        let pager_from_env = match (env::get_env_var("BAT_PAGER"), env::get_env_var("PAGER")) {
             (Some(bat_pager), _) => Some(bat_pager),
             (_, Some(pager)) => {
                 // less needs to be called with the '-R' option in order to properly interpret the

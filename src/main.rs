@@ -8,6 +8,7 @@ mod config;
 mod delta;
 mod draw;
 mod edits;
+mod env;
 mod paint;
 mod parse;
 mod style;
@@ -57,8 +58,7 @@ fn main() -> std::io::Result<()> {
         process::exit(0);
     }
 
-    let mut output_type =
-        OutputType::from_mode(PagingMode::QuitIfOneScreen, None).unwrap();
+    let mut output_type = OutputType::from_mode(PagingMode::QuitIfOneScreen, None).unwrap();
     let mut writer = output_type.handle().unwrap();
 
     if let Err(error) = delta(
@@ -107,7 +107,7 @@ fn color_to_hex(color: Color) -> String {
 }
 
 fn compare_themes(assets: &HighlightingAssets) -> std::io::Result<()> {
-    let mut opt = cli::Opt::from_args();
+    let opt = cli::Opt::from_args();
     let mut input = String::new();
     if atty::is(atty::Stream::Stdin) {
         input = "\
@@ -129,7 +129,6 @@ index 541e930..e23bef1 100644
 
     let stdout = io::stdout();
     let mut stdout = stdout.lock();
-    let mut config: config::Config;
     let style = ansi_term::Style::new().bold();
 
     for (theme, _) in assets.theme_set.themes.iter() {
@@ -138,10 +137,12 @@ index 541e930..e23bef1 100644
         }
 
         writeln!(stdout, "\nTheme: {}\n", style.paint(theme))?;
-        opt.theme = Some(theme.to_string());
-        config = cli::process_command_line_arguments(&assets, &opt);
-        let mut output_type =
-            OutputType::from_mode(PagingMode::QuitIfOneScreen, None).unwrap();
+        let new_opt = cli::Opt {
+            theme: Some(theme.to_string()),
+            ..opt.clone()
+        };
+        let config = cli::process_command_line_arguments(&assets, &new_opt);
+        let mut output_type = OutputType::from_mode(PagingMode::QuitIfOneScreen, None).unwrap();
         let mut writer = output_type.handle().unwrap();
 
         if let Err(error) = delta(

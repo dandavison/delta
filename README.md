@@ -111,20 +111,25 @@ USAGE:
     delta [FLAGS] [OPTIONS]
 
 FLAGS:
-        --compare-themes       Compare available syntax highlighting themes. To use this option, supply git diff output
-                               to delta on standard input. For example: `git show --color=always | delta --compare-
-                               themes`.
-        --dark                 Use colors appropriate for a dark terminal background.  For more control, see --theme,
-                               --plus-color, and --minus-color.
-    -h, --help                 Prints help information
-        --highlight-removed    Apply syntax highlighting to removed lines. The default is to apply syntax highlighting
-                               to unchanged and new lines only.
-        --light                Use colors appropriate for a light terminal background. For more control, see --theme,
-                               --plus-color, and --minus-color.
-        --list-languages       List supported languages and associated file extensions.
-        --list-themes          List available syntax highlighting themes.
-        --show-colors          Show the command-line arguments for the current colors.
-    -V, --version              Prints version information
+        --compare-themes            Compare available syntax highlighting themes. To use this option, supply git diff
+                                    output to delta on standard input. For example: `git show --color=always | delta
+                                    --compare-themes`.
+        --dark                      Use colors appropriate for a dark terminal background.  For more control, see
+                                    --theme, --plus-color, and --minus-color.
+    -h, --help                      Prints help information
+        --highlight-removed         Apply syntax highlighting to removed lines. The default is to apply syntax
+                                    highlighting to unchanged and new lines only.
+        --light                     Use colors appropriate for a light terminal background. For more control, see
+                                    --theme, --plus-color, and --minus-color.
+        --list-languages            List supported languages and associated file extensions.
+        --list-themes               List available syntax highlighting themes.
+        --show-background-colors    Show the command-line arguments (RGB hex codes) for the background colors that are
+                                    in effect. The hex codes are displayed with their associated background color. This
+                                    option can be combined with --light and --dark to view the background colors for
+                                    those modes. It can also be used to experiment with different RGB hex codes by
+                                    combining this option with --minus-color, --minus-emph-color, --plus-color, --plus-
+                                    emph-color.
+    -V, --version                   Prints version information
 
 OPTIONS:
         --commit-style <commit_style>
@@ -148,7 +153,15 @@ OPTIONS:
         --plus-emph-color <plus_emph_color>
             The background color (RGB hex) to use for emphasized sections of added lines.
 
-        --theme <theme>                            The syntax highlighting theme to use.
+        --tabs <tab_width>
+            The number of spaces to replace tab characters with. Use --tabs=0 to pass tab characters through directly,
+            but note that in that case delta will calculate line widths assuming tabs occupy one character's width on
+            the screen: if your terminal renders tabs as more than than one character wide then delta's output will look
+            incorrect. [default: 4]
+        --theme <theme>
+            The syntax highlighting theme to use. Use --theme=none to disable syntax highlighting. If the theme is not
+            set using this option, it will be taken from the BAT_THEME environment variable, if that contains a valid
+            theme name. Use --list-themes and --compare-themes to view available themes. [env: BAT_THEME=]
     -w, --width <width>
             The width (in characters) of the background color highlighting. By default, the width is the current
             terminal width. Use --width=variable to apply background colors to the end of each line, without right
