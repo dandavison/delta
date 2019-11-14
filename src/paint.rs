@@ -3,7 +3,7 @@ use std::io::Write;
 use syntect::easy::HighlightLines;
 use syntect::highlighting::{Style, StyleModifier};
 use syntect::parsing::{SyntaxReference, SyntaxSet};
-use unicode_segmentation::UnicodeSegmentation;
+use unicode_width::UnicodeWidthStr;
 
 use crate::bat::assets::HighlightingAssets;
 use crate::config;
@@ -110,7 +110,7 @@ impl<'a> Painter<'a> {
             for (style, text) in superimpose_style_sections(syntax_sections, diff_sections) {
                 paint_text(&text, style, output_buffer).unwrap();
                 if config.width.is_some() {
-                    text_width += text.graphemes(true).count();
+                    text_width += UnicodeWidthStr::width(text.as_str());
                 }
             }
             if should_trim_newline_and_right_pad {

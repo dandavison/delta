@@ -3,7 +3,7 @@ use std::io::Write;
 use ansi_term::Style;
 use box_drawing;
 use console::strip_ansi_codes;
-use unicode_segmentation::UnicodeSegmentation;
+use unicode_width::UnicodeWidthStr;
 
 /// Write text to stream, surrounded by a box, leaving the cursor just
 /// beyond the bottom right corner.
@@ -19,7 +19,7 @@ pub fn write_boxed(
     } else {
         box_drawing::light::UP_LEFT
     };
-    let box_width = strip_ansi_codes(text).graphemes(true).count() + 1;
+    let box_width = UnicodeWidthStr::width(strip_ansi_codes(text).as_ref()) + 1;
     write_boxed_partial(writer, text, box_width, line_style, heavy)?;
     write!(writer, "{}", line_style.paint(up_left))?;
     Ok(())
@@ -34,7 +34,7 @@ pub fn write_boxed_with_line(
     line_style: Style,
     heavy: bool,
 ) -> std::io::Result<()> {
-    let box_width = strip_ansi_codes(text).graphemes(true).count() + 1;
+    let box_width = UnicodeWidthStr::width(strip_ansi_codes(text).as_ref()) + 1;
     write_boxed_with_horizontal_whisker(writer, text, box_width, line_style, heavy)?;
     write_horizontal_line(
         writer,

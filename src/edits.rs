@@ -1,6 +1,6 @@
 use regex::Regex;
 
-use unicode_segmentation::UnicodeSegmentation;
+use unicode_width::UnicodeWidthStr;
 
 use crate::align;
 
@@ -152,7 +152,7 @@ where
             plus_line,
         )
     };
-    let distance_contribution = |section: &str| section.trim().graphemes(true).count();
+    let distance_contribution = |section: &str| UnicodeWidthStr::width(section.trim());
 
     let (mut minus_op_prev, mut plus_op_prev) = (noop_deletion, noop_insertion);
     for (op, n) in alignment.coalesced_operations() {
