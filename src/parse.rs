@@ -15,7 +15,7 @@ pub fn get_file_extension_from_diff_line(line: &str) -> Option<&str> {
     }
 }
 
-pub fn get_file_path_from_file_meta_line(line: &str) -> String {
+pub fn get_file_path_from_file_meta_line(line: &str, remove_prefix: bool) -> String {
     if line.starts_with("rename") {
         match line.split(' ').nth(2) {
             Some(path) => path,
@@ -25,7 +25,13 @@ pub fn get_file_path_from_file_meta_line(line: &str) -> String {
     } else {
         match line.split(' ').nth(1) {
             Some("/dev/null") => "/dev/null",
-            Some(path) => &path[2..],
+            Some(path) => {
+                if remove_prefix {
+                    &path[2..]
+                } else {
+                    path
+                }
+            }
             _ => "",
         }
         .to_string()
@@ -86,13 +92,25 @@ mod tests {
     }
 
     #[test]
-    fn test_get_file_path_from_file_meta_line() {
+    fn test_get_file_path_from_git_file_meta_line() {
         assert_eq!(
-            get_file_path_from_file_meta_line("--- a/src/delta.rs"),
+            get_file_path_from_file_meta_line("--- a/src/delta.rs", true),
             "src/delta.rs"
         );
         assert_eq!(
-            get_file_path_from_file_meta_line("+++ b/src/delta.rs"),
+            get_file_path_from_file_meta_line("+++ b/src/delta.rs", true),
+            "src/delta.rs"
+        );
+    }
+
+    #[test]
+    fn test_get_file_path_from_file_meta_line() {
+        assert_eq!(
+            get_file_path_from_file_meta_line("--- src/delta.rs", false),
+            "src/delta.rs"
+        );
+        assert_eq!(
+            get_file_path_from_file_meta_line("+++ src/delta.rs", false),
             "src/delta.rs"
         );
     }

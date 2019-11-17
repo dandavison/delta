@@ -57,6 +57,7 @@ where
     let mut minus_file = "".to_string();
     let mut plus_file;
     let mut state = State::Unknown;
+    let mut git_diff = false;
 
     for raw_line in lines {
         let line = strip_ansi_codes(&raw_line).to_string();
@@ -72,14 +73,15 @@ where
             painter.paint_buffered_lines();
             state = State::FileMeta;
             painter.set_syntax(parse::get_file_extension_from_diff_line(&line));
+            git_diff = true;
         } else if (line.starts_with("--- ") || line.starts_with("rename from "))
             && config.opt.file_style != cli::SectionStyle::Plain
         {
-            minus_file = parse::get_file_path_from_file_meta_line(&line);
+            minus_file = parse::get_file_path_from_file_meta_line(&line, git_diff);
         } else if (line.starts_with("+++ ") || line.starts_with("rename to "))
             && config.opt.file_style != cli::SectionStyle::Plain
         {
-            plus_file = parse::get_file_path_from_file_meta_line(&line);
+            plus_file = parse::get_file_path_from_file_meta_line(&line, git_diff);
             painter.emit()?;
             handle_file_meta_header_line(&mut painter, &minus_file, &plus_file, config)?;
         } else if line.starts_with("@@ ") {
