@@ -7,6 +7,7 @@ use unicode_segmentation::UnicodeSegmentation;
 use crate::bat::assets::HighlightingAssets;
 use crate::cli;
 use crate::config::Config;
+use crate::delta::State::GitFileMeta;
 use crate::draw;
 use crate::paint::Painter;
 use crate::parse;
@@ -14,12 +15,13 @@ use crate::style;
 
 #[derive(Debug, PartialEq)]
 pub enum State {
-    CommitMeta, // In commit metadata section
-    FileMeta,   // In diff metadata section, between commit metadata and first hunk
-    HunkMeta,   // In hunk metadata line
-    HunkZero,   // In hunk; unchanged line
-    HunkMinus,  // In hunk; removed line
-    HunkPlus,   // In hunk; added line
+    CommitMeta,   // In commit metadata section
+    GitFileMeta,  // In git diff metadata section, between commit metadata and first hunk
+    DiffFileMeta, // In diff unified metadata section, before first hunk
+    HunkMeta,     // In hunk metadata line
+    HunkZero,     // In hunk; unchanged line
+    HunkMinus,    // In hunk; removed line
+    HunkPlus,     // In hunk; added line
     Unknown,
 }
 
@@ -35,14 +37,15 @@ impl State {
 // Possible transitions, with actions on entry:
 //
 //
-// | from \ to  | CommitMeta  | FileMeta    | HunkMeta    | HunkZero    | HunkMinus   | HunkPlus |
-// |------------+-------------+-------------+-------------+-------------+-------------+----------|
-// | CommitMeta | emit        | emit        |             |             |             |          |
-// | FileMeta   |             | emit        | emit        |             |             |          |
-// | HunkMeta   |             |             |             | emit        | push        | push     |
-// | HunkZero   | emit        | emit        | emit        | emit        | push        | push     |
-// | HunkMinus  | flush, emit | flush, emit | flush, emit | flush, emit | push        | push     |
-// | HunkPlus   | flush, emit | flush, emit | flush, emit | flush, emit | flush, push | push     |
+// | from \ to   | CommitMeta  | FileMeta    | HunkMeta    | HunkZero    | HunkMinus   | HunkPlus |
+// |-------------+-------------+-------------+-------------+-------------+-------------+----------|
+// | CommitMeta  | emit        | emit        |             |             |             |          |
+// | GitFileMeta |             | emit        | emit        |             |             |          |
+// | DiffFileMeta|             | emit        | emit        |             |             |          |
+// | HunkMeta    |             |             |             | emit        | push        | push     |
+// | HunkZero    | emit        | emit        | emit        | emit        | push        | push     |
+// | HunkMinus   | flush, emit | flush, emit | flush, emit | flush, emit | push        | push     |
+// | HunkPlus    | flush, emit | flush, emit | flush, emit | flush, emit | flush, push | push     |
 
 pub fn delta<I>(
     lines: I,
@@ -57,7 +60,6 @@ where
     let mut minus_file = "".to_string();
     let mut plus_file;
     let mut state = State::Unknown;
-    let mut git_diff = false;
 
     for raw_line in lines {
         let line = strip_ansi_codes(&raw_line).to_string();
@@ -71,19 +73,20 @@ where
             }
         } else if line.starts_with("diff --git ") {
             painter.paint_buffered_lines();
-            state = State::FileMeta;
+            state = State::GitFileMeta;
             painter.set_syntax(parse::get_file_extension_from_diff_line(&line));
-            git_diff = true;
+        } else if line.starts_with("diff -u ") || line.starts_with("diff -U") {
+            painter.paint_buffered_lines();
+            state = State::DiffFileMeta;
+            painter.set_syntax(parse::get_file_extension_from_diff_line(&line));
         } else if (line.starts_with("--- ") || line.starts_with("rename from "))
             && config.opt.file_style != cli::SectionStyle::Plain
         {
-            state = State::FileMeta;
-            minus_file = parse::get_file_path_from_file_meta_line(&line, git_diff);
+            minus_file = parse::get_file_path_from_file_meta_line(&line, state == GitFileMeta);
         } else if (line.starts_with("+++ ") || line.starts_with("rename to "))
             && config.opt.file_style != cli::SectionStyle::Plain
         {
-            state = State::FileMeta;
-            plus_file = parse::get_file_path_from_file_meta_line(&line, git_diff);
+            plus_file = parse::get_file_path_from_file_meta_line(&line, state == GitFileMeta);
             painter.emit()?;
             handle_file_meta_header_line(&mut painter, &minus_file, &plus_file, config)?;
         } else if line.starts_with("@@ ") {
@@ -99,7 +102,9 @@ where
             painter.emit()?;
             continue;
         }
-        if state == State::FileMeta && config.opt.file_style != cli::SectionStyle::Plain {
+        if (state == State::GitFileMeta || state == State::DiffFileMeta)
+            && config.opt.file_style != cli::SectionStyle::Plain
+        {
             // The file metadata section is 4 lines. Skip them under non-plain file-styles.
             continue;
         } else {
