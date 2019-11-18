@@ -55,7 +55,7 @@ where
 {
     let mut painter = Painter::new(writer, config, assets);
     let mut minus_file = "".to_string();
-    let mut plus_file;
+    let mut plus_file = String::new();
     let mut state = State::Unknown;
 
     for raw_line in lines {
@@ -72,12 +72,16 @@ where
             painter.paint_buffered_lines();
             state = State::FileMeta;
             painter.set_syntax(parse::get_file_extension_from_diff_line(&line));
+            minus_file = String::new();
+            plus_file = String::new();
         } else if (line.starts_with("--- ") || line.starts_with("rename from "))
             && config.opt.file_style != cli::SectionStyle::Plain
+            && minus_file.is_empty()
         {
             minus_file = parse::get_file_path_from_file_meta_line(&line);
         } else if (line.starts_with("+++ ") || line.starts_with("rename to "))
             && config.opt.file_style != cli::SectionStyle::Plain
+            && plus_file.is_empty()
         {
             plus_file = parse::get_file_path_from_file_meta_line(&line);
             painter.emit()?;
@@ -306,6 +310,17 @@ mod tests {
         let options = get_command_line_options();
         let output = strip_ansi_codes(&run_delta(RENAMED_FILE_INPUT, &options)).to_string();
         assert!(output.contains("\nrenamed: a.py ⟶   b.py\n"));
+    }
+
+    #[test]
+    fn test_renamed_and_modified_file() {
+        let options = get_command_line_options();
+        let output =
+            strip_ansi_codes(&run_delta(RENAMED_AND_MODIFIED_FILE_INPUT, &options)).to_string();
+        let mut lines = output.split('\n');
+        assert_eq!(lines.nth(1).unwrap(), "renamed: one.rs ⟶   two.rs");
+        assert_eq!(lines.nth(2).unwrap(), "19");
+        assert_eq!(lines.nth(0).unwrap(), " ### Examples");
     }
 
     #[test]
@@ -585,5 +600,21 @@ diff --git a/a.py b/b.py
 similarity index 100%
 rename from a.py
 rename to b.py
+";
+
+    const RENAMED_AND_MODIFIED_FILE_INPUT: &str = "\
+diff --git a/one.rs b/two.rs
+similarity index 99%
+rename from one.rs
+rename to two.rs
+index 50fc1ba..37f64c4 100644
+--- a/one.rs
++++ b/two.rs
+@@ -19,7 +19,6 @@
+ ### Examples
+
+ These are changes:
+-one:
++two:
 ";
 }
