@@ -77,10 +77,12 @@ where
         } else if (line.starts_with("--- ") || line.starts_with("rename from "))
             && config.opt.file_style != cli::SectionStyle::Plain
         {
+            state = State::FileMeta;
             minus_file = parse::get_file_path_from_file_meta_line(&line, git_diff);
         } else if (line.starts_with("+++ ") || line.starts_with("rename to "))
             && config.opt.file_style != cli::SectionStyle::Plain
         {
+            state = State::FileMeta;
             plus_file = parse::get_file_path_from_file_meta_line(&line, git_diff);
             painter.emit()?;
             handle_file_meta_header_line(&mut painter, &minus_file, &plus_file, config)?;
