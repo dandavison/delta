@@ -15,6 +15,16 @@ pub fn get_file_extension_from_diff_line(line: &str) -> Option<&str> {
     }
 }
 
+/// Given input like
+/// "--- one.rs	2019-11-20 06:16:08.000000000 +0100"
+/// Return "rs"
+pub fn get_file_extension_from_marker_line(line: &str) -> Option<&str> {
+    line.split('\t')
+        .next()
+        .and_then(|column| column.split(' ').nth(1))
+        .and_then(|file| file.split('.').last())
+}
+
 pub fn get_file_path_from_file_meta_line(line: &str, remove_prefix: bool) -> String {
     if line.starts_with("rename") {
         match line.split(' ').nth(2) {
@@ -38,12 +48,20 @@ pub fn get_file_path_from_file_meta_line(line: &str, remove_prefix: bool) -> Str
     }
 }
 
-pub fn get_file_change_description_from_file_paths(minus_file: &str, plus_file: &str) -> String {
-    match (minus_file, plus_file) {
-        (minus_file, plus_file) if minus_file == plus_file => minus_file.to_string(),
-        (minus_file, "/dev/null") => format!("deleted: {}", minus_file),
-        ("/dev/null", plus_file) => format!("added: {}", plus_file),
-        (minus_file, plus_file) => format!("renamed: {} ⟶   {}", minus_file, plus_file),
+pub fn get_file_change_description_from_file_paths(
+    minus_file: &str,
+    plus_file: &str,
+    comparing: bool,
+) -> String {
+    if comparing {
+        format!("comparing: {} ⟶   {}", minus_file, plus_file)
+    } else {
+        match (minus_file, plus_file) {
+            (minus_file, plus_file) if minus_file == plus_file => minus_file.to_string(),
+            (minus_file, "/dev/null") => format!("deleted: {}", minus_file),
+            ("/dev/null", plus_file) => format!("added: {}", plus_file),
+            (minus_file, plus_file) => format!("renamed: {} ⟶   {}", minus_file, plus_file),
+        }
     }
 }
 
@@ -87,6 +105,16 @@ mod tests {
     fn test_get_file_extension_from_diff_line() {
         assert_eq!(
             get_file_extension_from_diff_line("diff --git a/src/main.rs b/src/main.rs"),
+            Some("rs")
+        );
+    }
+
+    #[test]
+    fn test_get_file_extension_from_marker_line() {
+        assert_eq!(
+            get_file_extension_from_marker_line(
+                "--- src/one.rs	2019-11-20 06:47:56.000000000 +0100"
+            ),
             Some("rs")
         );
     }
