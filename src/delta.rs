@@ -595,4 +595,37 @@ similarity index 100%
 rename from a.py
 rename to b.py
 ";
+
+    const DIFF_UNIFIED_TWO_FILES: &str = "\
+--- one.rs	2019-11-20 06:16:08.000000000 +0100
++++ src/two.rs	2019-11-18 18:41:16.000000000 +0100
+ @@ -5,7 +5,7 @@
+
+ println!(\"Hello world\");
+-println!(\"Hello rust\");
++println!(\"Hello ruster\");
+
+@@ -43,9 +43,9 @@
+
+ // Some more changes
+-Change one
+ Unchanged
++Change two
+ Unchanged
+-Change three
++Change four
+ Unchanged
+";
+    const DIFF_UNIFIED_TWO_DIRECTORIES: &str = "\
+    diff -u a/different b/different
+--- a/different	2019-11-20 06:47:56.000000000 +0100
++++ b/different	2019-11-20 06:47:56.000000000 +0100
+@@ -1,3 +1,3 @@
+ A simple file for testing
+ the diff command in unified mode
+-This is different from b
++This is different from a
+Only in a/: just_a
+Only in b/: just_b
+";
 }
