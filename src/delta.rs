@@ -26,7 +26,7 @@ pub enum State {
 #[derive(Debug, PartialEq)]
 pub enum Source {
     GitDiff,     // Coming from a `git diff` command
-    DiffUnified, // Coming from a `git -u` command
+    DiffUnified, // Coming from a `diff -u` command
     Unknown,
 }
 
@@ -70,70 +70,69 @@ where
     for raw_line in lines_peekable {
         if source == Source::Unknown {
             writeln!(painter.writer, "{}", raw_line)?;
-        } else {
-            let line = strip_ansi_codes(&raw_line).to_string();
-            if line.starts_with("commit ") {
-                painter.paint_buffered_lines();
-                state = State::CommitMeta;
-                if config.opt.commit_style != cli::SectionStyle::Plain {
-                    painter.emit()?;
-                    handle_commit_meta_header_line(&mut painter, &raw_line, config)?;
-                    continue;
-                }
-            } else if line.starts_with("diff ") {
-                painter.paint_buffered_lines();
-                state = State::FileMeta;
-                painter.set_syntax(parse::get_file_extension_from_diff_line(&line));
-            } else if (line.starts_with("--- ") || line.starts_with("rename from "))
-                && config.opt.file_style != cli::SectionStyle::Plain
-            {
-                if source == Source::DiffUnified {
-                    state = State::FileMeta;
-                    painter.set_syntax(parse::get_file_extension_from_marker_line(&line));
-                }
-                minus_file =
-                    parse::get_file_path_from_file_meta_line(&line, source == Source::GitDiff);
-            } else if (line.starts_with("+++ ") || line.starts_with("rename to "))
-                && config.opt.file_style != cli::SectionStyle::Plain
-            {
-                plus_file =
-                    parse::get_file_path_from_file_meta_line(&line, source == Source::GitDiff);
-                painter.emit()?;
-                handle_file_meta_header_line(
-                    &mut painter,
-                    &minus_file,
-                    &plus_file,
-                    config,
-                    source == Source::DiffUnified,
-                )?;
-            } else if line.starts_with("@@ ") {
-                state = State::HunkMeta;
-                painter.set_highlighter();
-                if config.opt.hunk_style != cli::SectionStyle::Plain {
-                    painter.emit()?;
-                    handle_hunk_meta_line(&mut painter, &line, config)?;
-                    continue;
-                }
-            } else if source == Source::DiffUnified && line.starts_with("Only in ") {
-                painter.paint_buffered_lines();
-                if config.opt.commit_style != cli::SectionStyle::Plain {
-                    painter.emit()?;
-                    handle_file_uniqueness(&mut painter, &raw_line, config)?;
-                    continue;
-                }
-            } else if state.is_in_hunk() {
-                state = handle_hunk_line(&mut painter, &line, state, config);
-                painter.emit()?;
-                continue;
-            }
+            continue;
+        }
 
-            if state == State::FileMeta && config.opt.file_style != cli::SectionStyle::Plain {
-                // The file metadata section is 4 lines. Skip them under non-plain file-styles.
-                continue;
-            } else {
+        let line = strip_ansi_codes(&raw_line).to_string();
+        if line.starts_with("commit ") {
+            painter.paint_buffered_lines();
+            state = State::CommitMeta;
+            if config.opt.commit_style != cli::SectionStyle::Plain {
                 painter.emit()?;
-                writeln!(painter.writer, "{}", raw_line)?;
+                handle_commit_meta_header_line(&mut painter, &raw_line, config)?;
+                continue;
             }
+        } else if line.starts_with("diff ") {
+            painter.paint_buffered_lines();
+            state = State::FileMeta;
+            painter.set_syntax(parse::get_file_extension_from_diff_line(&line));
+        } else if (line.starts_with("--- ") || line.starts_with("rename from "))
+            && config.opt.file_style != cli::SectionStyle::Plain
+        {
+            if source == Source::DiffUnified {
+                state = State::FileMeta;
+                painter.set_syntax(parse::get_file_extension_from_marker_line(&line));
+            }
+            minus_file = parse::get_file_path_from_file_meta_line(&line, source == Source::GitDiff);
+        } else if (line.starts_with("+++ ") || line.starts_with("rename to "))
+            && config.opt.file_style != cli::SectionStyle::Plain
+        {
+            plus_file = parse::get_file_path_from_file_meta_line(&line, source == Source::GitDiff);
+            painter.emit()?;
+            handle_file_meta_header_line(
+                &mut painter,
+                &minus_file,
+                &plus_file,
+                config,
+                source == Source::DiffUnified,
+            )?;
+        } else if line.starts_with("@@ ") {
+            state = State::HunkMeta;
+            painter.set_highlighter();
+            if config.opt.hunk_style != cli::SectionStyle::Plain {
+                painter.emit()?;
+                handle_hunk_meta_line(&mut painter, &line, config)?;
+                continue;
+            }
+        } else if source == Source::DiffUnified && line.starts_with("Only in ") {
+            painter.paint_buffered_lines();
+            if config.opt.commit_style != cli::SectionStyle::Plain {
+                painter.emit()?;
+                handle_file_uniqueness(&mut painter, &raw_line, config)?;
+                continue;
+            }
+        } else if state.is_in_hunk() {
+            state = handle_hunk_line(&mut painter, &line, state, config);
+            painter.emit()?;
+            continue;
+        }
+
+        if state == State::FileMeta && config.opt.file_style != cli::SectionStyle::Plain {
+            // The file metadata section is 4 lines. Skip them under non-plain file-styles.
+            continue;
+        } else {
+            painter.emit()?;
+            writeln!(painter.writer, "{}", raw_line)?;
         }
     }
 
@@ -161,7 +160,7 @@ where
             Source::GitDiff
         } else if line.starts_with("diff -u ")
             || line.starts_with("diff -U")
-            || line.starts_with("---")
+            || line.starts_with("--- ")
         {
             Source::DiffUnified
         } else {
