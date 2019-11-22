@@ -115,10 +115,11 @@ where
                 continue;
             }
         } else if source == Source::DiffUnified && line.starts_with("Only in ") {
+            state = State::FileMeta;
             painter.paint_buffered_lines();
-            if config.opt.commit_style != cli::SectionStyle::Plain {
+            if config.opt.file_style != cli::SectionStyle::Plain {
                 painter.emit()?;
-                handle_file_uniqueness(&mut painter, &raw_line, config)?;
+                handle_directory_diff_unique_file_name(&mut painter, &raw_line, config)?;
                 continue;
             }
         } else if state.is_in_hunk() {
@@ -313,7 +314,13 @@ fn handle_hunk_line(painter: &mut Painter, line: &str, state: State, config: &Co
     }
 }
 
-fn handle_file_uniqueness(
+/// Creates a new file section with the FileMeta style to display file uniqueness in diff -u.
+///
+/// When comparing directories with diff -u, if filenames match between the directories, the
+/// files themselves will be compared. However, if an equivalent filename is not present,
+/// diff display a single line to express the uniqueness.
+/// This method handles the latter case and uses the FileMeta style to create a new file block.
+fn handle_directory_diff_unique_file_name(
     painter: &mut Painter,
     line: &str,
     config: &Config,
@@ -629,10 +636,7 @@ mod tests {
         let mut lines = output.split('\n');
 
         // Header
-        assert_eq!(
-            lines.nth(1).unwrap(),
-            "comparing: one.rs\t2019-11-20 ⟶   src/two.rs\t2019-11-18"
-        );
+        assert_eq!(lines.nth(1).unwrap(), "comparing: one.rs ⟶   src/two.rs");
         // Line
         assert_eq!(lines.nth(2).unwrap(), "5");
         // Change
@@ -653,14 +657,21 @@ mod tests {
         // Header
         assert_eq!(
             lines.nth(1).unwrap(),
-            "comparing: a/different\t2019-11-20 ⟶   b/different\t2019-11-20"
+            "comparing: a/different ⟶   b/different"
         );
         // Line number
         assert_eq!(lines.nth(2).unwrap(), "1");
         // Change
         assert_eq!(lines.nth(2).unwrap(), " This is different from b");
         // File uniqueness
-        assert_eq!(lines.nth(1).unwrap(), "Only in a/: just_a");
+        assert_eq!(lines.nth(2).unwrap(), "Only in a/: just_a");
+        // FileMeta divider
+        assert!(lines.next().unwrap().starts_with("───────"));
+        // Next hunk
+        assert_eq!(
+            lines.nth(4).unwrap(),
+            "comparing: a/more_difference ⟶   b/more_difference"
+        );
     }
 
     #[test]
@@ -748,6 +759,13 @@ diff -u a/different b/different
 +This is different from a
 Only in a/: just_a
 Only in b/: just_b
+--- a/more_difference	2019-11-20 06:47:56.000000000 +0100
++++ b/more_difference	2019-11-20 06:47:56.000000000 +0100
+@@ -1,3 +1,3 @@
+ Another different file
+ with a name that start with 'm' making it come after the 'Only in'
+-This is different from b
++This is different from a
 ";
 
     const NOT_A_DIFF_OUTPUT: &str = "\
