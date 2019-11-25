@@ -354,5 +354,4 @@ mod superimpose_style_sections {
             assert_eq!(superimpose(pairs), vec![(SUPERIMPOSED_STYLE, 'a')]);
         }
     }
-
 }

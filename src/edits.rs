@@ -703,5 +703,4 @@ mod tests {
     fn is_edit(edit: &EditOperation) -> bool {
         *edit == Deletion || *edit == Insertion
     }
-
 }

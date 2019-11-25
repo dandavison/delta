@@ -15,11 +15,18 @@ use crate::style;
 #[derive(Debug, PartialEq)]
 pub enum State {
     CommitMeta, // In commit metadata section
-    FileMeta,   // In diff metadata section, between commit metadata and first hunk
+    FileMeta,   // In diff metadata section, between (possible) commit metadata and first hunk
     HunkMeta,   // In hunk metadata line
     HunkZero,   // In hunk; unchanged line
     HunkMinus,  // In hunk; removed line
     HunkPlus,   // In hunk; added line
+    Unknown,
+}
+
+#[derive(Debug, PartialEq)]
+pub enum Source {
+    GitDiff,     // Coming from a `git diff` command
+    DiffUnified, // Coming from a `diff -u` command
     Unknown,
 }
 
@@ -35,14 +42,14 @@ impl State {
 // Possible transitions, with actions on entry:
 //
 //
-// | from \ to  | CommitMeta  | FileMeta    | HunkMeta    | HunkZero    | HunkMinus   | HunkPlus |
-// |------------+-------------+-------------+-------------+-------------+-------------+----------|
-// | CommitMeta | emit        | emit        |             |             |             |          |
-// | FileMeta   |             | emit        | emit        |             |             |          |
-// | HunkMeta   |             |             |             | emit        | push        | push     |
-// | HunkZero   | emit        | emit        | emit        | emit        | push        | push     |
-// | HunkMinus  | flush, emit | flush, emit | flush, emit | flush, emit | push        | push     |
-// | HunkPlus   | flush, emit | flush, emit | flush, emit | flush, emit | flush, push | push     |
+// | from \ to   | CommitMeta  | FileMeta    | HunkMeta    | HunkZero    | HunkMinus   | HunkPlus |
+// |-------------+-------------+-------------+-------------+-------------+-------------+----------|
+// | CommitMeta  | emit        | emit        |             |             |             |          |
+// | FileMeta    |             | emit        | emit        |             |             |          |
+// | HunkMeta    |             |             |             | emit        | push        | push     |
+// | HunkZero    | emit        | emit        | emit        | emit        | push        | push     |
+// | HunkMinus   | flush, emit | flush, emit | flush, emit | flush, emit | push        | push     |
+// | HunkPlus    | flush, emit | flush, emit | flush, emit | flush, emit | flush, push | push     |
 
 pub fn delta<I>(
     lines: I,
@@ -53,12 +60,19 @@ pub fn delta<I>(
 where
     I: Iterator<Item = String>,
 {
+    let mut lines_peekable = lines.peekable();
     let mut painter = Painter::new(writer, config, assets);
     let mut minus_file = "".to_string();
     let mut plus_file;
     let mut state = State::Unknown;
+    let source = detect_source(&mut lines_peekable);
 
-    for raw_line in lines {
+    for raw_line in lines_peekable {
+        if source == Source::Unknown {
+            writeln!(painter.writer, "{}", raw_line)?;
+            continue;
+        }
+
         let line = strip_ansi_codes(&raw_line).to_string();
         if line.starts_with("commit ") {
             painter.paint_buffered_lines();
@@ -68,20 +82,30 @@ where
                 handle_commit_meta_header_line(&mut painter, &raw_line, config)?;
                 continue;
             }
-        } else if line.starts_with("diff --git ") {
+        } else if line.starts_with("diff ") {
             painter.paint_buffered_lines();
             state = State::FileMeta;
             painter.set_syntax(parse::get_file_extension_from_diff_line(&line));
         } else if (line.starts_with("--- ") || line.starts_with("rename from "))
             && config.opt.file_style != cli::SectionStyle::Plain
         {
-            minus_file = parse::get_file_path_from_file_meta_line(&line);
+            if source == Source::DiffUnified {
+                state = State::FileMeta;
+                painter.set_syntax(parse::get_file_extension_from_marker_line(&line));
+            }
+            minus_file = parse::get_file_path_from_file_meta_line(&line, source == Source::GitDiff);
         } else if (line.starts_with("+++ ") || line.starts_with("rename to "))
             && config.opt.file_style != cli::SectionStyle::Plain
         {
-            plus_file = parse::get_file_path_from_file_meta_line(&line);
+            plus_file = parse::get_file_path_from_file_meta_line(&line, source == Source::GitDiff);
             painter.emit()?;
-            handle_file_meta_header_line(&mut painter, &minus_file, &plus_file, config)?;
+            handle_file_meta_header_line(
+                &mut painter,
+                &minus_file,
+                &plus_file,
+                config,
+                source == Source::DiffUnified,
+            )?;
         } else if line.starts_with("@@ ") {
             state = State::HunkMeta;
             painter.set_highlighter();
@@ -90,11 +114,20 @@ where
                 handle_hunk_meta_line(&mut painter, &line, config)?;
                 continue;
             }
+        } else if source == Source::DiffUnified && line.starts_with("Only in ") {
+            state = State::FileMeta;
+            painter.paint_buffered_lines();
+            if config.opt.file_style != cli::SectionStyle::Plain {
+                painter.emit()?;
+                handle_directory_diff_unique_file_name(&mut painter, &raw_line, config)?;
+                continue;
+            }
         } else if state.is_in_hunk() {
             state = handle_hunk_line(&mut painter, &line, state, config);
             painter.emit()?;
             continue;
         }
+
         if state == State::FileMeta && config.opt.file_style != cli::SectionStyle::Plain {
             // The file metadata section is 4 lines. Skip them under non-plain file-styles.
             continue;
@@ -107,6 +140,34 @@ where
     painter.paint_buffered_lines();
     painter.emit()?;
     Ok(())
+}
+
+/// Try to detect what is producing the input for delta by examining the first line
+///
+/// Currently can detect:
+/// * git diff
+/// * diff -u
+///
+/// If the source is not recognized, delta will print the unaltered
+/// input back out
+fn detect_source<I>(lines: &mut std::iter::Peekable<I>) -> Source
+where
+    I: Iterator<Item = String>,
+{
+    lines.peek().map_or(Source::Unknown, |first_line| {
+        let line = strip_ansi_codes(&first_line).to_string();
+
+        if line.starts_with("commit ") || line.starts_with("diff --git ") {
+            Source::GitDiff
+        } else if line.starts_with("diff -u ")
+            || line.starts_with("diff -U")
+            || line.starts_with("--- ")
+        {
+            Source::DiffUnified
+        } else {
+            Source::Unknown
+        }
+    })
 }
 
 fn handle_commit_meta_header_line(
@@ -134,6 +195,7 @@ fn handle_file_meta_header_line(
     minus_file: &str,
     plus_file: &str,
     config: &Config,
+    comparing: bool,
 ) -> std::io::Result<()> {
     let draw_fn = match config.opt.file_style {
         cli::SectionStyle::Box => draw::write_boxed_with_line,
@@ -145,7 +207,7 @@ fn handle_file_meta_header_line(
     draw_fn(
         painter.writer,
         &ansi_style.paint(parse::get_file_change_description_from_file_paths(
-            minus_file, plus_file,
+            minus_file, plus_file, comparing,
         )),
         config.terminal_width,
         ansi_style,
@@ -250,6 +312,34 @@ fn handle_hunk_line(painter: &mut Painter, line: &str, state: State, config: &Co
             State::HunkZero
         }
     }
+}
+
+/// Creates a new file section with the FileMeta style to display file uniqueness in diff -u.
+///
+/// When comparing directories with diff -u, if filenames match between the directories, the
+/// files themselves will be compared. However, if an equivalent filename is not present,
+/// diff display a single line to express the uniqueness.
+/// This method handles the latter case and uses the FileMeta style to create a new file block.
+fn handle_directory_diff_unique_file_name(
+    painter: &mut Painter,
+    line: &str,
+    config: &Config,
+) -> std::io::Result<()> {
+    let draw_fn = match config.opt.file_style {
+        cli::SectionStyle::Box => draw::write_boxed_with_line,
+        cli::SectionStyle::Underline => draw::write_underlined,
+        cli::SectionStyle::Plain => panic!(),
+    };
+    let ansi_style = Blue.normal();
+    writeln!(painter.writer)?;
+    draw_fn(
+        painter.writer,
+        &ansi_style.paint(line),
+        config.terminal_width,
+        ansi_style,
+        false,
+    )?;
+    Ok(())
 }
 
 /// Replace initial -/+ character with ' ', expand tabs as spaces, and optionally terminate with
@@ -539,6 +629,58 @@ mod tests {
         }
     }
 
+    #[test]
+    fn test_diff_unified_two_files() {
+        let options = get_command_line_options();
+        let output = strip_ansi_codes(&run_delta(DIFF_UNIFIED_TWO_FILES, &options)).to_string();
+        let mut lines = output.split('\n');
+
+        // Header
+        assert_eq!(lines.nth(1).unwrap(), "comparing: one.rs ⟶   src/two.rs");
+        // Line
+        assert_eq!(lines.nth(2).unwrap(), "5");
+        // Change
+        assert_eq!(lines.nth(2).unwrap(), " println!(\"Hello ruster\");");
+        // Next chunk
+        assert_eq!(lines.nth(2).unwrap(), "43");
+        // Unchanged in second chunk
+        assert_eq!(lines.nth(2).unwrap(), " Unchanged");
+    }
+
+    #[test]
+    fn test_diff_unified_two_directories() {
+        let options = get_command_line_options();
+        let output =
+            strip_ansi_codes(&run_delta(DIFF_UNIFIED_TWO_DIRECTORIES, &options)).to_string();
+        let mut lines = output.split('\n');
+
+        // Header
+        assert_eq!(
+            lines.nth(1).unwrap(),
+            "comparing: a/different ⟶   b/different"
+        );
+        // Line number
+        assert_eq!(lines.nth(2).unwrap(), "1");
+        // Change
+        assert_eq!(lines.nth(2).unwrap(), " This is different from b");
+        // File uniqueness
+        assert_eq!(lines.nth(2).unwrap(), "Only in a/: just_a");
+        // FileMeta divider
+        assert!(lines.next().unwrap().starts_with("───────"));
+        // Next hunk
+        assert_eq!(
+            lines.nth(4).unwrap(),
+            "comparing: a/more_difference ⟶   b/more_difference"
+        );
+    }
+
+    #[test]
+    fn test_delta_ignores_non_diff_input() {
+        let options = get_command_line_options();
+        let output = strip_ansi_codes(&run_delta(NOT_A_DIFF_OUTPUT, &options)).to_string();
+        assert_eq!(output, NOT_A_DIFF_OUTPUT.to_owned() + "\n");
+    }
+
     const ADDED_FILE_INPUT: &str = "\
 commit d28dc1ac57e53432567ec5bf19ad49ff90f0f7a5
 Author: Dan Davison <dandavison7@gmail.com>
@@ -585,5 +727,54 @@ diff --git a/a.py b/b.py
 similarity index 100%
 rename from a.py
 rename to b.py
+";
+
+    const DIFF_UNIFIED_TWO_FILES: &str = "\
+--- one.rs	2019-11-20 06:16:08.000000000 +0100
++++ src/two.rs	2019-11-18 18:41:16.000000000 +0100
+@@ -5,3 +5,3 @@
+ println!(\"Hello world\");
+-println!(\"Hello rust\");
++println!(\"Hello ruster\");
+
+@@ -43,6 +43,6 @@
+ // Some more changes
+-Change one
+ Unchanged
++Change two
+ Unchanged
+-Change three
++Change four
+ Unchanged
+";
+
+    const DIFF_UNIFIED_TWO_DIRECTORIES: &str = "\
+diff -u a/different b/different
+--- a/different	2019-11-20 06:47:56.000000000 +0100
++++ b/different	2019-11-20 06:47:56.000000000 +0100
+@@ -1,3 +1,3 @@
+ A simple file for testing
+ the diff command in unified mode
+-This is different from b
++This is different from a
+Only in a/: just_a
+Only in b/: just_b
+--- a/more_difference	2019-11-20 06:47:56.000000000 +0100
++++ b/more_difference	2019-11-20 06:47:56.000000000 +0100
+@@ -1,3 +1,3 @@
+ Another different file
+ with a name that start with 'm' making it come after the 'Only in'
+-This is different from b
++This is different from a
+";
+
+    const NOT_A_DIFF_OUTPUT: &str = "\
+Hello world
+This is a regular file that contains:
+--- some/file/here 06:47:56.000000000 +0100
++++ some/file/there 06:47:56.000000000 +0100
+ Some text here
+-Some text with a minus
++Some text with a plus
 ";
 }
