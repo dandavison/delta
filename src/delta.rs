@@ -62,7 +62,7 @@ where
 {
     let mut lines_peekable = lines.peekable();
     let mut painter = Painter::new(writer, config, assets);
-    let mut minus_file = "".to_string();
+    let mut minus_file = String::new();
     let mut plus_file = String::new();
     let mut state = State::Unknown;
     let source = detect_source(&mut lines_peekable);
@@ -121,6 +121,8 @@ where
         } else if source == Source::DiffUnified && line.starts_with("Only in ") {
             state = State::FileMeta;
             painter.paint_buffered_lines();
+            minus_file = String::new();
+            plus_file = String::new();
             if config.opt.file_style != cli::SectionStyle::Plain {
                 painter.emit()?;
                 handle_directory_diff_unique_file_name(&mut painter, &raw_line, config)?;
