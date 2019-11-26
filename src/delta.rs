@@ -668,6 +668,17 @@ mod tests {
         assert_eq!(output, NOT_A_DIFF_OUTPUT.to_owned() + "\n");
     }
 
+    #[test]
+    fn test_submodule_contains_untracked_content() {
+        let options = get_command_line_options();
+        let output = strip_ansi_codes(&run_delta(
+            SUBMODULE_CONTAINS_UNTRACKED_CONTENT_INPUT,
+            &options,
+        ))
+        .to_string();
+        assert!(output.contains("\nSubmodule x/y/z contains untracked content\n"));
+    }
+
     const ADDED_FILE_INPUT: &str = "\
 commit d28dc1ac57e53432567ec5bf19ad49ff90f0f7a5
 Author: Dan Davison <dandavison7@gmail.com>
@@ -763,5 +774,20 @@ This is a regular file that contains:
  Some text here
 -Some text with a minus
 +Some text with a plus
+";
+
+    const SUBMODULE_CONTAINS_UNTRACKED_CONTENT_INPUT: &str = "\
+--- a
++++ b
+@@ -2,3 +2,4 @@
+ x
+ y
+ z
+-a
++b
+ z
+ y
+ x
+Submodule x/y/z contains untracked content
 ";
 }
