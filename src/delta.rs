@@ -115,11 +115,17 @@ where
                 continue;
             }
         } else if source == Source::DiffUnified && line.starts_with("Only in ") {
+            // Additional FileMeta cases:
+            //
+            // 1. When comparing directories with diff -u, if filenames match between the
+            //    directories, the files themselves will be compared. However, if an equivalent
+            //    filename is not present, diff outputs a single line (Only in...) starting
+            //    indicating that the file is present in only one of the directories.
             state = State::FileMeta;
             painter.paint_buffered_lines();
             if config.opt.file_style != cli::SectionStyle::Plain {
                 painter.emit()?;
-                handle_directory_diff_unique_file_name(&mut painter, &raw_line, config)?;
+                handle_generic_file_meta_header_line(&mut painter, &raw_line, config)?;
                 continue;
             }
         } else if state.is_in_hunk() {
@@ -190,12 +196,23 @@ fn handle_commit_meta_header_line(
     Ok(())
 }
 
+/// Construct file change line from minus and plus file and write with FileMeta styling.
 fn handle_file_meta_header_line(
     painter: &mut Painter,
     minus_file: &str,
     plus_file: &str,
     config: &Config,
     comparing: bool,
+) -> std::io::Result<()> {
+    let line = parse::get_file_change_description_from_file_paths(minus_file, plus_file, comparing);
+    handle_generic_file_meta_header_line(painter, &line, config)
+}
+
+/// Write `line` with FileMeta styling.
+fn handle_generic_file_meta_header_line(
+    painter: &mut Painter,
+    line: &str,
+    config: &Config,
 ) -> std::io::Result<()> {
     let draw_fn = match config.opt.file_style {
         cli::SectionStyle::Box => draw::write_boxed_with_line,
@@ -206,9 +223,7 @@ fn handle_file_meta_header_line(
     writeln!(painter.writer)?;
     draw_fn(
         painter.writer,
-        &ansi_style.paint(parse::get_file_change_description_from_file_paths(
-            minus_file, plus_file, comparing,
-        )),
+        &ansi_style.paint(line),
         config.terminal_width,
         ansi_style,
         false,
@@ -312,34 +327,6 @@ fn handle_hunk_line(painter: &mut Painter, line: &str, state: State, config: &Co
             State::HunkZero
         }
     }
-}
-
-/// Creates a new file section with the FileMeta style to display file uniqueness in diff -u.
-///
-/// When comparing directories with diff -u, if filenames match between the directories, the
-/// files themselves will be compared. However, if an equivalent filename is not present,
-/// diff display a single line to express the uniqueness.
-/// This method handles the latter case and uses the FileMeta style to create a new file block.
-fn handle_directory_diff_unique_file_name(
-    painter: &mut Painter,
-    line: &str,
-    config: &Config,
-) -> std::io::Result<()> {
-    let draw_fn = match config.opt.file_style {
-        cli::SectionStyle::Box => draw::write_boxed_with_line,
-        cli::SectionStyle::Underline => draw::write_underlined,
-        cli::SectionStyle::Plain => panic!(),
-    };
-    let ansi_style = Blue.normal();
-    writeln!(painter.writer)?;
-    draw_fn(
-        painter.writer,
-        &ansi_style.paint(line),
-        config.terminal_width,
-        ansi_style,
-        false,
-    )?;
-    Ok(())
 }
 
 /// Replace initial -/+ character with ' ', expand tabs as spaces, and optionally terminate with
