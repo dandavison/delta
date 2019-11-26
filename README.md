@@ -81,7 +81,7 @@ All git commands that display diff output should now display syntax-highlighted 
 
 
 ## Supported languages and themes
-To add new laguages/color themes to delta, the process is
+To add new languages/color themes to delta, the process is
 
 1. Clone the delta repo
 2. Create new versions of the files `assets/syntaxes.bin` and/or `assets/themes.bin`. Please see the [bat](https://github.com/sharkdp/bat#adding-new-syntaxes--language-definitions) documentation for instructions on how to create new versions of these files. You will need to copy them into the `assets/` directory of the delta git repo after creating them.
