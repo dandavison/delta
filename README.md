@@ -27,6 +27,10 @@ brew install dandavison/delta/git-delta
 brew upgrade git-delta
 ```
 
+FreeBSD pkg(8):
+```sh
+pkg install git-delta
+```
 
 
 #### Configure git to use delta
