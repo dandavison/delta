@@ -67,7 +67,7 @@ deploy:
   # - TARGET: target triple of the build
   file:
     - $PROJECT_NAME-$TRAVIS_TAG-$TARGET.*
-    - $PROJECT_NAME*.deb
+    - $PACKAGE_NAME*.deb
   # don't delete artifacts from previous stage
   skip_cleanup: true
   on:
