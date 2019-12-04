@@ -36,8 +36,9 @@ env:
     # Default target on travis-ci.
     # Used as conditional check in the install stage
     - HOST=x86_64-unknown-linux-gnu
-    # Used on the deployment script
+    # Used in before_deploy.sh
     - PROJECT_NAME=delta
+    - PACKAGE_NAME=git-delta
 
 install:
   # prevent target re-add error from rustup
