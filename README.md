@@ -107,6 +107,11 @@ and you may then  need to quit tmux completely for it to take effect.
 
 <br>
 
+## Mouse scrolling
+
+If mouse scrolling is broken, try setting your `BAT_PAGER` environment variable to (at least) `less -R` .
+See [issue #58](https://github.com/dandavison/delta/issues/58) and [bat README / "Using a different pager"](https://github.com/sharkdp/bat#using-a-different-pager).
+
 ## Options
 Here's the output of `delta --help`. To use these options, add them to the delta command line in your `.gitconfig` file.
 
