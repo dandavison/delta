@@ -18,6 +18,15 @@ test:
 release:
 	cargo publish
 
+brew:
+	cd $$(brew --repo homebrew/homebrew-core) && \
+	brew uninstall --force git-delta && \
+	brew install --build-from-source git-delta && \
+	brew test git-delta && \
+	brew uninstall --force git-delta && \
+	brew install git-delta && \
+	brew audit --strict git-delta
+
 hash:
 	@version=$$(grep version Cargo.toml | head -n1 | sed -E 's,.*version = "([^"]+)",\1,') && \
     printf "$$version-tar.gz %s\n" $$(curl -sL https://github.com/dandavison/delta/archive/$$version.tar.gz | sha256sum -) && \
