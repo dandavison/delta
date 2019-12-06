@@ -1,6 +1,6 @@
 [![Build Status](https://travis-ci.com/dandavison/delta.svg?branch=master)](https://travis-ci.com/dandavison/delta)
 
-## A syntax-highlighting pager for git
+## A syntax-highlighting pager for git and diff output
 
 Delta brings language syntax highlighting, within-line insertion/deletion detection, and restructured diff output to git on the command line. Here's an example of `git show` output with git configured to use delta as its pager:
 
@@ -14,6 +14,8 @@ Delta brings language syntax highlighting, within-line insertion/deletion detect
 | within-line insertion/deletion detection       | ✅    | ❌  | ✅            | ✅             |
 | multiple insertion/deletions detected per line | ✅    | ❌  | ❌            | ✅             |
 | matching of unequal numbers of changed lines   | ✅    | ❌  | ❌            | ❌             |
+
+In addition, delta handles traditional unified diff output.
 
 ## Installation
 
@@ -48,6 +50,10 @@ All git commands that display diff output should now display syntax-highlighted 
   - `git stash show -p`
   - `git reflog -p`
 
+Delta also handles unified diff output:
+```
+diff -u a.txt b.txt | delta
+```
 
 <br>
 
