@@ -240,3 +240,4 @@ OPTIONS:
   https://github.com/trishume/syntect<br>
   https://github.com/sharkdp/bat<br>
   https://github.com/so-fancy/diff-so-fancy
+  https://github.com/paulcpederson/solarized-sublime
