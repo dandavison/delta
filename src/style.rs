@@ -1,10 +1,11 @@
 use syntect::highlighting::{Color, FontStyle, Style, StyleModifier};
 
-pub const LIGHT_THEMES: [&str; 4] = [
+pub const LIGHT_THEMES: [&str; 5] = [
     "GitHub",
     "Monokai Extended Light",
     "OneHalfLight",
     "ansi-light",
+    "Solarized (light)",
 ];
 
 pub const DEFAULT_LIGHT_THEME: &str = "GitHub";
