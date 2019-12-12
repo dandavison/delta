@@ -97,7 +97,7 @@ fn color_to_hex(color: Color) -> String {
         font_style: FontStyle::empty(),
     };
     paint::paint_text(
-        &format!("#{:x?}{:x?}{:x?}", color.r, color.g, color.b),
+        &format!("#{:02x?}{:02x?}{:02x?}", color.r, color.g, color.b),
         style,
         &mut string,
     )
