@@ -30,7 +30,7 @@ _delta() {
         --minus-emph-color
         --plus-color
         --plus-emph-color
-        --show-colors
+        --show-background-colors
         --theme
         --version
         --width
