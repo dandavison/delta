@@ -110,16 +110,19 @@ fn list_themes(assets: &HighlightingAssets) -> std::io::Result<()> {
     let mut input = String::new();
     if atty::is(atty::Stream::Stdin) {
         input = "\
-diff --git a/tests/data/hello.c b/tests/data/hello.c
-index 541e930..e23bef1 100644
---- a/tests/data/hello.c
-+++ b/tests/data/hello.c
+diff --git a/example.rs b/example.rs
+index f38589a..0f1bb83 100644
+--- a/example.rs
++++ b/example.rs
 @@ -1,5 +1,5 @@
- #include <stdio.h>
-
- int main(int argc, char **argv) {
--    printf(\"Hello!\\n\");
-+    printf(\"Hello world!\\n\");
+-// Output the square of a number.
+-fn print_square(num: f64) {
+-    let result = f64::powf(num, 2.0);
+-    println!(\"The square of {:.2} is {:.2}.\", num, result);
++// Output the cube of a number.
++fn print_cube(num: f64) {
++    let result = f64::powf(num, 3.0);
++    println!(\"The cube of {:.2} is {:.2}.\", num, result);
  }"
         .to_string()
     } else {
