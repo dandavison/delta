@@ -619,8 +619,8 @@ mod tests {
             tab_width: 4,
             show_background_colors: false,
             list_languages: false,
+            list_theme_names: false,
             list_themes: false,
-            compare_themes: false,
             max_line_distance: 0.3,
         }
     }

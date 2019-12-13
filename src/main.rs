@@ -43,11 +43,11 @@ fn main() -> std::io::Result<()> {
     if opt.list_languages {
         list_languages()?;
         process::exit(0);
-    } else if opt.list_themes {
-        list_themes()?;
+    } else if opt.list_theme_names {
+        list_theme_names()?;
         process::exit(0);
-    } else if opt.compare_themes {
-        compare_themes(&assets)?;
+    } else if opt.list_themes {
+        list_themes(&assets)?;
         process::exit(0);
     }
 
@@ -105,7 +105,7 @@ fn color_to_hex(color: Color) -> String {
     string
 }
 
-fn compare_themes(assets: &HighlightingAssets) -> std::io::Result<()> {
+fn list_themes(assets: &HighlightingAssets) -> std::io::Result<()> {
     let opt = cli::Opt::from_args();
     let mut input = String::new();
     if atty::is(atty::Stream::Stdin) {
@@ -159,7 +159,7 @@ index 541e930..e23bef1 100644
     Ok(())
 }
 
-pub fn list_themes() -> std::io::Result<()> {
+pub fn list_theme_names() -> std::io::Result<()> {
     let assets = HighlightingAssets::new();
     let themes = &assets.theme_set.themes;
     let stdout = io::stdout();

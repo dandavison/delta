@@ -90,15 +90,15 @@ pub struct Opt {
     #[structopt(long = "list-languages")]
     pub list_languages: bool,
 
-    /// List available syntax highlighting themes.
+    /// List available syntax-highlighting color themes.
+    #[structopt(long = "list-theme-names")]
+    pub list_theme_names: bool,
+
+    /// List available syntax highlighting themes, each with an example of highlighted diff output.
+    /// If diff output is supplied on standard input then this will be used for the demo. For
+    /// example: `git show --color=always | delta --list-themes`.
     #[structopt(long = "list-themes")]
     pub list_themes: bool,
-
-    /// Compare available syntax highlighting themes. To use this
-    /// option, supply git diff output to delta on standard input.
-    /// For example: `git show --color=always | delta --compare-themes`.
-    #[structopt(long = "compare-themes")]
-    pub compare_themes: bool,
 
     /// The maximum distance between two lines for them to be inferred to be homologous. Homologous
     /// line pairs are highlighted according to the deletion and insertion operations transforming
