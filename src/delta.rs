@@ -575,7 +575,7 @@ mod tests {
     fn paint_text(input: &str, style_modifier: StyleModifier, config: &Config) -> String {
         let mut output = String::new();
         let style = config.no_style.apply(style_modifier);
-        paint::paint_text(&input, style, &mut output).unwrap();
+        paint::paint_text(&input, style, &mut output);
         output
     }
 
