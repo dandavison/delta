@@ -126,9 +126,6 @@ USAGE:
     delta [FLAGS] [OPTIONS]
 
 FLAGS:
-        --compare-themes            Compare available syntax highlighting themes. To use this option, supply git diff
-                                    output to delta on standard input. For example: `git show --color=always | delta
-                                    --compare-themes`.
         --dark                      Use colors appropriate for a dark terminal background.  For more control, see
                                     --theme, --plus-color, and --minus-color.
     -h, --help                      Prints help information
@@ -137,7 +134,10 @@ FLAGS:
         --light                     Use colors appropriate for a light terminal background. For more control, see
                                     --theme, --plus-color, and --minus-color.
         --list-languages            List supported languages and associated file extensions.
-        --list-themes               List available syntax highlighting themes.
+        --list-theme-names          List available syntax-highlighting color themes.
+        --list-themes               List available syntax highlighting themes, each with an example of highlighted diff
+                                    output. If diff output is supplied on standard input then this will be used for the
+                                    demo. For example: `git show --color=always | delta --list-themes`.
         --show-background-colors    Show the command-line arguments (RGB hex codes) for the background colors that are
                                     in effect. The hex codes are displayed with their associated background color. This
                                     option can be combined with --light and --dark to view the background colors for
