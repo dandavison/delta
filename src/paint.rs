@@ -1,7 +1,7 @@
 use std::io::Write;
 
 use syntect::easy::HighlightLines;
-use syntect::highlighting::{Style, StyleModifier};
+use syntect::highlighting::{Color, Style, StyleModifier};
 use syntect::parsing::{SyntaxReference, SyntaxSet};
 use unicode_segmentation::UnicodeSegmentation;
 
@@ -108,7 +108,7 @@ impl<'a> Painter<'a> {
         {
             let mut text_width = 0;
             for (style, text) in superimpose_style_sections(syntax_sections, diff_sections) {
-                paint_text(&text, style, output_buffer).unwrap();
+                paint_text(&text, style, output_buffer);
                 if config.width.is_some() {
                     text_width += text.graphemes(true).count();
                 }
@@ -126,8 +126,7 @@ impl<'a> Painter<'a> {
                             &" ".repeat(width - text_width),
                             background_style,
                             output_buffer,
-                        )
-                        .unwrap();
+                        );
                     }
                     _ => (),
                 }
@@ -206,30 +205,34 @@ impl<'a> Painter<'a> {
 }
 
 /// Write section text to buffer with color escape codes.
-pub fn paint_text(text: &str, style: Style, output_buffer: &mut String) -> std::fmt::Result {
-    use std::fmt::Write;
-
+pub fn paint_text(text: &str, style: Style, output_buffer: &mut String) {
     if text.is_empty() {
-        return Ok(());
+        return;
     }
+    if style.background != style::NO_COLOR {
+        output_buffer.push_str(&get_color_code(style.background, false));
+    }
+    if style.foreground != style::NO_COLOR {
+        output_buffer.push_str(&get_color_code(style.foreground, true));
+    }
+    output_buffer.push_str(text);
+}
 
-    match style.background {
-        style::NO_COLOR => (),
-        _ => write!(
-            output_buffer,
-            "\x1b[48;2;{};{};{}m",
-            style.background.r, style.background.g, style.background.b
-        )?,
+/// ANSI color escape code.
+// See https://github.com/ogham/rust-ansi-term/blob/ff7eba98d55ad609c7fcc8c7bb0859b37c7545cc/src/ansi.rs#L82-L112
+fn get_color_code(color: Color, foreground: bool) -> String {
+    if color.a == 0 {
+        // See https://github.com/sharkdp/bat/pull/543
+        format!("\x1b[{};5;{}m", if foreground { 38 } else { 48 }, color.r)
+    } else {
+        format!(
+            "\x1b[{};2;{};{};{}m",
+            if foreground { 38 } else { 48 },
+            color.r,
+            color.g,
+            color.b
+        )
     }
-    match style.foreground {
-        style::NO_COLOR => write!(output_buffer, "{}", text)?,
-        _ => write!(
-            output_buffer,
-            "\x1b[38;2;{};{};{}m{}",
-            style.foreground.r, style.foreground.g, style.foreground.b, text
-        )?,
-    };
-    Ok(())
 }
 
 mod superimpose_style_sections {

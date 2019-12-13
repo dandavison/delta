@@ -100,8 +100,7 @@ fn color_to_hex(color: Color) -> String {
         &format!("#{:02x?}{:02x?}{:02x?}", color.r, color.g, color.b),
         style,
         &mut string,
-    )
-    .unwrap();
+    );
     string.push_str("\x1b[0m"); // reset
     string
 }
