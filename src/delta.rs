@@ -86,7 +86,7 @@ where
             painter.paint_buffered_lines();
             state = State::FileMeta;
             painter.set_syntax(parse::get_file_extension_from_diff_line(&line));
-        } else if (line.starts_with("--- ") || line.starts_with("rename from "))
+        } else if (line.starts_with("--- ") && line != "--- " || line.starts_with("rename from "))
             && config.opt.file_style != cli::SectionStyle::Plain
         {
             if source == Source::DiffUnified {
@@ -687,6 +687,56 @@ mod tests {
         .to_string();
         assert!(output.contains("\nSubmodule x/y/z contains untracked content\n"));
     }
+
+    #[test]
+    fn test_diff_in_diff() {
+        let options = get_command_line_options();
+        let output = strip_ansi_codes(&run_delta(
+            DIFF_IN_DIFF,
+            &options,
+        )).to_string();
+        assert!(output.contains("\n ---\n"));
+        assert!(output.contains("\n Subject: [PATCH] Init\n"));
+    }
+
+    const DIFF_IN_DIFF: &str = "\
+diff --git a/0001-Init.patch b/0001-Init.patch
+deleted file mode 100644
+index 5e35a67..0000000
+--- a/0001-Init.patch
++++ /dev/null
+@@ -1,22 +0,0 @@
+-From d3a8fe3e62be67484729c19e9d8db071f8b1d60c Mon Sep 17 00:00:00 2001
+-From: Maximilian Bosch <maximilian@mbosch.me>
+-Date: Sat, 28 Dec 2019 15:51:48 +0100
+-Subject: [PATCH] Init
+-
+----
+- README.md | 3 +++
+- 1 file changed, 3 insertions(+)
+- create mode 100644 README.md
+-
+-diff --git a/README.md b/README.md
+-new file mode 100644
+-index 0000000..2e6ca05
+---- /dev/null
+-+++ b/README.md
+-@@ -0,0 +1,3 @@
+-+# Test
+-+
+-+abc
+--- 
+-2.23.1
+-
+diff --git a/README.md b/README.md
+index 2e6ca05..8ae0569 100644
+--- a/README.md
++++ b/README.md
+@@ -1,3 +1 @@
+ # Test
+-
+-abc
+    ";
 
     const ADDED_FILE_INPUT: &str = "\
 commit d28dc1ac57e53432567ec5bf19ad49ff90f0f7a5
