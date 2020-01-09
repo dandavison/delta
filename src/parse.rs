@@ -25,7 +25,7 @@ pub fn get_file_extension_from_marker_line(line: &str) -> Option<&str> {
         .and_then(|file| file.split('.').last())
 }
 
-pub fn get_file_path_from_file_meta_line(line: &str, git_diff_name: bool) -> String {
+pub fn get_file_path_from_file_meta_line(line: &str, version_control_name: bool) -> String {
     if line.starts_with("rename") {
         match line.split(' ').nth(2) {
             Some(path) => path,
@@ -36,7 +36,7 @@ pub fn get_file_path_from_file_meta_line(line: &str, git_diff_name: bool) -> Str
         match line.split(' ').nth(1) {
             Some("/dev/null") => "/dev/null",
             Some(path) => {
-                if git_diff_name {
+                if version_control_name {
                     &path[2..]
                 } else {
                     path.split('\t').next().unwrap_or("")

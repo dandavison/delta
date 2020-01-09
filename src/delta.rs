@@ -26,6 +26,7 @@ pub enum State {
 pub enum Source {
     GitDiff,     // Coming from a `git diff` command
     DiffUnified, // Coming from a `diff -u` command
+    HgLog,       // Coming from a `hg log --patch` command
     Unknown,
 }
 
@@ -73,7 +74,7 @@ where
         }
 
         let line = strip_ansi_codes(&raw_line).to_string();
-        if line.starts_with("commit ") {
+        if line.starts_with("commit ") || line.starts_with("changeset:"){
             painter.paint_buffered_lines();
             state = State::CommitMeta;
             if config.opt.commit_style != cli::SectionStyle::Plain {
@@ -95,11 +96,11 @@ where
                 state = State::FileMeta;
                 painter.set_syntax(parse::get_file_extension_from_marker_line(&line));
             }
-            minus_file = parse::get_file_path_from_file_meta_line(&line, source == Source::GitDiff);
+            minus_file = parse::get_file_path_from_file_meta_line(&line, source_is_version_control(&source));
         } else if (line.starts_with("+++ ") || line.starts_with("rename to "))
             && config.opt.file_style != cli::SectionStyle::Plain
         {
-            plus_file = parse::get_file_path_from_file_meta_line(&line, source == Source::GitDiff);
+            plus_file = parse::get_file_path_from_file_meta_line(&line, source_is_version_control(&source));
             painter.emit()?;
             handle_file_meta_header_line(
                 &mut painter,
@@ -177,6 +178,8 @@ where
 
         if line.starts_with("commit ") || line.starts_with("diff --git ") {
             Source::GitDiff
+        } else if line.starts_with("changeset:") {
+            Source::HgLog
         } else if line.starts_with("diff -u ")
             || line.starts_with("diff -U")
             || line.starts_with("--- ")
@@ -344,6 +347,10 @@ fn handle_hunk_line(painter: &mut Painter, line: &str, state: State, config: &Co
             State::HunkZero
         }
     }
+}
+
+fn source_is_version_control(source: &Source) -> bool {
+    *source == Source::GitDiff || *source == Source::HgLog
 }
 
 /// Replace initial -/+ character with ' ', expand tabs as spaces, and optionally terminate with
@@ -692,6 +699,13 @@ mod tests {
     }
 
     #[test]
+    fn test_mercurial_log() {
+        let options = get_command_line_options();
+        let output = strip_ansi_codes(&run_delta(MERCURIAL_LOG_OUTPUT, &options)).to_string();
+        assert!(output.contains("\nadded: README\n"));
+    }
+
+    #[test]
     fn test_triple_dash_at_beginning_of_line_in_code() {
         let options = get_command_line_options();
         let output = strip_ansi_codes(&run_delta(
@@ -914,5 +928,22 @@ diff --git a/foo b/foo
 new file mode 100644
 index 0000000..b572921
 Binary files /dev/null and b/foo differ
+";
+
+    const MERCURIAL_LOG_OUTPUT: &str = "\
+changeset:   1:2b9b6e394669
+tag:         tip
+parent:      -1:000000000000
+user:        Levi Bard <taktaktaktaktaktaktaktaktaktak@gmail.com>
+date:        Thu Jan 09 13:37:32 2020 +0100
+summary:     .
+
+diff --git a/README b/README
+new file mode 100644
+--- /dev/null
++++ b/README
+@@ -0,0 +1,1 @@
++Hello world
+
 ";
 }
