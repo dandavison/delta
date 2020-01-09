@@ -43,6 +43,14 @@ Alternatively, you can edit your `.gitconfig` directly. Delta accepts many comma
     pager = delta --dark --plus-color="#012800" --minus-color="#340001" --theme="base16-ocean.dark"
 ```
 
+#### Configure mercurial to use delta
+
+Edit your `.hgrc` as follow and set the options you want for delta in it:
+```
+[pager]
+pager = delta --dark
+```
+
 #### Windows
 
 `less.exe` installed with git doesn't work well with `delta`. A patched version of `less.exe` and instructions for installing can be found [here](https://github.com/lzybkr/less/releases/tag/fix_windows_vt).
