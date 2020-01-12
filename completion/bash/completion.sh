@@ -26,6 +26,7 @@ _delta() {
         --light
         --list-languages
         --list-themes
+        --list-theme-names
         --minus-color
         --minus-emph-color
         --plus-color
