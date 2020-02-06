@@ -86,7 +86,10 @@ where
             painter.paint_buffered_lines();
             state = State::FileMeta;
             painter.set_syntax(parse::get_file_extension_from_diff_line(&line));
-        } else if (line.starts_with("--- ") || line.starts_with("rename from "))
+        } else if (state == State::FileMeta || source == Source::DiffUnified)
+            // FIXME: For unified diff input, removal ("-") of a line starting with "--" (e.g. a
+            // Haskell or SQL comment) will be confused with the "---" file metadata marker.
+            && (line.starts_with("--- ") || line.starts_with("rename from "))
             && config.opt.file_style != cli::SectionStyle::Plain
         {
             if source == Source::DiffUnified {
@@ -688,6 +691,19 @@ mod tests {
         assert!(output.contains("\nSubmodule x/y/z contains untracked content\n"));
     }
 
+    #[test]
+    fn test_triple_dash_at_beginning_of_line_in_code() {
+        let options = get_command_line_options();
+        let output = strip_ansi_codes(&run_delta(
+            TRIPLE_DASH_AT_BEGINNING_OF_LINE_IN_CODE,
+            &options,
+        ))
+        .to_string();
+        assert!(
+            output.contains(" -- instance (Category p, Category q) => Category (p ∧ q) where\n")
+        );
+    }
+
     const ADDED_FILE_INPUT: &str = "\
 commit d28dc1ac57e53432567ec5bf19ad49ff90f0f7a5
 Author: Dan Davison <dandavison7@gmail.com>
@@ -798,5 +814,38 @@ This is a regular file that contains:
  y
  x
 Submodule x/y/z contains untracked content
+";
+
+    const TRIPLE_DASH_AT_BEGINNING_OF_LINE_IN_CODE: &str = "\
+commit d481eaa8a249c6daecb05a97e8af1b926b0c02be
+Author: FirstName LastName <me@gmail.com>
+Date:   Thu Feb 6 14:02:49 2020 -0500
+
+    Reorganize
+
+diff --git a/src/Category/Coproduct.hs b/src/Category/Coproduct.hs
+deleted file mode 100644
+index ba28bfd..0000000
+--- a/src/Category/Coproduct.hs
++++ /dev/null
+@@ -1,18 +0,0 @@
+-{-# LANGUAGE InstanceSigs #-}
+-module Category.Coproduct where
+-
+-import Prelude hiding ((.), id)
+-
+-import Control.Category
+-
+-import Category.Hacks
+-
+--- data (p ∨ q) (a :: (k, k)) (b :: (k, k)) where
+---   (:<:) :: p a b -> (∨) p q '(a, c) '(b, d)
+---   (:>:) :: q c d -> (∨) p q '(a, c) '(b, d)
+---
+--- instance (Category p, Category q) => Category (p ∧ q) where
+---   (p1 :×: q1) . (p2 :×: q2) = (p1 . p2) :×: (q1 . q2)
+---
+---   id :: forall a. (p ∧ q) a a
+---   id | IsTup <- isTup @a  = id :×: id
 ";
 }
