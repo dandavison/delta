@@ -86,7 +86,10 @@ where
             painter.paint_buffered_lines();
             state = State::FileMeta;
             painter.set_syntax(parse::get_file_extension_from_diff_line(&line));
-        } else if (line.starts_with("--- ") || line.starts_with("rename from "))
+        } else if (state == State::FileMeta || source == Source::DiffUnified)
+            // FIXME: For unified diff input, removal ("-") of a line starting with "--" (e.g. a
+            // Haskell or SQL comment) will be confused with the "---" file metadata marker.
+            && (line.starts_with("--- ") || line.starts_with("rename from "))
             && config.opt.file_style != cli::SectionStyle::Plain
         {
             if source == Source::DiffUnified {
