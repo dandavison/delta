@@ -1,6 +1,6 @@
 [![Build Status](https://travis-ci.com/dandavison/delta.svg?branch=master)](https://travis-ci.com/dandavison/delta)
 
-## A syntax-highlighting pager for git and diff output
+## A syntax-highlighter for git and diff output
 
 Delta brings language syntax highlighting, within-line insertion/deletion detection, and restructured diff output to git on the command line. Here's an example of `git show` output with git configured to use delta as its pager:
 
