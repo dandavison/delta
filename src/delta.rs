@@ -119,6 +119,7 @@ where
             }
         } else if source == Source::DiffUnified && line.starts_with("Only in ")
             || line.starts_with("Submodule ")
+            || line.starts_with("Binary files ")
         {
             // Additional FileMeta cases:
             //
