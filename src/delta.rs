@@ -704,6 +704,13 @@ mod tests {
         );
     }
 
+    #[test]
+    fn test_binary_files_differ() {
+        let options = get_command_line_options();
+        let output = strip_ansi_codes(&run_delta(BINARY_FILES_DIFFER, &options)).to_string();
+        assert!(output.contains("Binary files /dev/null and b/foo differ\n"));
+    }
+
     const ADDED_FILE_INPUT: &str = "\
 commit d28dc1ac57e53432567ec5bf19ad49ff90f0f7a5
 Author: Dan Davison <dandavison7@gmail.com>
@@ -847,5 +854,18 @@ index ba28bfd..0000000
 ---
 ---   id :: forall a. (p ∧ q) a a
 ---   id | IsTup <- isTup @a  = id :×: id
+";
+
+    const BINARY_FILES_DIFFER: &str = "
+commit ad023698217b086f1bef934be62b4523c95f64d9 (HEAD -> master)
+Author: Dan Davison <dandavison7@gmail.com>
+Date:   Wed Feb 12 08:05:53 2020 -0600
+
+    .
+
+diff --git a/foo b/foo
+new file mode 100644
+index 0000000..b572921
+Binary files /dev/null and b/foo differ
 ";
 }
