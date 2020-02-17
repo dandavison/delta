@@ -46,6 +46,7 @@ pub fn write_boxed_with_line(
         line_style,
         heavy,
     )?;
+    write!(writer, "\n")?;
     Ok(())
 }
 
