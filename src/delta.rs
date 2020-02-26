@@ -181,7 +181,9 @@ where
         } else if line.starts_with("diff -u ")
             || line.starts_with("diff -U")
             || line.starts_with("--- ")
+            || line.starts_with("Index: ")
         {
+            // "Index: " indicates subversion, which we handle as unified diff.
             Source::DiffUnified
         } else {
             Source::Unknown
