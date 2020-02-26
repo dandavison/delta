@@ -31,6 +31,17 @@ FreeBSD pkg(8):
 pkg install git-delta
 ```
 
+Archlinux (AUR):
+```sh
+# With AUR helper `yay`:
+yay -S git-delta
+
+# Alternatively, without an AUR helper:
+git clone https://aur.archlinux.org/git-delta.git
+cd git-delta
+makepkg -csri
+```
+
 #### Configure git to use delta
 
 ```sh
