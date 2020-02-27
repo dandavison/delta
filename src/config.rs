@@ -194,12 +194,14 @@ fn color_from_arg_or_mode_default(
     light_theme_default: Color,
     dark_theme_default: Color,
 ) -> Color {
-    arg.and_then(|s| Color::from_str(s).ok())
-        .unwrap_or_else(|| {
+    match arg {
+        Some(string) => color_from_rgb_or_ansi_code(&string),
+        None => {
             if is_light_mode {
                 light_theme_default
             } else {
                 dark_theme_default
             }
-        })
+        }
+    }
 }
