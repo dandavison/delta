@@ -2,8 +2,7 @@ lint:
 	cargo clippy
 
 build:
-	@printf "____________________________________________________________________________________\n"
-	cargo build
+	cargo build --release
 
 test:
 	cargo test
