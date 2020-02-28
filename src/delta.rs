@@ -757,7 +757,7 @@ index 2e6ca05..8ae0569 100644
  # Test
 -
 -abc
-    ";
+";
 
     const ADDED_FILE_INPUT: &str = "\
 commit d28dc1ac57e53432567ec5bf19ad49ff90f0f7a5
