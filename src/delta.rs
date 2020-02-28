@@ -1,6 +1,5 @@
 use std::io::Write;
 
-use ansi_term::Colour::{Blue, Yellow};
 use console::strip_ansi_codes;
 use unicode_segmentation::UnicodeSegmentation;
 
@@ -8,7 +7,7 @@ use crate::bat::assets::HighlightingAssets;
 use crate::cli;
 use crate::config::Config;
 use crate::draw;
-use crate::paint::Painter;
+use crate::paint::{self, Painter};
 use crate::parse;
 use crate::style;
 
@@ -203,7 +202,7 @@ fn handle_commit_meta_header_line(
         painter.writer,
         line,
         config.terminal_width,
-        Yellow.normal(),
+        config.commit_color,
         true,
     )?;
     Ok(())
@@ -232,13 +231,12 @@ fn handle_generic_file_meta_header_line(
         cli::SectionStyle::Underline => draw::write_underlined,
         cli::SectionStyle::Plain => panic!(),
     };
-    let ansi_style = Blue.normal();
     writeln!(painter.writer)?;
     draw_fn(
         painter.writer,
-        &ansi_style.paint(line),
+        &paint::paint_text_foreground(line, config.file_color),
         config.terminal_width,
-        ansi_style,
+        config.file_color,
         false,
     )?;
     Ok(())
@@ -254,7 +252,6 @@ fn handle_hunk_meta_line(
         cli::SectionStyle::Underline => draw::write_underlined,
         cli::SectionStyle::Plain => panic!(),
     };
-    let ansi_style = Blue.normal();
     let (raw_code_fragment, line_number) = parse::parse_hunk_metadata(&line);
     let code_fragment = prepare(raw_code_fragment, config.tab_width, false);
     if !code_fragment.is_empty() {
@@ -280,12 +277,16 @@ fn handle_hunk_meta_line(
             painter.writer,
             &painter.output_buffer,
             config.terminal_width,
-            ansi_style,
+            config.hunk_color,
             false,
         )?;
         painter.output_buffer.clear();
     }
-    writeln!(painter.writer, "\n{}", ansi_style.paint(line_number))?;
+    writeln!(
+        painter.writer,
+        "\n{}",
+        paint::paint_text_foreground(line_number, config.hunk_color)
+    )?;
     Ok(())
 }
 
@@ -617,8 +618,11 @@ mod tests {
             theme: None,
             highlight_removed: false,
             commit_style: cli::SectionStyle::Plain,
+            commit_color: "Yellow".to_string(),
             file_style: cli::SectionStyle::Underline,
+            file_color: "Blue".to_string(),
             hunk_style: cli::SectionStyle::Box,
+            hunk_color: "blue".to_string(),
             width: Some("variable".to_string()),
             tab_width: 4,
             show_background_colors: false,
