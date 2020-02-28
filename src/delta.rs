@@ -89,7 +89,7 @@ where
         } else if (state == State::FileMeta || source == Source::DiffUnified)
             // FIXME: For unified diff input, removal ("-") of a line starting with "--" (e.g. a
             // Haskell or SQL comment) will be confused with the "---" file metadata marker.
-            && (line.starts_with("--- ") && line != "--- " || line.starts_with("rename from "))
+            && (line.starts_with("--- ") || line.starts_with("rename from "))
             && config.opt.file_style != cli::SectionStyle::Plain
         {
             if source == Source::DiffUnified {
