@@ -48,7 +48,7 @@ pub const LIGHT_THEME_PLUS_EMPH_COLOR: Color = Color {
 };
 
 pub const DARK_THEME_MINUS_COLOR: Color = Color {
-    r: 0x3F,
+    r: 0x3f,
     g: 0x00,
     b: 0x01,
     a: 0xff,
