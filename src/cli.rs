@@ -6,6 +6,7 @@ use console::Term;
 use structopt::StructOpt;
 
 use crate::bat::assets::HighlightingAssets;
+use crate::bat::output::PagingMode;
 use crate::config;
 use crate::style;
 
@@ -153,6 +154,12 @@ pub struct Opt {
     /// one into the other.
     #[structopt(long = "max-line-distance", default_value = "0.3")]
     pub max_line_distance: f64,
+
+    /// Whether to use a pager when displaying output. Options are: auto, always, and never. The
+    /// default pager is `less`: this can be altered by setting the environment variables BAT_PAGER
+    /// or PAGER (BAT_PAGER has priority).
+    #[structopt(long = "paging", default_value = "auto")]
+    pub paging_mode: String,
 }
 
 #[derive(Clone, Debug, PartialEq)]
@@ -237,11 +244,25 @@ pub fn process_command_line_arguments<'a>(
         None => Some(available_terminal_width),
     };
 
+    let paging_mode = match opt.paging_mode.as_ref() {
+        "always" => PagingMode::Always,
+        "never" => PagingMode::Never,
+        "auto" => PagingMode::QuitIfOneScreen,
+        _ => {
+            eprintln!(
+                "Invalid paging value: {} (valid values are \"always\", \"never\", and \"auto\")",
+                opt.paging_mode
+            );
+            process::exit(1);
+        }
+    };
+
     config::get_config(
         opt,
         &assets.syntax_set,
         &assets.theme_set,
         available_terminal_width,
         background_color_width,
+        paging_mode,
     )
 }

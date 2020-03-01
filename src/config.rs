@@ -8,6 +8,7 @@ use crate::cli;
 use crate::env;
 use crate::paint;
 use crate::style;
+use crate::bat::output::{PagingMode};
 
 pub struct Config<'a> {
     pub theme: Option<&'a Theme>,
@@ -26,6 +27,7 @@ pub struct Config<'a> {
     pub opt: &'a cli::Opt,
     pub no_style: Style,
     pub max_buffered_lines: usize,
+    pub paging_mode: PagingMode,
 }
 
 pub fn get_config<'a>(
@@ -34,6 +36,7 @@ pub fn get_config<'a>(
     theme_set: &'a ThemeSet,
     terminal_width: usize,
     width: Option<usize>,
+    paging_mode: PagingMode,
 ) -> Config<'a> {
     let theme_name_from_bat_pager = env::get_env_var("BAT_THEME");
     let (is_light_mode, theme_name) = get_is_light_mode_and_theme_name(
@@ -118,6 +121,7 @@ pub fn get_config<'a>(
         opt,
         no_style: style::get_no_style(),
         max_buffered_lines: 32,
+        paging_mode,
     }
 }
 

@@ -624,6 +624,7 @@ mod tests {
             hunk_style: cli::SectionStyle::Box,
             hunk_color: "blue".to_string(),
             width: Some("variable".to_string()),
+            paging_mode: "auto".to_string(),
             tab_width: 4,
             show_background_colors: false,
             list_languages: false,
