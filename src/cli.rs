@@ -8,6 +8,7 @@ use structopt::StructOpt;
 use crate::bat::assets::HighlightingAssets;
 use crate::config;
 use crate::style;
+use crate::bat::output::{PagingMode};
 
 #[derive(StructOpt, Clone, Debug)]
 #[structopt(
@@ -153,6 +154,10 @@ pub struct Opt {
     /// one into the other.
     #[structopt(long = "max-line-distance", default_value = "0.3")]
     pub max_line_distance: f64,
+
+    /// the paging mode. One of 'always', 'never' and 'quit-if-one-screen'
+    #[structopt(long = "paging_mode", default_value = "quit-if-one-screen")]
+    pub paging_mode: String,
 }
 
 #[derive(Clone, Debug, PartialEq)]
@@ -237,11 +242,18 @@ pub fn process_command_line_arguments<'a>(
         None => Some(available_terminal_width),
     };
 
+    let paging_mode = match opt.paging_mode.as_ref() {
+        "always" => PagingMode::Always,
+        "never" => PagingMode::Never,
+        _ => PagingMode::QuitIfOneScreen,
+    };
+
     config::get_config(
         opt,
         &assets.syntax_set,
         &assets.theme_set,
         available_terminal_width,
         background_color_width,
+        paging_mode,
     )
 }
