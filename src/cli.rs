@@ -155,7 +155,9 @@ pub struct Opt {
     #[structopt(long = "max-line-distance", default_value = "0.3")]
     pub max_line_distance: f64,
 
-    /// The paging mode. Options are: always, never and auto.
+    /// Whether to use a pager when displaying output. Options are: auto, always, and never. The
+    /// default pager is `less`: this can be altered by setting the environment variables BAT_PAGER
+    /// or PAGER (BAT_PAGER has priority).
     #[structopt(long = "paging", default_value = "auto")]
     pub paging_mode: String,
 }
