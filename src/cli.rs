@@ -6,9 +6,9 @@ use console::Term;
 use structopt::StructOpt;
 
 use crate::bat::assets::HighlightingAssets;
+use crate::bat::output::PagingMode;
 use crate::config;
 use crate::style;
-use crate::bat::output::{PagingMode};
 
 #[derive(StructOpt, Clone, Debug)]
 #[structopt(
@@ -155,8 +155,8 @@ pub struct Opt {
     #[structopt(long = "max-line-distance", default_value = "0.3")]
     pub max_line_distance: f64,
 
-    /// the paging mode. One of 'always', 'never' and 'quit-if-one-screen'
-    #[structopt(long = "paging_mode", default_value = "quit-if-one-screen")]
+    /// The paging mode. Options are: always, never and auto.
+    #[structopt(long = "paging", default_value = "auto")]
     pub paging_mode: String,
 }
 
