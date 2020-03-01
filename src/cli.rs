@@ -8,6 +8,7 @@ use structopt::StructOpt;
 use crate::bat::assets::HighlightingAssets;
 use crate::bat::output::PagingMode;
 use crate::config;
+use crate::env;
 use crate::style;
 
 #[derive(StructOpt, Clone, Debug)]
@@ -155,6 +156,14 @@ pub struct Opt {
     #[structopt(long = "max-line-distance", default_value = "0.3")]
     pub max_line_distance: f64,
 
+    /// Whether to emit 24-bit ("true color") RGB color codes. Options are auto, always, and never.
+    /// "auto" means that delta will emit 24-bit color codes iff the environment variable COLORTERM
+    /// has the value "truecolor" or "24bit". If your terminal application (the application you use
+    /// to enter commands at a shell prompt) supports 24 bit colors, then it probably already sets
+    /// this environment variable, in which case you don't need to do anything.
+    #[structopt(long = "24-bit-color", default_value = "auto")]
+    pub true_color: String,
+
     /// Whether to use a pager when displaying output. Options are: auto, always, and never. The
     /// default pager is `less`: this can be altered by setting the environment variables BAT_PAGER
     /// or PAGER (BAT_PAGER has priority).
@@ -257,12 +266,32 @@ pub fn process_command_line_arguments<'a>(
         }
     };
 
+    let true_color = match opt.true_color.as_ref() {
+        "always" => true,
+        "never" => false,
+        "auto" => is_truecolor_terminal(),
+        _ => {
+            eprintln!(
+                "Invalid value for --24-bit-color option: {} (valid values are \"always\", \"never\", and \"auto\")",
+                opt.true_color
+            );
+            process::exit(1);
+        }
+    };
+
     config::get_config(
         opt,
         &assets.syntax_set,
         &assets.theme_set,
+        true_color,
         available_terminal_width,
         background_color_width,
         paging_mode,
     )
+}
+
+fn is_truecolor_terminal() -> bool {
+    env::get_env_var("COLORTERM")
+        .map(|colorterm| colorterm == "truecolor" || colorterm == "24bit")
+        .unwrap_or(false)
 }

@@ -4,11 +4,11 @@ use std::str::FromStr;
 use syntect::highlighting::{Color, Style, StyleModifier, Theme, ThemeSet};
 use syntect::parsing::SyntaxSet;
 
+use crate::bat::output::PagingMode;
 use crate::cli;
 use crate::env;
 use crate::paint;
 use crate::style;
-use crate::bat::output::{PagingMode};
 
 pub struct Config<'a> {
     pub theme: Option<&'a Theme>,
@@ -22,6 +22,7 @@ pub struct Config<'a> {
     pub hunk_color: Color,
     pub syntax_set: &'a SyntaxSet,
     pub terminal_width: usize,
+    pub true_color: bool,
     pub width: Option<usize>,
     pub tab_width: usize,
     pub opt: &'a cli::Opt,
@@ -34,6 +35,7 @@ pub fn get_config<'a>(
     opt: &'a cli::Opt,
     syntax_set: &'a SyntaxSet,
     theme_set: &'a ThemeSet,
+    true_color: bool,
     terminal_width: usize,
     width: Option<usize>,
     paging_mode: PagingMode,
@@ -53,11 +55,9 @@ pub fn get_config<'a>(
     };
 
     let minus_style_modifier = StyleModifier {
-        background: Some(color_from_arg_or_mode_default(
+        background: Some(color_from_arg(
             opt.minus_color.as_ref(),
-            is_light_mode,
-            style::LIGHT_THEME_MINUS_COLOR,
-            style::DARK_THEME_MINUS_COLOR,
+            style::get_minus_color_default(is_light_mode, true_color),
         )),
         foreground: if opt.highlight_removed {
             None
@@ -68,11 +68,9 @@ pub fn get_config<'a>(
     };
 
     let minus_emph_style_modifier = StyleModifier {
-        background: Some(color_from_arg_or_mode_default(
+        background: Some(color_from_arg(
             opt.minus_emph_color.as_ref(),
-            is_light_mode,
-            style::LIGHT_THEME_MINUS_EMPH_COLOR,
-            style::DARK_THEME_MINUS_EMPH_COLOR,
+            style::get_minus_emph_color_default(is_light_mode, true_color),
         )),
         foreground: if opt.highlight_removed {
             None
@@ -83,22 +81,18 @@ pub fn get_config<'a>(
     };
 
     let plus_style_modifier = StyleModifier {
-        background: Some(color_from_arg_or_mode_default(
+        background: Some(color_from_arg(
             opt.plus_color.as_ref(),
-            is_light_mode,
-            style::LIGHT_THEME_PLUS_COLOR,
-            style::DARK_THEME_PLUS_COLOR,
+            style::get_plus_color_default(is_light_mode, true_color),
         )),
         foreground: None,
         font_style: None,
     };
 
     let plus_emph_style_modifier = StyleModifier {
-        background: Some(color_from_arg_or_mode_default(
+        background: Some(color_from_arg(
             opt.plus_emph_color.as_ref(),
-            is_light_mode,
-            style::LIGHT_THEME_PLUS_EMPH_COLOR,
-            style::DARK_THEME_PLUS_EMPH_COLOR,
+            style::get_plus_emph_color_default(is_light_mode, true_color),
         )),
         foreground: None,
         font_style: None,
@@ -114,6 +108,7 @@ pub fn get_config<'a>(
         commit_color: color_from_rgb_or_ansi_code(&opt.commit_color),
         file_color: color_from_rgb_or_ansi_code(&opt.file_color),
         hunk_color: color_from_rgb_or_ansi_code(&opt.hunk_color),
+        true_color,
         terminal_width,
         width,
         tab_width: opt.tab_width,
@@ -192,20 +187,9 @@ fn color_from_rgb_or_ansi_code(s: &str) -> Color {
     }
 }
 
-fn color_from_arg_or_mode_default(
-    arg: Option<&String>,
-    is_light_mode: bool,
-    light_theme_default: Color,
-    dark_theme_default: Color,
-) -> Color {
+fn color_from_arg(arg: Option<&String>, default: Color) -> Color {
     match arg {
         Some(string) => color_from_rgb_or_ansi_code(&string),
-        None => {
-            if is_light_mode {
-                light_theme_default
-            } else {
-                dark_theme_default
-            }
-        }
+        None => default,
     }
 }
