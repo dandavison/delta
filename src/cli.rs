@@ -245,7 +245,14 @@ pub fn process_command_line_arguments<'a>(
     let paging_mode = match opt.paging_mode.as_ref() {
         "always" => PagingMode::Always,
         "never" => PagingMode::Never,
-        _ => PagingMode::QuitIfOneScreen,
+        "auto" => PagingMode::QuitIfOneScreen,
+        _ => {
+            eprintln!(
+                "Invalid paging value: {} (valid values are \"always\", \"never\", and \"auto\")",
+                opt.paging_mode
+            );
+            process::exit(1);
+        }
     };
 
     config::get_config(
