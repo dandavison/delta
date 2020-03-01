@@ -204,6 +204,7 @@ fn handle_commit_meta_header_line(
         config.terminal_width,
         config.commit_color,
         true,
+        config.true_color,
     )?;
     Ok(())
 }
@@ -234,10 +235,11 @@ fn handle_generic_file_meta_header_line(
     writeln!(painter.writer)?;
     draw_fn(
         painter.writer,
-        &paint::paint_text_foreground(line, config.file_color),
+        &paint::paint_text_foreground(line, config.file_color, config.true_color),
         config.terminal_width,
         config.file_color,
         false,
+        config.true_color,
     )?;
     Ok(())
 }
@@ -279,13 +281,14 @@ fn handle_hunk_meta_line(
             config.terminal_width,
             config.hunk_color,
             false,
+            config.true_color,
         )?;
         painter.output_buffer.clear();
     }
     writeln!(
         painter.writer,
         "\n{}",
-        paint::paint_text_foreground(line_number, config.hunk_color)
+        paint::paint_text_foreground(line_number, config.hunk_color, config.true_color)
     )?;
     Ok(())
 }
@@ -431,6 +434,7 @@ mod tests {
 
     #[test]
     fn test_theme_selection() {
+        #[derive(PartialEq)]
         enum Mode {
             Light,
             Dark,
@@ -496,6 +500,7 @@ mod tests {
             } else {
                 env::set_var("BAT_THEME", bat_theme_env_var);
             }
+            let is_true_color = true;
             let mut options = get_command_line_options();
             options.theme = theme_option;
             match mode_option {
@@ -521,31 +526,19 @@ mod tests {
             }
             assert_eq!(
                 config.minus_style_modifier.background.unwrap(),
-                match expected_mode {
-                    Mode::Light => style::LIGHT_THEME_MINUS_COLOR,
-                    Mode::Dark => style::DARK_THEME_MINUS_COLOR,
-                }
+                style::get_minus_color_default(expected_mode == Mode::Light, is_true_color)
             );
             assert_eq!(
                 config.minus_emph_style_modifier.background.unwrap(),
-                match expected_mode {
-                    Mode::Light => style::LIGHT_THEME_MINUS_EMPH_COLOR,
-                    Mode::Dark => style::DARK_THEME_MINUS_EMPH_COLOR,
-                }
+                style::get_minus_emph_color_default(expected_mode == Mode::Light, is_true_color)
             );
             assert_eq!(
                 config.plus_style_modifier.background.unwrap(),
-                match expected_mode {
-                    Mode::Light => style::LIGHT_THEME_PLUS_COLOR,
-                    Mode::Dark => style::DARK_THEME_PLUS_COLOR,
-                }
+                style::get_plus_color_default(expected_mode == Mode::Light, is_true_color)
             );
             assert_eq!(
                 config.plus_emph_style_modifier.background.unwrap(),
-                match expected_mode {
-                    Mode::Light => style::LIGHT_THEME_PLUS_EMPH_COLOR,
-                    Mode::Dark => style::DARK_THEME_PLUS_EMPH_COLOR,
-                }
+                style::get_plus_emph_color_default(expected_mode == Mode::Light, is_true_color)
             );
         }
     }
@@ -580,7 +573,7 @@ mod tests {
     fn paint_text(input: &str, style_modifier: StyleModifier, config: &Config) -> String {
         let mut output = String::new();
         let style = config.no_style.apply(style_modifier);
-        paint::paint_text(&input, style, &mut output);
+        paint::paint_text(&input, style, &mut output, config.true_color);
         output
     }
 
@@ -623,6 +616,7 @@ mod tests {
             file_color: "Blue".to_string(),
             hunk_style: cli::SectionStyle::Box,
             hunk_color: "blue".to_string(),
+            true_color: "always".to_string(),
             width: Some("variable".to_string()),
             paging_mode: "auto".to_string(),
             tab_width: 4,

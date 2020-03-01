@@ -1,6 +1,7 @@
 use std::io::Write;
 use std::str::FromStr;
 
+use ansi_colours;
 use syntect::easy::HighlightLines;
 use syntect::highlighting::{Color, Style, StyleModifier};
 use syntect::parsing::{SyntaxReference, SyntaxSet};
@@ -109,7 +110,7 @@ impl<'a> Painter<'a> {
         {
             let mut text_width = 0;
             for (style, text) in superimpose_style_sections(syntax_sections, diff_sections) {
-                paint_text(&text, style, output_buffer);
+                paint_text(&text, style, output_buffer, config.true_color);
                 if config.width.is_some() {
                     text_width += text.graphemes(true).count();
                 }
@@ -127,6 +128,7 @@ impl<'a> Painter<'a> {
                             &" ".repeat(width - text_width),
                             background_style,
                             output_buffer,
+                            config.true_color,
                         );
                     }
                     _ => (),
@@ -206,22 +208,34 @@ impl<'a> Painter<'a> {
 }
 
 /// Write section text to buffer with shell escape codes specifying foreground and background color.
-pub fn paint_text(text: &str, style: Style, output_buffer: &mut String) {
+pub fn paint_text(text: &str, style: Style, output_buffer: &mut String, true_color: bool) {
     if text.is_empty() {
         return;
     }
     if style.background != style::NO_COLOR {
-        output_buffer.push_str(&get_color_escape_sequence(style.background, false));
+        output_buffer.push_str(&get_color_escape_sequence(
+            style.background,
+            false,
+            true_color,
+        ));
     }
     if style.foreground != style::NO_COLOR {
-        output_buffer.push_str(&get_color_escape_sequence(style.foreground, true));
+        output_buffer.push_str(&get_color_escape_sequence(
+            style.foreground,
+            true,
+            true_color,
+        ));
     }
     output_buffer.push_str(text);
 }
 
 /// Return text together with shell escape codes specifying the foreground color.
-pub fn paint_text_foreground(text: &str, color: Color) -> String {
-    format!("{}{}", get_color_escape_sequence(color, true), text)
+pub fn paint_text_foreground(text: &str, color: Color, true_color: bool) -> String {
+    format!(
+        "{}{}",
+        get_color_escape_sequence(color, true, true_color),
+        text,
+    )
 }
 
 /// Return shell escape sequence specifying either an RGB color, or a user-customizable 8-bit ANSI
@@ -229,17 +243,23 @@ pub fn paint_text_foreground(text: &str, color: Color) -> String {
 // See
 // https://en.wikipedia.org/wiki/ANSI_escape_code#8-bit
 // https://github.com/ogham/rust-ansi-term/blob/ff7eba98d55ad609c7fcc8c7bb0859b37c7545cc/src/ansi.rs#L82-L112
-fn get_color_escape_sequence(color: Color, foreground: bool) -> String {
+fn get_color_escape_sequence(color: Color, foreground: bool, true_color: bool) -> String {
     if color.a == 0 {
         // See https://github.com/sharkdp/bat/pull/543
         format!("\x1b[{};5;{}m", if foreground { 38 } else { 48 }, color.r)
-    } else {
+    } else if true_color {
         format!(
             "\x1b[{};2;{};{};{}m",
             if foreground { 38 } else { 48 },
             color.r,
             color.g,
             color.b
+        )
+    } else {
+        format!(
+            "\x1b[{};5;{}m",
+            if foreground { 38 } else { 48 },
+            ansi_colours::ansi256_from_rgb((color.r, color.g, color.b))
         )
     }
 }
