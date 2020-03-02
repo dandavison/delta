@@ -55,7 +55,7 @@ pub fn get_config<'a>(
     };
 
     let minus_style_modifier = StyleModifier {
-        background: Some(color_from_arg(
+        background: Some(color_from_rgb_or_ansi_code_with_default(
             opt.minus_color.as_ref(),
             style::get_minus_color_default(is_light_mode, true_color),
         )),
@@ -68,7 +68,7 @@ pub fn get_config<'a>(
     };
 
     let minus_emph_style_modifier = StyleModifier {
-        background: Some(color_from_arg(
+        background: Some(color_from_rgb_or_ansi_code_with_default(
             opt.minus_emph_color.as_ref(),
             style::get_minus_emph_color_default(is_light_mode, true_color),
         )),
@@ -81,7 +81,7 @@ pub fn get_config<'a>(
     };
 
     let plus_style_modifier = StyleModifier {
-        background: Some(color_from_arg(
+        background: Some(color_from_rgb_or_ansi_code_with_default(
             opt.plus_color.as_ref(),
             style::get_plus_color_default(is_light_mode, true_color),
         )),
@@ -90,7 +90,7 @@ pub fn get_config<'a>(
     };
 
     let plus_emph_style_modifier = StyleModifier {
-        background: Some(color_from_arg(
+        background: Some(color_from_rgb_or_ansi_code_with_default(
             opt.plus_emph_color.as_ref(),
             style::get_plus_emph_color_default(is_light_mode, true_color),
         )),
@@ -187,7 +187,7 @@ fn color_from_rgb_or_ansi_code(s: &str) -> Color {
     }
 }
 
-fn color_from_arg(arg: Option<&String>, default: Color) -> Color {
+fn color_from_rgb_or_ansi_code_with_default(arg: Option<&String>, default: Color) -> Color {
     match arg {
         Some(string) => color_from_rgb_or_ansi_code(&string),
         None => default,
