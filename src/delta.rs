@@ -360,7 +360,11 @@ fn prepare(line: &str, tab_width: usize, append_newline: bool) -> String {
 
         // The first column contains a -/+/space character, added by git. We skip it here and insert
         // a replacement space when formatting the line below.
-        line.next();
+        let first_char_replacement = match line.next() {
+            Some("+") | Some("-") => " ",
+            Some(c) => c,
+            None => "",
+        };
 
         // Expand tabs as spaces.
         // tab_width = 0 is documented to mean do not replace tabs.
@@ -371,7 +375,7 @@ fn prepare(line: &str, tab_width: usize, append_newline: bool) -> String {
         } else {
             line.collect::<String>()
         };
-        format!(" {}{}", output_line, terminator)
+        format!("{}{}{}", first_char_replacement, output_line, terminator)
     } else {
         terminator.to_string()
     }
