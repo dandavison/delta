@@ -1,13 +1,14 @@
 use std::io::Write;
 use std::str::FromStr;
 
-use ansi_colours;
+use ansi_term;
 use syntect::easy::HighlightLines;
 use syntect::highlighting::{Color, Style, StyleModifier};
 use syntect::parsing::{SyntaxReference, SyntaxSet};
 use unicode_segmentation::UnicodeSegmentation;
 
 use crate::bat::assets::HighlightingAssets;
+use crate::bat::terminal::to_ansi_color;
 use crate::config;
 use crate::edits;
 use crate::paint::superimpose_style_sections::superimpose_style_sections;
@@ -104,21 +105,19 @@ impl<'a> Painter<'a> {
         background_style_modifier: StyleModifier,
         should_trim_newline_and_right_pad: bool,
     ) {
-        use std::fmt::Write;
         for (syntax_sections, diff_sections) in
             syntax_style_sections.iter().zip(diff_style_sections.iter())
         {
             let mut text_width = 0;
+            let mut ansi_strings = Vec::new();
             for (style, text) in superimpose_style_sections(syntax_sections, diff_sections) {
-                paint_text(&text, style, output_buffer, config.true_color);
                 if config.width.is_some() {
                     text_width += text.graphemes(true).count();
                 }
+                ansi_strings.push(to_ansi_style(style, config.true_color).paint(text));
             }
+            let mut line = ansi_term::ANSIStrings(&ansi_strings).to_string();
             if should_trim_newline_and_right_pad {
-                // Remove the terminating newline whose presence was necessary for the syntax
-                // highlighter to work correctly.
-                output_buffer.truncate(output_buffer.len() - 1);
                 // Right pad with background-highlighted white space.
                 match config.width {
                     Some(width) if width > text_width => {
@@ -127,14 +126,15 @@ impl<'a> Painter<'a> {
                         paint_text(
                             &" ".repeat(width - text_width),
                             background_style,
-                            output_buffer,
+                            &mut line,
                             config.true_color,
                         );
                     }
                     _ => (),
                 }
             }
-            writeln!(output_buffer).unwrap();
+            output_buffer.push_str(&line);
+            output_buffer.push_str("\n");
         }
     }
 
@@ -207,61 +207,29 @@ impl<'a> Painter<'a> {
     }
 }
 
+pub fn to_ansi_style(style: Style, true_color: bool) -> ansi_term::Style {
+    let mut ansi_style = ansi_term::Style::new();
+    if style.background != style::NO_COLOR {
+        ansi_style = ansi_style.on(to_ansi_color(style.background, true_color));
+    }
+    if style.foreground != style::NO_COLOR {
+        ansi_style = ansi_style.fg(to_ansi_color(style.foreground, true_color));
+    }
+    ansi_style
+}
+
 /// Write section text to buffer with shell escape codes specifying foreground and background color.
 pub fn paint_text(text: &str, style: Style, output_buffer: &mut String, true_color: bool) {
     if text.is_empty() {
         return;
     }
-    if style.background != style::NO_COLOR {
-        output_buffer.push_str(&get_color_escape_sequence(
-            style.background,
-            false,
-            true_color,
-        ));
-    }
-    if style.foreground != style::NO_COLOR {
-        output_buffer.push_str(&get_color_escape_sequence(
-            style.foreground,
-            true,
-            true_color,
-        ));
-    }
-    output_buffer.push_str(text);
+    let ansi_style = to_ansi_style(style, true_color);
+    output_buffer.push_str(&ansi_style.paint(text).to_string());
 }
 
 /// Return text together with shell escape codes specifying the foreground color.
 pub fn paint_text_foreground(text: &str, color: Color, true_color: bool) -> String {
-    format!(
-        "{}{}",
-        get_color_escape_sequence(color, true, true_color),
-        text,
-    )
-}
-
-/// Return shell escape sequence specifying either an RGB color, or a user-customizable 8-bit ANSI
-/// color code.
-// See
-// https://en.wikipedia.org/wiki/ANSI_escape_code#8-bit
-// https://github.com/ogham/rust-ansi-term/blob/ff7eba98d55ad609c7fcc8c7bb0859b37c7545cc/src/ansi.rs#L82-L112
-fn get_color_escape_sequence(color: Color, foreground: bool, true_color: bool) -> String {
-    if color.a == 0 {
-        // See https://github.com/sharkdp/bat/pull/543
-        format!("\x1b[{};5;{}m", if foreground { 38 } else { 48 }, color.r)
-    } else if true_color {
-        format!(
-            "\x1b[{};2;{};{};{}m",
-            if foreground { 38 } else { 48 },
-            color.r,
-            color.g,
-            color.b
-        )
-    } else {
-        format!(
-            "\x1b[{};5;{}m",
-            if foreground { 38 } else { 48 },
-            ansi_colours::ansi256_from_rgb((color.r, color.g, color.b))
-        )
-    }
+    to_ansi_color(color, true_color).paint(text).to_string()
 }
 
 // See
@@ -358,6 +326,14 @@ mod superimpose_style_sections {
                 }
                 current_string.push(*c);
             }
+
+            // TODO: This is not the ideal location for the following code.
+            if current_string.ends_with("\n") {
+                // Remove the terminating newline whose presence was necessary for the syntax
+                // highlighter to work correctly.
+                current_string.truncate(current_string.len() - 1);
+            }
+
             coalesced.push((*current_style, current_string));
         }
         coalesced
