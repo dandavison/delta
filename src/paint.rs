@@ -259,13 +259,13 @@ pub fn ansi_color_name_to_number(name: &str) -> Option<u8> {
 }
 
 pub fn color_from_ansi_name(name: &str) -> Option<Color> {
-    ansi_color_name_to_number(name).and_then(|n| Some(color_from_ansi_number(n)))
+    ansi_color_name_to_number(name).and_then(color_from_ansi_number)
 }
 
 /// Convert 8-bit ANSI code to #RGBA string with ANSI code in red channel and 0 in alpha channel.
 // See https://github.com/sharkdp/bat/pull/543
-pub fn color_from_ansi_number(n: u8) -> Color {
-    Color::from_str(&format!("#{:02x}000000", n)).unwrap()
+pub fn color_from_ansi_number(n: u8) -> Option<Color> {
+    Color::from_str(&format!("#{:02x}000000", n)).ok()
 }
 
 mod superimpose_style_sections {

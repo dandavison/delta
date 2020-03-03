@@ -183,7 +183,11 @@ fn color_from_rgb_or_ansi_code(s: &str) -> Color {
     if s.starts_with("#") {
         Color::from_str(s).unwrap_or_else(|_| die())
     } else {
-        paint::color_from_ansi_name(s).unwrap_or_else(die)
+        s.parse::<u8>()
+            .ok()
+            .and_then(paint::color_from_ansi_number)
+            .or_else(|| paint::color_from_ansi_name(s))
+            .unwrap_or_else(die)
     }
 }
 

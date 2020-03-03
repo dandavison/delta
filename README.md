@@ -200,7 +200,7 @@ OPTIONS:
             not set using this option, it will be taken from the BAT_THEME environment variable, if that contains a
             valid theme name. Use --list-themes and --compare-themes to view available themes. Note that the choice of
             theme only affects code syntax highlighting. See --commit-color, --file-color, --hunk-color to configure the
-            colors of other parts of the diff output. [env: BAT_THEME=]
+            colors of other parts of the diff output. [env: BAT_THEME=base16]
         --24-bit-color <true_color>
             Whether to emit 24-bit ("true color") RGB color codes. Options are auto, always, and never. "auto" means
             that delta will emit 24-bit color codes iff the environment variable COLORTERM has the value "truecolor" or
@@ -215,11 +215,11 @@ OPTIONS:
 Colors
 ------
 
-All delta color options work the same way. There are two ways to specify a color:
+All delta color options work the same way. There are three ways to specify a color:
 
 1. RGB hex code
 
-   An example of passing an RGB hex code is:
+   An example of using an RGB hex code is:
    --file-color="#0e7c0e"
 
 2. ANSI color name
@@ -230,16 +230,26 @@ All delta color options work the same way. There are two ways to specify a color
    In addition, all of them have a bright form:
    bright-black, bright-red, bright-green, bright-yellow, bright-blue, bright-magenta, bright-cyan, bright-white
 
-   An example is:
+   An example of using an ANSI color name is:
    --file-color="green"
 
    Unlike RGB hex codes, ANSI color names are just names: you can choose the exact color that each
-   name corresponds to in the settings of your terminal application (the application you use to run
-   command line programs). This means that if you use ANSI color names, and you change the color
-   theme used by your terminal, then delta's colors will respond automatically, without needing to
-   change the delta command line.
+   name corresponds to in the settings of your terminal application (the application you use to
+   enter commands at a shell prompt). This means that if you use ANSI color names, and you change
+   the color theme used by your terminal, then delta's colors will respond automatically, without
+   needing to change the delta command line.
 
    "purple" is accepted as a synonym for "magenta". Color names and codes are case-insensitive.
+
+3. ANSI color number
+
+   An example of using an ANSI color number is:
+   --file-color=28
+
+   There are 256 ANSI color numbers: 0-255. The first 16 are the same as the colors described in
+   the "ANSI color name" section above. See https://en.wikipedia.org/wiki/ANSI_escape_code#8-bit.
+   Specifying colors like this is useful if your terminal only supports 256 colors (i.e. doesn't
+   support 24-bit color).
 ```
 
 <br>
