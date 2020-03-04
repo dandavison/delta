@@ -9,7 +9,7 @@ homepage = "https://github.com/dandavison/delta"
 license = "MIT"
 readme = "README.md"
 repository = "https://github.com/dandavison/delta"
-version = "0.0.16"
+version = "0.0.17"
 
 [[bin]]
 name = "delta"
