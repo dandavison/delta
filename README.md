@@ -230,7 +230,9 @@ All delta color options work the same way. There are three ways to specify a col
 <br>
 
 
-## Comparisons (`delta --light`)
+## Comparisons
+
+(`delta --light`)
 
 
 
