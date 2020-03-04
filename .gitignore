@@ -1,4 +1,7 @@
+.ignore
+.make-sentinels
 performance/all-benchmarks.json
 performance/index.html
+src/junk.rs
 **/*.rs.bk
 /target
