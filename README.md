@@ -20,7 +20,7 @@ In addition, delta handles traditional unified diff output.
 
 ## Installation
 
-Executables: [Linux](https://github.com/dandavison/delta/releases/download/0.0.16/delta-0.0.16-x86_64-unknown-linux-musl.tar.gz) | [MacOS](https://github.com/dandavison/delta/releases/download/0.0.16/delta-0.0.16-x86_64-apple-darwin.tar.gz) | [Windows](https://github.com/dandavison/delta/releases/download/0.0.15/delta-0.0.15-x86_64-pc-windows-msvc.zip) | [All](https://github.com/dandavison/delta/releases)
+Executables: [Linux](https://github.com/dandavison/delta/releases/download/0.0.17/delta-0.0.17-x86_64-unknown-linux-musl.tar.gz) | [MacOS](https://github.com/dandavison/delta/releases/download/0.0.17/delta-0.0.17-x86_64-apple-darwin.tar.gz) | [Windows](https://github.com/dandavison/delta/releases/download/0.0.15/delta-0.0.15-x86_64-pc-windows-msvc.zip) | [All](https://github.com/dandavison/delta/releases)
 
 Homebrew:
 ```sh
