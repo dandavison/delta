@@ -3,9 +3,47 @@
 
 ## A syntax-highlighter for git and diff output
 
-Delta brings language syntax highlighting, within-line insertion/deletion detection, and restructured diff output to git on the command line. Here's an example of `git show` output with git configured to use delta as its pager:
+Delta provides language syntax-highlighting, within-line insertion/deletion detection, and restructured diff output for git on the command line. All the syntax-highlighting color themes that are available with [bat](https://github.com/sharkdp/bat/) are available with delta. Here's what `git show` looks like when git is configured to use delta as its pager:
 
-<img width=800px src="https://user-images.githubusercontent.com/52205/75842654-89681a00-5d96-11ea-95a8-b18e860a148a.png" alt="image" />
+<br>
+
+<table>
+  <tr>
+    <td>
+      <img width=500px style="border: 1px solid black"
+           src="https://user-images.githubusercontent.com/52205/75841661-eca47d00-5d93-11ea-8d32-48f2ebb0c5cb.png"
+           alt="image" />
+    </td>
+    <td>
+      <img width=500px style="border: 1px solid black"
+           src="https://user-images.githubusercontent.com/52205/75842593-59207b80-5d96-11ea-843e-c7d2c5a55548.png"
+           alt="image" />
+    </td>
+  </tr>
+  <tr>
+    <td>
+      "GitHub" theme
+    </td>
+    <td>
+      "Monokai Extended" theme
+    </td>
+  </tr>
+</table>
+
+<br>
+<br>
+By default, delta restructures the git output slightly to make the hunk markers human-readable:
+
+<br>
+<br>
+
+<table><tr><td>
+  <img width=650px src="https://user-images.githubusercontent.com/52205/74090846-f200f700-4a75-11ea-9427-89e1fa686bfe.png" alt="image" />
+</td></tr></table>
+
+
+
+
 
 <br>
 
