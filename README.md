@@ -7,6 +7,33 @@ Delta brings language syntax highlighting, within-line insertion/deletion detect
 
 <img width=800px src="https://user-images.githubusercontent.com/52205/74090846-f200f700-4a75-11ea-9427-89e1fa686bfe.png" alt="image" />
 
+<br>
+
+<table>
+  <tr>
+    <td>
+      delta --dark (default)
+    </td>
+    <td>
+      delta --light
+    </td>
+  </tr>
+  <tr>
+    <td>
+      <img width=500px style="border: 1px solid black"
+           src="https://user-images.githubusercontent.com/52205/65245970-85488880-dae5-11e9-9fd2-d358071bcf7f.png"
+           alt="image" />
+    </td>
+    <td>
+      <img width=500px style="border: 1px solid black"
+           src="https://user-images.githubusercontent.com/52205/75841661-eca47d00-5d93-11ea-8d32-48f2ebb0c5cb.png"
+           alt="image" />
+    </td>
+  </tr>
+</table>
+
+<br>
+
 
 ## Features
 |                                                | delta | git | diff-so-fancy | github/gitlab |
@@ -82,32 +109,6 @@ diff -u a.txt b.txt | delta
 <br>
 
 
-<br>
-
-<table>
-  <tr>
-    <td>
-      delta --dark (default)
-    </td>
-    <td>
-      delta --light
-    </td>
-  </tr>
-  <tr>
-    <td>
-      <img width=500px style="border: 1px solid black"
-           src="https://user-images.githubusercontent.com/52205/65245970-85488880-dae5-11e9-9fd2-d358071bcf7f.png"
-           alt="image" />
-    </td>
-    <td>
-      <img width=500px style="border: 1px solid black"
-           src="https://user-images.githubusercontent.com/52205/65246093-c93b8d80-dae5-11e9-8346-eb8bc0a89e75.png"
-           alt="image" />
-    </td>
-  </tr>
-</table>
-
-<br>
 
 
 ## Supported languages and themes
