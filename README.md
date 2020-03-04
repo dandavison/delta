@@ -5,7 +5,7 @@
 
 Delta brings language syntax highlighting, within-line insertion/deletion detection, and restructured diff output to git on the command line. Here's an example of `git show` output with git configured to use delta as its pager:
 
-<img width=800px src="https://user-images.githubusercontent.com/52205/75842256-77d24280-5d95-11ea-96ee-bb2f04a9e94d.png" alt="image" />
+<img width=800px src="https://user-images.githubusercontent.com/52205/75842654-89681a00-5d96-11ea-95a8-b18e860a148a.png" alt="image" />
 
 <br>
 
