@@ -15,19 +15,13 @@ test:
                                   | ansifilter | cut -c 2-)"
 
 release:
-	cargo publish
+	@make -f release.Makefile release
 
-brew:
-	cd $$(brew --repo homebrew/homebrew-core) && \
-	brew uninstall --force git-delta && \
-	brew install --build-from-source git-delta && \
-	brew test git-delta && \
-	brew uninstall --force git-delta && \
-	brew install git-delta && \
-	brew audit --strict git-delta
+version:
+	@grep version Cargo.toml | head -n1 | sed -E 's,.*version = "([^"]+)",\1,'
 
 hash:
-	@version=$$(grep version Cargo.toml | head -n1 | sed -E 's,.*version = "([^"]+)",\1,') && \
+	@version=$$(make version) && \
     printf "$$version-tar.gz %s\n" $$(curl -sL https://github.com/dandavison/delta/archive/$$version.tar.gz | sha256sum -) && \
 	printf "delta-$$version-x86_64-apple-darwin.tar.gz %s\n" $$(curl -sL https://github.com/dandavison/delta/releases/download/$$version/delta-$$version-x86_64-apple-darwin.tar.gz | sha256sum -) && \
 	printf "delta-$$version-x86_64-unknown-linux-musl.tar.gz %s\n" $$(curl -sL https://github.com/dandavison/delta/releases/download/$$version/delta-$$version-x86_64-unknown-linux-musl.tar.gz | sha256sum -)
