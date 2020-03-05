@@ -1,0 +1,10 @@
+Index: file.c
+===================================================================
+--- file.c      (revision 14)
++++ file.c      (working copy)
+@@ -1 +1,4 @@
+-void aa(){}
++void ab(){}
++
++
++int aaa
