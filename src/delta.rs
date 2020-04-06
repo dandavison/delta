@@ -255,7 +255,7 @@ fn handle_hunk_meta_line(
         cli::SectionStyle::Plain => panic!(),
     };
     let (raw_code_fragment, line_number) = parse::parse_hunk_metadata(&line);
-    let code_fragment = prepare(raw_code_fragment, config.tab_width, false);
+    let code_fragment = prepare(raw_code_fragment, false, config);
     if !code_fragment.is_empty() {
         let syntax_style_sections = Painter::get_line_syntax_style_sections(
             &code_fragment,
@@ -313,20 +313,16 @@ fn handle_hunk_line(painter: &mut Painter, line: &str, state: State, config: &Co
             if state == State::HunkPlus {
                 painter.paint_buffered_lines();
             }
-            painter
-                .minus_lines
-                .push(prepare(&line, config.tab_width, true));
+            painter.minus_lines.push(prepare(&line, true, config));
             State::HunkMinus
         }
         Some('+') => {
-            painter
-                .plus_lines
-                .push(prepare(&line, config.tab_width, true));
+            painter.plus_lines.push(prepare(&line, true, config));
             State::HunkPlus
         }
         _ => {
             painter.paint_buffered_lines();
-            let line = prepare(&line, config.tab_width, true);
+            let line = prepare(&line, true, config);
             let syntax_style_sections = Painter::get_line_syntax_style_sections(
                 &line,
                 &mut painter.highlighter,
@@ -351,7 +347,7 @@ fn handle_hunk_line(painter: &mut Painter, line: &str, state: State, config: &Co
 // Terminating with newline character is necessary for many of the sublime syntax definitions to
 // highlight correctly.
 // See https://docs.rs/syntect/3.2.0/syntect/parsing/struct.SyntaxSetBuilder.html#method.add_from_folder
-fn prepare(line: &str, tab_width: usize, append_newline: bool) -> String {
+fn prepare(line: &str, append_newline: bool, config: &Config) -> String {
     let terminator = if append_newline { "\n" } else { "" };
     if !line.is_empty() {
         let mut line = line.graphemes(true);
@@ -362,8 +358,8 @@ fn prepare(line: &str, tab_width: usize, append_newline: bool) -> String {
 
         // Expand tabs as spaces.
         // tab_width = 0 is documented to mean do not replace tabs.
-        let output_line = if tab_width > 0 {
-            let tab_replacement = " ".repeat(tab_width);
+        let output_line = if config.tab_width > 0 {
+            let tab_replacement = " ".repeat(config.tab_width);
             line.map(|s| if s == "\t" { &tab_replacement } else { s })
                 .collect::<String>()
         } else {
