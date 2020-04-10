@@ -685,6 +685,23 @@ mod tests {
     }
 
     #[test]
+    fn test_delta_paints_diff_when_there_is_unrecognized_initial_content() {
+        for input in vec![
+            DIFF_WITH_UNRECOGNIZED_PRECEDING_MATERIAL_1,
+            DIFF_WITH_UNRECOGNIZED_PRECEDING_MATERIAL_2,
+        ] {
+            let mut options = get_command_line_options();
+            options.color_only = true;
+            let output = run_delta(input, &options);
+            assert_eq!(
+                strip_ansi_codes(&output).to_string(),
+                input.to_owned() + "\n"
+            );
+            assert_ne!(output, input.to_owned() + "\n");
+        }
+    }
+
+    #[test]
     fn test_submodule_contains_untracked_content() {
         let options = get_command_line_options();
         let output = strip_ansi_codes(&run_delta(
@@ -918,5 +935,75 @@ diff --git a/foo b/foo
 new file mode 100644
 index 0000000..b572921
 Binary files /dev/null and b/foo differ
+";
+
+    // git --no-pager show -p --cc --format=  --numstat --stat
+    // #121
+    const DIFF_WITH_UNRECOGNIZED_PRECEDING_MATERIAL_1: &str = "
+1	5	src/delta.rs
+ src/delta.rs | 6 +-----
+ 1 file changed, 1 insertion(+), 5 deletions(-)
+
+diff --git a/src/delta.rs b/src/delta.rs
+index da10d2b..39cff42 100644
+--- a/src/delta.rs
++++ b/src/delta.rs
+@@ -67,11 +67,6 @@ where
+     let source = detect_source(&mut lines_peekable);
+
+     for raw_line in lines_peekable {
+-        if source == Source::Unknown {
+-            writeln!(painter.writer, \"{}\", raw_line)?;
+-            continue;
+-        }
+-
+         let line = strip_ansi_codes(&raw_line).to_string();
+         if line.starts_with(\"commit \") {
+             painter.paint_buffered_lines();
+@@ -674,6 +669,7 @@ mod tests {
+     }
+
+     #[test]
++    #[ignore] // Ideally, delta would make this test pass.
+     fn test_delta_ignores_non_diff_input() {
+         let options = get_command_line_options();
+         let output = strip_ansi_codes(&run_delta(NOT_A_DIFF_OUTPUT, &options)).to_string();
+";
+
+    // git stash show --stat --patch
+    // #100
+    const DIFF_WITH_UNRECOGNIZED_PRECEDING_MATERIAL_2: &str = "
+ src/cli.rs    | 2 ++
+ src/config.rs | 4 +++-
+ 2 files changed, 5 insertions(+), 1 deletion(-)
+
+diff --git a/src/cli.rs b/src/cli.rs
+index bd5f1d5..55ba315 100644
+--- a/src/cli.rs
++++ b/src/cli.rs
+@@ -286,6 +286,8 @@ pub fn process_command_line_arguments<'a>(
+         }
+     };
+
++    println!(\"true_color is {}\", true_color);
++
+     config::get_config(
+         opt,
+         &assets.syntax_set,
+diff --git a/src/config.rs b/src/config.rs
+index cba6064..ba1a4de 100644
+--- a/src/config.rs
++++ b/src/config.rs
+@@ -181,7 +181,9 @@ fn color_from_rgb_or_ansi_code(s: &str) -> Color {
+         process::exit(1);
+     };
+     if s.starts_with(\"#\") {
+-        Color::from_str(s).unwrap_or_else(|_| die())
++        let col = Color::from_str(s).unwrap_or_else(|_| die());
++        println!(\"{} => {} {} {} {}\", s, col.r, col.g, col.b, col.a);
++        col
+     } else {
+         s.parse::<u8>()
+             .ok()
 ";
 }
