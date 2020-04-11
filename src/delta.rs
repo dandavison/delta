@@ -76,7 +76,7 @@ where
         if line.starts_with("commit ") {
             painter.paint_buffered_lines();
             state = State::CommitMeta;
-            if config.opt.commit_style != cli::SectionStyle::Plain {
+            if config.commit_style != cli::SectionStyle::Plain {
                 painter.emit()?;
                 handle_commit_meta_header_line(&mut painter, &raw_line, config)?;
                 continue;
@@ -89,7 +89,7 @@ where
             // FIXME: For unified diff input, removal ("-") of a line starting with "--" (e.g. a
             // Haskell or SQL comment) will be confused with the "---" file metadata marker.
             && (line.starts_with("--- ") || line.starts_with("rename from "))
-            && config.opt.file_style != cli::SectionStyle::Plain
+            && config.file_style != cli::SectionStyle::Plain
         {
             if source == Source::DiffUnified {
                 state = State::FileMeta;
@@ -97,7 +97,7 @@ where
             }
             minus_file = parse::get_file_path_from_file_meta_line(&line, source == Source::GitDiff);
         } else if (line.starts_with("+++ ") || line.starts_with("rename to "))
-            && config.opt.file_style != cli::SectionStyle::Plain
+            && config.file_style != cli::SectionStyle::Plain
         {
             plus_file = parse::get_file_path_from_file_meta_line(&line, source == Source::GitDiff);
             painter.emit()?;
@@ -111,7 +111,7 @@ where
         } else if line.starts_with("@@ ") {
             state = State::HunkMeta;
             painter.set_highlighter();
-            if config.opt.hunk_style != cli::SectionStyle::Plain {
+            if config.hunk_style != cli::SectionStyle::Plain {
                 painter.emit()?;
                 handle_hunk_meta_line(&mut painter, &line, config)?;
                 continue;
@@ -135,7 +135,7 @@ where
 
             state = State::FileMeta;
             painter.paint_buffered_lines();
-            if config.opt.file_style != cli::SectionStyle::Plain {
+            if config.file_style != cli::SectionStyle::Plain {
                 painter.emit()?;
                 handle_generic_file_meta_header_line(&mut painter, &raw_line, config)?;
                 continue;
@@ -146,7 +146,7 @@ where
             continue;
         }
 
-        if state == State::FileMeta && config.opt.file_style != cli::SectionStyle::Plain {
+        if state == State::FileMeta && config.file_style != cli::SectionStyle::Plain {
             // The file metadata section is 4 lines. Skip them under non-plain file-styles.
             continue;
         } else {
@@ -193,7 +193,7 @@ fn handle_commit_meta_header_line(
     line: &str,
     config: &Config,
 ) -> std::io::Result<()> {
-    let draw_fn = match config.opt.commit_style {
+    let draw_fn = match config.commit_style {
         cli::SectionStyle::Box => draw::write_boxed_with_line,
         cli::SectionStyle::Underline => draw::write_underlined,
         cli::SectionStyle::Plain => panic!(),
@@ -227,7 +227,7 @@ fn handle_generic_file_meta_header_line(
     line: &str,
     config: &Config,
 ) -> std::io::Result<()> {
-    let draw_fn = match config.opt.file_style {
+    let draw_fn = match config.file_style {
         cli::SectionStyle::Box => draw::write_boxed_with_line,
         cli::SectionStyle::Underline => draw::write_underlined,
         cli::SectionStyle::Plain => panic!(),
@@ -249,7 +249,7 @@ fn handle_hunk_meta_line(
     line: &str,
     config: &Config,
 ) -> std::io::Result<()> {
-    let draw_fn = match config.opt.hunk_style {
+    let draw_fn = match config.hunk_style {
         cli::SectionStyle::Box => draw::write_boxed,
         cli::SectionStyle::Underline => draw::write_underlined,
         cli::SectionStyle::Plain => panic!(),

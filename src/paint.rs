@@ -158,7 +158,7 @@ impl<'a> Painter<'a> {
                 &line,
                 highlighter,
                 &config,
-                config.opt.highlight_removed,
+                config.highlight_removed,
             ));
         }
         let mut plus_line_sections = Vec::new();
@@ -202,7 +202,7 @@ impl<'a> Painter<'a> {
             config.minus_emph_style_modifier,
             config.plus_style_modifier,
             config.plus_emph_style_modifier,
-            config.opt.max_line_distance,
+            config.max_line_distance,
         )
     }
 }

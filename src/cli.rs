@@ -181,7 +181,7 @@ pub struct Opt {
     pub paging_mode: String,
 }
 
-#[derive(Clone, Debug, PartialEq)]
+#[derive(Clone, Copy, Debug, PartialEq)]
 pub enum SectionStyle {
     Box,
     Plain,
