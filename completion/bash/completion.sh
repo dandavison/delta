@@ -31,6 +31,7 @@ _delta() {
         --minus-emph-color
         --plus-color
         --plus-emph-color
+        --keep-plus-minus-markers
         --show-background-colors
         --theme
         --version

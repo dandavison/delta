@@ -18,6 +18,8 @@ pub struct Config<'a> {
     pub minus_emph_style_modifier: StyleModifier,
     pub plus_style_modifier: StyleModifier,
     pub plus_emph_style_modifier: StyleModifier,
+    pub minus_line_marker: &'a str,
+    pub plus_line_marker: &'a str,
     pub highlight_removed: bool,
     pub commit_style: cli::SectionStyle,
     pub commit_color: Color,
@@ -102,6 +104,17 @@ pub fn get_config<'a>(
         font_style: None,
     };
 
+    let minus_line_marker = if opt.keep_plus_minus_markers {
+        "-"
+    } else {
+        " "
+    };
+    let plus_line_marker = if opt.keep_plus_minus_markers {
+        "+"
+    } else {
+        " "
+    };
+
     Config {
         theme,
         theme_name,
@@ -111,6 +124,8 @@ pub fn get_config<'a>(
         plus_style_modifier,
         plus_emph_style_modifier,
         highlight_removed: opt.highlight_removed,
+        minus_line_marker,
+        plus_line_marker,
         commit_style: opt.commit_style,
         commit_color: color_from_rgb_or_ansi_code(&opt.commit_color),
         file_style: opt.file_style,

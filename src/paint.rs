@@ -77,6 +77,7 @@ impl<'a> Painter<'a> {
                 minus_line_diff_style_sections,
                 &mut self.output_buffer,
                 self.config,
+                self.config.minus_line_marker,
                 self.config.minus_style_modifier,
                 true,
             );
@@ -87,6 +88,7 @@ impl<'a> Painter<'a> {
                 plus_line_diff_style_sections,
                 &mut self.output_buffer,
                 self.config,
+                self.config.plus_line_marker,
                 self.config.plus_style_modifier,
                 true,
             );
@@ -102,14 +104,20 @@ impl<'a> Painter<'a> {
         diff_style_sections: Vec<Vec<(StyleModifier, &str)>>,
         output_buffer: &mut String,
         config: &config::Config,
+        prefix: &str,
         background_style_modifier: StyleModifier,
         should_trim_newline_and_right_pad: bool,
     ) {
+        let background_style = config.no_style.apply(background_style_modifier);
+        let background_ansi_style = to_ansi_style(background_style, config.true_color);
         for (syntax_sections, diff_sections) in
             syntax_style_sections.iter().zip(diff_style_sections.iter())
         {
             let mut text_width = 0;
             let mut ansi_strings = Vec::new();
+            if prefix != "" {
+                ansi_strings.push(background_ansi_style.paint(prefix));
+            }
             for (style, text) in superimpose_style_sections(syntax_sections, diff_sections) {
                 if config.width.is_some() {
                     text_width += text.graphemes(true).count();
@@ -122,7 +130,6 @@ impl<'a> Painter<'a> {
                 match config.width {
                     Some(width) if width > text_width => {
                         // Right pad to requested width with spaces.
-                        let background_style = config.no_style.apply(background_style_modifier);
                         paint_text(
                             &" ".repeat(width - text_width),
                             background_style,
