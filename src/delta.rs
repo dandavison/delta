@@ -264,12 +264,12 @@ fn handle_hunk_meta_line(
             true,
         );
         Painter::paint_lines(
-            &mut painter.output_buffer,
             vec![syntax_style_sections],
             vec![vec![(
                 style::NO_BACKGROUND_COLOR_STYLE_MODIFIER,
                 &code_fragment,
             )]],
+            &mut painter.output_buffer,
             config,
             style::NO_BACKGROUND_COLOR_STYLE_MODIFIER,
             false,
@@ -330,9 +330,9 @@ fn handle_hunk_line(painter: &mut Painter, line: &str, state: State, config: &Co
                 true,
             );
             Painter::paint_lines(
-                &mut painter.output_buffer,
                 vec![syntax_style_sections],
                 vec![vec![(style::NO_BACKGROUND_COLOR_STYLE_MODIFIER, &line)]],
+                &mut painter.output_buffer,
                 config,
                 style::NO_BACKGROUND_COLOR_STYLE_MODIFIER,
                 true,

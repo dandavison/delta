@@ -73,9 +73,9 @@ impl<'a> Painter<'a> {
         // TODO: lines and style sections contain identical line text
         if !self.minus_lines.is_empty() {
             Painter::paint_lines(
-                &mut self.output_buffer,
                 minus_line_syntax_style_sections,
                 minus_line_diff_style_sections,
+                &mut self.output_buffer,
                 self.config,
                 self.config.minus_style_modifier,
                 true,
@@ -83,9 +83,9 @@ impl<'a> Painter<'a> {
         }
         if !self.plus_lines.is_empty() {
             Painter::paint_lines(
-                &mut self.output_buffer,
                 plus_line_syntax_style_sections,
                 plus_line_diff_style_sections,
+                &mut self.output_buffer,
                 self.config,
                 self.config.plus_style_modifier,
                 true,
@@ -98,9 +98,9 @@ impl<'a> Painter<'a> {
     /// Superimpose background styles and foreground syntax
     /// highlighting styles, and write colored lines to output buffer.
     pub fn paint_lines(
-        output_buffer: &mut String,
         syntax_style_sections: Vec<Vec<(Style, &str)>>,
         diff_style_sections: Vec<Vec<(StyleModifier, &str)>>,
+        output_buffer: &mut String,
         config: &config::Config,
         background_style_modifier: StyleModifier,
         should_trim_newline_and_right_pad: bool,
