@@ -322,7 +322,9 @@ fn handle_hunk_line(painter: &mut Painter, line: &str, state: State, config: &Co
             State::HunkPlus
         }
         _ => {
-            let is_empty = line.is_empty();
+            // First character at this point is typically a space, but could also be e.g. '\'
+            // from '\ No newline at end of file'.
+            let prefix = if line.is_empty() { "" } else { &line[..1] };
             painter.paint_buffered_lines();
             let line = prepare(&line, true, config);
             let syntax_style_sections = Painter::get_line_syntax_style_sections(
@@ -336,7 +338,7 @@ fn handle_hunk_line(painter: &mut Painter, line: &str, state: State, config: &Co
                 vec![vec![(style::NO_BACKGROUND_COLOR_STYLE_MODIFIER, &line)]],
                 &mut painter.output_buffer,
                 config,
-                if is_empty { "" } else { " " },
+                prefix,
                 style::NO_BACKGROUND_COLOR_STYLE_MODIFIER,
                 true,
             );
