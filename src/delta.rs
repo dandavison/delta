@@ -369,7 +369,7 @@ fn prepare(line: &str, append_newline: bool, config: &Config) -> String {
         } else {
             line.collect::<String>()
         };
-        format!("{}{}", output_line, terminator)
+        format!(" {}{}", output_line, terminator)
     } else {
         terminator.to_string()
     }

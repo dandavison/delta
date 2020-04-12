@@ -118,7 +118,14 @@ impl<'a> Painter<'a> {
             if prefix != "" {
                 ansi_strings.push(background_ansi_style.paint(prefix));
             }
-            for (style, text) in superimpose_style_sections(syntax_sections, diff_sections) {
+            let mut dropped_prefix = prefix == ""; // TODO: Hack
+            for (style, mut text) in superimpose_style_sections(syntax_sections, diff_sections) {
+                if !dropped_prefix {
+                    if text.len() > 0 {
+                        text.remove(0);
+                    }
+                    dropped_prefix = true;
+                }
                 if config.width.is_some() {
                     text_width += text.graphemes(true).count();
                 }
