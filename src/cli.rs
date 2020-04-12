@@ -97,6 +97,12 @@ pub struct Opt {
     /// apply syntax highlighting to unchanged and new lines only.
     pub highlight_removed: bool,
 
+    #[structopt(long = "color-only")]
+    /// Do not alter the input in any way other than applying colors. Equivalent to
+    /// `--keep-plus-minus-markers --width variable --tabs 0 --commit-style plain
+    ///  --file-style plain --hunk-style plain`.
+    pub color_only: bool,
+
     #[structopt(long = "keep-plus-minus-markers")]
     /// Prefix added/removed lines with a +/- character, respectively, exactly as git does. The
     /// default behavior is to output a space character in place of these markers.
