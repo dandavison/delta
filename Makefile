@@ -6,13 +6,7 @@ lint:
 
 test:
 	cargo test
-	bash -c "diff -u <(git log -p | cut -c 2-) \
-                     <(git log -p | delta --width variable \
-                                          --tabs 0 \
-                                          --commit-style plain \
-                                          --file-style plain \
-                                          --hunk-style plain \
-                                  | ansifilter | cut -c 2-)"
+	bash -c "diff -u <(git log -p) <(git log -p | delta --color-only | ansifilter)"
 
 release:
 	@make -f release.Makefile release

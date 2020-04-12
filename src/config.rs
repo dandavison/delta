@@ -18,6 +18,8 @@ pub struct Config<'a> {
     pub minus_emph_style_modifier: StyleModifier,
     pub plus_style_modifier: StyleModifier,
     pub plus_emph_style_modifier: StyleModifier,
+    pub minus_line_marker: &'a str,
+    pub plus_line_marker: &'a str,
     pub highlight_removed: bool,
     pub commit_style: cli::SectionStyle,
     pub commit_color: Color,
@@ -44,6 +46,30 @@ pub fn get_config<'a>(
     width: Option<usize>,
     paging_mode: PagingMode,
 ) -> Config<'a> {
+    // Implement --color-only
+    let keep_plus_minus_markers = if opt.color_only {
+        true
+    } else {
+        opt.keep_plus_minus_markers
+    };
+    let width = if opt.color_only { None } else { width };
+    let tab_width = if opt.color_only { 0 } else { opt.tab_width };
+    let commit_style = if opt.color_only {
+        cli::SectionStyle::Plain
+    } else {
+        opt.commit_style
+    };
+    let file_style = if opt.color_only {
+        cli::SectionStyle::Plain
+    } else {
+        opt.file_style
+    };
+    let hunk_style = if opt.color_only {
+        cli::SectionStyle::Plain
+    } else {
+        opt.hunk_style
+    };
+
     let theme_name_from_bat_pager = env::get_env_var("BAT_THEME");
     let (is_light_mode, theme_name) = get_is_light_mode_and_theme_name(
         opt.theme.as_ref(),
@@ -102,6 +128,9 @@ pub fn get_config<'a>(
         font_style: None,
     };
 
+    let minus_line_marker = if keep_plus_minus_markers { "-" } else { " " };
+    let plus_line_marker = if keep_plus_minus_markers { "+" } else { " " };
+
     Config {
         theme,
         theme_name,
@@ -111,16 +140,18 @@ pub fn get_config<'a>(
         plus_style_modifier,
         plus_emph_style_modifier,
         highlight_removed: opt.highlight_removed,
-        commit_style: opt.commit_style,
+        minus_line_marker,
+        plus_line_marker,
+        commit_style,
         commit_color: color_from_rgb_or_ansi_code(&opt.commit_color),
-        file_style: opt.file_style,
+        file_style,
         file_color: color_from_rgb_or_ansi_code(&opt.file_color),
-        hunk_style: opt.hunk_style,
+        hunk_style,
         hunk_color: color_from_rgb_or_ansi_code(&opt.hunk_color),
         true_color,
         terminal_width,
         width,
-        tab_width: opt.tab_width,
+        tab_width,
         syntax_set,
         no_style: style::get_no_style(),
         max_buffered_lines: 32,
