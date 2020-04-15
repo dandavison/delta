@@ -86,10 +86,10 @@ make_deb() {
     esac
     version=${TRAVIS_TAG#v}
     if [[ $TARGET = *musl* ]]; then
-      dpkgname=$PROJECT_NAME-musl
+      dpkgname=$PACKAGE_NAME-musl
       conflictname=$PROJECT_NAME
     else
-      dpkgname=$PROJECT_NAME
+      dpkgname=$PACKAGE_NAME
       conflictname=$PROJECT_NAME-musl
     fi
 

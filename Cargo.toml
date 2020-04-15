@@ -9,18 +9,21 @@ homepage = "https://github.com/dandavison/delta"
 license = "MIT"
 readme = "README.md"
 repository = "https://github.com/dandavison/delta"
-version = "0.0.14"
+version = "0.0.17"
 
 [[bin]]
 name = "delta"
 path = "src/main.rs"
 
 [dependencies]
+ansi_colours = "1.0.1"
 ansi_term = "0.11.0"
 atty = "0.2.13"
 box_drawing = "0.1.2"
 console = "0.7.7"
+dirs = "2.0"
 itertools = "0.8.0"
+lazy_static = "1.4"
 regex = "1.2.1"
 shell-words = "0.1.0"
 structopt = "0.2.18"

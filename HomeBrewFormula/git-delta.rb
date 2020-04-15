@@ -1,14 +1,14 @@
 class GitDelta < Formula
-  version "0.0.14"
+  version "0.0.17"
   desc "A syntax-highlighting pager for git"
   homepage "https://github.com/dandavison/delta"
 
   if OS.mac?
       url "https://github.com/dandavison/delta/releases/download/#{version}/delta-#{version}-x86_64-apple-darwin.tar.gz"
-      sha256 "d750b3b9dd405b5554c1579b5dad41cecafe81eb539c009ed5175431637b431c"
+      sha256 "6f21d905a747ec53568f6e3a07e53988964cb206d32c9e84090131ef91c1e3fa"
   elsif OS.linux?
       url "https://github.com/dandavison/delta/releases/download/#{version}/delta-#{version}-x86_64-unknown-linux-musl.tar.gz"
-      sha256 "3ebd9bf761b0e408fb64f00e50dd79a3c0276fb05212e49abef22b2da65cd35f"
+      sha256 "a3c1cb56a4fbf2e6d99f1e2c802814321f4ac38edc4e235d9ffddb21adeb8a75"
   end
 
   conflicts_with "delta"

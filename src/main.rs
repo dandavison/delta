@@ -43,11 +43,11 @@ fn main() -> std::io::Result<()> {
     if opt.list_languages {
         list_languages()?;
         process::exit(0);
-    } else if opt.list_themes {
-        list_themes()?;
+    } else if opt.list_theme_names {
+        list_theme_names()?;
         process::exit(0);
-    } else if opt.compare_themes {
-        compare_themes(&assets)?;
+    } else if opt.list_themes {
+        list_themes(&assets)?;
         process::exit(0);
     }
 
@@ -58,7 +58,7 @@ fn main() -> std::io::Result<()> {
         process::exit(0);
     }
 
-    let mut output_type = OutputType::from_mode(PagingMode::QuitIfOneScreen, None).unwrap();
+    let mut output_type = OutputType::from_mode(config.paging_mode, None).unwrap();
     let mut writer = output_type.handle().unwrap();
 
     if let Err(error) = delta(
@@ -82,14 +82,26 @@ fn show_background_colors(config: &config::Config) {
          --minus-emph-color=\"{minus_emph_color}\" \
          --plus-color=\"{plus_color}\" \
          --plus-emph-color=\"{plus_emph_color}\"",
-        minus_color = color_to_hex(config.minus_style_modifier.background.unwrap()),
-        minus_emph_color = color_to_hex(config.minus_emph_style_modifier.background.unwrap()),
-        plus_color = color_to_hex(config.plus_style_modifier.background.unwrap()),
-        plus_emph_color = color_to_hex(config.plus_emph_style_modifier.background.unwrap()),
+        minus_color = get_painted_rgb_string(
+            config.minus_style_modifier.background.unwrap(),
+            config.true_color
+        ),
+        minus_emph_color = get_painted_rgb_string(
+            config.minus_emph_style_modifier.background.unwrap(),
+            config.true_color
+        ),
+        plus_color = get_painted_rgb_string(
+            config.plus_style_modifier.background.unwrap(),
+            config.true_color
+        ),
+        plus_emph_color = get_painted_rgb_string(
+            config.plus_emph_style_modifier.background.unwrap(),
+            config.true_color
+        ),
     )
 }
 
-fn color_to_hex(color: Color) -> String {
+fn get_painted_rgb_string(color: Color, true_color: bool) -> String {
     let mut string = String::new();
     let style = Style {
         foreground: style::NO_COLOR,
@@ -97,30 +109,33 @@ fn color_to_hex(color: Color) -> String {
         font_style: FontStyle::empty(),
     };
     paint::paint_text(
-        &format!("#{:x?}{:x?}{:x?}", color.r, color.g, color.b),
+        &format!("#{:02x?}{:02x?}{:02x?}", color.r, color.g, color.b),
         style,
         &mut string,
-    )
-    .unwrap();
+        true_color,
+    );
     string.push_str("\x1b[0m"); // reset
     string
 }
 
-fn compare_themes(assets: &HighlightingAssets) -> std::io::Result<()> {
+fn list_themes(assets: &HighlightingAssets) -> std::io::Result<()> {
     let opt = cli::Opt::from_args();
     let mut input = String::new();
     if atty::is(atty::Stream::Stdin) {
         input = "\
-diff --git a/tests/data/hello.c b/tests/data/hello.c
-index 541e930..e23bef1 100644
---- a/tests/data/hello.c
-+++ b/tests/data/hello.c
+diff --git a/example.rs b/example.rs
+index f38589a..0f1bb83 100644
+--- a/example.rs
++++ b/example.rs
 @@ -1,5 +1,5 @@
- #include <stdio.h>
-
- int main(int argc, char **argv) {
--    printf(\"Hello!\\n\");
-+    printf(\"Hello world!\\n\");
+-// Output the square of a number.
+-fn print_square(num: f64) {
+-    let result = f64::powf(num, 2.0);
+-    println!(\"The square of {:.2} is {:.2}.\", num, result);
++// Output the cube of a number.
++fn print_cube(num: f64) {
++    let result = f64::powf(num, 3.0);
++    println!(\"The cube of {:.2} is {:.2}.\", num, result);
  }"
         .to_string()
     } else {
@@ -160,7 +175,7 @@ index 541e930..e23bef1 100644
     Ok(())
 }
 
-pub fn list_themes() -> std::io::Result<()> {
+pub fn list_theme_names() -> std::io::Result<()> {
     let assets = HighlightingAssets::new();
     let themes = &assets.theme_set.themes;
     let stdout = io::stdout();

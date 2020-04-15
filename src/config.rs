@@ -1,35 +1,75 @@
+use std::process;
 use std::str::FromStr;
 
 use syntect::highlighting::{Color, Style, StyleModifier, Theme, ThemeSet};
 use syntect::parsing::SyntaxSet;
 
+use crate::bat::output::PagingMode;
 use crate::cli;
 use crate::env;
+use crate::paint;
 use crate::style;
 
 pub struct Config<'a> {
     pub theme: Option<&'a Theme>,
     pub theme_name: String,
+    pub max_line_distance: f64,
     pub minus_style_modifier: StyleModifier,
     pub minus_emph_style_modifier: StyleModifier,
     pub plus_style_modifier: StyleModifier,
     pub plus_emph_style_modifier: StyleModifier,
+    pub minus_line_marker: &'a str,
+    pub plus_line_marker: &'a str,
+    pub highlight_removed: bool,
+    pub commit_style: cli::SectionStyle,
+    pub commit_color: Color,
+    pub file_style: cli::SectionStyle,
+    pub file_color: Color,
+    pub hunk_style: cli::SectionStyle,
+    pub hunk_color: Color,
     pub syntax_set: &'a SyntaxSet,
     pub terminal_width: usize,
+    pub true_color: bool,
     pub width: Option<usize>,
     pub tab_width: usize,
-    pub opt: &'a cli::Opt,
     pub no_style: Style,
     pub max_buffered_lines: usize,
+    pub paging_mode: PagingMode,
 }
 
 pub fn get_config<'a>(
     opt: &'a cli::Opt,
     syntax_set: &'a SyntaxSet,
     theme_set: &'a ThemeSet,
+    true_color: bool,
     terminal_width: usize,
     width: Option<usize>,
+    paging_mode: PagingMode,
 ) -> Config<'a> {
+    // Implement --color-only
+    let keep_plus_minus_markers = if opt.color_only {
+        true
+    } else {
+        opt.keep_plus_minus_markers
+    };
+    let width = if opt.color_only { None } else { width };
+    let tab_width = if opt.color_only { 0 } else { opt.tab_width };
+    let commit_style = if opt.color_only {
+        cli::SectionStyle::Plain
+    } else {
+        opt.commit_style
+    };
+    let file_style = if opt.color_only {
+        cli::SectionStyle::Plain
+    } else {
+        opt.file_style
+    };
+    let hunk_style = if opt.color_only {
+        cli::SectionStyle::Plain
+    } else {
+        opt.hunk_style
+    };
+
     let theme_name_from_bat_pager = env::get_env_var("BAT_THEME");
     let (is_light_mode, theme_name) = get_is_light_mode_and_theme_name(
         opt.theme.as_ref(),
@@ -45,11 +85,9 @@ pub fn get_config<'a>(
     };
 
     let minus_style_modifier = StyleModifier {
-        background: Some(color_from_arg(
+        background: Some(color_from_rgb_or_ansi_code_with_default(
             opt.minus_color.as_ref(),
-            is_light_mode,
-            style::LIGHT_THEME_MINUS_COLOR,
-            style::DARK_THEME_MINUS_COLOR,
+            style::get_minus_color_default(is_light_mode, true_color),
         )),
         foreground: if opt.highlight_removed {
             None
@@ -60,11 +98,9 @@ pub fn get_config<'a>(
     };
 
     let minus_emph_style_modifier = StyleModifier {
-        background: Some(color_from_arg(
+        background: Some(color_from_rgb_or_ansi_code_with_default(
             opt.minus_emph_color.as_ref(),
-            is_light_mode,
-            style::LIGHT_THEME_MINUS_EMPH_COLOR,
-            style::DARK_THEME_MINUS_EMPH_COLOR,
+            style::get_minus_emph_color_default(is_light_mode, true_color),
         )),
         foreground: if opt.highlight_removed {
             None
@@ -75,41 +111,51 @@ pub fn get_config<'a>(
     };
 
     let plus_style_modifier = StyleModifier {
-        background: Some(color_from_arg(
+        background: Some(color_from_rgb_or_ansi_code_with_default(
             opt.plus_color.as_ref(),
-            is_light_mode,
-            style::LIGHT_THEME_PLUS_COLOR,
-            style::DARK_THEME_PLUS_COLOR,
+            style::get_plus_color_default(is_light_mode, true_color),
         )),
         foreground: None,
         font_style: None,
     };
 
     let plus_emph_style_modifier = StyleModifier {
-        background: Some(color_from_arg(
+        background: Some(color_from_rgb_or_ansi_code_with_default(
             opt.plus_emph_color.as_ref(),
-            is_light_mode,
-            style::LIGHT_THEME_PLUS_EMPH_COLOR,
-            style::DARK_THEME_PLUS_EMPH_COLOR,
+            style::get_plus_emph_color_default(is_light_mode, true_color),
         )),
         foreground: None,
         font_style: None,
     };
 
+    let minus_line_marker = if keep_plus_minus_markers { "-" } else { " " };
+    let plus_line_marker = if keep_plus_minus_markers { "+" } else { " " };
+
     Config {
         theme,
         theme_name,
+        max_line_distance: opt.max_line_distance,
         minus_style_modifier,
         minus_emph_style_modifier,
         plus_style_modifier,
         plus_emph_style_modifier,
+        highlight_removed: opt.highlight_removed,
+        minus_line_marker,
+        plus_line_marker,
+        commit_style,
+        commit_color: color_from_rgb_or_ansi_code(&opt.commit_color),
+        file_style,
+        file_color: color_from_rgb_or_ansi_code(&opt.file_color),
+        hunk_style,
+        hunk_color: color_from_rgb_or_ansi_code(&opt.hunk_color),
+        true_color,
         terminal_width,
         width,
-        tab_width: opt.tab_width,
+        tab_width,
         syntax_set,
-        opt,
         no_style: style::get_no_style(),
         max_buffered_lines: 32,
+        paging_mode,
     }
 }
 
@@ -168,18 +214,25 @@ fn valid_theme_name_or_none(theme_name: Option<&String>, theme_set: &ThemeSet) -
     }
 }
 
-fn color_from_arg(
-    arg: Option<&String>,
-    is_light_mode: bool,
-    light_theme_default: Color,
-    dark_theme_default: Color,
-) -> Color {
-    arg.and_then(|s| Color::from_str(s).ok())
-        .unwrap_or_else(|| {
-            if is_light_mode {
-                light_theme_default
-            } else {
-                dark_theme_default
-            }
-        })
+fn color_from_rgb_or_ansi_code(s: &str) -> Color {
+    let die = || {
+        eprintln!("Invalid color: {}", s);
+        process::exit(1);
+    };
+    if s.starts_with("#") {
+        Color::from_str(s).unwrap_or_else(|_| die())
+    } else {
+        s.parse::<u8>()
+            .ok()
+            .and_then(paint::color_from_ansi_number)
+            .or_else(|| paint::color_from_ansi_name(s))
+            .unwrap_or_else(die)
+    }
+}
+
+fn color_from_rgb_or_ansi_code_with_default(arg: Option<&String>, default: Color) -> Color {
+    match arg {
+        Some(string) => color_from_rgb_or_ansi_code(&string),
+        None => default,
+    }
 }

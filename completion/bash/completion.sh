@@ -16,6 +16,7 @@ _delta() {
     shopt -s extglob
 
     local commands=(
+        --color-only
         --commit-style
         --compare-themes
         --dark
@@ -26,11 +27,13 @@ _delta() {
         --light
         --list-languages
         --list-themes
+        --list-theme-names
         --minus-color
         --minus-emph-color
         --plus-color
         --plus-emph-color
-        --show-colors
+        --keep-plus-minus-markers
+        --show-background-colors
         --theme
         --version
         --width

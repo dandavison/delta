@@ -1,6 +1,5 @@
 use std::io::Write;
 
-use ansi_term::Colour::{Blue, Yellow};
 use console::strip_ansi_codes;
 use unicode_segmentation::UnicodeSegmentation;
 
@@ -8,18 +7,25 @@ use crate::bat::assets::HighlightingAssets;
 use crate::cli;
 use crate::config::Config;
 use crate::draw;
-use crate::paint::Painter;
+use crate::paint::{self, Painter};
 use crate::parse;
 use crate::style;
 
 #[derive(Debug, PartialEq)]
 pub enum State {
     CommitMeta, // In commit metadata section
-    FileMeta,   // In diff metadata section, between commit metadata and first hunk
+    FileMeta,   // In diff metadata section, between (possible) commit metadata and first hunk
     HunkMeta,   // In hunk metadata line
     HunkZero,   // In hunk; unchanged line
     HunkMinus,  // In hunk; removed line
     HunkPlus,   // In hunk; added line
+    Unknown,
+}
+
+#[derive(Debug, PartialEq)]
+pub enum Source {
+    GitDiff,     // Coming from a `git diff` command
+    DiffUnified, // Coming from a `diff -u` command
     Unknown,
 }
 
@@ -35,14 +41,14 @@ impl State {
 // Possible transitions, with actions on entry:
 //
 //
-// | from \ to  | CommitMeta  | FileMeta    | HunkMeta    | HunkZero    | HunkMinus   | HunkPlus |
-// |------------+-------------+-------------+-------------+-------------+-------------+----------|
-// | CommitMeta | emit        | emit        |             |             |             |          |
-// | FileMeta   |             | emit        | emit        |             |             |          |
-// | HunkMeta   |             |             |             | emit        | push        | push     |
-// | HunkZero   | emit        | emit        | emit        | emit        | push        | push     |
-// | HunkMinus  | flush, emit | flush, emit | flush, emit | flush, emit | push        | push     |
-// | HunkPlus   | flush, emit | flush, emit | flush, emit | flush, emit | flush, push | push     |
+// | from \ to   | CommitMeta  | FileMeta    | HunkMeta    | HunkZero    | HunkMinus   | HunkPlus |
+// |-------------+-------------+-------------+-------------+-------------+-------------+----------|
+// | CommitMeta  | emit        | emit        |             |             |             |          |
+// | FileMeta    |             | emit        | emit        |             |             |          |
+// | HunkMeta    |             |             |             | emit        | push        | push     |
+// | HunkZero    | emit        | emit        | emit        | emit        | push        | push     |
+// | HunkMinus   | flush, emit | flush, emit | flush, emit | flush, emit | push        | push     |
+// | HunkPlus    | flush, emit | flush, emit | flush, emit | flush, emit | flush, push | push     |
 
 pub fn delta<I>(
     lines: I,
@@ -57,37 +63,78 @@ where
     let mut minus_file = "".to_string();
     let mut plus_file;
     let mut state = State::Unknown;
+    let mut source = Source::Unknown;
 
     for raw_line in lines {
         let line = strip_ansi_codes(&raw_line).to_string();
+        if source == Source::Unknown {
+            source = detect_source(&line);
+        }
         if line.starts_with("commit ") {
             painter.paint_buffered_lines();
             state = State::CommitMeta;
-            if config.opt.commit_style != cli::SectionStyle::Plain {
+            if config.commit_style != cli::SectionStyle::Plain {
                 painter.emit()?;
                 handle_commit_meta_header_line(&mut painter, &raw_line, config)?;
                 continue;
             }
-        } else if line.starts_with("diff --git ") {
+        } else if line.starts_with("diff ") {
             painter.paint_buffered_lines();
             state = State::FileMeta;
             painter.set_syntax(parse::get_file_extension_from_diff_line(&line));
-        } else if (line.starts_with("--- ") || line.starts_with("rename from "))
-            && config.opt.file_style != cli::SectionStyle::Plain
+        } else if (state == State::FileMeta || source == Source::DiffUnified)
+            // FIXME: For unified diff input, removal ("-") of a line starting with "--" (e.g. a
+            // Haskell or SQL comment) will be confused with the "---" file metadata marker.
+            && (line.starts_with("--- ") || line.starts_with("rename from "))
+            && config.file_style != cli::SectionStyle::Plain
         {
-            minus_file = parse::get_file_path_from_file_meta_line(&line);
+            if source == Source::DiffUnified {
+                state = State::FileMeta;
+                painter.set_syntax(parse::get_file_extension_from_marker_line(&line));
+            }
+            minus_file = parse::get_file_path_from_file_meta_line(&line, source == Source::GitDiff);
         } else if (line.starts_with("+++ ") || line.starts_with("rename to "))
-            && config.opt.file_style != cli::SectionStyle::Plain
+            && config.file_style != cli::SectionStyle::Plain
         {
-            plus_file = parse::get_file_path_from_file_meta_line(&line);
+            plus_file = parse::get_file_path_from_file_meta_line(&line, source == Source::GitDiff);
             painter.emit()?;
-            handle_file_meta_header_line(&mut painter, &minus_file, &plus_file, config)?;
+            handle_file_meta_header_line(
+                &mut painter,
+                &minus_file,
+                &plus_file,
+                config,
+                source == Source::DiffUnified,
+            )?;
         } else if line.starts_with("@@ ") {
             state = State::HunkMeta;
             painter.set_highlighter();
-            if config.opt.hunk_style != cli::SectionStyle::Plain {
+            if config.hunk_style != cli::SectionStyle::Plain {
                 painter.emit()?;
                 handle_hunk_meta_line(&mut painter, &line, config)?;
+                continue;
+            }
+        } else if source == Source::DiffUnified && line.starts_with("Only in ")
+            || line.starts_with("Submodule ")
+            || line.starts_with("Binary files ")
+        {
+            // Additional FileMeta cases:
+            //
+            // 1. When comparing directories with diff -u, if filenames match between the
+            //    directories, the files themselves will be compared. However, if an equivalent
+            //    filename is not present, diff outputs a single line (Only in...) starting
+            //    indicating that the file is present in only one of the directories.
+            //
+            // 2. Git diff emits lines describing submodule state such as "Submodule x/y/z contains
+            //    untracked content"
+            //
+            // See https://github.com/dandavison/delta/issues/60#issuecomment-557485242 for a
+            // proposal for more robust parsing logic.
+
+            state = State::FileMeta;
+            painter.paint_buffered_lines();
+            if config.file_style != cli::SectionStyle::Plain {
+                painter.emit()?;
+                handle_generic_file_meta_header_line(&mut painter, &raw_line, config)?;
                 continue;
             }
         } else if state.is_in_hunk() {
@@ -95,7 +142,8 @@ where
             painter.emit()?;
             continue;
         }
-        if state == State::FileMeta && config.opt.file_style != cli::SectionStyle::Plain {
+
+        if state == State::FileMeta && config.file_style != cli::SectionStyle::Plain {
             // The file metadata section is 4 lines. Skip them under non-plain file-styles.
             continue;
         } else {
@@ -109,12 +157,30 @@ where
     Ok(())
 }
 
+/// Try to detect what is producing the input for delta.
+///
+/// Currently can detect:
+/// * git diff
+/// * diff -u
+fn detect_source(line: &str) -> Source {
+    if line.starts_with("commit ") || line.starts_with("diff --git ") {
+        Source::GitDiff
+    } else if line.starts_with("diff -u ")
+        || line.starts_with("diff -U")
+        || line.starts_with("--- ")
+    {
+        Source::DiffUnified
+    } else {
+        Source::Unknown
+    }
+}
+
 fn handle_commit_meta_header_line(
     painter: &mut Painter,
     line: &str,
     config: &Config,
 ) -> std::io::Result<()> {
-    let draw_fn = match config.opt.commit_style {
+    let draw_fn = match config.commit_style {
         cli::SectionStyle::Box => draw::write_boxed_with_line,
         cli::SectionStyle::Underline => draw::write_underlined,
         cli::SectionStyle::Plain => panic!(),
@@ -123,33 +189,44 @@ fn handle_commit_meta_header_line(
         painter.writer,
         line,
         config.terminal_width,
-        Yellow.normal(),
+        config.commit_color,
         true,
+        config.true_color,
     )?;
     Ok(())
 }
 
+/// Construct file change line from minus and plus file and write with FileMeta styling.
 fn handle_file_meta_header_line(
     painter: &mut Painter,
     minus_file: &str,
     plus_file: &str,
     config: &Config,
+    comparing: bool,
 ) -> std::io::Result<()> {
-    let draw_fn = match config.opt.file_style {
+    let line = parse::get_file_change_description_from_file_paths(minus_file, plus_file, comparing);
+    handle_generic_file_meta_header_line(painter, &line, config)
+}
+
+/// Write `line` with FileMeta styling.
+fn handle_generic_file_meta_header_line(
+    painter: &mut Painter,
+    line: &str,
+    config: &Config,
+) -> std::io::Result<()> {
+    let draw_fn = match config.file_style {
         cli::SectionStyle::Box => draw::write_boxed_with_line,
         cli::SectionStyle::Underline => draw::write_underlined,
         cli::SectionStyle::Plain => panic!(),
     };
-    let ansi_style = Blue.normal();
     writeln!(painter.writer)?;
     draw_fn(
         painter.writer,
-        &ansi_style.paint(parse::get_file_change_description_from_file_paths(
-            minus_file, plus_file,
-        )),
+        &paint::paint_text_foreground(line, config.file_color, config.true_color),
         config.terminal_width,
-        ansi_style,
+        config.file_color,
         false,
+        config.true_color,
     )?;
     Ok(())
 }
@@ -159,14 +236,13 @@ fn handle_hunk_meta_line(
     line: &str,
     config: &Config,
 ) -> std::io::Result<()> {
-    let draw_fn = match config.opt.hunk_style {
+    let draw_fn = match config.hunk_style {
         cli::SectionStyle::Box => draw::write_boxed,
         cli::SectionStyle::Underline => draw::write_underlined,
         cli::SectionStyle::Plain => panic!(),
     };
-    let ansi_style = Blue.normal();
     let (raw_code_fragment, line_number) = parse::parse_hunk_metadata(&line);
-    let code_fragment = prepare(raw_code_fragment, config.tab_width, false);
+    let code_fragment = prepare(raw_code_fragment, false, config);
     if !code_fragment.is_empty() {
         let syntax_style_sections = Painter::get_line_syntax_style_sections(
             &code_fragment,
@@ -175,13 +251,14 @@ fn handle_hunk_meta_line(
             true,
         );
         Painter::paint_lines(
-            &mut painter.output_buffer,
             vec![syntax_style_sections],
             vec![vec![(
                 style::NO_BACKGROUND_COLOR_STYLE_MODIFIER,
                 &code_fragment,
             )]],
+            &mut painter.output_buffer,
             config,
+            "",
             style::NO_BACKGROUND_COLOR_STYLE_MODIFIER,
             false,
         );
@@ -190,12 +267,17 @@ fn handle_hunk_meta_line(
             painter.writer,
             &painter.output_buffer,
             config.terminal_width,
-            ansi_style,
+            config.hunk_color,
             false,
+            config.true_color,
         )?;
         painter.output_buffer.clear();
     }
-    writeln!(painter.writer, "\n{}", ansi_style.paint(line_number))?;
+    writeln!(
+        painter.writer,
+        "\n{}",
+        paint::paint_text_foreground(line_number, config.hunk_color, config.true_color)
+    )?;
     Ok(())
 }
 
@@ -219,20 +301,19 @@ fn handle_hunk_line(painter: &mut Painter, line: &str, state: State, config: &Co
             if state == State::HunkPlus {
                 painter.paint_buffered_lines();
             }
-            painter
-                .minus_lines
-                .push(prepare(&line, config.tab_width, true));
+            painter.minus_lines.push(prepare(&line, true, config));
             State::HunkMinus
         }
         Some('+') => {
-            painter
-                .plus_lines
-                .push(prepare(&line, config.tab_width, true));
+            painter.plus_lines.push(prepare(&line, true, config));
             State::HunkPlus
         }
         _ => {
+            // First character at this point is typically a space, but could also be e.g. '\'
+            // from '\ No newline at end of file'.
+            let prefix = if line.is_empty() { "" } else { &line[..1] };
             painter.paint_buffered_lines();
-            let line = prepare(&line, config.tab_width, true);
+            let line = prepare(&line, true, config);
             let syntax_style_sections = Painter::get_line_syntax_style_sections(
                 &line,
                 &mut painter.highlighter,
@@ -240,10 +321,11 @@ fn handle_hunk_line(painter: &mut Painter, line: &str, state: State, config: &Co
                 true,
             );
             Painter::paint_lines(
-                &mut painter.output_buffer,
                 vec![syntax_style_sections],
                 vec![vec![(style::NO_BACKGROUND_COLOR_STYLE_MODIFIER, &line)]],
+                &mut painter.output_buffer,
                 config,
+                prefix,
                 style::NO_BACKGROUND_COLOR_STYLE_MODIFIER,
                 true,
             );
@@ -257,19 +339,20 @@ fn handle_hunk_line(painter: &mut Painter, line: &str, state: State, config: &Co
 // Terminating with newline character is necessary for many of the sublime syntax definitions to
 // highlight correctly.
 // See https://docs.rs/syntect/3.2.0/syntect/parsing/struct.SyntaxSetBuilder.html#method.add_from_folder
-fn prepare(line: &str, tab_width: usize, append_newline: bool) -> String {
+fn prepare(line: &str, append_newline: bool, config: &Config) -> String {
     let terminator = if append_newline { "\n" } else { "" };
     if !line.is_empty() {
         let mut line = line.graphemes(true);
 
-        // The first column contains a -/+/space character, added by git. We skip it here and insert
-        // a replacement space when formatting the line below.
+        // The first column contains a -/+/space character, added by git. We drop it now, so that
+        // it is not present during syntax highlighting, and inject a replacement when emitting the
+        // line.
         line.next();
 
         // Expand tabs as spaces.
         // tab_width = 0 is documented to mean do not replace tabs.
-        let output_line = if tab_width > 0 {
-            let tab_replacement = " ".repeat(tab_width);
+        let output_line = if config.tab_width > 0 {
+            let tab_replacement = " ".repeat(config.tab_width);
             line.map(|s| if s == "\t" { &tab_replacement } else { s })
                 .collect::<String>()
         } else {
@@ -340,6 +423,7 @@ mod tests {
 
     #[test]
     fn test_theme_selection() {
+        #[derive(PartialEq)]
         enum Mode {
             Light,
             Dark,
@@ -405,6 +489,7 @@ mod tests {
             } else {
                 env::set_var("BAT_THEME", bat_theme_env_var);
             }
+            let is_true_color = true;
             let mut options = get_command_line_options();
             options.theme = theme_option;
             match mode_option {
@@ -430,31 +515,19 @@ mod tests {
             }
             assert_eq!(
                 config.minus_style_modifier.background.unwrap(),
-                match expected_mode {
-                    Mode::Light => style::LIGHT_THEME_MINUS_COLOR,
-                    Mode::Dark => style::DARK_THEME_MINUS_COLOR,
-                }
+                style::get_minus_color_default(expected_mode == Mode::Light, is_true_color)
             );
             assert_eq!(
                 config.minus_emph_style_modifier.background.unwrap(),
-                match expected_mode {
-                    Mode::Light => style::LIGHT_THEME_MINUS_EMPH_COLOR,
-                    Mode::Dark => style::DARK_THEME_MINUS_EMPH_COLOR,
-                }
+                style::get_minus_emph_color_default(expected_mode == Mode::Light, is_true_color)
             );
             assert_eq!(
                 config.plus_style_modifier.background.unwrap(),
-                match expected_mode {
-                    Mode::Light => style::LIGHT_THEME_PLUS_COLOR,
-                    Mode::Dark => style::DARK_THEME_PLUS_COLOR,
-                }
+                style::get_plus_color_default(expected_mode == Mode::Light, is_true_color)
             );
             assert_eq!(
                 config.plus_emph_style_modifier.background.unwrap(),
-                match expected_mode {
-                    Mode::Light => style::LIGHT_THEME_PLUS_EMPH_COLOR,
-                    Mode::Dark => style::DARK_THEME_PLUS_EMPH_COLOR,
-                }
+                style::get_plus_emph_color_default(expected_mode == Mode::Light, is_true_color)
             );
         }
     }
@@ -489,7 +562,7 @@ mod tests {
     fn paint_text(input: &str, style_modifier: StyleModifier, config: &Config) -> String {
         let mut output = String::new();
         let style = config.no_style.apply(style_modifier);
-        paint::paint_text(&input, style, &mut output).unwrap();
+        paint::paint_text(&input, style, &mut output, config.true_color);
         output
     }
 
@@ -524,20 +597,175 @@ mod tests {
             minus_emph_color: None,
             plus_color: None,
             plus_emph_color: None,
+            color_only: false,
+            keep_plus_minus_markers: false,
             theme: None,
             highlight_removed: false,
             commit_style: cli::SectionStyle::Plain,
+            commit_color: "Yellow".to_string(),
             file_style: cli::SectionStyle::Underline,
+            file_color: "Blue".to_string(),
             hunk_style: cli::SectionStyle::Box,
+            hunk_color: "blue".to_string(),
+            true_color: "always".to_string(),
             width: Some("variable".to_string()),
+            paging_mode: "auto".to_string(),
             tab_width: 4,
             show_background_colors: false,
             list_languages: false,
+            list_theme_names: false,
             list_themes: false,
-            compare_themes: false,
             max_line_distance: 0.3,
         }
     }
+
+    #[test]
+    fn test_diff_unified_two_files() {
+        let options = get_command_line_options();
+        let output = strip_ansi_codes(&run_delta(DIFF_UNIFIED_TWO_FILES, &options)).to_string();
+        let mut lines = output.split('\n');
+
+        // Header
+        assert_eq!(lines.nth(1).unwrap(), "comparing: one.rs ⟶   src/two.rs");
+        // Line
+        assert_eq!(lines.nth(2).unwrap(), "5");
+        // Change
+        assert_eq!(lines.nth(2).unwrap(), " println!(\"Hello ruster\");");
+        // Next chunk
+        assert_eq!(lines.nth(2).unwrap(), "43");
+        // Unchanged in second chunk
+        assert_eq!(lines.nth(2).unwrap(), " Unchanged");
+    }
+
+    #[test]
+    fn test_diff_unified_two_directories() {
+        let options = get_command_line_options();
+        let output =
+            strip_ansi_codes(&run_delta(DIFF_UNIFIED_TWO_DIRECTORIES, &options)).to_string();
+        let mut lines = output.split('\n');
+
+        // Header
+        assert_eq!(
+            lines.nth(1).unwrap(),
+            "comparing: a/different ⟶   b/different"
+        );
+        // Line number
+        assert_eq!(lines.nth(2).unwrap(), "1");
+        // Change
+        assert_eq!(lines.nth(2).unwrap(), " This is different from b");
+        // File uniqueness
+        assert_eq!(lines.nth(2).unwrap(), "Only in a/: just_a");
+        // FileMeta divider
+        assert!(lines.next().unwrap().starts_with("───────"));
+        // Next hunk
+        assert_eq!(
+            lines.nth(4).unwrap(),
+            "comparing: a/more_difference ⟶   b/more_difference"
+        );
+    }
+
+    #[test]
+    #[ignore] // Ideally, delta would make this test pass. See #121.
+    fn test_delta_ignores_non_diff_input() {
+        let options = get_command_line_options();
+        let output = strip_ansi_codes(&run_delta(NOT_A_DIFF_OUTPUT, &options)).to_string();
+        assert_eq!(output, NOT_A_DIFF_OUTPUT.to_owned() + "\n");
+    }
+
+    #[test]
+    fn test_delta_paints_diff_when_there_is_unrecognized_initial_content() {
+        for input in vec![
+            DIFF_WITH_UNRECOGNIZED_PRECEDING_MATERIAL_1,
+            DIFF_WITH_UNRECOGNIZED_PRECEDING_MATERIAL_2,
+        ] {
+            let mut options = get_command_line_options();
+            options.color_only = true;
+            let output = run_delta(input, &options);
+            assert_eq!(
+                strip_ansi_codes(&output).to_string(),
+                input.to_owned() + "\n"
+            );
+            assert_ne!(output, input.to_owned() + "\n");
+        }
+    }
+
+    #[test]
+    fn test_submodule_contains_untracked_content() {
+        let options = get_command_line_options();
+        let output = strip_ansi_codes(&run_delta(
+            SUBMODULE_CONTAINS_UNTRACKED_CONTENT_INPUT,
+            &options,
+        ))
+        .to_string();
+        assert!(output.contains("\nSubmodule x/y/z contains untracked content\n"));
+    }
+
+    #[test]
+    fn test_triple_dash_at_beginning_of_line_in_code() {
+        let options = get_command_line_options();
+        let output = strip_ansi_codes(&run_delta(
+            TRIPLE_DASH_AT_BEGINNING_OF_LINE_IN_CODE,
+            &options,
+        ))
+        .to_string();
+        assert!(
+            output.contains(" -- instance (Category p, Category q) => Category (p ∧ q) where\n")
+        );
+    }
+
+    #[test]
+    fn test_binary_files_differ() {
+        let options = get_command_line_options();
+        let output = strip_ansi_codes(&run_delta(BINARY_FILES_DIFFER, &options)).to_string();
+        assert!(output.contains("Binary files /dev/null and b/foo differ\n"));
+    }
+
+    #[test]
+    fn test_diff_in_diff() {
+        let options = get_command_line_options();
+        let output = strip_ansi_codes(&run_delta(DIFF_IN_DIFF, &options)).to_string();
+        assert!(output.contains("\n ---\n"));
+        assert!(output.contains("\n Subject: [PATCH] Init\n"));
+    }
+
+    const DIFF_IN_DIFF: &str = "\
+diff --git a/0001-Init.patch b/0001-Init.patch
+deleted file mode 100644
+index 5e35a67..0000000
+--- a/0001-Init.patch
++++ /dev/null
+@@ -1,22 +0,0 @@
+-From d3a8fe3e62be67484729c19e9d8db071f8b1d60c Mon Sep 17 00:00:00 2001
+-From: Maximilian Bosch <maximilian@mbosch.me>
+-Date: Sat, 28 Dec 2019 15:51:48 +0100
+-Subject: [PATCH] Init
+-
+----
+- README.md | 3 +++
+- 1 file changed, 3 insertions(+)
+- create mode 100644 README.md
+-
+-diff --git a/README.md b/README.md
+-new file mode 100644
+-index 0000000..2e6ca05
+---- /dev/null
+-+++ b/README.md
+-@@ -0,0 +1,3 @@
+-+# Test
+-+
+-+abc
+---
+-2.23.1
+-
+diff --git a/README.md b/README.md
+index 2e6ca05..8ae0569 100644
+--- a/README.md
++++ b/README.md
+@@ -1,3 +1 @@
+ # Test
+-
+-abc
+";
 
     const ADDED_FILE_INPUT: &str = "\
 commit d28dc1ac57e53432567ec5bf19ad49ff90f0f7a5
@@ -585,5 +813,185 @@ diff --git a/a.py b/b.py
 similarity index 100%
 rename from a.py
 rename to b.py
+";
+
+    const DIFF_UNIFIED_TWO_FILES: &str = "\
+--- one.rs	2019-11-20 06:16:08.000000000 +0100
++++ src/two.rs	2019-11-18 18:41:16.000000000 +0100
+@@ -5,3 +5,3 @@
+ println!(\"Hello world\");
+-println!(\"Hello rust\");
++println!(\"Hello ruster\");
+
+@@ -43,6 +43,6 @@
+ // Some more changes
+-Change one
+ Unchanged
++Change two
+ Unchanged
+-Change three
++Change four
+ Unchanged
+";
+
+    const DIFF_UNIFIED_TWO_DIRECTORIES: &str = "\
+diff -u a/different b/different
+--- a/different	2019-11-20 06:47:56.000000000 +0100
++++ b/different	2019-11-20 06:47:56.000000000 +0100
+@@ -1,3 +1,3 @@
+ A simple file for testing
+ the diff command in unified mode
+-This is different from b
++This is different from a
+Only in a/: just_a
+Only in b/: just_b
+--- a/more_difference	2019-11-20 06:47:56.000000000 +0100
++++ b/more_difference	2019-11-20 06:47:56.000000000 +0100
+@@ -1,3 +1,3 @@
+ Another different file
+ with a name that start with 'm' making it come after the 'Only in'
+-This is different from b
++This is different from a
+";
+
+    const NOT_A_DIFF_OUTPUT: &str = "\
+Hello world
+This is a regular file that contains:
+--- some/file/here 06:47:56.000000000 +0100
++++ some/file/there 06:47:56.000000000 +0100
+ Some text here
+-Some text with a minus
++Some text with a plus
+";
+
+    const SUBMODULE_CONTAINS_UNTRACKED_CONTENT_INPUT: &str = "\
+--- a
++++ b
+@@ -2,3 +2,4 @@
+ x
+ y
+ z
+-a
++b
+ z
+ y
+ x
+Submodule x/y/z contains untracked content
+";
+
+    const TRIPLE_DASH_AT_BEGINNING_OF_LINE_IN_CODE: &str = "\
+commit d481eaa8a249c6daecb05a97e8af1b926b0c02be
+Author: FirstName LastName <me@gmail.com>
+Date:   Thu Feb 6 14:02:49 2020 -0500
+
+    Reorganize
+
+diff --git a/src/Category/Coproduct.hs b/src/Category/Coproduct.hs
+deleted file mode 100644
+index ba28bfd..0000000
+--- a/src/Category/Coproduct.hs
++++ /dev/null
+@@ -1,18 +0,0 @@
+-{-# LANGUAGE InstanceSigs #-}
+-module Category.Coproduct where
+-
+-import Prelude hiding ((.), id)
+-
+-import Control.Category
+-
+-import Category.Hacks
+-
+--- data (p ∨ q) (a :: (k, k)) (b :: (k, k)) where
+---   (:<:) :: p a b -> (∨) p q '(a, c) '(b, d)
+---   (:>:) :: q c d -> (∨) p q '(a, c) '(b, d)
+---
+--- instance (Category p, Category q) => Category (p ∧ q) where
+---   (p1 :×: q1) . (p2 :×: q2) = (p1 . p2) :×: (q1 . q2)
+---
+---   id :: forall a. (p ∧ q) a a
+---   id | IsTup <- isTup @a  = id :×: id
+";
+
+    const BINARY_FILES_DIFFER: &str = "
+commit ad023698217b086f1bef934be62b4523c95f64d9 (HEAD -> master)
+Author: Dan Davison <dandavison7@gmail.com>
+Date:   Wed Feb 12 08:05:53 2020 -0600
+
+    .
+
+diff --git a/foo b/foo
+new file mode 100644
+index 0000000..b572921
+Binary files /dev/null and b/foo differ
+";
+
+    // git --no-pager show -p --cc --format=  --numstat --stat
+    // #121
+    const DIFF_WITH_UNRECOGNIZED_PRECEDING_MATERIAL_1: &str = "
+1	5	src/delta.rs
+ src/delta.rs | 6 +-----
+ 1 file changed, 1 insertion(+), 5 deletions(-)
+
+diff --git a/src/delta.rs b/src/delta.rs
+index da10d2b..39cff42 100644
+--- a/src/delta.rs
++++ b/src/delta.rs
+@@ -67,11 +67,6 @@ where
+     let source = detect_source(&mut lines_peekable);
+
+     for raw_line in lines_peekable {
+-        if source == Source::Unknown {
+-            writeln!(painter.writer, \"{}\", raw_line)?;
+-            continue;
+-        }
+-
+         let line = strip_ansi_codes(&raw_line).to_string();
+         if line.starts_with(\"commit \") {
+             painter.paint_buffered_lines();
+@@ -674,6 +669,7 @@ mod tests {
+     }
+
+     #[test]
++    #[ignore] // Ideally, delta would make this test pass.
+     fn test_delta_ignores_non_diff_input() {
+         let options = get_command_line_options();
+         let output = strip_ansi_codes(&run_delta(NOT_A_DIFF_OUTPUT, &options)).to_string();
+";
+
+    // git stash show --stat --patch
+    // #100
+    const DIFF_WITH_UNRECOGNIZED_PRECEDING_MATERIAL_2: &str = "
+ src/cli.rs    | 2 ++
+ src/config.rs | 4 +++-
+ 2 files changed, 5 insertions(+), 1 deletion(-)
+
+diff --git a/src/cli.rs b/src/cli.rs
+index bd5f1d5..55ba315 100644
+--- a/src/cli.rs
++++ b/src/cli.rs
+@@ -286,6 +286,8 @@ pub fn process_command_line_arguments<'a>(
+         }
+     };
+
++    println!(\"true_color is {}\", true_color);
++
+     config::get_config(
+         opt,
+         &assets.syntax_set,
+diff --git a/src/config.rs b/src/config.rs
+index cba6064..ba1a4de 100644
+--- a/src/config.rs
++++ b/src/config.rs
+@@ -181,7 +181,9 @@ fn color_from_rgb_or_ansi_code(s: &str) -> Color {
+         process::exit(1);
+     };
+     if s.starts_with(\"#\") {
+-        Color::from_str(s).unwrap_or_else(|_| die())
++        let col = Color::from_str(s).unwrap_or_else(|_| die());
++        println!(\"{} => {} {} {} {}\", s, col.r, col.g, col.b, col.a);
++        col
+     } else {
+         s.parse::<u8>()
+             .ok()
 ";
 }

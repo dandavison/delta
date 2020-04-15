@@ -1,11 +1,14 @@
 use std::io::Write;
+use std::str::FromStr;
 
+use ansi_term;
 use syntect::easy::HighlightLines;
-use syntect::highlighting::{Style, StyleModifier};
+use syntect::highlighting::{Color, Style, StyleModifier};
 use syntect::parsing::{SyntaxReference, SyntaxSet};
 use unicode_width::UnicodeWidthStr;
 
 use crate::bat::assets::HighlightingAssets;
+use crate::bat::terminal::to_ansi_color;
 use crate::config;
 use crate::edits;
 use crate::paint::superimpose_style_sections::superimpose_style_sections;
@@ -70,20 +73,22 @@ impl<'a> Painter<'a> {
         // TODO: lines and style sections contain identical line text
         if !self.minus_lines.is_empty() {
             Painter::paint_lines(
-                &mut self.output_buffer,
                 minus_line_syntax_style_sections,
                 minus_line_diff_style_sections,
+                &mut self.output_buffer,
                 self.config,
+                self.config.minus_line_marker,
                 self.config.minus_style_modifier,
                 true,
             );
         }
         if !self.plus_lines.is_empty() {
             Painter::paint_lines(
-                &mut self.output_buffer,
                 plus_line_syntax_style_sections,
                 plus_line_diff_style_sections,
+                &mut self.output_buffer,
                 self.config,
+                self.config.plus_line_marker,
                 self.config.plus_style_modifier,
                 true,
             );
@@ -95,44 +100,55 @@ impl<'a> Painter<'a> {
     /// Superimpose background styles and foreground syntax
     /// highlighting styles, and write colored lines to output buffer.
     pub fn paint_lines(
-        output_buffer: &mut String,
         syntax_style_sections: Vec<Vec<(Style, &str)>>,
         diff_style_sections: Vec<Vec<(StyleModifier, &str)>>,
+        output_buffer: &mut String,
         config: &config::Config,
+        prefix: &str,
         background_style_modifier: StyleModifier,
         should_trim_newline_and_right_pad: bool,
     ) {
-        use std::fmt::Write;
+        let background_style = config.no_style.apply(background_style_modifier);
+        let background_ansi_style = to_ansi_style(background_style, config.true_color);
         for (syntax_sections, diff_sections) in
             syntax_style_sections.iter().zip(diff_style_sections.iter())
         {
             let mut text_width = 0;
-            for (style, text) in superimpose_style_sections(syntax_sections, diff_sections) {
-                paint_text(&text, style, output_buffer).unwrap();
+            let mut ansi_strings = Vec::new();
+            if prefix != "" {
+                ansi_strings.push(background_ansi_style.paint(prefix));
+            }
+            let mut dropped_prefix = prefix == ""; // TODO: Hack
+            for (style, mut text) in superimpose_style_sections(syntax_sections, diff_sections) {
+                if !dropped_prefix {
+                    if text.len() > 0 {
+                        text.remove(0);
+                    }
+                    dropped_prefix = true;
+                }
                 if config.width.is_some() {
                     text_width += UnicodeWidthStr::width(text.as_str());
                 }
+                ansi_strings.push(to_ansi_style(style, config.true_color).paint(text));
             }
+            let mut line = ansi_term::ANSIStrings(&ansi_strings).to_string();
             if should_trim_newline_and_right_pad {
-                // Remove the terminating newline whose presence was necessary for the syntax
-                // highlighter to work correctly.
-                output_buffer.truncate(output_buffer.len() - 1);
                 // Right pad with background-highlighted white space.
                 match config.width {
                     Some(width) if width > text_width => {
                         // Right pad to requested width with spaces.
-                        let background_style = config.no_style.apply(background_style_modifier);
                         paint_text(
                             &" ".repeat(width - text_width),
                             background_style,
-                            output_buffer,
-                        )
-                        .unwrap();
+                            &mut line,
+                            config.true_color,
+                        );
                     }
                     _ => (),
                 }
             }
-            writeln!(output_buffer).unwrap();
+            output_buffer.push_str(&line);
+            output_buffer.push_str("\n");
         }
     }
 
@@ -156,7 +172,7 @@ impl<'a> Painter<'a> {
                 &line,
                 highlighter,
                 &config,
-                config.opt.highlight_removed,
+                config.highlight_removed,
             ));
         }
         let mut plus_line_sections = Vec::new();
@@ -200,36 +216,70 @@ impl<'a> Painter<'a> {
             config.minus_emph_style_modifier,
             config.plus_style_modifier,
             config.plus_emph_style_modifier,
-            config.opt.max_line_distance,
+            config.max_line_distance,
         )
     }
 }
 
-/// Write section text to buffer with color escape codes.
-pub fn paint_text(text: &str, style: Style, output_buffer: &mut String) -> std::fmt::Result {
-    use std::fmt::Write;
+pub fn to_ansi_style(style: Style, true_color: bool) -> ansi_term::Style {
+    let mut ansi_style = ansi_term::Style::new();
+    if style.background != style::NO_COLOR {
+        ansi_style = ansi_style.on(to_ansi_color(style.background, true_color));
+    }
+    if style.foreground != style::NO_COLOR {
+        ansi_style = ansi_style.fg(to_ansi_color(style.foreground, true_color));
+    }
+    ansi_style
+}
 
+/// Write section text to buffer with shell escape codes specifying foreground and background color.
+pub fn paint_text(text: &str, style: Style, output_buffer: &mut String, true_color: bool) {
     if text.is_empty() {
-        return Ok(());
+        return;
     }
+    let ansi_style = to_ansi_style(style, true_color);
+    output_buffer.push_str(&ansi_style.paint(text).to_string());
+}
 
-    match style.background {
-        style::NO_COLOR => (),
-        _ => write!(
-            output_buffer,
-            "\x1b[48;2;{};{};{}m",
-            style.background.r, style.background.g, style.background.b
-        )?,
+/// Return text together with shell escape codes specifying the foreground color.
+pub fn paint_text_foreground(text: &str, color: Color, true_color: bool) -> String {
+    to_ansi_color(color, true_color).paint(text).to_string()
+}
+
+// See
+// https://en.wikipedia.org/wiki/ANSI_escape_code#8-bit
+pub fn ansi_color_name_to_number(name: &str) -> Option<u8> {
+    match name.to_lowercase().as_ref() {
+        "black" => Some(0),
+        "red" => Some(1),
+        "green" => Some(2),
+        "yellow" => Some(3),
+        "blue" => Some(4),
+        "magenta" => Some(5),
+        "purple" => Some(5),
+        "cyan" => Some(6),
+        "white" => Some(7),
+        "bright-black" => Some(8),
+        "bright-red" => Some(9),
+        "bright-green" => Some(10),
+        "bright-yellow" => Some(11),
+        "bright-blue" => Some(12),
+        "bright-magenta" => Some(13),
+        "bright-purple" => Some(13),
+        "bright-cyan" => Some(14),
+        "bright-white" => Some(15),
+        _ => None,
     }
-    match style.foreground {
-        style::NO_COLOR => write!(output_buffer, "{}", text)?,
-        _ => write!(
-            output_buffer,
-            "\x1b[38;2;{};{};{}m{}",
-            style.foreground.r, style.foreground.g, style.foreground.b, text
-        )?,
-    };
-    Ok(())
+}
+
+pub fn color_from_ansi_name(name: &str) -> Option<Color> {
+    ansi_color_name_to_number(name).and_then(color_from_ansi_number)
+}
+
+/// Convert 8-bit ANSI code to #RGBA string with ANSI code in red channel and 0 in alpha channel.
+// See https://github.com/sharkdp/bat/pull/543
+pub fn color_from_ansi_number(n: u8) -> Option<Color> {
+    Color::from_str(&format!("#{:02x}000000", n)).ok()
 }
 
 mod superimpose_style_sections {
@@ -290,6 +340,14 @@ mod superimpose_style_sections {
                 }
                 current_string.push(*c);
             }
+
+            // TODO: This is not the ideal location for the following code.
+            if current_string.ends_with("\n") {
+                // Remove the terminating newline whose presence was necessary for the syntax
+                // highlighter to work correctly.
+                current_string.truncate(current_string.len() - 1);
+            }
+
             coalesced.push((*current_style, current_string));
         }
         coalesced
@@ -354,5 +412,4 @@ mod superimpose_style_sections {
             assert_eq!(superimpose(pairs), vec![(SUPERIMPOSED_STYLE, 'a')]);
         }
     }
-
 }
