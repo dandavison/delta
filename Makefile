@@ -4,9 +4,13 @@ build:
 lint:
 	cargo clippy
 
-test:
+test: unit-test end-to-end-test
+
+unit-test:
 	cargo test
-	bash -c "diff -u <(git log -p) <(git log -p | delta --color-only | ansifilter)"
+
+end-to-end-test: build
+	bash -c "diff -u <(git log -p) <(git log -p | target/release/delta --color-only | ansifilter)"
 
 release:
 	@make -f release.Makefile release
@@ -22,3 +26,5 @@ hash:
 
 chronologer:
 	chronologer performance/chronologer.yaml
+
+.PHONY: build lint test unit-test end-to-end-test release vesion hash chronologer
