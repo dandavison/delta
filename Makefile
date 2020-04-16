@@ -24,7 +24,12 @@ hash:
 	printf "delta-$$version-x86_64-apple-darwin.tar.gz %s\n" $$(curl -sL https://github.com/dandavison/delta/releases/download/$$version/delta-$$version-x86_64-apple-darwin.tar.gz | sha256sum -) && \
 	printf "delta-$$version-x86_64-unknown-linux-musl.tar.gz %s\n" $$(curl -sL https://github.com/dandavison/delta/releases/download/$$version/delta-$$version-x86_64-unknown-linux-musl.tar.gz | sha256sum -)
 
+BENCHMARK_INPUT_FILE = /tmp/delta-benchmark-input.gitdiff
+benchmark: build
+	git log -p 23c292d3f25c67082a2ba315a187268be1a9b0ab > $(BENCHMARK_INPUT_FILE)
+	hyperfine 'target/release/delta < $(BENCHMARK_INPUT_FILE) > /dev/null'
+
 chronologer:
 	chronologer performance/chronologer.yaml
 
-.PHONY: build lint test unit-test end-to-end-test release vesion hash chronologer
+.PHONY: build lint test unit-test end-to-end-test release vesion hash benchmark chronologer
