@@ -8,6 +8,7 @@ cargo build --target "$TARGET" --verbose
 # We cannot run arm executables on linux
 if [[ $TARGET != arm-unknown-linux-gnueabihf ]] && [[ $TARGET != aarch64-unknown-linux-gnu ]]; then
     cargo test --target "$TARGET" --verbose
+    make end-to-end-test
 
     cargo run --target "$TARGET" -- < /dev/null
 fi
