@@ -5,7 +5,7 @@ use ansi_term;
 use syntect::easy::HighlightLines;
 use syntect::highlighting::{Color, Style, StyleModifier};
 use syntect::parsing::{SyntaxReference, SyntaxSet};
-use unicode_segmentation::UnicodeSegmentation;
+use unicode_width::UnicodeWidthStr;
 
 use crate::bat::assets::HighlightingAssets;
 use crate::bat::terminal::to_ansi_color;
@@ -127,7 +127,7 @@ impl<'a> Painter<'a> {
                     dropped_prefix = true;
                 }
                 if config.width.is_some() {
-                    text_width += text.graphemes(true).count();
+                    text_width += UnicodeWidthStr::width(text.as_str());
                 }
                 ansi_strings.push(to_ansi_style(style, config.true_color).paint(text));
             }

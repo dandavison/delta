@@ -3,7 +3,7 @@ use std::io::Write;
 use box_drawing;
 use console::strip_ansi_codes;
 use syntect::highlighting::Color;
-use unicode_segmentation::UnicodeSegmentation;
+use unicode_width::UnicodeWidthStr;
 
 use crate::paint;
 
@@ -22,7 +22,7 @@ pub fn write_boxed(
     } else {
         box_drawing::light::UP_LEFT
     };
-    let box_width = strip_ansi_codes(text).graphemes(true).count() + 1;
+    let box_width = UnicodeWidthStr::width(strip_ansi_codes(text).as_ref()) + 1;
     write_boxed_partial(writer, text, box_width, color, heavy, true_color)?;
     write!(
         writer,
@@ -42,7 +42,7 @@ pub fn write_boxed_with_line(
     heavy: bool,
     true_color: bool,
 ) -> std::io::Result<()> {
-    let box_width = strip_ansi_codes(text).graphemes(true).count() + 1;
+    let box_width = UnicodeWidthStr::width(strip_ansi_codes(text).as_ref()) + 1;
     write_boxed_with_horizontal_whisker(writer, text, box_width, color, heavy, true_color)?;
     write_horizontal_line(
         writer,
