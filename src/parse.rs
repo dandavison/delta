@@ -35,13 +35,11 @@ pub fn get_file_path_from_file_meta_line(line: &str, git_diff_name: bool) -> Str
     } else {
         match line.split(' ').nth(1) {
             Some("/dev/null") => "/dev/null",
-            Some(path) => {
-                if git_diff_name {
-                    &path[2..]
-                } else {
-                    path.split('\t').next().unwrap_or("")
-                }
+            Some(path) if git_diff_name && (path.starts_with("a/") || path.starts_with("b/")) => {
+                &path[2..]
             }
+            Some(path) if git_diff_name => path,
+            Some(path) => path.split('\t').next().unwrap_or(""),
             _ => "",
         }
         .to_string()
@@ -119,6 +117,20 @@ mod tests {
         );
     }
 
+    // We should only strip the prefixes if they are "a/" or "b/". This will be correct except for
+    // the case of a user with `diff.noprefix = true` who has directories named "a" or "b", which
+    // is an irresolvable ambiguity. Ideally one would only strip the prefixes if we have confirmed
+    // that we are looking at something like
+    //
+    // --- a/src/parse.rs
+    // +++ b/src/parse.rs
+    //
+    // as opposed to something like
+    //
+    // --- a/src/parse.rs
+    // +++ sibling_of_a/src/parse.rs
+    //
+    // but we don't attempt that currently.
     #[test]
     fn test_get_file_path_from_git_file_meta_line() {
         assert_eq!(
@@ -129,7 +141,19 @@ mod tests {
             get_file_path_from_file_meta_line("+++ b/src/delta.rs", true),
             "src/delta.rs"
         );
+        assert_eq!(
+            get_file_path_from_file_meta_line("--- src/delta.rs", true),
+            "src/delta.rs"
+        );
+        assert_eq!(
+            get_file_path_from_file_meta_line("+++ src/delta.rs", true),
+            "src/delta.rs"
+        );
     }
+
+    // We should not strip the prefix unless it's If the user has `diff.noprefix = true` then
+    #[test]
+    fn test_get_file_path_from_git_file_meta_line_under_diff_noprefix() {}
 
     #[test]
     fn test_get_file_path_from_file_meta_line() {
