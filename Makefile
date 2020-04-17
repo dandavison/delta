@@ -16,7 +16,7 @@ release:
 	@make -f release.Makefile release
 
 version:
-	@grep version Cargo.toml | head -n1 | perl -pe 's/\e\[[0-9;]*m//g'
+	@grep version Cargo.toml | head -n1 | sed -E 's,.*version = "([^"]+)",\1,'
 
 hash:
 	@version=$$(make version) && \
