@@ -1,4 +1,5 @@
 release: \
+	clean \
 	check_environment \
 	bump-version \
 	create-github-release \
@@ -6,6 +7,10 @@ release: \
 	bump-private-homebrew-formula \
 	bump-public-homebrew-formula \
 	publish-to-cargo
+
+
+clean:
+	rm -fr .make-sentinels
 
 
 check_environment:
@@ -30,6 +35,7 @@ $(BUMP_VERSION_SENTINEL):
 CREATE_GITHUB_RELEASE_SENTINEL=.make-sentinels/create-github-release
 create-github-release: $(CREATE_GITHUB_RELEASE_SENTINEL)
 $(CREATE_GITHUB_RELEASE_SENTINEL):
+	which gren > /dev/null
 	@echo \# Creating release tag
 	git tag "$$DELTA_NEW_VERSION"
 	git push
@@ -88,6 +94,7 @@ $(PUBLISH_TO_CARGO_SENTINEL):
 
 
 .PHONY: \
+	clean \
 	release	\
 	check_environment \
 	bump-version \
