@@ -1,0 +1,42 @@
+diff --cc Makefile
+index 759070d,3daf9eb..0000000
+--- a/Makefile
++++ b/Makefile
+@@@ -4,13 -4,16 +4,37 @@@ build
+  lint:
+  	cargo clippy
+  
+++<<<<<<< Updated upstream
+ +test: unit-test end-to-end-test
+ +
+ +unit-test:
+ +	cargo test
+ +
+ +end-to-end-test: build
+ +	bash -c "diff -u <(git log -p) <(git log -p | target/release/delta --color-only | perl -pe 's/\e\[[0-9;]*m//g')"
+++||||||| constructed merge base
+++test:
+++	cargo test
+++	bash -c "diff -u <(git log -p) \
+++                     <(git log -p | delta --width variable \
+++                                          --tabs 0 \
+++	                                      --retain-plus-minus-markers \
+++                                          --commit-style plain \
+++                                          --file-style plain \
+++                                          --hunk-style plain \
+++                                  | ansifilter)"
+++=======
++ test:
++ 	cargo test --release
++ 	bash -c "diff -u <(git log -p) \
++                      <(git log -p | target/release/delta --width variable \
++                                           --tabs 0 \
++ 	                                      --retain-plus-minus-markers \
++                                           --commit-style plain \
++                                           --file-style plain \
++                                           --hunk-style plain \
++                                   | ansifilter)" > /dev/null
+++>>>>>>> Stashed changes
+  
+  release:
+  	@make -f release.Makefile release

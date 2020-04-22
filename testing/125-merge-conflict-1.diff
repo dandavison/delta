@@ -1,0 +1,48 @@
+diff --cc src/config.rs
+index e35d2e4,fad673e..0000000
+--- a/src/config.rs
++++ b/src/config.rs
+@@@ -1,4 -1,5 +1,10 @@@
+++<<<<<<< Updated upstream
+ +use std::process;
+++||||||| constructed merge base
+++=======
++ use std::process;
++ 
+++>>>>>>> Stashed changes
+  use std::str::FromStr;
+  
+  use syntect::highlighting::{Color, Style, StyleModifier, Theme, ThemeSet};
+@@@ -78,7 -40,9 +84,15 @@@ pub fn get_config<'a>
+          theme_set,
+      );
+  
+++<<<<<<< Updated upstream
+ +    let theme = if style::is_no_syntax_highlighting_theme_name(&theme_name) {
+++||||||| constructed merge base
+++    let theme = if is_no_syntax_highlighting_theme_name(&theme_name) {
+++=======
++     println!("theme_name: {}", theme_name);
++ 
++     let theme = if is_no_syntax_highlighting_theme_name(&theme_name) {
+++>>>>>>> Stashed changes
+          None
+      } else {
+          Some(&theme_set.themes[&theme_name])
+@@@ -190,10 -128,14 +204,14 @@@ fn get_is_light_mode_and_theme_name
+  ) -> (bool, String) {
+      let theme_arg = valid_theme_name_or_none(theme_arg, theme_set);
+      let bat_theme_env_var = valid_theme_name_or_none(bat_theme_env_var, theme_set);
++ 
++     println!("theme_arg: {:?}", theme_arg);
++     println!("bat_theme_env_var: {:?}", bat_theme_env_var);
++ 
+      match (theme_arg, bat_theme_env_var, light_mode_arg) {
+          (None, None, false) => (false, style::DEFAULT_DARK_THEME.to_string()),
+ -        (Some(theme_name), _, false) => (is_light_theme(&theme_name), theme_name),
+ -        (None, Some(theme_name), false) => (is_light_theme(&theme_name), theme_name),
+ +        (Some(theme_name), _, false) => (style::is_light_theme(&theme_name), theme_name),
+ +        (None, Some(theme_name), false) => (style::is_light_theme(&theme_name), theme_name),
+          (None, None, true) => (true, style::DEFAULT_LIGHT_THEME.to_string()),
+          (Some(theme_name), _, is_light_mode) => (is_light_mode, theme_name),
+          (None, Some(theme_name), is_light_mode) => (is_light_mode, theme_name),
