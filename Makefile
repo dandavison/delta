@@ -9,8 +9,9 @@ test: unit-test end-to-end-test
 unit-test:
 	cargo test
 
+GIT_LOG_TEST_COMMAND = git log --patch --stat --numstat
 end-to-end-test: build
-	bash -c "diff -u <(git log -p) <(git log -p | target/release/delta --color-only | perl -pe 's/\e\[[0-9;]*m//g')"
+	bash -c "diff -u <($(GIT_LOG_TEST_COMMAND)) <($(GIT_LOG_TEST_COMMAND) | target/release/delta --color-only | perl -pe 's/\e\[[0-9;]*m//g')"
 
 release:
 	@make -f release.Makefile release
