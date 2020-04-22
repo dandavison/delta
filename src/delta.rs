@@ -105,7 +105,7 @@ where
                 config,
                 source == Source::DiffUnified,
             )?;
-        } else if line.starts_with("@@ ") {
+        } else if line.starts_with("@@") {
             state = State::HunkMeta;
             painter.set_highlighter();
             if config.hunk_style != cli::SectionStyle::Plain {
