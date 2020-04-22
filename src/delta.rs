@@ -690,6 +690,26 @@ mod tests {
     }
 
     #[test]
+    fn test_diff_with_merge_conflict_is_not_truncated() {
+        let mut options = get_command_line_options();
+        let output = run_delta(DIFF_WITH_MERGE_CONFLICT, &options);
+        // TODO: The + in the first column is being removed.
+        assert!(strip_ansi_codes(&output).contains("+>>>>>>> Stashed changes"));
+        assert_eq!(output.split('\n').count(), 47);
+    }
+
+    #[test]
+    fn test_diff_with_merge_conflict_is_passed_on_unchanged_under_color_only() {
+        let mut options = get_command_line_options();
+        options.color_only = true;
+        let output = run_delta(DIFF_WITH_MERGE_CONFLICT, &options);
+        assert_eq!(
+            strip_ansi_codes(&output).to_string(),
+            DIFF_WITH_MERGE_CONFLICT.to_owned() + "\n"
+        );
+    }
+
+    #[test]
     fn test_submodule_contains_untracked_content() {
         let options = get_command_line_options();
         let output = strip_ansi_codes(&run_delta(
@@ -994,4 +1014,49 @@ index cba6064..ba1a4de 100644
          s.parse::<u8>()
              .ok()
 ";
+
+    const DIFF_WITH_MERGE_CONFLICT: &str = r#"
+diff --cc Makefile
+index 759070d,3daf9eb..0000000
+--- a/Makefile
++++ b/Makefile
+@@@ -4,13 -4,16 +4,37 @@@ build
+  lint:
+  	cargo clippy
+
+++<<<<<<< Updated upstream
+ +test: unit-test end-to-end-test
+ +
+ +unit-test:
+ +	cargo test
+ +
+ +end-to-end-test: build
+ +	bash -c "diff -u <(git log -p) <(git log -p | target/release/delta --color-only | perl -pe 's/\e\[[0-9;]*m//g')"
+++||||||| constructed merge base
+++test:
+++	cargo test
+++	bash -c "diff -u <(git log -p) \
+++                     <(git log -p | delta --width variable \
+++                                          --tabs 0 \
+++	                                      --retain-plus-minus-markers \
+++                                          --commit-style plain \
+++                                          --file-style plain \
+++                                          --hunk-style plain \
+++                                  | ansifilter)"
+++=======
++ test:
++ 	cargo test --release
++ 	bash -c "diff -u <(git log -p) \
++                      <(git log -p | target/release/delta --width variable \
++                                           --tabs 0 \
++ 	                                      --retain-plus-minus-markers \
++                                           --commit-style plain \
++                                           --file-style plain \
++                                           --hunk-style plain \
++                                   | ansifilter)" > /dev/null
+++>>>>>>> Stashed changes
+
+  release:
+  	@make -f release.Makefile release
+"#;
 }
