@@ -86,10 +86,9 @@ pub struct Opt {
     #[structopt(long = "theme", env = "BAT_THEME")]
     /// The code syntax highlighting theme to use. Use --theme=none to disable syntax highlighting.
     /// If the theme is not set using this option, it will be taken from the BAT_THEME environment
-    /// variable, if that contains a valid theme name. Use --list-themes and --compare-themes to
-    /// view available themes. Note that the choice of theme only affects code syntax highlighting.
-    /// See --commit-color, --file-color, --hunk-color to configure the colors of other parts of
-    /// the diff output.
+    /// variable, if that contains a valid theme name. Use --list-themes to view available themes.
+    /// Note that the choice of theme only affects code syntax highlighting. See --commit-color,
+    /// --file-color, --hunk-color to configure the colors of other parts of the diff output.
     pub theme: Option<String>,
 
     #[structopt(long = "highlight-removed")]

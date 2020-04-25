@@ -18,7 +18,6 @@ _delta() {
     local commands=(
         --color-only
         --commit-style
-        --compare-themes
         --dark
         --file-style
         --help

@@ -97,7 +97,7 @@ The languages and color themes that ship with delta are those that ship with bat
 
 Delta looks best if your terminal application supports 24 bit colors. See https://gist.github.com/XVilka/8346728. For example, on MacOS, iTerm2 supports 24-bit colors but Terminal.app does not.
 
-If your terminal application does not support 24-bit color, delta will still work, by automatically choosing the closest color from those available. See the `Colors` section of the help output below. 
+If your terminal application does not support 24-bit color, delta will still work, by automatically choosing the closest color from those available. See the `Colors` section of the help output below.
 
 If you're using tmux, it's worth checking that 24 bit color is  working correctly. For example, run a color test script like [this  one](https://gist.githubusercontent.com/lifepillar/09a44b8cf0f9397465614e622979107f/raw/24-bit-color.sh),  or one of the others listed [here](https://gist.github.com/XVilka/8346728). If  you do not see smooth color gradients, see the discussion at  [tmux#696](https://github.com/tmux/tmux/issues/696). The short  version is you need something like this in your `~/.tmux.conf`:
 ```
@@ -120,25 +120,30 @@ USAGE:
     delta [FLAGS] [OPTIONS]
 
 FLAGS:
-        --dark                      Use default colors appropriate for a dark terminal background. For more control, see
-                                    the other color options.
-    -h, --help                      Prints help information
-        --highlight-removed         Apply syntax highlighting to removed lines. The default is to apply syntax
-                                    highlighting to unchanged and new lines only.
-        --light                     Use default colors appropriate for a light terminal background. For more control,
-                                    see the other color options.
-        --list-languages            List supported languages and associated file extensions.
-        --list-theme-names          List available syntax-highlighting color themes.
-        --list-themes               List available syntax highlighting themes, each with an example of highlighted diff
-                                    output. If diff output is supplied on standard input then this will be used for the
-                                    demo. For example: `git show --color=always | delta --list-themes`.
-        --show-background-colors    Show the command-line arguments (RGB hex codes) for the background colors that are
-                                    in effect. The hex codes are displayed with their associated background color. This
-                                    option can be combined with --light and --dark to view the background colors for
-                                    those modes. It can also be used to experiment with different RGB hex codes by
-                                    combining this option with --minus-color, --minus-emph-color, --plus-color, --plus-
-                                    emph-color.
-    -V, --version                   Prints version information
+        --color-only                 Do not alter the input in any way other than applying colors. Equivalent to
+                                     `--keep-plus-minus-markers --width variable --tabs 0 --commit-style plain --file-
+                                     style plain --hunk-style plain`.
+        --dark                       Use default colors appropriate for a dark terminal background. For more control,
+                                     see the other color options.
+    -h, --help                       Prints help information
+        --highlight-removed          Apply syntax highlighting to removed lines. The default is to apply syntax
+                                     highlighting to unchanged and new lines only.
+        --keep-plus-minus-markers    Prefix added/removed lines with a +/- character, respectively, exactly as git does.
+                                     The default behavior is to output a space character in place of these markers.
+        --light                      Use default colors appropriate for a light terminal background. For more control,
+                                     see the other color options.
+        --list-languages             List supported languages and associated file extensions.
+        --list-theme-names           List available syntax-highlighting color themes.
+        --list-themes                List available syntax highlighting themes, each with an example of highlighted diff
+                                     output. If diff output is supplied on standard input then this will be used for the
+                                     demo. For example: `git show --color=always | delta --list-themes`.
+        --show-background-colors     Show the command-line arguments (RGB hex codes) for the background colors that are
+                                     in effect. The hex codes are displayed with their associated background color. This
+                                     option can be combined with --light and --dark to view the background colors for
+                                     those modes. It can also be used to experiment with different RGB hex codes by
+                                     combining this option with --minus-color, --minus-emph-color, --plus-color, --plus-
+                                     emph-color.
+    -V, --version                    Prints version information
 
 OPTIONS:
         --commit-color <commit_color>              Color for the commit section of git output. [default: yellow]
@@ -173,9 +178,9 @@ OPTIONS:
         --theme <theme>
             The code syntax highlighting theme to use. Use --theme=none to disable syntax highlighting. If the theme is
             not set using this option, it will be taken from the BAT_THEME environment variable, if that contains a
-            valid theme name. Use --list-themes and --compare-themes to view available themes. Note that the choice of
-            theme only affects code syntax highlighting. See --commit-color, --file-color, --hunk-color to configure the
-            colors of other parts of the diff output. [env: BAT_THEME=base16]
+            valid theme name. Use --list-themes to view available themes. Note that the choice of theme only affects
+            code syntax highlighting. See --commit-color, --file-color, --hunk-color to configure the colors of other
+            parts of the diff output. [env: BAT_THEME=base16]
         --24-bit-color <true_color>
             Whether to emit 24-bit ("true color") RGB color codes. Options are auto, always, and never. "auto" means
             that delta will emit 24-bit color codes iff the environment variable COLORTERM has the value "truecolor" or

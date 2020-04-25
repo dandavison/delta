@@ -20,6 +20,6 @@ class GitDelta < Formula
   end
 
   test do
-    shell_output "#{bin}/delta --compare-themes"
+    shell_output "#{bin}/delta --list-themes"
   end
 end
