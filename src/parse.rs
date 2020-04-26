@@ -29,13 +29,13 @@ pub fn get_file_path_from_file_meta_line(line: &str, git_diff_name: bool) -> Str
     if line.starts_with("rename ") {
         line.split(' ').skip(2).collect::<Vec<&str>>().join(" ")
     } else {
-        match line.split(' ').nth(1) {
-            Some("/dev/null") => "/dev/null",
-            Some(path) if git_diff_name && (path.starts_with("a/") || path.starts_with("b/")) => {
+        match line.split(' ').skip(1).collect::<Vec<&str>>().join(" ") {
+            path if path == "/dev/null" => "/dev/null",
+            path if git_diff_name && (path.starts_with("a/") || path.starts_with("b/")) => {
                 &path[2..]
             }
-            Some(path) if git_diff_name => path,
-            Some(path) => path.split('\t').next().unwrap_or(""),
+            path if git_diff_name => path,
+            path => path.split('\t').next().unwrap_or(""),
             _ => "",
         }
         .to_string()
