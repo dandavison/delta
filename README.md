@@ -59,28 +59,28 @@ In addition, delta handles traditional unified diff output.
 
 ## Installation
 
-Executables: [Linux](https://github.com/dandavison/delta/releases/download/0.0.18/delta-0.0.18-x86_64-unknown-linux-musl.tar.gz) | [MacOS](https://github.com/dandavison/delta/releases/download/0.0.18/delta-0.0.18-x86_64-apple-darwin.tar.gz) | [Windows](https://github.com/dandavison/delta/releases/download/0.0.15/delta-0.0.15-x86_64-pc-windows-msvc.zip) | [All](https://github.com/dandavison/delta/releases)
+You can download an executable for your system: [Linux](https://github.com/dandavison/delta/releases/download/0.0.18/delta-0.0.18-x86_64-unknown-linux-musl.tar.gz) | [MacOS](https://github.com/dandavison/delta/releases/download/0.0.18/delta-0.0.18-x86_64-apple-darwin.tar.gz) | [Windows](https://github.com/dandavison/delta/releases/download/0.0.15/delta-0.0.15-x86_64-pc-windows-msvc.zip) | [All](https://github.com/dandavison/delta/releases)
 
-Homebrew:
-```sh
-brew install git-delta
-```
+Alternatively, delta is available in the following package managers:
 
-FreeBSD pkg(8):
-```sh
-pkg install git-delta
-```
-
-Archlinux (AUR):
-```sh
-# With AUR helper `yay`:
-yay -S git-delta
-
-# Alternatively, without an AUR helper:
-git clone https://aur.archlinux.org/git-delta.git
-cd git-delta
-makepkg -csri
-```
+<table>
+  <tr>
+    <td>homebrew</td>
+    <td><code>brew install git-delta</code></td>
+  </tr>
+  <tr>
+    <td>FreeBSD pkg(8)</td>
+    <td><code>pkg install git-delta</code></td>
+  </tr>
+  <tr>
+    <td>Archlinux (AUR)</td>
+    <td><code>yay -S git-delta</code>
+        <br>or<br>
+        <code>git clone https://aur.archlinux.org/git-delta.git</code><br>
+        <code>cd git-delta</code><br>
+        <code>makepkg -csri</code></td>
+  </tr>
+</table>
 
 #### Configure git to use delta
 
@@ -94,18 +94,6 @@ Alternatively, you can edit your `.gitconfig` directly. Delta accepts many comma
     pager = delta --dark --plus-color="#012800" --minus-color="#340001" --theme="base16-ocean.dark"
 ```
 
-#### Configure mercurial to use delta
-
-Edit your `.hgrc` as follow and set the options you want for delta in it:
-```
-[pager]
-pager = delta --dark
-```
-
-#### Windows
-
-`less.exe` installed with git doesn't work well with `delta`. A patched version of `less.exe` and instructions for installing can be found [here](https://github.com/lzybkr/less/releases/tag/fix_windows_vt).
-
 All git commands that display diff output should now display syntax-highlighted output. For example:
   - `git diff`
   - `git show`
@@ -118,11 +106,6 @@ Delta also handles unified diff output:
 diff -u a.txt b.txt | delta
 ```
 
-<br>
-
-
-
-
 ## Supported languages and themes
 To list the supported languages and color themes, use `delta --list-languages` and `delta --list-theme-names`. To see a demo of the color themes, use `delta --list-themes`.
 
@@ -131,7 +114,7 @@ delta uses the same mechanisms as [bat](https://github.com/sharkdp/bat#adding-ne
 The languages and color themes that ship with delta are those that ship with bat. So, to propose a new language or color theme for inclusion in delta, it would need to be a helpful addition to bat, in which case please open a PR against bat.
 
 
-## 24 bit color
+## 24 bit color (truecolor)
 
 Delta looks best if your terminal application supports 24 bit colors. See https://gist.github.com/XVilka/8346728. For example, on MacOS, iTerm2 supports 24-bit colors but Terminal.app does not.
 
@@ -143,12 +126,26 @@ set -ga terminal-overrides ",xterm-256color:Tc"
 ```
 and you may then  need to quit tmux completely for it to take effect.
 
-<br>
+
+## Windows
+
+Delta works with Windows. However, the `less.exe` installed with git doesn't work well with `delta`. A patched version of `less.exe` and instructions for installing can be found [here](https://github.com/lzybkr/less/releases/tag/fix_windows_vt).
+
 
 ## Mouse scrolling
 
 If mouse scrolling is broken, try setting your `BAT_PAGER` environment variable to (at least) `less -R` .
 See [issue #58](https://github.com/dandavison/delta/issues/58) and [bat README / "Using a different pager"](https://github.com/sharkdp/bat#using-a-different-pager).
+
+
+## Using delta with mercurial
+
+Edit your `.hgrc` as follow and set the options you want for delta in it:
+```
+[pager]
+pager = delta --dark
+```
+
 
 ## Options
 Here's the output of `delta --help`. To use these options, add them to the delta command line in your `.gitconfig` file.
