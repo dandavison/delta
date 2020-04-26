@@ -24,7 +24,7 @@ BUMP_VERSION_SENTINEL=.make-sentinels/bump-version
 bump-version: $(BUMP_VERSION_SENTINEL)
 $(BUMP_VERSION_SENTINEL):
 	@echo Bumping version in Cargo.toml
-	sed -iE "s,$$DELTA_OLD_VERSION,$$DELTA_NEW_VERSION,g" Cargo.toml
+	sed -i -E "s,$$DELTA_OLD_VERSION,$$DELTA_NEW_VERSION,g" Cargo.toml
 	make build
 	make test
 	git add Cargo.toml Cargo.lock
@@ -49,7 +49,7 @@ $(CREATE_GITHUB_RELEASE_SENTINEL):
 BUMP_VERSION_IN_DOCUMENTATION_LINKS_SENTINEL=.make-sentinels/bump-version-in-documentation-links
 bump-version-in-documentation-links: $(BUMP_VERSION_IN_DOCUMENTATION_LINKS_SENTINEL)
 $(BUMP_VERSION_IN_DOCUMENTATION_LINKS_SENTINEL):
-	sed -iE "s,$$DELTA_OLD_VERSION,$$DELTA_NEW_VERSION,g" README.md
+	sed -i -E "s,$$DELTA_OLD_VERSION,$$DELTA_NEW_VERSION,g" README.md
 	git add README.md
 	git commit -m "Bump version in links to executables"
 	git push
@@ -59,7 +59,7 @@ $(BUMP_VERSION_IN_DOCUMENTATION_LINKS_SENTINEL):
 BUMP_PRIVATE_HOMEBREW_FORMULA_SENTINEL=.make-sentinels/bump-private-homebrew-formula
 bump-private-homebrew-formula: $(BUMP_PRIVATE_HOMEBREW_FORMULA_SENTINEL)
 $(BUMP_PRIVATE_HOMEBREW_FORMULA_SENTINEL):
-	sed -iE "s,$$DELTA_OLD_VERSION,$$DELTA_NEW_VERSION,g" HomeBrewFormula/git-delta.rb
+	sed -i -E "s,$$DELTA_OLD_VERSION,$$DELTA_NEW_VERSION,g" HomeBrewFormula/git-delta.rb
 	make hash
 	@echo \# modify hashes in HomeBrewFormula/git-delta.rb
 	git add HomeBrewFormula/git-delta.rb
