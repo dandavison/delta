@@ -385,6 +385,13 @@ mod tests {
     }
 
     #[test]
+    fn test_added_empty_file() {
+        let options = get_command_line_options();
+        let output = strip_ansi_codes(&run_delta(ADDED_EMPTY_FILE, &options)).to_string();
+        assert!(output.contains("\nadded: file\n"));
+    }
+
+    #[test]
     fn test_renamed_file() {
         let options = get_command_line_options();
         let output = strip_ansi_codes(&run_delta(RENAMED_FILE_INPUT, &options)).to_string();
@@ -820,6 +827,18 @@ added: a.py
  # hello
  class X:
      pass
+";
+
+    const ADDED_EMPTY_FILE: &str = "
+commit c0a18433cb6e0ca8f796bfae9e31d95b06b91597 (HEAD -> master)
+Author: Dan Davison <dandavison7@gmail.com>
+Date:   Sun Apr 26 16:32:58 2020 -0400
+
+    Initial commit
+
+diff --git a/file b/file
+new file mode 100644
+index 0000000..e69de29
 ";
 
     const RENAMED_FILE_INPUT: &str = "\

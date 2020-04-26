@@ -1,0 +1,15 @@
+#!/bin/bash
+
+
+repo=$(mktemp -d)
+cd $repo
+
+git init
+git commit --allow-empty -m "Initial commit"
+
+touch file
+
+git add file
+git commit -m "Initial commit"
+
+git show
