@@ -26,12 +26,8 @@ pub fn get_file_extension_from_marker_line(line: &str) -> Option<&str> {
 }
 
 pub fn get_file_path_from_file_meta_line(line: &str, git_diff_name: bool) -> String {
-    if line.starts_with("rename") {
-        match line.split(' ').nth(2) {
-            Some(path) => path,
-            _ => "",
-        }
-        .to_string()
+    if line.starts_with("rename ") {
+        line.split(' ').skip(2).collect::<Vec<&str>>().join(" ")
     } else {
         match line.split(' ').nth(1) {
             Some("/dev/null") => "/dev/null",
