@@ -138,6 +138,13 @@ If mouse scrolling is broken, try setting your `BAT_PAGER` environment variable 
 See [issue #58](https://github.com/dandavison/delta/issues/58) and [bat README / "Using a different pager"](https://github.com/sharkdp/bat#using-a-different-pager).
 
 
+## Using delta with Magit
+
+Delta can be used when displaying diffs in [Magit](https://github.com/magit): see https://github.com/dandavison/magit-delta/. Here's a screenshot:
+
+<table><tr><td><img width=500px src="https://user-images.githubusercontent.com/52205/79934267-2acb2e00-8420-11ea-8bc4-546508fd3581.png" alt="image" /></td></tr></table>
+
+
 ## Using delta with mercurial
 
 Edit your `.hgrc` as follow and set the options you want for delta in it:
