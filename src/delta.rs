@@ -691,7 +691,7 @@ mod tests {
 
     #[test]
     fn test_diff_with_merge_conflict_is_not_truncated() {
-        let mut options = get_command_line_options();
+        let options = get_command_line_options();
         let output = run_delta(DIFF_WITH_MERGE_CONFLICT, &options);
         // TODO: The + in the first column is being removed.
         assert!(strip_ansi_codes(&output).contains("+>>>>>>> Stashed changes"));
