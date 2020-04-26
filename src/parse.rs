@@ -26,20 +26,29 @@ pub fn get_file_extension_from_marker_line(line: &str) -> Option<&str> {
 }
 
 pub fn get_file_path_from_file_meta_line(line: &str, git_diff_name: bool) -> String {
-    if line.starts_with("rename ") {
-        line.split(' ').skip(2).collect::<Vec<&str>>().join(" ")
-    } else {
-        match line.split(' ').skip(1).collect::<Vec<&str>>().join(" ") {
-            path if path == "/dev/null" => "/dev/null",
-            path if git_diff_name && (path.starts_with("a/") || path.starts_with("b/")) => {
-                &path[2..]
-            }
-            path if git_diff_name => path,
-            path => path.split('\t').next().unwrap_or(""),
-            _ => "",
+    match line {
+        line if line.starts_with("rename from ") => {
+            let offset = "rename from ".len();
+            &line[offset..]
         }
-        .to_string()
+        line if line.starts_with("rename to ") => {
+            let offset = "rename to ".len();
+            &line[offset..]
+        }
+        line if line.starts_with("--- ") || line.starts_with("+++ ") => {
+            let offset = 4;
+            match &line[offset..] {
+                path if path == "/dev/null" => "/dev/null",
+                path if git_diff_name && (path.starts_with("a/") || path.starts_with("b/")) => {
+                    &path[2..]
+                }
+                path if git_diff_name => &path,
+                path => path.split('\t').next().unwrap_or(""),
+            }
+        }
+        _ => "",
     }
+    .to_string()
 }
 
 pub fn get_file_change_description_from_file_paths(
