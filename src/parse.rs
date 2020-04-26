@@ -134,6 +134,10 @@ mod tests {
     #[test]
     fn test_get_file_path_from_git_file_meta_line() {
         assert_eq!(
+            get_file_path_from_file_meta_line("--- /dev/null", true),
+            "/dev/null"
+        );
+        assert_eq!(
             get_file_path_from_file_meta_line("--- a/src/delta.rs", true),
             "src/delta.rs"
         );
@@ -151,9 +155,45 @@ mod tests {
         );
     }
 
-    // We should not strip the prefix unless it's If the user has `diff.noprefix = true` then
     #[test]
-    fn test_get_file_path_from_git_file_meta_line_under_diff_noprefix() {}
+    fn test_get_file_path_from_git_file_meta_line_containing_spaces() {
+        assert_eq!(
+            get_file_path_from_file_meta_line("+++ a/my src/delta.rs", true),
+            "my src/delta.rs"
+        );
+        assert_eq!(
+            get_file_path_from_file_meta_line("+++ my src/delta.rs", true),
+            "my src/delta.rs"
+        );
+        assert_eq!(
+            get_file_path_from_file_meta_line("+++ a/src/my delta.rs", true),
+            "src/my delta.rs"
+        );
+        assert_eq!(
+            get_file_path_from_file_meta_line("+++ a/my src/my delta.rs", true),
+            "my src/my delta.rs"
+        );
+        assert_eq!(
+            get_file_path_from_file_meta_line("+++ b/my src/my enough/my delta.rs", true),
+            "my src/my enough/my delta.rs"
+        );
+    }
+
+    #[test]
+    fn test_get_file_path_from_git_file_meta_line_rename() {
+        assert_eq!(
+            get_file_path_from_file_meta_line("rename from nospace/file2.el", true),
+            "nospace/file2.el"
+        );
+    }
+
+    #[test]
+    fn test_get_file_path_from_git_file_meta_line_rename_containing_spaces() {
+        assert_eq!(
+            get_file_path_from_file_meta_line("rename from with space/file1.el", true),
+            "with space/file1.el"
+        );
+    }
 
     #[test]
     fn test_get_file_path_from_file_meta_line() {
