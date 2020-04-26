@@ -385,6 +385,7 @@ mod tests {
     }
 
     #[test]
+    #[ignore] // #128
     fn test_added_empty_file() {
         let options = get_command_line_options();
         let output = strip_ansi_codes(&run_delta(ADDED_EMPTY_FILE, &options)).to_string();
