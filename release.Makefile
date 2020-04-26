@@ -24,7 +24,7 @@ BUMP_VERSION_SENTINEL=.make-sentinels/bump-version
 bump-version: $(BUMP_VERSION_SENTINEL)
 $(BUMP_VERSION_SENTINEL):
 	@echo Bumping version in Cargo.toml
-	sed -i -E "s,$$DELTA_OLD_VERSION,$$DELTA_NEW_VERSION,g" Cargo.toml
+	sed -i -E "s,^version = \"$$DELTA_OLD_VERSION\",version = \"$$DELTA_NEW_VERSION\",g" Cargo.toml
 	make build
 	make test
 	git add Cargo.toml Cargo.lock
