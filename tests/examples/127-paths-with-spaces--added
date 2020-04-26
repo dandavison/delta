@@ -1,0 +1,18 @@
+#!/bin/bash
+
+
+repo=$(mktemp -d)
+cd $repo
+
+mkdir "with space"
+echo "file1 contents" > "with space/file1"
+
+mkdir "nospace"
+echo "file2 contents" >  "nospace/file2"
+
+git init
+git commit --allow-empty -m "Initial commit"
+git add .
+git commit -m "Initial commit"
+
+git show

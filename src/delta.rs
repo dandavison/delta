@@ -392,6 +392,18 @@ mod tests {
     }
 
     #[test]
+    fn test_added_file_directory_path_containing_space() {
+        let options = get_command_line_options();
+        let output = strip_ansi_codes(&run_delta(
+            ADDED_FILES_DIRECTORY_PATH_CONTAINING_SPACE,
+            &options,
+        ))
+        .to_string();
+        assert!(output.contains("\nadded: with space/file1\n"));
+        assert!(output.contains("\nadded: nospace/file2\n"));
+    }
+
+    #[test]
     fn test_renamed_file() {
         let options = get_command_line_options();
         let output = strip_ansi_codes(&run_delta(RENAMED_FILE_INPUT, &options)).to_string();
@@ -839,6 +851,29 @@ Date:   Sun Apr 26 16:32:58 2020 -0400
 diff --git a/file b/file
 new file mode 100644
 index 0000000..e69de29
+";
+
+    const ADDED_FILES_DIRECTORY_PATH_CONTAINING_SPACE: &str = "
+commit 654e180c8d5329904d584c44b661149f68bd2911 (HEAD -> master)
+Author: Dan Davison <dandavison7@gmail.com>
+Date:   Sun Apr 26 16:30:58 2020 -0400
+
+    Initial commit
+
+diff --git a/nospace/file2 b/nospace/file2
+new file mode 100644
+index 0000000..af1b8ae
+--- /dev/null
++++ b/nospace/file2
+@@ -0,0 +1 @@
++file2 contents
+diff --git a/with space/file1 b/with space/file1
+new file mode 100644
+index 0000000..84d55c5
+--- /dev/null
++++ b/with space/file1
+@@ -0,0 +1 @@
++file1 contents
 ";
 
     const RENAMED_FILE_INPUT: &str = "\
