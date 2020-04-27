@@ -73,7 +73,7 @@ Alternatively, delta is available in the following package managers:
     <td><code>pkg install git-delta</code></td>
   </tr>
   <tr>
-    <td>Archlinux (AUR)</td>
+    <td>Arch Linux (AUR)</td>
     <td><code>yay -S git-delta</code>
         <br>or<br>
         <code>git clone https://aur.archlinux.org/git-delta.git</code><br>
