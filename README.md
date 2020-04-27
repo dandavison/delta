@@ -91,7 +91,7 @@ Alternatively, delta is available in the following package managers:
 Set delta to be git's pager in your `.gitconfig`. Delta accepts many command line options to alter colors and other details of the output. An example is
 ```
 [core]
-    pager = delta --dark --plus-color="#012800" --minus-color="#340001" --theme="Monokai Extended"
+    pager = delta --plus-color="#012800" --minus-color="#340001"
 
 [interactive]
     diffFilter = delta --color-only
