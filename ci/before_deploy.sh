@@ -30,9 +30,7 @@ pack() {
 
     # copying the main binary
     cp "target/$TARGET/release/$PROJECT_NAME" "$tempdir/$package_name/"
-    if [ "$TRAVIS_OS_NAME" != windows ]; then
-        "${gcc_prefix}"strip "$tempdir/$package_name/$PROJECT_NAME"
-    fi
+    "${gcc_prefix}"strip "$tempdir/$package_name/$PROJECT_NAME"
 
     # manpage, readme and license
     cp README.md "$tempdir/$package_name"
