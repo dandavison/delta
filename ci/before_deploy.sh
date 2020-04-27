@@ -38,10 +38,7 @@ pack() {
     cp README.md "$tempdir/$package_name"
     cp LICENSE "$tempdir/$package_name"
 
-    # Release binary
-    cp "$tempdir/$package_name/$PROJECT_NAME" "$out_dir"
-
-    # Release archive containing binary, license and docs
+    # archiving
     pushd "$tempdir"
     if [ "$TRAVIS_OS_NAME" = windows ]; then
         7z a "$out_dir/$package_name.zip" "$package_name"/*
