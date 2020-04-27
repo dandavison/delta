@@ -80,6 +80,10 @@ Alternatively, delta is available in the following package managers:
         <code>cd git-delta</code><br>
         <code>makepkg -csri</code></td>
   </tr>
+  <tr>
+    <td>Nix</td>
+    <td><code>nix-env -iA nixpkgs.gitAndTools.delta</code>
+  </tr>
 </table>
 
 #### Configure git to use delta
