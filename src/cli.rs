@@ -265,11 +265,10 @@ pub fn process_command_line_arguments<'a>(
     let available_terminal_width = (Term::stdout().size().1 - 1) as usize;
     let background_color_width = match opt.width.as_ref().map(String::as_str) {
         Some("variable") => None,
-        Some(width) => Some(
-            width
-                .parse::<usize>()
-                .unwrap_or_else(|_| panic!("Invalid width: {}", width)),
-        ),
+        Some(width) => Some(width.parse::<usize>().unwrap_or_else(|_| {
+            eprintln!("Invalid width: {}", width);
+            process::exit(1)
+        })),
         None => Some(available_terminal_width),
     };
 
