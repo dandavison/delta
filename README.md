@@ -84,14 +84,13 @@ Alternatively, delta is available in the following package managers:
 
 #### Configure git to use delta
 
-```sh
-git config --global core.pager "delta --dark"  # --light for light terminal backgrounds
-```
-
-Alternatively, you can edit your `.gitconfig` directly. Delta accepts many command line options to alter colors and other details of the output. An example is
+Set delta to be git's pager in your `.gitconfig`. Delta accepts many command line options to alter colors and other details of the output. An example is
 ```
 [core]
     pager = delta --dark --plus-color="#012800" --minus-color="#340001" --theme="base16-ocean.dark"
+
+[interactive]
+    diffFilter = delta --color-only
 ```
 
 All git commands that display diff output should now display syntax-highlighted output. For example:
@@ -100,6 +99,7 @@ All git commands that display diff output should now display syntax-highlighted 
   - `git log -p`
   - `git stash show -p`
   - `git reflog -p`
+  - `git add -p`
 
 Delta also handles unified diff output:
 ```
