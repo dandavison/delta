@@ -1,7 +1,7 @@
 ---
 name: Bug report
 about: "-------------"
-title: ''
+title: "\U0001F41B"
 labels: ''
 assignees: ''
 

@@ -1,7 +1,7 @@
 ---
 name: Feature request
 about: "-------------------"
-title: ''
+title: "➕"
 labels: ''
 assignees: ''
 
