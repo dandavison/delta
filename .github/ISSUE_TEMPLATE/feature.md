@@ -1,7 +1,7 @@
 ---
 name: Feature
 about: Propose an improvement
-title: "➕"
+title: "\U0001F680"
 labels: ''
 assignees: ''
 
