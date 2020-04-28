@@ -7,4 +7,4 @@ assignees: ''
 
 ---
 
-Hi, thanks for contributing to Delta! Please go ahead and describe your proposal.
+Hi, thanks for contributing to Delta, please just go ahead and describe your proposal!
