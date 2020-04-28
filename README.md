@@ -65,11 +65,11 @@ Alternatively, delta is available in the following package managers:
 
 <table>
   <tr>
-    <td>homebrew</td>
+    <td>Homebrew</td>
     <td><code>brew install git-delta</code></td>
   </tr>
   <tr>
-    <td>FreeBSD pkg(8)</td>
+    <td>FreeBSD</td>
     <td><code>pkg install git-delta</code></td>
   </tr>
   <tr>
