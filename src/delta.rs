@@ -138,6 +138,8 @@ where
                 continue;
             }
         } else if state.is_in_hunk() {
+            // A true hunk line should start with one of: '+', '-', ' '. However, handle_hunk_line
+            // handles all lines until the state machine transitions away from the hunk states.
             state = handle_hunk_line(&mut painter, &line, state, config);
             painter.emit()?;
             continue;
@@ -308,9 +310,7 @@ fn handle_hunk_line(painter: &mut Painter, line: &str, state: State, config: &Co
             painter.plus_lines.push(prepare(&line, true, config));
             State::HunkPlus
         }
-        _ => {
-            // First character at this point is typically a space, but could also be e.g. '\'
-            // from '\ No newline at end of file'.
+        Some(' ') => {
             let prefix = if line.is_empty() { "" } else { &line[..1] };
             painter.paint_buffered_lines();
             let line = prepare(&line, true, config);
@@ -331,6 +331,17 @@ fn handle_hunk_line(painter: &mut Painter, line: &str, state: State, config: &Co
             );
             State::HunkZero
         }
+        _ => {
+            // The first character here could be e.g. '\' from '\ No newline at end of file'. This
+            // is not a hunk line, but the parser does not have a more accurate state corresponding
+            // to this.
+            painter.paint_buffered_lines();
+            painter
+                .output_buffer
+                .push_str(&expand_tabs(line.graphemes(true), config.tab_width));
+            painter.output_buffer.push_str("\n");
+            State::HunkZero
+        }
     }
 }
 
@@ -344,23 +355,29 @@ fn prepare(line: &str, append_newline: bool, config: &Config) -> String {
     if !line.is_empty() {
         let mut line = line.graphemes(true);
 
-        // The first column contains a -/+/space character, added by git. We drop it now, so that
-        // it is not present during syntax highlighting, and inject a replacement when emitting the
-        // line.
+        // The first column contains a -/+/space character, added by git. We substitute it for a
+        // space now, so that it is not present during syntax highlighting, and substitute again
+        // when emitting the line.
         line.next();
 
-        // Expand tabs as spaces.
-        // tab_width = 0 is documented to mean do not replace tabs.
-        let output_line = if config.tab_width > 0 {
-            let tab_replacement = " ".repeat(config.tab_width);
-            line.map(|s| if s == "\t" { &tab_replacement } else { s })
-                .collect::<String>()
-        } else {
-            line.collect::<String>()
-        };
-        format!(" {}{}", output_line, terminator)
+        format!(" {}{}", expand_tabs(line, config.tab_width), terminator)
     } else {
         terminator.to_string()
+    }
+}
+
+/// Expand tabs as spaces.
+/// tab_width = 0 is documented to mean do not replace tabs.
+fn expand_tabs<'a, I>(line: I, tab_width: usize) -> String
+where
+    I: Iterator<Item = &'a str>,
+{
+    if tab_width > 0 {
+        let tab_replacement = " ".repeat(tab_width);
+        line.map(|s| if s == "\t" { &tab_replacement } else { s })
+            .collect::<String>()
+    } else {
+        line.collect::<String>()
     }
 }
 
