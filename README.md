@@ -65,20 +65,25 @@ Alternatively, delta is available in the following package managers:
 
 <table>
   <tr>
-    <td>Homebrew</td>
-    <td><code>brew install git-delta</code></td>
-  </tr>
-  <tr>
-    <td>FreeBSD</td>
-    <td><code>pkg install git-delta</code></td>
-  </tr>
-  <tr>
     <td>Arch Linux (AUR)</td>
     <td><code>yay -S git-delta</code>
         <br>or<br>
         <code>git clone https://aur.archlinux.org/git-delta.git</code><br>
         <code>cd git-delta</code><br>
         <code>makepkg -csri</code></td>
+  </tr>
+  <tr>
+    <td>Debian</td>
+    <td><br>Grab `.deb` from [barnumbirr/delta-debian](https://github.com/barnumbirr/delta-debian/releases)<br>
+    <code>dpkg -i delta_<version>_amd64_<debian_version>.deb</code></td>
+  </tr>
+  <tr>
+    <td>FreeBSD</td>
+    <td><code>pkg install git-delta</code></td>
+  </tr>
+  <tr>
+    <td>Homebrew</td>
+    <td><code>brew install git-delta</code></td>
   </tr>
   <tr>
     <td>Nix</td>
