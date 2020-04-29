@@ -74,8 +74,8 @@ Alternatively, delta is available in the following package managers:
   </tr>
   <tr>
     <td>Debian</td>
-    <td><br>Grab `.deb` from [barnumbirr/delta-debian](https://github.com/barnumbirr/delta-debian/releases)<br>
-    <code>dpkg -i delta_<version>_amd64_<debian_version>.deb</code></td>
+    <td><br>.deb files are on the <a href="https://github.com/dandavison/delta/releases">releases</a> page and at <a href="https://github.com/barnumbirr/delta-debian/releases">barnumbirr/delta-debian</a><br>
+    <code>dpkg -i file.deb</code></td>
   </tr>
   <tr>
     <td>FreeBSD</td>
