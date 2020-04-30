@@ -262,7 +262,7 @@ fn handle_hunk_meta_line(
             config,
             "",
             style::NO_BACKGROUND_COLOR_STYLE_MODIFIER,
-            false,
+            Some(false),
         );
         painter.output_buffer.pop(); // trim newline
         draw_fn(
@@ -333,7 +333,7 @@ fn handle_hunk_line(
                 config,
                 prefix,
                 style::NO_BACKGROUND_COLOR_STYLE_MODIFIER,
-                true,
+                None,
             );
             State::HunkZero
         }

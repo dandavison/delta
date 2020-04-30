@@ -5,7 +5,6 @@ use ansi_term;
 use syntect::easy::HighlightLines;
 use syntect::highlighting::{Color, Style, StyleModifier};
 use syntect::parsing::{SyntaxReference, SyntaxSet};
-use unicode_width::UnicodeWidthStr;
 
 use crate::bat::assets::HighlightingAssets;
 use crate::bat::terminal::to_ansi_color;
@@ -13,6 +12,9 @@ use crate::config;
 use crate::edits;
 use crate::paint::superimpose_style_sections::superimpose_style_sections;
 use crate::style;
+
+const ANSI_CSI_ERASE_IN_LINE: &str = "\x1b[K";
+const ANSI_SGR_RESET: &str = "\x1b[0m";
 
 pub struct Painter<'a> {
     pub minus_lines: Vec<String>,
@@ -79,7 +81,7 @@ impl<'a> Painter<'a> {
                 self.config,
                 self.config.minus_line_marker,
                 self.config.minus_style_modifier,
-                true,
+                None,
             );
         }
         if !self.plus_lines.is_empty() {
@@ -90,7 +92,7 @@ impl<'a> Painter<'a> {
                 self.config,
                 self.config.plus_line_marker,
                 self.config.plus_style_modifier,
-                true,
+                None,
             );
         }
         self.minus_lines.clear();
@@ -106,14 +108,13 @@ impl<'a> Painter<'a> {
         config: &config::Config,
         prefix: &str,
         background_style_modifier: StyleModifier,
-        should_trim_newline_and_right_pad: bool,
+        background_color_extends_to_terminal_width: Option<bool>,
     ) {
         let background_style = config.no_style.apply(background_style_modifier);
         let background_ansi_style = to_ansi_style(background_style, config.true_color);
         for (syntax_sections, diff_sections) in
             syntax_style_sections.iter().zip(diff_style_sections.iter())
         {
-            let mut text_width = 0;
             let mut ansi_strings = Vec::new();
             if prefix != "" {
                 ansi_strings.push(background_ansi_style.paint(prefix));
@@ -126,28 +127,27 @@ impl<'a> Painter<'a> {
                     }
                     dropped_prefix = true;
                 }
-                if config.width.is_some() {
-                    text_width += UnicodeWidthStr::width(text.as_str());
-                }
                 ansi_strings.push(to_ansi_style(style, config.true_color).paint(text));
             }
-            let mut line = ansi_term::ANSIStrings(&ansi_strings).to_string();
-            if should_trim_newline_and_right_pad {
-                // Right pad with background-highlighted white space.
-                match config.width {
-                    Some(width) if width > text_width => {
-                        // Right pad to requested width with spaces.
-                        paint_text(
-                            &" ".repeat(width - text_width),
-                            background_style,
-                            &mut line,
-                            config.true_color,
-                        );
-                    }
-                    _ => (),
+            let line = &mut ansi_term::ANSIStrings(&ansi_strings).to_string();
+            let background_color_extends_to_terminal_width =
+                match background_color_extends_to_terminal_width {
+                    Some(boolean) => boolean,
+                    None => config.background_color_extends_to_terminal_width,
+                };
+            if background_color_extends_to_terminal_width {
+                // HACK: How to properly incorporate the ANSI_CSI_ERASE_IN_LINE into ansi_strings?
+                if line
+                    .to_lowercase()
+                    .ends_with(&ANSI_SGR_RESET.to_lowercase())
+                {
+                    line.truncate(line.len() - ANSI_SGR_RESET.len());
                 }
+                output_buffer.push_str(&line);
+                output_buffer.push_str(ANSI_CSI_ERASE_IN_LINE);
+            } else {
+                output_buffer.push_str(&line);
             }
-            output_buffer.push_str(&line);
             output_buffer.push_str("\n");
         }
     }

@@ -95,6 +95,7 @@ impl OutputType {
                 };
 
                 Ok(process
+                    .env("LESSANSIENDCHARS", "mK")
                     .stdin(Stdio::piped())
                     .spawn()
                     .map(OutputType::Pager)
