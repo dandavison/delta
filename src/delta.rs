@@ -140,7 +140,7 @@ where
         } else if state.is_in_hunk() {
             // A true hunk line should start with one of: '+', '-', ' '. However, handle_hunk_line
             // handles all lines until the state machine transitions away from the hunk states.
-            state = handle_hunk_line(&mut painter, &line, state, config);
+            state = handle_hunk_line(&mut painter, &line, &raw_line, state, config);
             painter.emit()?;
             continue;
         }
@@ -289,7 +289,13 @@ fn handle_hunk_meta_line(
 // minus and plus lines jointly, in order to paint detailed
 // highlighting according to inferred edit operations. In the case of
 // an unchanged line, we paint it immediately.
-fn handle_hunk_line(painter: &mut Painter, line: &str, state: State, config: &Config) -> State {
+fn handle_hunk_line(
+    painter: &mut Painter,
+    line: &str,
+    raw_line: &str,
+    state: State,
+    config: &Config,
+) -> State {
     // Don't let the line buffers become arbitrarily large -- if we
     // were to allow that, then for a large deleted/added file we
     // would process the entire file before painting anything.
@@ -338,7 +344,7 @@ fn handle_hunk_line(painter: &mut Painter, line: &str, state: State, config: &Co
             painter.paint_buffered_lines();
             painter
                 .output_buffer
-                .push_str(&expand_tabs(line.graphemes(true), config.tab_width));
+                .push_str(&expand_tabs(raw_line.graphemes(true), config.tab_width));
             painter.output_buffer.push_str("\n");
             State::HunkZero
         }
