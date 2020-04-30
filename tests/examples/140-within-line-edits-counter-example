@@ -1,0 +1,28 @@
+#!/bin/bash
+
+
+repo=$(mktemp -d)
+cd $repo
+
+git init
+git commit --allow-empty -m "Initial commit"
+
+cat > file <<EOF
+aaaa a aaa
+bbbb b bbb
+cccc c ccc
+EOF
+
+git add file
+git commit -m "Base commit"
+
+cat > file <<EOF
+bbbb ! bbb
+dddd d ddd
+cccc ! ccc
+EOF
+
+git add file
+git commit -m "Changes"
+
+git log --patch

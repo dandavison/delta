@@ -1,0 +1,38 @@
+#!/bin/bash
+
+
+repo=$(mktemp -d)
+cd $repo
+
+git init
+git commit --allow-empty -m "Initial commit"
+
+cat > file1.js <<EOF
+{
+    if(g_themeController == nullptr)
+    {
+EOF
+
+cat > file2.js <<EOF
+myColor = color === control.palette.window ? themeController.themePalette.buttonColor
+                                           : themeController.themePalette.windowColor
+EOF
+
+git add file1.js file2.js
+git commit -m "Base commit"
+
+cat > file1.js <<EOF
+{
+    if(g_themeViewModel == nullptr)
+    {
+EOF
+
+cat > file2.js <<EOF
+myColor = color === control.palette.window ? themeViewModel.themePalette.basicBase
+                                           : themeViewModel.themePalette.windowColor
+EOF
+
+git add file1.js file2.js
+git commit -m "Changes"
+
+git log --patch

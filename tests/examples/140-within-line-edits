@@ -1,0 +1,26 @@
+#!/bin/bash
+
+
+repo=$(mktemp -d)
+cd $repo
+
+git init
+git commit --allow-empty -m "Initial commit"
+
+echo "did_emsg = FALSE;" > file.R
+
+git add file.R
+git commit -m "Base commit"
+
+echo "did_emsg == FALSE;" > file.R
+
+git add file.R
+git commit -m "Short change"
+
+git revert --no-edit HEAD
+
+echo "did_emsg = TRUE;" > file.R
+git add file.R
+git commit -m "Long change"
+
+git log --patch
