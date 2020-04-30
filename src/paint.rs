@@ -145,6 +145,7 @@ impl<'a> Painter<'a> {
                 }
                 output_buffer.push_str(&line);
                 output_buffer.push_str(ANSI_CSI_ERASE_IN_LINE);
+                output_buffer.push_str(ANSI_SGR_RESET);
             } else {
                 output_buffer.push_str(&line);
             }
