@@ -134,10 +134,8 @@ pub struct Opt {
     /// Color for the hunk-marker section of git output.
     pub hunk_color: String,
 
-    /// The width (in characters) of the background color
-    /// highlighting. By default, the width is the current terminal
-    /// width. Use --width=variable to apply background colors to the
-    /// end of each line, without right padding to equal width.
+    /// Use --width=variable to extend background colors to the end of each line only. Otherwise
+    /// background colors extend to the full terminal width.
     #[structopt(short = "w", long = "width")]
     pub width: Option<String>,
 
@@ -263,14 +261,6 @@ pub fn process_command_line_arguments<'a>(
     // characters unused for less at the right edge of the terminal, despite the subtraction of 1
     // here.
     let available_terminal_width = (Term::stdout().size().1 - 1) as usize;
-    let background_color_width = match opt.width.as_ref().map(String::as_str) {
-        Some("variable") => None,
-        Some(width) => Some(width.parse::<usize>().unwrap_or_else(|_| {
-            eprintln!("Invalid width: {}", width);
-            process::exit(1)
-        })),
-        None => Some(available_terminal_width),
-    };
 
     let paging_mode = match opt.paging_mode.as_ref() {
         "always" => PagingMode::Always,
@@ -304,7 +294,6 @@ pub fn process_command_line_arguments<'a>(
         &assets.theme_set,
         true_color,
         available_terminal_width,
-        background_color_width,
         paging_mode,
     )
 }
