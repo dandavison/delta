@@ -129,6 +129,7 @@ impl<'a> Painter<'a> {
                 }
                 ansi_strings.push(to_ansi_style(style, config.true_color).paint(text));
             }
+            ansi_strings.push(background_ansi_style.paint(""));
             let line = &mut ansi_term::ANSIStrings(&ansi_strings).to_string();
             let background_color_extends_to_terminal_width =
                 match background_color_extends_to_terminal_width {
@@ -145,6 +146,7 @@ impl<'a> Painter<'a> {
                 }
                 output_buffer.push_str(&line);
                 output_buffer.push_str(ANSI_CSI_ERASE_IN_LINE);
+                output_buffer.push_str(ANSI_SGR_RESET);
             } else {
                 output_buffer.push_str(&line);
             }
