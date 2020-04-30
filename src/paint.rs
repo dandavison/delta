@@ -219,6 +219,7 @@ impl<'a> Painter<'a> {
             config.plus_style_modifier,
             config.plus_emph_style_modifier,
             config.max_line_distance,
+            config.max_line_distance_for_naively_paired_lines,
         )
     }
 }

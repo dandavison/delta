@@ -16,6 +16,7 @@ pub fn infer_edits<'a, EditOperation>(
     noop_insertion: EditOperation,
     insertion: EditOperation,
     max_line_distance: f64,
+    max_line_distance_for_naively_paired_lines: f64,
 ) -> (
     Vec<Vec<(EditOperation, &'a str)>>, // annotated minus lines
     Vec<Vec<(EditOperation, &'a str)>>, // annotated plus lines
@@ -42,7 +43,10 @@ where
                 minus_line,
                 plus_line,
             );
-            if distance <= max_line_distance {
+            if minus_lines.len() == plus_lines.len()
+                && distance <= max_line_distance_for_naively_paired_lines
+                || distance <= max_line_distance
+            {
                 // minus_line and plus_line are inferred to be a homologous pair.
 
                 // Emit as unpaired the plus lines already considered and rejected
@@ -597,6 +601,7 @@ mod tests {
             PlusNoop,
             Insertion,
             max_line_distance,
+            0.0,
         );
         assert_eq!(actual_edits, expected_edits);
     }

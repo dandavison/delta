@@ -14,6 +14,7 @@ pub struct Config<'a> {
     pub theme: Option<&'a Theme>,
     pub theme_name: String,
     pub max_line_distance: f64,
+    pub max_line_distance_for_naively_paired_lines: f64,
     pub minus_style_modifier: StyleModifier,
     pub minus_emph_style_modifier: StyleModifier,
     pub plus_style_modifier: StyleModifier,
@@ -130,10 +131,16 @@ pub fn get_config<'a>(
     let minus_line_marker = if keep_plus_minus_markers { "-" } else { " " };
     let plus_line_marker = if keep_plus_minus_markers { "+" } else { " " };
 
+    let max_line_distance_for_naively_paired_lines =
+        env::get_env_var("DELTA_EXPERIMENTAL_MAX_LINE_DISTANCE_FOR_NAIVELY_PAIRED_LINES")
+            .map(|s| s.parse::<f64>().unwrap_or(0.0))
+            .unwrap_or(0.0);
+
     Config {
         theme,
         theme_name,
         max_line_distance: opt.max_line_distance,
+        max_line_distance_for_naively_paired_lines,
         minus_style_modifier,
         minus_emph_style_modifier,
         plus_style_modifier,
