@@ -194,6 +194,7 @@ pub enum SectionStyle {
     Box,
     Plain,
     Underline,
+    Omit,
 }
 
 // TODO: clean up enum parsing and error handling

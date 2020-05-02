@@ -186,6 +186,7 @@ fn handle_commit_meta_header_line(
         cli::SectionStyle::Box => draw::write_boxed_with_line,
         cli::SectionStyle::Underline => draw::write_underlined,
         cli::SectionStyle::Plain => panic!(),
+        cli::SectionStyle::Omit => return Ok(()),
     };
     draw_fn(
         painter.writer,
@@ -220,6 +221,7 @@ fn handle_generic_file_meta_header_line(
         cli::SectionStyle::Box => draw::write_boxed_with_line,
         cli::SectionStyle::Underline => draw::write_underlined,
         cli::SectionStyle::Plain => panic!(),
+        cli::SectionStyle::Omit => return Ok(()),
     };
     writeln!(painter.writer)?;
     draw_fn(
@@ -242,6 +244,7 @@ fn handle_hunk_meta_line(
         cli::SectionStyle::Box => draw::write_boxed,
         cli::SectionStyle::Underline => draw::write_underlined,
         cli::SectionStyle::Plain => panic!(),
+        cli::SectionStyle::Omit => return Ok(()),
     };
     let (raw_code_fragment, line_number) = parse::parse_hunk_metadata(&line);
     let code_fragment = prepare(raw_code_fragment, false, config);
