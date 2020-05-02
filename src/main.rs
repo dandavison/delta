@@ -151,12 +151,14 @@ index f38589a..0f1bb83 100644
             continue;
         }
 
-        writeln!(stdout, "\nTheme: {}\n", style.paint(theme))?;
+        writeln!(stdout, "\n\nTheme: {}\n", style.paint(theme))?;
         let new_opt = cli::Opt {
             theme: Some(theme.to_string()),
             ..opt.clone()
         };
-        let config = cli::process_command_line_arguments(&assets, &new_opt);
+        let mut config = cli::process_command_line_arguments(&assets, &new_opt);
+        config.file_style = cli::SectionStyle::Omit;
+        config.hunk_style = cli::SectionStyle::Omit;
         let mut output_type = OutputType::from_mode(PagingMode::QuitIfOneScreen, None).unwrap();
         let mut writer = output_type.handle().unwrap();
 
