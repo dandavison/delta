@@ -81,22 +81,29 @@ where
         } else if line.starts_with("diff ") {
             painter.paint_buffered_lines();
             state = State::FileMeta;
-            painter.set_syntax(parse::get_file_extension_from_diff_line(&line));
         } else if (state == State::FileMeta || source == Source::DiffUnified)
             // FIXME: For unified diff input, removal ("-") of a line starting with "--" (e.g. a
             // Haskell or SQL comment) will be confused with the "---" file metadata marker.
             && (line.starts_with("--- ") || line.starts_with("rename from "))
             && config.file_style != cli::SectionStyle::Plain
         {
+            minus_file = parse::get_file_path_from_file_meta_line(&line, source == Source::GitDiff);
             if source == Source::DiffUnified {
                 state = State::FileMeta;
                 painter.set_syntax(parse::get_file_extension_from_marker_line(&line));
+            } else {
+                state = State::FileMeta;
+                painter.set_syntax(parse::get_file_extension_from_file_meta_line_file_path(
+                    &minus_file,
+                ));
             }
-            minus_file = parse::get_file_path_from_file_meta_line(&line, source == Source::GitDiff);
         } else if (line.starts_with("+++ ") || line.starts_with("rename to "))
             && config.file_style != cli::SectionStyle::Plain
         {
             plus_file = parse::get_file_path_from_file_meta_line(&line, source == Source::GitDiff);
+            painter.set_syntax(parse::get_file_extension_from_file_meta_line_file_path(
+                &plus_file,
+            ));
             painter.emit()?;
             handle_file_meta_header_line(
                 &mut painter,
