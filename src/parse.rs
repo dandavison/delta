@@ -119,6 +119,18 @@ mod tests {
             get_file_extension_from_file_meta_line_file_path("/dev/null"),
             None
         );
+        assert_eq!(
+            get_file_extension_from_file_meta_line_file_path("Makefile"),
+            Some("Makefile")
+        );
+        assert_eq!(
+            get_file_extension_from_file_meta_line_file_path("a/src/Makefile"),
+            Some("Makefile")
+        );
+        assert_eq!(
+            get_file_extension_from_file_meta_line_file_path("src/Makefile"),
+            Some("Makefile")
+        );
     }
 
     // We should only strip the prefixes if they are "a/" or "b/". This will be correct except for
