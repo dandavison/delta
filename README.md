@@ -78,6 +78,10 @@ Alternatively, delta is available in the following package managers:
     <code>dpkg -i file.deb</code></td>
   </tr>
   <tr>
+    <td>Fedora</td>
+    <td><code>sudo dnf install git-delta</code></td>
+  </tr>
+  <tr>
     <td>FreeBSD</td>
     <td><code>pkg install git-delta</code></td>
   </tr>
