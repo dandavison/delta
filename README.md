@@ -33,6 +33,17 @@ Delta provides language syntax-highlighting, within-line insertion/deletion dete
 <br>
 <br>
 
+**By default, delta restructures the git output slightly to make the hunk markers human-readable:**
+
+<br>
+<table><tr><td>
+  <img width=650px src="https://user-images.githubusercontent.com/52205/81059276-254cf980-8e9e-11ea-95c3-8b757a4c11b5.png" alt="image" />
+</td></tr></table>
+
+
+<br>
+<br>
+
 **All the syntax-highlighting color themes that are available with [bat](https://github.com/sharkdp/bat/) are available with delta:**
 
 <br>
@@ -58,22 +69,6 @@ Delta provides language syntax-highlighting, within-line insertion/deletion dete
     </td>
   </tr>
 </table>
-
-
-
-
-<br>
-<br>
-
-**By default, delta restructures the git output slightly to make the hunk markers human-readable:**
-
-<br>
-<table><tr><td>
-  <img width=650px src="https://user-images.githubusercontent.com/52205/81059276-254cf980-8e9e-11ea-95c3-8b757a4c11b5.png" alt="image" />
-</td></tr></table>
-
-
-
 
 
 <br>
