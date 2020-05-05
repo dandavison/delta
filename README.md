@@ -3,7 +3,7 @@
 
 ## A syntax-highlighter for git and diff output
 
-Delta provides language syntax-highlighting, within-line insertion/deletion detection, and restructured diff output for git on the command line. All the syntax-highlighting color themes that are available with [bat](https://github.com/sharkdp/bat/) are available with delta. Here's what `git show` looks like when git is configured to use delta as its pager:
+Delta provides language syntax-highlighting, within-line insertion/deletion detection, and restructured diff output for git on the command line. Here's what `git show` looks like when git is configured to use delta as its pager:
 
 <br>
 
@@ -32,11 +32,42 @@ Delta provides language syntax-highlighting, within-line insertion/deletion dete
 
 <br>
 <br>
-By default, delta restructures the git output slightly to make the hunk markers human-readable:
+
+**All the syntax-highlighting color themes that are available with [bat](https://github.com/sharkdp/bat/) are available with delta:**
+
+<br>
+<table>
+  <tr>
+    <td>
+      <img width=500px style="border: 1px solid black"
+           src="https://user-images.githubusercontent.com/52205/80850197-b8f5a000-8be8-11ea-8c9e-29c5b213c4b7.png"
+           alt="image" />
+    </td>
+    <td>
+      <img width=450px style="border: 1px solid black"
+           src="https://user-images.githubusercontent.com/52205/80850237-e04c6d00-8be8-11ea-9027-0d2ea62f15c2.png"
+           alt="image" />
+    </td>
+  </tr>
+  <tr>
+    <td>
+      <code>delta --list-themes --dark</code>
+    </td>
+    <td>
+      <code>delta --list-themes --light</code>
+    </td>
+  </tr>
+</table>
+
+
+
 
 <br>
 <br>
 
+**By default, delta restructures the git output slightly to make the hunk markers human-readable:**
+
+<br>
 <table><tr><td>
   <img width=650px src="https://user-images.githubusercontent.com/52205/74090846-f200f700-4a75-11ea-9427-89e1fa686bfe.png" alt="image" />
 </td></tr></table>
@@ -123,30 +154,6 @@ diff -u a.txt b.txt | delta
 
 ## Supported languages and themes
 To list the supported languages and color themes, use `delta --list-languages` and `delta --list-theme-names`. To see a demo of the color themes, use `delta --list-themes`:
-
-<table>
-  <tr>
-    <td>
-      <img width=500px style="border: 1px solid black"
-           src="https://user-images.githubusercontent.com/52205/80850197-b8f5a000-8be8-11ea-8c9e-29c5b213c4b7.png"
-           alt="image" />
-    </td>
-    <td>
-      <img width=450px style="border: 1px solid black"
-           src="https://user-images.githubusercontent.com/52205/80850237-e04c6d00-8be8-11ea-9027-0d2ea62f15c2.png"
-           alt="image" />
-    </td>
-  </tr>
-  <tr>
-    <td>
-      <code>delta --list-themes --dark</code>
-    </td>
-    <td>
-      <code>delta --list-themes --light</code>
-    </td>
-  </tr>
-</table>
-
 
 To add your own custom color theme, or language, please follow the instructions in the Customization section of the [bat documentation](https://github.com/sharkdp/bat/#customization):
 - [Adding a custom language](https://github.com/sharkdp/bat/#adding-new-syntaxes--language-definitions)
