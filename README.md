@@ -122,7 +122,31 @@ diff -u a.txt b.txt | delta
 ```
 
 ## Supported languages and themes
-To list the supported languages and color themes, use `delta --list-languages` and `delta --list-theme-names`. To see a demo of the color themes, use `delta --list-themes`.
+To list the supported languages and color themes, use `delta --list-languages` and `delta --list-theme-names`. To see a demo of the color themes, use `delta --list-themes`:
+
+<table>
+  <tr>
+    <td>
+      <img width=500px style="border: 1px solid black"
+           src="https://user-images.githubusercontent.com/52205/80850197-b8f5a000-8be8-11ea-8c9e-29c5b213c4b7.png"
+           alt="image" />
+    </td>
+    <td>
+      <img width=450px style="border: 1px solid black"
+           src="https://user-images.githubusercontent.com/52205/80850237-e04c6d00-8be8-11ea-9027-0d2ea62f15c2.png"
+           alt="image" />
+    </td>
+  </tr>
+  <tr>
+    <td>
+      <code>delta --list-themes --dark</code>
+    </td>
+    <td>
+      <code>delta --list-themes --light</code>
+    </td>
+  </tr>
+</table>
+
 
 To add your own custom color theme, or language, please follow the instructions in the Customization section of the [bat documentation](https://github.com/sharkdp/bat/#customization):
 - [Adding a custom language](https://github.com/sharkdp/bat/#adding-new-syntaxes--language-definitions)
