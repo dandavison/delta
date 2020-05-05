@@ -25,7 +25,7 @@ Delta provides language syntax-highlighting, within-line insertion/deletion dete
       "GitHub" theme
     </td>
     <td>
-      "Monokai Extended" theme
+      "Dracula" theme
     </td>
   </tr>
 </table>
