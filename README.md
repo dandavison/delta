@@ -69,7 +69,7 @@ Delta provides language syntax-highlighting, within-line insertion/deletion dete
 
 <br>
 <table><tr><td>
-  <img width=650px src="https://user-images.githubusercontent.com/52205/74090846-f200f700-4a75-11ea-9427-89e1fa686bfe.png" alt="image" />
+  <img width=650px src="https://user-images.githubusercontent.com/52205/81059276-254cf980-8e9e-11ea-95c3-8b757a4c11b5.png" alt="image" />
 </td></tr></table>
 
 
