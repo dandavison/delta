@@ -164,13 +164,9 @@ Delta can be used when displaying diffs in the Magit git client: see [magit-delt
 <table><tr><td><img width=500px src="https://user-images.githubusercontent.com/52205/79934267-2acb2e00-8420-11ea-8bc4-546508fd3581.png" alt="image" /></td></tr></table>
 
 
-## Using delta with mercurial
+## Mercurial
 
-Edit your `.hgrc` as follow and set the options you want for delta in it:
-```
-[pager]
-pager = delta --dark
-```
+Add delta to the `[pager]` section of `.hgrc`, the same way as `~/.gitconfig`.
 
 
 ## Options
