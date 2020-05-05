@@ -11,12 +11,12 @@ Delta provides language syntax-highlighting, within-line insertion/deletion dete
   <tr>
     <td>
       <img width=500px style="border: 1px solid black"
-           src="https://user-images.githubusercontent.com/52205/75841661-eca47d00-5d93-11ea-8d32-48f2ebb0c5cb.png"
+           src="https://user-images.githubusercontent.com/52205/81058911-6abcf700-8e9d-11ea-93be-e212824ec03d.png"
            alt="image" />
     </td>
     <td>
       <img width=500px style="border: 1px solid black"
-           src="https://user-images.githubusercontent.com/52205/81058046-a060e080-8e9b-11ea-89c0-c17256aafd89.png"
+           src="https://user-images.githubusercontent.com/52205/81058545-a5725f80-8e9c-11ea-912e-d21954586a44.png"
            alt="image" />
     </td>
   </tr>
