@@ -9,6 +9,7 @@ use std::process::{Child, Command, Stdio};
 use shell_words;
 
 use crate::env;
+use super::less::retrieve_less_version;
 
 #[derive(Debug, Clone, Copy, PartialEq)]
 #[allow(dead_code)]
@@ -79,7 +80,27 @@ impl OutputType {
                 let mut process = if is_less {
                     let mut p = Command::new(&pager_path);
                     if args.is_empty() || replace_arguments_to_less {
-                        p.args(vec!["--RAW-CONTROL-CHARS", "--no-init"]);
+                        p.args(vec!["--RAW-CONTROL-CHARS"]);
+
+                        // Passing '--no-init' fixes a bug with '--quit-if-one-screen' in older
+                        // versions of 'less'. Unfortunately, it also breaks mouse-wheel support.
+                        //
+                        // See: http://www.greenwoodsoftware.com/less/news.530.html
+                        //
+                        // For newer versions (530 or 558 on Windows), we omit '--no-init' as it
+                        // is not needed anymore.
+                        match retrieve_less_version() {
+                            None => {
+                                p.arg("--no-init");
+                            }
+                            Some(version)
+                                if (version < 530 || (cfg!(windows) && version < 558)) =>
+                            {
+                                p.arg("--no-init");
+                            }
+                            _ => {}
+                        }
+
                         if quit_if_one_screen {
                             p.arg("--quit-if-one-screen");
                         }
