@@ -1,0 +1,68 @@
+#[cfg(test)]
+pub mod integration_test_utils {
+    use bytelines::ByteLines;
+    use console::strip_ansi_codes;
+    use std::io::BufReader;
+
+    use crate::bat::assets::HighlightingAssets;
+    use crate::cli;
+    use crate::delta::delta;
+
+    pub fn get_command_line_options() -> cli::Opt {
+        cli::Opt {
+            light: false,
+            dark: false,
+            minus_color: None,
+            minus_emph_color: None,
+            minus_foreground_color: None,
+            minus_emph_foreground_color: None,
+            plus_color: None,
+            plus_emph_color: None,
+            plus_foreground_color: None,
+            plus_emph_foreground_color: None,
+            color_only: false,
+            keep_plus_minus_markers: false,
+            theme: None,
+            lines_to_be_syntax_highlighted: "0+".to_string(),
+            highlight_minus_lines: false,
+            commit_style: cli::SectionStyle::Plain,
+            commit_color: "Yellow".to_string(),
+            file_style: cli::SectionStyle::Underline,
+            file_color: "Blue".to_string(),
+            hunk_style: cli::SectionStyle::Box,
+            hunk_color: "blue".to_string(),
+            true_color: "always".to_string(),
+            width: Some("variable".to_string()),
+            paging_mode: "auto".to_string(),
+            tab_width: 4,
+            show_background_colors: false,
+            list_languages: false,
+            list_theme_names: false,
+            list_themes: false,
+            max_line_distance: 0.3,
+        }
+    }
+
+    pub fn get_line_of_code_from_delta(input: &str, options: &cli::Opt) -> String {
+        let output = run_delta(&input, &options);
+        let line_of_code = output.lines().nth(12).unwrap();
+        assert!(strip_ansi_codes(line_of_code) == " class X:");
+        line_of_code.to_string()
+    }
+
+    pub fn run_delta(input: &str, options: &cli::Opt) -> String {
+        let mut writer: Vec<u8> = Vec::new();
+
+        let assets = HighlightingAssets::new();
+        let config = cli::process_command_line_arguments(&assets, &options);
+
+        delta(
+            ByteLines::new(BufReader::new(input.as_bytes())),
+            &config,
+            &assets,
+            &mut writer,
+        )
+        .unwrap();
+        String::from_utf8(writer).unwrap()
+    }
+}

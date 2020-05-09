@@ -2,12 +2,14 @@ use std::process;
 use std::str::FromStr;
 use std::string::ToString;
 
+use bit_set::BitSet;
 use console::Term;
 use structopt::StructOpt;
 
 use crate::bat::assets::HighlightingAssets;
 use crate::bat::output::PagingMode;
 use crate::config;
+use crate::delta::State;
 use crate::env;
 use crate::style;
 
@@ -68,20 +70,36 @@ pub struct Opt {
     pub dark: bool,
 
     #[structopt(long = "minus-color")]
-    /// The background color to use for removed lines.
+    /// The background color for removed lines.
     pub minus_color: Option<String>,
 
     #[structopt(long = "minus-emph-color")]
-    /// The background color to use for emphasized sections of removed lines.
+    /// The background color for emphasized sections of removed lines.
     pub minus_emph_color: Option<String>,
 
+    #[structopt(long = "minus-foreground-color")]
+    /// The foreground color for removed lines.
+    pub minus_foreground_color: Option<String>,
+
+    #[structopt(long = "minus-emph-foreground-color")]
+    /// The foreground color for emphasized sections of removed lines.
+    pub minus_emph_foreground_color: Option<String>,
+
     #[structopt(long = "plus-color")]
-    /// The background color to use for added lines.
+    /// The background color for added lines.
     pub plus_color: Option<String>,
 
     #[structopt(long = "plus-emph-color")]
-    /// The background color to use for emphasized sections of added lines.
+    /// The background color for emphasized sections of added lines.
     pub plus_emph_color: Option<String>,
+
+    #[structopt(long = "plus-foreground-color")]
+    /// Disable syntax highlighting and instead use this foreground color for added lines.
+    pub plus_foreground_color: Option<String>,
+
+    #[structopt(long = "plus-emph-foreground-color")]
+    /// Disable syntax highlighting and instead use this foreground color for emphasized sections of added lines.
+    pub plus_emph_foreground_color: Option<String>,
 
     #[structopt(long = "theme", env = "BAT_THEME")]
     /// The code syntax highlighting theme to use. Use --theme=none to disable syntax highlighting.
@@ -91,10 +109,15 @@ pub struct Opt {
     /// --file-color, --hunk-color to configure the colors of other parts of the diff output.
     pub theme: Option<String>,
 
+    /// A string consisting only of the characters '-', '0', '+', specifying
+    /// which of the 3 diff hunk line-types (removed, unchanged, added) should
+    /// be syntax-highlighted. "all" and "none" are also valid values.
+    #[structopt(long = "syntax-highlight", default_value = "0+")]
+    pub lines_to_be_syntax_highlighted: String,
+
     #[structopt(long = "highlight-removed")]
-    /// Apply syntax highlighting to removed lines. The default is to
-    /// apply syntax highlighting to unchanged and new lines only.
-    pub highlight_removed: bool,
+    /// DEPRECATED: use --syntax-highlight.
+    pub highlight_minus_lines: bool,
 
     #[structopt(long = "color-only")]
     /// Do not alter the input in any way other than applying colors. Equivalent to
@@ -296,6 +319,7 @@ pub fn process_command_line_arguments<'a>(
         true_color,
         available_terminal_width,
         paging_mode,
+        get_lines_to_be_syntax_highlighted(opt),
     )
 }
 
@@ -303,4 +327,157 @@ fn is_truecolor_terminal() -> bool {
     env::get_env_var("COLORTERM")
         .map(|colorterm| colorterm == "truecolor" || colorterm == "24bit")
         .unwrap_or(false)
+}
+
+fn get_lines_to_be_syntax_highlighted(opt: &Opt) -> BitSet {
+    if opt.highlight_minus_lines {
+        eprintln!("--highlight-removed is deprecated: use --syntax-highlight.");
+    }
+
+    let syntax_highlight_lines = match opt.lines_to_be_syntax_highlighted.to_lowercase().as_ref() {
+        "none" => "",
+        // This is the default value of the new option: honor the deprecated option if it has been used.
+        "0+" => match opt.highlight_minus_lines {
+            true => "-0+",
+            false => "0+",
+        },
+        "all" => "-0+",
+        s => s,
+    }
+    .to_string();
+
+    let mut lines_to_be_syntax_highlighted = BitSet::new();
+    for line_type in syntax_highlight_lines.chars() {
+        lines_to_be_syntax_highlighted.insert(match line_type {
+            '-' => State::HunkMinus as usize,
+            '0' => State::HunkZero as usize,
+            '+' => State::HunkPlus as usize,
+            s => {
+                eprintln!("Invalid --syntax-highlight value: {}. Valid characters are \"-\", \"0\", \"+\".", s);
+                process::exit(1);
+            }
+        });
+    }
+    lines_to_be_syntax_highlighted
+}
+
+#[cfg(test)]
+mod tests {
+    use std::env;
+
+    use crate::bat::assets::HighlightingAssets;
+    use crate::cli;
+    use crate::style;
+    use crate::tests::integration_test_utils::integration_test_utils;
+
+    #[test]
+    fn test_theme_selection() {
+        #[derive(PartialEq)]
+        enum Mode {
+            Light,
+            Dark,
+        };
+        let assets = HighlightingAssets::new();
+        for (
+            theme_option,
+            bat_theme_env_var,
+            mode_option, // (--light, --dark)
+            expected_theme,
+            expected_mode,
+        ) in vec![
+            (None, "", None, style::DEFAULT_DARK_THEME, Mode::Dark),
+            (Some("GitHub".to_string()), "", None, "GitHub", Mode::Light),
+            (
+                Some("GitHub".to_string()),
+                "1337",
+                None,
+                "GitHub",
+                Mode::Light,
+            ),
+            (None, "1337", None, "1337", Mode::Dark),
+            (
+                None,
+                "<not set>",
+                None,
+                style::DEFAULT_DARK_THEME,
+                Mode::Dark,
+            ),
+            (
+                None,
+                "",
+                Some(Mode::Light),
+                style::DEFAULT_LIGHT_THEME,
+                Mode::Light,
+            ),
+            (
+                None,
+                "",
+                Some(Mode::Dark),
+                style::DEFAULT_DARK_THEME,
+                Mode::Dark,
+            ),
+            (
+                None,
+                "<@@@@@>",
+                Some(Mode::Light),
+                style::DEFAULT_LIGHT_THEME,
+                Mode::Light,
+            ),
+            (None, "1337", Some(Mode::Light), "1337", Mode::Light),
+            (Some("none".to_string()), "", None, "none", Mode::Dark),
+            (
+                Some("None".to_string()),
+                "",
+                Some(Mode::Light),
+                "None",
+                Mode::Light,
+            ),
+        ] {
+            if bat_theme_env_var == "<not set>" {
+                env::remove_var("BAT_THEME")
+            } else {
+                env::set_var("BAT_THEME", bat_theme_env_var);
+            }
+            let is_true_color = true;
+            let mut options = integration_test_utils::get_command_line_options();
+            options.theme = theme_option;
+            match mode_option {
+                Some(Mode::Light) => {
+                    options.light = true;
+                    options.dark = false;
+                }
+                Some(Mode::Dark) => {
+                    options.light = false;
+                    options.dark = true;
+                }
+                None => {
+                    options.light = false;
+                    options.dark = false;
+                }
+            }
+            let config = cli::process_command_line_arguments(&assets, &options);
+            assert_eq!(config.theme_name, expected_theme);
+            if style::is_no_syntax_highlighting_theme_name(expected_theme) {
+                assert!(config.theme.is_none())
+            } else {
+                assert_eq!(config.theme.unwrap().name.as_ref().unwrap(), expected_theme);
+            }
+            assert_eq!(
+                config.minus_style_modifier.background.unwrap(),
+                style::get_minus_color_default(expected_mode == Mode::Light, is_true_color)
+            );
+            assert_eq!(
+                config.minus_emph_style_modifier.background.unwrap(),
+                style::get_minus_emph_color_default(expected_mode == Mode::Light, is_true_color)
+            );
+            assert_eq!(
+                config.plus_style_modifier.background.unwrap(),
+                style::get_plus_color_default(expected_mode == Mode::Light, is_true_color)
+            );
+            assert_eq!(
+                config.plus_emph_style_modifier.background.unwrap(),
+                style::get_plus_emph_color_default(expected_mode == Mode::Light, is_true_color)
+            );
+        }
+    }
 }

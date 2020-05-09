@@ -1,11 +1,13 @@
 use std::process;
 use std::str::FromStr;
 
+use bit_set::BitSet;
 use syntect::highlighting::{Color, Style, StyleModifier, Theme, ThemeSet};
 use syntect::parsing::SyntaxSet;
 
 use crate::bat::output::PagingMode;
 use crate::cli;
+use crate::delta::State;
 use crate::env;
 use crate::paint;
 use crate::style;
@@ -15,13 +17,15 @@ pub struct Config<'a> {
     pub theme_name: String,
     pub max_line_distance: f64,
     pub max_line_distance_for_naively_paired_lines: f64,
+    pub minus_foreground_style_modifier: Option<StyleModifier>,
     pub minus_style_modifier: StyleModifier,
     pub minus_emph_style_modifier: StyleModifier,
+    pub plus_foreground_style_modifier: Option<StyleModifier>,
     pub plus_style_modifier: StyleModifier,
     pub plus_emph_style_modifier: StyleModifier,
     pub minus_line_marker: &'a str,
     pub plus_line_marker: &'a str,
-    pub highlight_removed: bool,
+    pub lines_to_be_syntax_highlighted: BitSet,
     pub commit_style: cli::SectionStyle,
     pub commit_color: Color,
     pub file_style: cli::SectionStyle,
@@ -38,6 +42,37 @@ pub struct Config<'a> {
     pub paging_mode: PagingMode,
 }
 
+#[allow(dead_code)]
+pub enum ColorLayer {
+    Background,
+    Foreground,
+}
+use ColorLayer::*;
+use State::*;
+
+impl<'a> Config<'a> {
+    #[allow(dead_code)]
+    pub fn get_color(&self, state: &State, layer: ColorLayer) -> Option<Color> {
+        let modifier = match state {
+            HunkMinus => Some(self.minus_style_modifier),
+            HunkZero => None,
+            HunkPlus => Some(self.plus_style_modifier),
+            _ => panic!("Invalid"),
+        };
+        match (modifier, layer) {
+            (Some(modifier), Background) => modifier.background,
+            (Some(modifier), Foreground) => modifier.foreground,
+            (None, _) => None,
+        }
+    }
+
+    #[allow(dead_code)]
+    pub fn should_syntax_highlight(&self, state: &State) -> bool {
+        self.lines_to_be_syntax_highlighted
+            .contains((*state).clone() as usize)
+    }
+}
+
 pub fn get_config<'a>(
     opt: &'a cli::Opt,
     syntax_set: &'a SyntaxSet,
@@ -45,6 +80,7 @@ pub fn get_config<'a>(
     true_color: bool,
     terminal_width: usize,
     paging_mode: PagingMode,
+    lines_to_be_syntax_highlighted: BitSet,
 ) -> Config<'a> {
     // Implement --color-only
     let keep_plus_minus_markers = if opt.color_only {
@@ -54,20 +90,14 @@ pub fn get_config<'a>(
     };
     let background_color_extends_to_terminal_width = opt.width != Some("variable".to_string());
     let tab_width = if opt.color_only { 0 } else { opt.tab_width };
-    let commit_style = if opt.color_only {
-        cli::SectionStyle::Plain
+    let (commit_style, file_style, hunk_style) = if opt.color_only {
+        (
+            cli::SectionStyle::Plain,
+            cli::SectionStyle::Plain,
+            cli::SectionStyle::Plain,
+        )
     } else {
-        opt.commit_style
-    };
-    let file_style = if opt.color_only {
-        cli::SectionStyle::Plain
-    } else {
-        opt.file_style
-    };
-    let hunk_style = if opt.color_only {
-        cli::SectionStyle::Plain
-    } else {
-        opt.hunk_style
+        (opt.commit_style, opt.file_style, opt.hunk_style)
     };
 
     let theme_name_from_bat_pager = env::get_env_var("BAT_THEME");
@@ -78,54 +108,24 @@ pub fn get_config<'a>(
         theme_set,
     );
 
+    let (
+        minus_style_modifier,
+        plus_style_modifier,
+        minus_emph_style_modifier,
+        plus_emph_style_modifier,
+        minus_foreground_style_modifier,
+        plus_foreground_style_modifier,
+    ) = make_style_modifiers(
+        &lines_to_be_syntax_highlighted,
+        opt,
+        is_light_mode,
+        true_color,
+    );
+
     let theme = if style::is_no_syntax_highlighting_theme_name(&theme_name) {
         None
     } else {
         Some(&theme_set.themes[&theme_name])
-    };
-
-    let minus_style_modifier = StyleModifier {
-        background: Some(color_from_rgb_or_ansi_code_with_default(
-            opt.minus_color.as_ref(),
-            style::get_minus_color_default(is_light_mode, true_color),
-        )),
-        foreground: if opt.highlight_removed {
-            None
-        } else {
-            Some(style::NO_COLOR)
-        },
-        font_style: None,
-    };
-
-    let minus_emph_style_modifier = StyleModifier {
-        background: Some(color_from_rgb_or_ansi_code_with_default(
-            opt.minus_emph_color.as_ref(),
-            style::get_minus_emph_color_default(is_light_mode, true_color),
-        )),
-        foreground: if opt.highlight_removed {
-            None
-        } else {
-            Some(style::NO_COLOR)
-        },
-        font_style: None,
-    };
-
-    let plus_style_modifier = StyleModifier {
-        background: Some(color_from_rgb_or_ansi_code_with_default(
-            opt.plus_color.as_ref(),
-            style::get_plus_color_default(is_light_mode, true_color),
-        )),
-        foreground: None,
-        font_style: None,
-    };
-
-    let plus_emph_style_modifier = StyleModifier {
-        background: Some(color_from_rgb_or_ansi_code_with_default(
-            opt.plus_emph_color.as_ref(),
-            style::get_plus_emph_color_default(is_light_mode, true_color),
-        )),
-        foreground: None,
-        font_style: None,
     };
 
     let minus_line_marker = if keep_plus_minus_markers { "-" } else { " " };
@@ -141,11 +141,13 @@ pub fn get_config<'a>(
         theme_name,
         max_line_distance: opt.max_line_distance,
         max_line_distance_for_naively_paired_lines,
+        minus_foreground_style_modifier,
         minus_style_modifier,
         minus_emph_style_modifier,
+        plus_foreground_style_modifier,
         plus_style_modifier,
         plus_emph_style_modifier,
-        highlight_removed: opt.highlight_removed,
+        lines_to_be_syntax_highlighted,
         minus_line_marker,
         plus_line_marker,
         commit_style,
@@ -218,6 +220,100 @@ fn valid_theme_name_or_none(theme_name: Option<&String>, theme_set: &ThemeSet) -
         }
         _ => None,
     }
+}
+
+fn make_style_modifiers<'a>(
+    lines_to_be_syntax_highlighted: &BitSet,
+    opt: &'a cli::Opt,
+    is_light_mode: bool,
+    true_color: bool,
+) -> (
+    StyleModifier,
+    StyleModifier,
+    StyleModifier,
+    StyleModifier,
+    Option<StyleModifier>,
+    Option<StyleModifier>,
+) {
+    // Background styles
+    let minus_background_style_modifier = StyleModifier {
+        background: Some(color_from_rgb_or_ansi_code_with_default(
+            opt.minus_color.as_ref(),
+            style::get_minus_color_default(is_light_mode, true_color),
+        )),
+        foreground: if lines_to_be_syntax_highlighted.contains(State::HunkMinus as usize) {
+            None
+        } else {
+            Some(style::NO_COLOR)
+        },
+        font_style: None,
+    };
+
+    let plus_background_style_modifier = StyleModifier {
+        background: Some(color_from_rgb_or_ansi_code_with_default(
+            opt.plus_color.as_ref(),
+            style::get_plus_color_default(is_light_mode, true_color),
+        )),
+        foreground: None,
+        font_style: None,
+    };
+
+    // Background emph styles
+    let minus_background_emph_style_modifier = StyleModifier {
+        background: Some(color_from_rgb_or_ansi_code_with_default(
+            opt.minus_emph_color.as_ref(),
+            style::get_minus_emph_color_default(is_light_mode, true_color),
+        )),
+        foreground: if lines_to_be_syntax_highlighted.contains(State::HunkMinus as usize) {
+            None
+        } else {
+            Some(style::NO_COLOR)
+        },
+        font_style: None,
+    };
+
+    let plus_background_emph_style_modifier = StyleModifier {
+        background: Some(color_from_rgb_or_ansi_code_with_default(
+            opt.plus_emph_color.as_ref(),
+            style::get_plus_emph_color_default(is_light_mode, true_color),
+        )),
+        foreground: None,
+        font_style: None,
+    };
+
+    // Foreground styles (these replace syntax highlighting).
+    let minus_foreground_style_modifier = match opt.minus_foreground_color.is_some() {
+        true => Some(StyleModifier {
+            background: None,
+            foreground: Some(color_from_rgb_or_ansi_code_with_default(
+                opt.minus_foreground_color.as_ref(),
+                style::get_minus_emph_color_default(is_light_mode, true_color),
+            )),
+            font_style: None,
+        }),
+        false => None,
+    };
+
+    let plus_foreground_style_modifier = match opt.plus_foreground_color.is_some() {
+        true => Some(StyleModifier {
+            background: None,
+            foreground: Some(color_from_rgb_or_ansi_code_with_default(
+                opt.plus_foreground_color.as_ref(),
+                style::get_plus_emph_color_default(is_light_mode, true_color),
+            )),
+            font_style: None,
+        }),
+        false => None,
+    };
+
+    (
+        minus_background_style_modifier,
+        plus_background_style_modifier,
+        minus_background_emph_style_modifier,
+        plus_background_emph_style_modifier,
+        minus_foreground_style_modifier,
+        plus_foreground_style_modifier,
+    )
 }
 
 fn color_from_rgb_or_ansi_code(s: &str) -> Color {
