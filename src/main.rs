@@ -62,7 +62,10 @@ fn main() -> std::io::Result<()> {
     let mut writer = output_type.handle().unwrap();
 
     if let Err(error) = delta(
-        io::stdin().lock().lines().map(|l| l.unwrap()),
+        io::stdin()
+            .lock()
+            .lines()
+            .map(|l| l.unwrap_or_else(|_| "<delta: invalid utf-8 data>".to_string())),
         &config,
         &assets,
         &mut writer,
