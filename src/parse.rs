@@ -1,21 +1,6 @@
 use std::path::Path;
 
 /// Given input like
-/// "diff --git a/src/main.rs b/src/main.rs"
-/// Return "rs", i.e. a single file extension consistent with both files.
-pub fn get_file_extension_from_diff_line(line: &str) -> Option<&str> {
-    match get_file_extensions_from_diff_line(line) {
-        (Some(_ext1), Some(ext2)) => {
-            // If they differ then it's a rename; use the new extension.
-            Some(ext2)
-        }
-        (Some(ext1), None) => Some(ext1),
-        (None, Some(ext2)) => Some(ext2),
-        (None, None) => None,
-    }
-}
-
-/// Given input like
 /// "--- one.rs	2019-11-20 06:16:08.000000000 +0100"
 /// Return "rs"
 pub fn get_file_extension_from_marker_line(line: &str) -> Option<&str> {
@@ -51,6 +36,14 @@ pub fn get_file_path_from_file_meta_line(line: &str, git_diff_name: bool) -> Str
     .to_string()
 }
 
+pub fn get_file_extension_from_file_meta_line_file_path(path: &str) -> Option<&str> {
+    if path.is_empty() || path == "/dev/null" {
+        None
+    } else {
+        get_extension(&path).map(|ex| ex.trim())
+    }
+}
+
 pub fn get_file_change_description_from_file_paths(
     minus_file: &str,
     plus_file: &str,
@@ -81,16 +74,6 @@ pub fn parse_hunk_metadata(line: &str) -> (&str, &str) {
     (code_fragment, line_number)
 }
 
-/// Given input like "diff --git a/src/main.rs b/src/main.rs"
-/// return ("rs", "rs").
-fn get_file_extensions_from_diff_line(line: &str) -> (Option<&str>, Option<&str>) {
-    let mut iter = line.split(' ').skip(2);
-    (
-        iter.next().and_then(|s| get_extension(&s[2..])),
-        iter.next().and_then(|s| get_extension(&s[2..])),
-    )
-}
-
 /// Attempt to parse input as a file path and return extension as a &str.
 fn get_extension(s: &str) -> Option<&str> {
     let path = Path::new(s);
@@ -105,20 +88,48 @@ mod tests {
     use super::*;
 
     #[test]
-    fn test_get_file_extension_from_diff_line() {
-        assert_eq!(
-            get_file_extension_from_diff_line("diff --git a/src/main.rs b/src/main.rs"),
-            Some("rs")
-        );
-    }
-
-    #[test]
     fn test_get_file_extension_from_marker_line() {
         assert_eq!(
             get_file_extension_from_marker_line(
                 "--- src/one.rs	2019-11-20 06:47:56.000000000 +0100"
             ),
             Some("rs")
+        );
+    }
+
+    #[test]
+    fn test_get_file_extension_from_file_meta_line() {
+        assert_eq!(
+            get_file_extension_from_file_meta_line_file_path("a/src/parse.rs"),
+            Some("rs")
+        );
+        assert_eq!(
+            get_file_extension_from_file_meta_line_file_path("b/src/pa rse.rs"),
+            Some("rs")
+        );
+        assert_eq!(
+            get_file_extension_from_file_meta_line_file_path("src/pa rse.rs"),
+            Some("rs")
+        );
+        assert_eq!(
+            get_file_extension_from_file_meta_line_file_path("wat hello.rs"),
+            Some("rs")
+        );
+        assert_eq!(
+            get_file_extension_from_file_meta_line_file_path("/dev/null"),
+            None
+        );
+        assert_eq!(
+            get_file_extension_from_file_meta_line_file_path("Makefile"),
+            Some("Makefile")
+        );
+        assert_eq!(
+            get_file_extension_from_file_meta_line_file_path("a/src/Makefile"),
+            Some("Makefile")
+        );
+        assert_eq!(
+            get_file_extension_from_file_meta_line_file_path("src/Makefile"),
+            Some("Makefile")
         );
     }
 
