@@ -13,11 +13,12 @@ mod paint;
 mod parse;
 mod style;
 
-use std::io::{self, BufRead, ErrorKind, Read, Write};
+use std::io::{self, ErrorKind, Read, Write};
 use std::process;
 
 use ansi_term;
 use atty;
+use bytelines::ByteLinesReader;
 use structopt::StructOpt;
 use syntect::highlighting::{Color, FontStyle, Style};
 
@@ -62,10 +63,7 @@ fn main() -> std::io::Result<()> {
     let mut writer = output_type.handle().unwrap();
 
     if let Err(error) = delta(
-        io::stdin()
-            .lock()
-            .lines()
-            .map(|l| l.unwrap_or_else(|_| "<delta: invalid utf-8 data>".to_string())),
+        io::stdin().lock().byte_lines_iter(),
         &config,
         &assets,
         &mut writer,
@@ -123,9 +121,9 @@ fn get_painted_rgb_string(color: Color, true_color: bool) -> String {
 
 fn list_themes(assets: &HighlightingAssets) -> std::io::Result<()> {
     let opt = cli::Opt::from_args();
-    let mut input = String::new();
+    let mut input = Vec::new();
     if atty::is(atty::Stream::Stdin) {
-        input = "\
+        input = b"\
 diff --git a/example.rs b/example.rs
 index f38589a..0f1bb83 100644
 --- a/example.rs
@@ -140,9 +138,9 @@ index f38589a..0f1bb83 100644
 +    let result = f64::powf(num, 3.0);
 +    println!(\"The cube of {:.2} is {:.2}.\", num, result);
  }"
-        .to_string()
+        .to_vec()
     } else {
-        io::stdin().read_to_string(&mut input)?;
+        io::stdin().read_to_end(&mut input)?;
     }
 
     let stdout = io::stdout();
@@ -166,7 +164,7 @@ index f38589a..0f1bb83 100644
         let mut writer = output_type.handle().unwrap();
 
         if let Err(error) = delta(
-            input.split('\n').map(String::from),
+            input.split(|&b| b == b'\n').map(|line| Ok(line.to_vec())),
             &config,
             &assets,
             &mut writer,
