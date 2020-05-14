@@ -116,6 +116,10 @@ Alternatively, delta is available in the following package managers:
     <td><code>brew install git-delta</code></td>
   </tr>
   <tr>
+    <td>MacPorts</td>
+    <td><code>port install git-delta</code></td>
+  </tr>
+  <tr>
     <td>Nix</td>
     <td><code>nix-env -iA nixpkgs.gitAndTools.delta</code>
   </tr>
