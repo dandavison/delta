@@ -1,6 +1,8 @@
 use std::io::Write;
 
+use bytelines::ByteLines;
 use console::strip_ansi_codes;
+use std::io::BufRead;
 use unicode_segmentation::UnicodeSegmentation;
 
 use crate::bat::assets::HighlightingAssets;
@@ -51,13 +53,13 @@ impl State {
 // | HunkPlus    | flush, emit | flush, emit | flush, emit | flush, emit | flush, push | push     |
 
 pub fn delta<I>(
-    mut lines: I,
+    mut lines: ByteLines<I>,
     config: &Config,
     assets: &HighlightingAssets,
     writer: &mut dyn Write,
 ) -> std::io::Result<()>
 where
-    I: Iterator<Item = std::io::Result<Vec<u8>>>,
+    I: BufRead,
 {
     let mut painter = Painter::new(writer, config, assets);
     let mut minus_file = "".to_string();
@@ -403,6 +405,7 @@ mod tests {
     use super::*;
     use console::strip_ansi_codes;
     use std::env;
+    use std::io::BufReader;
     use syntect::highlighting::StyleModifier;
 
     use crate::paint;
@@ -634,7 +637,7 @@ mod tests {
         let config = cli::process_command_line_arguments(&assets, &options);
 
         delta(
-            input.split("\n").map(|s| Ok(s.as_bytes().to_vec())),
+            ByteLines::new(BufReader::new(input.as_bytes())),
             &config,
             &assets,
             &mut writer,
@@ -735,11 +738,8 @@ mod tests {
             let mut options = get_command_line_options();
             options.color_only = true;
             let output = run_delta(input, &options);
-            assert_eq!(
-                strip_ansi_codes(&output).to_string(),
-                input.to_owned() + "\n"
-            );
-            assert_ne!(output, input.to_owned() + "\n");
+            assert_eq!(strip_ansi_codes(&output).to_string(), input.to_owned());
+            assert_ne!(output, input.to_owned());
         }
     }
 
@@ -749,7 +749,7 @@ mod tests {
         let output = run_delta(DIFF_WITH_MERGE_CONFLICT, &options);
         // TODO: The + in the first column is being removed.
         assert!(strip_ansi_codes(&output).contains("+>>>>>>> Stashed changes"));
-        assert_eq!(output.split('\n').count(), 47);
+        assert_eq!(output.split('\n').count(), 46);
     }
 
     #[test]
@@ -759,7 +759,7 @@ mod tests {
         let output = run_delta(DIFF_WITH_MERGE_CONFLICT, &options);
         assert_eq!(
             strip_ansi_codes(&output).to_string(),
-            DIFF_WITH_MERGE_CONFLICT.to_owned() + "\n"
+            DIFF_WITH_MERGE_CONFLICT.to_owned()
         );
     }
 

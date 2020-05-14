@@ -63,7 +63,7 @@ fn main() -> std::io::Result<()> {
     let mut writer = output_type.handle().unwrap();
 
     if let Err(error) = delta(
-        io::stdin().lock().byte_lines_iter(),
+        io::stdin().lock().byte_lines(),
         &config,
         &assets,
         &mut writer,
@@ -120,10 +120,15 @@ fn get_painted_rgb_string(color: Color, true_color: bool) -> String {
 }
 
 fn list_themes(assets: &HighlightingAssets) -> std::io::Result<()> {
+    use bytelines::ByteLines;
+    use std::io::BufReader;
     let opt = cli::Opt::from_args();
-    let mut input = Vec::new();
-    if atty::is(atty::Stream::Stdin) {
-        input = b"\
+    let input = if !atty::is(atty::Stream::Stdin) {
+        let mut buf = Vec::new();
+        io::stdin().lock().read_to_end(&mut buf)?;
+        buf
+    } else {
+        b"\
 diff --git a/example.rs b/example.rs
 index f38589a..0f1bb83 100644
 --- a/example.rs
@@ -139,9 +144,7 @@ index f38589a..0f1bb83 100644
 +    println!(\"The cube of {:.2} is {:.2}.\", num, result);
  }"
         .to_vec()
-    } else {
-        io::stdin().read_to_end(&mut input)?;
-    }
+    };
 
     let stdout = io::stdout();
     let mut stdout = stdout.lock();
@@ -164,7 +167,7 @@ index f38589a..0f1bb83 100644
         let mut writer = output_type.handle().unwrap();
 
         if let Err(error) = delta(
-            input.split(|&b| b == b'\n').map(|line| Ok(line.to_vec())),
+            ByteLines::new(BufReader::new(&input[0..])),
             &config,
             &assets,
             &mut writer,
