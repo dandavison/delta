@@ -8,8 +8,8 @@ use std::process::{Child, Command, Stdio};
 
 use shell_words;
 
-use crate::env;
 use super::less::retrieve_less_version;
+use crate::env;
 
 #[derive(Debug, Clone, Copy, PartialEq)]
 #[allow(dead_code)]
