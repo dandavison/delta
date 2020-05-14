@@ -1,6 +1,9 @@
 build:
 	cargo build --release
 
+format:
+	rustfmt src/*.rs
+
 lint:
 	cargo clippy
 
@@ -32,4 +35,4 @@ benchmark: build
 chronologer:
 	chronologer performance/chronologer.yaml
 
-.PHONY: build lint test unit-test end-to-end-test release version hash benchmark chronologer
+.PHONY: build format lint test unit-test end-to-end-test release version hash benchmark chronologer
