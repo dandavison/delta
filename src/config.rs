@@ -282,29 +282,9 @@ fn make_style_modifiers<'a>(
     };
 
     // Foreground styles (these replace syntax highlighting).
-    let minus_foreground_style_modifier = match opt.minus_foreground_color.is_some() {
-        true => Some(StyleModifier {
-            background: None,
-            foreground: Some(color_from_rgb_or_ansi_code_with_default(
-                opt.minus_foreground_color.as_ref(),
-                style::get_minus_emph_color_default(is_light_mode, true_color),
-            )),
-            font_style: None,
-        }),
-        false => None,
-    };
+    let minus_foreground_style_modifier = None;
 
-    let plus_foreground_style_modifier = match opt.plus_foreground_color.is_some() {
-        true => Some(StyleModifier {
-            background: None,
-            foreground: Some(color_from_rgb_or_ansi_code_with_default(
-                opt.plus_foreground_color.as_ref(),
-                style::get_plus_emph_color_default(is_light_mode, true_color),
-            )),
-            font_style: None,
-        }),
-        false => None,
-    };
+    let plus_foreground_style_modifier = None;
 
     (
         minus_background_style_modifier,

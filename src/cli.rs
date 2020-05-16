@@ -77,14 +77,6 @@ pub struct Opt {
     /// The background color for emphasized sections of removed lines.
     pub minus_emph_color: Option<String>,
 
-    #[structopt(long = "minus-foreground-color")]
-    /// The foreground color for removed lines.
-    pub minus_foreground_color: Option<String>,
-
-    #[structopt(long = "minus-emph-foreground-color")]
-    /// The foreground color for emphasized sections of removed lines.
-    pub minus_emph_foreground_color: Option<String>,
-
     #[structopt(long = "plus-color")]
     /// The background color for added lines.
     pub plus_color: Option<String>,
@@ -92,14 +84,6 @@ pub struct Opt {
     #[structopt(long = "plus-emph-color")]
     /// The background color for emphasized sections of added lines.
     pub plus_emph_color: Option<String>,
-
-    #[structopt(long = "plus-foreground-color")]
-    /// Disable syntax highlighting and instead use this foreground color for added lines.
-    pub plus_foreground_color: Option<String>,
-
-    #[structopt(long = "plus-emph-foreground-color")]
-    /// Disable syntax highlighting and instead use this foreground color for emphasized sections of added lines.
-    pub plus_emph_foreground_color: Option<String>,
 
     #[structopt(long = "theme", env = "BAT_THEME")]
     /// The code syntax highlighting theme to use. Use --theme=none to disable syntax highlighting.
