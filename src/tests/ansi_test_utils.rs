@@ -11,10 +11,19 @@ pub mod ansi_test_utils {
     use crate::delta::State;
     use crate::paint;
 
+    use ansi_parser::AnsiSequence::*;
+    use ansi_parser::Output::*;
+
+    // Note that ansi_parser seems to be parsing 24-bit sequences as TextBlock
+    // rather than Escape(SetGraphicsMode). As a workaround, we examime the
+    // TextBlock string value using functions such as
+    // string_has_some_background_color and string_has_some_foreground_color.
+
     pub fn is_syntax_highlighted(line: &str) -> bool {
         line.ansi_parse()
             .filter(|tok| match tok {
-                ansi_parser::Output::TextBlock(s) => string_has_some_foreground_color(s),
+                TextBlock(s) => string_has_some_foreground_color(s),
+                Escape(SetGraphicsMode(parameters)) => parameters[0] == 38,
                 _ => false,
             })
             .next()
@@ -24,7 +33,7 @@ pub mod ansi_test_utils {
     pub fn line_has_background_color(line: &str, state: &State, config: &Config) -> bool {
         line.ansi_parse()
             .filter(|tok| match tok {
-                ansi_parser::Output::TextBlock(s) => string_has_background_color(s, state, config),
+                TextBlock(s) => string_has_background_color(s, state, config),
                 _ => false,
             })
             .next()
@@ -34,7 +43,7 @@ pub mod ansi_test_utils {
     pub fn line_has_no_background_color(line: &str) -> bool {
         line.ansi_parse()
             .filter(|tok| match tok {
-                ansi_parser::Output::TextBlock(s) => string_has_some_background_color(s),
+                TextBlock(s) => string_has_some_background_color(s),
                 _ => false,
             })
             .next()
@@ -49,7 +58,9 @@ pub mod ansi_test_utils {
                 .unwrap_or_else(|| panic!("state {:?} does not have a background color", state)),
             true,
         );
-        let ansi_sequence = painted.trim_end_matches(paint::ANSI_SGR_RESET);
+        let ansi_sequence = painted
+            .trim_end_matches(paint::ANSI_SGR_RESET)
+            .trim_end_matches("m");
         string.starts_with(ansi_sequence)
     }
 
@@ -62,15 +73,17 @@ pub mod ansi_test_utils {
     }
 
     pub fn assert_line_has_expected_ansi_sequences(line: &str, expected: &Vec<(&str, &str)>) {
-        assert_eq!(line.ansi_parse().count(), expected.len());
-        for ((expected_ansi_sequence, _), ref token) in expected.iter().zip_eq(line.ansi_parse()) {
+        let parsed_line = line.ansi_parse().filter(|token| match token {
+            Escape(SetGraphicsMode(parameters)) if parameters == &vec![0 as u32] => false,
+            _ => true,
+        });
+        for ((expected_ansi_sequence, _), ref token) in expected.iter().zip_eq(parsed_line) {
             match token {
-                ansi_parser::Output::TextBlock(s) => {
+                TextBlock(s) => {
                     assert!(s.starts_with(*expected_ansi_sequence));
                 }
-                ansi_parser::Output::Escape(_) => {
-                    assert_eq!(expected_ansi_sequence, &paint::ANSI_SGR_RESET);
-                }
+                Escape(SetGraphicsMode(parameters)) => assert_eq!(parameters, &vec![0 as u32]),
+                _ => panic!("Unexpected token: {:?}", token),
             }
         }
     }

@@ -17,10 +17,8 @@ pub struct Config<'a> {
     pub theme_name: String,
     pub max_line_distance: f64,
     pub max_line_distance_for_naively_paired_lines: f64,
-    pub minus_foreground_style_modifier: Option<StyleModifier>,
     pub minus_style_modifier: StyleModifier,
     pub minus_emph_style_modifier: StyleModifier,
-    pub plus_foreground_style_modifier: Option<StyleModifier>,
     pub plus_style_modifier: StyleModifier,
     pub plus_emph_style_modifier: StyleModifier,
     pub minus_line_marker: &'a str,
@@ -110,17 +108,10 @@ pub fn get_config<'a>(
 
     let (
         minus_style_modifier,
-        plus_style_modifier,
         minus_emph_style_modifier,
+        plus_style_modifier,
         plus_emph_style_modifier,
-        minus_foreground_style_modifier,
-        plus_foreground_style_modifier,
-    ) = make_style_modifiers(
-        &lines_to_be_syntax_highlighted,
-        opt,
-        is_light_mode,
-        true_color,
-    );
+    ) = make_style_modifiers(opt, is_light_mode, true_color);
 
     let theme = if style::is_no_syntax_highlighting_theme_name(&theme_name) {
         None
@@ -141,10 +132,8 @@ pub fn get_config<'a>(
         theme_name,
         max_line_distance: opt.max_line_distance,
         max_line_distance_for_naively_paired_lines,
-        minus_foreground_style_modifier,
         minus_style_modifier,
         minus_emph_style_modifier,
-        plus_foreground_style_modifier,
         plus_style_modifier,
         plus_emph_style_modifier,
         lines_to_be_syntax_highlighted,
@@ -223,76 +212,69 @@ fn valid_theme_name_or_none(theme_name: Option<&String>, theme_set: &ThemeSet) -
 }
 
 fn make_style_modifiers<'a>(
-    lines_to_be_syntax_highlighted: &BitSet,
     opt: &'a cli::Opt,
     is_light_mode: bool,
     true_color: bool,
-) -> (
-    StyleModifier,
-    StyleModifier,
-    StyleModifier,
-    StyleModifier,
-    Option<StyleModifier>,
-    Option<StyleModifier>,
-) {
-    // Background styles
-    let minus_background_style_modifier = StyleModifier {
-        background: Some(color_from_rgb_or_ansi_code_with_default(
+) -> (StyleModifier, StyleModifier, StyleModifier, StyleModifier) {
+    let minus_style_modifier = StyleModifier {
+        background: color_from_rgb_or_ansi_code_with_default(
             opt.minus_color.as_ref(),
-            style::get_minus_color_default(is_light_mode, true_color),
-        )),
-        foreground: if lines_to_be_syntax_highlighted.contains(State::HunkMinus as usize) {
-            None
-        } else {
-            Some(style::NO_COLOR)
-        },
+            Some(style::get_minus_color_default(is_light_mode, true_color)),
+        ),
+        foreground: color_from_rgb_or_ansi_code_with_default(
+            opt.minus_foreground_color.as_ref(),
+            None,
+        ),
         font_style: None,
     };
 
-    let plus_background_style_modifier = StyleModifier {
-        background: Some(color_from_rgb_or_ansi_code_with_default(
-            opt.plus_color.as_ref(),
-            style::get_plus_color_default(is_light_mode, true_color),
-        )),
-        foreground: None,
-        font_style: None,
-    };
-
-    // Background emph styles
-    let minus_background_emph_style_modifier = StyleModifier {
-        background: Some(color_from_rgb_or_ansi_code_with_default(
+    let minus_emph_style_modifier = StyleModifier {
+        background: color_from_rgb_or_ansi_code_with_default(
             opt.minus_emph_color.as_ref(),
-            style::get_minus_emph_color_default(is_light_mode, true_color),
-        )),
-        foreground: if lines_to_be_syntax_highlighted.contains(State::HunkMinus as usize) {
-            None
-        } else {
-            Some(style::NO_COLOR)
-        },
+            Some(style::get_minus_emph_color_default(
+                is_light_mode,
+                true_color,
+            )),
+        ),
+        foreground: color_from_rgb_or_ansi_code_with_default(
+            opt.minus_emph_foreground_color.as_ref(),
+            minus_style_modifier.foreground,
+        ),
         font_style: None,
     };
 
-    let plus_background_emph_style_modifier = StyleModifier {
-        background: Some(color_from_rgb_or_ansi_code_with_default(
+    let plus_style_modifier = StyleModifier {
+        background: color_from_rgb_or_ansi_code_with_default(
+            opt.plus_color.as_ref(),
+            Some(style::get_plus_color_default(is_light_mode, true_color)),
+        ),
+        foreground: color_from_rgb_or_ansi_code_with_default(
+            opt.plus_foreground_color.as_ref(),
+            None,
+        ),
+        font_style: None,
+    };
+
+    let plus_emph_style_modifier = StyleModifier {
+        background: color_from_rgb_or_ansi_code_with_default(
             opt.plus_emph_color.as_ref(),
-            style::get_plus_emph_color_default(is_light_mode, true_color),
-        )),
-        foreground: None,
+            Some(style::get_plus_emph_color_default(
+                is_light_mode,
+                true_color,
+            )),
+        ),
+        foreground: color_from_rgb_or_ansi_code_with_default(
+            opt.plus_emph_foreground_color.as_ref(),
+            plus_style_modifier.foreground,
+        ),
         font_style: None,
     };
-
-    // Foreground styles (these replace syntax highlighting).
-    let minus_foreground_style_modifier = None;
-
-    let plus_foreground_style_modifier = None;
 
     (
-        minus_background_style_modifier,
-        plus_background_style_modifier,
-        minus_background_emph_style_modifier,
-        plus_background_emph_style_modifier,
-        minus_foreground_style_modifier,
-        plus_foreground_style_modifier,
+        minus_style_modifier,
+        minus_emph_style_modifier,
+        plus_style_modifier,
+        plus_emph_style_modifier,
     )
 }
 
@@ -312,9 +294,13 @@ fn color_from_rgb_or_ansi_code(s: &str) -> Color {
     }
 }
 
-fn color_from_rgb_or_ansi_code_with_default(arg: Option<&String>, default: Color) -> Color {
+fn color_from_rgb_or_ansi_code_with_default(
+    arg: Option<&String>,
+    default: Option<Color>,
+) -> Option<Color> {
     match arg {
-        Some(string) => color_from_rgb_or_ansi_code(&string),
+        Some(string) if string.to_lowercase() == "none" => None,
+        Some(string) => Some(color_from_rgb_or_ansi_code(&string)),
         None => default,
     }
 }

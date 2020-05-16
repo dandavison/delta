@@ -261,8 +261,8 @@ fn handle_hunk_meta_line(
     if !code_fragment.is_empty() {
         let syntax_style_sections = Painter::get_line_syntax_style_sections(
             &code_fragment,
+            true,
             &mut painter.highlighter,
-            None,
             &painter.config,
         );
         Painter::paint_lines(
@@ -337,8 +337,8 @@ fn handle_hunk_line(
             let syntax_style_sections = if config.should_syntax_highlight(&state) {
                 Painter::get_line_syntax_style_sections(
                     &line,
+                    true,
                     &mut painter.highlighter,
-                    None,
                     &painter.config,
                 )
             } else {

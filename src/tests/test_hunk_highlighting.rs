@@ -10,15 +10,55 @@ mod tests {
     use crate::tests::ansi_test_utils::ansi_test_utils;
     use crate::tests::integration_test_utils::integration_test_utils;
 
+    const VERBOSE: bool = false;
+
     #[test]
     fn test_hunk_highlighting() {
         let mut options = integration_test_utils::get_command_line_options();
+        options.theme = Some("GitHub".to_string());
         options.max_line_distance = 1.0;
-        for lines_to_be_syntax_highlighted in
-            vec!["none", "all", "+", "0", "0+", "-", "-+", "-0", "-0+"]
-        {
-            options.lines_to_be_syntax_highlighted = lines_to_be_syntax_highlighted.to_string();
-            _do_hunk_color_test(&options);
+        options.minus_emph_color = Some("#ffa0a0".to_string());
+        options.plus_emph_color = Some("#80ef80".to_string());
+        for minus_foreground_color in vec![None, Some("green".to_string())] {
+            options.minus_foreground_color = minus_foreground_color;
+            for minus_emph_foreground_color in vec![None, Some("#80ef80".to_string())] {
+                options.minus_emph_foreground_color = minus_emph_foreground_color;
+                for plus_foreground_color in vec![None, Some("red".to_string())] {
+                    options.plus_foreground_color = plus_foreground_color;
+                    for plus_emph_foreground_color in vec![None, Some("#ffa0a0".to_string())] {
+                        options.plus_emph_foreground_color = plus_emph_foreground_color;
+                        for lines_to_be_syntax_highlighted in vec!["none", "all"] {
+                            options.lines_to_be_syntax_highlighted =
+                                lines_to_be_syntax_highlighted.to_string();
+                            if VERBOSE {
+                                println!();
+                                print!(
+                                    " --syntax-highlight {:?}",
+                                    options.lines_to_be_syntax_highlighted
+                                );
+                                print!(
+                                    " --minus-foreground-color {:?}",
+                                    options.minus_foreground_color
+                                );
+                                print!(
+                                    " --minus-emph-foreground-color {:?}",
+                                    options.minus_emph_foreground_color
+                                );
+                                print!(
+                                    " --plus-foreground-color {:?}",
+                                    options.plus_foreground_color
+                                );
+                                print!(
+                                    " --plus-emph-foreground-color {:?}",
+                                    options.plus_emph_foreground_color
+                                );
+                                println!();
+                            }
+                            _do_hunk_color_test(&options);
+                        }
+                    }
+                }
+            }
         }
     }
 
@@ -37,6 +77,7 @@ mod tests {
         let minus =
             paint::paint_text_background("", config.minus_style_modifier.background.unwrap(), true)
                 .trim_end_matches(paint::ANSI_SGR_RESET)
+                .trim_end_matches("m")
                 .to_string();
         let minus_emph = paint::paint_text_background(
             "",
@@ -44,10 +85,12 @@ mod tests {
             true,
         )
         .trim_end_matches(paint::ANSI_SGR_RESET)
+        .trim_end_matches("m")
         .to_string();
         let plus =
             paint::paint_text_background("", config.plus_style_modifier.background.unwrap(), true)
                 .trim_end_matches(paint::ANSI_SGR_RESET)
+                .trim_end_matches("m")
                 .to_string();
         let plus_emph = paint::paint_text_background(
             "",
@@ -55,6 +98,7 @@ mod tests {
             true,
         )
         .trim_end_matches(paint::ANSI_SGR_RESET)
+        .trim_end_matches("m")
         .to_string();
 
         let expectation = vec![
@@ -70,32 +114,22 @@ mod tests {
                     (minus.as_str(), "(22222222, 22222222"),
                     (minus_emph.as_str(), ", 22222222"),
                     (minus.as_str(), ")"),
-                    (paint::ANSI_SGR_RESET, ""),
                 ],
             ),
             // line 3: removed
             (
                 State::HunkMinus,
-                vec![
-                    (minus.as_str(), "(33333333, 33333333, 33333333)"),
-                    (paint::ANSI_SGR_RESET, ""),
-                ],
+                vec![(minus.as_str(), "(33333333, 33333333, 33333333)")],
             ),
             // line 4: removed
             (
                 State::HunkMinus,
-                vec![
-                    (minus.as_str(), "(44444444, 44444444, 44444444)"),
-                    (paint::ANSI_SGR_RESET, ""),
-                ],
+                vec![(minus.as_str(), "(44444444, 44444444, 44444444)")],
             ),
             // line 5: added, and syntax-higlighted.
             (
                 State::HunkPlus,
-                vec![
-                    (plus.as_str(), "(22222222, 22222222)"),
-                    (paint::ANSI_SGR_RESET, ""),
-                ],
+                vec![(plus.as_str(), "(22222222, 22222222)")],
             ),
             // line 6: added, and syntax-highlighted. First is plus-emph.
             (
@@ -104,7 +138,6 @@ mod tests {
                     (plus.as_str(), "("),
                     (plus_emph.as_str(), "33333333, "),
                     (plus.as_str(), "33333333, 33333333, 33333333)"),
-                    (paint::ANSI_SGR_RESET, ""),
                 ],
             ),
             // line 7: unchanged
@@ -115,15 +148,15 @@ mod tests {
             // line 8: added, and syntax-highlighted.
             (
                 State::HunkPlus,
-                vec![
-                    (plus.as_str(), "(66666666, 66666666, 66666666)"),
-                    (paint::ANSI_SGR_RESET, ""),
-                ],
+                vec![(plus.as_str(), "(66666666, 66666666, 66666666)")],
             ),
         ];
 
         // TODO: check same length
         for ((state, assertion), line) in expectation.iter().zip_eq(lines) {
+            if VERBOSE {
+                println!("{}", line)
+            };
             if config.should_syntax_highlight(state) {
                 assert!(ansi_test_utils::is_syntax_highlighted(line));
             } else {
