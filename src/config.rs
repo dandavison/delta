@@ -111,7 +111,7 @@ pub fn get_config<'a>(
         minus_emph_style_modifier,
         plus_style_modifier,
         plus_emph_style_modifier,
-    ) = make_style_modifiers(opt, is_light_mode, true_color);
+    ) = make_styles(opt, is_light_mode, true_color);
 
     let theme = if style::is_no_syntax_highlighting_theme_name(&theme_name) {
         None
@@ -211,71 +211,59 @@ fn valid_theme_name_or_none(theme_name: Option<&String>, theme_set: &ThemeSet) -
     }
 }
 
-fn make_style_modifiers<'a>(
+fn make_styles<'a>(
     opt: &'a cli::Opt,
     is_light_mode: bool,
     true_color: bool,
 ) -> (StyleModifier, StyleModifier, StyleModifier, StyleModifier) {
-    let minus_style_modifier = StyleModifier {
-        background: color_from_rgb_or_ansi_code_with_default(
-            opt.minus_color.as_ref(),
-            Some(style::get_minus_color_default(is_light_mode, true_color)),
-        ),
-        foreground: color_from_rgb_or_ansi_code_with_default(
-            opt.minus_foreground_color.as_ref(),
-            None,
-        ),
-        font_style: None,
-    };
+    let minus_style = make_style(
+        opt.minus_color.as_deref(),
+        Some(style::get_minus_color_default(is_light_mode, true_color)),
+        opt.minus_foreground_color.as_deref(),
+        None,
+    );
 
-    let minus_emph_style_modifier = StyleModifier {
-        background: color_from_rgb_or_ansi_code_with_default(
-            opt.minus_emph_color.as_ref(),
-            Some(style::get_minus_emph_color_default(
-                is_light_mode,
-                true_color,
-            )),
-        ),
-        foreground: color_from_rgb_or_ansi_code_with_default(
-            opt.minus_emph_foreground_color.as_ref(),
-            minus_style_modifier.foreground,
-        ),
-        font_style: None,
-    };
+    let minus_emph_style = make_style(
+        opt.minus_emph_color.as_deref(),
+        Some(style::get_minus_emph_color_default(
+            is_light_mode,
+            true_color,
+        )),
+        opt.minus_emph_foreground_color.as_deref(),
+        minus_style.foreground,
+    );
 
-    let plus_style_modifier = StyleModifier {
-        background: color_from_rgb_or_ansi_code_with_default(
-            opt.plus_color.as_ref(),
-            Some(style::get_plus_color_default(is_light_mode, true_color)),
-        ),
-        foreground: color_from_rgb_or_ansi_code_with_default(
-            opt.plus_foreground_color.as_ref(),
-            None,
-        ),
-        font_style: None,
-    };
+    let plus_style = make_style(
+        opt.plus_color.as_deref(),
+        Some(style::get_plus_color_default(is_light_mode, true_color)),
+        opt.plus_foreground_color.as_deref(),
+        None,
+    );
 
-    let plus_emph_style_modifier = StyleModifier {
-        background: color_from_rgb_or_ansi_code_with_default(
-            opt.plus_emph_color.as_ref(),
-            Some(style::get_plus_emph_color_default(
-                is_light_mode,
-                true_color,
-            )),
-        ),
-        foreground: color_from_rgb_or_ansi_code_with_default(
-            opt.plus_emph_foreground_color.as_ref(),
-            plus_style_modifier.foreground,
-        ),
-        font_style: None,
-    };
+    let plus_emph_style = make_style(
+        opt.plus_emph_color.as_deref(),
+        Some(style::get_plus_emph_color_default(
+            is_light_mode,
+            true_color,
+        )),
+        opt.plus_emph_foreground_color.as_deref(),
+        plus_style.foreground,
+    );
 
-    (
-        minus_style_modifier,
-        minus_emph_style_modifier,
-        plus_style_modifier,
-        plus_emph_style_modifier,
-    )
+    (minus_style, minus_emph_style, plus_style, plus_emph_style)
+}
+
+fn make_style(
+    background: Option<&str>,
+    background_default: Option<Color>,
+    foreground: Option<&str>,
+    foreground_default: Option<Color>,
+) -> StyleModifier {
+    StyleModifier {
+        background: color_from_rgb_or_ansi_code_with_default(background, background_default),
+        foreground: color_from_rgb_or_ansi_code_with_default(foreground, foreground_default),
+        font_style: None,
+    }
 }
 
 fn color_from_rgb_or_ansi_code(s: &str) -> Color {
@@ -295,7 +283,7 @@ fn color_from_rgb_or_ansi_code(s: &str) -> Color {
 }
 
 fn color_from_rgb_or_ansi_code_with_default(
-    arg: Option<&String>,
+    arg: Option<&str>,
     default: Option<Color>,
 ) -> Option<Color> {
     match arg {
