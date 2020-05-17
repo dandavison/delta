@@ -3,7 +3,7 @@ use std::str::FromStr;
 
 use ansi_term;
 use syntect::easy::HighlightLines;
-use syntect::highlighting::{Color, Style, StyleModifier};
+use syntect::highlighting::{Color, FontStyle, Style, StyleModifier};
 use syntect::parsing::{SyntaxReference, SyntaxSet};
 
 use crate::bat::terminal::to_ansi_color;
@@ -222,6 +222,15 @@ pub fn to_ansi_style(style: Style, true_color: bool) -> ansi_term::Style {
     }
     if style.foreground != style::NO_COLOR {
         ansi_style = ansi_style.fg(to_ansi_color(style.foreground, true_color));
+    }
+    if style.font_style.contains(FontStyle::BOLD) {
+        ansi_style.is_bold = true;
+    }
+    if style.font_style.contains(FontStyle::ITALIC) {
+        ansi_style.is_italic = true;
+    }
+    if style.font_style.contains(FontStyle::UNDERLINE) {
+        ansi_style.is_underline = true;
     }
     ansi_style
 }

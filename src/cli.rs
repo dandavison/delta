@@ -2,7 +2,6 @@ use std::process;
 use std::str::FromStr;
 use std::string::ToString;
 
-use bit_set::BitSet;
 use console::Term;
 use structopt::clap::AppSettings::{ColorAlways, ColoredHelp, DeriveDisplayOrder};
 use structopt::StructOpt;
@@ -10,7 +9,6 @@ use structopt::StructOpt;
 use crate::bat::assets::HighlightingAssets;
 use crate::bat::output::PagingMode;
 use crate::config;
-use crate::delta::State;
 use crate::env;
 use crate::style;
 
@@ -73,37 +71,37 @@ pub struct Opt {
     #[structopt(long = "dark")]
     pub dark: bool,
 
+    #[structopt(long = "minus-style")]
+    /// The style for removed lines.
+    pub minus_style: Option<String>,
+
+    #[structopt(long = "minus-emph-style")]
+    /// The style for emphasized sections of removed lines.
+    pub minus_emph_style: Option<String>,
+
+    #[structopt(long = "plus-style")]
+    /// The style for removed lines.
+    pub plus_style: Option<String>,
+
+    #[structopt(long = "plus-emph-style")]
+    /// The style for emphasized sections of removed lines.
+    pub plus_emph_style: Option<String>,
+
     #[structopt(long = "minus-color")]
     /// The background color for removed lines.
-    pub minus_color: Option<String>,
+    pub _deprecated_minus_color: Option<String>,
 
     #[structopt(long = "minus-emph-color")]
     /// The background color for emphasized sections of removed lines.
-    pub minus_emph_color: Option<String>,
-
-    #[structopt(long = "minus-foreground-color")]
-    /// The foreground color for removed lines.
-    pub minus_foreground_color: Option<String>,
-
-    #[structopt(long = "minus-emph-foreground-color")]
-    /// The foreground color for emphasized sections of removed lines.
-    pub minus_emph_foreground_color: Option<String>,
+    pub _deprecated_minus_emph_color: Option<String>,
 
     #[structopt(long = "plus-color")]
     /// The background color for added lines.
-    pub plus_color: Option<String>,
+    pub _deprecated_plus_color: Option<String>,
 
     #[structopt(long = "plus-emph-color")]
     /// The background color for emphasized sections of added lines.
-    pub plus_emph_color: Option<String>,
-
-    #[structopt(long = "plus-foreground-color")]
-    /// Disable syntax highlighting and instead use this foreground color for added lines.
-    pub plus_foreground_color: Option<String>,
-
-    #[structopt(long = "plus-emph-foreground-color")]
-    /// Disable syntax highlighting and instead use this foreground color for emphasized sections of added lines.
-    pub plus_emph_foreground_color: Option<String>,
+    pub _deprecated_plus_emph_color: Option<String>,
 
     #[structopt(long = "theme", env = "BAT_THEME")]
     /// The code syntax highlighting theme to use. Use --theme=none to disable syntax highlighting.
@@ -113,14 +111,8 @@ pub struct Opt {
     /// --file-color, --hunk-color to configure the colors of other parts of the diff output.
     pub theme: Option<String>,
 
-    /// A string consisting only of the characters '-', '0', '+', specifying
-    /// which of the 3 diff hunk line-types (removed, unchanged, added) should
-    /// be syntax-highlighted. "all" and "none" are also valid values.
-    #[structopt(long = "syntax-highlight", default_value = "0+")]
-    pub lines_to_be_syntax_highlighted: String,
-
     #[structopt(long = "highlight-removed")]
-    /// DEPRECATED: use --syntax-highlight.
+    /// DEPRECATED: supply 'syntax' as the foreground color in --minus-style.
     pub highlight_minus_lines: bool,
 
     #[structopt(long = "color-only")]
@@ -249,15 +241,62 @@ impl ToString for Error {
     }
 }
 
-pub fn process_command_line_arguments<'a>(opt: Opt) -> config::Config<'a> {
+pub fn process_command_line_arguments<'a>(mut opt: Opt) -> config::Config<'a> {
     let assets = HighlightingAssets::new();
 
+    _check_validity(&opt, &assets);
+
+    _apply_rewrite_rules(&mut opt);
+
+    // We do not use the full width, in case `less --status-column` is in effect. See #41 and #10.
+    // TODO: There seems to be some confusion in the accounting: we are actually leaving 2
+    // characters unused for less at the right edge of the terminal, despite the subtraction of 1
+    // here.
+    let available_terminal_width = (Term::stdout().size().1 - 1) as usize;
+
+    let paging_mode = match opt.paging_mode.as_ref() {
+        "always" => PagingMode::Always,
+        "never" => PagingMode::Never,
+        "auto" => PagingMode::QuitIfOneScreen,
+        _ => {
+            eprintln!(
+                "Invalid value for --paging option: {} (valid values are \"always\", \"never\", and \"auto\")",
+                opt.paging_mode
+            );
+            process::exit(1);
+        }
+    };
+
+    let true_color = match opt.true_color.as_ref() {
+        "always" => true,
+        "never" => false,
+        "auto" => is_truecolor_terminal(),
+        _ => {
+            eprintln!(
+                "Invalid value for --24-bit-color option: {} (valid values are \"always\", \"never\", and \"auto\")",
+                opt.true_color
+            );
+            process::exit(1);
+        }
+    };
+
+    config::get_config(
+        opt,
+        assets.syntax_set,
+        assets.theme_set,
+        true_color,
+        available_terminal_width,
+        paging_mode,
+    )
+}
+
+fn _check_validity(opt: &Opt, assets: &HighlightingAssets) {
     if opt.light && opt.dark {
         eprintln!("--light and --dark cannot be used together.");
         process::exit(1);
     }
-    match &opt.theme {
-        Some(theme) if !style::is_no_syntax_highlighting_theme_name(&theme) => {
+    if let Some(ref theme) = opt.theme {
+        if !style::is_no_syntax_highlighting_theme_name(&theme) {
             if !assets.theme_set.themes.contains_key(theme.as_str()) {
                 eprintln!("Invalid theme: '{}'", theme);
                 process::exit(1);
@@ -279,97 +318,58 @@ pub fn process_command_line_arguments<'a>(opt: Opt) -> config::Config<'a> {
                 process::exit(1);
             }
         }
-        _ => (),
-    };
+    }
+}
 
-    // We do not use the full width, in case `less --status-column` is in effect. See #41 and #10.
+fn _apply_rewrite_rules(opt: &mut Opt) {
+    opt.minus_style = _make_style_string(
+        opt.minus_style.as_deref(),
+        opt._deprecated_minus_color.as_deref(),
+        "minus",
+    );
+    opt.minus_emph_style = _make_style_string(
+        opt.minus_emph_style.as_deref(),
+        opt._deprecated_minus_emph_color.as_deref(),
+        "minus-emph",
+    );
+    opt.plus_style = _make_style_string(
+        opt.plus_style.as_deref(),
+        opt._deprecated_plus_color.as_deref(),
+        "plus",
+    );
+    opt.plus_emph_style = _make_style_string(
+        opt.plus_emph_style.as_deref(),
+        opt._deprecated_plus_emph_color.as_deref(),
+        "plus-emph",
+    );
+}
 
-    // TODO: There seems to be some confusion in the accounting: we are actually leaving 2
-    // characters unused for less at the right edge of the terminal, despite the subtraction of 1
-    // here.
-    let available_terminal_width = (Term::stdout().size().1 - 1) as usize;
-
-    let paging_mode = match opt.paging_mode.as_ref() {
-        "always" => PagingMode::Always,
-        "never" => PagingMode::Never,
-        "auto" => PagingMode::QuitIfOneScreen,
-        _ => {
+pub fn _make_style_string(
+    style: Option<&str>,
+    background_color: Option<&str>,
+    element_name: &str,
+) -> Option<String> {
+    match (style, background_color) {
+        (_, None) => style.map(str::to_string),
+        (None, Some(background_color)) => Some(format!("syntax {}", background_color)),
+        (Some(_), Some(_)) => {
             eprintln!(
-                "Invalid paging value: {} (valid values are \"always\", \"never\", and \"auto\")",
-                opt.paging_mode
+                "--{name}-color cannot be used with --{name}-style. \
+                 Use --{name}-style=\"fg bg attr1 attr2 ...\" to set \
+                 foreground color, background color, and style attributes. \
+                 --{name}-color can only be used to set the background color. \
+                 (It is still available for backwards-compatibility.)",
+                name = element_name,
             );
             process::exit(1);
         }
-    };
-
-    let true_color = match opt.true_color.as_ref() {
-        "always" => true,
-        "never" => false,
-        "auto" => is_truecolor_terminal(),
-        _ => {
-            eprintln!(
-                "Invalid value for --24-bit-color option: {} (valid values are \"always\", \"never\", and \"auto\")",
-                opt.true_color
-            );
-            process::exit(1);
-        }
-    };
-
-    let lines_to_be_syntax_highlighted = get_lines_to_be_syntax_highlighted(&opt);
-
-    config::get_config(
-        opt,
-        assets.syntax_set,
-        assets.theme_set,
-        true_color,
-        available_terminal_width,
-        paging_mode,
-        lines_to_be_syntax_highlighted,
-    )
+    }
 }
 
 fn is_truecolor_terminal() -> bool {
     env::get_env_var("COLORTERM")
         .map(|colorterm| colorterm == "truecolor" || colorterm == "24bit")
         .unwrap_or(false)
-}
-
-fn get_lines_to_be_syntax_highlighted(opt: &Opt) -> BitSet {
-    if opt.highlight_minus_lines {
-        eprintln!("--highlight-removed is deprecated: use --syntax-highlight.");
-    }
-
-    let syntax_highlight_lines = match opt.lines_to_be_syntax_highlighted.to_lowercase().as_ref() {
-        "none" => "",
-        // This is the default value of the new option: honor the deprecated option if it has been used.
-        "0+" => match opt.highlight_minus_lines {
-            true => "-0+",
-            false => "0+",
-        },
-        "all" => "-0+",
-        s => s,
-    }
-    .to_string();
-
-    let mut lines_to_be_syntax_highlighted = BitSet::new();
-    for line_type in syntax_highlight_lines.chars() {
-        lines_to_be_syntax_highlighted.insert(match line_type {
-            '-' => State::HunkMinus as usize,
-            '0' => State::HunkZero as usize,
-            '+' => State::HunkPlus as usize,
-            s => {
-                eprintln!("Invalid --syntax-highlight value: {}. Valid characters are \"-\", \"0\", \"+\".", s);
-                process::exit(1);
-            }
-        });
-    }
-    if opt.minus_foreground_color.is_some() || opt.minus_emph_foreground_color.is_some() {
-        lines_to_be_syntax_highlighted.remove(State::HunkMinus as usize);
-    }
-    if opt.plus_foreground_color.is_some() || opt.plus_emph_foreground_color.is_some() {
-        lines_to_be_syntax_highlighted.remove(State::HunkPlus as usize);
-    }
-    lines_to_be_syntax_highlighted
 }
 
 #[cfg(test)]

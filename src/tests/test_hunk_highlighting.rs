@@ -16,45 +16,29 @@ mod tests {
         let mut options = integration_test_utils::get_command_line_options();
         options.theme = Some("GitHub".to_string());
         options.max_line_distance = 1.0;
-        options.minus_emph_color = Some("#ffa0a0".to_string());
-        options.plus_emph_color = Some("#80ef80".to_string());
-        for minus_foreground_color in vec![None, Some("green".to_string())] {
-            options.minus_foreground_color = minus_foreground_color;
-            for minus_emph_foreground_color in vec![None, Some("#80ef80".to_string())] {
-                options.minus_emph_foreground_color = minus_emph_foreground_color;
-                for plus_foreground_color in vec![None, Some("red".to_string())] {
-                    options.plus_foreground_color = plus_foreground_color;
-                    for plus_emph_foreground_color in vec![None, Some("#ffa0a0".to_string())] {
-                        options.plus_emph_foreground_color = plus_emph_foreground_color;
-                        for lines_to_be_syntax_highlighted in vec!["none", "all"] {
-                            options.lines_to_be_syntax_highlighted =
-                                lines_to_be_syntax_highlighted.to_string();
-                            if VERBOSE {
-                                println!();
-                                print!(
-                                    " --syntax-highlight {:?}",
-                                    options.lines_to_be_syntax_highlighted
-                                );
-                                print!(
-                                    " --minus-foreground-color {:?}",
-                                    options.minus_foreground_color
-                                );
-                                print!(
-                                    " --minus-emph-foreground-color {:?}",
-                                    options.minus_emph_foreground_color
-                                );
-                                print!(
-                                    " --plus-foreground-color {:?}",
-                                    options.plus_foreground_color
-                                );
-                                print!(
-                                    " --plus-emph-foreground-color {:?}",
-                                    options.plus_emph_foreground_color
-                                );
-                                println!();
-                            }
-                            _do_hunk_color_test(options.clone());
+        let minus_emph_background = "#ffa0a0";
+        let plus_emph_background = "#80ef80";
+        for minus_foreground in vec!["none", "green"] {
+            for minus_emph_foreground in vec!["none", "#80ef80"] {
+                for plus_foreground in vec!["none", "red"] {
+                    for plus_emph_foreground in vec!["none", "#ffa0a0"] {
+                        options.minus_style = Some(minus_foreground.to_string());
+                        options.minus_emph_style = Some(format!(
+                            "{} {}",
+                            minus_emph_foreground, minus_emph_background
+                        ));
+                        options.plus_style = Some(plus_foreground.to_string());
+                        options.plus_emph_style =
+                            Some(format!("{} {}", plus_emph_foreground, plus_emph_background));
+                        if VERBOSE {
+                            println!();
+                            print!(" --minus-style {:?}", options.minus_style);
+                            print!(" --minus-emph-style {:?}", options.minus_emph_style);
+                            print!(" --plus-style {:?}", options.plus_style);
+                            print!(" --plus-emph-style {:?}", options.plus_emph_style);
+                            println!();
                         }
+                        _do_hunk_color_test(options.clone());
                     }
                 }
             }

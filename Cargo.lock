@@ -130,19 +130,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "bit-set"
-version = "0.5.2"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-dependencies = [
- "bit-vec 0.6.2 (registry+https://github.com/rust-lang/crates.io-index)",
-]
-
-[[package]]
-name = "bit-vec"
-version = "0.6.2"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-
-[[package]]
 name = "bitflags"
 version = "1.1.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -367,7 +354,6 @@ dependencies = [
  "ansi_colours 1.0.1 (registry+https://github.com/rust-lang/crates.io-index)",
  "ansi_term 0.12.1 (registry+https://github.com/rust-lang/crates.io-index)",
  "atty 0.2.14 (registry+https://github.com/rust-lang/crates.io-index)",
- "bit-set 0.5.2 (registry+https://github.com/rust-lang/crates.io-index)",
  "box_drawing 0.1.2 (registry+https://github.com/rust-lang/crates.io-index)",
  "bytelines 2.2.2 (registry+https://github.com/rust-lang/crates.io-index)",
  "console 0.11.2 (registry+https://github.com/rust-lang/crates.io-index)",
@@ -984,8 +970,6 @@ dependencies = [
 "checksum base64 0.10.1 (registry+https://github.com/rust-lang/crates.io-index)" = "0b25d992356d2eb0ed82172f5248873db5560c4721f564b13cb5193bda5e668e"
 "checksum bincode 1.2.1 (registry+https://github.com/rust-lang/crates.io-index)" = "5753e2a71534719bf3f4e57006c3a4f0d2c672a4b676eec84161f763eca87dbf"
 "checksum bindgen 0.50.1 (registry+https://github.com/rust-lang/crates.io-index)" = "cb0e5a5f74b2bafe0b39379f616b5975e08bcaca4e779c078d5c31324147e9ba"
-"checksum bit-set 0.5.2 (registry+https://github.com/rust-lang/crates.io-index)" = "6e11e16035ea35e4e5997b393eacbf6f63983188f7a2ad25bfb13465f5ad59de"
-"checksum bit-vec 0.6.2 (registry+https://github.com/rust-lang/crates.io-index)" = "5f0dc55f2d8a1a85650ac47858bb001b4c0dd73d79e3c455a842925e68d29cd3"
 "checksum bitflags 1.1.0 (registry+https://github.com/rust-lang/crates.io-index)" = "3d155346769a6855b86399e9bc3814ab343cd3d62c7e985113d46a0ec3c281fd"
 "checksum blake2b_simd 0.5.9 (registry+https://github.com/rust-lang/crates.io-index)" = "b83b7baab1e671718d78204225800d6b170e648188ac7dc992e9d6bddf87d0c0"
 "checksum box_drawing 0.1.2 (registry+https://github.com/rust-lang/crates.io-index)" = "ea27d8d5fd867b17523bf6788b1175fa9867f34669d057e9adaf76e27bcea44b"

@@ -1,8 +1,7 @@
 use std::process;
 use std::str::FromStr;
 
-use bit_set::BitSet;
-use syntect::highlighting::{Color, Style, StyleModifier, Theme, ThemeSet};
+use syntect::highlighting::{Color, FontStyle, Style, StyleModifier, Theme, ThemeSet};
 use syntect::parsing::SyntaxSet;
 
 use crate::bat::output::PagingMode;
@@ -24,7 +23,6 @@ pub struct Config<'a> {
     pub plus_emph_style_modifier: StyleModifier,
     pub minus_line_marker: &'a str,
     pub plus_line_marker: &'a str,
-    pub lines_to_be_syntax_highlighted: BitSet,
     pub commit_style: cli::SectionStyle,
     pub commit_color: Color,
     pub file_style: cli::SectionStyle,
@@ -50,25 +48,29 @@ use ColorLayer::*;
 use State::*;
 
 impl<'a> Config<'a> {
-    #[allow(dead_code)]
-    pub fn get_color(&self, state: &State, layer: ColorLayer) -> Option<Color> {
-        let modifier = match state {
+    pub fn get_style(&self, state: &State) -> Option<StyleModifier> {
+        match state {
             HunkMinus => Some(self.minus_style_modifier),
             HunkZero => None,
             HunkPlus => Some(self.plus_style_modifier),
             _ => panic!("Invalid"),
-        };
-        match (modifier, layer) {
-            (Some(modifier), Background) => modifier.background,
-            (Some(modifier), Foreground) => modifier.foreground,
-            (None, _) => None,
         }
     }
 
     #[allow(dead_code)]
+    pub fn get_color(&self, state: &State, layer: ColorLayer) -> Option<Color> {
+        match (self.get_style(state), layer) {
+            (Some(style), Background) => style.background,
+            (Some(style), Foreground) => style.foreground,
+            (None, _) => None,
+        }
+    }
+
     pub fn should_syntax_highlight(&self, state: &State) -> bool {
-        self.lines_to_be_syntax_highlighted
-            .contains((*state).clone() as usize)
+        match self.get_style(state) {
+            Some(style) => style.foreground == Some(style::SYNTAX_HIGHLIGHTING_COLOR),
+            None => false,
+        }
     }
 }
 
@@ -79,7 +81,6 @@ pub fn get_config<'a>(
     true_color: bool,
     terminal_width: usize,
     paging_mode: PagingMode,
-    lines_to_be_syntax_highlighted: BitSet,
 ) -> Config<'a> {
     // Implement --color-only
     let keep_plus_minus_markers = if opt.color_only {
@@ -139,7 +140,6 @@ pub fn get_config<'a>(
         minus_emph_style_modifier,
         plus_style_modifier,
         plus_emph_style_modifier,
-        lines_to_be_syntax_highlighted,
         minus_line_marker,
         plus_line_marker,
         commit_style,
@@ -220,52 +220,98 @@ fn make_styles<'a>(
     true_color: bool,
 ) -> (StyleModifier, StyleModifier, StyleModifier, StyleModifier) {
     let minus_style = make_style(
-        opt.minus_color.as_deref(),
+        opt.minus_style.as_deref(),
         Some(style::get_minus_color_default(is_light_mode, true_color)),
-        opt.minus_foreground_color.as_deref(),
         None,
     );
 
     let minus_emph_style = make_style(
-        opt.minus_emph_color.as_deref(),
+        opt.minus_emph_style.as_deref(),
         Some(style::get_minus_emph_color_default(
             is_light_mode,
             true_color,
         )),
-        opt.minus_emph_foreground_color.as_deref(),
         minus_style.foreground,
     );
 
     let plus_style = make_style(
-        opt.plus_color.as_deref(),
+        opt.plus_style.as_deref(),
         Some(style::get_plus_color_default(is_light_mode, true_color)),
-        opt.plus_foreground_color.as_deref(),
         None,
     );
 
     let plus_emph_style = make_style(
-        opt.plus_emph_color.as_deref(),
+        opt.plus_emph_style.as_deref(),
         Some(style::get_plus_emph_color_default(
             is_light_mode,
             true_color,
         )),
-        opt.plus_emph_foreground_color.as_deref(),
         plus_style.foreground,
     );
 
     (minus_style, minus_emph_style, plus_style, plus_emph_style)
 }
 
+/// Construct syntect StyleModifier from background and foreground strings,
+/// together with their defaults. The background string is handled specially in
+/// that it may be a single color, or it may be a space-separated "style string".
 fn make_style(
-    background: Option<&str>,
+    style_string: Option<&str>,
     background_default: Option<Color>,
-    foreground: Option<&str>,
     foreground_default: Option<Color>,
 ) -> StyleModifier {
+    if let Some(s) = style_string {
+        parse_style_string(s, background_default, foreground_default)
+    } else {
+        StyleModifier {
+            background: background_default,
+            foreground: foreground_default,
+            font_style: None,
+        }
+    }
+}
+
+fn parse_style_string(
+    style_string: &str,
+    background_default: Option<Color>,
+    foreground_default: Option<Color>,
+) -> StyleModifier {
+    let mut foreground = foreground_default;
+    let mut background = background_default;
+    let mut font_style = FontStyle::empty();
+    let mut seen_foreground = false;
+    let mut seen_background = false;
+    for s in style_string.to_lowercase().split_whitespace() {
+        if s == "bold" {
+            font_style.set(FontStyle::BOLD, true)
+        } else if s == "italic" {
+            font_style.set(FontStyle::ITALIC, true)
+        } else if s == "underline" {
+            font_style.set(FontStyle::UNDERLINE, true)
+        } else if !seen_foreground {
+            foreground = color_from_rgb_or_ansi_code_with_default(Some(s), None);
+            seen_foreground = true;
+        } else if !seen_background {
+            background = color_from_rgb_or_ansi_code_with_default(Some(s), None);
+            seen_background = true;
+        } else {
+            eprintln!(
+                "Invalid style string: {}.\n\
+                 A style string may contain a foreground color string. \
+                 If it contains a foreground color string it may subsequently \
+                 contain a background color string. Font style attributes \
+                 'bold', 'italic', and 'underline' may occur in any position. \
+                 All strings must be separated by spaces. \
+                 See delta --help for how to specify colors.",
+                s
+            );
+            process::exit(1);
+        }
+    }
     StyleModifier {
-        background: color_from_rgb_or_ansi_code_with_default(background, background_default),
-        foreground: color_from_rgb_or_ansi_code_with_default(foreground, foreground_default),
-        font_style: None,
+        background,
+        foreground,
+        font_style: Some(font_style),
     }
 }
 
@@ -289,9 +335,10 @@ fn color_from_rgb_or_ansi_code_with_default(
     arg: Option<&str>,
     default: Option<Color>,
 ) -> Option<Color> {
-    match arg {
-        Some(string) if string.to_lowercase() == "none" => None,
-        Some(string) => Some(color_from_rgb_or_ansi_code(&string)),
+    match arg.map(str::to_lowercase) {
+        Some(s) if s == "none" => None,
+        Some(s) if s == "syntax" => Some(style::SYNTAX_HIGHLIGHTING_COLOR),
+        Some(s) => Some(color_from_rgb_or_ansi_code(&s)),
         None => default,
     }
 }
