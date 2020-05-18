@@ -1,5 +1,6 @@
 use regex::Regex;
 
+use lazy_static::lazy_static;
 use unicode_width::UnicodeWidthStr;
 
 use crate::align;
@@ -75,13 +76,16 @@ where
     (annotated_minus_lines, annotated_plus_lines)
 }
 
+lazy_static! {
+    static ref TOKENIZATION_REGEXP: Regex = Regex::new(r#"[\t ,;.:()\[\]<>/'"-]+"#).unwrap();
+}
+
 /// Split line into tokens for alignment. The alignment algorithm aligns sequences of substrings;
 /// not individual characters.
 fn tokenize(line: &str) -> Vec<&str> {
-    let separators = Regex::new(r#"[\t ,;.:()\[\]<>/'"-]+"#).unwrap();
     let mut tokens = Vec::new();
     let mut offset = 0;
-    for m in separators.find_iter(line) {
+    for m in TOKENIZATION_REGEXP.find_iter(line) {
         tokens.push(&line[offset..m.start()]);
         // Align separating text as multiple single-character tokens.
         for i in m.start()..m.end() {
