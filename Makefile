@@ -33,6 +33,7 @@ benchmark: build
 	$(BENCHMARK_COMMAND) > $(BENCHMARK_INPUT_FILE)
 	hyperfine 'target/release/delta < $(BENCHMARK_INPUT_FILE) > /dev/null'
 
+# https://github.com/brendangregg/FlameGraph
 flamegraph: build
 	$(BENCHMARK_COMMAND) | target/release/delta > /dev/null &
 	sample delta | stackcollapse-sample | flamegraph > performance/flamegraph.svg
