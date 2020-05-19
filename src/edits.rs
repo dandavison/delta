@@ -77,7 +77,7 @@ where
 }
 
 lazy_static! {
-    static ref TOKENIZATION_REGEXP: Regex = Regex::new(r#"[\t ,;.:()\[\]<>/'"-]+"#).unwrap();
+    static ref TOKENIZATION_REGEXP: Regex = Regex::new(r#"\w+"#).unwrap();
 }
 
 /// Split line into tokens for alignment. The alignment algorithm aligns sequences of substrings;
@@ -86,15 +86,17 @@ fn tokenize(line: &str) -> Vec<&str> {
     let mut tokens = Vec::new();
     let mut offset = 0;
     for m in TOKENIZATION_REGEXP.find_iter(line) {
-        tokens.push(&line[offset..m.start()]);
         // Align separating text as multiple single-character tokens.
-        for i in m.start()..m.end() {
+        for i in offset..m.start() {
             tokens.push(&line[i..i + 1]);
         }
+        tokens.push(&line[m.start()..m.end()]);
         offset = m.end();
     }
     if offset < line.len() {
-        tokens.push(&line[offset..line.len()]);
+        for i in offset..line.len() {
+            tokens.push(&line[i..i + 1]);
+        }
     }
     tokens
 }
@@ -313,7 +315,8 @@ mod tests {
                 ".",
                 "push",
                 "(",
-                "vec!",
+                "vec",
+                "!",
                 "[",
                 "(",
                 "noop_insertion",
@@ -496,7 +499,7 @@ mod tests {
                 "             s0.zip(s1)",
                 "                 .take_while(|((_, c0), (_, c1))| c0 == c1) // TODO: Don't consume one-past-the-end!",
                 "                 .fold(0, |offset, ((_, c0), (_, _))| offset + c0.len())"
-            ], 0.66)
+            ], 0.5)
     }
 
     #[test]
@@ -654,6 +657,7 @@ mod tests {
             max_line_distance,
             0.0,
         );
+        // compare_annotated_lines(actual_edits, expected_edits);
         assert_eq!(actual_edits, expected_edits);
     }
 
