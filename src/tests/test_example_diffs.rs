@@ -7,11 +7,8 @@ mod tests {
     #[test]
     fn test_added_file() {
         let options = integration_test_utils::get_command_line_options();
-        let output = strip_ansi_codes(&integration_test_utils::run_delta(
-            ADDED_FILE_INPUT,
-            &options,
-        ))
-        .to_string();
+        let (output, _) = integration_test_utils::run_delta(ADDED_FILE_INPUT, options);
+        let output = strip_ansi_codes(&output);
         assert!(output.contains("\nadded: a.py\n"));
         if false {
             // TODO: hline width
@@ -23,22 +20,17 @@ mod tests {
     #[ignore] // #128
     fn test_added_empty_file() {
         let options = integration_test_utils::get_command_line_options();
-        let output = strip_ansi_codes(&integration_test_utils::run_delta(
-            ADDED_EMPTY_FILE,
-            &options,
-        ))
-        .to_string();
+        let (output, _) = integration_test_utils::run_delta(ADDED_EMPTY_FILE, options);
+        let output = strip_ansi_codes(&output);
         assert!(output.contains("\nadded: file\n"));
     }
 
     #[test]
     fn test_added_file_directory_path_containing_space() {
         let options = integration_test_utils::get_command_line_options();
-        let output = strip_ansi_codes(&integration_test_utils::run_delta(
-            ADDED_FILES_DIRECTORY_PATH_CONTAINING_SPACE,
-            &options,
-        ))
-        .to_string();
+        let (output, _) =
+            integration_test_utils::run_delta(ADDED_FILES_DIRECTORY_PATH_CONTAINING_SPACE, options);
+        let output = strip_ansi_codes(&output);
         assert!(output.contains("\nadded: with space/file1\n"));
         assert!(output.contains("\nadded: nospace/file2\n"));
     }
@@ -46,11 +38,8 @@ mod tests {
     #[test]
     fn test_renamed_file() {
         let options = integration_test_utils::get_command_line_options();
-        let output = strip_ansi_codes(&integration_test_utils::run_delta(
-            RENAMED_FILE_INPUT,
-            &options,
-        ))
-        .to_string();
+        let (output, _) = integration_test_utils::run_delta(RENAMED_FILE_INPUT, options);
+        let output = strip_ansi_codes(&output);
         assert!(output.contains("\nrenamed: a.py ⟶   b.py\n"));
     }
 
@@ -58,9 +47,9 @@ mod tests {
     fn test_recognized_file_type() {
         // In addition to the background color, the code has language syntax highlighting.
         let options = integration_test_utils::get_command_line_options();
-        let input = ADDED_FILE_INPUT;
-        let output = integration_test_utils::get_line_of_code_from_delta(&input, &options);
-        ansi_test_utils::assert_has_color_other_than_plus_color(&output, &options);
+        let (output, config) =
+            integration_test_utils::get_line_of_code_from_delta(&ADDED_FILE_INPUT, options);
+        ansi_test_utils::assert_has_color_other_than_plus_color(&output, &config);
     }
 
     #[test]
@@ -69,8 +58,8 @@ mod tests {
         // .txt syntax under the theme.
         let options = integration_test_utils::get_command_line_options();
         let input = ADDED_FILE_INPUT.replace("a.py", "a");
-        let output = integration_test_utils::get_line_of_code_from_delta(&input, &options);
-        ansi_test_utils::assert_has_color_other_than_plus_color(&output, &options);
+        let (output, config) = integration_test_utils::get_line_of_code_from_delta(&input, options);
+        ansi_test_utils::assert_has_color_other_than_plus_color(&output, &config);
     }
 
     #[test]
@@ -80,18 +69,15 @@ mod tests {
         let mut options = integration_test_utils::get_command_line_options();
         options.theme = Some("none".to_string());
         let input = ADDED_FILE_INPUT.replace("a.py", "a");
-        let output = integration_test_utils::get_line_of_code_from_delta(&input, &options);
-        ansi_test_utils::assert_has_plus_color_only(&output, &options);
+        let (output, config) = integration_test_utils::get_line_of_code_from_delta(&input, options);
+        ansi_test_utils::assert_has_plus_color_only(&output, &config);
     }
 
     #[test]
     fn test_diff_unified_two_files() {
         let options = integration_test_utils::get_command_line_options();
-        let output = strip_ansi_codes(&integration_test_utils::run_delta(
-            DIFF_UNIFIED_TWO_FILES,
-            &options,
-        ))
-        .to_string();
+        let (output, _) = integration_test_utils::run_delta(DIFF_UNIFIED_TWO_FILES, options);
+        let output = strip_ansi_codes(&output);
         let mut lines = output.split('\n');
 
         // Header
@@ -109,11 +95,8 @@ mod tests {
     #[test]
     fn test_diff_unified_two_directories() {
         let options = integration_test_utils::get_command_line_options();
-        let output = strip_ansi_codes(&integration_test_utils::run_delta(
-            DIFF_UNIFIED_TWO_DIRECTORIES,
-            &options,
-        ))
-        .to_string();
+        let (output, _) = integration_test_utils::run_delta(DIFF_UNIFIED_TWO_DIRECTORIES, options);
+        let output = strip_ansi_codes(&output);
         let mut lines = output.split('\n');
 
         // Header
@@ -140,11 +123,8 @@ mod tests {
     #[ignore] // Ideally, delta would make this test pass. See #121.
     fn test_delta_ignores_non_diff_input() {
         let options = integration_test_utils::get_command_line_options();
-        let output = strip_ansi_codes(&integration_test_utils::run_delta(
-            NOT_A_DIFF_OUTPUT,
-            &options,
-        ))
-        .to_string();
+        let (output, _) = integration_test_utils::run_delta(NOT_A_DIFF_OUTPUT, options);
+        let output = strip_ansi_codes(&output);
         assert_eq!(output, NOT_A_DIFF_OUTPUT.to_owned() + "\n");
     }
 
@@ -156,16 +136,16 @@ mod tests {
         ] {
             let mut options = integration_test_utils::get_command_line_options();
             options.color_only = true;
-            let output = integration_test_utils::run_delta(input, &options);
-            assert_eq!(strip_ansi_codes(&output).to_string(), input.to_owned());
-            assert_ne!(output, input.to_owned());
+            let (output, _) = integration_test_utils::run_delta(input, options);
+            assert_eq!(strip_ansi_codes(&output), input);
+            assert_ne!(output, input);
         }
     }
 
     #[test]
     fn test_diff_with_merge_conflict_is_not_truncated() {
         let options = integration_test_utils::get_command_line_options();
-        let output = integration_test_utils::run_delta(DIFF_WITH_MERGE_CONFLICT, &options);
+        let (output, _) = integration_test_utils::run_delta(DIFF_WITH_MERGE_CONFLICT, options);
         // TODO: The + in the first column is being removed.
         assert!(strip_ansi_codes(&output).contains("+>>>>>>> Stashed changes"));
         assert_eq!(output.split('\n').count(), 46);
@@ -175,32 +155,25 @@ mod tests {
     fn test_diff_with_merge_conflict_is_passed_on_unchanged_under_color_only() {
         let mut options = integration_test_utils::get_command_line_options();
         options.color_only = true;
-        let output = integration_test_utils::run_delta(DIFF_WITH_MERGE_CONFLICT, &options);
-        assert_eq!(
-            strip_ansi_codes(&output).to_string(),
-            DIFF_WITH_MERGE_CONFLICT.to_owned()
-        );
+        let (output, _) = integration_test_utils::run_delta(DIFF_WITH_MERGE_CONFLICT, options);
+        assert_eq!(strip_ansi_codes(&output), DIFF_WITH_MERGE_CONFLICT);
     }
 
     #[test]
     fn test_submodule_contains_untracked_content() {
         let options = integration_test_utils::get_command_line_options();
-        let output = strip_ansi_codes(&integration_test_utils::run_delta(
-            SUBMODULE_CONTAINS_UNTRACKED_CONTENT_INPUT,
-            &options,
-        ))
-        .to_string();
+        let (output, _) =
+            integration_test_utils::run_delta(SUBMODULE_CONTAINS_UNTRACKED_CONTENT_INPUT, options);
+        let output = strip_ansi_codes(&output);
         assert!(output.contains("\nSubmodule x/y/z contains untracked content\n"));
     }
 
     #[test]
     fn test_triple_dash_at_beginning_of_line_in_code() {
         let options = integration_test_utils::get_command_line_options();
-        let output = strip_ansi_codes(&integration_test_utils::run_delta(
-            TRIPLE_DASH_AT_BEGINNING_OF_LINE_IN_CODE,
-            &options,
-        ))
-        .to_string();
+        let (output, _) =
+            integration_test_utils::run_delta(TRIPLE_DASH_AT_BEGINNING_OF_LINE_IN_CODE, options);
+        let output = strip_ansi_codes(&output);
         assert!(
             output.contains(" -- instance (Category p, Category q) => Category (p ∧ q) where\n")
         );
@@ -209,19 +182,16 @@ mod tests {
     #[test]
     fn test_binary_files_differ() {
         let options = integration_test_utils::get_command_line_options();
-        let output = strip_ansi_codes(&integration_test_utils::run_delta(
-            BINARY_FILES_DIFFER,
-            &options,
-        ))
-        .to_string();
+        let (output, _) = integration_test_utils::run_delta(BINARY_FILES_DIFFER, options);
+        let output = strip_ansi_codes(&output);
         assert!(output.contains("Binary files /dev/null and b/foo differ\n"));
     }
 
     #[test]
     fn test_diff_in_diff() {
         let options = integration_test_utils::get_command_line_options();
-        let output = strip_ansi_codes(&integration_test_utils::run_delta(DIFF_IN_DIFF, &options))
-            .to_string();
+        let (output, _) = integration_test_utils::run_delta(DIFF_IN_DIFF, options);
+        let output = strip_ansi_codes(&output);
         assert!(output.contains("\n ---\n"));
         assert!(output.contains("\n Subject: [PATCH] Init\n"));
     }

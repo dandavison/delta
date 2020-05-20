@@ -6,7 +6,6 @@ use syntect::easy::HighlightLines;
 use syntect::highlighting::{Color, Style, StyleModifier};
 use syntect::parsing::{SyntaxReference, SyntaxSet};
 
-use crate::bat::assets::HighlightingAssets;
 use crate::bat::terminal::to_ansi_color;
 use crate::config;
 use crate::delta::State;
@@ -28,15 +27,10 @@ pub struct Painter<'a> {
 }
 
 impl<'a> Painter<'a> {
-    pub fn new(
-        writer: &'a mut dyn Write,
-        config: &'a config::Config,
-        assets: &'a HighlightingAssets,
-    ) -> Self {
-        let default_syntax = Self::get_syntax(config.syntax_set, None);
-        // TODO: Avoid setting these.
-        let dummy_theme = &assets.theme_set.themes[style::DEFAULT_LIGHT_THEME];
-        let dummy_highlighter = HighlightLines::new(default_syntax, dummy_theme);
+    pub fn new(writer: &'a mut dyn Write, config: &'a config::Config) -> Self {
+        let default_syntax = Self::get_syntax(&config.syntax_set, None);
+        // TODO: Avoid doing this.
+        let dummy_highlighter = HighlightLines::new(default_syntax, &config.dummy_theme);
         Self {
             minus_lines: Vec::new(),
             plus_lines: Vec::new(),
@@ -49,7 +43,7 @@ impl<'a> Painter<'a> {
     }
 
     pub fn set_syntax(&mut self, extension: Option<&str>) {
-        self.syntax = Painter::get_syntax(self.config.syntax_set, extension);
+        self.syntax = Painter::get_syntax(&self.config.syntax_set, extension);
     }
 
     fn get_syntax(syntax_set: &'a SyntaxSet, extension: Option<&str>) -> &'a SyntaxReference {
@@ -59,8 +53,8 @@ impl<'a> Painter<'a> {
     }
 
     pub fn set_highlighter(&mut self) {
-        if let Some(theme) = self.config.theme {
-            self.highlighter = HighlightLines::new(self.syntax, theme)
+        if let Some(ref theme) = self.config.theme {
+            self.highlighter = HighlightLines::new(self.syntax, &theme)
         };
     }
 

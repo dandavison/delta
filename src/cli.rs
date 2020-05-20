@@ -245,10 +245,9 @@ impl ToString for Error {
     }
 }
 
-pub fn process_command_line_arguments<'a>(
-    assets: &'a HighlightingAssets,
-    opt: &'a Opt,
-) -> config::Config<'a> {
+pub fn process_command_line_arguments<'a>(opt: Opt) -> config::Config<'a> {
+    let assets = HighlightingAssets::new();
+
     if opt.light && opt.dark {
         eprintln!("--light and --dark cannot be used together.");
         process::exit(1);
@@ -312,14 +311,16 @@ pub fn process_command_line_arguments<'a>(
         }
     };
 
+    let lines_to_be_syntax_highlighted = get_lines_to_be_syntax_highlighted(&opt);
+
     config::get_config(
         opt,
-        &assets.syntax_set,
-        &assets.theme_set,
+        assets.syntax_set,
+        assets.theme_set,
         true_color,
         available_terminal_width,
         paging_mode,
-        get_lines_to_be_syntax_highlighted(opt),
+        lines_to_be_syntax_highlighted,
     )
 }
 
@@ -371,7 +372,6 @@ fn get_lines_to_be_syntax_highlighted(opt: &Opt) -> BitSet {
 mod tests {
     use std::env;
 
-    use crate::bat::assets::HighlightingAssets;
     use crate::cli;
     use crate::style;
     use crate::tests::integration_test_utils::integration_test_utils;
@@ -383,7 +383,6 @@ mod tests {
             Light,
             Dark,
         };
-        let assets = HighlightingAssets::new();
         for (
             theme_option,
             bat_theme_env_var,
@@ -461,7 +460,7 @@ mod tests {
                     options.dark = false;
                 }
             }
-            let config = cli::process_command_line_arguments(&assets, &options);
+            let config = cli::process_command_line_arguments(options);
             assert_eq!(config.theme_name, expected_theme);
             if style::is_no_syntax_highlighting_theme_name(expected_theme) {
                 assert!(config.theme.is_none())

@@ -13,8 +13,9 @@ use crate::paint;
 use crate::style;
 
 pub struct Config<'a> {
-    pub theme: Option<&'a Theme>,
+    pub theme: Option<Theme>,
     pub theme_name: String,
+    pub dummy_theme: Theme,
     pub max_line_distance: f64,
     pub max_line_distance_for_naively_paired_lines: f64,
     pub minus_style_modifier: StyleModifier,
@@ -30,7 +31,7 @@ pub struct Config<'a> {
     pub file_color: Color,
     pub hunk_style: cli::SectionStyle,
     pub hunk_color: Color,
-    pub syntax_set: &'a SyntaxSet,
+    pub syntax_set: SyntaxSet,
     pub terminal_width: usize,
     pub true_color: bool,
     pub background_color_extends_to_terminal_width: bool,
@@ -72,9 +73,9 @@ impl<'a> Config<'a> {
 }
 
 pub fn get_config<'a>(
-    opt: &'a cli::Opt,
-    syntax_set: &'a SyntaxSet,
-    theme_set: &'a ThemeSet,
+    opt: cli::Opt,
+    syntax_set: SyntaxSet,
+    theme_set: ThemeSet,
     true_color: bool,
     terminal_width: usize,
     paging_mode: PagingMode,
@@ -103,7 +104,7 @@ pub fn get_config<'a>(
         opt.theme.as_ref(),
         theme_name_from_bat_pager.as_ref(),
         opt.light,
-        theme_set,
+        &theme_set,
     );
 
     let (
@@ -111,13 +112,14 @@ pub fn get_config<'a>(
         minus_emph_style_modifier,
         plus_style_modifier,
         plus_emph_style_modifier,
-    ) = make_styles(opt, is_light_mode, true_color);
+    ) = make_styles(&opt, is_light_mode, true_color);
 
     let theme = if style::is_no_syntax_highlighting_theme_name(&theme_name) {
         None
     } else {
-        Some(&theme_set.themes[&theme_name])
+        Some(theme_set.themes[&theme_name].clone())
     };
+    let dummy_theme = theme_set.themes.values().next().unwrap().clone();
 
     let minus_line_marker = if keep_plus_minus_markers { "-" } else { " " };
     let plus_line_marker = if keep_plus_minus_markers { "+" } else { " " };
@@ -130,6 +132,7 @@ pub fn get_config<'a>(
     Config {
         theme,
         theme_name,
+        dummy_theme,
         max_line_distance: opt.max_line_distance,
         max_line_distance_for_naively_paired_lines,
         minus_style_modifier,

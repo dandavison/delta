@@ -40,8 +40,6 @@ mod errors {
 fn main() -> std::io::Result<()> {
     let opt = cli::Opt::from_args();
 
-    let assets = HighlightingAssets::new();
-
     if opt.list_languages {
         list_languages()?;
         process::exit(0);
@@ -49,13 +47,15 @@ fn main() -> std::io::Result<()> {
         list_theme_names()?;
         process::exit(0);
     } else if opt.list_themes {
-        list_themes(&assets)?;
+        list_themes()?;
         process::exit(0);
     }
 
-    let config = cli::process_command_line_arguments(&assets, &opt);
+    let show_background_colors_option = opt.show_background_colors;
 
-    if opt.show_background_colors {
+    let config = cli::process_command_line_arguments(opt);
+
+    if show_background_colors_option {
         show_background_colors(&config);
         process::exit(0);
     }
@@ -63,12 +63,7 @@ fn main() -> std::io::Result<()> {
     let mut output_type = OutputType::from_mode(config.paging_mode, None).unwrap();
     let mut writer = output_type.handle().unwrap();
 
-    if let Err(error) = delta(
-        io::stdin().lock().byte_lines(),
-        &config,
-        &assets,
-        &mut writer,
-    ) {
+    if let Err(error) = delta(io::stdin().lock().byte_lines(), &mut writer, &config) {
         match error.kind() {
             ErrorKind::BrokenPipe => process::exit(0),
             _ => eprintln!("{}", error),
@@ -120,7 +115,7 @@ fn get_painted_rgb_string(color: Color, true_color: bool) -> String {
     string
 }
 
-fn list_themes(assets: &HighlightingAssets) -> std::io::Result<()> {
+fn list_themes() -> std::io::Result<()> {
     use bytelines::ByteLines;
     use std::io::BufReader;
     let opt = cli::Opt::from_args();
@@ -151,17 +146,18 @@ index f38589a..0f1bb83 100644
     let mut stdout = stdout.lock();
     let style = ansi_term::Style::new().bold();
 
+    let assets = HighlightingAssets::new();
+
     for (theme, _) in assets.theme_set.themes.iter() {
         if opt.light && !style::is_light_theme(theme) || opt.dark && style::is_light_theme(theme) {
             continue;
         }
 
         writeln!(stdout, "\n\nTheme: {}\n", style.paint(theme))?;
-        let new_opt = cli::Opt {
+        let mut config = cli::process_command_line_arguments(cli::Opt {
             theme: Some(theme.to_string()),
             ..opt.clone()
-        };
-        let mut config = cli::process_command_line_arguments(&assets, &new_opt);
+        });
         config.file_style = cli::SectionStyle::Omit;
         config.hunk_style = cli::SectionStyle::Omit;
         let mut output_type = OutputType::from_mode(PagingMode::QuitIfOneScreen, None).unwrap();
@@ -169,9 +165,8 @@ index f38589a..0f1bb83 100644
 
         if let Err(error) = delta(
             ByteLines::new(BufReader::new(&input[0..])),
-            &config,
-            &assets,
             &mut writer,
+            &config,
         ) {
             match error.kind() {
                 ErrorKind::BrokenPipe => process::exit(0),

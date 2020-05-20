@@ -2,7 +2,6 @@
 mod tests {
     use itertools::Itertools;
 
-    use crate::bat::assets::HighlightingAssets;
     use crate::cli;
     use crate::config::ColorLayer::*;
     use crate::delta::State;
@@ -54,7 +53,7 @@ mod tests {
                                 );
                                 println!();
                             }
-                            _do_hunk_color_test(&options);
+                            _do_hunk_color_test(options.clone());
                         }
                     }
                 }
@@ -62,17 +61,12 @@ mod tests {
         }
     }
 
-    fn _do_hunk_color_test(options: &cli::Opt) {
-        let output = integration_test_utils::run_delta(
+    fn _do_hunk_color_test(options: cli::Opt) {
+        let (output, config) = integration_test_utils::run_delta(
             DIFF_YIELDING_ALL_HUNK_LINE_COLOR_CATEGORIES,
             options,
         );
-
         let lines = output.trim().split("\n").skip(4);
-
-        // Hack: The config has been built once already in run_delta
-        let assets = HighlightingAssets::new();
-        let config = cli::process_command_line_arguments(&assets, &options);
 
         let minus =
             paint::paint_text_background("", config.minus_style_modifier.background.unwrap(), true)

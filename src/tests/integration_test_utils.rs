@@ -4,8 +4,8 @@ pub mod integration_test_utils {
     use console::strip_ansi_codes;
     use std::io::BufReader;
 
-    use crate::bat::assets::HighlightingAssets;
     use crate::cli;
+    use crate::config;
     use crate::delta::delta;
 
     pub fn get_command_line_options() -> cli::Opt {
@@ -43,26 +43,27 @@ pub mod integration_test_utils {
         }
     }
 
-    pub fn get_line_of_code_from_delta(input: &str, options: &cli::Opt) -> String {
-        let output = run_delta(&input, &options);
+    pub fn get_line_of_code_from_delta<'a>(
+        input: &str,
+        options: cli::Opt,
+    ) -> (String, config::Config<'a>) {
+        let (output, config) = run_delta(&input, options);
         let line_of_code = output.lines().nth(12).unwrap();
         assert!(strip_ansi_codes(line_of_code) == " class X:");
-        line_of_code.to_string()
+        (line_of_code.to_string(), config)
     }
 
-    pub fn run_delta(input: &str, options: &cli::Opt) -> String {
+    pub fn run_delta<'a>(input: &str, options: cli::Opt) -> (String, config::Config<'a>) {
         let mut writer: Vec<u8> = Vec::new();
 
-        let assets = HighlightingAssets::new();
-        let config = cli::process_command_line_arguments(&assets, &options);
+        let config = cli::process_command_line_arguments(options);
 
         delta(
             ByteLines::new(BufReader::new(input.as_bytes())),
-            &config,
-            &assets,
             &mut writer,
+            &config,
         )
         .unwrap();
-        String::from_utf8(writer).unwrap()
+        (String::from_utf8(writer).unwrap(), config)
     }
 }

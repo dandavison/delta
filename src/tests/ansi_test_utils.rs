@@ -5,8 +5,6 @@ pub mod ansi_test_utils {
     use itertools::Itertools;
     use syntect::highlighting::StyleModifier;
 
-    use crate::bat::assets::HighlightingAssets;
-    use crate::cli;
     use crate::config::{ColorLayer::*, Config};
     use crate::delta::State;
     use crate::paint;
@@ -88,29 +86,26 @@ pub mod ansi_test_utils {
         }
     }
 
-    pub fn assert_has_color_other_than_plus_color(string: &str, options: &cli::Opt) {
+    pub fn assert_has_color_other_than_plus_color(string: &str, config: &Config) {
         let (string_without_any_color, string_with_plus_color_only) =
-            get_color_variants(string, &options);
+            get_color_variants(string, config);
         assert_ne!(string, string_without_any_color);
         assert_ne!(string, string_with_plus_color_only);
     }
 
-    pub fn assert_has_plus_color_only(string: &str, options: &cli::Opt) {
+    pub fn assert_has_plus_color_only(string: &str, config: &Config) {
         let (string_without_any_color, string_with_plus_color_only) =
-            get_color_variants(string, &options);
+            get_color_variants(string, config);
         assert_ne!(string, string_without_any_color);
         assert_eq!(string, string_with_plus_color_only);
     }
 
-    pub fn get_color_variants(string: &str, options: &cli::Opt) -> (String, String) {
-        let assets = HighlightingAssets::new();
-        let config = cli::process_command_line_arguments(&assets, &options);
-
+    pub fn get_color_variants(string: &str, config: &Config) -> (String, String) {
         let string_without_any_color = strip_ansi_codes(string).to_string();
         let string_with_plus_color_only = paint_text(
             &string_without_any_color,
             config.plus_style_modifier,
-            &config,
+            config,
         );
         (string_without_any_color, string_with_plus_color_only)
     }

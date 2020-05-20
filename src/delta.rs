@@ -5,7 +5,6 @@ use console::strip_ansi_codes;
 use std::io::BufRead;
 use unicode_segmentation::UnicodeSegmentation;
 
-use crate::bat::assets::HighlightingAssets;
 use crate::cli;
 use crate::config::Config;
 use crate::draw;
@@ -54,14 +53,13 @@ impl State {
 
 pub fn delta<I>(
     mut lines: ByteLines<I>,
-    config: &Config,
-    assets: &HighlightingAssets,
     writer: &mut dyn Write,
+    config: &Config,
 ) -> std::io::Result<()>
 where
     I: BufRead,
 {
-    let mut painter = Painter::new(writer, config, assets);
+    let mut painter = Painter::new(writer, config);
     let mut minus_file = "".to_string();
     let mut plus_file;
     let mut state = State::Unknown;
