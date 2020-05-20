@@ -3,7 +3,6 @@ pub mod ansi_test_utils {
     use ansi_parser::{self, AnsiParser};
     use console::strip_ansi_codes;
     use itertools::Itertools;
-    use syntect::highlighting::StyleModifier;
 
     use crate::config::{ColorLayer::*, Config};
     use crate::delta::State;
@@ -49,13 +48,10 @@ pub mod ansi_test_utils {
     }
 
     fn string_has_background_color(string: &str, state: &State, config: &Config) -> bool {
-        let painted = paint::paint_text_background(
-            "",
-            config
-                .get_color(state, Background)
-                .unwrap_or_else(|| panic!("state {:?} does not have a background color", state)),
-            true,
-        );
+        let painted = config
+            .get_color(state, Background)
+            .unwrap_or_else(|| panic!("state {:?} does not have a background color", state))
+            .paint("");
         let ansi_sequence = painted
             .trim_end_matches(paint::ANSI_SGR_RESET)
             .trim_end_matches("m");
@@ -102,18 +98,10 @@ pub mod ansi_test_utils {
 
     pub fn get_color_variants(string: &str, config: &Config) -> (String, String) {
         let string_without_any_color = strip_ansi_codes(string).to_string();
-        let string_with_plus_color_only = paint_text(
-            &string_without_any_color,
-            config.plus_style_modifier,
-            config,
-        );
-        (string_without_any_color, string_with_plus_color_only)
-    }
-
-    fn paint_text(input: &str, style_modifier: StyleModifier, config: &Config) -> String {
-        let mut output = String::new();
-        let style = config.no_style.apply(style_modifier);
-        paint::paint_text(&input, style, &mut output, config.true_color);
-        output
+        let string_with_plus_color_only = config.plus_style.paint(&string_without_any_color);
+        (
+            string_without_any_color.to_string(),
+            string_with_plus_color_only.to_string(),
+        )
     }
 }

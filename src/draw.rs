@@ -1,11 +1,9 @@
 use std::io::Write;
 
+use ansi_term::Color;
 use box_drawing;
 use console::strip_ansi_codes;
-use syntect::highlighting::Color;
 use unicode_width::UnicodeWidthStr;
-
-use crate::paint;
 
 /// Write text to stream, surrounded by a box, leaving the cursor just
 /// beyond the bottom right corner.
@@ -15,7 +13,6 @@ pub fn write_boxed(
     _line_width: usize, // ignored
     color: Color,
     heavy: bool,
-    true_color: bool,
 ) -> std::io::Result<()> {
     let up_left = if heavy {
         box_drawing::heavy::UP_LEFT
@@ -23,12 +20,8 @@ pub fn write_boxed(
         box_drawing::light::UP_LEFT
     };
     let box_width = UnicodeWidthStr::width(strip_ansi_codes(text).as_ref()) + 1;
-    write_boxed_partial(writer, text, box_width, color, heavy, true_color)?;
-    write!(
-        writer,
-        "{}",
-        paint::paint_text_foreground(up_left, color, true_color)
-    )?;
+    write_boxed_partial(writer, text, box_width, color, heavy)?;
+    write!(writer, "{}", color.paint(up_left))?;
     Ok(())
 }
 
@@ -40,10 +33,9 @@ pub fn write_boxed_with_line(
     line_width: usize,
     color: Color,
     heavy: bool,
-    true_color: bool,
 ) -> std::io::Result<()> {
     let box_width = UnicodeWidthStr::width(strip_ansi_codes(text).as_ref()) + 1;
-    write_boxed_with_horizontal_whisker(writer, text, box_width, color, heavy, true_color)?;
+    write_boxed_with_horizontal_whisker(writer, text, box_width, color, heavy)?;
     write_horizontal_line(
         writer,
         if line_width > box_width {
@@ -53,7 +45,6 @@ pub fn write_boxed_with_line(
         },
         color,
         heavy,
-        true_color,
     )?;
     write!(writer, "\n")?;
     Ok(())
@@ -65,14 +56,9 @@ pub fn write_underlined(
     line_width: usize,
     color: Color,
     heavy: bool,
-    true_color: bool,
 ) -> std::io::Result<()> {
-    writeln!(
-        writer,
-        "{}",
-        paint::paint_text_foreground(text, color, true_color)
-    )?;
-    write_horizontal_line(writer, line_width - 1, color, heavy, true_color)?;
+    writeln!(writer, "{}", color.paint(text))?;
+    write_horizontal_line(writer, line_width - 1, color, heavy)?;
     write!(writer, "\n")?;
     Ok(())
 }
@@ -82,18 +68,13 @@ fn write_horizontal_line(
     line_width: usize,
     color: Color,
     heavy: bool,
-    true_color: bool,
 ) -> std::io::Result<()> {
     let horizontal = if heavy {
         box_drawing::heavy::HORIZONTAL
     } else {
         box_drawing::light::HORIZONTAL
     };
-    write!(
-        writer,
-        "{}",
-        paint::paint_text_foreground(&horizontal.repeat(line_width), color, true_color)
-    )
+    write!(writer, "{}", color.paint(horizontal.repeat(line_width)))
 }
 
 pub fn write_boxed_with_horizontal_whisker(
@@ -102,19 +83,14 @@ pub fn write_boxed_with_horizontal_whisker(
     box_width: usize,
     color: Color,
     heavy: bool,
-    true_color: bool,
 ) -> std::io::Result<()> {
     let up_horizontal = if heavy {
         box_drawing::heavy::UP_HORIZONTAL
     } else {
         box_drawing::light::UP_HORIZONTAL
     };
-    write_boxed_partial(writer, text, box_width, color, heavy, true_color)?;
-    write!(
-        writer,
-        "{}",
-        paint::paint_text_foreground(up_horizontal, color, true_color)
-    )?;
+    write_boxed_partial(writer, text, box_width, color, heavy)?;
+    write!(writer, "{}", color.paint(up_horizontal))?;
     Ok(())
 }
 
@@ -124,7 +100,6 @@ fn write_boxed_partial(
     box_width: usize,
     color: Color,
     heavy: bool,
-    true_color: bool,
 ) -> std::io::Result<()> {
     let horizontal = if heavy {
         box_drawing::heavy::HORIZONTAL
@@ -146,10 +121,10 @@ fn write_boxed_partial(
     write!(
         writer,
         "{}{}\n{} {}\n{}",
-        paint::paint_text_foreground(&horizontal_edge, color, true_color),
-        paint::paint_text_foreground(down_left, color, true_color),
-        paint::paint_text_foreground(text, color, true_color),
-        paint::paint_text_foreground(vertical, color, true_color),
-        paint::paint_text_foreground(&horizontal_edge, color, true_color),
+        color.paint(&horizontal_edge),
+        color.paint(down_left),
+        color.paint(text),
+        color.paint(vertical),
+        color.paint(&horizontal_edge),
     )
 }

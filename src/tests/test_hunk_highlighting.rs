@@ -2,6 +2,8 @@
 mod tests {
     use itertools::Itertools;
 
+    use ansi_term::Style;
+
     use crate::cli;
     use crate::config::ColorLayer::*;
     use crate::delta::State;
@@ -52,32 +54,30 @@ mod tests {
         );
         let lines = output.trim().split("\n").skip(4);
 
-        let minus =
-            paint::paint_text_background("", config.minus_style_modifier.background.unwrap(), true)
-                .trim_end_matches(paint::ANSI_SGR_RESET)
-                .trim_end_matches("m")
-                .to_string();
-        let minus_emph = paint::paint_text_background(
-            "",
-            config.minus_emph_style_modifier.background.unwrap(),
-            true,
-        )
-        .trim_end_matches(paint::ANSI_SGR_RESET)
-        .trim_end_matches("m")
-        .to_string();
-        let plus =
-            paint::paint_text_background("", config.plus_style_modifier.background.unwrap(), true)
-                .trim_end_matches(paint::ANSI_SGR_RESET)
-                .trim_end_matches("m")
-                .to_string();
-        let plus_emph = paint::paint_text_background(
-            "",
-            config.plus_emph_style_modifier.background.unwrap(),
-            true,
-        )
-        .trim_end_matches(paint::ANSI_SGR_RESET)
-        .trim_end_matches("m")
-        .to_string();
+        let minus = Style::new()
+            .on(config.minus_style.background.unwrap())
+            .paint("")
+            .trim_end_matches(paint::ANSI_SGR_RESET)
+            .trim_end_matches("m")
+            .to_string();
+        let minus_emph = Style::new()
+            .on(config.minus_emph_style.background.unwrap())
+            .paint("")
+            .trim_end_matches(paint::ANSI_SGR_RESET)
+            .trim_end_matches("m")
+            .to_string();
+        let plus = Style::new()
+            .on(config.plus_style.background.unwrap())
+            .paint("")
+            .trim_end_matches(paint::ANSI_SGR_RESET)
+            .trim_end_matches("m")
+            .to_string();
+        let plus_emph = Style::new()
+            .on(config.plus_emph_style.background.unwrap())
+            .paint("")
+            .trim_end_matches(paint::ANSI_SGR_RESET)
+            .trim_end_matches("m")
+            .to_string();
 
         let expectation = vec![
             // line 1: unchanged

@@ -1,5 +1,6 @@
 use std::io::Write;
 
+use ansi_term::Style;
 use bytelines::ByteLines;
 use console::strip_ansi_codes;
 use std::io::BufRead;
@@ -8,9 +9,8 @@ use unicode_segmentation::UnicodeSegmentation;
 use crate::cli;
 use crate::config::Config;
 use crate::draw;
-use crate::paint::{self, Painter};
+use crate::paint::Painter;
 use crate::parse;
-use crate::style;
 
 #[derive(Clone, Debug, PartialEq)]
 pub enum State {
@@ -202,7 +202,6 @@ fn handle_commit_meta_header_line(
         config.terminal_width,
         config.commit_color,
         true,
-        config.true_color,
     )?;
     Ok(())
 }
@@ -234,11 +233,10 @@ fn handle_generic_file_meta_header_line(
     writeln!(painter.writer)?;
     draw_fn(
         painter.writer,
-        &paint::paint_text_foreground(line, config.file_color, config.true_color),
+        &config.file_color.paint(line),
         config.terminal_width,
         config.file_color,
         false,
-        config.true_color,
     )?;
     Ok(())
 }
@@ -265,14 +263,11 @@ fn handle_hunk_meta_line(
         );
         Painter::paint_lines(
             vec![syntax_style_sections],
-            vec![vec![(
-                style::NO_BACKGROUND_COLOR_STYLE_MODIFIER,
-                &code_fragment,
-            )]],
+            vec![vec![(Style::new(), &code_fragment)]],
             &mut painter.output_buffer,
             config,
             "",
-            style::NO_BACKGROUND_COLOR_STYLE_MODIFIER,
+            config.null_style,
             Some(false),
         );
         painter.output_buffer.pop(); // trim newline
@@ -282,15 +277,10 @@ fn handle_hunk_meta_line(
             config.terminal_width,
             config.hunk_color,
             false,
-            config.true_color,
         )?;
         painter.output_buffer.clear();
     }
-    writeln!(
-        painter.writer,
-        "\n{}",
-        paint::paint_text_foreground(line_number, config.hunk_color, config.true_color)
-    )?;
+    writeln!(painter.writer, "\n{}", config.hunk_color.paint(line_number))?;
     Ok(())
 }
 
@@ -340,10 +330,9 @@ fn handle_hunk_line(
                     &painter.config,
                 )
             } else {
-                vec![(style::get_no_style(), line.as_str())]
+                vec![(config.null_syntect_style, line.as_str())]
             };
-            let diff_style_sections =
-                vec![(style::NO_BACKGROUND_COLOR_STYLE_MODIFIER, line.as_str())];
+            let diff_style_sections = vec![(Style::new(), line.as_str())];
 
             Painter::paint_lines(
                 vec![syntax_style_sections],
@@ -351,7 +340,7 @@ fn handle_hunk_line(
                 &mut painter.output_buffer,
                 config,
                 prefix,
-                style::NO_BACKGROUND_COLOR_STYLE_MODIFIER,
+                config.null_style,
                 None,
             );
             state

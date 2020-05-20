@@ -12,16 +12,16 @@ mod env;
 mod paint;
 mod parse;
 mod style;
+mod syntect_color;
 mod tests;
 
 use std::io::{self, ErrorKind, Read, Write};
 use std::process;
 
-use ansi_term;
+use ansi_term::{Color, Style};
 use atty;
 use bytelines::ByteLinesReader;
 use structopt::StructOpt;
-use syntect::highlighting::{Color, FontStyle, Style};
 
 use crate::bat::assets::{list_languages, HighlightingAssets};
 use crate::bat::output::{OutputType, PagingMode};
@@ -79,40 +79,15 @@ fn show_background_colors(config: &config::Config) {
          --minus-emph-color=\"{minus_emph_color}\" \
          --plus-color=\"{plus_color}\" \
          --plus-emph-color=\"{plus_emph_color}\"",
-        minus_color = get_painted_rgb_string(
-            config.minus_style_modifier.background.unwrap(),
-            config.true_color
-        ),
-        minus_emph_color = get_painted_rgb_string(
-            config.minus_emph_style_modifier.background.unwrap(),
-            config.true_color
-        ),
-        plus_color = get_painted_rgb_string(
-            config.plus_style_modifier.background.unwrap(),
-            config.true_color
-        ),
-        plus_emph_color = get_painted_rgb_string(
-            config.plus_emph_style_modifier.background.unwrap(),
-            config.true_color
-        ),
+        minus_color = get_painted_rgb_string(config.minus_style.background.unwrap()),
+        minus_emph_color = get_painted_rgb_string(config.minus_emph_style.background.unwrap()),
+        plus_color = get_painted_rgb_string(config.plus_style.background.unwrap()),
+        plus_emph_color = get_painted_rgb_string(config.plus_emph_style.background.unwrap()),
     )
 }
 
-fn get_painted_rgb_string(color: Color, true_color: bool) -> String {
-    let mut string = String::new();
-    let style = Style {
-        foreground: style::NO_COLOR,
-        background: color,
-        font_style: FontStyle::empty(),
-    };
-    paint::paint_text(
-        &format!("#{:02x?}{:02x?}{:02x?}", color.r, color.g, color.b),
-        style,
-        &mut string,
-        true_color,
-    );
-    string.push_str("\x1b[0m"); // reset
-    string
+fn get_painted_rgb_string(color: Color) -> String {
+    color.paint(format!("{:?}", color)).to_string()
 }
 
 fn list_themes() -> std::io::Result<()> {
@@ -144,7 +119,7 @@ index f38589a..0f1bb83 100644
 
     let stdout = io::stdout();
     let mut stdout = stdout.lock();
-    let style = ansi_term::Style::new().bold();
+    let style = Style::new().bold();
 
     let assets = HighlightingAssets::new();
 
