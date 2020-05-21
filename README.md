@@ -91,7 +91,7 @@ Alternatively, delta is available in the following package managers:
 
 <table>
   <tr>
-    <td>Arch Linux (AUR)</td>
+    <td>Arch Linux (<a href="https://aur.archlinux.org/packages/git-delta">AUR</a>)</td>
     <td><code>yay -S git-delta</code>
         <br>or<br>
         <code>git clone https://aur.archlinux.org/git-delta.git</code><br>
