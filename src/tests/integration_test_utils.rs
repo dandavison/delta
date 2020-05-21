@@ -8,22 +8,25 @@ pub mod integration_test_utils {
     use crate::config;
     use crate::delta::delta;
 
+    // TODO: These should be set in a more principled way, based on the default
+    // argument values.
     pub fn get_command_line_options() -> cli::Opt {
         cli::Opt {
             light: false,
             dark: false,
-            minus_style: None,
-            minus_emph_style: None,
-            plus_style: None,
-            plus_emph_style: None,
-            _deprecated_minus_color: None,
-            _deprecated_minus_emph_color: None,
-            _deprecated_plus_color: None,
-            _deprecated_plus_emph_color: None,
+            minus_style: "normal auto".to_string(),
+            minus_emph_style: "normal auto".to_string(),
+            zero_style: "syntax normal".to_string(),
+            plus_style: "syntax auto".to_string(),
+            plus_emph_style: "syntax auto".to_string(),
+            deprecated_minus_background_color: None,
+            deprecated_minus_emph_background_color: None,
+            deprecated_plus_background_color: None,
+            deprecated_plus_emph_background_color: None,
             color_only: false,
             keep_plus_minus_markers: false,
             theme: None,
-            highlight_minus_lines: false,
+            deprecated_highlight_minus_lines: false,
             commit_style: cli::SectionStyle::Plain,
             commit_color: "Yellow".to_string(),
             file_style: cli::SectionStyle::Underline,

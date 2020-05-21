@@ -253,17 +253,17 @@ fn handle_hunk_meta_line(
         cli::SectionStyle::Omit => return Ok(()),
     };
     let (raw_code_fragment, line_number) = parse::parse_hunk_metadata(&line);
-    let code_fragment = prepare(raw_code_fragment, false, config);
-    if !code_fragment.is_empty() {
-        let syntax_style_sections = Painter::get_line_syntax_style_sections(
-            &code_fragment,
-            true,
+    let lines = vec![prepare(raw_code_fragment, false, config)];
+    if !lines[0].is_empty() {
+        let syntax_style_sections = Painter::get_syntax_style_sections_for_lines(
+            &lines,
+            &State::HunkMeta,
             &mut painter.highlighter,
             &painter.config,
         );
         Painter::paint_lines(
-            vec![syntax_style_sections],
-            vec![vec![(Style::new(), &code_fragment)]],
+            syntax_style_sections,
+            vec![vec![(Style::new(), lines[0].as_str())]],
             &mut painter.output_buffer,
             config,
             "",
@@ -321,26 +321,22 @@ fn handle_hunk_line(
             let state = State::HunkZero;
             let prefix = if line.is_empty() { "" } else { &line[..1] };
             painter.paint_buffered_lines();
-            let line = prepare(&line, true, config);
-            let syntax_style_sections = if config.should_syntax_highlight(&state) {
-                Painter::get_line_syntax_style_sections(
-                    &line,
-                    true,
-                    &mut painter.highlighter,
-                    &painter.config,
-                )
-            } else {
-                vec![(config.null_syntect_style, line.as_str())]
-            };
-            let diff_style_sections = vec![(Style::new(), line.as_str())];
+            let lines = vec![prepare(&line, true, config)];
+            let syntax_style_sections = Painter::get_syntax_style_sections_for_lines(
+                &lines,
+                &state,
+                &mut painter.highlighter,
+                &painter.config,
+            );
+            let diff_style_sections = vec![(config.zero_style, lines[0].as_str())];
 
             Painter::paint_lines(
-                vec![syntax_style_sections],
+                syntax_style_sections,
                 vec![diff_style_sections],
                 &mut painter.output_buffer,
                 config,
                 prefix,
-                config.null_style,
+                config.zero_style,
                 None,
             );
             state

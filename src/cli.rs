@@ -71,37 +71,41 @@ pub struct Opt {
     #[structopt(long = "dark")]
     pub dark: bool,
 
-    #[structopt(long = "minus-style")]
+    #[structopt(long = "minus-style", default_value = "normal auto")]
     /// The style for removed lines.
-    pub minus_style: Option<String>,
+    pub minus_style: String,
 
-    #[structopt(long = "minus-emph-style")]
+    #[structopt(long = "minus-emph-style", default_value = "normal auto")]
     /// The style for emphasized sections of removed lines.
-    pub minus_emph_style: Option<String>,
+    pub minus_emph_style: String,
 
-    #[structopt(long = "plus-style")]
+    #[structopt(long = "zero-style", default_value = "syntax normal")]
+    /// The style for unchanged lines.
+    pub zero_style: String,
+
+    #[structopt(long = "plus-style", default_value = "syntax auto")]
     /// The style for removed lines.
-    pub plus_style: Option<String>,
+    pub plus_style: String,
 
-    #[structopt(long = "plus-emph-style")]
+    #[structopt(long = "plus-emph-style", default_value = "syntax auto")]
     /// The style for emphasized sections of removed lines.
-    pub plus_emph_style: Option<String>,
+    pub plus_emph_style: String,
 
     #[structopt(long = "minus-color")]
     /// The background color for removed lines.
-    pub _deprecated_minus_color: Option<String>,
+    pub deprecated_minus_background_color: Option<String>,
 
     #[structopt(long = "minus-emph-color")]
     /// The background color for emphasized sections of removed lines.
-    pub _deprecated_minus_emph_color: Option<String>,
+    pub deprecated_minus_emph_background_color: Option<String>,
 
     #[structopt(long = "plus-color")]
     /// The background color for added lines.
-    pub _deprecated_plus_color: Option<String>,
+    pub deprecated_plus_background_color: Option<String>,
 
     #[structopt(long = "plus-emph-color")]
     /// The background color for emphasized sections of added lines.
-    pub _deprecated_plus_emph_color: Option<String>,
+    pub deprecated_plus_emph_background_color: Option<String>,
 
     #[structopt(long = "theme", env = "BAT_THEME")]
     /// The code syntax highlighting theme to use. Use --theme=none to disable syntax highlighting.
@@ -113,7 +117,7 @@ pub struct Opt {
 
     #[structopt(long = "highlight-removed")]
     /// DEPRECATED: supply 'syntax' as the foreground color in --minus-style.
-    pub highlight_minus_lines: bool,
+    pub deprecated_highlight_minus_lines: bool,
 
     #[structopt(long = "color-only")]
     /// Do not alter the input in any way other than applying colors. Equivalent to
@@ -246,8 +250,9 @@ pub fn process_command_line_arguments<'a>(mut opt: Opt) -> config::Config<'a> {
 
     _check_validity(&opt, &assets);
 
-    _apply_rewrite_rules(&mut opt);
-
+    // Apply rewrite rules
+    _rewrite_style_strings_to_honor_deprecated_options(&mut opt);
+    _rewrite_options_to_implement_color_only(&mut opt);
     // We do not use the full width, in case `less --status-column` is in effect. See #41 and #10.
     // TODO: There seems to be some confusion in the accounting: we are actually leaving 2
     // characters unused for less at the right edge of the terminal, despite the subtraction of 1
@@ -321,44 +326,104 @@ fn _check_validity(opt: &Opt, assets: &HighlightingAssets) {
     }
 }
 
-fn _apply_rewrite_rules(opt: &mut Opt) {
-    opt.minus_style = _make_style_string(
-        opt.minus_style.as_deref(),
-        opt._deprecated_minus_color.as_deref(),
-        "minus",
-    );
-    opt.minus_emph_style = _make_style_string(
-        opt.minus_emph_style.as_deref(),
-        opt._deprecated_minus_emph_color.as_deref(),
-        "minus-emph",
-    );
-    opt.plus_style = _make_style_string(
-        opt.plus_style.as_deref(),
-        opt._deprecated_plus_color.as_deref(),
-        "plus",
-    );
-    opt.plus_emph_style = _make_style_string(
-        opt.plus_emph_style.as_deref(),
-        opt._deprecated_plus_emph_color.as_deref(),
-        "plus-emph",
-    );
+/// Implement --color-only
+fn _rewrite_options_to_implement_color_only(opt: &mut Opt) {
+    if opt.color_only {
+        opt.keep_plus_minus_markers = true;
+        opt.tab_width = 0;
+        opt.commit_style = SectionStyle::Plain;
+        opt.file_style = SectionStyle::Plain;
+        opt.hunk_style = SectionStyle::Plain;
+    }
 }
 
-pub fn _make_style_string(
-    style: Option<&str>,
-    background_color: Option<&str>,
+/// Honor deprecated arguments by rewriting the canonical --*-style arguments if appropriate.
+// TODO: How to avoid repeating the default values for style options here and in
+// the structopt definition?
+// If --highlight-removed was passed then we should set minus and minus emph foreground to "syntax", if they are still at their default values.
+fn _rewrite_style_strings_to_honor_deprecated_options(opt: &mut Opt) {
+    let deprecated_minus_foreground_arg = if opt.deprecated_highlight_minus_lines {
+        Some("syntax")
+    } else {
+        None
+    };
+
+    if let Some(rewritten) = _rewrite_style_string_maybe(
+        &opt.minus_style,
+        ("normal", "auto"),
+        (
+            deprecated_minus_foreground_arg,
+            opt.deprecated_minus_background_color.as_deref(),
+        ),
+        "minus",
+    ) {
+        opt.minus_style = rewritten.to_string();
+    }
+    if let Some(rewritten) = _rewrite_style_string_maybe(
+        &opt.minus_emph_style,
+        ("normal", "auto"),
+        (
+            deprecated_minus_foreground_arg,
+            opt.deprecated_minus_emph_background_color.as_deref(),
+        ),
+        "minus-emph",
+    ) {
+        opt.minus_emph_style = rewritten.to_string();
+    }
+    if let Some(rewritten) = _rewrite_style_string_maybe(
+        &opt.plus_style,
+        ("syntax", "auto"),
+        (None, opt.deprecated_plus_background_color.as_deref()),
+        "plus",
+    ) {
+        opt.plus_style = rewritten.to_string();
+    }
+    if let Some(rewritten) = _rewrite_style_string_maybe(
+        &opt.plus_emph_style,
+        ("syntax", "auto"),
+        (None, opt.deprecated_plus_emph_background_color.as_deref()),
+        "plus-emph",
+    ) {
+        opt.plus_emph_style = rewritten.to_string();
+    }
+}
+
+pub fn _rewrite_style_string_maybe(
+    style: &str,
+    style_default_pair: (&str, &str),
+    deprecated_args_style_pair: (Option<&str>, Option<&str>),
     element_name: &str,
 ) -> Option<String> {
-    match (style, background_color) {
-        (_, None) => style.map(str::to_string),
-        (None, Some(background_color)) => Some(format!("syntax {}", background_color)),
-        (Some(_), Some(_)) => {
+    let format_style = |pair: (&str, &str)| format!("{} {}", pair.0, pair.1);
+    match (style, deprecated_args_style_pair) {
+        (_, (None, None)) => None, // no rewrite
+        (style, deprecated_args_style_pair) if style == format_style(style_default_pair) => {
+            // TODO: We allow the deprecated argument values to have effect if
+            // the style argument value is equal to its default value. This is
+            // non-ideal, because the user may have explicitly supplied the
+            // style argument (i.e. it might just happen to equal the default).
+            Some(format_style((
+                deprecated_args_style_pair.0.unwrap_or(style_default_pair.0),
+                deprecated_args_style_pair.1.unwrap_or(style_default_pair.1),
+            )))
+        }
+        (_, (_, Some(_))) => {
             eprintln!(
                 "--{name}-color cannot be used with --{name}-style. \
                  Use --{name}-style=\"fg bg attr1 attr2 ...\" to set \
                  foreground color, background color, and style attributes. \
                  --{name}-color can only be used to set the background color. \
                  (It is still available for backwards-compatibility.)",
+                name = element_name,
+            );
+            process::exit(1);
+        }
+        (_, (Some(_), None)) => {
+            eprintln!(
+                "Deprecated option --highlight-removed cannot be used with \
+                 --{name}-style. Use --{name}-style=\"fg bg attr1 attr2 ...\" \
+                 to set foreground color, background color, and style \
+                 attributes.",
                 name = element_name,
             );
             process::exit(1);
@@ -473,19 +538,31 @@ mod tests {
             }
             assert_eq!(
                 config.minus_style.background.unwrap(),
-                style::get_minus_color_default(expected_mode == Mode::Light, is_true_color)
+                style::get_minus_background_color_default(
+                    expected_mode == Mode::Light,
+                    is_true_color
+                )
             );
             assert_eq!(
                 config.minus_emph_style.background.unwrap(),
-                style::get_minus_emph_color_default(expected_mode == Mode::Light, is_true_color)
+                style::get_minus_emph_background_color_default(
+                    expected_mode == Mode::Light,
+                    is_true_color
+                )
             );
             assert_eq!(
                 config.plus_style.background.unwrap(),
-                style::get_plus_color_default(expected_mode == Mode::Light, is_true_color)
+                style::get_plus_background_color_default(
+                    expected_mode == Mode::Light,
+                    is_true_color
+                )
             );
             assert_eq!(
                 config.plus_emph_style.background.unwrap(),
-                style::get_plus_emph_color_default(expected_mode == Mode::Light, is_true_color)
+                style::get_plus_emph_background_color_default(
+                    expected_mode == Mode::Light,
+                    is_true_color
+                )
             );
         }
     }

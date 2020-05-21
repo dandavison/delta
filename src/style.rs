@@ -1,4 +1,4 @@
-use ansi_term::Color;
+use ansi_term::{Color, Style};
 
 pub const LIGHT_THEMES: [&str; 5] = [
     "GitHub",
@@ -19,7 +19,7 @@ pub fn is_no_syntax_highlighting_theme_name(theme_name: &str) -> bool {
     theme_name.to_lowercase() == "none"
 }
 
-pub fn get_minus_color_default(is_light_mode: bool, is_true_color: bool) -> Color {
+pub fn get_minus_background_color_default(is_light_mode: bool, is_true_color: bool) -> Color {
     match (is_light_mode, is_true_color) {
         (true, true) => LIGHT_THEME_MINUS_COLOR,
         (true, false) => LIGHT_THEME_MINUS_COLOR_256,
@@ -28,7 +28,7 @@ pub fn get_minus_color_default(is_light_mode: bool, is_true_color: bool) -> Colo
     }
 }
 
-pub fn get_minus_emph_color_default(is_light_mode: bool, is_true_color: bool) -> Color {
+pub fn get_minus_emph_background_color_default(is_light_mode: bool, is_true_color: bool) -> Color {
     match (is_light_mode, is_true_color) {
         (true, true) => LIGHT_THEME_MINUS_EMPH_COLOR,
         (true, false) => LIGHT_THEME_MINUS_EMPH_COLOR_256,
@@ -37,7 +37,7 @@ pub fn get_minus_emph_color_default(is_light_mode: bool, is_true_color: bool) ->
     }
 }
 
-pub fn get_plus_color_default(is_light_mode: bool, is_true_color: bool) -> Color {
+pub fn get_plus_background_color_default(is_light_mode: bool, is_true_color: bool) -> Color {
     match (is_light_mode, is_true_color) {
         (true, true) => LIGHT_THEME_PLUS_COLOR,
         (true, false) => LIGHT_THEME_PLUS_COLOR_256,
@@ -46,7 +46,7 @@ pub fn get_plus_color_default(is_light_mode: bool, is_true_color: bool) -> Color
     }
 }
 
-pub fn get_plus_emph_color_default(is_light_mode: bool, is_true_color: bool) -> Color {
+pub fn get_plus_emph_background_color_default(is_light_mode: bool, is_true_color: bool) -> Color {
     match (is_light_mode, is_true_color) {
         (true, true) => LIGHT_THEME_PLUS_EMPH_COLOR,
         (true, false) => LIGHT_THEME_PLUS_EMPH_COLOR_256,
@@ -90,3 +90,13 @@ const DARK_THEME_PLUS_EMPH_COLOR_256: Color = Color::Fixed(28);
 /// A special color value to signify that the foreground color of a style should be derived from
 /// syntax highlighting.
 pub const SYNTAX_HIGHLIGHTING_COLOR: Color = Color::White; // TODO
+
+pub trait SyntaxHighlightable {
+    fn is_syntax_highlighted(&self) -> bool;
+}
+
+impl SyntaxHighlightable for Style {
+    fn is_syntax_highlighted(&self) -> bool {
+        self.foreground == Some(SYNTAX_HIGHLIGHTING_COLOR)
+    }
+}
