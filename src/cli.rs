@@ -4,6 +4,7 @@ use std::string::ToString;
 
 use bit_set::BitSet;
 use console::Term;
+use structopt::clap::AppSettings::{ColorAlways, ColoredHelp, DeriveDisplayOrder};
 use structopt::StructOpt;
 
 use crate::bat::assets::HighlightingAssets;
@@ -17,6 +18,9 @@ use crate::style;
 #[structopt(
     name = "delta",
     about = "A syntax-highlighter for git and diff output",
+    setting(ColorAlways),
+    setting(ColoredHelp),
+    setting(DeriveDisplayOrder),
     after_help = "\
 Colors
 ------
