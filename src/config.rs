@@ -1,7 +1,7 @@
 use std::process;
 use std::str::FromStr;
 
-use ansi_term::{Color, Style};
+use ansi_term::Color;
 use syntect::highlighting::Color as SyntectColor;
 use syntect::highlighting::Style as SyntectStyle;
 use syntect::highlighting::{Theme, ThemeSet};
@@ -11,7 +11,7 @@ use crate::bat::output::PagingMode;
 use crate::bat::terminal::to_ansi_color;
 use crate::cli;
 use crate::env;
-use crate::style;
+use crate::style::{self, Style};
 use crate::syntect_color;
 
 pub struct Config<'a> {
@@ -242,27 +242,31 @@ pub fn parse_style_string(
     let mut seen_background = false;
     for s in style_string.to_lowercase().split_whitespace() {
         if s == "blink" {
-            style.is_blink = true;
+            style.ansi_term_style.is_blink = true;
         } else if s == "bold" {
-            style.is_bold = true;
+            style.ansi_term_style.is_bold = true;
         } else if s == "dimmed" {
-            style.is_dimmed = true;
+            style.ansi_term_style.is_dimmed = true;
         } else if s == "hidden" {
-            style.is_hidden = true;
+            style.ansi_term_style.is_hidden = true;
         } else if s == "italic" {
-            style.is_italic = true;
+            style.ansi_term_style.is_italic = true;
         } else if s == "reverse" {
-            style.is_reverse = true;
+            style.ansi_term_style.is_reverse = true;
         } else if s == "strikethrough" {
-            style.is_strikethrough = true;
+            style.ansi_term_style.is_strikethrough = true;
         } else if s == "underline" {
-            style.is_underline = true;
+            style.ansi_term_style.is_underline = true;
         } else if !seen_foreground {
-            style.foreground =
-                color_from_rgb_or_ansi_code_with_default(s, foreground_default, true_color);
+            if s == "syntax" {
+                style.is_syntax_highlighted = true;
+            } else {
+                style.ansi_term_style.foreground =
+                    color_from_rgb_or_ansi_code_with_default(s, foreground_default, true_color);
+            }
             seen_foreground = true;
         } else if !seen_background {
-            style.background =
+            style.ansi_term_style.background =
                 color_from_rgb_or_ansi_code_with_default(s, background_default, true_color);
             seen_background = true;
         } else {
@@ -309,8 +313,6 @@ fn color_from_rgb_or_ansi_code_with_default(
         None
     } else if arg == "auto" {
         default
-    } else if arg == "syntax" {
-        Some(style::SYNTAX_HIGHLIGHTING_COLOR)
     } else {
         Some(color_from_rgb_or_ansi_code(&arg, true_color))
     }

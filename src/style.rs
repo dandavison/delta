@@ -1,4 +1,19 @@
-use ansi_term::{Color, Style};
+use ansi_term::{self, Color};
+
+#[derive(Clone, Copy, Debug, PartialEq)]
+pub struct Style {
+    pub ansi_term_style: ansi_term::Style,
+    pub is_syntax_highlighted: bool,
+}
+
+impl Style {
+    pub fn new() -> Self {
+        Self {
+            ansi_term_style: ansi_term::Style::new(),
+            is_syntax_highlighted: false,
+        }
+    }
+}
 
 pub const LIGHT_THEMES: [&str; 5] = [
     "GitHub",
@@ -86,17 +101,3 @@ const DARK_THEME_PLUS_COLOR_256: Color = Color::Fixed(22);
 const DARK_THEME_PLUS_EMPH_COLOR: Color = Color::RGB(0x00, 0x60, 0x00);
 
 const DARK_THEME_PLUS_EMPH_COLOR_256: Color = Color::Fixed(28);
-
-/// A special color value to signify that the foreground color of a style should be derived from
-/// syntax highlighting.
-pub const SYNTAX_HIGHLIGHTING_COLOR: Color = Color::White; // TODO
-
-pub trait SyntaxHighlightable {
-    fn is_syntax_highlighted(&self) -> bool;
-}
-
-impl SyntaxHighlightable for Style {
-    fn is_syntax_highlighted(&self) -> bool {
-        self.foreground == Some(SYNTAX_HIGHLIGHTING_COLOR)
-    }
-}

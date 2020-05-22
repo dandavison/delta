@@ -537,28 +537,28 @@ mod tests {
                 assert_eq!(config.theme.unwrap().name.as_ref().unwrap(), expected_theme);
             }
             assert_eq!(
-                config.minus_style.background.unwrap(),
+                config.minus_style.ansi_term_style.background.unwrap(),
                 style::get_minus_background_color_default(
                     expected_mode == Mode::Light,
                     is_true_color
                 )
             );
             assert_eq!(
-                config.minus_emph_style.background.unwrap(),
+                config.minus_emph_style.ansi_term_style.background.unwrap(),
                 style::get_minus_emph_background_color_default(
                     expected_mode == Mode::Light,
                     is_true_color
                 )
             );
             assert_eq!(
-                config.plus_style.background.unwrap(),
+                config.plus_style.ansi_term_style.background.unwrap(),
                 style::get_plus_background_color_default(
                     expected_mode == Mode::Light,
                     is_true_color
                 )
             );
             assert_eq!(
-                config.plus_emph_style.background.unwrap(),
+                config.plus_emph_style.ansi_term_style.background.unwrap(),
                 style::get_plus_emph_background_color_default(
                     expected_mode == Mode::Light,
                     is_true_color

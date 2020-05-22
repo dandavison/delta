@@ -20,7 +20,10 @@ pub mod ansi_test_utils {
 
     pub fn get_color_variants(string: &str, config: &Config) -> (String, String) {
         let string_without_any_color = strip_ansi_codes(string).to_string();
-        let string_with_plus_color_only = config.plus_style.paint(&string_without_any_color);
+        let string_with_plus_color_only = config
+            .plus_style
+            .ansi_term_style
+            .paint(&string_without_any_color);
         (
             string_without_any_color.to_string(),
             string_with_plus_color_only.to_string(),

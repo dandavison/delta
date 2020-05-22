@@ -1,6 +1,5 @@
 use std::io::Write;
 
-use ansi_term::Style;
 use bytelines::ByteLines;
 use console::strip_ansi_codes;
 use std::io::BufRead;
@@ -11,6 +10,7 @@ use crate::config::Config;
 use crate::draw;
 use crate::paint::Painter;
 use crate::parse;
+use crate::style::Style;
 
 #[derive(Clone, Debug, PartialEq)]
 pub enum State {

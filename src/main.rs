@@ -18,7 +18,7 @@ mod tests;
 use std::io::{self, ErrorKind, Read, Write};
 use std::process;
 
-use ansi_term::{Color, Style};
+use ansi_term::{self, Color};
 use atty;
 use bytelines::ByteLinesReader;
 use structopt::StructOpt;
@@ -79,10 +79,13 @@ fn show_background_colors(config: &config::Config) {
          --minus-emph-color=\"{minus_emph_color}\" \
          --plus-color=\"{plus_color}\" \
          --plus-emph-color=\"{plus_emph_color}\"",
-        minus_color = get_painted_rgb_string(config.minus_style.background.unwrap()),
-        minus_emph_color = get_painted_rgb_string(config.minus_emph_style.background.unwrap()),
-        plus_color = get_painted_rgb_string(config.plus_style.background.unwrap()),
-        plus_emph_color = get_painted_rgb_string(config.plus_emph_style.background.unwrap()),
+        minus_color =
+            get_painted_rgb_string(config.minus_style.ansi_term_style.background.unwrap()),
+        minus_emph_color =
+            get_painted_rgb_string(config.minus_emph_style.ansi_term_style.background.unwrap()),
+        plus_color = get_painted_rgb_string(config.plus_style.ansi_term_style.background.unwrap()),
+        plus_emph_color =
+            get_painted_rgb_string(config.plus_emph_style.ansi_term_style.background.unwrap()),
     )
 }
 
@@ -119,7 +122,7 @@ index f38589a..0f1bb83 100644
 
     let stdout = io::stdout();
     let mut stdout = stdout.lock();
-    let style = Style::new().bold();
+    let style = ansi_term::Style::new().bold();
 
     let assets = HighlightingAssets::new();
 

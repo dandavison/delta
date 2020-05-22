@@ -1,6 +1,6 @@
 use std::io::Write;
 
-use ansi_term::{self, Style};
+use ansi_term;
 use syntect::easy::HighlightLines;
 use syntect::highlighting::Style as SyntectStyle;
 use syntect::parsing::{SyntaxReference, SyntaxSet};
@@ -9,7 +9,7 @@ use crate::config;
 use crate::delta::State;
 use crate::edits;
 use crate::paint::superimpose_style_sections::superimpose_style_sections;
-use crate::style::SyntaxHighlightable;
+use crate::style::Style;
 
 pub const ANSI_CSI_ERASE_IN_LINE: &str = "\x1b[K";
 pub const ANSI_SGR_RESET: &str = "\x1b[0m";
@@ -119,7 +119,7 @@ impl<'a> Painter<'a> {
         {
             let mut ansi_strings = Vec::new();
             if prefix != "" {
-                ansi_strings.push(default_style.paint(prefix));
+                ansi_strings.push(default_style.ansi_term_style.paint(prefix));
             }
             let mut dropped_prefix = prefix == ""; // TODO: Hack
             for (style, mut text) in superimpose_style_sections(
@@ -134,9 +134,9 @@ impl<'a> Painter<'a> {
                     }
                     dropped_prefix = true;
                 }
-                ansi_strings.push(style.paint(text));
+                ansi_strings.push(style.ansi_term_style.paint(text));
             }
-            ansi_strings.push(default_style.paint(""));
+            ansi_strings.push(default_style.ansi_term_style.paint(""));
             let line = &mut ansi_term::ANSIStrings(&ansi_strings).to_string();
             let background_color_extends_to_terminal_width =
                 match background_color_extends_to_terminal_width {
@@ -174,13 +174,13 @@ impl<'a> Painter<'a> {
         }
         match state {
             State::HunkMinus => {
-                config.minus_style.is_syntax_highlighted()
-                    || config.minus_emph_style.is_syntax_highlighted()
+                config.minus_style.is_syntax_highlighted
+                    || config.minus_emph_style.is_syntax_highlighted
             }
-            State::HunkZero => config.zero_style.is_syntax_highlighted(),
+            State::HunkZero => config.zero_style.is_syntax_highlighted,
             State::HunkPlus => {
-                config.plus_style.is_syntax_highlighted()
-                    || config.plus_emph_style.is_syntax_highlighted()
+                config.plus_style.is_syntax_highlighted
+                    || config.plus_emph_style.is_syntax_highlighted
             }
             State::HunkMeta => true,
             _ => panic!(
@@ -228,11 +228,10 @@ impl<'a> Painter<'a> {
 }
 
 mod superimpose_style_sections {
-    use ansi_term::Style;
     use syntect::highlighting::Style as SyntectStyle;
 
     use crate::bat::terminal::to_ansi_color;
-    use crate::style::SyntaxHighlightable;
+    use crate::style::Style;
 
     pub fn superimpose_style_sections(
         sections_1: &[(SyntectStyle, &str)],
@@ -287,9 +286,12 @@ mod superimpose_style_sections {
         null_syntect_style: SyntectStyle,
     ) -> Vec<(Style, String)> {
         let make_superimposed_style = |(syntect_style, style): (SyntectStyle, Style)| {
-            if style.is_syntax_highlighted() && syntect_style != null_syntect_style {
+            if style.is_syntax_highlighted && syntect_style != null_syntect_style {
                 Style {
-                    foreground: Some(to_ansi_color(syntect_style.foreground, true_color)),
+                    ansi_term_style: ansi_term::Style {
+                        foreground: Some(to_ansi_color(syntect_style.foreground, true_color)),
+                        ..style.ansi_term_style
+                    },
                     ..style
                 }
             } else {
@@ -328,10 +330,12 @@ mod superimpose_style_sections {
         use lazy_static::lazy_static;
 
         use super::*;
-        use ansi_term::{Color, Style};
+        use ansi_term::{self, Color};
         use syntect::highlighting::Color as SyntectColor;
         use syntect::highlighting::FontStyle as SyntectFontStyle;
         use syntect::highlighting::Style as SyntectStyle;
+
+        use crate::style::Style;
 
         lazy_static! {
             static ref SYNTAX_STYLE: SyntectStyle = SyntectStyle {
@@ -341,26 +345,43 @@ mod superimpose_style_sections {
             };
         }
         lazy_static! {
-            static ref STYLE: Style = Style {
-                foreground: Some(Color::White),
-                background: Some(Color::White),
-                is_underline: true,
-                ..Style::new()
+            static ref SYNTAX_HIGHLIGHTED_STYLE: Style = Style {
+                ansi_term_style: ansi_term::Style {
+                    foreground: Some(Color::White),
+                    background: Some(Color::White),
+                    is_underline: true,
+                    ..ansi_term::Style::new()
+                },
+                is_syntax_highlighted: true,
+            };
+        }
+        lazy_static! {
+            static ref NON_SYNTAX_HIGHLIGHTED_STYLE: Style = Style {
+                ansi_term_style: ansi_term::Style {
+                    foreground: Some(Color::White),
+                    background: Some(Color::White),
+                    is_underline: true,
+                    ..ansi_term::Style::new()
+                },
+                is_syntax_highlighted: false,
             };
         }
         lazy_static! {
             static ref SUPERIMPOSED_STYLE: Style = Style {
-                foreground: Some(to_ansi_color(SyntectColor::BLACK, true)),
-                background: Some(Color::White),
-                is_underline: true,
-                ..Style::new()
+                ansi_term_style: ansi_term::Style {
+                    foreground: Some(to_ansi_color(SyntectColor::BLACK, true)),
+                    background: Some(Color::White),
+                    is_underline: true,
+                    ..ansi_term::Style::new()
+                },
+                is_syntax_highlighted: true,
             };
         }
 
         #[test]
         fn test_superimpose_style_sections_1() {
             let sections_1 = vec![(*SYNTAX_STYLE, "ab")];
-            let sections_2 = vec![(*STYLE, "ab")];
+            let sections_2 = vec![(*SYNTAX_HIGHLIGHTED_STYLE, "ab")];
             let superimposed = vec![(*SUPERIMPOSED_STYLE, "ab".to_string())];
             assert_eq!(
                 superimpose_style_sections(&sections_1, &sections_2, true, SyntectStyle::default()),
@@ -371,8 +392,22 @@ mod superimpose_style_sections {
         #[test]
         fn test_superimpose_style_sections_2() {
             let sections_1 = vec![(*SYNTAX_STYLE, "ab")];
-            let sections_2 = vec![(*STYLE, "a"), (*STYLE, "b")];
+            let sections_2 = vec![
+                (*SYNTAX_HIGHLIGHTED_STYLE, "a"),
+                (*SYNTAX_HIGHLIGHTED_STYLE, "b"),
+            ];
             let superimposed = vec![(*SUPERIMPOSED_STYLE, String::from("ab"))];
+            assert_eq!(
+                superimpose_style_sections(&sections_1, &sections_2, true, SyntectStyle::default()),
+                superimposed
+            );
+        }
+
+        #[test]
+        fn test_superimpose_style_sections_3() {
+            let sections_1 = vec![(*SYNTAX_STYLE, "ab")];
+            let sections_2 = vec![(*NON_SYNTAX_HIGHLIGHTED_STYLE, "ab")];
+            let superimposed = vec![(*NON_SYNTAX_HIGHLIGHTED_STYLE, "ab".to_string())];
             assert_eq!(
                 superimpose_style_sections(&sections_1, &sections_2, true, SyntectStyle::default()),
                 superimposed
@@ -391,8 +426,11 @@ mod superimpose_style_sections {
         #[test]
         fn test_superimpose() {
             let x = (*SYNTAX_STYLE, 'a');
-            let pairs = vec![(&x, (*STYLE, 'a'))];
-            assert_eq!(superimpose(pairs), vec![((*SYNTAX_STYLE, *STYLE), 'a')]);
+            let pairs = vec![(&x, (*SYNTAX_HIGHLIGHTED_STYLE, 'a'))];
+            assert_eq!(
+                superimpose(pairs),
+                vec![((*SYNTAX_STYLE, *SYNTAX_HIGHLIGHTED_STYLE), 'a')]
+            );
         }
     }
 }
