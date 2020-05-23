@@ -253,22 +253,22 @@ pub struct Opt {
     #[structopt(long = "paging", default_value = "auto")]
     pub paging_mode: String,
 
-    #[structopt(long = "minus-color")]
+    #[structopt(long = "minus-color", name = "minus-background-color")]
     /// Deprecated: an alternative way to set the background color for removed lines. Use
     /// --minus-style instead.
     pub deprecated_minus_background_color: Option<String>,
 
-    #[structopt(long = "minus-emph-color")]
+    #[structopt(long = "minus-emph-color", name = "minus-emph-background-color")]
     /// Deprecated: an alternative way to set the background color for emphasized sections of
     /// removed lines. Use --minus-emph-style instead.
     pub deprecated_minus_emph_background_color: Option<String>,
 
-    #[structopt(long = "plus-color")]
+    #[structopt(long = "plus-color", name = "plus-background-color")]
     /// Deprecated: an alternative way to set the background color for added lines. Use
     /// --plus-style instead.
     pub deprecated_plus_background_color: Option<String>,
 
-    #[structopt(long = "plus-emph-color")]
+    #[structopt(long = "plus-emph-color", name = "plus-emph-background-color")]
     /// Deprecated: an alternative way to set the background color for emphasized sections of added
     /// lines. Use --plus-emph-style instead.
     pub deprecated_plus_emph_background_color: Option<String>,
