@@ -20,10 +20,60 @@ use crate::style;
     setting(ColoredHelp),
     setting(DeriveDisplayOrder),
     after_help = "\
-Colors
+STYLES
 ------
 
-All delta color options work the same way. There are three ways to specify a color:
+All options that have a name like --*-style work the same way. It is very similar to how
+colors/styles are specified in a gitconfig file:
+https://git-scm.com/docs/git-config#Documentation/git-config.txt-color
+
+Here is an example:
+
+--minus-style 'red bold underline #ffeeee'
+
+That means: For removed lines, set the foreground (text) color to 'red', make it bold and
+            underlined, and set the background color to '#ffeeee'.
+
+See the COLORS section below for how to specify a color. In addition to real colors, there are 3
+special color names: 'auto', 'normal', 'syntax'.
+
+Here is an example of using special color names together with a single attribute:
+
+--minus-style 'syntax bold auto'
+
+That means: For removed lines, syntax-highlight the text, and make it bold, and do whatever delta
+            normally does for the background.
+
+The available attributes are: 'blink', 'bold', 'dimmed', 'hidden', 'italic', 'reverse',
+'strikethrough', 'underline'.
+
+A complete description of the style string syntax follows:
+
+- A style string consists of 0, 1, or 2 colors, together with an arbitrary number of style
+  attributes, all separated by spaces.
+
+- The first color is the foreground (text) color. The second color is the background color.
+  Attributes can go in any position.
+
+- This means that in order to specify a background color you must also specify a foreground (text)
+  color.
+
+- If you just want delta to do what it would normally do for one of the colors, then use the
+  special color 'auto'. This can be used for both foreground and background.
+
+- If you want the foreground text to be syntax-highlighted according to its language, then use the
+  special foreground color 'syntax'. This can only be used for the foreground (text).
+
+- If you want delta to not apply any color, then use the special color 'normal'. This can be used
+  for both foreground and background.
+
+- The minimal style specification is the empty string ''. This means: do not apply any colors or
+  styling to the element in question.
+
+COLORS
+------
+
+There are three ways to specify a color:
 
 1. RGB hex code
 
@@ -72,40 +122,26 @@ pub struct Opt {
     pub dark: bool,
 
     #[structopt(long = "minus-style", default_value = "normal auto")]
-    /// The style for removed lines.
+    /// The style (foreground, background, attributes) for removed lines. See STYLES section.
     pub minus_style: String,
 
-    #[structopt(long = "minus-emph-style", default_value = "normal auto")]
-    /// The style for emphasized sections of removed lines.
-    pub minus_emph_style: String,
-
     #[structopt(long = "zero-style", default_value = "syntax normal")]
-    /// The style for unchanged lines.
+    /// The style (foreground, background, attributes) for unchanged lines. See STYLES section.
     pub zero_style: String,
 
     #[structopt(long = "plus-style", default_value = "syntax auto")]
-    /// The style for removed lines.
+    /// The style (foreground, background, attributes) for added lines. See STYLES section.
     pub plus_style: String,
 
+    #[structopt(long = "minus-emph-style", default_value = "normal auto")]
+    /// The style (foreground, background, attributes) for emphasized sections of removed lines.
+    /// See STYLES section.
+    pub minus_emph_style: String,
+
     #[structopt(long = "plus-emph-style", default_value = "syntax auto")]
-    /// The style for emphasized sections of removed lines.
+    /// The style (foreground, background, attributes) for emphasized sections of added lines. See
+    /// STYLES section.
     pub plus_emph_style: String,
-
-    #[structopt(long = "minus-color")]
-    /// The background color for removed lines.
-    pub deprecated_minus_background_color: Option<String>,
-
-    #[structopt(long = "minus-emph-color")]
-    /// The background color for emphasized sections of removed lines.
-    pub deprecated_minus_emph_background_color: Option<String>,
-
-    #[structopt(long = "plus-color")]
-    /// The background color for added lines.
-    pub deprecated_plus_background_color: Option<String>,
-
-    #[structopt(long = "plus-emph-color")]
-    /// The background color for emphasized sections of added lines.
-    pub deprecated_plus_emph_background_color: Option<String>,
 
     #[structopt(long = "theme", env = "BAT_THEME")]
     /// The code syntax highlighting theme to use. Use --theme=none to disable syntax highlighting.
@@ -114,10 +150,6 @@ pub struct Opt {
     /// Note that the choice of theme only affects code syntax highlighting. See --commit-color,
     /// --file-color, --hunk-color to configure the colors of other parts of the diff output.
     pub theme: Option<String>,
-
-    #[structopt(long = "highlight-removed")]
-    /// DEPRECATED: supply 'syntax' as the foreground color in --minus-style.
-    pub deprecated_highlight_minus_lines: bool,
 
     #[structopt(long = "color-only")]
     /// Do not alter the input in any way other than applying colors. Equivalent to
@@ -210,6 +242,30 @@ pub struct Opt {
     /// or PAGER (BAT_PAGER has priority).
     #[structopt(long = "paging", default_value = "auto")]
     pub paging_mode: String,
+
+    #[structopt(long = "minus-color")]
+    /// Deprecated: an alternative way to set the background color for removed lines. Use
+    /// --minus-style instead.
+    pub deprecated_minus_background_color: Option<String>,
+
+    #[structopt(long = "minus-emph-color")]
+    /// Deprecated: an alternative way to set the background color for emphasized sections of
+    /// removed lines. Use --minus-emph-style instead.
+    pub deprecated_minus_emph_background_color: Option<String>,
+
+    #[structopt(long = "plus-color")]
+    /// Deprecated: an alternative way to set the background color for added lines. Use
+    /// --plus-style instead.
+    pub deprecated_plus_background_color: Option<String>,
+
+    #[structopt(long = "plus-emph-color")]
+    /// Deprecated: an alternative way to set the background color for emphasized sections of added
+    /// lines. Use --plus-emph-style instead.
+    pub deprecated_plus_emph_background_color: Option<String>,
+
+    #[structopt(long = "highlight-removed")]
+    /// Deprecated: use --minus-style instead.
+    pub deprecated_highlight_minus_lines: bool,
 }
 
 #[derive(Clone, Copy, Debug, PartialEq)]
