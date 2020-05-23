@@ -20,11 +20,13 @@ pub mod integration_test_utils {
 
     pub fn get_line_of_code_from_delta<'a>(
         input: &str,
+        line_number: usize,
+        expected_text: &str,
         options: cli::Opt,
     ) -> (String, config::Config<'a>) {
         let (output, config) = run_delta(&input, options);
-        let line_of_code = output.lines().nth(12).unwrap();
-        assert!(strip_ansi_codes(line_of_code) == " class X:");
+        let line_of_code = output.lines().nth(line_number).unwrap();
+        assert!(strip_ansi_codes(line_of_code) == expected_text);
         (line_of_code.to_string(), config)
     }
 

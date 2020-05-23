@@ -47,8 +47,12 @@ mod tests {
     fn test_recognized_file_type() {
         // In addition to the background color, the code has language syntax highlighting.
         let options = integration_test_utils::get_command_line_options();
-        let (output, config) =
-            integration_test_utils::get_line_of_code_from_delta(&ADDED_FILE_INPUT, options);
+        let (output, config) = integration_test_utils::get_line_of_code_from_delta(
+            &ADDED_FILE_INPUT,
+            12,
+            " class X:",
+            options,
+        );
         ansi_test_utils::assert_has_color_other_than_plus_color(&output, &config);
     }
 
@@ -58,7 +62,8 @@ mod tests {
         // .txt syntax under the theme.
         let options = integration_test_utils::get_command_line_options();
         let input = ADDED_FILE_INPUT.replace("a.py", "a");
-        let (output, config) = integration_test_utils::get_line_of_code_from_delta(&input, options);
+        let (output, config) =
+            integration_test_utils::get_line_of_code_from_delta(&input, 12, " class X:", options);
         ansi_test_utils::assert_has_color_other_than_plus_color(&output, &config);
     }
 
@@ -69,7 +74,8 @@ mod tests {
         let mut options = integration_test_utils::get_command_line_options();
         options.theme = Some("none".to_string());
         let input = ADDED_FILE_INPUT.replace("a.py", "a");
-        let (output, config) = integration_test_utils::get_line_of_code_from_delta(&input, options);
+        let (output, config) =
+            integration_test_utils::get_line_of_code_from_delta(&input, 12, " class X:", options);
         ansi_test_utils::assert_has_plus_color_only(&output, &config);
     }
 
