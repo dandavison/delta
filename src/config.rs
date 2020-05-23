@@ -321,7 +321,7 @@ pub fn parse_style_string(
     style
 }
 
-fn color_from_rgb_or_ansi_code(s: &str, true_color: bool) -> Color {
+pub fn color_from_rgb_or_ansi_code(s: &str, true_color: bool) -> Color {
     let die = || {
         eprintln!("Invalid color: {}", s);
         process::exit(1);

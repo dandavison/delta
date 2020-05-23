@@ -1,8 +1,10 @@
 #[cfg(test)]
 mod tests {
+    use console::strip_ansi_codes;
+
+    use crate::cli::SectionStyle;
     use crate::tests::ansi_test_utils::ansi_test_utils;
     use crate::tests::integration_test_utils::integration_test_utils;
-    use console::strip_ansi_codes;
 
     #[test]
     fn test_added_file() {
@@ -201,6 +203,274 @@ mod tests {
         assert!(output.contains("\n ---\n"));
         assert!(output.contains("\n Subject: [PATCH] Init\n"));
     }
+
+    #[test]
+    fn test_commit_style_plain() {
+        let mut options = integration_test_utils::get_command_line_options();
+        options.commit_style = SectionStyle::Plain;
+        // TODO: --commit-color has no effect in conjunction with --commit-style plain
+        let (output, _) = integration_test_utils::run_delta(GIT_DIFF_SINGLE_HUNK, options);
+        ansi_test_utils::assert_line_has_no_color(
+            &output,
+            0,
+            "commit 94907c0f136f46dc46ffae2dc92dca9af7eb7c2e",
+        );
+        let output = strip_ansi_codes(&output);
+        assert!(output.contains(
+            "\
+commit 94907c0f136f46dc46ffae2dc92dca9af7eb7c2e
+"
+        ));
+    }
+
+    #[test]
+    fn test_commit_style_box() {
+        let mut options = integration_test_utils::get_command_line_options();
+        options.commit_style = SectionStyle::Box;
+        options.commit_color = "blue".to_string();
+        let (output, config) = integration_test_utils::run_delta(GIT_DIFF_SINGLE_HUNK, options);
+        ansi_test_utils::assert_line_has_foreground_color(
+            &output,
+            0,
+            "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┓",
+            "blue",
+            &config,
+        );
+        ansi_test_utils::assert_line_has_foreground_color(
+            &output,
+            1,
+            "commit 94907c0f136f46dc46ffae2dc92dca9af7eb7c2e ┃",
+            "blue",
+            &config,
+        );
+        ansi_test_utils::assert_line_has_foreground_color(
+            &output,
+            2,
+            "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┻━",
+            "blue",
+            &config,
+        );
+        let output = strip_ansi_codes(&output);
+        assert!(output.contains(
+            "\
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┓
+commit 94907c0f136f46dc46ffae2dc92dca9af7eb7c2e ┃
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┻━"
+        ));
+    }
+
+    #[test]
+    fn test_commit_style_underline() {
+        let mut options = integration_test_utils::get_command_line_options();
+        options.commit_style = SectionStyle::Underline;
+        options.commit_color = "yellow".to_string();
+        let (output, config) = integration_test_utils::run_delta(GIT_DIFF_SINGLE_HUNK, options);
+        ansi_test_utils::assert_line_has_foreground_color(
+            &output,
+            0,
+            "commit 94907c0f136f46dc46ffae2dc92dca9af7eb7c2e",
+            "yellow",
+            &config,
+        );
+        ansi_test_utils::assert_line_has_foreground_color(
+            &output,
+            1,
+            "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━",
+            "yellow",
+            &config,
+        );
+        let output = strip_ansi_codes(&output);
+        assert!(output.contains(
+            "\
+commit 94907c0f136f46dc46ffae2dc92dca9af7eb7c2e
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+        ));
+    }
+
+    #[test]
+    fn test_file_style_plain() {
+        let mut options = integration_test_utils::get_command_line_options();
+        options.file_style = SectionStyle::Plain;
+        // TODO: --file-color has no effect in conjunction with --file-style plain
+        let (output, _) = integration_test_utils::run_delta(GIT_DIFF_SINGLE_HUNK, options);
+        for (i, line) in vec![
+            "diff --git a/src/align.rs b/src/align.rs",
+            "index 8e37a9e..6ce4863 100644",
+            "--- a/src/align.rs",
+            "+++ b/src/align.rs",
+        ]
+        .iter()
+        .enumerate()
+        {
+            ansi_test_utils::assert_line_has_no_color(&output, 6 + i, line);
+        }
+        let output = strip_ansi_codes(&output);
+        assert!(output.contains(
+            "
+diff --git a/src/align.rs b/src/align.rs
+index 8e37a9e..6ce4863 100644
+--- a/src/align.rs
++++ b/src/align.rs
+"
+        ));
+    }
+
+    #[test]
+    fn test_file_style_box() {
+        let mut options = integration_test_utils::get_command_line_options();
+        options.file_style = SectionStyle::Box;
+        options.file_color = "green".to_string();
+        let (output, config) = integration_test_utils::run_delta(GIT_DIFF_SINGLE_HUNK, options);
+        ansi_test_utils::assert_line_has_foreground_color(
+            &output,
+            7,
+            "─────────────┐",
+            "green",
+            &config,
+        );
+        ansi_test_utils::assert_line_has_foreground_color(
+            &output,
+            8,
+            "src/align.rs │",
+            "green",
+            &config,
+        );
+        ansi_test_utils::assert_line_has_foreground_color(
+            &output,
+            9,
+            "─────────────┴─",
+            "green",
+            &config,
+        );
+        let output = strip_ansi_codes(&output);
+        assert!(output.contains(
+            "
+─────────────┐
+src/align.rs │
+─────────────┴─"
+        ));
+    }
+
+    #[test]
+    fn test_file_style_underline() {
+        let mut options = integration_test_utils::get_command_line_options();
+        options.file_style = SectionStyle::Underline;
+        options.file_color = "magenta".to_string();
+        let (output, config) = integration_test_utils::run_delta(GIT_DIFF_SINGLE_HUNK, options);
+        ansi_test_utils::assert_line_has_foreground_color(
+            &output,
+            7,
+            "src/align.rs",
+            "magenta",
+            &config,
+        );
+        ansi_test_utils::assert_line_has_foreground_color(
+            &output,
+            8,
+            "────────────",
+            "magenta",
+            &config,
+        );
+        let output = strip_ansi_codes(&output);
+        assert!(output.contains(
+            "
+src/align.rs
+────────────"
+        ));
+    }
+
+    #[test]
+    fn test_hunk_style_plain() {
+        let mut options = integration_test_utils::get_command_line_options();
+        options.hunk_style = SectionStyle::Plain;
+        // TODO: --hunk-color has no effect in conjunction with --hunk-style plain
+        let (output, _) = integration_test_utils::run_delta(GIT_DIFF_SINGLE_HUNK, options);
+        ansi_test_utils::assert_line_has_no_color(
+            &output,
+            9,
+            "@@ -71,11 +71,8 @@ impl<'a> Alignment<'a> {",
+        );
+        let output = strip_ansi_codes(&output);
+        assert!(output.contains("@@ -71,11 +71,8 @@ impl<'a> Alignment<'a> {"));
+    }
+
+    #[test]
+    fn test_hunk_style_box() {
+        let mut options = integration_test_utils::get_command_line_options();
+        options.hunk_style = SectionStyle::Box;
+        options.hunk_color = "white".to_string();
+        let (output, config) = integration_test_utils::run_delta(GIT_DIFF_SINGLE_HUNK, options);
+        ansi_test_utils::assert_line_has_foreground_color(
+            &output,
+            9,
+            "──────────────────────────┐",
+            "white",
+            &config,
+        );
+        ansi_test_utils::assert_line_has_foreground_color(
+            &output,
+            11,
+            "──────────────────────────┘",
+            "white",
+            &config,
+        );
+        let output = strip_ansi_codes(&output);
+        assert!(output.contains(
+            "
+──────────────────────────┐
+ impl<'a> Alignment<'a> { │
+──────────────────────────┘
+"
+        ));
+    }
+
+    #[test]
+    fn test_hunk_style_underline() {
+        let mut options = integration_test_utils::get_command_line_options();
+        options.hunk_style = SectionStyle::Underline;
+        options.hunk_color = "black".to_string();
+        let (output, config) = integration_test_utils::run_delta(GIT_DIFF_SINGLE_HUNK, options);
+        ansi_test_utils::assert_line_has_foreground_color(
+            &output,
+            10,
+            "─────────────────────────",
+            "black",
+            &config,
+        );
+        let output = strip_ansi_codes(&output);
+        assert!(output.contains(
+            "
+ impl<'a> Alignment<'a> {
+─────────────────────────"
+        ));
+    }
+
+    const GIT_DIFF_SINGLE_HUNK: &str = "\
+commit 94907c0f136f46dc46ffae2dc92dca9af7eb7c2e
+Author: Dan Davison <dandavison7@gmail.com>
+Date:   Thu May 14 11:13:17 2020 -0400
+
+    rustfmt
+
+diff --git a/src/align.rs b/src/align.rs
+index 8e37a9e..6ce4863 100644
+--- a/src/align.rs
++++ b/src/align.rs
+@@ -71,11 +71,8 @@ impl<'a> Alignment<'a> {
+
+         for (i, x_i) in self.x.iter().enumerate() {
+             for (j, y_j) in self.y.iter().enumerate() {
+-                let (left, diag, up) = (
+-                    self.index(i, j + 1),
+-                    self.index(i, j),
+-                    self.index(i + 1, j),
+-                );
++                let (left, diag, up) =
++                    (self.index(i, j + 1), self.index(i, j), self.index(i + 1, j));
+                 let candidates = [
+                     Cell {
+                         parent: left,
+";
 
     const DIFF_IN_DIFF: &str = "\
 diff --git a/0001-Init.patch b/0001-Init.patch
