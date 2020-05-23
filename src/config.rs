@@ -71,7 +71,7 @@ pub fn get_config<'a>(
         plus_style,
         plus_emph_style,
         plus_non_emph_style,
-    ) = make_styles(&opt, is_light_mode, true_color);
+    ) = make_hunk_styles(&opt, is_light_mode, true_color);
 
     let theme = if style::is_no_syntax_highlighting_theme_name(&theme_name) {
         None
@@ -184,7 +184,7 @@ fn valid_theme_name_or_none(theme_name: Option<&String>, theme_set: &ThemeSet) -
     }
 }
 
-fn make_styles<'a>(
+fn make_hunk_styles<'a>(
     opt: &'a cli::Opt,
     is_light_mode: bool,
     true_color: bool,
