@@ -111,93 +111,93 @@ There are three ways to specify a color:
 "
 )]
 pub struct Opt {
-    /// Use default colors appropriate for a light terminal background. For more control, see the other
-    /// color options.
+    #[structopt(long = "theme", env = "BAT_THEME")]
+    /// The code syntax highlighting theme to use. Use --list-themes to demo available themes. If
+    /// the theme is not set using this option, it will be taken from the BAT_THEME environment
+    /// variable, if that contains a valid theme name. --theme=none disables all syntax
+    /// highlighting.
+    pub theme: Option<String>,
+
+    /// Use default colors appropriate for a light terminal background. For more control, see the
+    /// style options.
     #[structopt(long = "light")]
     pub light: bool,
 
     /// Use default colors appropriate for a dark terminal background. For more control, see the
-    /// other color options.
+    /// style options.
     #[structopt(long = "dark")]
     pub dark: bool,
 
     #[structopt(long = "minus-style", default_value = "normal auto")]
-    /// The style (foreground, background, attributes) for removed lines. See STYLES section.
+    /// Style (foreground, background, attributes) for removed lines. See STYLES section.
     pub minus_style: String,
 
     #[structopt(long = "zero-style", default_value = "syntax normal")]
-    /// The style (foreground, background, attributes) for unchanged lines. See STYLES section.
+    /// Style (foreground, background, attributes) for unchanged lines. See STYLES section.
     pub zero_style: String,
 
     #[structopt(long = "plus-style", default_value = "syntax auto")]
-    /// The style (foreground, background, attributes) for added lines. See STYLES section.
+    /// Style (foreground, background, attributes) for added lines. See STYLES section.
     pub plus_style: String,
 
     #[structopt(long = "minus-emph-style", default_value = "normal auto")]
-    /// The style (foreground, background, attributes) for emphasized sections of removed lines.
-    /// See STYLES section.
+    /// Style (foreground, background, attributes) for emphasized sections of removed lines. See
+    /// STYLES section.
     pub minus_emph_style: String,
 
     #[structopt(long = "minus-non-emph-style")]
-    /// The style (foreground, background, attributes) for non-emphasized sections of removed lines
+    /// Style (foreground, background, attributes) for non-emphasized sections of removed lines
     /// that have an emphasized section. Defaults to --minus-style. See STYLES section.
     pub minus_non_emph_style: Option<String>,
 
     #[structopt(long = "plus-emph-style", default_value = "syntax auto")]
-    /// The style (foreground, background, attributes) for emphasized sections of added lines. See
+    /// Style (foreground, background, attributes) for emphasized sections of added lines. See
     /// STYLES section.
     pub plus_emph_style: String,
 
     #[structopt(long = "plus-non-emph-style")]
-    /// The style (foreground, background, attributes) for non-emphasized sections of added lines
-    /// that have an emphasized section. Defaults to --plus-style. See STYLES section.
+    /// Style (foreground, background, attributes) for non-emphasized sections of added lines that
+    /// have an emphasized section. Defaults to --plus-style. See STYLES section.
     pub plus_non_emph_style: Option<String>,
 
-    #[structopt(long = "theme", env = "BAT_THEME")]
-    /// The code syntax highlighting theme to use. Use --theme=none to disable syntax highlighting.
-    /// If the theme is not set using this option, it will be taken from the BAT_THEME environment
-    /// variable, if that contains a valid theme name. Use --list-themes to view available themes.
-    /// Note that the choice of theme only affects code syntax highlighting. See --commit-color,
-    /// --file-color, --hunk-color to configure the colors of other parts of the diff output.
-    pub theme: Option<String>,
+    #[structopt(long = "commit-style", default_value = "yellow")]
+    /// Style (foreground, background, attributes) for the commit hash line. See STYLES section.
+    pub commit_style: String,
+
+    #[structopt(long = "commit-decoration-style", default_value = "")]
+    /// Style for the commit hash decoration. See STYLES section. Special attributes are 'box', and
+    /// 'underline' are available in addition to the usual style attributes.
+    pub commit_decoration_style: String,
+
+    #[structopt(long = "file-style", default_value = "blue")]
+    /// Style (foreground, background, attributes) for the file section. See STYLES section.
+    pub file_style: String,
+
+    #[structopt(long = "file-decoration-style", default_value = "blue underline")]
+    /// Style for the file decoration. See STYLES section. Special attributes are 'box', and
+    /// 'underline' are available in addition to the usual style attributes.
+    pub file_decoration_style: String,
+
+    #[structopt(long = "hunk-header-style", default_value = "syntax")]
+    /// Style (foreground, background, attributes) for the hunk-header. See STYLES section.
+    pub hunk_header_style: String,
+
+    #[structopt(long = "hunk-header-decoration-style", default_value = "blue box")]
+    /// Style (foreground, background, attributes) for the hunk-header decoration. See STYLES
+    /// section. Special attributes are 'box', and 'underline' are available in addition to the
+    /// usual style attributes.
+    pub hunk_header_decoration_style: String,
 
     #[structopt(long = "color-only")]
     /// Do not alter the input in any way other than applying colors. Equivalent to
-    /// `--keep-plus-minus-markers --width variable --tabs 0 --commit-style plain
-    ///  --file-style plain --hunk-style plain`.
+    /// `--keep-plus-minus-markers --width variable --tabs 0 --commit-decoration ''
+    /// --file-decoration '' --hunk-decoration ''`.
     pub color_only: bool,
 
     #[structopt(long = "keep-plus-minus-markers")]
     /// Prefix added/removed lines with a +/- character, respectively, exactly as git does. The
     /// default behavior is to output a space character in place of these markers.
     pub keep_plus_minus_markers: bool,
-
-    #[structopt(long = "commit-style", default_value = "plain")]
-    /// Formatting style for the commit section of git output. Options
-    /// are: plain, box.
-    pub commit_style: SectionStyle,
-
-    #[structopt(long = "commit-color", default_value = "yellow")]
-    /// Color for the commit section of git output.
-    pub commit_color: String,
-
-    #[structopt(long = "file-style", default_value = "underline")]
-    /// Formatting style for the file section of git output. Options
-    /// are: plain, box, underline.
-    pub file_style: SectionStyle,
-
-    #[structopt(long = "file-color", default_value = "blue")]
-    /// Color for the file section of git output.
-    pub file_color: String,
-
-    #[structopt(long = "hunk-style", default_value = "box")]
-    /// Formatting style for the hunk-marker section of git output. Options
-    /// are: plain, box.
-    pub hunk_style: SectionStyle,
-
-    #[structopt(long = "hunk-color", default_value = "blue")]
-    /// Color for the hunk-marker section of git output.
-    pub hunk_color: String,
 
     /// Use --width=variable to extend background colors to the end of each line only. Otherwise
     /// background colors extend to the full terminal width.
@@ -214,8 +214,8 @@ pub struct Opt {
     /// Show the command-line arguments (RGB hex codes) for the background colors that are in
     /// effect. The hex codes are displayed with their associated background color. This option can
     /// be combined with --light and --dark to view the background colors for those modes. It can
-    /// also be used to experiment with different RGB hex codes by combining this option with
-    /// --minus-color, --minus-emph-color, --plus-color, --plus-emph-color.
+    /// also be used to experiment with different RGB hex codes by combining this option with style
+    /// options such as --minus-style, --zero-style, --plus-style, etc.
     #[structopt(long = "show-background-colors")]
     pub show_background_colors: bool,
 
@@ -253,29 +253,41 @@ pub struct Opt {
     #[structopt(long = "paging", default_value = "auto")]
     pub paging_mode: String,
 
-    #[structopt(long = "minus-color", name = "minus-background-color")]
-    /// Deprecated: an alternative way to set the background color for removed lines. Use
-    /// --minus-style instead.
+    #[structopt(long = "minus-color")]
+    /// Deprecated: use --minus-style='normal my_background_color'.
     pub deprecated_minus_background_color: Option<String>,
 
-    #[structopt(long = "minus-emph-color", name = "minus-emph-background-color")]
-    /// Deprecated: an alternative way to set the background color for emphasized sections of
-    /// removed lines. Use --minus-emph-style instead.
+    #[structopt(long = "minus-emph-color")]
+    /// Deprecated: use --minus-emph-style='normal my_background_color'.
     pub deprecated_minus_emph_background_color: Option<String>,
 
-    #[structopt(long = "plus-color", name = "plus-background-color")]
-    /// Deprecated: an alternative way to set the background color for added lines. Use
-    /// --plus-style instead.
+    #[structopt(long = "plus-color")]
+    /// Deprecated: Use --plus-style='normal my_background_color'.
     pub deprecated_plus_background_color: Option<String>,
 
-    #[structopt(long = "plus-emph-color", name = "plus-emph-background-color")]
-    /// Deprecated: an alternative way to set the background color for emphasized sections of added
-    /// lines. Use --plus-emph-style instead.
+    #[structopt(long = "plus-emph-color")]
+    /// Deprecated: Use --plus-emph-style='normal my_background_color'.
     pub deprecated_plus_emph_background_color: Option<String>,
 
     #[structopt(long = "highlight-removed")]
-    /// Deprecated: use --minus-style instead.
+    /// Deprecated: use --minus-style='syntax'.
     pub deprecated_highlight_minus_lines: bool,
+
+    #[structopt(long = "commit-color")]
+    /// Deprecated: use --commit-style='my_foreground_color' --commit-decoration-style='my_foreground_color'.
+    pub deprecated_commit_color: Option<String>,
+
+    #[structopt(long = "file-color")]
+    /// Deprecated: use --file-style='my_foreground_color' --file-decoration-style='my_foreground_color'.
+    pub deprecated_file_color: Option<String>,
+
+    #[structopt(long = "hunk-style")]
+    /// Deprecated: synonym of --hunk-header-decoration-style.
+    pub deprecated_hunk_style: Option<String>,
+
+    #[structopt(long = "hunk-color")]
+    /// Deprecated: use --hunk-header-style='my_foreground_color' --hunk-header-decoration-style='my_foreground_color'.
+    pub deprecated_hunk_color: Option<String>,
 }
 
 #[derive(Clone, Copy, Debug, PartialEq)]
@@ -317,8 +329,10 @@ pub fn process_command_line_arguments<'a>(mut opt: Opt) -> config::Config<'a> {
     _check_validity(&opt, &assets);
 
     // Apply rewrite rules
-    _rewrite_style_strings_to_honor_deprecated_options(&mut opt);
+    _rewrite_style_strings_to_honor_deprecated_hunk_style_options(&mut opt);
     _rewrite_options_to_implement_color_only(&mut opt);
+    _rewrite_options_to_implement_commit_color_file_color_hunk_color(&mut opt);
+
     // We do not use the full width, in case `less --status-column` is in effect. See #41 and #10.
     // TODO: There seems to be some confusion in the accounting: we are actually leaving 2
     // characters unused for less at the right edge of the terminal, despite the subtraction of 1
@@ -403,18 +417,77 @@ fn _rewrite_options_to_implement_color_only(opt: &mut Opt) {
     }
 }
 
+// TODO: How to avoid repeating the default values for style options here and in
+// the structopt definition?
+fn _rewrite_options_to_implement_deprecated_commit_file_hunk_section_style_string_options(
+    opt: &mut Opt,
+) {
+    if let Some(rewritten) = _rewrite_hunk_style_string_maybe(
+        &opt.commit_style,
+        ("normal", "auto"),
+        (
+            deprecated_minus_foreground_arg,
+            opt.deprecated_minus_background_color.as_deref(),
+        ),
+        "minus",
+    ) {
+        opt.minus_style = rewritten.to_string();
+    }
+}
+
+pub fn _rewrite_commit_file_hunk_section_style_string_maybe(
+    style: &str,
+    style_default_pair: (&str, &str),
+    deprecated_args_style_pair: (Option<&str>, Option<&str>),
+    element_name: &str,
+) -> Option<String> {
+    let format_style = |pair: (&str, &str)| format!("{} {}", pair.0, pair.1);
+    match (style, deprecated_args_style_pair) {
+        (_, (None, None)) => None, // no rewrite
+        (style, deprecated_args_style_pair) if style == format_style(style_default_pair) => {
+            // TODO: We allow the deprecated argument values to have effect if
+            // the style argument value is equal to its default value. This is
+            // non-ideal, because the user may have explicitly supplied the
+            // style argument (i.e. it might just happen to equal the default).
+            Some(format_style((
+                deprecated_args_style_pair.0.unwrap_or(style_default_pair.0),
+                deprecated_args_style_pair.1.unwrap_or(style_default_pair.1),
+            )))
+        }
+        (_, (Some(_), None)) => {
+            eprintln!(
+                "--{name}-color cannot be used with --{name}-style. \
+                 Use --{name}-style=\"fg bg attr1 attr2 ...\" to set \
+                 foreground color, background color, and style attributes. \
+                 --{name}-color can only be used to set the foreground color. \
+                 (It is still available for backwards-compatibility.)",
+                name = element_name,
+            );
+            process::exit(1);
+        }
+        _ => {
+            eprintln!(
+                "This should not be possible. \
+                        Please report the bug at https://github.com/dandavison/delta/issues."
+            );
+            process::exit(1);
+        }
+    }
+}
+
 /// Honor deprecated arguments by rewriting the canonical --*-style arguments if appropriate.
 // TODO: How to avoid repeating the default values for style options here and in
 // the structopt definition?
-// If --highlight-removed was passed then we should set minus and minus emph foreground to "syntax", if they are still at their default values.
-fn _rewrite_style_strings_to_honor_deprecated_options(opt: &mut Opt) {
+fn _rewrite_style_strings_to_honor_deprecated_hunk_style_options(opt: &mut Opt) {
+    // If --highlight-removed was passed then we should set minus and minus emph foreground to
+    // "syntax", if they are still at their default values.
     let deprecated_minus_foreground_arg = if opt.deprecated_highlight_minus_lines {
         Some("syntax")
     } else {
         None
     };
 
-    if let Some(rewritten) = _rewrite_style_string_maybe(
+    if let Some(rewritten) = _rewrite_hunk_style_string_maybe(
         &opt.minus_style,
         ("normal", "auto"),
         (
@@ -425,7 +498,7 @@ fn _rewrite_style_strings_to_honor_deprecated_options(opt: &mut Opt) {
     ) {
         opt.minus_style = rewritten.to_string();
     }
-    if let Some(rewritten) = _rewrite_style_string_maybe(
+    if let Some(rewritten) = _rewrite_hunk_style_string_maybe(
         &opt.minus_emph_style,
         ("normal", "auto"),
         (
@@ -436,7 +509,7 @@ fn _rewrite_style_strings_to_honor_deprecated_options(opt: &mut Opt) {
     ) {
         opt.minus_emph_style = rewritten.to_string();
     }
-    if let Some(rewritten) = _rewrite_style_string_maybe(
+    if let Some(rewritten) = _rewrite_hunk_style_string_maybe(
         &opt.plus_style,
         ("syntax", "auto"),
         (None, opt.deprecated_plus_background_color.as_deref()),
@@ -444,7 +517,7 @@ fn _rewrite_style_strings_to_honor_deprecated_options(opt: &mut Opt) {
     ) {
         opt.plus_style = rewritten.to_string();
     }
-    if let Some(rewritten) = _rewrite_style_string_maybe(
+    if let Some(rewritten) = _rewrite_hunk_style_string_maybe(
         &opt.plus_emph_style,
         ("syntax", "auto"),
         (None, opt.deprecated_plus_emph_background_color.as_deref()),
@@ -454,7 +527,7 @@ fn _rewrite_style_strings_to_honor_deprecated_options(opt: &mut Opt) {
     }
 }
 
-pub fn _rewrite_style_string_maybe(
+pub fn _rewrite_hunk_style_string_maybe(
     style: &str,
     style_default_pair: (&str, &str),
     deprecated_args_style_pair: (Option<&str>, Option<&str>),
