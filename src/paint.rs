@@ -80,6 +80,7 @@ impl<'a> Painter<'a> {
                 self.config,
                 self.config.minus_line_marker,
                 self.config.minus_style,
+                self.config.minus_non_emph_style,
                 None,
             );
         }
@@ -91,6 +92,7 @@ impl<'a> Painter<'a> {
                 self.config,
                 self.config.plus_line_marker,
                 self.config.plus_style,
+                self.config.plus_non_emph_style,
                 None,
             );
         }
@@ -106,37 +108,46 @@ impl<'a> Painter<'a> {
         output_buffer: &mut String,
         config: &config::Config,
         prefix: &str,
-        // TODO: When we have distinct minus_style and minus_non_emph_style,
-        // this function will have to watch the emph-types encountered in the
-        // line to determine whether the appropriate default style is
-        // minus_style (no emph section encountered) or minus_emph_style
-        // (otherwise).
-        default_style: Style,
+        base_style: Style,
+        non_emph_style: Style,
         background_color_extends_to_terminal_width: Option<bool>,
     ) {
+        // There's some unfortunate hackery going on here for two reasons:
+        //
+        // 1. The prefix needs to be injected into the output stream. We paint
+        //    this with whatever style the line starts with.
+        //
+        // 2. We must ensure that we fill rightwards with the appropriate
+        //    non-emph background color. In that case we don't use the last
+        //    style of the line, because this might be emph.
         for (syntax_sections, diff_sections) in
             syntax_style_sections.iter().zip(diff_style_sections.iter())
         {
+            let right_fill_style = if diff_sections.len() > 1 {
+                non_emph_style // line contains an emph section
+            } else {
+                base_style
+            };
             let mut ansi_strings = Vec::new();
-            if prefix != "" {
-                ansi_strings.push(default_style.ansi_term_style.paint(prefix));
-            }
-            let mut dropped_prefix = prefix == ""; // TODO: Hack
+            let mut handled_prefix = false;
             for (style, mut text) in superimpose_style_sections(
                 syntax_sections,
                 diff_sections,
                 config.true_color,
                 config.null_syntect_style,
             ) {
-                if !dropped_prefix {
-                    if text.len() > 0 {
-                        text.remove(0);
+                if !handled_prefix {
+                    if prefix != "" {
+                        ansi_strings.push(style.ansi_term_style.paint(prefix));
+                        if text.len() > 0 {
+                            text.remove(0);
+                        }
                     }
-                    dropped_prefix = true;
+                    handled_prefix = true;
                 }
                 ansi_strings.push(style.ansi_term_style.paint(text));
             }
-            ansi_strings.push(default_style.ansi_term_style.paint(""));
+            ansi_strings.push(right_fill_style.ansi_term_style.paint(""));
             let line = &mut ansi_term::ANSIStrings(&ansi_strings).to_string();
             let background_color_extends_to_terminal_width =
                 match background_color_extends_to_terminal_width {
@@ -214,7 +225,7 @@ impl<'a> Painter<'a> {
         plus_lines: &'b Vec<String>,
         config: &config::Config,
     ) -> (Vec<Vec<(Style, &'b str)>>, Vec<Vec<(Style, &'b str)>>) {
-        edits::infer_edits(
+        let mut diff_sections = edits::infer_edits(
             minus_lines,
             plus_lines,
             config.minus_style,
@@ -223,7 +234,38 @@ impl<'a> Painter<'a> {
             config.plus_emph_style,
             config.max_line_distance,
             config.max_line_distance_for_naively_paired_lines,
-        )
+        );
+        if config.minus_non_emph_style != config.minus_emph_style {
+            Self::set_non_emph_styles(
+                &mut diff_sections.0,
+                config.minus_emph_style,
+                config.minus_non_emph_style,
+            );
+        }
+        if config.plus_non_emph_style != config.plus_emph_style {
+            Self::set_non_emph_styles(
+                &mut diff_sections.1,
+                config.plus_emph_style,
+                config.plus_non_emph_style,
+            );
+        }
+        diff_sections
+    }
+
+    fn set_non_emph_styles(
+        style_sections: &mut Vec<Vec<(Style, &str)>>,
+        emph_style: Style,
+        non_emph_style: Style,
+    ) {
+        for line_sections in style_sections {
+            if line_sections.len() > 1 {
+                for section in line_sections.iter_mut() {
+                    if section.0 != emph_style {
+                        *section = (non_emph_style, section.1);
+                    }
+                }
+            }
+        }
     }
 }
 

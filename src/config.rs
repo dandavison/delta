@@ -22,9 +22,11 @@ pub struct Config<'a> {
     pub max_line_distance_for_naively_paired_lines: f64,
     pub minus_style: Style,
     pub minus_emph_style: Style,
+    pub minus_non_emph_style: Style,
     pub zero_style: Style,
     pub plus_style: Style,
     pub plus_emph_style: Style,
+    pub plus_non_emph_style: Style,
     pub minus_line_marker: &'a str,
     pub plus_line_marker: &'a str,
     pub commit_style: cli::SectionStyle,
@@ -61,8 +63,15 @@ pub fn get_config<'a>(
         &theme_set,
     );
 
-    let (minus_style, minus_emph_style, zero_style, plus_style, plus_emph_style) =
-        make_styles(&opt, is_light_mode, true_color);
+    let (
+        minus_style,
+        minus_emph_style,
+        minus_non_emph_style,
+        zero_style,
+        plus_style,
+        plus_emph_style,
+        plus_non_emph_style,
+    ) = make_styles(&opt, is_light_mode, true_color);
 
     let theme = if style::is_no_syntax_highlighting_theme_name(&theme_name) {
         None
@@ -95,9 +104,11 @@ pub fn get_config<'a>(
         max_line_distance_for_naively_paired_lines,
         minus_style,
         minus_emph_style,
+        minus_non_emph_style,
         zero_style,
         plus_style,
         plus_emph_style,
+        plus_non_emph_style,
         minus_line_marker,
         plus_line_marker,
         commit_style: opt.commit_style,
@@ -177,7 +188,7 @@ fn make_styles<'a>(
     opt: &'a cli::Opt,
     is_light_mode: bool,
     true_color: bool,
-) -> (Style, Style, Style, Style, Style) {
+) -> (Style, Style, Style, Style, Style, Style, Style) {
     let minus_style = parse_style_string(
         &opt.minus_style,
         None,
@@ -197,6 +208,17 @@ fn make_styles<'a>(
         )),
         true_color,
     );
+
+    // The non-emph styles default to the base style.
+    let minus_non_emph_style = match &opt.minus_non_emph_style {
+        Some(style_string) => parse_style_string(
+            &style_string,
+            None,
+            minus_style.ansi_term_style.background,
+            true_color,
+        ),
+        None => minus_style,
+    };
 
     let zero_style = parse_style_string(&opt.zero_style, None, None, true_color);
 
@@ -220,12 +242,25 @@ fn make_styles<'a>(
         true_color,
     );
 
+    // The non-emph styles default to the base style.
+    let plus_non_emph_style = match &opt.plus_non_emph_style {
+        Some(style_string) => parse_style_string(
+            &style_string,
+            None,
+            plus_style.ansi_term_style.background,
+            true_color,
+        ),
+        None => plus_style,
+    };
+
     (
         minus_style,
         minus_emph_style,
+        minus_non_emph_style,
         zero_style,
         plus_style,
         plus_emph_style,
+        plus_non_emph_style,
     )
 }
 

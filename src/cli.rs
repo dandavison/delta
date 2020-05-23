@@ -138,10 +138,20 @@ pub struct Opt {
     /// See STYLES section.
     pub minus_emph_style: String,
 
+    #[structopt(long = "minus-non-emph-style")]
+    /// The style (foreground, background, attributes) for non-emphasized sections of removed lines
+    /// that have an emphasized section. Defaults to --minus-style. See STYLES section.
+    pub minus_non_emph_style: Option<String>,
+
     #[structopt(long = "plus-emph-style", default_value = "syntax auto")]
     /// The style (foreground, background, attributes) for emphasized sections of added lines. See
     /// STYLES section.
     pub plus_emph_style: String,
+
+    #[structopt(long = "plus-non-emph-style")]
+    /// The style (foreground, background, attributes) for non-emphasized sections of added lines
+    /// that have an emphasized section. Defaults to --plus-style. See STYLES section.
+    pub plus_non_emph_style: Option<String>,
 
     #[structopt(long = "theme", env = "BAT_THEME")]
     /// The code syntax highlighting theme to use. Use --theme=none to disable syntax highlighting.

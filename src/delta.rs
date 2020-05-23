@@ -268,6 +268,7 @@ fn handle_hunk_meta_line(
             config,
             "",
             config.null_style,
+            config.null_style,
             Some(false),
         );
         painter.output_buffer.pop(); // trim newline
@@ -336,6 +337,7 @@ fn handle_hunk_line(
                 &mut painter.output_buffer,
                 config,
                 prefix,
+                config.zero_style,
                 config.zero_style,
                 None,
             );
