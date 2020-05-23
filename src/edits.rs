@@ -437,22 +437,6 @@ mod tests {
     }
 
     #[test]
-    fn test_infer_edits_6_1() {
-        let (after, before) = (
-            "                     i += c0.len();",
-            "                 .fold(0, |offset, ((_, c0), (_, _))| offset + c0.len())",
-        );
-        println!("          before: {}", before);
-        println!("          after : {}", after);
-        println!("tokenized before: {:?}", tokenize(before));
-        println!("tokenized after : {:?}", tokenize(after));
-        println!(
-            "distance: {:?}",
-            align::Alignment::new(tokenize(before), tokenize(after)).distance_parts()
-        );
-    }
-
-    #[test]
     fn test_infer_edits_7() {
         assert_edits(
             vec!["fn coalesce_edits<'a, EditOperation>("],
