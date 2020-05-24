@@ -132,12 +132,12 @@ index f38589a..0f1bb83 100644
         }
 
         writeln!(stdout, "\n\nTheme: {}\n", style.paint(theme))?;
-        let mut config = cli::process_command_line_arguments(cli::Opt {
+        let config = cli::process_command_line_arguments(cli::Opt {
             theme: Some(theme.to_string()),
+            file_decoration_style: "omit".to_string(),
+            hunk_header_style: "omit".to_string(),
             ..opt.clone()
         });
-        config.file_style = cli::SectionStyle::Omit;
-        config.hunk_style = cli::SectionStyle::Omit;
         let mut output_type = OutputType::from_mode(PagingMode::QuitIfOneScreen, None).unwrap();
         let mut writer = output_type.handle().unwrap();
 

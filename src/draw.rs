@@ -1,6 +1,7 @@
+/// This lower-level module works directly with ansi_term::Style, rather than Delta's higher-level style::Style.
 use std::io::Write;
 
-use ansi_term::Color;
+use ansi_term;
 use box_drawing;
 use console::strip_ansi_codes;
 use unicode_width::UnicodeWidthStr;
@@ -11,7 +12,8 @@ pub fn write_boxed(
     writer: &mut dyn Write,
     text: &str,
     _line_width: usize, // ignored
-    color: Color,
+    text_style: ansi_term::Style,
+    decoration_style: ansi_term::Style,
     heavy: bool,
 ) -> std::io::Result<()> {
     let up_left = if heavy {
@@ -20,8 +22,8 @@ pub fn write_boxed(
         box_drawing::light::UP_LEFT
     };
     let box_width = UnicodeWidthStr::width(strip_ansi_codes(text).as_ref()) + 1;
-    write_boxed_partial(writer, text, box_width, color, heavy)?;
-    write!(writer, "{}", color.paint(up_left))?;
+    write_boxed_partial(writer, text, box_width, text_style, decoration_style, heavy)?;
+    write!(writer, "{}", decoration_style.paint(up_left))?;
     Ok(())
 }
 
@@ -31,11 +33,19 @@ pub fn write_boxed_with_line(
     writer: &mut dyn Write,
     text: &str,
     line_width: usize,
-    color: Color,
+    text_style: ansi_term::Style,
+    decoration_style: ansi_term::Style,
     heavy: bool,
 ) -> std::io::Result<()> {
     let box_width = UnicodeWidthStr::width(strip_ansi_codes(text).as_ref()) + 1;
-    write_boxed_with_horizontal_whisker(writer, text, box_width, color, heavy)?;
+    write_boxed_with_horizontal_whisker(
+        writer,
+        text,
+        box_width,
+        text_style,
+        decoration_style,
+        heavy,
+    )?;
     write_horizontal_line(
         writer,
         if line_width > box_width {
@@ -43,7 +53,8 @@ pub fn write_boxed_with_line(
         } else {
             0
         },
-        color,
+        text_style,
+        decoration_style,
         heavy,
     )?;
     write!(writer, "\n")?;
@@ -54,11 +65,12 @@ pub fn write_underlined(
     writer: &mut dyn Write,
     text: &str,
     line_width: usize,
-    color: Color,
+    text_style: ansi_term::Style,
+    decoration_style: ansi_term::Style,
     heavy: bool,
 ) -> std::io::Result<()> {
-    writeln!(writer, "{}", color.paint(text))?;
-    write_horizontal_line(writer, line_width - 1, color, heavy)?;
+    writeln!(writer, "{}", text_style.paint(text))?;
+    write_horizontal_line(writer, line_width - 1, text_style, decoration_style, heavy)?;
     write!(writer, "\n")?;
     Ok(())
 }
@@ -66,7 +78,8 @@ pub fn write_underlined(
 fn write_horizontal_line(
     writer: &mut dyn Write,
     line_width: usize,
-    color: Color,
+    _text_style: ansi_term::Style,
+    decoration_style: ansi_term::Style,
     heavy: bool,
 ) -> std::io::Result<()> {
     let horizontal = if heavy {
@@ -74,14 +87,19 @@ fn write_horizontal_line(
     } else {
         box_drawing::light::HORIZONTAL
     };
-    write!(writer, "{}", color.paint(horizontal.repeat(line_width)))
+    write!(
+        writer,
+        "{}",
+        decoration_style.paint(horizontal.repeat(line_width))
+    )
 }
 
 pub fn write_boxed_with_horizontal_whisker(
     writer: &mut dyn Write,
     text: &str,
     box_width: usize,
-    color: Color,
+    text_style: ansi_term::Style,
+    decoration_style: ansi_term::Style,
     heavy: bool,
 ) -> std::io::Result<()> {
     let up_horizontal = if heavy {
@@ -89,8 +107,8 @@ pub fn write_boxed_with_horizontal_whisker(
     } else {
         box_drawing::light::UP_HORIZONTAL
     };
-    write_boxed_partial(writer, text, box_width, color, heavy)?;
-    write!(writer, "{}", color.paint(up_horizontal))?;
+    write_boxed_partial(writer, text, box_width, text_style, decoration_style, heavy)?;
+    write!(writer, "{}", decoration_style.paint(up_horizontal))?;
     Ok(())
 }
 
@@ -98,7 +116,8 @@ fn write_boxed_partial(
     writer: &mut dyn Write,
     text: &str,
     box_width: usize,
-    color: Color,
+    text_style: ansi_term::Style,
+    decoration_style: ansi_term::Style,
     heavy: bool,
 ) -> std::io::Result<()> {
     let horizontal = if heavy {
@@ -121,10 +140,10 @@ fn write_boxed_partial(
     write!(
         writer,
         "{}{}\n{} {}\n{}",
-        color.paint(&horizontal_edge),
-        color.paint(down_left),
-        color.paint(text),
-        color.paint(vertical),
-        color.paint(&horizontal_edge),
+        decoration_style.paint(&horizontal_edge),
+        decoration_style.paint(down_left),
+        text_style.paint(text),
+        decoration_style.paint(vertical),
+        decoration_style.paint(&horizontal_edge),
     )
 }

@@ -1,6 +1,4 @@
 use std::process;
-use std::str::FromStr;
-use std::string::ToString;
 
 use console::Term;
 use structopt::clap::AppSettings::{ColorAlways, ColoredHelp, DeriveDisplayOrder};
@@ -290,39 +288,6 @@ pub struct Opt {
     pub deprecated_hunk_color: Option<String>,
 }
 
-#[derive(Clone, Copy, Debug, PartialEq)]
-pub enum SectionStyle {
-    Box,
-    Plain,
-    Underline,
-    Omit,
-}
-
-// TODO: clean up enum parsing and error handling
-
-#[derive(Debug)]
-pub enum Error {
-    SectionStyleParseError,
-}
-
-impl FromStr for SectionStyle {
-    type Err = Error;
-    fn from_str(s: &str) -> Result<SectionStyle, Error> {
-        match s.to_lowercase().as_str() {
-            "box" => Ok(SectionStyle::Box),
-            "plain" => Ok(SectionStyle::Plain),
-            "underline" => Ok(SectionStyle::Underline),
-            _ => Err(Error::SectionStyleParseError),
-        }
-    }
-}
-
-impl ToString for Error {
-    fn to_string(&self) -> String {
-        "".to_string()
-    }
-}
-
 pub fn process_command_line_arguments<'a>(mut opt: Opt) -> config::Config<'a> {
     let assets = HighlightingAssets::new();
 
@@ -331,7 +296,9 @@ pub fn process_command_line_arguments<'a>(mut opt: Opt) -> config::Config<'a> {
     // Apply rewrite rules
     _rewrite_style_strings_to_honor_deprecated_hunk_style_options(&mut opt);
     _rewrite_options_to_implement_color_only(&mut opt);
-    _rewrite_options_to_implement_commit_color_file_color_hunk_color(&mut opt);
+    _rewrite_options_to_implement_deprecated_commit_file_hunk_header_section_style_string_options(
+        &mut opt,
+    );
 
     // We do not use the full width, in case `less --status-column` is in effect. See #41 and #10.
     // TODO: There seems to be some confusion in the accounting: we are actually leaving 2
@@ -411,67 +378,64 @@ fn _rewrite_options_to_implement_color_only(opt: &mut Opt) {
     if opt.color_only {
         opt.keep_plus_minus_markers = true;
         opt.tab_width = 0;
-        opt.commit_style = SectionStyle::Plain;
-        opt.file_style = SectionStyle::Plain;
-        opt.hunk_style = SectionStyle::Plain;
+        opt.commit_style = "".to_string();
+        opt.file_style = "".to_string();
+        opt.hunk_header_style = "".to_string();
     }
 }
 
 // TODO: How to avoid repeating the default values for style options here and in
 // the structopt definition?
-fn _rewrite_options_to_implement_deprecated_commit_file_hunk_section_style_string_options(
+fn _rewrite_options_to_implement_deprecated_commit_file_hunk_header_section_style_string_options(
     opt: &mut Opt,
 ) {
-    if let Some(rewritten) = _rewrite_hunk_style_string_maybe(
+    if let Some(rewritten) = _rewrite_commit_file_hunk_header_section_style_string_maybe(
         &opt.commit_style,
-        ("normal", "auto"),
-        (
-            deprecated_minus_foreground_arg,
-            opt.deprecated_minus_background_color.as_deref(),
-        ),
-        "minus",
+        ("yellow", "normal"),
+        (opt.deprecated_commit_color.as_deref(), None),
+        "commit",
     ) {
-        opt.minus_style = rewritten.to_string();
+        opt.commit_style = rewritten.to_string();
     }
-}
 
-pub fn _rewrite_commit_file_hunk_section_style_string_maybe(
-    style: &str,
-    style_default_pair: (&str, &str),
-    deprecated_args_style_pair: (Option<&str>, Option<&str>),
-    element_name: &str,
-) -> Option<String> {
-    let format_style = |pair: (&str, &str)| format!("{} {}", pair.0, pair.1);
-    match (style, deprecated_args_style_pair) {
-        (_, (None, None)) => None, // no rewrite
-        (style, deprecated_args_style_pair) if style == format_style(style_default_pair) => {
-            // TODO: We allow the deprecated argument values to have effect if
-            // the style argument value is equal to its default value. This is
-            // non-ideal, because the user may have explicitly supplied the
-            // style argument (i.e. it might just happen to equal the default).
-            Some(format_style((
-                deprecated_args_style_pair.0.unwrap_or(style_default_pair.0),
-                deprecated_args_style_pair.1.unwrap_or(style_default_pair.1),
-            )))
-        }
-        (_, (Some(_), None)) => {
+    if let Some(rewritten) = _rewrite_commit_file_hunk_header_section_style_string_maybe(
+        &opt.file_style,
+        ("blue", "normal"),
+        (opt.deprecated_file_color.as_deref(), None),
+        "file",
+    ) {
+        opt.file_style = rewritten.to_string();
+    }
+
+    if let Some(rewritten) = _rewrite_commit_file_hunk_header_section_style_string_maybe(
+        &opt.hunk_header_style,
+        ("blue", "normal"),
+        (opt.deprecated_hunk_color.as_deref(), None),
+        "hunk",
+    ) {
+        opt.hunk_header_style = rewritten.to_string();
+    }
+
+    // Examples of how --hunk-style was originally used are
+    // --hunk-style box       => --hunk-header-decoration-style box
+    // --hunk-style underline => --hunk-header-decoration-style underline
+    // --hunk-style plain     => --hunk-header-decoration-style ''
+    if let Some(deprecated_hunk_style) = opt.deprecated_hunk_style.as_deref().map(str::to_lowercase)
+    {
+        // As in the other cases, we only honor the deprecated option if the replacement option has
+        // apparently been left at its default value.
+        let hunk_header_decoration_default = "box";
+        if opt.hunk_header_decoration_style != hunk_header_decoration_default {
             eprintln!(
-                "--{name}-color cannot be used with --{name}-style. \
-                 Use --{name}-style=\"fg bg attr1 attr2 ...\" to set \
-                 foreground color, background color, and style attributes. \
-                 --{name}-color can only be used to set the foreground color. \
-                 (It is still available for backwards-compatibility.)",
-                name = element_name,
-            );
+                "Deprecated option --hunk-style cannot be used with --hunk-header-decoration-style. \
+                 Use --hunk-header-decoration-style.");
             process::exit(1);
         }
-        _ => {
-            eprintln!(
-                "This should not be possible. \
-                        Please report the bug at https://github.com/dandavison/delta/issues."
-            );
-            process::exit(1);
-        }
+        opt.hunk_header_decoration_style = if deprecated_hunk_style == "plain" {
+            "".to_string()
+        } else {
+            deprecated_hunk_style
+        };
     }
 }
 
@@ -527,6 +491,44 @@ fn _rewrite_style_strings_to_honor_deprecated_hunk_style_options(opt: &mut Opt) 
     }
 }
 
+pub fn _rewrite_commit_file_hunk_header_section_style_string_maybe(
+    style: &str,
+    style_default_pair: (&str, &str),
+    deprecated_args_style_pair: (Option<&str>, Option<&str>),
+    element_name: &str,
+) -> Option<String> {
+    let format_style = |pair: (&str, &str)| format!("{} {}", pair.0, pair.1);
+    match (style, deprecated_args_style_pair) {
+        (_, (None, None)) => None, // no rewrite
+        (style, deprecated_args_style_pair) if style == format_style(style_default_pair) => {
+            // TODO: We allow the deprecated argument values to have effect if
+            // the style argument value is equal to its default value. This is
+            // non-ideal, because the user may have explicitly supplied the
+            // style argument (i.e. it might just happen to equal the default).
+            Some(format_style((
+                deprecated_args_style_pair.0.unwrap_or(style_default_pair.0),
+                deprecated_args_style_pair.1.unwrap_or(style_default_pair.1),
+            )))
+        }
+        (_, (Some(_), None)) => {
+            eprintln!(
+                "--{name}-color cannot be used with --{name}-style. \
+                 Use --{name}-style=\"fg bg attr1 attr2 ...\" to set \
+                 foreground color, background color, and style attributes. \
+                 --{name}-color can only be used to set the foreground color. \
+                 (It is still available for backwards-compatibility.)",
+                name = element_name,
+            );
+            process::exit(1);
+        }
+        _ => unreachable(&format!(
+            "Unexpected value deprecated_args_style_pair={:?} in \
+             _rewrite_commit_file_hunk_header_section_style_string_maybe.",
+            deprecated_args_style_pair,
+        )),
+    }
+}
+
 pub fn _rewrite_hunk_style_string_maybe(
     style: &str,
     style_default_pair: (&str, &str),
@@ -568,6 +570,15 @@ pub fn _rewrite_hunk_style_string_maybe(
             process::exit(1);
         }
     }
+}
+
+pub fn unreachable(message: &str) -> ! {
+    eprintln!(
+        "{} This should not be possible. \
+         Please report the bug at https://github.com/dandavison/delta/issues.",
+        message
+    );
+    process::exit(1);
 }
 
 fn is_truecolor_terminal() -> bool {

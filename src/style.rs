@@ -4,6 +4,14 @@ use ansi_term::{self, Color};
 pub struct Style {
     pub ansi_term_style: ansi_term::Style,
     pub is_syntax_highlighted: bool,
+    pub decoration_style: Option<DecorationStyle>,
+}
+
+#[derive(Clone, Copy, Debug, PartialEq)]
+pub enum DecorationStyle {
+    Box(ansi_term::Style),
+    Underline(ansi_term::Style),
+    Omit,
 }
 
 impl Style {
@@ -11,7 +19,42 @@ impl Style {
         Self {
             ansi_term_style: ansi_term::Style::new(),
             is_syntax_highlighted: false,
+            decoration_style: None,
         }
+    }
+
+    pub fn decoration_ansi_term_style(&self) -> Option<ansi_term::Style> {
+        match self.decoration_style {
+            Some(DecorationStyle::Box(style)) => Some(style),
+            Some(DecorationStyle::Underline(style)) => Some(style),
+            _ => None,
+        }
+    }
+}
+
+// See
+// https://en.wikipedia.org/wiki/ANSI_escape_code#8-bit
+pub fn ansi_color_name_to_number(name: &str) -> Option<u8> {
+    match name.to_lowercase().as_ref() {
+        "black" => Some(0),
+        "red" => Some(1),
+        "green" => Some(2),
+        "yellow" => Some(3),
+        "blue" => Some(4),
+        "magenta" => Some(5),
+        "purple" => Some(5),
+        "cyan" => Some(6),
+        "white" => Some(7),
+        "bright-black" => Some(8),
+        "bright-red" => Some(9),
+        "bright-green" => Some(10),
+        "bright-yellow" => Some(11),
+        "bright-blue" => Some(12),
+        "bright-magenta" => Some(13),
+        "bright-purple" => Some(13),
+        "bright-cyan" => Some(14),
+        "bright-white" => Some(15),
+        _ => None,
     }
 }
 
