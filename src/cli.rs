@@ -8,9 +8,10 @@ use crate::bat::assets::HighlightingAssets;
 use crate::bat::output::PagingMode;
 use crate::config;
 use crate::env;
+use crate::rewrite;
 use crate::style;
 
-#[derive(StructOpt, Clone, Debug)]
+#[derive(StructOpt, Clone, Debug, PartialEq)]
 #[structopt(
     name = "delta",
     about = "A syntax-highlighter for git and diff output",
@@ -293,12 +294,7 @@ pub fn process_command_line_arguments<'a>(mut opt: Opt) -> config::Config<'a> {
 
     _check_validity(&opt, &assets);
 
-    // Apply rewrite rules
-    _rewrite_style_strings_to_honor_deprecated_hunk_style_options(&mut opt);
-    _rewrite_options_to_implement_color_only(&mut opt);
-    _rewrite_options_to_implement_deprecated_commit_file_hunk_header_section_style_string_options(
-        &mut opt,
-    );
+    rewrite::apply_rewrite_rules(&mut opt);
 
     // We do not use the full width, in case `less --status-column` is in effect. See #41 and #10.
     // TODO: There seems to be some confusion in the accounting: we are actually leaving 2
@@ -373,199 +369,22 @@ fn _check_validity(opt: &Opt, assets: &HighlightingAssets) {
     }
 }
 
-/// Implement --color-only
-fn _rewrite_options_to_implement_color_only(opt: &mut Opt) {
-    if opt.color_only {
-        opt.keep_plus_minus_markers = true;
-        opt.tab_width = 0;
-        opt.commit_style = "".to_string();
-        opt.file_style = "".to_string();
-        opt.hunk_header_style = "".to_string();
-    }
-}
-
-// TODO: How to avoid repeating the default values for style options here and in
-// the structopt definition?
-fn _rewrite_options_to_implement_deprecated_commit_file_hunk_header_section_style_string_options(
-    opt: &mut Opt,
-) {
-    if let Some(rewritten) = _rewrite_commit_file_hunk_header_section_style_string_maybe(
-        &opt.commit_style,
-        ("yellow", "normal"),
-        (opt.deprecated_commit_color.as_deref(), None),
-        "commit",
-    ) {
-        opt.commit_style = rewritten.to_string();
-    }
-
-    if let Some(rewritten) = _rewrite_commit_file_hunk_header_section_style_string_maybe(
-        &opt.file_style,
-        ("blue", "normal"),
-        (opt.deprecated_file_color.as_deref(), None),
-        "file",
-    ) {
-        opt.file_style = rewritten.to_string();
-    }
-
-    if let Some(rewritten) = _rewrite_commit_file_hunk_header_section_style_string_maybe(
-        &opt.hunk_header_style,
-        ("blue", "normal"),
-        (opt.deprecated_hunk_color.as_deref(), None),
-        "hunk",
-    ) {
-        opt.hunk_header_style = rewritten.to_string();
-    }
-
-    // Examples of how --hunk-style was originally used are
-    // --hunk-style box       => --hunk-header-decoration-style box
-    // --hunk-style underline => --hunk-header-decoration-style underline
-    // --hunk-style plain     => --hunk-header-decoration-style ''
-    if let Some(deprecated_hunk_style) = opt.deprecated_hunk_style.as_deref().map(str::to_lowercase)
-    {
-        // As in the other cases, we only honor the deprecated option if the replacement option has
-        // apparently been left at its default value.
-        let hunk_header_decoration_default = "box";
-        if opt.hunk_header_decoration_style != hunk_header_decoration_default {
+/// If the style string contains a 'special decoration attribute' then extract it and return it
+/// along with the modified style string.
+pub fn extract_special_attribute(style_string: &str) -> (String, Option<String>) {
+    let (special_attributes, standard_attributes): (Vec<&str>, Vec<&str>) =
+        style_string.split_whitespace().partition(|&token| {
+            token == "box" || token == "underline" || token == "omit" || token == "plain"
+        });
+    match special_attributes {
+        attrs if attrs.len() == 0 => (style_string.to_string(), None),
+        attrs if attrs.len() == 1 => (standard_attributes.join(" "), Some(attrs[0].to_string())),
+        attrs => {
             eprintln!(
-                "Deprecated option --hunk-style cannot be used with --hunk-header-decoration-style. \
-                 Use --hunk-header-decoration-style.");
-            process::exit(1);
-        }
-        opt.hunk_header_decoration_style = if deprecated_hunk_style == "plain" {
-            "".to_string()
-        } else {
-            deprecated_hunk_style
-        };
-    }
-}
-
-/// Honor deprecated arguments by rewriting the canonical --*-style arguments if appropriate.
-// TODO: How to avoid repeating the default values for style options here and in
-// the structopt definition?
-fn _rewrite_style_strings_to_honor_deprecated_hunk_style_options(opt: &mut Opt) {
-    // If --highlight-removed was passed then we should set minus and minus emph foreground to
-    // "syntax", if they are still at their default values.
-    let deprecated_minus_foreground_arg = if opt.deprecated_highlight_minus_lines {
-        Some("syntax")
-    } else {
-        None
-    };
-
-    if let Some(rewritten) = _rewrite_hunk_style_string_maybe(
-        &opt.minus_style,
-        ("normal", "auto"),
-        (
-            deprecated_minus_foreground_arg,
-            opt.deprecated_minus_background_color.as_deref(),
-        ),
-        "minus",
-    ) {
-        opt.minus_style = rewritten.to_string();
-    }
-    if let Some(rewritten) = _rewrite_hunk_style_string_maybe(
-        &opt.minus_emph_style,
-        ("normal", "auto"),
-        (
-            deprecated_minus_foreground_arg,
-            opt.deprecated_minus_emph_background_color.as_deref(),
-        ),
-        "minus-emph",
-    ) {
-        opt.minus_emph_style = rewritten.to_string();
-    }
-    if let Some(rewritten) = _rewrite_hunk_style_string_maybe(
-        &opt.plus_style,
-        ("syntax", "auto"),
-        (None, opt.deprecated_plus_background_color.as_deref()),
-        "plus",
-    ) {
-        opt.plus_style = rewritten.to_string();
-    }
-    if let Some(rewritten) = _rewrite_hunk_style_string_maybe(
-        &opt.plus_emph_style,
-        ("syntax", "auto"),
-        (None, opt.deprecated_plus_emph_background_color.as_deref()),
-        "plus-emph",
-    ) {
-        opt.plus_emph_style = rewritten.to_string();
-    }
-}
-
-pub fn _rewrite_commit_file_hunk_header_section_style_string_maybe(
-    style: &str,
-    style_default_pair: (&str, &str),
-    deprecated_args_style_pair: (Option<&str>, Option<&str>),
-    element_name: &str,
-) -> Option<String> {
-    let format_style = |pair: (&str, &str)| format!("{} {}", pair.0, pair.1);
-    match (style, deprecated_args_style_pair) {
-        (_, (None, None)) => None, // no rewrite
-        (style, deprecated_args_style_pair) if style == format_style(style_default_pair) => {
-            // TODO: We allow the deprecated argument values to have effect if
-            // the style argument value is equal to its default value. This is
-            // non-ideal, because the user may have explicitly supplied the
-            // style argument (i.e. it might just happen to equal the default).
-            Some(format_style((
-                deprecated_args_style_pair.0.unwrap_or(style_default_pair.0),
-                deprecated_args_style_pair.1.unwrap_or(style_default_pair.1),
-            )))
-        }
-        (_, (Some(_), None)) => {
-            eprintln!(
-                "--{name}-color cannot be used with --{name}-style. \
-                 Use --{name}-style=\"fg bg attr1 attr2 ...\" to set \
-                 foreground color, background color, and style attributes. \
-                 --{name}-color can only be used to set the foreground color. \
-                 (It is still available for backwards-compatibility.)",
-                name = element_name,
-            );
-            process::exit(1);
-        }
-        _ => unreachable(&format!(
-            "Unexpected value deprecated_args_style_pair={:?} in \
-             _rewrite_commit_file_hunk_header_section_style_string_maybe.",
-            deprecated_args_style_pair,
-        )),
-    }
-}
-
-pub fn _rewrite_hunk_style_string_maybe(
-    style: &str,
-    style_default_pair: (&str, &str),
-    deprecated_args_style_pair: (Option<&str>, Option<&str>),
-    element_name: &str,
-) -> Option<String> {
-    let format_style = |pair: (&str, &str)| format!("{} {}", pair.0, pair.1);
-    match (style, deprecated_args_style_pair) {
-        (_, (None, None)) => None, // no rewrite
-        (style, deprecated_args_style_pair) if style == format_style(style_default_pair) => {
-            // TODO: We allow the deprecated argument values to have effect if
-            // the style argument value is equal to its default value. This is
-            // non-ideal, because the user may have explicitly supplied the
-            // style argument (i.e. it might just happen to equal the default).
-            Some(format_style((
-                deprecated_args_style_pair.0.unwrap_or(style_default_pair.0),
-                deprecated_args_style_pair.1.unwrap_or(style_default_pair.1),
-            )))
-        }
-        (_, (_, Some(_))) => {
-            eprintln!(
-                "--{name}-color cannot be used with --{name}-style. \
-                 Use --{name}-style=\"fg bg attr1 attr2 ...\" to set \
-                 foreground color, background color, and style attributes. \
-                 --{name}-color can only be used to set the background color. \
-                 (It is still available for backwards-compatibility.)",
-                name = element_name,
-            );
-            process::exit(1);
-        }
-        (_, (Some(_), None)) => {
-            eprintln!(
-                "Deprecated option --highlight-removed cannot be used with \
-                 --{name}-style. Use --{name}-style=\"fg bg attr1 attr2 ...\" \
-                 to set foreground color, background color, and style \
-                 attributes.",
-                name = element_name,
+                "Encountered multiple special attributes: {:?}. \
+                 You may supply no more than one of the special attributes 'box', 'underline', \
+                 and 'omit'.",
+                attrs.join(", ")
             );
             process::exit(1);
         }

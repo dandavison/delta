@@ -11,6 +11,7 @@ mod edits;
 mod env;
 mod paint;
 mod parse;
+mod rewrite;
 mod style;
 mod syntect_color;
 mod tests;

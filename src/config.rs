@@ -9,7 +9,7 @@ use syntect::parsing::SyntaxSet;
 
 use crate::bat::output::PagingMode;
 use crate::bat::terminal::to_ansi_color;
-use crate::cli::{self, unreachable};
+use crate::cli::{self, extract_special_attribute, unreachable};
 use crate::env;
 use crate::style::{self, DecorationStyle, Style};
 use crate::syntect_color;
@@ -309,8 +309,8 @@ pub fn parse_style(
         true_color,
     );
     let decoration_style = match decoration_style_string {
-        Some(s) => parse_decoration_style_string(s, true_color),
-        None => None,
+        Some(s) if s != "" => parse_decoration_style_string(s, true_color),
+        _ => None,
     };
     Style {
         ansi_term_style,
@@ -378,37 +378,21 @@ fn parse_ansi_term_style(
 
 fn parse_decoration_style_string(style_string: &str, true_color: bool) -> Option<DecorationStyle> {
     let style_string = style_string.to_lowercase();
-    let (special_attributes, standard_attributes): (Vec<&str>, Vec<&str>) =
-        style_string.split_whitespace().partition(|&token| {
-            token == "box" || token == "underline" || token == "omit" || token == "plain"
-        });
-    if special_attributes.len() > 1 {
+    let (style_string, special_attribute) = extract_special_attribute(&style_string);
+    let special_attribute = special_attribute.unwrap_or_else(|| {
         eprintln!(
-            "Encountered multiple special attributes: {:?}. \
-             You may supply no more than one of the special attributes 'box', 'underline', and 'omit'.",
-            special_attributes.join(", ")
+            "To specify a decoration style, you must supply one of the special attributes \
+             'box', 'underline', or 'omit'.",
         );
-        std::process::exit(1);
-    } else if special_attributes.len() == 0 {
-        if standard_attributes.len() > 0 {
-            eprintln!(
-                "To specify a decoration style, you must supply one of the special attributes \
-                 'box', 'underline', or 'omit'.",
-            );
-            std::process::exit(1);
-        } else {
-            return None;
-        }
-    };
-    let special_attribute = special_attributes[0];
-    let style_string = standard_attributes.join(" ");
+        process::exit(1);
+    });
     let (style, is_syntax_highlighted): (ansi_term::Style, bool) =
         parse_ansi_term_style(&style_string, None, None, true_color);
     if is_syntax_highlighted {
         eprintln!("'syntax' may not be used as a color name in a decoration style.");
         process::exit(1);
     };
-    match special_attribute {
+    match special_attribute.as_ref() {
         "box" => Some(DecorationStyle::Box(style)),
         "underline" => Some(DecorationStyle::Underline(style)),
         "omit" => Some(DecorationStyle::Omit),
