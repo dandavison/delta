@@ -206,7 +206,7 @@ mod tests {
     #[test]
     fn test_commit_style_plain() {
         let mut options = integration_test_utils::get_command_line_options();
-        options.commit_style = "plain".to_string();
+        options.commit_decoration_style = "".to_string();
         // TODO: --commit-color has no effect in conjunction with --commit-style plain
         let (output, _) = integration_test_utils::run_delta(GIT_DIFF_SINGLE_HUNK, options);
         ansi_test_utils::assert_line_has_no_color(
@@ -225,8 +225,8 @@ commit 94907c0f136f46dc46ffae2dc92dca9af7eb7c2e
     #[test]
     fn test_commit_style_box() {
         let mut options = integration_test_utils::get_command_line_options();
-        options.commit_style = "box".to_string();
-        options.deprecated_commit_color = Some("blue".to_string());
+        options.commit_style = "blue".to_string();
+        options.commit_decoration_style = "blue box".to_string();
         let (output, config) = integration_test_utils::run_delta(GIT_DIFF_SINGLE_HUNK, options);
         ansi_test_utils::assert_line_has_foreground_color(
             &output,
@@ -261,8 +261,8 @@ commit 94907c0f136f46dc46ffae2dc92dca9af7eb7c2e ┃
     #[test]
     fn test_commit_style_underline() {
         let mut options = integration_test_utils::get_command_line_options();
-        options.commit_style = "underline".to_string();
-        options.deprecated_commit_color = Some("yellow".to_string());
+        options.commit_style = "yellow".to_string();
+        options.commit_decoration_style = "yellow underline".to_string();
         let (output, config) = integration_test_utils::run_delta(GIT_DIFF_SINGLE_HUNK, options);
         ansi_test_utils::assert_line_has_foreground_color(
             &output,
@@ -289,7 +289,7 @@ commit 94907c0f136f46dc46ffae2dc92dca9af7eb7c2e
     #[test]
     fn test_file_style_plain() {
         let mut options = integration_test_utils::get_command_line_options();
-        options.file_style = "plain".to_string();
+        options.file_decoration_style = "".to_string();
         // TODO: --file-color has no effect in conjunction with --file-style plain
         let (output, _) = integration_test_utils::run_delta(GIT_DIFF_SINGLE_HUNK, options);
         for (i, line) in vec![
@@ -317,8 +317,8 @@ index 8e37a9e..6ce4863 100644
     #[test]
     fn test_file_style_box() {
         let mut options = integration_test_utils::get_command_line_options();
-        options.file_style = "box".to_string();
-        options.deprecated_file_color = Some("green".to_string());
+        options.file_style = "green".to_string();
+        options.file_decoration_style = "green box".to_string();
         let (output, config) = integration_test_utils::run_delta(GIT_DIFF_SINGLE_HUNK, options);
         ansi_test_utils::assert_line_has_foreground_color(
             &output,
@@ -353,8 +353,8 @@ src/align.rs │
     #[test]
     fn test_file_style_underline() {
         let mut options = integration_test_utils::get_command_line_options();
-        options.file_style = "underline".to_string();
-        options.deprecated_file_color = Some("magenta".to_string());
+        options.file_style = "magenta".to_string();
+        options.file_decoration_style = "magenta underline".to_string();
         let (output, config) = integration_test_utils::run_delta(GIT_DIFF_SINGLE_HUNK, options);
         ansi_test_utils::assert_line_has_foreground_color(
             &output,
@@ -381,7 +381,7 @@ src/align.rs
     #[test]
     fn test_hunk_style_plain() {
         let mut options = integration_test_utils::get_command_line_options();
-        options.deprecated_hunk_style = Some("plain".to_string());
+        options.hunk_header_decoration_style = "".to_string();
         // TODO: --hunk-color has no effect in conjunction with --hunk-style plain
         let (output, _) = integration_test_utils::run_delta(GIT_DIFF_SINGLE_HUNK, options);
         ansi_test_utils::assert_line_has_no_color(
@@ -396,8 +396,7 @@ src/align.rs
     #[test]
     fn test_hunk_style_box() {
         let mut options = integration_test_utils::get_command_line_options();
-        options.deprecated_hunk_style = Some("box".to_string());
-        options.deprecated_hunk_color = Some("white".to_string());
+        options.hunk_header_decoration_style = "white box".to_string();
         let (output, config) = integration_test_utils::run_delta(GIT_DIFF_SINGLE_HUNK, options);
         ansi_test_utils::assert_line_has_foreground_color(
             &output,
@@ -426,8 +425,7 @@ src/align.rs
     #[test]
     fn test_hunk_style_underline() {
         let mut options = integration_test_utils::get_command_line_options();
-        options.deprecated_hunk_style = Some("underline".to_string());
-        options.deprecated_hunk_color = Some("black".to_string());
+        options.hunk_header_decoration_style = "black underline".to_string();
         let (output, config) = integration_test_utils::run_delta(GIT_DIFF_SINGLE_HUNK, options);
         ansi_test_utils::assert_line_has_foreground_color(
             &output,
@@ -441,6 +439,33 @@ src/align.rs
             "
  impl<'a> Alignment<'a> {
 ─────────────────────────"
+        ));
+    }
+
+    #[test]
+    fn test_hunk_style_box_with_syntax_highlighting() {
+        let mut options = integration_test_utils::get_command_line_options();
+        options.hunk_header_style = "syntax".to_string();
+        // For this test we are currently forced to disable styling of the decoration, since
+        // otherwise it will confuse assert_line_is_syntax_highlighted.
+        options.hunk_header_decoration_style = "box".to_string();
+        let (output, config) = integration_test_utils::run_delta(GIT_DIFF_SINGLE_HUNK, options);
+        ansi_test_utils::assert_line_has_no_color(&output, 9, "──────────────────────────┐");
+        ansi_test_utils::assert_line_is_syntax_highlighted(
+            &output,
+            10,
+            " impl<'a> Alignment<'a> {",
+            "rs",
+            &config,
+        );
+        ansi_test_utils::assert_line_has_no_color(&output, 11, "──────────────────────────┘");
+        let output = strip_ansi_codes(&output);
+        assert!(output.contains(
+            "
+──────────────────────────┐
+ impl<'a> Alignment<'a> { │
+──────────────────────────┘
+"
         ));
     }
 
