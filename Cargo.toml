@@ -31,7 +31,7 @@ unicode-segmentation = "1.6.0"
 unicode-width = "0.1.7"
 
 [dependencies.syntect]
-version = "4.1.1"
+version = "4.2.0"
 default-features = false
 features = ["parsing", "assets", "yaml-load", "dump-load", "regex-onig"]
 
