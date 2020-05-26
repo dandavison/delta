@@ -309,7 +309,7 @@ pub fn parse_style(
         true_color,
     );
     let decoration_style = match decoration_style_string {
-        Some(s) if s != "" => parse_decoration_style_string(s, true_color),
+        Some(s) if s != "" => parse_decoration_style(s, true_color),
         _ => None,
     };
     Style {
@@ -376,7 +376,7 @@ fn parse_ansi_term_style(
     (style, is_syntax_highlighted)
 }
 
-fn parse_decoration_style_string(style_string: &str, true_color: bool) -> Option<DecorationStyle> {
+fn parse_decoration_style(style_string: &str, true_color: bool) -> Option<DecorationStyle> {
     let style_string = style_string.to_lowercase();
     let (style_string, special_attribute) = extract_special_attribute(&style_string);
     let special_attribute = special_attribute.unwrap_or_else(|| {
@@ -397,7 +397,7 @@ fn parse_decoration_style_string(style_string: &str, true_color: bool) -> Option
         "underline" => Some(DecorationStyle::Underline(style)),
         "omit" => Some(DecorationStyle::Omit),
         "plain" => None,
-        _ => unreachable("Unreachable code path reached in parse_decoration_style_string."),
+        _ => unreachable("Unreachable code path reached in parse_decoration_style."),
     }
 }
 
