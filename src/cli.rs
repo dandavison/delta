@@ -369,28 +369,6 @@ fn _check_validity(opt: &Opt, assets: &HighlightingAssets) {
     }
 }
 
-/// If the style string contains a 'special decoration attribute' then extract it and return it
-/// along with the modified style string.
-pub fn extract_special_attribute(style_string: &str) -> (String, Option<String>) {
-    let (special_attributes, standard_attributes): (Vec<&str>, Vec<&str>) =
-        style_string.split_whitespace().partition(|&token| {
-            token == "box" || token == "underline" || token == "omit" || token == "plain"
-        });
-    match special_attributes {
-        attrs if attrs.len() == 0 => (style_string.to_string(), None),
-        attrs if attrs.len() == 1 => (standard_attributes.join(" "), Some(attrs[0].to_string())),
-        attrs => {
-            eprintln!(
-                "Encountered multiple special attributes: {:?}. \
-                 You may supply no more than one of the special attributes 'box', 'underline', \
-                 and 'omit'.",
-                attrs.join(", ")
-            );
-            process::exit(1);
-        }
-    }
-}
-
 pub fn unreachable(message: &str) -> ! {
     eprintln!(
         "{} This should not be possible. \

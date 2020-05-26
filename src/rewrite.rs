@@ -4,7 +4,7 @@
 ///    other options.
 use std::process;
 
-use crate::cli::{self, extract_special_attribute, unreachable};
+use crate::cli;
 
 pub fn apply_rewrite_rules(opt: &mut cli::Opt) {
     _rewrite_style_strings_to_honor_deprecated_minus_plus_options(opt);
@@ -29,58 +29,6 @@ mod tests {
         apply_rewrite_rules(&mut opt);
 
         assert_eq!(opt, before);
-    }
-
-    #[test]
-    fn test_box_is_rewritten_as_decoration_attribute_1() {
-        let mut opt = cli::Opt::from_iter(Vec::<OsString>::new());
-        opt.commit_style = "box".to_string();
-        assert_eq!(opt.commit_style, "box");
-        assert_eq!(opt.commit_decoration_style, "");
-
-        apply_rewrite_rules(&mut opt);
-
-        assert_eq!(opt.commit_style, "");
-        assert_eq!(opt.commit_decoration_style, "box");
-    }
-
-    #[test]
-    fn test_box_is_rewritten_as_decoration_attribute_2() {
-        let mut opt = cli::Opt::from_iter(Vec::<OsString>::new());
-        opt.commit_style = "green box red".to_string();
-        assert_eq!(opt.commit_style, "green box red");
-        assert_eq!(opt.commit_decoration_style, "");
-
-        apply_rewrite_rules(&mut opt);
-
-        assert_eq!(opt.commit_style, "green red");
-        assert_eq!(opt.commit_decoration_style, "box");
-    }
-
-    #[test]
-    fn test_deprecated_commit_color_option_is_rewritten_as_style() {
-        let mut opt = cli::Opt::from_iter(Vec::<OsString>::new());
-        let default = "yellow";
-        opt.deprecated_commit_color = Some("red".to_string());
-        assert_eq!(opt.commit_style, default);
-
-        apply_rewrite_rules(&mut opt);
-
-        assert_eq!(opt.commit_style, "red");
-        assert_eq!(opt.deprecated_commit_color, None);
-    }
-
-    #[test]
-    fn test_deprecated_file_color_option_is_rewritten_as_style() {
-        let mut opt = cli::Opt::from_iter(Vec::<OsString>::new());
-        let default = "blue";
-        opt.deprecated_file_color = Some("red".to_string());
-        assert_eq!(opt.file_style, default);
-
-        apply_rewrite_rules(&mut opt);
-
-        assert_eq!(opt.file_style, "red");
-        assert_eq!(opt.deprecated_file_color, None);
     }
 
     /// Since --hunk-header-decoration-style is at its default value of "box",
@@ -120,8 +68,6 @@ fn _rewrite_options_to_implement_color_only(opt: &mut cli::Opt) {
 }
 
 fn _rewrite_options_to_implement_deprecated_commit_file_hunk_header_options(opt: &mut cli::Opt) {
-    _rewrite_options_to_implement_deprecated_decoration_style_attributes_in_style_string(opt);
-    _rewrite_options_to_implement_deprecated_commit_file_hunk_header_color_options(opt);
     _rewrite_options_to_implement_deprecated_hunk_style_option(opt);
 }
 
@@ -177,83 +123,6 @@ fn _rewrite_style_strings_to_honor_deprecated_minus_plus_options(opt: &mut cli::
     }
 }
 
-fn _rewrite_options_to_implement_deprecated_decoration_style_attributes_in_style_string(
-    opt: &mut cli::Opt,
-) {
-    // --commit-decoration
-    if let Some((rewritten, decoration_style)) =
-        _get_rewritten_decoration_style_string_with_special_attribute(
-            &opt.commit_style,
-            &opt.commit_decoration_style,
-            "",
-            "commit",
-        )
-    {
-        opt.commit_decoration_style = decoration_style;
-        opt.commit_style = rewritten;
-    }
-    // --file-decoration
-    if let Some((rewritten, decoration_style)) =
-        _get_rewritten_decoration_style_string_with_special_attribute(
-            &opt.file_style,
-            &opt.file_decoration_style,
-            "underline",
-            "file",
-        )
-    {
-        opt.file_decoration_style = decoration_style;
-        opt.file_style = rewritten;
-    }
-    // --hunk-header-decoration
-    if let Some((rewritten, decoration_style)) =
-        _get_rewritten_decoration_style_string_with_special_attribute(
-            &opt.hunk_header_style,
-            &opt.hunk_header_decoration_style,
-            "box",
-            "hunk-header",
-        )
-    {
-        opt.hunk_header_decoration_style = decoration_style;
-        opt.hunk_header_style = rewritten;
-    }
-}
-
-// TODO: How to avoid repeating the default values for style options here and in
-// the structopt definition?
-fn _rewrite_options_to_implement_deprecated_commit_file_hunk_header_color_options(
-    opt: &mut cli::Opt,
-) {
-    if let Some(rewritten) = _get_rewritten_commit_file_hunk_header_style_string(
-        &opt.commit_style,
-        ("yellow", None),
-        (opt.deprecated_commit_color.as_deref(), None),
-        "commit",
-    ) {
-        opt.commit_style = rewritten.to_string();
-        opt.deprecated_commit_color = None;
-    }
-
-    if let Some(rewritten) = _get_rewritten_commit_file_hunk_header_style_string(
-        &opt.file_style,
-        ("blue", None),
-        (opt.deprecated_file_color.as_deref(), None),
-        "file",
-    ) {
-        opt.file_style = rewritten.to_string();
-        opt.deprecated_file_color = None;
-    }
-
-    if let Some(rewritten) = _get_rewritten_commit_file_hunk_header_style_string(
-        &opt.hunk_header_style,
-        ("blue", None),
-        (opt.deprecated_hunk_color.as_deref(), None),
-        "hunk",
-    ) {
-        opt.hunk_header_style = rewritten.to_string();
-        opt.deprecated_hunk_color = None;
-    }
-}
-
 fn _rewrite_options_to_implement_deprecated_hunk_style_option(opt: &mut cli::Opt) {
     // Examples of how --hunk-style was originally used are
     // --hunk-style box       => --hunk-header-decoration-style box
@@ -279,41 +148,9 @@ fn _rewrite_options_to_implement_deprecated_hunk_style_option(opt: &mut cli::Opt
     }
 }
 
-/// A special decoration style attribute (one of 'box', 'underline', 'plain', and 'omit') is
-/// currently allowed to be supplied in the style string. This is deprecated, but supported for
-/// backwards-compatibility: the non-deprecated usage is for one of those special attributes to be
-/// supplied in the decoration style string. If the deprecated form has been used, then this
-/// function returns a (new_style_string, new_decoration_style_string) tuple, which should be used
-/// to rewrite the comamnd line options in non-deprecated form.
-fn _get_rewritten_decoration_style_string_with_special_attribute(
-    style: &str,
-    decoration_style: &str,
-    decoration_style_default: &str,
-    element_name: &str,
-) -> Option<(String, String)> {
-    match extract_special_attribute(style) {
-        (style, Some(special_attribute)) => {
-            if decoration_style == decoration_style_default {
-                Some((style, special_attribute))
-            } else {
-                eprintln!(
-                    "Special attribute {attr_name} may not be used in --{element_name}-style \
-                     if you are also using --commit-decoration-style.",
-                    attr_name = special_attribute,
-                    element_name = element_name
-                );
-                process::exit(1);
-            }
-        }
-        _ => None,
-    }
-}
-
 fn _get_rewritten_commit_file_hunk_header_style_string(
-    style: &str,
     style_default_pair: (&str, Option<&str>),
     deprecated_args_style_pair: (Option<&str>, Option<&str>),
-    element_name: &str,
 ) -> Option<String> {
     let format_style = |pair: (&str, Option<&str>)| {
         format!(
@@ -325,37 +162,15 @@ fn _get_rewritten_commit_file_hunk_header_style_string(
             }
         )
     };
-    match (style, deprecated_args_style_pair) {
-        (_, (None, None)) => None, // no rewrite
-        (style, deprecated_args_style_pair) if style == format_style(style_default_pair) => {
-            // TODO: We allow the deprecated argument values to have effect if
-            // the style argument value is equal to its default value. This is
-            // non-ideal, because the user may have explicitly supplied the
-            // style argument (i.e. it might just happen to equal the default).
-            Some(format_style((
-                deprecated_args_style_pair.0.unwrap_or(style_default_pair.0),
-                match deprecated_args_style_pair.1 {
-                    Some(s) => Some(s),
-                    None => style_default_pair.1,
-                },
-            )))
-        }
-        (_, (Some(_), None)) => {
-            eprintln!(
-                "--{name}-color cannot be used with --{name}-style. \
-                 Use --{name}-style=\"fg bg attr1 attr2 ...\" to set \
-                 foreground color, background color, and style attributes. \
-                 --{name}-color can only be used to set the foreground color. \
-                 (It is still available for backwards-compatibility.)",
-                name = element_name,
-            );
-            process::exit(1);
-        }
-        _ => unreachable(&format!(
-            "Unexpected value deprecated_args_style_pair={:?} in \
-             _get_rewritten_commit_file_hunk_header_style_string.",
-            deprecated_args_style_pair,
-        )),
+    match deprecated_args_style_pair {
+        (None, None) => None,
+        deprecated_args_style_pair => Some(format_style((
+            deprecated_args_style_pair.0.unwrap_or(style_default_pair.0),
+            match deprecated_args_style_pair.1 {
+                Some(s) => Some(s),
+                None => style_default_pair.1,
+            },
+        ))),
     }
 }
 

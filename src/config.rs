@@ -9,7 +9,7 @@ use syntect::parsing::SyntaxSet;
 
 use crate::bat::output::PagingMode;
 use crate::bat::terminal::to_ansi_color;
-use crate::cli::{self, extract_special_attribute, unreachable};
+use crate::cli::{self, unreachable};
 use crate::env;
 use crate::style::{self, DecorationStyle, Style};
 use crate::syntect_color;
@@ -269,28 +269,54 @@ fn make_hunk_styles<'a>(
 
 fn make_commit_file_hunk_header_styles(opt: &cli::Opt, true_color: bool) -> (Style, Style, Style) {
     (
-        parse_style(
+        _parse_style_respecting_deprecated_foreground_color_arg(
             &opt.commit_style,
             None,
             None,
             Some(&opt.commit_decoration_style),
+            opt.deprecated_commit_color.as_deref(),
             true_color,
         ),
-        parse_style(
+        _parse_style_respecting_deprecated_foreground_color_arg(
             &opt.file_style,
             None,
             None,
             Some(&opt.file_decoration_style),
+            opt.deprecated_file_color.as_deref(),
             true_color,
         ),
-        parse_style(
+        _parse_style_respecting_deprecated_foreground_color_arg(
             &opt.hunk_header_style,
             None,
             None,
             Some(&opt.hunk_header_decoration_style),
+            opt.deprecated_hunk_color.as_deref(),
             true_color,
         ),
     )
+}
+
+fn _parse_style_respecting_deprecated_foreground_color_arg(
+    style_string: &str,
+    foreground_default: Option<Color>,
+    background_default: Option<Color>,
+    decoration_style_string: Option<&str>,
+    deprecated_foreground_color_arg: Option<&str>,
+    true_color: bool,
+) -> Style {
+    let mut style = parse_style(
+        style_string,
+        foreground_default,
+        background_default,
+        decoration_style_string,
+        true_color,
+    );
+    if let Some(s) = deprecated_foreground_color_arg {
+        style.ansi_term_style.foreground = parse_ansi_term_style(s, None, None, true_color)
+            .0
+            .foreground;
+    }
+    style
 }
 
 /// Construct Style from style and decoration-style strings supplied on command line, together with
@@ -302,8 +328,10 @@ pub fn parse_style(
     decoration_style_string: Option<&str>,
     true_color: bool,
 ) -> Style {
+    let (style_string, special_attribute_from_style_string) =
+        extract_special_attribute(style_string);
     let (ansi_term_style, is_syntax_highlighted) = parse_ansi_term_style(
-        style_string,
+        &style_string,
         foreground_default,
         background_default,
         true_color,
@@ -312,10 +340,41 @@ pub fn parse_style(
         Some(s) if s != "" => parse_decoration_style(s, true_color),
         _ => None,
     };
-    Style {
+    let mut style = Style {
         ansi_term_style,
         is_syntax_highlighted,
         decoration_style,
+    };
+    if let Some(special_attribute) = special_attribute_from_style_string {
+        if let Some(decoration_style) = apply_special_decoration_attribute(
+            style.decoration_style,
+            &special_attribute,
+            true_color,
+        ) {
+            style.decoration_style = Some(decoration_style)
+        }
+    }
+    style
+}
+
+fn apply_special_decoration_attribute(
+    decoration_style: Option<style::DecorationStyle>,
+    special_attribute: &str,
+    true_color: bool,
+) -> Option<DecorationStyle> {
+    let ansi_term_style = match decoration_style {
+        None => ansi_term::Style::new(),
+        Some(style::DecorationStyle::Box(ansi_term_style)) => ansi_term_style,
+        Some(style::DecorationStyle::Underline(ansi_term_style)) => ansi_term_style,
+        Some(style::DecorationStyle::Omit) => ansi_term::Style::new(),
+    };
+    match parse_decoration_style(special_attribute, true_color) {
+        Some(style::DecorationStyle::Box(_)) => Some(style::DecorationStyle::Box(ansi_term_style)),
+        Some(style::DecorationStyle::Underline(_)) => {
+            Some(style::DecorationStyle::Underline(ansi_term_style))
+        }
+        Some(style::DecorationStyle::Omit) => Some(style::DecorationStyle::Omit),
+        None => None,
     }
 }
 
@@ -398,6 +457,28 @@ fn parse_decoration_style(style_string: &str, true_color: bool) -> Option<Decora
         "omit" => Some(DecorationStyle::Omit),
         "plain" => None,
         _ => unreachable("Unreachable code path reached in parse_decoration_style."),
+    }
+}
+
+/// If the style string contains a 'special decoration attribute' then extract it and return it
+/// along with the modified style string.
+fn extract_special_attribute(style_string: &str) -> (String, Option<String>) {
+    let (special_attributes, standard_attributes): (Vec<&str>, Vec<&str>) =
+        style_string.split_whitespace().partition(|&token| {
+            token == "box" || token == "underline" || token == "omit" || token == "plain"
+        });
+    match special_attributes {
+        attrs if attrs.len() == 0 => (style_string.to_string(), None),
+        attrs if attrs.len() == 1 => (standard_attributes.join(" "), Some(attrs[0].to_string())),
+        attrs => {
+            eprintln!(
+                "Encountered multiple special attributes: {:?}. \
+                 You may supply no more than one of the special attributes 'box', 'underline', \
+                 and 'omit'.",
+                attrs.join(", ")
+            );
+            process::exit(1);
+        }
     }
 }
 
