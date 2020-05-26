@@ -14,6 +14,7 @@ unit-test:
 
 end-to-end-test: build
 	./tests/test_color_only_output_matches_git_on_full_repo_history
+	./tests/test_deprecated_options > /dev/null
 
 release:
 	@make -f release.Makefile release
