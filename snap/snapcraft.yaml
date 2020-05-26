@@ -1,0 +1,30 @@
+name: delta
+base: core18
+adopt-info: delta
+summary: A syntax-highlighter for git and diff output
+description: |
+  Delta provides language syntax-highlighting, within-line
+  insertion/deletion detection, and restructured diff output for git on the
+  command line.
+
+grade: devel
+confinement: strict
+license: MIT
+
+apps:
+  delta:
+    command: bin/delta
+    plugs:
+      - home
+
+parts:
+  delta:
+    plugin: rust
+    source: .
+    build-packages:
+      - libclang-dev
+      - llvm
+    override-pull: |
+      snapcraftctl pull
+      snapcraftctl set-version $(git describe --tags)
+
