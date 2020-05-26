@@ -1,8 +1,5 @@
 use std::process;
-use std::str::FromStr;
-use std::string::ToString;
 
-use bit_set::BitSet;
 use console::Term;
 use structopt::clap::AppSettings::{ColorAlways, ColoredHelp, DeriveDisplayOrder};
 use structopt::StructOpt;
@@ -10,11 +7,11 @@ use structopt::StructOpt;
 use crate::bat::assets::HighlightingAssets;
 use crate::bat::output::PagingMode;
 use crate::config;
-use crate::delta::State;
 use crate::env;
+use crate::rewrite;
 use crate::style;
 
-#[derive(StructOpt, Clone, Debug)]
+#[derive(StructOpt, Clone, Debug, PartialEq)]
 #[structopt(
     name = "delta",
     about = "A syntax-highlighter for git and diff output",
@@ -22,10 +19,60 @@ use crate::style;
     setting(ColoredHelp),
     setting(DeriveDisplayOrder),
     after_help = "\
-Colors
+STYLES
 ------
 
-All delta color options work the same way. There are three ways to specify a color:
+All options that have a name like --*-style work the same way. It is very similar to how
+colors/styles are specified in a gitconfig file:
+https://git-scm.com/docs/git-config#Documentation/git-config.txt-color
+
+Here is an example:
+
+--minus-style 'red bold underline #ffeeee'
+
+That means: For removed lines, set the foreground (text) color to 'red', make it bold and
+            underlined, and set the background color to '#ffeeee'.
+
+See the COLORS section below for how to specify a color. In addition to real colors, there are 3
+special color names: 'auto', 'normal', 'syntax'.
+
+Here is an example of using special color names together with a single attribute:
+
+--minus-style 'syntax bold auto'
+
+That means: For removed lines, syntax-highlight the text, and make it bold, and do whatever delta
+            normally does for the background.
+
+The available attributes are: 'blink', 'bold', 'dimmed', 'hidden', 'italic', 'reverse',
+'strikethrough', 'underline'.
+
+A complete description of the style string syntax follows:
+
+- A style string consists of 0, 1, or 2 colors, together with an arbitrary number of style
+  attributes, all separated by spaces.
+
+- The first color is the foreground (text) color. The second color is the background color.
+  Attributes can go in any position.
+
+- This means that in order to specify a background color you must also specify a foreground (text)
+  color.
+
+- If you just want delta to do what it would normally do for one of the colors, then use the
+  special color 'auto'. This can be used for both foreground and background.
+
+- If you want the foreground text to be syntax-highlighted according to its language, then use the
+  special foreground color 'syntax'. This can only be used for the foreground (text).
+
+- If you want delta to not apply any color, then use the special color 'normal'. This can be used
+  for both foreground and background.
+
+- The minimal style specification is the empty string ''. This means: do not apply any colors or
+  styling to the element in question.
+
+COLORS
+------
+
+There are three ways to specify a color:
 
 1. RGB hex code
 
@@ -63,103 +110,93 @@ All delta color options work the same way. There are three ways to specify a col
 "
 )]
 pub struct Opt {
-    /// Use default colors appropriate for a light terminal background. For more control, see the other
-    /// color options.
+    #[structopt(long = "theme", env = "BAT_THEME")]
+    /// The code syntax highlighting theme to use. Use --list-themes to demo available themes. If
+    /// the theme is not set using this option, it will be taken from the BAT_THEME environment
+    /// variable, if that contains a valid theme name. --theme=none disables all syntax
+    /// highlighting.
+    pub theme: Option<String>,
+
+    /// Use default colors appropriate for a light terminal background. For more control, see the
+    /// style options.
     #[structopt(long = "light")]
     pub light: bool,
 
     /// Use default colors appropriate for a dark terminal background. For more control, see the
-    /// other color options.
+    /// style options.
     #[structopt(long = "dark")]
     pub dark: bool,
 
-    #[structopt(long = "minus-color")]
-    /// The background color for removed lines.
-    pub minus_color: Option<String>,
+    #[structopt(long = "minus-style", default_value = "normal auto")]
+    /// Style (foreground, background, attributes) for removed lines. See STYLES section.
+    pub minus_style: String,
 
-    #[structopt(long = "minus-emph-color")]
-    /// The background color for emphasized sections of removed lines.
-    pub minus_emph_color: Option<String>,
+    #[structopt(long = "zero-style", default_value = "syntax normal")]
+    /// Style (foreground, background, attributes) for unchanged lines. See STYLES section.
+    pub zero_style: String,
 
-    #[structopt(long = "minus-foreground-color")]
-    /// The foreground color for removed lines.
-    pub minus_foreground_color: Option<String>,
+    #[structopt(long = "plus-style", default_value = "syntax auto")]
+    /// Style (foreground, background, attributes) for added lines. See STYLES section.
+    pub plus_style: String,
 
-    #[structopt(long = "minus-emph-foreground-color")]
-    /// The foreground color for emphasized sections of removed lines.
-    pub minus_emph_foreground_color: Option<String>,
+    #[structopt(long = "minus-emph-style", default_value = "normal auto")]
+    /// Style (foreground, background, attributes) for emphasized sections of removed lines. See
+    /// STYLES section.
+    pub minus_emph_style: String,
 
-    #[structopt(long = "plus-color")]
-    /// The background color for added lines.
-    pub plus_color: Option<String>,
+    #[structopt(long = "minus-non-emph-style")]
+    /// Style (foreground, background, attributes) for non-emphasized sections of removed lines
+    /// that have an emphasized section. Defaults to --minus-style. See STYLES section.
+    pub minus_non_emph_style: Option<String>,
 
-    #[structopt(long = "plus-emph-color")]
-    /// The background color for emphasized sections of added lines.
-    pub plus_emph_color: Option<String>,
+    #[structopt(long = "plus-emph-style", default_value = "syntax auto")]
+    /// Style (foreground, background, attributes) for emphasized sections of added lines. See
+    /// STYLES section.
+    pub plus_emph_style: String,
 
-    #[structopt(long = "plus-foreground-color")]
-    /// Disable syntax highlighting and instead use this foreground color for added lines.
-    pub plus_foreground_color: Option<String>,
+    #[structopt(long = "plus-non-emph-style")]
+    /// Style (foreground, background, attributes) for non-emphasized sections of added lines that
+    /// have an emphasized section. Defaults to --plus-style. See STYLES section.
+    pub plus_non_emph_style: Option<String>,
 
-    #[structopt(long = "plus-emph-foreground-color")]
-    /// Disable syntax highlighting and instead use this foreground color for emphasized sections of added lines.
-    pub plus_emph_foreground_color: Option<String>,
+    #[structopt(long = "commit-style", default_value = "yellow")]
+    /// Style (foreground, background, attributes) for the commit hash line. See STYLES section.
+    pub commit_style: String,
 
-    #[structopt(long = "theme", env = "BAT_THEME")]
-    /// The code syntax highlighting theme to use. Use --theme=none to disable syntax highlighting.
-    /// If the theme is not set using this option, it will be taken from the BAT_THEME environment
-    /// variable, if that contains a valid theme name. Use --list-themes to view available themes.
-    /// Note that the choice of theme only affects code syntax highlighting. See --commit-color,
-    /// --file-color, --hunk-color to configure the colors of other parts of the diff output.
-    pub theme: Option<String>,
+    #[structopt(long = "commit-decoration-style", default_value = "")]
+    /// Style for the commit hash decoration. See STYLES section. Special attributes are 'box', and
+    /// 'underline' are available in addition to the usual style attributes.
+    pub commit_decoration_style: String,
 
-    /// A string consisting only of the characters '-', '0', '+', specifying
-    /// which of the 3 diff hunk line-types (removed, unchanged, added) should
-    /// be syntax-highlighted. "all" and "none" are also valid values.
-    #[structopt(long = "syntax-highlight", default_value = "0+")]
-    pub lines_to_be_syntax_highlighted: String,
+    #[structopt(long = "file-style", default_value = "blue")]
+    /// Style (foreground, background, attributes) for the file section. See STYLES section.
+    pub file_style: String,
 
-    #[structopt(long = "highlight-removed")]
-    /// DEPRECATED: use --syntax-highlight.
-    pub highlight_minus_lines: bool,
+    #[structopt(long = "file-decoration-style", default_value = "blue underline")]
+    /// Style for the file decoration. See STYLES section. Special attributes are 'box', and
+    /// 'underline' are available in addition to the usual style attributes.
+    pub file_decoration_style: String,
+
+    #[structopt(long = "hunk-header-style", default_value = "syntax")]
+    /// Style (foreground, background, attributes) for the hunk-header. See STYLES section.
+    pub hunk_header_style: String,
+
+    #[structopt(long = "hunk-header-decoration-style", default_value = "blue box")]
+    /// Style (foreground, background, attributes) for the hunk-header decoration. See STYLES
+    /// section. Special attributes are 'box', and 'underline' are available in addition to the
+    /// usual style attributes.
+    pub hunk_header_decoration_style: String,
 
     #[structopt(long = "color-only")]
     /// Do not alter the input in any way other than applying colors. Equivalent to
-    /// `--keep-plus-minus-markers --width variable --tabs 0 --commit-style plain
-    ///  --file-style plain --hunk-style plain`.
+    /// `--keep-plus-minus-markers --width variable --tabs 0 --commit-decoration ''
+    /// --file-decoration '' --hunk-decoration ''`.
     pub color_only: bool,
 
     #[structopt(long = "keep-plus-minus-markers")]
     /// Prefix added/removed lines with a +/- character, respectively, exactly as git does. The
     /// default behavior is to output a space character in place of these markers.
     pub keep_plus_minus_markers: bool,
-
-    #[structopt(long = "commit-style", default_value = "plain")]
-    /// Formatting style for the commit section of git output. Options
-    /// are: plain, box.
-    pub commit_style: SectionStyle,
-
-    #[structopt(long = "commit-color", default_value = "yellow")]
-    /// Color for the commit section of git output.
-    pub commit_color: String,
-
-    #[structopt(long = "file-style", default_value = "underline")]
-    /// Formatting style for the file section of git output. Options
-    /// are: plain, box, underline.
-    pub file_style: SectionStyle,
-
-    #[structopt(long = "file-color", default_value = "blue")]
-    /// Color for the file section of git output.
-    pub file_color: String,
-
-    #[structopt(long = "hunk-style", default_value = "box")]
-    /// Formatting style for the hunk-marker section of git output. Options
-    /// are: plain, box.
-    pub hunk_style: SectionStyle,
-
-    #[structopt(long = "hunk-color", default_value = "blue")]
-    /// Color for the hunk-marker section of git output.
-    pub hunk_color: String,
 
     /// Use --width=variable to extend background colors to the end of each line only. Otherwise
     /// background colors extend to the full terminal width.
@@ -176,8 +213,8 @@ pub struct Opt {
     /// Show the command-line arguments (RGB hex codes) for the background colors that are in
     /// effect. The hex codes are displayed with their associated background color. This option can
     /// be combined with --light and --dark to view the background colors for those modes. It can
-    /// also be used to experiment with different RGB hex codes by combining this option with
-    /// --minus-color, --minus-emph-color, --plus-color, --plus-emph-color.
+    /// also be used to experiment with different RGB hex codes by combining this option with style
+    /// options such as --minus-style, --zero-style, --plus-style, etc.
     #[structopt(long = "show-background-colors")]
     pub show_background_colors: bool,
 
@@ -214,50 +251,100 @@ pub struct Opt {
     /// or PAGER (BAT_PAGER has priority).
     #[structopt(long = "paging", default_value = "auto")]
     pub paging_mode: String,
+
+    #[structopt(long = "minus-color")]
+    /// Deprecated: use --minus-style='normal my_background_color'.
+    pub deprecated_minus_background_color: Option<String>,
+
+    #[structopt(long = "minus-emph-color")]
+    /// Deprecated: use --minus-emph-style='normal my_background_color'.
+    pub deprecated_minus_emph_background_color: Option<String>,
+
+    #[structopt(long = "plus-color")]
+    /// Deprecated: Use --plus-style='normal my_background_color'.
+    pub deprecated_plus_background_color: Option<String>,
+
+    #[structopt(long = "plus-emph-color")]
+    /// Deprecated: Use --plus-emph-style='normal my_background_color'.
+    pub deprecated_plus_emph_background_color: Option<String>,
+
+    #[structopt(long = "highlight-removed")]
+    /// Deprecated: use --minus-style='syntax'.
+    pub deprecated_highlight_minus_lines: bool,
+
+    #[structopt(long = "commit-color")]
+    /// Deprecated: use --commit-style='my_foreground_color' --commit-decoration-style='my_foreground_color'.
+    pub deprecated_commit_color: Option<String>,
+
+    #[structopt(long = "file-color")]
+    /// Deprecated: use --file-style='my_foreground_color' --file-decoration-style='my_foreground_color'.
+    pub deprecated_file_color: Option<String>,
+
+    #[structopt(long = "hunk-style")]
+    /// Deprecated: synonym of --hunk-header-decoration-style.
+    pub deprecated_hunk_style: Option<String>,
+
+    #[structopt(long = "hunk-color")]
+    /// Deprecated: use --hunk-header-style='my_foreground_color' --hunk-header-decoration-style='my_foreground_color'.
+    pub deprecated_hunk_color: Option<String>,
 }
 
-#[derive(Clone, Copy, Debug, PartialEq)]
-pub enum SectionStyle {
-    Box,
-    Plain,
-    Underline,
-    Omit,
-}
-
-// TODO: clean up enum parsing and error handling
-
-#[derive(Debug)]
-pub enum Error {
-    SectionStyleParseError,
-}
-
-impl FromStr for SectionStyle {
-    type Err = Error;
-    fn from_str(s: &str) -> Result<SectionStyle, Error> {
-        match s.to_lowercase().as_str() {
-            "box" => Ok(SectionStyle::Box),
-            "plain" => Ok(SectionStyle::Plain),
-            "underline" => Ok(SectionStyle::Underline),
-            _ => Err(Error::SectionStyleParseError),
-        }
-    }
-}
-
-impl ToString for Error {
-    fn to_string(&self) -> String {
-        "".to_string()
-    }
-}
-
-pub fn process_command_line_arguments<'a>(opt: Opt) -> config::Config<'a> {
+pub fn process_command_line_arguments<'a>(mut opt: Opt) -> config::Config<'a> {
     let assets = HighlightingAssets::new();
 
+    _check_validity(&opt, &assets);
+
+    rewrite::apply_rewrite_rules(&mut opt);
+
+    // We do not use the full width, in case `less --status-column` is in effect. See #41 and #10.
+    // TODO: There seems to be some confusion in the accounting: we are actually leaving 2
+    // characters unused for less at the right edge of the terminal, despite the subtraction of 1
+    // here.
+    let available_terminal_width = (Term::stdout().size().1 - 1) as usize;
+
+    let paging_mode = match opt.paging_mode.as_ref() {
+        "always" => PagingMode::Always,
+        "never" => PagingMode::Never,
+        "auto" => PagingMode::QuitIfOneScreen,
+        _ => {
+            eprintln!(
+                "Invalid value for --paging option: {} (valid values are \"always\", \"never\", and \"auto\")",
+                opt.paging_mode
+            );
+            process::exit(1);
+        }
+    };
+
+    let true_color = match opt.true_color.as_ref() {
+        "always" => true,
+        "never" => false,
+        "auto" => is_truecolor_terminal(),
+        _ => {
+            eprintln!(
+                "Invalid value for --24-bit-color option: {} (valid values are \"always\", \"never\", and \"auto\")",
+                opt.true_color
+            );
+            process::exit(1);
+        }
+    };
+
+    config::get_config(
+        opt,
+        assets.syntax_set,
+        assets.theme_set,
+        true_color,
+        available_terminal_width,
+        paging_mode,
+    )
+}
+
+fn _check_validity(opt: &Opt, assets: &HighlightingAssets) {
     if opt.light && opt.dark {
         eprintln!("--light and --dark cannot be used together.");
         process::exit(1);
     }
-    match &opt.theme {
-        Some(theme) if !style::is_no_syntax_highlighting_theme_name(&theme) => {
+    if let Some(ref theme) = opt.theme {
+        if !style::is_no_syntax_highlighting_theme_name(&theme) {
             if !assets.theme_set.themes.contains_key(theme.as_str()) {
                 eprintln!("Invalid theme: '{}'", theme);
                 process::exit(1);
@@ -279,97 +366,22 @@ pub fn process_command_line_arguments<'a>(opt: Opt) -> config::Config<'a> {
                 process::exit(1);
             }
         }
-        _ => (),
-    };
+    }
+}
 
-    // We do not use the full width, in case `less --status-column` is in effect. See #41 and #10.
-
-    // TODO: There seems to be some confusion in the accounting: we are actually leaving 2
-    // characters unused for less at the right edge of the terminal, despite the subtraction of 1
-    // here.
-    let available_terminal_width = (Term::stdout().size().1 - 1) as usize;
-
-    let paging_mode = match opt.paging_mode.as_ref() {
-        "always" => PagingMode::Always,
-        "never" => PagingMode::Never,
-        "auto" => PagingMode::QuitIfOneScreen,
-        _ => {
-            eprintln!(
-                "Invalid paging value: {} (valid values are \"always\", \"never\", and \"auto\")",
-                opt.paging_mode
-            );
-            process::exit(1);
-        }
-    };
-
-    let true_color = match opt.true_color.as_ref() {
-        "always" => true,
-        "never" => false,
-        "auto" => is_truecolor_terminal(),
-        _ => {
-            eprintln!(
-                "Invalid value for --24-bit-color option: {} (valid values are \"always\", \"never\", and \"auto\")",
-                opt.true_color
-            );
-            process::exit(1);
-        }
-    };
-
-    let lines_to_be_syntax_highlighted = get_lines_to_be_syntax_highlighted(&opt);
-
-    config::get_config(
-        opt,
-        assets.syntax_set,
-        assets.theme_set,
-        true_color,
-        available_terminal_width,
-        paging_mode,
-        lines_to_be_syntax_highlighted,
-    )
+pub fn unreachable(message: &str) -> ! {
+    eprintln!(
+        "{} This should not be possible. \
+         Please report the bug at https://github.com/dandavison/delta/issues.",
+        message
+    );
+    process::exit(1);
 }
 
 fn is_truecolor_terminal() -> bool {
     env::get_env_var("COLORTERM")
         .map(|colorterm| colorterm == "truecolor" || colorterm == "24bit")
         .unwrap_or(false)
-}
-
-fn get_lines_to_be_syntax_highlighted(opt: &Opt) -> BitSet {
-    if opt.highlight_minus_lines {
-        eprintln!("--highlight-removed is deprecated: use --syntax-highlight.");
-    }
-
-    let syntax_highlight_lines = match opt.lines_to_be_syntax_highlighted.to_lowercase().as_ref() {
-        "none" => "",
-        // This is the default value of the new option: honor the deprecated option if it has been used.
-        "0+" => match opt.highlight_minus_lines {
-            true => "-0+",
-            false => "0+",
-        },
-        "all" => "-0+",
-        s => s,
-    }
-    .to_string();
-
-    let mut lines_to_be_syntax_highlighted = BitSet::new();
-    for line_type in syntax_highlight_lines.chars() {
-        lines_to_be_syntax_highlighted.insert(match line_type {
-            '-' => State::HunkMinus as usize,
-            '0' => State::HunkZero as usize,
-            '+' => State::HunkPlus as usize,
-            s => {
-                eprintln!("Invalid --syntax-highlight value: {}. Valid characters are \"-\", \"0\", \"+\".", s);
-                process::exit(1);
-            }
-        });
-    }
-    if opt.minus_foreground_color.is_some() || opt.minus_emph_foreground_color.is_some() {
-        lines_to_be_syntax_highlighted.remove(State::HunkMinus as usize);
-    }
-    if opt.plus_foreground_color.is_some() || opt.plus_emph_foreground_color.is_some() {
-        lines_to_be_syntax_highlighted.remove(State::HunkPlus as usize);
-    }
-    lines_to_be_syntax_highlighted
 }
 
 #[cfg(test)]
@@ -381,6 +393,7 @@ mod tests {
     use crate::tests::integration_test_utils::integration_test_utils;
 
     #[test]
+    #[ignore]
     fn test_theme_selection() {
         #[derive(PartialEq)]
         enum Mode {
@@ -472,20 +485,32 @@ mod tests {
                 assert_eq!(config.theme.unwrap().name.as_ref().unwrap(), expected_theme);
             }
             assert_eq!(
-                config.minus_style_modifier.background.unwrap(),
-                style::get_minus_color_default(expected_mode == Mode::Light, is_true_color)
+                config.minus_style.ansi_term_style.background.unwrap(),
+                style::get_minus_background_color_default(
+                    expected_mode == Mode::Light,
+                    is_true_color
+                )
             );
             assert_eq!(
-                config.minus_emph_style_modifier.background.unwrap(),
-                style::get_minus_emph_color_default(expected_mode == Mode::Light, is_true_color)
+                config.minus_emph_style.ansi_term_style.background.unwrap(),
+                style::get_minus_emph_background_color_default(
+                    expected_mode == Mode::Light,
+                    is_true_color
+                )
             );
             assert_eq!(
-                config.plus_style_modifier.background.unwrap(),
-                style::get_plus_color_default(expected_mode == Mode::Light, is_true_color)
+                config.plus_style.ansi_term_style.background.unwrap(),
+                style::get_plus_background_color_default(
+                    expected_mode == Mode::Light,
+                    is_true_color
+                )
             );
             assert_eq!(
-                config.plus_emph_style_modifier.background.unwrap(),
-                style::get_plus_emph_color_default(expected_mode == Mode::Light, is_true_color)
+                config.plus_emph_style.ansi_term_style.background.unwrap(),
+                style::get_plus_emph_background_color_default(
+                    expected_mode == Mode::Light,
+                    is_true_color
+                )
             );
         }
     }

@@ -10,6 +10,7 @@ if [[ $TARGET != arm-unknown-linux-gnueabihf ]] && [[ $TARGET != aarch64-unknown
     cargo test --target "$TARGET" --verbose
     cargo build --release
     ./tests/test_color_only_output_matches_git_on_full_repo_history
+    ./tests/test_deprecated_options > /dev/null
 
     cargo run --target "$TARGET" -- < /dev/null
 fi

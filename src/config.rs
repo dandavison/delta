@@ -1,16 +1,18 @@
 use std::process;
 use std::str::FromStr;
 
-use bit_set::BitSet;
-use syntect::highlighting::{Color, Style, StyleModifier, Theme, ThemeSet};
+use ansi_term::Color;
+use syntect::highlighting::Color as SyntectColor;
+use syntect::highlighting::Style as SyntectStyle;
+use syntect::highlighting::{Theme, ThemeSet};
 use syntect::parsing::SyntaxSet;
 
 use crate::bat::output::PagingMode;
-use crate::cli;
-use crate::delta::State;
+use crate::bat::terminal::to_ansi_color;
+use crate::cli::{self, unreachable};
 use crate::env;
-use crate::paint;
-use crate::style;
+use crate::style::{self, DecorationStyle, Style};
+use crate::syntect_color;
 
 pub struct Config<'a> {
     pub theme: Option<Theme>,
@@ -18,58 +20,27 @@ pub struct Config<'a> {
     pub dummy_theme: Theme,
     pub max_line_distance: f64,
     pub max_line_distance_for_naively_paired_lines: f64,
-    pub minus_style_modifier: StyleModifier,
-    pub minus_emph_style_modifier: StyleModifier,
-    pub plus_style_modifier: StyleModifier,
-    pub plus_emph_style_modifier: StyleModifier,
+    pub minus_style: Style,
+    pub minus_emph_style: Style,
+    pub minus_non_emph_style: Style,
+    pub zero_style: Style,
+    pub plus_style: Style,
+    pub plus_emph_style: Style,
+    pub plus_non_emph_style: Style,
     pub minus_line_marker: &'a str,
     pub plus_line_marker: &'a str,
-    pub lines_to_be_syntax_highlighted: BitSet,
-    pub commit_style: cli::SectionStyle,
-    pub commit_color: Color,
-    pub file_style: cli::SectionStyle,
-    pub file_color: Color,
-    pub hunk_style: cli::SectionStyle,
-    pub hunk_color: Color,
+    pub commit_style: Style,
+    pub file_style: Style,
+    pub hunk_header_style: Style,
     pub syntax_set: SyntaxSet,
     pub terminal_width: usize,
     pub true_color: bool,
     pub background_color_extends_to_terminal_width: bool,
     pub tab_width: usize,
-    pub no_style: Style,
+    pub null_style: Style,
+    pub null_syntect_style: SyntectStyle,
     pub max_buffered_lines: usize,
     pub paging_mode: PagingMode,
-}
-
-#[allow(dead_code)]
-pub enum ColorLayer {
-    Background,
-    Foreground,
-}
-use ColorLayer::*;
-use State::*;
-
-impl<'a> Config<'a> {
-    #[allow(dead_code)]
-    pub fn get_color(&self, state: &State, layer: ColorLayer) -> Option<Color> {
-        let modifier = match state {
-            HunkMinus => Some(self.minus_style_modifier),
-            HunkZero => None,
-            HunkPlus => Some(self.plus_style_modifier),
-            _ => panic!("Invalid"),
-        };
-        match (modifier, layer) {
-            (Some(modifier), Background) => modifier.background,
-            (Some(modifier), Foreground) => modifier.foreground,
-            (None, _) => None,
-        }
-    }
-
-    #[allow(dead_code)]
-    pub fn should_syntax_highlight(&self, state: &State) -> bool {
-        self.lines_to_be_syntax_highlighted
-            .contains((*state).clone() as usize)
-    }
 }
 
 pub fn get_config<'a>(
@@ -79,26 +50,8 @@ pub fn get_config<'a>(
     true_color: bool,
     terminal_width: usize,
     paging_mode: PagingMode,
-    lines_to_be_syntax_highlighted: BitSet,
 ) -> Config<'a> {
-    // Implement --color-only
-    let keep_plus_minus_markers = if opt.color_only {
-        true
-    } else {
-        opt.keep_plus_minus_markers
-    };
     let background_color_extends_to_terminal_width = opt.width != Some("variable".to_string());
-    let tab_width = if opt.color_only { 0 } else { opt.tab_width };
-    let (commit_style, file_style, hunk_style) = if opt.color_only {
-        (
-            cli::SectionStyle::Plain,
-            cli::SectionStyle::Plain,
-            cli::SectionStyle::Plain,
-        )
-    } else {
-        (opt.commit_style, opt.file_style, opt.hunk_style)
-    };
-
     let theme_name_from_bat_pager = env::get_env_var("BAT_THEME");
     let (is_light_mode, theme_name) = get_is_light_mode_and_theme_name(
         opt.theme.as_ref(),
@@ -108,11 +61,17 @@ pub fn get_config<'a>(
     );
 
     let (
-        minus_style_modifier,
-        minus_emph_style_modifier,
-        plus_style_modifier,
-        plus_emph_style_modifier,
-    ) = make_styles(&opt, is_light_mode, true_color);
+        minus_style,
+        minus_emph_style,
+        minus_non_emph_style,
+        zero_style,
+        plus_style,
+        plus_emph_style,
+        plus_non_emph_style,
+    ) = make_hunk_styles(&opt, is_light_mode, true_color);
+
+    let (commit_style, file_style, hunk_header_style) =
+        make_commit_file_hunk_header_styles(&opt, true_color);
 
     let theme = if style::is_no_syntax_highlighting_theme_name(&theme_name) {
         None
@@ -121,8 +80,16 @@ pub fn get_config<'a>(
     };
     let dummy_theme = theme_set.themes.values().next().unwrap().clone();
 
-    let minus_line_marker = if keep_plus_minus_markers { "-" } else { " " };
-    let plus_line_marker = if keep_plus_minus_markers { "+" } else { " " };
+    let minus_line_marker = if opt.keep_plus_minus_markers {
+        "-"
+    } else {
+        " "
+    };
+    let plus_line_marker = if opt.keep_plus_minus_markers {
+        "+"
+    } else {
+        " "
+    };
 
     let max_line_distance_for_naively_paired_lines =
         env::get_env_var("DELTA_EXPERIMENTAL_MAX_LINE_DISTANCE_FOR_NAIVELY_PAIRED_LINES")
@@ -135,25 +102,25 @@ pub fn get_config<'a>(
         dummy_theme,
         max_line_distance: opt.max_line_distance,
         max_line_distance_for_naively_paired_lines,
-        minus_style_modifier,
-        minus_emph_style_modifier,
-        plus_style_modifier,
-        plus_emph_style_modifier,
-        lines_to_be_syntax_highlighted,
+        minus_style,
+        minus_emph_style,
+        minus_non_emph_style,
+        zero_style,
+        plus_style,
+        plus_emph_style,
+        plus_non_emph_style,
         minus_line_marker,
         plus_line_marker,
         commit_style,
-        commit_color: color_from_rgb_or_ansi_code(&opt.commit_color),
         file_style,
-        file_color: color_from_rgb_or_ansi_code(&opt.file_color),
-        hunk_style,
-        hunk_color: color_from_rgb_or_ansi_code(&opt.hunk_color),
+        hunk_header_style,
         true_color,
         terminal_width,
         background_color_extends_to_terminal_width,
-        tab_width,
+        tab_width: opt.tab_width,
         syntax_set,
-        no_style: style::get_no_style(),
+        null_style: Style::new(),
+        null_syntect_style: SyntectStyle::default(),
         max_buffered_lines: 32,
         paging_mode,
     }
@@ -214,84 +181,414 @@ fn valid_theme_name_or_none(theme_name: Option<&String>, theme_set: &ThemeSet) -
     }
 }
 
-fn make_styles<'a>(
+fn make_hunk_styles<'a>(
     opt: &'a cli::Opt,
     is_light_mode: bool,
     true_color: bool,
-) -> (StyleModifier, StyleModifier, StyleModifier, StyleModifier) {
-    let minus_style = make_style(
-        opt.minus_color.as_deref(),
-        Some(style::get_minus_color_default(is_light_mode, true_color)),
-        opt.minus_foreground_color.as_deref(),
+) -> (Style, Style, Style, Style, Style, Style, Style) {
+    let minus_style = parse_style(
+        &opt.minus_style,
         None,
-    );
-
-    let minus_emph_style = make_style(
-        opt.minus_emph_color.as_deref(),
-        Some(style::get_minus_emph_color_default(
+        Some(style::get_minus_background_color_default(
             is_light_mode,
             true_color,
         )),
-        opt.minus_emph_foreground_color.as_deref(),
-        minus_style.foreground,
-    );
-
-    let plus_style = make_style(
-        opt.plus_color.as_deref(),
-        Some(style::get_plus_color_default(is_light_mode, true_color)),
-        opt.plus_foreground_color.as_deref(),
         None,
+        true_color,
     );
 
-    let plus_emph_style = make_style(
-        opt.plus_emph_color.as_deref(),
-        Some(style::get_plus_emph_color_default(
+    let minus_emph_style = parse_style(
+        &opt.minus_emph_style,
+        None,
+        Some(style::get_minus_emph_background_color_default(
             is_light_mode,
             true_color,
         )),
-        opt.plus_emph_foreground_color.as_deref(),
-        plus_style.foreground,
+        None,
+        true_color,
     );
 
-    (minus_style, minus_emph_style, plus_style, plus_emph_style)
+    // The non-emph styles default to the base style.
+    let minus_non_emph_style = match &opt.minus_non_emph_style {
+        Some(style_string) => parse_style(
+            &style_string,
+            None,
+            minus_style.ansi_term_style.background,
+            None,
+            true_color,
+        ),
+        None => minus_style,
+    };
+
+    let zero_style = parse_style(&opt.zero_style, None, None, None, true_color);
+
+    let plus_style = parse_style(
+        &opt.plus_style,
+        None,
+        Some(style::get_plus_background_color_default(
+            is_light_mode,
+            true_color,
+        )),
+        None,
+        true_color,
+    );
+
+    let plus_emph_style = parse_style(
+        &opt.plus_emph_style,
+        None,
+        Some(style::get_plus_emph_background_color_default(
+            is_light_mode,
+            true_color,
+        )),
+        None,
+        true_color,
+    );
+
+    // The non-emph styles default to the base style.
+    let plus_non_emph_style = match &opt.plus_non_emph_style {
+        Some(style_string) => parse_style(
+            &style_string,
+            None,
+            plus_style.ansi_term_style.background,
+            None,
+            true_color,
+        ),
+        None => plus_style,
+    };
+
+    (
+        minus_style,
+        minus_emph_style,
+        minus_non_emph_style,
+        zero_style,
+        plus_style,
+        plus_emph_style,
+        plus_non_emph_style,
+    )
 }
 
-fn make_style(
-    background: Option<&str>,
-    background_default: Option<Color>,
-    foreground: Option<&str>,
+fn make_commit_file_hunk_header_styles(opt: &cli::Opt, true_color: bool) -> (Style, Style, Style) {
+    (
+        _parse_style_respecting_deprecated_foreground_color_arg(
+            &opt.commit_style,
+            None,
+            None,
+            Some(&opt.commit_decoration_style),
+            opt.deprecated_commit_color.as_deref(),
+            true_color,
+        ),
+        _parse_style_respecting_deprecated_foreground_color_arg(
+            &opt.file_style,
+            None,
+            None,
+            Some(&opt.file_decoration_style),
+            opt.deprecated_file_color.as_deref(),
+            true_color,
+        ),
+        _parse_style_respecting_deprecated_foreground_color_arg(
+            &opt.hunk_header_style,
+            None,
+            None,
+            Some(&opt.hunk_header_decoration_style),
+            opt.deprecated_hunk_color.as_deref(),
+            true_color,
+        ),
+    )
+}
+
+fn _parse_style_respecting_deprecated_foreground_color_arg(
+    style_string: &str,
     foreground_default: Option<Color>,
-) -> StyleModifier {
-    StyleModifier {
-        background: color_from_rgb_or_ansi_code_with_default(background, background_default),
-        foreground: color_from_rgb_or_ansi_code_with_default(foreground, foreground_default),
-        font_style: None,
+    background_default: Option<Color>,
+    decoration_style_string: Option<&str>,
+    deprecated_foreground_color_arg: Option<&str>,
+    true_color: bool,
+) -> Style {
+    let mut style = parse_style(
+        style_string,
+        foreground_default,
+        background_default,
+        decoration_style_string,
+        true_color,
+    );
+    if let Some(s) = deprecated_foreground_color_arg {
+        style.ansi_term_style.foreground = parse_ansi_term_style(s, None, None, true_color)
+            .0
+            .foreground;
+    }
+    style
+}
+
+/// Construct Style from style and decoration-style strings supplied on command line, together with
+/// defaults.
+pub fn parse_style(
+    style_string: &str,
+    foreground_default: Option<Color>,
+    background_default: Option<Color>,
+    decoration_style_string: Option<&str>,
+    true_color: bool,
+) -> Style {
+    let (style_string, special_attribute_from_style_string) =
+        extract_special_attribute(style_string);
+    let (ansi_term_style, is_syntax_highlighted) = parse_ansi_term_style(
+        &style_string,
+        foreground_default,
+        background_default,
+        true_color,
+    );
+    let decoration_style = match decoration_style_string {
+        Some(s) if s != "" => parse_decoration_style(s, true_color),
+        _ => None,
+    };
+    let mut style = Style {
+        ansi_term_style,
+        is_syntax_highlighted,
+        decoration_style,
+    };
+    if let Some(special_attribute) = special_attribute_from_style_string {
+        if let Some(decoration_style) = apply_special_decoration_attribute(
+            style.decoration_style,
+            &special_attribute,
+            true_color,
+        ) {
+            style.decoration_style = Some(decoration_style)
+        }
+    }
+    style
+}
+
+fn apply_special_decoration_attribute(
+    decoration_style: Option<style::DecorationStyle>,
+    special_attribute: &str,
+    true_color: bool,
+) -> Option<DecorationStyle> {
+    let ansi_term_style = match decoration_style {
+        None => ansi_term::Style::new(),
+        Some(style::DecorationStyle::Box(ansi_term_style)) => ansi_term_style,
+        Some(style::DecorationStyle::Underline(ansi_term_style)) => ansi_term_style,
+        Some(style::DecorationStyle::Omit) => ansi_term::Style::new(),
+    };
+    match parse_decoration_style(special_attribute, true_color) {
+        Some(style::DecorationStyle::Box(_)) => Some(style::DecorationStyle::Box(ansi_term_style)),
+        Some(style::DecorationStyle::Underline(_)) => {
+            Some(style::DecorationStyle::Underline(ansi_term_style))
+        }
+        Some(style::DecorationStyle::Omit) => Some(style::DecorationStyle::Omit),
+        None => None,
     }
 }
 
-fn color_from_rgb_or_ansi_code(s: &str) -> Color {
+fn parse_ansi_term_style(
+    s: &str,
+    foreground_default: Option<Color>,
+    background_default: Option<Color>,
+    true_color: bool,
+) -> (ansi_term::Style, bool) {
+    let mut style = ansi_term::Style::new();
+    let mut seen_foreground = false;
+    let mut seen_background = false;
+    let mut is_syntax_highlighted = false;
+    for word in s.to_lowercase().split_whitespace() {
+        if word == "blink" {
+            style.is_blink = true;
+        } else if word == "bold" {
+            style.is_bold = true;
+        } else if word == "dimmed" {
+            style.is_dimmed = true;
+        } else if word == "hidden" {
+            style.is_hidden = true;
+        } else if word == "italic" {
+            style.is_italic = true;
+        } else if word == "reverse" {
+            style.is_reverse = true;
+        } else if word == "strikethrough" {
+            style.is_strikethrough = true;
+        } else if !seen_foreground {
+            if word == "syntax" {
+                is_syntax_highlighted = true;
+            } else {
+                style.foreground =
+                    color_from_rgb_or_ansi_code_with_default(word, foreground_default, true_color);
+            }
+            seen_foreground = true;
+        } else if !seen_background {
+            if word == "syntax" {
+                eprintln!(
+                    "You have used the special color 'syntax' as a background color \
+                     (second color in a style string). It may only be used as a foreground \
+                     color (first color in a style string)."
+                );
+                process::exit(1);
+            } else {
+                style.background =
+                    color_from_rgb_or_ansi_code_with_default(word, background_default, true_color);
+            }
+            seen_background = true;
+        } else {
+            eprintln!(
+                "Invalid style string: {}. See the STYLES section of delta --help.",
+                s
+            );
+            process::exit(1);
+        }
+    }
+    (style, is_syntax_highlighted)
+}
+
+fn parse_decoration_style(style_string: &str, true_color: bool) -> Option<DecorationStyle> {
+    let style_string = style_string.to_lowercase();
+    let (style_string, special_attribute) = extract_special_attribute(&style_string);
+    let special_attribute = special_attribute.unwrap_or_else(|| {
+        eprintln!(
+            "To specify a decoration style, you must supply one of the special attributes \
+             'box', 'underline', or 'omit'.",
+        );
+        process::exit(1);
+    });
+    let (style, is_syntax_highlighted): (ansi_term::Style, bool) =
+        parse_ansi_term_style(&style_string, None, None, true_color);
+    if is_syntax_highlighted {
+        eprintln!("'syntax' may not be used as a color name in a decoration style.");
+        process::exit(1);
+    };
+    match special_attribute.as_ref() {
+        "box" => Some(DecorationStyle::Box(style)),
+        "underline" => Some(DecorationStyle::Underline(style)),
+        "omit" => Some(DecorationStyle::Omit),
+        "plain" => None,
+        _ => unreachable("Unreachable code path reached in parse_decoration_style."),
+    }
+}
+
+/// If the style string contains a 'special decoration attribute' then extract it and return it
+/// along with the modified style string.
+fn extract_special_attribute(style_string: &str) -> (String, Option<String>) {
+    let (special_attributes, standard_attributes): (Vec<&str>, Vec<&str>) =
+        style_string.split_whitespace().partition(|&token| {
+            token == "box" || token == "underline" || token == "omit" || token == "plain"
+        });
+    match special_attributes {
+        attrs if attrs.len() == 0 => (style_string.to_string(), None),
+        attrs if attrs.len() == 1 => (standard_attributes.join(" "), Some(attrs[0].to_string())),
+        attrs => {
+            eprintln!(
+                "Encountered multiple special attributes: {:?}. \
+                 You may supply no more than one of the special attributes 'box', 'underline', \
+                 and 'omit'.",
+                attrs.join(", ")
+            );
+            process::exit(1);
+        }
+    }
+}
+
+pub fn color_from_rgb_or_ansi_code(s: &str, true_color: bool) -> Color {
     let die = || {
         eprintln!("Invalid color: {}", s);
         process::exit(1);
     };
-    if s.starts_with("#") {
-        Color::from_str(s).unwrap_or_else(|_| die())
+    let syntect_color = if s.starts_with("#") {
+        SyntectColor::from_str(s).unwrap_or_else(|_| die())
     } else {
         s.parse::<u8>()
             .ok()
-            .and_then(paint::color_from_ansi_number)
-            .or_else(|| paint::color_from_ansi_name(s))
+            .and_then(syntect_color::syntect_color_from_ansi_number)
+            .or_else(|| syntect_color::syntect_color_from_ansi_name(s))
             .unwrap_or_else(die)
-    }
+    };
+    to_ansi_color(syntect_color, true_color)
 }
 
 fn color_from_rgb_or_ansi_code_with_default(
-    arg: Option<&str>,
+    arg: &str,
     default: Option<Color>,
+    true_color: bool,
 ) -> Option<Color> {
-    match arg {
-        Some(string) if string.to_lowercase() == "none" => None,
-        Some(string) => Some(color_from_rgb_or_ansi_code(&string)),
-        None => default,
+    let arg = arg.to_lowercase();
+    if arg == "normal" {
+        None
+    } else if arg == "auto" {
+        default
+    } else {
+        Some(color_from_rgb_or_ansi_code(&arg, true_color))
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::style::ansi_color_name_to_number;
+    use ansi_term;
+
+    #[test]
+    fn test_parse_ansi_term_style() {
+        assert_eq!(
+            parse_ansi_term_style("", None, None, false),
+            (ansi_term::Style::new(), false)
+        );
+        assert_eq!(
+            parse_ansi_term_style("red", None, None, false),
+            (
+                ansi_term::Style {
+                    foreground: Some(ansi_term::Color::Fixed(
+                        ansi_color_name_to_number("red").unwrap()
+                    )),
+                    ..ansi_term::Style::new()
+                },
+                false
+            )
+        );
+        assert_eq!(
+            parse_ansi_term_style("red green", None, None, false),
+            (
+                ansi_term::Style {
+                    foreground: Some(ansi_term::Color::Fixed(
+                        ansi_color_name_to_number("red").unwrap()
+                    )),
+                    background: Some(ansi_term::Color::Fixed(
+                        ansi_color_name_to_number("green").unwrap()
+                    )),
+                    ..ansi_term::Style::new()
+                },
+                false
+            )
+        );
+    }
+
+    #[test]
+    fn test_parse_ansi_term_style_with_special_syntax_color() {
+        assert_eq!(
+            parse_ansi_term_style("syntax", None, None, false),
+            (ansi_term::Style::new(), true)
+        );
+        assert_eq!(
+            parse_ansi_term_style("syntax italic white hidden", None, None, false),
+            (
+                ansi_term::Style {
+                    background: Some(ansi_term::Color::Fixed(
+                        ansi_color_name_to_number("white").unwrap()
+                    )),
+                    is_italic: true,
+                    is_hidden: true,
+                    ..ansi_term::Style::new()
+                },
+                true
+            )
+        );
+        assert_eq!(
+            parse_ansi_term_style("bold syntax italic white hidden", None, None, false),
+            (
+                ansi_term::Style {
+                    background: Some(ansi_term::Color::Fixed(
+                        ansi_color_name_to_number("white").unwrap()
+                    )),
+                    is_bold: true,
+                    is_italic: true,
+                    is_hidden: true,
+                    ..ansi_term::Style::new()
+                },
+                true
+            )
+        );
     }
 }
