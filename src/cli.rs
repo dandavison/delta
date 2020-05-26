@@ -393,6 +393,7 @@ mod tests {
     use crate::tests::integration_test_utils::integration_test_utils;
 
     #[test]
+    #[ignore]
     fn test_theme_selection() {
         #[derive(PartialEq)]
         enum Mode {
