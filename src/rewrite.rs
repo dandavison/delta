@@ -8,7 +8,7 @@ use crate::cli;
 
 pub fn apply_rewrite_rules(opt: &mut cli::Opt) {
     _rewrite_style_strings_to_honor_deprecated_minus_plus_options(opt);
-    _rewrite_options_to_implement_deprecated_commit_file_hunk_header_options(opt);
+    _rewrite_options_to_implement_deprecated_hunk_style_option(opt);
     _rewrite_options_to_implement_color_only(opt);
 }
 
@@ -65,10 +65,6 @@ fn _rewrite_options_to_implement_color_only(opt: &mut cli::Opt) {
         opt.file_decoration_style = "".to_string();
         opt.hunk_header_decoration_style = "".to_string();
     }
-}
-
-fn _rewrite_options_to_implement_deprecated_commit_file_hunk_header_options(opt: &mut cli::Opt) {
-    _rewrite_options_to_implement_deprecated_hunk_style_option(opt);
 }
 
 /// Honor deprecated arguments by rewriting the canonical --*-style arguments if appropriate.
