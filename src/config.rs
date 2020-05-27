@@ -372,22 +372,20 @@ pub fn parse_style(
 }
 
 fn apply_special_decoration_attribute(
-    decoration_style: Option<style::DecorationStyle>,
+    decoration_style: Option<DecorationStyle>,
     special_attribute: &str,
     true_color: bool,
 ) -> Option<DecorationStyle> {
     let ansi_term_style = match decoration_style {
         None => ansi_term::Style::new(),
-        Some(style::DecorationStyle::Box(ansi_term_style)) => ansi_term_style,
-        Some(style::DecorationStyle::Underline(ansi_term_style)) => ansi_term_style,
-        Some(style::DecorationStyle::Omit) => ansi_term::Style::new(),
+        Some(DecorationStyle::Box(ansi_term_style)) => ansi_term_style,
+        Some(DecorationStyle::Underline(ansi_term_style)) => ansi_term_style,
+        Some(DecorationStyle::Omit) => ansi_term::Style::new(),
     };
     match parse_decoration_style(special_attribute, true_color) {
-        Some(style::DecorationStyle::Box(_)) => Some(style::DecorationStyle::Box(ansi_term_style)),
-        Some(style::DecorationStyle::Underline(_)) => {
-            Some(style::DecorationStyle::Underline(ansi_term_style))
-        }
-        Some(style::DecorationStyle::Omit) => Some(style::DecorationStyle::Omit),
+        Some(DecorationStyle::Box(_)) => Some(DecorationStyle::Box(ansi_term_style)),
+        Some(DecorationStyle::Underline(_)) => Some(DecorationStyle::Underline(ansi_term_style)),
+        Some(DecorationStyle::Omit) => Some(DecorationStyle::Omit),
         None => None,
     }
 }

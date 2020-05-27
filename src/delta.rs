@@ -10,7 +10,7 @@ use crate::config::Config;
 use crate::draw;
 use crate::paint::Painter;
 use crate::parse;
-use crate::style::{self, DecorationStyle};
+use crate::style::DecorationStyle;
 
 #[derive(Clone, Debug, PartialEq)]
 pub enum State {
@@ -266,15 +266,15 @@ fn handle_hunk_header_line(
 ) -> std::io::Result<()> {
     let decoration_ansi_term_style;
     let draw_fn = match config.hunk_header_style.decoration_style {
-        Some(style::DecorationStyle::Box(style)) => {
+        Some(DecorationStyle::Box(style)) => {
             decoration_ansi_term_style = style;
             draw::write_boxed
         }
-        Some(style::DecorationStyle::Underline(style)) => {
+        Some(DecorationStyle::Underline(style)) => {
             decoration_ansi_term_style = style;
             draw::write_underlined
         }
-        Some(style::DecorationStyle::Omit) => return Ok(()),
+        Some(DecorationStyle::Omit) => return Ok(()),
         None => unreachable("Unreachable code path reached in handle_hunk_header_line."),
     };
     let (raw_code_fragment, line_number) = parse::parse_hunk_metadata(&line);
