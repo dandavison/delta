@@ -61,6 +61,12 @@ pub fn write_boxed_with_line(
     Ok(())
 }
 
+enum Underoverline {
+    Under,
+    Over,
+    Underover,
+}
+
 pub fn write_underlined(
     writer: &mut dyn Write,
     text: &str,
@@ -69,9 +75,79 @@ pub fn write_underlined(
     decoration_style: ansi_term::Style,
     heavy: bool,
 ) -> std::io::Result<()> {
+    _write_under_or_over_lined(
+        Underoverline::Under,
+        writer,
+        text,
+        line_width,
+        text_style,
+        decoration_style,
+        heavy,
+    )
+}
+
+pub fn write_overlined(
+    writer: &mut dyn Write,
+    text: &str,
+    line_width: usize,
+    text_style: ansi_term::Style,
+    decoration_style: ansi_term::Style,
+    heavy: bool,
+) -> std::io::Result<()> {
+    _write_under_or_over_lined(
+        Underoverline::Over,
+        writer,
+        text,
+        line_width,
+        text_style,
+        decoration_style,
+        heavy,
+    )
+}
+
+pub fn write_underoverlined(
+    writer: &mut dyn Write,
+    text: &str,
+    line_width: usize,
+    text_style: ansi_term::Style,
+    decoration_style: ansi_term::Style,
+    heavy: bool,
+) -> std::io::Result<()> {
+    _write_under_or_over_lined(
+        Underoverline::Underover,
+        writer,
+        text,
+        line_width,
+        text_style,
+        decoration_style,
+        heavy,
+    )
+}
+
+fn _write_under_or_over_lined(
+    underoverline: Underoverline,
+    writer: &mut dyn Write,
+    text: &str,
+    line_width: usize,
+    text_style: ansi_term::Style,
+    decoration_style: ansi_term::Style,
+    heavy: bool,
+) -> std::io::Result<()> {
+    let mut write_line: Box<dyn FnMut(&mut dyn Write) -> std::io::Result<()>> =
+        Box::new(|writer| {
+            write_horizontal_line(writer, line_width - 1, text_style, decoration_style, heavy)?;
+            write!(writer, "\n")?;
+            Ok(())
+        });
+    match underoverline {
+        Underoverline::Under => {}
+        _ => write_line(writer)?,
+    }
     writeln!(writer, "{}", text_style.paint(text))?;
-    write_horizontal_line(writer, line_width - 1, text_style, decoration_style, heavy)?;
-    write!(writer, "\n")?;
+    match underoverline {
+        Underoverline::Over => {}
+        _ => write_line(writer)?,
+    }
     Ok(())
 }
 

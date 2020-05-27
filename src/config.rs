@@ -327,6 +327,14 @@ fn _parse_style_respecting_deprecated_foreground_color_arg(
                 ansi_term_style.foreground = foreground_from_deprecated_arg;
                 Some(DecorationStyle::Underline(ansi_term_style))
             }
+            Some(DecorationStyle::Overline(mut ansi_term_style)) => {
+                ansi_term_style.foreground = foreground_from_deprecated_arg;
+                Some(DecorationStyle::Overline(ansi_term_style))
+            }
+            Some(DecorationStyle::Underoverline(mut ansi_term_style)) => {
+                ansi_term_style.foreground = foreground_from_deprecated_arg;
+                Some(DecorationStyle::Underoverline(ansi_term_style))
+            }
             _ => style.decoration_style,
         };
     }
@@ -380,11 +388,17 @@ fn apply_special_decoration_attribute(
         None => ansi_term::Style::new(),
         Some(DecorationStyle::Box(ansi_term_style)) => ansi_term_style,
         Some(DecorationStyle::Underline(ansi_term_style)) => ansi_term_style,
+        Some(DecorationStyle::Overline(ansi_term_style)) => ansi_term_style,
+        Some(DecorationStyle::Underoverline(ansi_term_style)) => ansi_term_style,
         Some(DecorationStyle::Omit) => ansi_term::Style::new(),
     };
     match parse_decoration_style(special_attribute, true_color) {
         Some(DecorationStyle::Box(_)) => Some(DecorationStyle::Box(ansi_term_style)),
         Some(DecorationStyle::Underline(_)) => Some(DecorationStyle::Underline(ansi_term_style)),
+        Some(DecorationStyle::Overline(_)) => Some(DecorationStyle::Overline(ansi_term_style)),
+        Some(DecorationStyle::Underoverline(_)) => {
+            Some(DecorationStyle::Underoverline(ansi_term_style))
+        }
         Some(DecorationStyle::Omit) => Some(DecorationStyle::Omit),
         None => None,
     }
@@ -455,8 +469,9 @@ fn parse_decoration_style(style_string: &str, true_color: bool) -> Option<Decora
     let (style_string, special_attribute) = extract_special_attribute(&style_string);
     let special_attribute = special_attribute.unwrap_or_else(|| {
         eprintln!(
-            "To specify a decoration style, you must supply one of the special attributes \
-             'box', 'underline', or 'omit'.",
+            "Invalid decoration style: '{}'. To specify a decoration style, you must supply one of \
+             the special attributes: 'box', 'underline', 'overline', 'underoverline', or 'omit'.",
+            style_string
         );
         process::exit(1);
     });
@@ -469,6 +484,8 @@ fn parse_decoration_style(style_string: &str, true_color: bool) -> Option<Decora
     match special_attribute.as_ref() {
         "box" => Some(DecorationStyle::Box(style)),
         "underline" => Some(DecorationStyle::Underline(style)),
+        "overline" => Some(DecorationStyle::Overline(style)),
+        "underoverline" => Some(DecorationStyle::Underoverline(style)),
         "omit" => Some(DecorationStyle::Omit),
         "plain" => None,
         _ => unreachable("Unreachable code path reached in parse_decoration_style."),
@@ -483,7 +500,13 @@ fn extract_special_attribute(style_string: &str) -> (String, Option<String>) {
         .split_whitespace()
         .map(|word| word.trim_matches(|c| c == '"' || c == '\''))
         .partition(|&token| {
-            token == "box" || token == "underline" || token == "omit" || token == "plain"
+            // TODO: This should be tied to the enum
+            token == "box"
+                || token == "underline"
+                || token == "overline"
+                || token == "underoverline"
+                || token == "omit"
+                || token == "plain"
         });
     match special_attributes {
         attrs if attrs.len() == 0 => (style_string.to_string(), None),

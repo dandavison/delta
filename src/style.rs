@@ -11,6 +11,8 @@ pub struct Style {
 pub enum DecorationStyle {
     Box(ansi_term::Style),
     Underline(ansi_term::Style),
+    Overline(ansi_term::Style),
+    Underoverline(ansi_term::Style),
     Omit,
 }
 
@@ -27,6 +29,8 @@ impl Style {
         match self.decoration_style {
             Some(DecorationStyle::Box(style)) => Some(style),
             Some(DecorationStyle::Underline(style)) => Some(style),
+            Some(DecorationStyle::Overline(style)) => Some(style),
+            Some(DecorationStyle::Underoverline(style)) => Some(style),
             _ => None,
         }
     }

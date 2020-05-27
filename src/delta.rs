@@ -200,6 +200,14 @@ fn handle_commit_meta_header_line(
             decoration_ansi_term_style = style;
             draw::write_underlined
         }
+        Some(DecorationStyle::Overline(style)) => {
+            decoration_ansi_term_style = style;
+            draw::write_overlined
+        }
+        Some(DecorationStyle::Underoverline(style)) => {
+            decoration_ansi_term_style = style;
+            draw::write_underoverlined
+        }
         Some(DecorationStyle::Omit) => return Ok(()),
         None => unreachable("Unreachable code path reached in handle_commit_meta_header_line."),
     };
@@ -242,6 +250,14 @@ fn handle_generic_file_meta_header_line(
             decoration_ansi_term_style = style;
             draw::write_underlined
         }
+        Some(DecorationStyle::Overline(style)) => {
+            decoration_ansi_term_style = style;
+            draw::write_overlined
+        }
+        Some(DecorationStyle::Underoverline(style)) => {
+            decoration_ansi_term_style = style;
+            draw::write_underoverlined
+        }
         Some(DecorationStyle::Omit) => return Ok(()),
         None => {
             unreachable("Unreachable code path reached in handle_generic_file_meta_header_line.")
@@ -273,6 +289,14 @@ fn handle_hunk_header_line(
         Some(DecorationStyle::Underline(style)) => {
             decoration_ansi_term_style = style;
             draw::write_underlined
+        }
+        Some(DecorationStyle::Overline(style)) => {
+            decoration_ansi_term_style = style;
+            draw::write_overlined
+        }
+        Some(DecorationStyle::Underoverline(style)) => {
+            decoration_ansi_term_style = style;
+            draw::write_underoverlined
         }
         Some(DecorationStyle::Omit) => return Ok(()),
         None => unreachable("Unreachable code path reached in handle_hunk_header_line."),
