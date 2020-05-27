@@ -312,9 +312,23 @@ fn _parse_style_respecting_deprecated_foreground_color_arg(
         true_color,
     );
     if let Some(s) = deprecated_foreground_color_arg {
-        style.ansi_term_style.foreground = parse_ansi_term_style(s, None, None, true_color)
+        // The deprecated --{commit,file,hunk}-color args functioned to set the decoration
+        // foreground color. In the case of file, it set the text foreground color also.
+        let foreground_from_deprecated_arg = parse_ansi_term_style(s, None, None, true_color)
             .0
             .foreground;
+        style.ansi_term_style.foreground = foreground_from_deprecated_arg;
+        style.decoration_style = match style.decoration_style {
+            Some(DecorationStyle::Box(mut ansi_term_style)) => {
+                ansi_term_style.foreground = foreground_from_deprecated_arg;
+                Some(DecorationStyle::Box(ansi_term_style))
+            }
+            Some(DecorationStyle::Underline(mut ansi_term_style)) => {
+                ansi_term_style.foreground = foreground_from_deprecated_arg;
+                Some(DecorationStyle::Underline(ansi_term_style))
+            }
+            _ => style.decoration_style,
+        };
     }
     style
 }
