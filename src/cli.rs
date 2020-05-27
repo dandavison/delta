@@ -57,8 +57,8 @@ A complete description of the style string syntax follows:
 - This means that in order to specify a background color you must also specify a foreground (text)
   color.
 
-- If you just want delta to do what it would normally do for one of the colors, then use the
-  special color 'auto'. This can be used for both foreground and background.
+- If you just want delta to choose one of the colors automatically, then use the special color
+  'auto'. This can be used for both foreground and background.
 
 - If you want the foreground text to be syntax-highlighted according to its language, then use the
   special foreground color 'syntax'. This can only be used for the foreground (text).
@@ -72,12 +72,13 @@ A complete description of the style string syntax follows:
 COLORS
 ------
 
-There are three ways to specify a color:
+There are three ways to specify a color (this section applies to both foreground and background
+colors within a style string):
 
 1. RGB hex code
 
    An example of using an RGB hex code is:
-   --file-color=\"#0e7c0e\"
+   --file-style=\"#0e7c0e\"
 
 2. ANSI color name
 
@@ -88,7 +89,7 @@ There are three ways to specify a color:
    bright-black, bright-red, bright-green, bright-yellow, bright-blue, bright-magenta, bright-cyan, bright-white
 
    An example of using an ANSI color name is:
-   --file-color=\"green\"
+   --file-style=\"green\"
 
    Unlike RGB hex codes, ANSI color names are just names: you can choose the exact color that each
    name corresponds to in the settings of your terminal application (the application you use to
@@ -101,7 +102,7 @@ There are three ways to specify a color:
 3. ANSI color number
 
    An example of using an ANSI color number is:
-   --file-color=28
+   --file-style=28
 
    There are 256 ANSI color numbers: 0-255. The first 16 are the same as the colors described in
    the \"ANSI color name\" section above. See https://en.wikipedia.org/wiki/ANSI_escape_code#8-bit.
