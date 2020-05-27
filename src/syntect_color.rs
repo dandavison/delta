@@ -2,10 +2,10 @@ use std::str::FromStr;
 
 use syntect::highlighting::Color;
 
-use crate::style;
+use crate::color;
 
 pub fn syntect_color_from_ansi_name(name: &str) -> Option<Color> {
-    style::ansi_color_name_to_number(name).and_then(syntect_color_from_ansi_number)
+    color::ansi_color_name_to_number(name).and_then(syntect_color_from_ansi_number)
 }
 
 /// Convert 8-bit ANSI code to #RGBA string with ANSI code in red channel and 0 in alpha channel.

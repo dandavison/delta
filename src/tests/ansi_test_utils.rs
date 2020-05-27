@@ -3,7 +3,8 @@ pub mod ansi_test_utils {
     use ansi_term;
     use console::strip_ansi_codes;
 
-    use crate::config::{color_from_rgb_or_ansi_code, Config};
+    use crate::color;
+    use crate::config::Config;
     use crate::paint;
     use crate::style::Style;
 
@@ -23,7 +24,7 @@ pub mod ansi_test_utils {
         assert!(strip_ansi_codes(line).starts_with(expected_prefix));
         assert!(has_foreground_color(
             line,
-            color_from_rgb_or_ansi_code(expected_color, config.true_color)
+            color::color_from_rgb_or_ansi_code(expected_color, config.true_color)
         ));
     }
 

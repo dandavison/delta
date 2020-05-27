@@ -1,18 +1,13 @@
-use std::process;
-use std::str::FromStr;
-
-use ansi_term::Color;
-use syntect::highlighting::Color as SyntectColor;
 use syntect::highlighting::Style as SyntectStyle;
 use syntect::highlighting::{Theme, ThemeSet};
 use syntect::parsing::SyntaxSet;
 
 use crate::bat::output::PagingMode;
-use crate::bat::terminal::to_ansi_color;
-use crate::cli::{self, unreachable};
+use crate::cli;
+use crate::color;
 use crate::env;
-use crate::style::{self, DecorationStyle, Style};
-use crate::syntect_color;
+use crate::style::Style;
+use crate::theme;
 
 pub struct Config<'a> {
     pub theme: Option<Theme>,
@@ -53,7 +48,7 @@ pub fn get_config<'a>(
 ) -> Config<'a> {
     let background_color_extends_to_terminal_width = opt.width != Some("variable".to_string());
     let theme_name_from_bat_pager = env::get_env_var("BAT_THEME");
-    let (is_light_mode, theme_name) = get_is_light_mode_and_theme_name(
+    let (is_light_mode, theme_name) = theme::get_is_light_mode_and_theme_name(
         opt.theme.as_ref(),
         theme_name_from_bat_pager.as_ref(),
         opt.light,
@@ -73,7 +68,7 @@ pub fn get_config<'a>(
     let (commit_style, file_style, hunk_header_style) =
         make_commit_file_hunk_header_styles(&opt, true_color);
 
-    let theme = if style::is_no_syntax_highlighting_theme_name(&theme_name) {
+    let theme = if theme::is_no_syntax_highlighting_theme_name(&theme_name) {
         None
     } else {
         Some(theme_set.themes[&theme_name].clone())
@@ -126,70 +121,15 @@ pub fn get_config<'a>(
     }
 }
 
-/// Return a (theme_name, is_light_mode) tuple.
-/// theme_name == None in return value means syntax highlighting is disabled.
-///
-/// There are two types of color choices that have to be made:
-/// 1. The choice of "theme". This is the language syntax highlighting theme; you have to make this choice when using `bat` also.
-/// 2. The choice of "light vs dark mode". This determines whether the background colors should be chosen for a light or dark terminal background. (`bat` has no equivalent.)
-///
-/// Basically:
-/// 1. The theme is specified by the `--theme` option. If this isn't supplied then it is specified by the `BAT_PAGER` environment variable.
-/// 2. Light vs dark mode is specified by the `--light` or `--dark` options. If these aren't supplied then it is inferred from the chosen theme.
-///
-/// In the absence of other factors, the default assumes a dark terminal background.
-///
-/// Specifically, the rules are as follows:
-///
-/// | --theme    | $BAT_THEME | --light/--dark | Behavior                                                                   |
-/// |------------|------------|----------------|----------------------------------------------------------------------------|
-/// | -          | -          | -              | default dark theme, dark mode                                              |
-/// | some_theme | (IGNORED)  | -              | some_theme with light/dark mode inferred accordingly                       |
-/// | -          | BAT_THEME  | -              | BAT_THEME, with light/dark mode inferred accordingly                       |
-/// | -          | -          | yes            | default light/dark theme, light/dark mode                                  |
-/// | some_theme | (IGNORED)  | yes            | some_theme, light/dark mode (even if some_theme conflicts with light/dark) |
-/// | -          | BAT_THEME  | yes            | BAT_THEME, light/dark mode (even if BAT_THEME conflicts with light/dark)   |
-fn get_is_light_mode_and_theme_name(
-    theme_arg: Option<&String>,
-    bat_theme_env_var: Option<&String>,
-    light_mode_arg: bool,
-    theme_set: &ThemeSet,
-) -> (bool, String) {
-    let theme_arg = valid_theme_name_or_none(theme_arg, theme_set);
-    let bat_theme_env_var = valid_theme_name_or_none(bat_theme_env_var, theme_set);
-    match (theme_arg, bat_theme_env_var, light_mode_arg) {
-        (None, None, false) => (false, style::DEFAULT_DARK_THEME.to_string()),
-        (Some(theme_name), _, false) => (style::is_light_theme(&theme_name), theme_name),
-        (None, Some(theme_name), false) => (style::is_light_theme(&theme_name), theme_name),
-        (None, None, true) => (true, style::DEFAULT_LIGHT_THEME.to_string()),
-        (Some(theme_name), _, is_light_mode) => (is_light_mode, theme_name),
-        (None, Some(theme_name), is_light_mode) => (is_light_mode, theme_name),
-    }
-}
-
-// At this stage the theme name is considered valid if it is either a real theme name or the special
-// no-syntax-highlighting name.
-fn valid_theme_name_or_none(theme_name: Option<&String>, theme_set: &ThemeSet) -> Option<String> {
-    match theme_name {
-        Some(name)
-            if style::is_no_syntax_highlighting_theme_name(name)
-                || theme_set.themes.contains_key(name) =>
-        {
-            Some(name.to_string())
-        }
-        _ => None,
-    }
-}
-
 fn make_hunk_styles<'a>(
     opt: &'a cli::Opt,
     is_light_mode: bool,
     true_color: bool,
 ) -> (Style, Style, Style, Style, Style, Style, Style) {
-    let minus_style = parse_style(
+    let minus_style = Style::from_str(
         &opt.minus_style,
         None,
-        Some(style::get_minus_background_color_default(
+        Some(color::get_minus_background_color_default(
             is_light_mode,
             true_color,
         )),
@@ -197,10 +137,10 @@ fn make_hunk_styles<'a>(
         true_color,
     );
 
-    let minus_emph_style = parse_style(
+    let minus_emph_style = Style::from_str(
         &opt.minus_emph_style,
         None,
-        Some(style::get_minus_emph_background_color_default(
+        Some(color::get_minus_emph_background_color_default(
             is_light_mode,
             true_color,
         )),
@@ -210,7 +150,7 @@ fn make_hunk_styles<'a>(
 
     // The non-emph styles default to the base style.
     let minus_non_emph_style = match &opt.minus_non_emph_style {
-        Some(style_string) => parse_style(
+        Some(style_string) => Style::from_str(
             &style_string,
             None,
             minus_style.ansi_term_style.background,
@@ -220,12 +160,12 @@ fn make_hunk_styles<'a>(
         None => minus_style,
     };
 
-    let zero_style = parse_style(&opt.zero_style, None, None, None, true_color);
+    let zero_style = Style::from_str(&opt.zero_style, None, None, None, true_color);
 
-    let plus_style = parse_style(
+    let plus_style = Style::from_str(
         &opt.plus_style,
         None,
-        Some(style::get_plus_background_color_default(
+        Some(color::get_plus_background_color_default(
             is_light_mode,
             true_color,
         )),
@@ -233,10 +173,10 @@ fn make_hunk_styles<'a>(
         true_color,
     );
 
-    let plus_emph_style = parse_style(
+    let plus_emph_style = Style::from_str(
         &opt.plus_emph_style,
         None,
-        Some(style::get_plus_emph_background_color_default(
+        Some(color::get_plus_emph_background_color_default(
             is_light_mode,
             true_color,
         )),
@@ -246,7 +186,7 @@ fn make_hunk_styles<'a>(
 
     // The non-emph styles default to the base style.
     let plus_non_emph_style = match &opt.plus_non_emph_style {
-        Some(style_string) => parse_style(
+        Some(style_string) => Style::from_str(
             &style_string,
             None,
             plus_style.ansi_term_style.background,
@@ -269,7 +209,7 @@ fn make_hunk_styles<'a>(
 
 fn make_commit_file_hunk_header_styles(opt: &cli::Opt, true_color: bool) -> (Style, Style, Style) {
     (
-        _parse_style_respecting_deprecated_foreground_color_arg(
+        Style::from_str_respecting_deprecated_foreground_color_arg(
             &opt.commit_style,
             None,
             None,
@@ -277,7 +217,7 @@ fn make_commit_file_hunk_header_styles(opt: &cli::Opt, true_color: bool) -> (Sty
             opt.deprecated_commit_color.as_deref(),
             true_color,
         ),
-        _parse_style_respecting_deprecated_foreground_color_arg(
+        Style::from_str_respecting_deprecated_foreground_color_arg(
             &opt.file_style,
             None,
             None,
@@ -285,7 +225,7 @@ fn make_commit_file_hunk_header_styles(opt: &cli::Opt, true_color: bool) -> (Sty
             opt.deprecated_file_color.as_deref(),
             true_color,
         ),
-        _parse_style_respecting_deprecated_foreground_color_arg(
+        Style::from_str_respecting_deprecated_foreground_color_arg(
             &opt.hunk_header_style,
             None,
             None,
@@ -296,340 +236,135 @@ fn make_commit_file_hunk_header_styles(opt: &cli::Opt, true_color: bool) -> (Sty
     )
 }
 
-fn _parse_style_respecting_deprecated_foreground_color_arg(
-    style_string: &str,
-    foreground_default: Option<Color>,
-    background_default: Option<Color>,
-    decoration_style_string: Option<&str>,
-    deprecated_foreground_color_arg: Option<&str>,
-    true_color: bool,
-) -> Style {
-    let mut style = parse_style(
-        style_string,
-        foreground_default,
-        background_default,
-        decoration_style_string,
-        true_color,
-    );
-    if let Some(s) = deprecated_foreground_color_arg {
-        // The deprecated --{commit,file,hunk}-color args functioned to set the decoration
-        // foreground color. In the case of file, it set the text foreground color also.
-        let foreground_from_deprecated_arg = parse_ansi_term_style(s, None, None, true_color)
-            .0
-            .foreground;
-        style.ansi_term_style.foreground = foreground_from_deprecated_arg;
-        style.decoration_style = match style.decoration_style {
-            Some(DecorationStyle::Box(mut ansi_term_style)) => {
-                ansi_term_style.foreground = foreground_from_deprecated_arg;
-                Some(DecorationStyle::Box(ansi_term_style))
-            }
-            Some(DecorationStyle::Underline(mut ansi_term_style)) => {
-                ansi_term_style.foreground = foreground_from_deprecated_arg;
-                Some(DecorationStyle::Underline(ansi_term_style))
-            }
-            Some(DecorationStyle::Overline(mut ansi_term_style)) => {
-                ansi_term_style.foreground = foreground_from_deprecated_arg;
-                Some(DecorationStyle::Overline(ansi_term_style))
-            }
-            Some(DecorationStyle::Underoverline(mut ansi_term_style)) => {
-                ansi_term_style.foreground = foreground_from_deprecated_arg;
-                Some(DecorationStyle::Underoverline(ansi_term_style))
-            }
-            _ => style.decoration_style,
-        };
-    }
-    style
-}
-
-/// Construct Style from style and decoration-style strings supplied on command line, together with
-/// defaults.
-pub fn parse_style(
-    style_string: &str,
-    foreground_default: Option<Color>,
-    background_default: Option<Color>,
-    decoration_style_string: Option<&str>,
-    true_color: bool,
-) -> Style {
-    let (style_string, special_attribute_from_style_string) =
-        extract_special_attribute(style_string);
-    let (ansi_term_style, is_syntax_highlighted) = parse_ansi_term_style(
-        &style_string,
-        foreground_default,
-        background_default,
-        true_color,
-    );
-    let decoration_style = match decoration_style_string {
-        Some(s) if s != "" => parse_decoration_style(s, true_color),
-        _ => None,
-    };
-    let mut style = Style {
-        ansi_term_style,
-        is_syntax_highlighted,
-        decoration_style,
-    };
-    if let Some(special_attribute) = special_attribute_from_style_string {
-        if let Some(decoration_style) = apply_special_decoration_attribute(
-            style.decoration_style,
-            &special_attribute,
-            true_color,
-        ) {
-            style.decoration_style = Some(decoration_style)
-        }
-    }
-    style
-}
-
-fn apply_special_decoration_attribute(
-    decoration_style: Option<DecorationStyle>,
-    special_attribute: &str,
-    true_color: bool,
-) -> Option<DecorationStyle> {
-    let ansi_term_style = match decoration_style {
-        None => ansi_term::Style::new(),
-        Some(DecorationStyle::Box(ansi_term_style)) => ansi_term_style,
-        Some(DecorationStyle::Underline(ansi_term_style)) => ansi_term_style,
-        Some(DecorationStyle::Overline(ansi_term_style)) => ansi_term_style,
-        Some(DecorationStyle::Underoverline(ansi_term_style)) => ansi_term_style,
-        Some(DecorationStyle::Omit) => ansi_term::Style::new(),
-    };
-    match parse_decoration_style(special_attribute, true_color) {
-        Some(DecorationStyle::Box(_)) => Some(DecorationStyle::Box(ansi_term_style)),
-        Some(DecorationStyle::Underline(_)) => Some(DecorationStyle::Underline(ansi_term_style)),
-        Some(DecorationStyle::Overline(_)) => Some(DecorationStyle::Overline(ansi_term_style)),
-        Some(DecorationStyle::Underoverline(_)) => {
-            Some(DecorationStyle::Underoverline(ansi_term_style))
-        }
-        Some(DecorationStyle::Omit) => Some(DecorationStyle::Omit),
-        None => None,
-    }
-}
-
-fn parse_ansi_term_style(
-    s: &str,
-    foreground_default: Option<Color>,
-    background_default: Option<Color>,
-    true_color: bool,
-) -> (ansi_term::Style, bool) {
-    let mut style = ansi_term::Style::new();
-    let mut seen_foreground = false;
-    let mut seen_background = false;
-    let mut is_syntax_highlighted = false;
-    for word in s
-        .to_lowercase()
-        .split_whitespace()
-        .map(|word| word.trim_matches(|c| c == '"' || c == '\''))
-    {
-        if word == "blink" {
-            style.is_blink = true;
-        } else if word == "bold" {
-            style.is_bold = true;
-        } else if word == "dimmed" {
-            style.is_dimmed = true;
-        } else if word == "hidden" {
-            style.is_hidden = true;
-        } else if word == "italic" {
-            style.is_italic = true;
-        } else if word == "reverse" {
-            style.is_reverse = true;
-        } else if word == "strikethrough" {
-            style.is_strikethrough = true;
-        } else if !seen_foreground {
-            if word == "syntax" {
-                is_syntax_highlighted = true;
-            } else {
-                style.foreground =
-                    color_from_rgb_or_ansi_code_with_default(word, foreground_default, true_color);
-            }
-            seen_foreground = true;
-        } else if !seen_background {
-            if word == "syntax" {
-                eprintln!(
-                    "You have used the special color 'syntax' as a background color \
-                     (second color in a style string). It may only be used as a foreground \
-                     color (first color in a style string)."
-                );
-                process::exit(1);
-            } else {
-                style.background =
-                    color_from_rgb_or_ansi_code_with_default(word, background_default, true_color);
-            }
-            seen_background = true;
-        } else {
-            eprintln!(
-                "Invalid style string: {}. See the STYLES section of delta --help.",
-                s
-            );
-            process::exit(1);
-        }
-    }
-    (style, is_syntax_highlighted)
-}
-
-fn parse_decoration_style(style_string: &str, true_color: bool) -> Option<DecorationStyle> {
-    let (style_string, special_attribute) = extract_special_attribute(&style_string);
-    let special_attribute = special_attribute.unwrap_or_else(|| {
-        eprintln!(
-            "Invalid decoration style: '{}'. To specify a decoration style, you must supply one of \
-             the special attributes: 'box', 'underline', 'overline', 'underoverline', or 'omit'.",
-            style_string
-        );
-        process::exit(1);
-    });
-    let (style, is_syntax_highlighted): (ansi_term::Style, bool) =
-        parse_ansi_term_style(&style_string, None, None, true_color);
-    if is_syntax_highlighted {
-        eprintln!("'syntax' may not be used as a color name in a decoration style.");
-        process::exit(1);
-    };
-    match special_attribute.as_ref() {
-        "box" => Some(DecorationStyle::Box(style)),
-        "underline" => Some(DecorationStyle::Underline(style)),
-        "overline" => Some(DecorationStyle::Overline(style)),
-        "underoverline" => Some(DecorationStyle::Underoverline(style)),
-        "omit" => Some(DecorationStyle::Omit),
-        "plain" => None,
-        _ => unreachable("Unreachable code path reached in parse_decoration_style."),
-    }
-}
-
-/// If the style string contains a 'special decoration attribute' then extract it and return it
-/// along with the modified style string.
-fn extract_special_attribute(style_string: &str) -> (String, Option<String>) {
-    let style_string = style_string.to_lowercase();
-    let (special_attributes, standard_attributes): (Vec<&str>, Vec<&str>) = style_string
-        .split_whitespace()
-        .map(|word| word.trim_matches(|c| c == '"' || c == '\''))
-        .partition(|&token| {
-            // TODO: This should be tied to the enum
-            token == "box"
-                || token == "underline"
-                || token == "overline"
-                || token == "underoverline"
-                || token == "omit"
-                || token == "plain"
-        });
-    match special_attributes {
-        attrs if attrs.len() == 0 => (style_string.to_string(), None),
-        attrs if attrs.len() == 1 => (standard_attributes.join(" "), Some(attrs[0].to_string())),
-        attrs => {
-            eprintln!(
-                "Encountered multiple special attributes: {:?}. \
-                 You may supply no more than one of the special attributes 'box', 'underline', \
-                 and 'omit'.",
-                attrs.join(", ")
-            );
-            process::exit(1);
-        }
-    }
-}
-
-pub fn color_from_rgb_or_ansi_code(s: &str, true_color: bool) -> Color {
-    let die = || {
-        eprintln!("Invalid color: {}", s);
-        process::exit(1);
-    };
-    let syntect_color = if s.starts_with("#") {
-        SyntectColor::from_str(s).unwrap_or_else(|_| die())
-    } else {
-        s.parse::<u8>()
-            .ok()
-            .and_then(syntect_color::syntect_color_from_ansi_number)
-            .or_else(|| syntect_color::syntect_color_from_ansi_name(s))
-            .unwrap_or_else(die)
-    };
-    to_ansi_color(syntect_color, true_color)
-}
-
-fn color_from_rgb_or_ansi_code_with_default(
-    arg: &str,
-    default: Option<Color>,
-    true_color: bool,
-) -> Option<Color> {
-    let arg = arg.to_lowercase();
-    if arg == "normal" {
-        None
-    } else if arg == "auto" {
-        default
-    } else {
-        Some(color_from_rgb_or_ansi_code(&arg, true_color))
-    }
-}
-
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::style::ansi_color_name_to_number;
-    use ansi_term;
+    use std::env;
+
+    use crate::cli;
+    use crate::color;
+    use crate::tests::integration_test_utils::integration_test_utils;
 
     #[test]
-    fn test_parse_ansi_term_style() {
-        assert_eq!(
-            parse_ansi_term_style("", None, None, false),
-            (ansi_term::Style::new(), false)
-        );
-        assert_eq!(
-            parse_ansi_term_style("red", None, None, false),
+    #[ignore]
+    fn test_theme_selection() {
+        #[derive(PartialEq)]
+        enum Mode {
+            Light,
+            Dark,
+        };
+        for (
+            theme_option,
+            bat_theme_env_var,
+            mode_option, // (--light, --dark)
+            expected_theme,
+            expected_mode,
+        ) in vec![
+            (None, "", None, theme::DEFAULT_DARK_THEME, Mode::Dark),
+            (Some("GitHub".to_string()), "", None, "GitHub", Mode::Light),
             (
-                ansi_term::Style {
-                    foreground: Some(ansi_term::Color::Fixed(
-                        ansi_color_name_to_number("red").unwrap()
-                    )),
-                    ..ansi_term::Style::new()
-                },
-                false
-            )
-        );
-        assert_eq!(
-            parse_ansi_term_style("red green", None, None, false),
+                Some("GitHub".to_string()),
+                "1337",
+                None,
+                "GitHub",
+                Mode::Light,
+            ),
+            (None, "1337", None, "1337", Mode::Dark),
             (
-                ansi_term::Style {
-                    foreground: Some(ansi_term::Color::Fixed(
-                        ansi_color_name_to_number("red").unwrap()
-                    )),
-                    background: Some(ansi_term::Color::Fixed(
-                        ansi_color_name_to_number("green").unwrap()
-                    )),
-                    ..ansi_term::Style::new()
-                },
-                false
-            )
-        );
-    }
-
-    #[test]
-    fn test_parse_ansi_term_style_with_special_syntax_color() {
-        assert_eq!(
-            parse_ansi_term_style("syntax", None, None, false),
-            (ansi_term::Style::new(), true)
-        );
-        assert_eq!(
-            parse_ansi_term_style("syntax italic white hidden", None, None, false),
+                None,
+                "<not set>",
+                None,
+                theme::DEFAULT_DARK_THEME,
+                Mode::Dark,
+            ),
             (
-                ansi_term::Style {
-                    background: Some(ansi_term::Color::Fixed(
-                        ansi_color_name_to_number("white").unwrap()
-                    )),
-                    is_italic: true,
-                    is_hidden: true,
-                    ..ansi_term::Style::new()
-                },
-                true
-            )
-        );
-        assert_eq!(
-            parse_ansi_term_style("bold syntax italic white hidden", None, None, false),
+                None,
+                "",
+                Some(Mode::Light),
+                theme::DEFAULT_LIGHT_THEME,
+                Mode::Light,
+            ),
             (
-                ansi_term::Style {
-                    background: Some(ansi_term::Color::Fixed(
-                        ansi_color_name_to_number("white").unwrap()
-                    )),
-                    is_bold: true,
-                    is_italic: true,
-                    is_hidden: true,
-                    ..ansi_term::Style::new()
-                },
-                true
-            )
-        );
+                None,
+                "",
+                Some(Mode::Dark),
+                theme::DEFAULT_DARK_THEME,
+                Mode::Dark,
+            ),
+            (
+                None,
+                "<@@@@@>",
+                Some(Mode::Light),
+                theme::DEFAULT_LIGHT_THEME,
+                Mode::Light,
+            ),
+            (None, "1337", Some(Mode::Light), "1337", Mode::Light),
+            (Some("none".to_string()), "", None, "none", Mode::Dark),
+            (
+                Some("None".to_string()),
+                "",
+                Some(Mode::Light),
+                "None",
+                Mode::Light,
+            ),
+        ] {
+            if bat_theme_env_var == "<not set>" {
+                env::remove_var("BAT_THEME")
+            } else {
+                env::set_var("BAT_THEME", bat_theme_env_var);
+            }
+            let is_true_color = true;
+            let mut options = integration_test_utils::get_command_line_options();
+            options.theme = theme_option;
+            match mode_option {
+                Some(Mode::Light) => {
+                    options.light = true;
+                    options.dark = false;
+                }
+                Some(Mode::Dark) => {
+                    options.light = false;
+                    options.dark = true;
+                }
+                None => {
+                    options.light = false;
+                    options.dark = false;
+                }
+            }
+            let config = cli::process_command_line_arguments(options);
+            assert_eq!(config.theme_name, expected_theme);
+            if theme::is_no_syntax_highlighting_theme_name(expected_theme) {
+                assert!(config.theme.is_none())
+            } else {
+                assert_eq!(config.theme.unwrap().name.as_ref().unwrap(), expected_theme);
+            }
+            assert_eq!(
+                config.minus_style.ansi_term_style.background.unwrap(),
+                color::get_minus_background_color_default(
+                    expected_mode == Mode::Light,
+                    is_true_color
+                )
+            );
+            assert_eq!(
+                config.minus_emph_style.ansi_term_style.background.unwrap(),
+                color::get_minus_emph_background_color_default(
+                    expected_mode == Mode::Light,
+                    is_true_color
+                )
+            );
+            assert_eq!(
+                config.plus_style.ansi_term_style.background.unwrap(),
+                color::get_plus_background_color_default(
+                    expected_mode == Mode::Light,
+                    is_true_color
+                )
+            );
+            assert_eq!(
+                config.plus_emph_style.ansi_term_style.background.unwrap(),
+                color::get_plus_emph_background_color_default(
+                    expected_mode == Mode::Light,
+                    is_true_color
+                )
+            );
+        }
     }
 }

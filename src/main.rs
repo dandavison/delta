@@ -4,6 +4,7 @@ extern crate error_chain;
 mod align;
 mod bat;
 mod cli;
+mod color;
 mod config;
 mod delta;
 mod draw;
@@ -15,6 +16,7 @@ mod rewrite;
 mod style;
 mod syntect_color;
 mod tests;
+mod theme;
 
 use std::io::{self, ErrorKind, Read, Write};
 use std::process;
@@ -128,7 +130,7 @@ index f38589a..0f1bb83 100644
     let assets = HighlightingAssets::new();
 
     for (theme, _) in assets.theme_set.themes.iter() {
-        if opt.light && !style::is_light_theme(theme) || opt.dark && style::is_light_theme(theme) {
+        if opt.light && !theme::is_light_theme(theme) || opt.dark && theme::is_light_theme(theme) {
             continue;
         }
 
@@ -164,13 +166,13 @@ pub fn list_theme_names() -> std::io::Result<()> {
 
     writeln!(stdout, "Light themes:")?;
     for (theme, _) in themes.iter() {
-        if style::is_light_theme(theme) {
+        if theme::is_light_theme(theme) {
             writeln!(stdout, "    {}", theme)?;
         }
     }
     writeln!(stdout, "Dark themes:")?;
     for (theme, _) in themes.iter() {
-        if !style::is_light_theme(theme) {
+        if !theme::is_light_theme(theme) {
             writeln!(stdout, "    {}", theme)?;
         }
     }
