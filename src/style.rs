@@ -319,6 +319,24 @@ mod tests {
                 false
             )
         );
+        assert_eq!(
+            parse_ansi_term_style("bold red underline green blink", None, None, false),
+            (
+                ansi_term::Style {
+                    foreground: Some(ansi_term::Color::Fixed(
+                        ansi_color_name_to_number("red").unwrap()
+                    )),
+                    background: Some(ansi_term::Color::Fixed(
+                        ansi_color_name_to_number("green").unwrap()
+                    )),
+                    is_blink: true,
+                    is_bold: true,
+                    is_underline: true,
+                    ..ansi_term::Style::new()
+                },
+                false
+            )
+        );
     }
 
     #[test]
