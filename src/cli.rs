@@ -236,7 +236,7 @@ pub struct Opt {
     /// The maximum distance between two lines for them to be inferred to be homologous. Homologous
     /// line pairs are highlighted according to the deletion and insertion operations transforming
     /// one into the other.
-    #[structopt(long = "max-line-distance", default_value = "0.3")]
+    #[structopt(long = "max-line-distance", default_value = "0.6")]
     pub max_line_distance: f64,
 
     /// Whether to emit 24-bit ("true color") RGB color codes. Options are auto, always, and never.
