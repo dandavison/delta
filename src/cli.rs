@@ -72,8 +72,8 @@ A complete description of the style string syntax follows:
 COLORS
 ------
 
-There are three ways to specify a color (this section applies to both foreground and background
-colors within a style string):
+There are three ways to specify a color (this section applies to foreground and background colors
+within a style string):
 
 1. RGB hex code
 
@@ -165,8 +165,9 @@ pub struct Opt {
     pub commit_style: String,
 
     #[structopt(long = "commit-decoration-style", default_value = "")]
-    /// Style for the commit hash decoration. See STYLES section. Special attributes are 'box', and
-    /// 'underline' are available in addition to the usual style attributes.
+    /// Style (foreground, background, attributes) for the commit hash decoration. See STYLES
+    /// section. One of the special attributes 'box', 'underline', 'overline', or 'underoverline'
+    /// must be given.
     pub commit_decoration_style: String,
 
     #[structopt(long = "file-style", default_value = "blue")]
@@ -174,8 +175,8 @@ pub struct Opt {
     pub file_style: String,
 
     #[structopt(long = "file-decoration-style", default_value = "blue underline")]
-    /// Style for the file decoration. See STYLES section. Special attributes are 'box', and
-    /// 'underline' are available in addition to the usual style attributes.
+    /// Style (foreground, background, attributes) for the file decoration. See STYLES section. One
+    /// of the special attributes 'box', 'underline', 'overline', or 'underoverline' must be given.
     pub file_decoration_style: String,
 
     #[structopt(long = "hunk-header-style", default_value = "syntax")]
@@ -184,8 +185,8 @@ pub struct Opt {
 
     #[structopt(long = "hunk-header-decoration-style", default_value = "blue box")]
     /// Style (foreground, background, attributes) for the hunk-header decoration. See STYLES
-    /// section. Special attributes are 'box', and 'underline' are available in addition to the
-    /// usual style attributes.
+    /// section. One of the special attributes 'box', 'underline', 'overline', or 'underoverline'
+    /// must be given.
     pub hunk_header_decoration_style: String,
 
     #[structopt(long = "color-only")]
@@ -262,11 +263,13 @@ pub struct Opt {
     pub deprecated_minus_emph_background_color: Option<String>,
 
     #[structopt(long = "plus-color")]
-    /// Deprecated: Use --plus-style='normal my_background_color'.
+    /// Deprecated: Use --plus-style='syntax my_background_color' to change the background color
+    /// while retaining syntax-highlighting.
     pub deprecated_plus_background_color: Option<String>,
 
     #[structopt(long = "plus-emph-color")]
-    /// Deprecated: Use --plus-emph-style='normal my_background_color'.
+    /// Deprecated: Use --plus-emph-style='syntax my_background_color' to change the background
+    /// color while retaining syntax-highlighting.
     pub deprecated_plus_emph_background_color: Option<String>,
 
     #[structopt(long = "highlight-removed")]
@@ -274,11 +277,13 @@ pub struct Opt {
     pub deprecated_highlight_minus_lines: bool,
 
     #[structopt(long = "commit-color")]
-    /// Deprecated: use --commit-style='my_foreground_color' --commit-decoration-style='my_foreground_color'.
+    /// Deprecated: use --commit-style='my_foreground_color'
+    /// --commit-decoration-style='my_foreground_color'.
     pub deprecated_commit_color: Option<String>,
 
     #[structopt(long = "file-color")]
-    /// Deprecated: use --file-style='my_foreground_color' --file-decoration-style='my_foreground_color'.
+    /// Deprecated: use --file-style='my_foreground_color'
+    /// --file-decoration-style='my_foreground_color'.
     pub deprecated_file_color: Option<String>,
 
     #[structopt(long = "hunk-style")]
@@ -286,7 +291,8 @@ pub struct Opt {
     pub deprecated_hunk_style: Option<String>,
 
     #[structopt(long = "hunk-color")]
-    /// Deprecated: use --hunk-header-style='my_foreground_color' --hunk-header-decoration-style='my_foreground_color'.
+    /// Deprecated: use --hunk-header-style='my_foreground_color'
+    /// --hunk-header-decoration-style='my_foreground_color'.
     pub deprecated_hunk_color: Option<String>,
 }
 
