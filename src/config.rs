@@ -400,7 +400,11 @@ fn parse_ansi_term_style(
     let mut seen_foreground = false;
     let mut seen_background = false;
     let mut is_syntax_highlighted = false;
-    for word in s.to_lowercase().split_whitespace() {
+    for word in s
+        .to_lowercase()
+        .split_whitespace()
+        .map(|word| word.trim_matches(|c| c == '"' || c == '\''))
+    {
         if word == "blink" {
             style.is_blink = true;
         } else if word == "bold" {
@@ -448,7 +452,6 @@ fn parse_ansi_term_style(
 }
 
 fn parse_decoration_style(style_string: &str, true_color: bool) -> Option<DecorationStyle> {
-    let style_string = style_string.to_lowercase();
     let (style_string, special_attribute) = extract_special_attribute(&style_string);
     let special_attribute = special_attribute.unwrap_or_else(|| {
         eprintln!(
@@ -475,8 +478,11 @@ fn parse_decoration_style(style_string: &str, true_color: bool) -> Option<Decora
 /// If the style string contains a 'special decoration attribute' then extract it and return it
 /// along with the modified style string.
 fn extract_special_attribute(style_string: &str) -> (String, Option<String>) {
-    let (special_attributes, standard_attributes): (Vec<&str>, Vec<&str>) =
-        style_string.split_whitespace().partition(|&token| {
+    let style_string = style_string.to_lowercase();
+    let (special_attributes, standard_attributes): (Vec<&str>, Vec<&str>) = style_string
+        .split_whitespace()
+        .map(|word| word.trim_matches(|c| c == '"' || c == '\''))
+        .partition(|&token| {
             token == "box" || token == "underline" || token == "omit" || token == "plain"
         });
     match special_attributes {
