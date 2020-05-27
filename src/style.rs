@@ -30,8 +30,10 @@ impl Style {
         }
     }
 
-    /// Construct Style from style and decoration-style strings supplied on command line, together with
-    /// defaults.
+    /// Construct Style from style and decoration-style strings supplied on command line, together
+    /// with defaults. A style string is a space-separated string containing 0, 1, or 2 colors
+    /// (foreground and then background) and an arbitrary number of style attributes. See `delta
+    /// --help` for more precise spec.
     pub fn from_str(
         style_string: &str,
         foreground_default: Option<ansi_term::Color>,
@@ -39,8 +41,6 @@ impl Style {
         decoration_style_string: Option<&str>,
         true_color: bool,
     ) -> Self {
-        let (style_string, special_attribute_from_style_string) =
-            extract_special_decoration_attribute(style_string);
         let (ansi_term_style, is_syntax_highlighted) = parse_ansi_term_style(
             &style_string,
             foreground_default,
@@ -51,11 +51,30 @@ impl Style {
             Some(s) if s != "" => DecorationStyle::from_str(s, true_color),
             _ => None,
         };
-        let mut style = Style {
+        Style {
             ansi_term_style,
             is_syntax_highlighted,
             decoration_style,
-        };
+        }
+    }
+
+    /// Construct Style but interpreting 'underline', 'box', etc as applying to the decoration style.
+    pub fn from_str_with_handling_of_special_decoration_attributes(
+        style_string: &str,
+        foreground_default: Option<ansi_term::Color>,
+        background_default: Option<ansi_term::Color>,
+        decoration_style_string: Option<&str>,
+        true_color: bool,
+    ) -> Self {
+        let (style_string, special_attribute_from_style_string) =
+            extract_special_decoration_attribute(style_string);
+        let mut style = Style::from_str(
+            &style_string,
+            foreground_default,
+            background_default,
+            decoration_style_string,
+            true_color,
+        );
         if let Some(special_attribute) = special_attribute_from_style_string {
             if let Some(decoration_style) = DecorationStyle::apply_special_decoration_attribute(
                 style.decoration_style,
@@ -68,7 +87,9 @@ impl Style {
         style
     }
 
-    pub fn from_str_respecting_deprecated_foreground_color_arg(
+    /// As from_str_with_handling_of_special_decoration_attributes but respecting an optional
+    /// foreground color which has precedence when present.
+    pub fn from_str_with_handling_of_special_decoration_attributes_and_respecting_deprecated_foreground_color_arg(
         style_string: &str,
         foreground_default: Option<ansi_term::Color>,
         background_default: Option<ansi_term::Color>,
@@ -76,7 +97,7 @@ impl Style {
         deprecated_foreground_color_arg: Option<&str>,
         true_color: bool,
     ) -> Self {
-        let mut style = Self::from_str(
+        let mut style = Self::from_str_with_handling_of_special_decoration_attributes(
             style_string,
             foreground_default,
             background_default,
@@ -209,6 +230,8 @@ fn parse_ansi_term_style(
             style.is_reverse = true;
         } else if word == "strikethrough" {
             style.is_strikethrough = true;
+        } else if word == "underline" {
+            style.is_underline = true;
         } else if !seen_foreground {
             if word == "syntax" {
                 is_syntax_highlighted = true;

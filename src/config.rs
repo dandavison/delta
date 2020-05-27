@@ -209,7 +209,7 @@ fn make_hunk_styles<'a>(
 
 fn make_commit_file_hunk_header_styles(opt: &cli::Opt, true_color: bool) -> (Style, Style, Style) {
     (
-        Style::from_str_respecting_deprecated_foreground_color_arg(
+        Style::from_str_with_handling_of_special_decoration_attributes_and_respecting_deprecated_foreground_color_arg(
             &opt.commit_style,
             None,
             None,
@@ -217,7 +217,7 @@ fn make_commit_file_hunk_header_styles(opt: &cli::Opt, true_color: bool) -> (Sty
             opt.deprecated_commit_color.as_deref(),
             true_color,
         ),
-        Style::from_str_respecting_deprecated_foreground_color_arg(
+        Style::from_str_with_handling_of_special_decoration_attributes_and_respecting_deprecated_foreground_color_arg(
             &opt.file_style,
             None,
             None,
@@ -225,7 +225,7 @@ fn make_commit_file_hunk_header_styles(opt: &cli::Opt, true_color: bool) -> (Sty
             opt.deprecated_file_color.as_deref(),
             true_color,
         ),
-        Style::from_str_respecting_deprecated_foreground_color_arg(
+        Style::from_str_with_handling_of_special_decoration_attributes_and_respecting_deprecated_foreground_color_arg(
             &opt.hunk_header_style,
             None,
             None,
