@@ -147,14 +147,19 @@ impl<'a> Painter<'a> {
                 }
                 ansi_strings.push(section_style.ansi_term_style.paint(text));
             }
-            ansi_strings.push(non_emph_style.ansi_term_style.paint(""));
+            // Set style for the right-fill.
+            let mut have_background_for_right_fill = false;
+            if non_emph_style.ansi_term_style.background.is_some() {
+                ansi_strings.push(non_emph_style.ansi_term_style.paint(""));
+                have_background_for_right_fill = true;
+            }
             let line = &mut ansi_term::ANSIStrings(&ansi_strings).to_string();
             let background_color_extends_to_terminal_width =
                 match background_color_extends_to_terminal_width {
                     Some(boolean) => boolean,
                     None => config.background_color_extends_to_terminal_width,
                 };
-            if background_color_extends_to_terminal_width {
+            if background_color_extends_to_terminal_width && have_background_for_right_fill {
                 // HACK: How to properly incorporate the ANSI_CSI_ERASE_IN_LINE into ansi_strings?
                 if line
                     .to_lowercase()
