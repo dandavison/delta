@@ -288,16 +288,10 @@ fn extract_special_decoration_attribute(style_string: &str) -> (String, Option<S
         });
     match special_attributes {
         attrs if attrs.len() == 0 => (style_string.to_string(), None),
-        attrs if attrs.len() == 1 => (standard_attributes.join(" "), Some(attrs[0].to_string())),
-        attrs => {
-            eprintln!(
-                "Encountered multiple special attributes: {:?}. \
-                 You may supply no more than one of the special attributes 'box', 'underline', \
-                 and 'omit'.",
-                attrs.join(", ")
-            );
-            process::exit(1);
-        }
+        attrs => (
+            format!("{} {}", attrs[1..].join(" "), standard_attributes.join(" ")),
+            Some(attrs[0].to_string()),
+        ),
     }
 }
 
