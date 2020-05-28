@@ -226,7 +226,7 @@ commit 94907c0f136f46dc46ffae2dc92dca9af7eb7c2e
     fn test_commit_style_box() {
         let mut options = integration_test_utils::get_command_line_options();
         options.commit_style = "blue".to_string();
-        options.commit_decoration_style = "blue box".to_string();
+        options.commit_decoration_style = "bold blue box".to_string();
         let (output, config) = integration_test_utils::run_delta(GIT_DIFF_SINGLE_HUNK, options);
         ansi_test_utils::assert_line_has_foreground_color(
             &output,
@@ -262,7 +262,7 @@ commit 94907c0f136f46dc46ffae2dc92dca9af7eb7c2e ┃
     fn test_commit_style_underline() {
         let mut options = integration_test_utils::get_command_line_options();
         options.commit_style = "yellow".to_string();
-        options.commit_decoration_style = "yellow underline".to_string();
+        options.commit_decoration_style = "bold yellow underline".to_string();
         let (output, config) = integration_test_utils::run_delta(GIT_DIFF_SINGLE_HUNK, options);
         ansi_test_utils::assert_line_has_foreground_color(
             &output,

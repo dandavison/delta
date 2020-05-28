@@ -219,7 +219,6 @@ fn handle_commit_meta_header_line(
         config.terminal_width,
         config.commit_style.ansi_term_style,
         decoration_ansi_term_style,
-        true,
     )?;
     Ok(())
 }
@@ -277,7 +276,6 @@ fn handle_generic_file_meta_header_line(
         config.terminal_width,
         config.file_style.ansi_term_style,
         decoration_ansi_term_style,
-        false,
     )?;
     Ok(())
 }
@@ -338,7 +336,6 @@ fn handle_hunk_header_line(
             config.terminal_width,
             config.hunk_header_style.ansi_term_style,
             decoration_ansi_term_style,
-            false,
         )?;
         painter.output_buffer.clear();
     }

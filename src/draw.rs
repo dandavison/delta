@@ -6,6 +6,19 @@ use box_drawing;
 use console::strip_ansi_codes;
 use unicode_width::UnicodeWidthStr;
 
+trait NotBoldExt {
+    fn not_bold(&self) -> Self;
+}
+
+impl NotBoldExt for ansi_term::Style {
+    fn not_bold(&self) -> Self {
+        Self {
+            is_bold: false,
+            ..*self
+        }
+    }
+}
+
 /// Write text to stream, surrounded by a box, leaving the cursor just
 /// beyond the bottom right corner.
 pub fn write_boxed(
@@ -14,16 +27,15 @@ pub fn write_boxed(
     _line_width: usize, // ignored
     text_style: ansi_term::Style,
     decoration_style: ansi_term::Style,
-    heavy: bool,
 ) -> std::io::Result<()> {
-    let up_left = if heavy {
+    let up_left = if decoration_style.is_bold {
         box_drawing::heavy::UP_LEFT
     } else {
         box_drawing::light::UP_LEFT
     };
     let box_width = UnicodeWidthStr::width(strip_ansi_codes(text).as_ref());
-    write_boxed_partial(writer, text, box_width, text_style, decoration_style, heavy)?;
-    write!(writer, "{}", decoration_style.paint(up_left))?;
+    write_boxed_partial(writer, text, box_width, text_style, decoration_style)?;
+    write!(writer, "{}", decoration_style.not_bold().paint(up_left))?;
     Ok(())
 }
 
@@ -35,17 +47,9 @@ pub fn write_boxed_with_line(
     line_width: usize,
     text_style: ansi_term::Style,
     decoration_style: ansi_term::Style,
-    heavy: bool,
 ) -> std::io::Result<()> {
     let box_width = UnicodeWidthStr::width(strip_ansi_codes(text).as_ref());
-    write_boxed_with_horizontal_whisker(
-        writer,
-        text,
-        box_width,
-        text_style,
-        decoration_style,
-        heavy,
-    )?;
+    write_boxed_with_horizontal_whisker(writer, text, box_width, text_style, decoration_style)?;
     write_horizontal_line(
         writer,
         if line_width > box_width {
@@ -55,7 +59,6 @@ pub fn write_boxed_with_line(
         },
         text_style,
         decoration_style,
-        heavy,
     )?;
     write!(writer, "\n")?;
     Ok(())
@@ -73,7 +76,6 @@ pub fn write_underlined(
     line_width: usize,
     text_style: ansi_term::Style,
     decoration_style: ansi_term::Style,
-    heavy: bool,
 ) -> std::io::Result<()> {
     _write_under_or_over_lined(
         Underoverline::Under,
@@ -82,7 +84,6 @@ pub fn write_underlined(
         line_width,
         text_style,
         decoration_style,
-        heavy,
     )
 }
 
@@ -92,7 +93,6 @@ pub fn write_overlined(
     line_width: usize,
     text_style: ansi_term::Style,
     decoration_style: ansi_term::Style,
-    heavy: bool,
 ) -> std::io::Result<()> {
     _write_under_or_over_lined(
         Underoverline::Over,
@@ -101,7 +101,6 @@ pub fn write_overlined(
         line_width,
         text_style,
         decoration_style,
-        heavy,
     )
 }
 
@@ -111,7 +110,6 @@ pub fn write_underoverlined(
     line_width: usize,
     text_style: ansi_term::Style,
     decoration_style: ansi_term::Style,
-    heavy: bool,
 ) -> std::io::Result<()> {
     _write_under_or_over_lined(
         Underoverline::Underover,
@@ -120,7 +118,6 @@ pub fn write_underoverlined(
         line_width,
         text_style,
         decoration_style,
-        heavy,
     )
 }
 
@@ -131,11 +128,10 @@ fn _write_under_or_over_lined(
     line_width: usize,
     text_style: ansi_term::Style,
     decoration_style: ansi_term::Style,
-    heavy: bool,
 ) -> std::io::Result<()> {
     let mut write_line: Box<dyn FnMut(&mut dyn Write) -> std::io::Result<()>> =
         Box::new(|writer| {
-            write_horizontal_line(writer, line_width - 1, text_style, decoration_style, heavy)?;
+            write_horizontal_line(writer, line_width - 1, text_style, decoration_style)?;
             write!(writer, "\n")?;
             Ok(())
         });
@@ -156,9 +152,8 @@ fn write_horizontal_line(
     line_width: usize,
     _text_style: ansi_term::Style,
     decoration_style: ansi_term::Style,
-    heavy: bool,
 ) -> std::io::Result<()> {
-    let horizontal = if heavy {
+    let horizontal = if decoration_style.is_bold {
         box_drawing::heavy::HORIZONTAL
     } else {
         box_drawing::light::HORIZONTAL
@@ -166,25 +161,30 @@ fn write_horizontal_line(
     write!(
         writer,
         "{}",
-        decoration_style.paint(horizontal.repeat(line_width))
+        decoration_style
+            .not_bold()
+            .paint(horizontal.repeat(line_width))
     )
 }
 
-pub fn write_boxed_with_horizontal_whisker(
+fn write_boxed_with_horizontal_whisker(
     writer: &mut dyn Write,
     text: &str,
     box_width: usize,
     text_style: ansi_term::Style,
     decoration_style: ansi_term::Style,
-    heavy: bool,
 ) -> std::io::Result<()> {
-    let up_horizontal = if heavy {
+    let up_horizontal = if decoration_style.is_bold {
         box_drawing::heavy::UP_HORIZONTAL
     } else {
         box_drawing::light::UP_HORIZONTAL
     };
-    write_boxed_partial(writer, text, box_width, text_style, decoration_style, heavy)?;
-    write!(writer, "{}", decoration_style.paint(up_horizontal))?;
+    write_boxed_partial(writer, text, box_width, text_style, decoration_style)?;
+    write!(
+        writer,
+        "{}",
+        decoration_style.not_bold().paint(up_horizontal)
+    )?;
     Ok(())
 }
 
@@ -194,25 +194,22 @@ fn write_boxed_partial(
     box_width: usize,
     text_style: ansi_term::Style,
     decoration_style: ansi_term::Style,
-    heavy: bool,
 ) -> std::io::Result<()> {
-    let horizontal = if heavy {
-        box_drawing::heavy::HORIZONTAL
+    let (horizontal, down_left, vertical) = if decoration_style.is_bold {
+        (
+            box_drawing::heavy::HORIZONTAL,
+            box_drawing::heavy::DOWN_LEFT,
+            box_drawing::heavy::VERTICAL,
+        )
     } else {
-        box_drawing::light::HORIZONTAL
+        (
+            box_drawing::light::HORIZONTAL,
+            box_drawing::light::DOWN_LEFT,
+            box_drawing::light::VERTICAL,
+        )
     };
-    let down_left = if heavy {
-        box_drawing::heavy::DOWN_LEFT
-    } else {
-        box_drawing::light::DOWN_LEFT
-    };
-    let vertical = if heavy {
-        box_drawing::heavy::VERTICAL
-    } else {
-        box_drawing::light::VERTICAL
-    };
-
     let horizontal_edge = horizontal.repeat(box_width);
+    let decoration_style = decoration_style.not_bold();
     write!(
         writer,
         "{}{}\n{}{}\n{}",
