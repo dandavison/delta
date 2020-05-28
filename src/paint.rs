@@ -123,7 +123,7 @@ impl<'a> Painter<'a> {
         for (syntax_sections, diff_sections) in
             syntax_style_sections.iter().zip(diff_style_sections.iter())
         {
-            let right_fill_style = if diff_sections.len() > 1 {
+            let right_fill_style = if style_sections_contain_more_than_one_style(diff_sections) {
                 non_emph_style // line contains an emph section
             } else {
                 base_style
@@ -258,7 +258,10 @@ impl<'a> Painter<'a> {
         non_emph_style: Style,
     ) {
         for line_sections in style_sections {
-            if line_sections.len() > 1 {
+            // If there multiple diff styles in the line, then the line must have some inferred
+            // edit operations and so the non-emph color style should be used for the non-emph
+            // style sections.
+            if style_sections_contain_more_than_one_style(line_sections) {
                 for section in line_sections.iter_mut() {
                     if section.0 != emph_style {
                         *section = (non_emph_style, section.1);
@@ -266,6 +269,21 @@ impl<'a> Painter<'a> {
                 }
             }
         }
+    }
+}
+
+// edits::annotate doesn't return "coalesced" annotations (see comment there), so we can't assume
+// that `sections.len() > 1 <=> (multiple styles)`.
+fn style_sections_contain_more_than_one_style(sections: &Vec<(Style, &str)>) -> bool {
+    if sections.len() > 1 {
+        let (first_style, _) = sections[0];
+        sections
+            .iter()
+            .filter(|(style, _)| *style != first_style)
+            .next()
+            .is_some()
+    } else {
+        false
     }
 }
 

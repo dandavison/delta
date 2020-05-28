@@ -100,9 +100,11 @@ fn tokenize(line: &str) -> Vec<&str> {
 }
 
 /// Use alignment to "annotate" minus and plus lines. An "annotated" line is a sequence of
-/// (s: &str, a: Annotation) pairs, where the &strs reference the memory
+/// (a: Annotation, s: &str) pairs, where the &strs reference the memory
 /// of the original line and their concatenation equals the line.
-// TODO: Coalesce runs of the same operation.
+// This function doesn't return "coalesced" annotations: i.e. they're often are runs of consecutive
+// occurrences of the same operation. Since it is returning &strs pointing into the memory of the
+// original line, it's not possible to coalesce them in this function.
 fn annotate<'a, Annotation>(
     alignment: align::Alignment<'a>,
     noop_deletion: Annotation,
