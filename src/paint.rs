@@ -108,8 +108,8 @@ impl<'a> Painter<'a> {
         output_buffer: &mut String,
         config: &config::Config,
         prefix: &str,
-        base_style: Style,
-        non_emph_style: Style,
+        style: Style,          // style for right fill if line contains no emph sections
+        non_emph_style: Style, // style for right fill if line contains emph sections
         background_color_extends_to_terminal_width: Option<bool>,
     ) {
         // There's some unfortunate hackery going on here for two reasons:
@@ -123,14 +123,14 @@ impl<'a> Painter<'a> {
         for (syntax_sections, diff_sections) in
             syntax_style_sections.iter().zip(diff_style_sections.iter())
         {
-            let right_fill_style = if style_sections_contain_more_than_one_style(diff_sections) {
+            let non_emph_style = if style_sections_contain_more_than_one_style(diff_sections) {
                 non_emph_style // line contains an emph section
             } else {
-                base_style
+                style
             };
             let mut ansi_strings = Vec::new();
             let mut handled_prefix = false;
-            for (style, mut text) in superimpose_style_sections(
+            for (section_style, mut text) in superimpose_style_sections(
                 syntax_sections,
                 diff_sections,
                 config.true_color,
@@ -138,16 +138,16 @@ impl<'a> Painter<'a> {
             ) {
                 if !handled_prefix {
                     if prefix != "" {
-                        ansi_strings.push(style.ansi_term_style.paint(prefix));
+                        ansi_strings.push(section_style.ansi_term_style.paint(prefix));
                         if text.len() > 0 {
                             text.remove(0);
                         }
                     }
                     handled_prefix = true;
                 }
-                ansi_strings.push(style.ansi_term_style.paint(text));
+                ansi_strings.push(section_style.ansi_term_style.paint(text));
             }
-            ansi_strings.push(right_fill_style.ansi_term_style.paint(""));
+            ansi_strings.push(non_emph_style.ansi_term_style.paint(""));
             let line = &mut ansi_term::ANSIStrings(&ansi_strings).to_string();
             let background_color_extends_to_terminal_width =
                 match background_color_extends_to_terminal_width {
