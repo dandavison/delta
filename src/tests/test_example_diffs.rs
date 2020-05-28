@@ -437,7 +437,7 @@ src/align.rs
         let output = strip_ansi_codes(&output);
         assert!(output.contains(
             "
- impl<'a> Alignment<'a> {
+ impl<'a> Alignment<'a> { 
 ─────────────────────────"
         ));
     }
@@ -454,7 +454,7 @@ src/align.rs
         ansi_test_utils::assert_line_is_syntax_highlighted(
             &output,
             10,
-            " impl<'a> Alignment<'a> {",
+            " impl<'a> Alignment<'a> { ",
             "rs",
             &config,
         );

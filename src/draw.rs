@@ -21,7 +21,7 @@ pub fn write_boxed(
     } else {
         box_drawing::light::UP_LEFT
     };
-    let box_width = UnicodeWidthStr::width(strip_ansi_codes(text).as_ref()) + 1;
+    let box_width = UnicodeWidthStr::width(strip_ansi_codes(text).as_ref());
     write_boxed_partial(writer, text, box_width, text_style, decoration_style, heavy)?;
     write!(writer, "{}", decoration_style.paint(up_left))?;
     Ok(())
@@ -37,7 +37,7 @@ pub fn write_boxed_with_line(
     decoration_style: ansi_term::Style,
     heavy: bool,
 ) -> std::io::Result<()> {
-    let box_width = UnicodeWidthStr::width(strip_ansi_codes(text).as_ref()) + 1;
+    let box_width = UnicodeWidthStr::width(strip_ansi_codes(text).as_ref());
     write_boxed_with_horizontal_whisker(
         writer,
         text,
@@ -215,7 +215,7 @@ fn write_boxed_partial(
     let horizontal_edge = horizontal.repeat(box_width);
     write!(
         writer,
-        "{}{}\n{} {}\n{}",
+        "{}{}\n{}{}\n{}",
         decoration_style.paint(&horizontal_edge),
         decoration_style.paint(down_left),
         text_style.paint(text),

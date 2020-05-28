@@ -191,8 +191,10 @@ fn handle_commit_meta_header_line(
     config: &Config,
 ) -> std::io::Result<()> {
     let decoration_ansi_term_style;
+    let mut pad = false;
     let draw_fn = match config.commit_style.decoration_style {
         Some(DecorationStyle::Box(style)) => {
+            pad = true;
             decoration_ansi_term_style = style;
             draw::write_boxed_with_line
         }
@@ -213,7 +215,7 @@ fn handle_commit_meta_header_line(
     };
     draw_fn(
         painter.writer,
-        line,
+        &format!("{}{}", line, if pad { " " } else { "" }),
         config.terminal_width,
         config.commit_style.ansi_term_style,
         decoration_ansi_term_style,
@@ -241,8 +243,10 @@ fn handle_generic_file_meta_header_line(
     config: &Config,
 ) -> std::io::Result<()> {
     let decoration_ansi_term_style;
+    let mut pad = false;
     let draw_fn = match config.file_style.decoration_style {
         Some(DecorationStyle::Box(style)) => {
+            pad = true;
             decoration_ansi_term_style = style;
             draw::write_boxed_with_line
         }
@@ -266,7 +270,10 @@ fn handle_generic_file_meta_header_line(
     writeln!(painter.writer)?;
     draw_fn(
         painter.writer,
-        &config.file_style.ansi_term_style.paint(line),
+        &config
+            .file_style
+            .ansi_term_style
+            .paint(format!("{}{}", line, if pad { " " } else { "" })),
         config.terminal_width,
         config.file_style.ansi_term_style,
         decoration_ansi_term_style,
@@ -302,7 +309,11 @@ fn handle_hunk_header_line(
         None => unreachable("Unreachable code path reached in handle_hunk_header_line."),
     };
     let (raw_code_fragment, line_number) = parse::parse_hunk_metadata(&line);
-    let lines = vec![prepare(raw_code_fragment, false, config)];
+    let line = match prepare(raw_code_fragment, false, config) {
+        s if s.len() > 0 => format!("{} ", s),
+        s => s,
+    };
+    let lines = vec![line];
     if !lines[0].is_empty() {
         let syntax_style_sections = Painter::get_syntax_style_sections_for_lines(
             &lines,
