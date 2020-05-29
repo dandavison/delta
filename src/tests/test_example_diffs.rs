@@ -204,10 +204,10 @@ mod tests {
     }
 
     #[test]
-    fn test_commit_style_plain() {
+    fn test_commit_style_raw_no_decoration() {
         let mut options = integration_test_utils::get_command_line_options();
-        options.commit_decoration_style = "".to_string();
-        // TODO: --commit-color has no effect in conjunction with --commit-style plain
+        options.commit_style = "raw".to_string();
+        options.commit_decoration_style = "omit".to_string();
         let (output, _) = integration_test_utils::run_delta(GIT_DIFF_SINGLE_HUNK, options);
         ansi_test_utils::assert_line_has_no_color(
             &output,
@@ -287,10 +287,10 @@ commit 94907c0f136f46dc46ffae2dc92dca9af7eb7c2e
     }
 
     #[test]
-    fn test_file_style_plain() {
+    fn test_file_style_raw_no_decoration() {
         let mut options = integration_test_utils::get_command_line_options();
-        options.file_decoration_style = "".to_string();
-        // TODO: --file-color has no effect in conjunction with --file-style plain
+        options.file_style = "raw".to_string();
+        options.file_decoration_style = "omit".to_string();
         let (output, _) = integration_test_utils::run_delta(GIT_DIFF_SINGLE_HUNK, options);
         for (i, line) in vec![
             "diff --git a/src/align.rs b/src/align.rs",
@@ -379,10 +379,10 @@ src/align.rs
     }
 
     #[test]
-    fn test_hunk_style_plain() {
+    fn test_hunk_style_raw_no_decoration() {
         let mut options = integration_test_utils::get_command_line_options();
-        options.hunk_header_decoration_style = "".to_string();
-        // TODO: --hunk-color has no effect in conjunction with --hunk-style plain
+        options.hunk_header_style = "raw".to_string();
+        options.hunk_header_decoration_style = "omit".to_string();
         let (output, _) = integration_test_utils::run_delta(GIT_DIFF_SINGLE_HUNK, options);
         ansi_test_utils::assert_line_has_no_color(
             &output,
