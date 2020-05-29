@@ -28,7 +28,7 @@ https://git-scm.com/docs/git-config#Documentation/git-config.txt-color
 
 Here is an example:
 
---minus-style 'red bold underline #ffeeee'
+--minus-style 'red bold ul #ffeeee'
 
 That means: For removed lines, set the foreground (text) color to 'red', make it bold and
             underlined, and set the background color to '#ffeeee'.
@@ -43,8 +43,8 @@ Here is an example of using special color names together with a single attribute
 That means: For removed lines, syntax-highlight the text, and make it bold, and do whatever delta
             normally does for the background.
 
-The available attributes are: 'blink', 'bold', 'dimmed', 'hidden', 'italic', 'reverse',
-'strikethrough', 'underline'.
+The available attributes are: 'blink', 'bold', 'dim', 'hidden', 'italic', 'reverse',
+'strike', 'ul' (or 'underline').
 
 A complete description of the style string syntax follows:
 
@@ -108,6 +108,9 @@ within a style string):
    the \"ANSI color name\" section above. See https://en.wikipedia.org/wiki/ANSI_escape_code#8-bit.
    Specifying colors like this is useful if your terminal only supports 256 colors (i.e. doesn\'t
    support 24-bit color).
+
+If something isn't working correctly, or you have a feature request, please open an issue at
+https://github.com/dandavison/delta/issues.
 "
 )]
 pub struct Opt {
@@ -166,17 +169,17 @@ pub struct Opt {
 
     #[structopt(long = "commit-decoration-style", default_value = "")]
     /// Style (foreground, background, attributes) for the commit hash decoration. See STYLES
-    /// section. One of the special attributes 'box', 'underline', 'overline', or 'underoverline'
-    /// must be given.
+    /// section. One of the special attributes 'box', 'ul', 'overline', or 'underoverline' must be
+    /// given.
     pub commit_decoration_style: String,
 
     #[structopt(long = "file-style", default_value = "blue")]
     /// Style (foreground, background, attributes) for the file section. See STYLES section.
     pub file_style: String,
 
-    #[structopt(long = "file-decoration-style", default_value = "blue underline")]
+    #[structopt(long = "file-decoration-style", default_value = "blue ul")]
     /// Style (foreground, background, attributes) for the file decoration. See STYLES section. One
-    /// of the special attributes 'box', 'underline', 'overline', or 'underoverline' must be given.
+    /// of the special attributes 'box', 'ul', 'overline', or 'underoverline' must be given.
     pub file_decoration_style: String,
 
     #[structopt(long = "hunk-header-style", default_value = "syntax")]
@@ -185,8 +188,8 @@ pub struct Opt {
 
     #[structopt(long = "hunk-header-decoration-style", default_value = "blue box")]
     /// Style (foreground, background, attributes) for the hunk-header decoration. See STYLES
-    /// section. One of the special attributes 'box', 'underline', 'overline', or 'underoverline'
-    /// must be given.
+    /// section. One of the special attributes 'box', 'ul', 'overline', or 'underoverline' must be
+    /// given.
     pub hunk_header_decoration_style: String,
 
     #[structopt(long = "color-only")]

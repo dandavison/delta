@@ -58,7 +58,7 @@ impl Style {
         }
     }
 
-    /// Construct Style but interpreting 'underline', 'box', etc as applying to the decoration style.
+    /// Construct Style but interpreting 'ul', 'box', etc as applying to the decoration style.
     pub fn from_str_with_handling_of_special_decoration_attributes(
         style_string: &str,
         foreground_default: Option<ansi_term::Color>,
@@ -151,7 +151,7 @@ impl DecorationStyle {
         let special_attribute = special_attribute.unwrap_or_else(|| {
             eprintln!(
             "Invalid decoration style: '{}'. To specify a decoration style, you must supply one of \
-             the special attributes: 'box', 'underline', 'overline', 'underoverline', or 'omit'.",
+             the special attributes: 'box', 'ul', 'overline', 'underoverline', or 'omit'.",
             style_string
         );
             process::exit(1);
@@ -165,6 +165,7 @@ impl DecorationStyle {
         match special_attribute.as_ref() {
             "box" => Some(DecorationStyle::Box(style)),
             "underline" => Some(DecorationStyle::Underline(style)),
+            "ul" => Some(DecorationStyle::Underline(style)),
             "overline" => Some(DecorationStyle::Overline(style)),
             "underoverline" => Some(DecorationStyle::Underoverline(style)),
             "omit" => Some(DecorationStyle::Omit),
@@ -220,7 +221,7 @@ fn parse_ansi_term_style(
             style.is_blink = true;
         } else if word == "bold" {
             style.is_bold = true;
-        } else if word == "dimmed" {
+        } else if word == "dim" {
             style.is_dimmed = true;
         } else if word == "hidden" {
             style.is_hidden = true;
@@ -228,9 +229,9 @@ fn parse_ansi_term_style(
             style.is_italic = true;
         } else if word == "reverse" {
             style.is_reverse = true;
-        } else if word == "strikethrough" {
+        } else if word == "strike" {
             style.is_strikethrough = true;
-        } else if word == "underline" {
+        } else if word == "ul" || word == "underline" {
             style.is_underline = true;
         } else if !seen_foreground {
             if word == "syntax" {
@@ -280,6 +281,7 @@ fn extract_special_decoration_attribute(style_string: &str) -> (String, Option<S
         .partition(|&token| {
             // TODO: This should be tied to the enum
             token == "box"
+                || token == "ul"
                 || token == "underline"
                 || token == "overline"
                 || token == "underoverline"
