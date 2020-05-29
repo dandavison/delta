@@ -313,6 +313,7 @@ fn handle_hunk_header_line(
     };
     let lines = vec![line];
     if !lines[0].is_empty() {
+        writeln!(painter.writer)?;
         let syntax_style_sections = Painter::get_syntax_style_sections_for_lines(
             &lines,
             &State::HunkHeader,

@@ -155,7 +155,7 @@ mod tests {
         let (output, _) = integration_test_utils::run_delta(DIFF_WITH_MERGE_CONFLICT, options);
         // TODO: The + in the first column is being removed.
         assert!(strip_ansi_codes(&output).contains("+>>>>>>> Stashed changes"));
-        assert_eq!(output.split('\n').count(), 46);
+        assert_eq!(output.split('\n').count(), 47);
     }
 
     #[test]
@@ -400,14 +400,14 @@ src/align.rs
         let (output, config) = integration_test_utils::run_delta(GIT_DIFF_SINGLE_HUNK, options);
         ansi_test_utils::assert_line_has_foreground_color(
             &output,
-            9,
+            10,
             "──────────────────────────┐",
             "white",
             &config,
         );
         ansi_test_utils::assert_line_has_foreground_color(
             &output,
-            11,
+            12,
             "──────────────────────────┘",
             "white",
             &config,
@@ -429,7 +429,7 @@ src/align.rs
         let (output, config) = integration_test_utils::run_delta(GIT_DIFF_SINGLE_HUNK, options);
         ansi_test_utils::assert_line_has_foreground_color(
             &output,
-            10,
+            11,
             "─────────────────────────",
             "black",
             &config,
@@ -450,15 +450,15 @@ src/align.rs
         // otherwise it will confuse assert_line_is_syntax_highlighted.
         options.hunk_header_decoration_style = "box".to_string();
         let (output, config) = integration_test_utils::run_delta(GIT_DIFF_SINGLE_HUNK, options);
-        ansi_test_utils::assert_line_has_no_color(&output, 9, "──────────────────────────┐");
+        ansi_test_utils::assert_line_has_no_color(&output, 10, "──────────────────────────┐");
         ansi_test_utils::assert_line_is_syntax_highlighted(
             &output,
-            10,
+            11,
             " impl<'a> Alignment<'a> { ",
             "rs",
             &config,
         );
-        ansi_test_utils::assert_line_has_no_color(&output, 11, "──────────────────────────┘");
+        ansi_test_utils::assert_line_has_no_color(&output, 12, "──────────────────────────┘");
         let output = strip_ansi_codes(&output);
         assert!(output.contains(
             "
