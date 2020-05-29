@@ -6,19 +6,6 @@ use box_drawing;
 use console::strip_ansi_codes;
 use unicode_width::UnicodeWidthStr;
 
-trait NotBoldExt {
-    fn not_bold(&self) -> Self;
-}
-
-impl NotBoldExt for ansi_term::Style {
-    fn not_bold(&self) -> Self {
-        Self {
-            is_bold: false,
-            ..*self
-        }
-    }
-}
-
 /// Write text to stream, surrounded by a box, leaving the cursor just
 /// beyond the bottom right corner.
 pub fn write_boxed(
@@ -35,7 +22,7 @@ pub fn write_boxed(
     };
     let box_width = UnicodeWidthStr::width(strip_ansi_codes(text).as_ref());
     write_boxed_partial(writer, text, box_width, text_style, decoration_style)?;
-    write!(writer, "{}", decoration_style.not_bold().paint(up_left))?;
+    write!(writer, "{}", decoration_style.paint(up_left))?;
     Ok(())
 }
 
@@ -161,9 +148,7 @@ fn write_horizontal_line(
     write!(
         writer,
         "{}",
-        decoration_style
-            .not_bold()
-            .paint(horizontal.repeat(line_width))
+        decoration_style.paint(horizontal.repeat(line_width))
     )
 }
 
@@ -180,11 +165,7 @@ fn write_boxed_with_horizontal_whisker(
         box_drawing::light::UP_HORIZONTAL
     };
     write_boxed_partial(writer, text, box_width, text_style, decoration_style)?;
-    write!(
-        writer,
-        "{}",
-        decoration_style.not_bold().paint(up_horizontal)
-    )?;
+    write!(writer, "{}", decoration_style.paint(up_horizontal))?;
     Ok(())
 }
 
@@ -209,7 +190,6 @@ fn write_boxed_partial(
         )
     };
     let horizontal_edge = horizontal.repeat(box_width);
-    let decoration_style = decoration_style.not_bold();
     write!(
         writer,
         "{}{}\n{}{}\n{}",
