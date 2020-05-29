@@ -5,7 +5,6 @@ use console::strip_ansi_codes;
 use std::io::BufRead;
 use unicode_segmentation::UnicodeSegmentation;
 
-use crate::cli::unreachable;
 use crate::config::Config;
 use crate::draw;
 use crate::paint::Painter;
@@ -191,25 +190,27 @@ fn handle_commit_meta_header_line(
     let decoration_ansi_term_style;
     let mut pad = false;
     let draw_fn = match config.commit_style.decoration_style {
-        Some(DecorationStyle::Box(style)) => {
+        DecorationStyle::Box(style) => {
             pad = true;
             decoration_ansi_term_style = style;
             draw::write_boxed_with_line
         }
-        Some(DecorationStyle::Underline(style)) => {
+        DecorationStyle::Underline(style) => {
             decoration_ansi_term_style = style;
             draw::write_underlined
         }
-        Some(DecorationStyle::Overline(style)) => {
+        DecorationStyle::Overline(style) => {
             decoration_ansi_term_style = style;
             draw::write_overlined
         }
-        Some(DecorationStyle::Underoverline(style)) => {
+        DecorationStyle::Underoverline(style) => {
             decoration_ansi_term_style = style;
             draw::write_underoverlined
         }
-        Some(DecorationStyle::NoDecoration) => return Ok(()),
-        None => unreachable("Unreachable code path reached in handle_commit_meta_header_line."),
+        DecorationStyle::NoDecoration => {
+            decoration_ansi_term_style = ansi_term::Style::new();
+            draw::write_no_decoration
+        }
     };
     draw_fn(
         painter.writer,
@@ -242,26 +243,26 @@ fn handle_generic_file_meta_header_line(
     let decoration_ansi_term_style;
     let mut pad = false;
     let draw_fn = match config.file_style.decoration_style {
-        Some(DecorationStyle::Box(style)) => {
+        DecorationStyle::Box(style) => {
             pad = true;
             decoration_ansi_term_style = style;
             draw::write_boxed_with_line
         }
-        Some(DecorationStyle::Underline(style)) => {
+        DecorationStyle::Underline(style) => {
             decoration_ansi_term_style = style;
             draw::write_underlined
         }
-        Some(DecorationStyle::Overline(style)) => {
+        DecorationStyle::Overline(style) => {
             decoration_ansi_term_style = style;
             draw::write_overlined
         }
-        Some(DecorationStyle::Underoverline(style)) => {
+        DecorationStyle::Underoverline(style) => {
             decoration_ansi_term_style = style;
             draw::write_underoverlined
         }
-        Some(DecorationStyle::NoDecoration) => return Ok(()),
-        None => {
-            unreachable("Unreachable code path reached in handle_generic_file_meta_header_line.")
+        DecorationStyle::NoDecoration => {
+            decoration_ansi_term_style = ansi_term::Style::new();
+            draw::write_no_decoration
         }
     };
     writeln!(painter.writer)?;
@@ -285,24 +286,26 @@ fn handle_hunk_header_line(
 ) -> std::io::Result<()> {
     let decoration_ansi_term_style;
     let draw_fn = match config.hunk_header_style.decoration_style {
-        Some(DecorationStyle::Box(style)) => {
+        DecorationStyle::Box(style) => {
             decoration_ansi_term_style = style;
             draw::write_boxed
         }
-        Some(DecorationStyle::Underline(style)) => {
+        DecorationStyle::Underline(style) => {
             decoration_ansi_term_style = style;
             draw::write_underlined
         }
-        Some(DecorationStyle::Overline(style)) => {
+        DecorationStyle::Overline(style) => {
             decoration_ansi_term_style = style;
             draw::write_overlined
         }
-        Some(DecorationStyle::Underoverline(style)) => {
+        DecorationStyle::Underoverline(style) => {
             decoration_ansi_term_style = style;
             draw::write_underoverlined
         }
-        Some(DecorationStyle::NoDecoration) => return Ok(()),
-        None => unreachable("Unreachable code path reached in handle_hunk_header_line."),
+        DecorationStyle::NoDecoration => {
+            decoration_ansi_term_style = ansi_term::Style::new();
+            draw::write_no_decoration
+        }
     };
     let (raw_code_fragment, line_number) = parse::parse_hunk_metadata(&line);
     let line = match prepare(raw_code_fragment, false, config) {

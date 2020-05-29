@@ -10,7 +10,7 @@ pub struct Style {
     pub ansi_term_style: ansi_term::Style,
     pub is_raw: bool,
     pub is_syntax_highlighted: bool,
-    pub decoration_style: Option<DecorationStyle>,
+    pub decoration_style: DecorationStyle,
 }
 
 #[derive(Clone, Copy, Debug, PartialEq)]
@@ -28,7 +28,7 @@ impl Style {
             ansi_term_style: ansi_term::Style::new(),
             is_raw: false,
             is_syntax_highlighted: false,
-            decoration_style: None,
+            decoration_style: DecorationStyle::NoDecoration,
         }
     }
 
@@ -51,7 +51,7 @@ impl Style {
         );
         let decoration_style = match decoration_style_string {
             Some(s) if s != "" => DecorationStyle::from_str(s, true_color),
-            _ => None,
+            _ => DecorationStyle::NoDecoration,
         };
         Style {
             ansi_term_style,
@@ -79,13 +79,11 @@ impl Style {
             true_color,
         );
         if let Some(special_attribute) = special_attribute_from_style_string {
-            if let Some(decoration_style) = DecorationStyle::apply_special_decoration_attribute(
+            style.decoration_style = DecorationStyle::apply_special_decoration_attribute(
                 style.decoration_style,
                 &special_attribute,
                 true_color,
-            ) {
-                style.decoration_style = Some(decoration_style)
-            }
+            )
         }
         style
     }
@@ -115,23 +113,23 @@ impl Style {
                 .foreground;
             style.ansi_term_style.foreground = foreground_from_deprecated_arg;
             style.decoration_style = match style.decoration_style {
-                Some(DecorationStyle::Box(mut ansi_term_style)) => {
+                DecorationStyle::Box(mut ansi_term_style) => {
                     ansi_term_style.foreground = foreground_from_deprecated_arg;
-                    Some(DecorationStyle::Box(ansi_term_style))
+                    DecorationStyle::Box(ansi_term_style)
                 }
-                Some(DecorationStyle::Underline(mut ansi_term_style)) => {
+                DecorationStyle::Underline(mut ansi_term_style) => {
                     ansi_term_style.foreground = foreground_from_deprecated_arg;
-                    Some(DecorationStyle::Underline(ansi_term_style))
+                    DecorationStyle::Underline(ansi_term_style)
                 }
-                Some(DecorationStyle::Overline(mut ansi_term_style)) => {
+                DecorationStyle::Overline(mut ansi_term_style) => {
                     ansi_term_style.foreground = foreground_from_deprecated_arg;
-                    Some(DecorationStyle::Overline(ansi_term_style))
+                    DecorationStyle::Overline(ansi_term_style)
                 }
-                Some(DecorationStyle::Underoverline(mut ansi_term_style)) => {
+                DecorationStyle::Underoverline(mut ansi_term_style) => {
                     ansi_term_style.foreground = foreground_from_deprecated_arg;
-                    Some(DecorationStyle::Underoverline(ansi_term_style))
+                    DecorationStyle::Underoverline(ansi_term_style)
                 }
-                _ => style.decoration_style,
+                DecorationStyle::NoDecoration => style.decoration_style,
             };
         }
         style
@@ -139,17 +137,17 @@ impl Style {
 
     pub fn decoration_ansi_term_style(&self) -> Option<ansi_term::Style> {
         match self.decoration_style {
-            Some(DecorationStyle::Box(style)) => Some(style),
-            Some(DecorationStyle::Underline(style)) => Some(style),
-            Some(DecorationStyle::Overline(style)) => Some(style),
-            Some(DecorationStyle::Underoverline(style)) => Some(style),
-            _ => None,
+            DecorationStyle::Box(style) => Some(style),
+            DecorationStyle::Underline(style) => Some(style),
+            DecorationStyle::Overline(style) => Some(style),
+            DecorationStyle::Underoverline(style) => Some(style),
+            DecorationStyle::NoDecoration => None,
         }
     }
 }
 
 impl DecorationStyle {
-    pub fn from_str(style_string: &str, true_color: bool) -> Option<Self> {
+    pub fn from_str(style_string: &str, true_color: bool) -> Self {
         let (style_string, special_attribute) = extract_special_decoration_attribute(&style_string);
         let special_attribute = special_attribute.unwrap_or_else(|| {
             eprintln!(
@@ -170,41 +168,35 @@ impl DecorationStyle {
             process::exit(1);
         };
         match special_attribute.as_ref() {
-            "box" => Some(DecorationStyle::Box(style)),
-            "underline" => Some(DecorationStyle::Underline(style)),
-            "ul" => Some(DecorationStyle::Underline(style)),
-            "overline" => Some(DecorationStyle::Overline(style)),
-            "underoverline" => Some(DecorationStyle::Underoverline(style)),
-            "omit" => Some(DecorationStyle::NoDecoration),
-            "plain" => Some(DecorationStyle::NoDecoration),
+            "box" => DecorationStyle::Box(style),
+            "underline" => DecorationStyle::Underline(style),
+            "ul" => DecorationStyle::Underline(style),
+            "overline" => DecorationStyle::Overline(style),
+            "underoverline" => DecorationStyle::Underoverline(style),
+            "omit" => DecorationStyle::NoDecoration,
+            "plain" => DecorationStyle::NoDecoration,
             _ => unreachable("Unreachable code path reached in parse_decoration_style."),
         }
     }
 
     fn apply_special_decoration_attribute(
-        decoration_style: Option<DecorationStyle>,
+        decoration_style: DecorationStyle,
         special_attribute: &str,
         true_color: bool,
-    ) -> Option<DecorationStyle> {
+    ) -> DecorationStyle {
         let ansi_term_style = match decoration_style {
-            None => ansi_term::Style::new(),
-            Some(DecorationStyle::Box(ansi_term_style)) => ansi_term_style,
-            Some(DecorationStyle::Underline(ansi_term_style)) => ansi_term_style,
-            Some(DecorationStyle::Overline(ansi_term_style)) => ansi_term_style,
-            Some(DecorationStyle::Underoverline(ansi_term_style)) => ansi_term_style,
-            Some(DecorationStyle::NoDecoration) => ansi_term::Style::new(),
+            DecorationStyle::Box(ansi_term_style) => ansi_term_style,
+            DecorationStyle::Underline(ansi_term_style) => ansi_term_style,
+            DecorationStyle::Overline(ansi_term_style) => ansi_term_style,
+            DecorationStyle::Underoverline(ansi_term_style) => ansi_term_style,
+            DecorationStyle::NoDecoration => ansi_term::Style::new(),
         };
         match DecorationStyle::from_str(special_attribute, true_color) {
-            Some(DecorationStyle::Box(_)) => Some(DecorationStyle::Box(ansi_term_style)),
-            Some(DecorationStyle::Underline(_)) => {
-                Some(DecorationStyle::Underline(ansi_term_style))
-            }
-            Some(DecorationStyle::Overline(_)) => Some(DecorationStyle::Overline(ansi_term_style)),
-            Some(DecorationStyle::Underoverline(_)) => {
-                Some(DecorationStyle::Underoverline(ansi_term_style))
-            }
-            Some(DecorationStyle::NoDecoration) => Some(DecorationStyle::NoDecoration),
-            None => None,
+            DecorationStyle::Box(_) => DecorationStyle::Box(ansi_term_style),
+            DecorationStyle::Underline(_) => DecorationStyle::Underline(ansi_term_style),
+            DecorationStyle::Overline(_) => DecorationStyle::Overline(ansi_term_style),
+            DecorationStyle::Underoverline(_) => DecorationStyle::Underoverline(ansi_term_style),
+            DecorationStyle::NoDecoration => DecorationStyle::NoDecoration,
         }
     }
 }

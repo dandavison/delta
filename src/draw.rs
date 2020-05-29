@@ -6,6 +6,17 @@ use box_drawing;
 use console::strip_ansi_codes;
 use unicode_width::UnicodeWidthStr;
 
+pub fn write_no_decoration(
+    writer: &mut dyn Write,
+    text: &str,
+    _line_width: usize, // ignored
+    _text_style: ansi_term::Style,
+    _decoration_style: ansi_term::Style,
+) -> std::io::Result<()> {
+    writeln!(writer, "{}", text)?;
+    Ok(())
+}
+
 /// Write text to stream, surrounded by a box, leaving the cursor just
 /// beyond the bottom right corner.
 pub fn write_boxed(
