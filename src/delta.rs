@@ -74,7 +74,7 @@ where
         if line.starts_with("commit ") {
             painter.paint_buffered_lines();
             state = State::CommitMeta;
-            if config.commit_style.decoration_style.is_some() {
+            if !config.commit_style.is_raw {
                 painter.emit()?;
                 handle_commit_meta_header_line(&mut painter, &raw_line, config)?;
                 continue;
@@ -84,7 +84,7 @@ where
             state = State::FileMeta;
         } else if (state == State::FileMeta || source == Source::DiffUnified)
             && (line.starts_with("--- ") || line.starts_with("rename from "))
-            && config.file_style.decoration_style.is_some()
+            && !config.file_style.is_raw
         {
             minus_file = parse::get_file_path_from_file_meta_line(&line, source == Source::GitDiff);
             if source == Source::DiffUnified {
@@ -97,7 +97,7 @@ where
                 ));
             }
         } else if (line.starts_with("+++ ") || line.starts_with("rename to "))
-            && config.file_style.decoration_style.is_some()
+            && !config.file_style.is_raw
         {
             plus_file = parse::get_file_path_from_file_meta_line(&line, source == Source::GitDiff);
             painter.set_syntax(parse::get_file_extension_from_file_meta_line_file_path(
@@ -114,7 +114,7 @@ where
         } else if line.starts_with("@@") {
             state = State::HunkHeader;
             painter.set_highlighter();
-            if config.hunk_header_style.decoration_style.is_some() {
+            if !config.hunk_header_style.is_raw {
                 painter.emit()?;
                 handle_hunk_header_line(&mut painter, &line, config)?;
                 continue;
@@ -138,7 +138,7 @@ where
 
             state = State::FileMeta;
             painter.paint_buffered_lines();
-            if config.file_style.decoration_style.is_some() {
+            if !config.file_style.is_raw {
                 painter.emit()?;
                 handle_generic_file_meta_header_line(&mut painter, &raw_line, config)?;
                 continue;
@@ -151,7 +151,7 @@ where
             continue;
         }
 
-        if state == State::FileMeta && config.file_style.decoration_style.is_some() {
+        if state == State::FileMeta && !config.file_style.is_raw {
             // The file metadata section is 4 lines. Skip them under non-plain file-styles.
             continue;
         } else {

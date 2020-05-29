@@ -417,6 +417,7 @@ mod superimpose_style_sections {
                     is_underline: true,
                     ..ansi_term::Style::new()
                 },
+                is_raw: false,
                 is_syntax_highlighted: true,
                 decoration_style: None,
             };
@@ -429,6 +430,7 @@ mod superimpose_style_sections {
                     is_underline: true,
                     ..ansi_term::Style::new()
                 },
+                is_raw: false,
                 is_syntax_highlighted: false,
                 decoration_style: None,
             };
@@ -441,6 +443,7 @@ mod superimpose_style_sections {
                     is_underline: true,
                     ..ansi_term::Style::new()
                 },
+                is_raw: false,
                 is_syntax_highlighted: true,
                 decoration_style: None,
             };

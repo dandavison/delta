@@ -8,6 +8,7 @@ use crate::color;
 #[derive(Clone, Copy, Debug, PartialEq)]
 pub struct Style {
     pub ansi_term_style: ansi_term::Style,
+    pub is_raw: bool,
     pub is_syntax_highlighted: bool,
     pub decoration_style: Option<DecorationStyle>,
 }
@@ -25,6 +26,7 @@ impl Style {
     pub fn new() -> Self {
         Self {
             ansi_term_style: ansi_term::Style::new(),
+            is_raw: false,
             is_syntax_highlighted: false,
             decoration_style: None,
         }
@@ -41,7 +43,7 @@ impl Style {
         decoration_style_string: Option<&str>,
         true_color: bool,
     ) -> Self {
-        let (ansi_term_style, is_syntax_highlighted) = parse_ansi_term_style(
+        let (ansi_term_style, is_raw, is_syntax_highlighted) = parse_ansi_term_style(
             &style_string,
             foreground_default,
             background_default,
@@ -53,6 +55,7 @@ impl Style {
         };
         Style {
             ansi_term_style,
+            is_raw,
             is_syntax_highlighted,
             decoration_style,
         }
@@ -156,10 +159,14 @@ impl DecorationStyle {
         );
             process::exit(1);
         });
-        let (style, is_syntax_highlighted): (ansi_term::Style, bool) =
+        let (style, is_raw, is_syntax_highlighted) =
             parse_ansi_term_style(&style_string, None, None, true_color);
+        if is_raw {
+            eprintln!("'raw' may not be used in a decoration style.");
+            process::exit(1);
+        };
         if is_syntax_highlighted {
-            eprintln!("'syntax' may not be used as a color name in a decoration style.");
+            eprintln!("'syntax' may not be used in a decoration style.");
             process::exit(1);
         };
         match special_attribute.as_ref() {
@@ -169,7 +176,7 @@ impl DecorationStyle {
             "overline" => Some(DecorationStyle::Overline(style)),
             "underoverline" => Some(DecorationStyle::Underoverline(style)),
             "omit" => Some(DecorationStyle::NoDecoration),
-            "plain" => None,
+            "plain" => Some(DecorationStyle::NoDecoration),
             _ => unreachable("Unreachable code path reached in parse_decoration_style."),
         }
     }
@@ -207,10 +214,11 @@ fn parse_ansi_term_style(
     foreground_default: Option<ansi_term::Color>,
     background_default: Option<ansi_term::Color>,
     true_color: bool,
-) -> (ansi_term::Style, bool) {
+) -> (ansi_term::Style, bool, bool) {
     let mut style = ansi_term::Style::new();
     let mut seen_foreground = false;
     let mut seen_background = false;
+    let mut is_raw = false;
     let mut is_syntax_highlighted = false;
     for word in s
         .to_lowercase()
@@ -229,6 +237,8 @@ fn parse_ansi_term_style(
             style.is_italic = true;
         } else if word == "reverse" {
             style.is_reverse = true;
+        } else if word == "raw" {
+            is_raw = true;
         } else if word == "strike" {
             style.is_strikethrough = true;
         } else if word == "ul" || word == "underline" {
@@ -268,7 +278,7 @@ fn parse_ansi_term_style(
             process::exit(1);
         }
     }
-    (style, is_syntax_highlighted)
+    (style, is_raw, is_syntax_highlighted)
 }
 
 /// If the style string contains a 'special decoration attribute' then extract it and return it
@@ -309,7 +319,7 @@ mod tests {
     fn test_parse_ansi_term_style() {
         assert_eq!(
             parse_ansi_term_style("", None, None, false),
-            (ansi_term::Style::new(), false)
+            (ansi_term::Style::new(), false, false)
         );
         assert_eq!(
             parse_ansi_term_style("red", None, None, false),
@@ -320,6 +330,7 @@ mod tests {
                     )),
                     ..ansi_term::Style::new()
                 },
+                false,
                 false
             )
         );
@@ -335,6 +346,7 @@ mod tests {
                     )),
                     ..ansi_term::Style::new()
                 },
+                false,
                 false
             )
         );
@@ -353,6 +365,7 @@ mod tests {
                     is_underline: true,
                     ..ansi_term::Style::new()
                 },
+                false,
                 false
             )
         );
@@ -362,7 +375,7 @@ mod tests {
     fn test_parse_ansi_term_style_with_special_syntax_color() {
         assert_eq!(
             parse_ansi_term_style("syntax", None, None, false),
-            (ansi_term::Style::new(), true)
+            (ansi_term::Style::new(), false, true)
         );
         assert_eq!(
             parse_ansi_term_style("syntax italic white hidden", None, None, false),
@@ -375,6 +388,7 @@ mod tests {
                     is_hidden: true,
                     ..ansi_term::Style::new()
                 },
+                false,
                 true
             )
         );
@@ -390,6 +404,31 @@ mod tests {
                     is_hidden: true,
                     ..ansi_term::Style::new()
                 },
+                false,
+                true
+            )
+        );
+    }
+
+    #[test]
+    fn test_parse_ansi_term_style_with_special_raw_attribute() {
+        assert_eq!(
+            parse_ansi_term_style("raw", None, None, false),
+            (ansi_term::Style::new(), true, false)
+        );
+        // It doesn't make sense for raw to be combined with anything else, but it is not an error.xbde
+        assert_eq!(
+            parse_ansi_term_style("raw syntax italic white hidden", None, None, false),
+            (
+                ansi_term::Style {
+                    background: Some(ansi_term::Color::Fixed(
+                        ansi_color_name_to_number("white").unwrap()
+                    )),
+                    is_italic: true,
+                    is_hidden: true,
+                    ..ansi_term::Style::new()
+                },
+                true,
                 true
             )
         );
