@@ -9,7 +9,7 @@ use crate::syntect_color;
 
 pub fn color_from_rgb_or_ansi_code(s: &str, true_color: bool) -> Color {
     let die = || {
-        eprintln!("Invalid color: {}", s);
+        eprintln!("Invalid color or style attribute: {}", s);
         process::exit(1);
     };
     let syntect_color = if s.starts_with("#") {
