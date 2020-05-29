@@ -74,14 +74,17 @@ Delta provides language syntax-highlighting, within-line insertion/deletion dete
 <br>
 
 ## Features
-|                                                | delta | git | <a href="https://github.com/so-fancy/diff-so-fancy">diff-so-fancy</a> /<br><a href="https://github.com/git/git/tree/master/contrib/diff-highlight">diff-highlight</a> | github/gitlab |
-|------------------------------------------------|-------|-----|-----------------------------------------------------------------------------------------------------------------------------------------------------------------------|---------------|
-| language syntax highlighting                   | ✅    | ❌  | ❌                                                                                                                                                                    | ✅            |
-| within-line insertion/deletion detection       | ✅    | ❌  | ✅                                                                                                                                                                    | ✅            |
-| multiple insertion/deletions detected per line | ✅    | ❌  | ❌                                                                                                                                                                    | ✅            |
-| matching of unequal numbers of changed lines   | ✅    | ❌  | ❌                                                                                                                                                                    | ❌            |
+|                                                | delta | git | [diff-so-fancy] /<br>[diff-highlight] | github/gitlab |
+|------------------------------------------------|-------|-----|---------------------------------------|---------------|
+| language syntax highlighting                   | ✅    | ❌  | ❌                                   | ✅            |
+| within-line insertion/deletion detection       | ✅    | ❌  | ✅                                   | ✅            |
+| multiple insertion/deletions detected per line | ✅    | ❌  | ❌                                   | ✅            |
+| matching of unequal numbers of changed lines   | ✅    | ❌  | ❌                                   | ❌            |
 
 In addition, delta handles traditional unified diff output.
+
+[diff-so-fancy]: https://github.com/so-fancy/diff-so-fancy
+[diff-highlight]: https://github.com/git/git/tree/master/contrib/diff-highlight
 
 ## Installation
 
