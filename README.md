@@ -74,12 +74,12 @@ Delta provides language syntax-highlighting, within-line insertion/deletion dete
 <br>
 
 ## Features
-|                                                | delta | git | diff-so-fancy | github/gitlab |
-|------------------------------------------------|-------|-----|---------------|---------------|
-| language syntax highlighting                   | ✅    | ❌  | ❌            | ✅             |
-| within-line insertion/deletion detection       | ✅    | ❌  | ✅            | ✅             |
-| multiple insertion/deletions detected per line | ✅    | ❌  | ❌            | ✅             |
-| matching of unequal numbers of changed lines   | ✅    | ❌  | ❌            | ❌             |
+|                                                | delta | git | <a href="https://github.com/so-fancy/diff-so-fancy">diff-so-fancy</a> /<br><a href="https://github.com/git/git/tree/master/contrib/diff-highlight">diff-highlight</a> | github/gitlab |
+|------------------------------------------------|-------|-----|-----------------------------------------------------------------------------------------------------------------------------------------------------------------------|---------------|
+| language syntax highlighting                   | ✅    | ❌  | ❌                                                                                                                                                                    | ✅            |
+| within-line insertion/deletion detection       | ✅    | ❌  | ✅                                                                                                                                                                    | ✅            |
+| multiple insertion/deletions detected per line | ✅    | ❌  | ❌                                                                                                                                                                    | ✅            |
+| matching of unequal numbers of changed lines   | ✅    | ❌  | ❌                                                                                                                                                                    | ❌            |
 
 In addition, delta handles traditional unified diff output.
 
@@ -350,7 +350,7 @@ All delta color options work the same way. There are three ways to specify a col
   </tr>
   <tr>
     <td>
-      delta vs. diff-so-fancy
+      delta vs. diff-so-fancy /<br>diff-highlight
     </td>
     <td>
       <img width=500px style="border: 1px solid black"
