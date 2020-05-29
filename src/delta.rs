@@ -208,7 +208,7 @@ fn handle_commit_meta_header_line(
             decoration_ansi_term_style = style;
             draw::write_underoverlined
         }
-        Some(DecorationStyle::Omit) => return Ok(()),
+        Some(DecorationStyle::NoDecoration) => return Ok(()),
         None => unreachable("Unreachable code path reached in handle_commit_meta_header_line."),
     };
     draw_fn(
@@ -259,7 +259,7 @@ fn handle_generic_file_meta_header_line(
             decoration_ansi_term_style = style;
             draw::write_underoverlined
         }
-        Some(DecorationStyle::Omit) => return Ok(()),
+        Some(DecorationStyle::NoDecoration) => return Ok(()),
         None => {
             unreachable("Unreachable code path reached in handle_generic_file_meta_header_line.")
         }
@@ -301,7 +301,7 @@ fn handle_hunk_header_line(
             decoration_ansi_term_style = style;
             draw::write_underoverlined
         }
-        Some(DecorationStyle::Omit) => return Ok(()),
+        Some(DecorationStyle::NoDecoration) => return Ok(()),
         None => unreachable("Unreachable code path reached in handle_hunk_header_line."),
     };
     let (raw_code_fragment, line_number) = parse::parse_hunk_metadata(&line);

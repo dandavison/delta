@@ -18,7 +18,7 @@ pub enum DecorationStyle {
     Underline(ansi_term::Style),
     Overline(ansi_term::Style),
     Underoverline(ansi_term::Style),
-    Omit,
+    NoDecoration,
 }
 
 impl Style {
@@ -168,7 +168,7 @@ impl DecorationStyle {
             "ul" => Some(DecorationStyle::Underline(style)),
             "overline" => Some(DecorationStyle::Overline(style)),
             "underoverline" => Some(DecorationStyle::Underoverline(style)),
-            "omit" => Some(DecorationStyle::Omit),
+            "omit" => Some(DecorationStyle::NoDecoration),
             "plain" => None,
             _ => unreachable("Unreachable code path reached in parse_decoration_style."),
         }
@@ -185,7 +185,7 @@ impl DecorationStyle {
             Some(DecorationStyle::Underline(ansi_term_style)) => ansi_term_style,
             Some(DecorationStyle::Overline(ansi_term_style)) => ansi_term_style,
             Some(DecorationStyle::Underoverline(ansi_term_style)) => ansi_term_style,
-            Some(DecorationStyle::Omit) => ansi_term::Style::new(),
+            Some(DecorationStyle::NoDecoration) => ansi_term::Style::new(),
         };
         match DecorationStyle::from_str(special_attribute, true_color) {
             Some(DecorationStyle::Box(_)) => Some(DecorationStyle::Box(ansi_term_style)),
@@ -196,7 +196,7 @@ impl DecorationStyle {
             Some(DecorationStyle::Underoverline(_)) => {
                 Some(DecorationStyle::Underoverline(ansi_term_style))
             }
-            Some(DecorationStyle::Omit) => Some(DecorationStyle::Omit),
+            Some(DecorationStyle::NoDecoration) => Some(DecorationStyle::NoDecoration),
             None => None,
         }
     }
