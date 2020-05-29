@@ -61,9 +61,12 @@ fn _rewrite_options_to_implement_color_only(opt: &mut cli::Opt) {
     if opt.color_only {
         opt.keep_plus_minus_markers = true;
         opt.tab_width = 0;
-        opt.commit_decoration_style = "".to_string();
-        opt.file_decoration_style = "".to_string();
-        opt.hunk_header_decoration_style = "".to_string();
+        opt.commit_style = "raw".to_string();
+        opt.commit_decoration_style = "omit".to_string();
+        opt.file_style = "raw".to_string();
+        opt.file_decoration_style = "omit".to_string();
+        opt.hunk_header_style = "raw".to_string();
+        opt.hunk_header_decoration_style = "omit".to_string();
     }
 }
 
