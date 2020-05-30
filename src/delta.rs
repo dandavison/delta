@@ -73,7 +73,7 @@ where
         if line.starts_with("commit ") {
             painter.paint_buffered_lines();
             state = State::CommitMeta;
-            if !config.commit_style.is_raw {
+            if should_handle(&state, config) {
                 painter.emit()?;
                 handle_commit_meta_header_line(&mut painter, &raw_line, config)?;
                 continue;
