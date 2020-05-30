@@ -113,9 +113,7 @@ where
         } else if line.starts_with("@@") {
             state = State::HunkHeader;
             painter.set_highlighter();
-            if !(config.hunk_header_style.is_raw
-                && config.hunk_header_style.decoration_style == DecorationStyle::NoDecoration)
-            {
+            if should_handle(&state, config) {
                 painter.emit()?;
                 handle_hunk_header_line(&mut painter, &line, &raw_line, config)?;
                 continue;
@@ -164,6 +162,12 @@ where
     painter.paint_buffered_lines();
     painter.emit()?;
     Ok(())
+}
+
+/// Should a handle_* function be called on this element?
+fn should_handle(state: &State, config: &Config) -> bool {
+    let style = config.get_style(state);
+    !(style.is_raw && style.decoration_style == DecorationStyle::NoDecoration)
 }
 
 /// Try to detect what is producing the input for delta.
