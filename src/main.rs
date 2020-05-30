@@ -137,7 +137,7 @@ index f38589a..0f1bb83 100644
         writeln!(stdout, "\n\nTheme: {}\n", style.paint(theme))?;
         let config = cli::process_command_line_arguments(cli::Opt {
             theme: Some(theme.to_string()),
-            file_decoration_style: "omit".to_string(),
+            file_style: "omit".to_string(),
             hunk_header_style: "omit".to_string(),
             ..opt.clone()
         });

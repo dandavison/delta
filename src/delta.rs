@@ -1,11 +1,10 @@
+use std::io::BufRead;
 use std::io::Write;
 
 use bytelines::ByteLines;
 use console::strip_ansi_codes;
-use std::io::BufRead;
 use unicode_segmentation::UnicodeSegmentation;
 
-use crate::cli::unreachable;
 use crate::config::Config;
 use crate::draw;
 use crate::paint::Painter;
@@ -74,7 +73,7 @@ where
         if line.starts_with("commit ") {
             painter.paint_buffered_lines();
             state = State::CommitMeta;
-            if config.commit_style.decoration_style.is_some() {
+            if should_handle(&state, config) {
                 painter.emit()?;
                 handle_commit_meta_header_line(&mut painter, &raw_line, config)?;
                 continue;
@@ -84,7 +83,7 @@ where
             state = State::FileMeta;
         } else if (state == State::FileMeta || source == Source::DiffUnified)
             && (line.starts_with("--- ") || line.starts_with("rename from "))
-            && config.file_style.decoration_style.is_some()
+            && should_handle(&State::FileMeta, config)
         {
             minus_file = parse::get_file_path_from_file_meta_line(&line, source == Source::GitDiff);
             if source == Source::DiffUnified {
@@ -97,7 +96,7 @@ where
                 ));
             }
         } else if (line.starts_with("+++ ") || line.starts_with("rename to "))
-            && config.file_style.decoration_style.is_some()
+            && should_handle(&State::FileMeta, config)
         {
             plus_file = parse::get_file_path_from_file_meta_line(&line, source == Source::GitDiff);
             painter.set_syntax(parse::get_file_extension_from_file_meta_line_file_path(
@@ -114,9 +113,9 @@ where
         } else if line.starts_with("@@") {
             state = State::HunkHeader;
             painter.set_highlighter();
-            if config.hunk_header_style.decoration_style.is_some() {
+            if should_handle(&state, config) {
                 painter.emit()?;
-                handle_hunk_header_line(&mut painter, &line, config)?;
+                handle_hunk_header_line(&mut painter, &line, &raw_line, config)?;
                 continue;
             }
         } else if source == Source::DiffUnified && line.starts_with("Only in ")
@@ -138,7 +137,7 @@ where
 
             state = State::FileMeta;
             painter.paint_buffered_lines();
-            if config.file_style.decoration_style.is_some() {
+            if should_handle(&State::FileMeta, config) {
                 painter.emit()?;
                 handle_generic_file_meta_header_line(&mut painter, &raw_line, config)?;
                 continue;
@@ -151,7 +150,7 @@ where
             continue;
         }
 
-        if state == State::FileMeta && config.file_style.decoration_style.is_some() {
+        if state == State::FileMeta && should_handle(&State::FileMeta, config) {
             // The file metadata section is 4 lines. Skip them under non-plain file-styles.
             continue;
         } else {
@@ -163,6 +162,12 @@ where
     painter.paint_buffered_lines();
     painter.emit()?;
     Ok(())
+}
+
+/// Should a handle_* function be called on this element?
+fn should_handle(state: &State, config: &Config) -> bool {
+    let style = config.get_style(state);
+    !(style.is_raw && style.decoration_style == DecorationStyle::NoDecoration)
 }
 
 /// Try to detect what is producing the input for delta.
@@ -188,28 +193,33 @@ fn handle_commit_meta_header_line(
     line: &str,
     config: &Config,
 ) -> std::io::Result<()> {
+    if config.commit_style.is_omitted {
+        return Ok(());
+    }
     let decoration_ansi_term_style;
     let mut pad = false;
     let draw_fn = match config.commit_style.decoration_style {
-        Some(DecorationStyle::Box(style)) => {
+        DecorationStyle::Box(style) => {
             pad = true;
             decoration_ansi_term_style = style;
             draw::write_boxed_with_line
         }
-        Some(DecorationStyle::Underline(style)) => {
+        DecorationStyle::Underline(style) => {
             decoration_ansi_term_style = style;
             draw::write_underlined
         }
-        Some(DecorationStyle::Overline(style)) => {
+        DecorationStyle::Overline(style) => {
             decoration_ansi_term_style = style;
             draw::write_overlined
         }
-        Some(DecorationStyle::Underoverline(style)) => {
+        DecorationStyle::Underoverline(style) => {
             decoration_ansi_term_style = style;
             draw::write_underoverlined
         }
-        Some(DecorationStyle::Omit) => return Ok(()),
-        None => unreachable("Unreachable code path reached in handle_commit_meta_header_line."),
+        DecorationStyle::NoDecoration => {
+            decoration_ansi_term_style = ansi_term::Style::new();
+            draw::write_no_decoration
+        }
     };
     draw_fn(
         painter.writer,
@@ -239,29 +249,32 @@ fn handle_generic_file_meta_header_line(
     line: &str,
     config: &Config,
 ) -> std::io::Result<()> {
+    if config.file_style.is_omitted {
+        return Ok(());
+    }
     let decoration_ansi_term_style;
     let mut pad = false;
     let draw_fn = match config.file_style.decoration_style {
-        Some(DecorationStyle::Box(style)) => {
+        DecorationStyle::Box(style) => {
             pad = true;
             decoration_ansi_term_style = style;
             draw::write_boxed_with_line
         }
-        Some(DecorationStyle::Underline(style)) => {
+        DecorationStyle::Underline(style) => {
             decoration_ansi_term_style = style;
             draw::write_underlined
         }
-        Some(DecorationStyle::Overline(style)) => {
+        DecorationStyle::Overline(style) => {
             decoration_ansi_term_style = style;
             draw::write_overlined
         }
-        Some(DecorationStyle::Underoverline(style)) => {
+        DecorationStyle::Underoverline(style) => {
             decoration_ansi_term_style = style;
             draw::write_underoverlined
         }
-        Some(DecorationStyle::Omit) => return Ok(()),
-        None => {
-            unreachable("Unreachable code path reached in handle_generic_file_meta_header_line.")
+        DecorationStyle::NoDecoration => {
+            decoration_ansi_term_style = ansi_term::Style::new();
+            draw::write_no_decoration
         }
     };
     writeln!(painter.writer)?;
@@ -281,63 +294,82 @@ fn handle_generic_file_meta_header_line(
 fn handle_hunk_header_line(
     painter: &mut Painter,
     line: &str,
+    raw_line: &str,
     config: &Config,
 ) -> std::io::Result<()> {
+    if config.hunk_header_style.is_omitted {
+        return Ok(());
+    }
     let decoration_ansi_term_style;
     let draw_fn = match config.hunk_header_style.decoration_style {
-        Some(DecorationStyle::Box(style)) => {
+        DecorationStyle::Box(style) => {
             decoration_ansi_term_style = style;
             draw::write_boxed
         }
-        Some(DecorationStyle::Underline(style)) => {
+        DecorationStyle::Underline(style) => {
             decoration_ansi_term_style = style;
             draw::write_underlined
         }
-        Some(DecorationStyle::Overline(style)) => {
+        DecorationStyle::Overline(style) => {
             decoration_ansi_term_style = style;
             draw::write_overlined
         }
-        Some(DecorationStyle::Underoverline(style)) => {
+        DecorationStyle::Underoverline(style) => {
             decoration_ansi_term_style = style;
             draw::write_underoverlined
         }
-        Some(DecorationStyle::Omit) => return Ok(()),
-        None => unreachable("Unreachable code path reached in handle_hunk_header_line."),
+        DecorationStyle::NoDecoration => {
+            decoration_ansi_term_style = ansi_term::Style::new();
+            draw::write_no_decoration
+        }
     };
     let (raw_code_fragment, line_number) = parse::parse_hunk_metadata(&line);
-    let line = match prepare(raw_code_fragment, false, config) {
-        s if s.len() > 0 => format!("{} ", s),
-        s => s,
-    };
-    let lines = vec![line];
-    if !lines[0].is_empty() {
+    if config.hunk_header_style.is_raw {
         writeln!(painter.writer)?;
-        let syntax_style_sections = Painter::get_syntax_style_sections_for_lines(
-            &lines,
-            &State::HunkHeader,
-            &mut painter.highlighter,
-            &painter.config,
-        );
-        Painter::paint_lines(
-            syntax_style_sections,
-            vec![vec![(config.hunk_header_style, lines[0].as_str())]],
-            &mut painter.output_buffer,
-            config,
-            "",
-            config.null_style,
-            config.null_style,
-            Some(false),
-        );
-        painter.output_buffer.pop(); // trim newline
         draw_fn(
             painter.writer,
-            &painter.output_buffer,
+            &format!("{} ", raw_line),
             config.terminal_width,
             config.hunk_header_style.ansi_term_style,
             decoration_ansi_term_style,
         )?;
-        painter.output_buffer.clear();
-    }
+    } else {
+        let line = match prepare(raw_code_fragment, false, config) {
+            s if s.len() > 0 => format!("{} ", s),
+            s => s,
+        };
+        if !line.is_empty() {
+            writeln!(painter.writer)?;
+            let lines = vec![line];
+            let syntax_style_sections = Painter::get_syntax_style_sections_for_lines(
+                &lines,
+                &State::HunkHeader,
+                &mut painter.highlighter,
+                &painter.config,
+            );
+            Painter::paint_lines(
+                syntax_style_sections,
+                vec![vec![(config.hunk_header_style, &lines[0])]],
+                &mut painter.output_buffer,
+                config,
+                "",
+                config.null_style,
+                config.null_style,
+                Some(false),
+            );
+            painter.output_buffer.pop(); // trim newline
+            draw_fn(
+                painter.writer,
+                &painter.output_buffer,
+                config.terminal_width,
+                config.hunk_header_style.ansi_term_style,
+                decoration_ansi_term_style,
+            )?;
+            if !config.hunk_header_style.is_raw {
+                painter.output_buffer.clear()
+            };
+        }
+    };
     match config.hunk_header_style.decoration_ansi_term_style() {
         Some(style) => writeln!(painter.writer, "\n{}", style.paint(line_number))?,
         None => writeln!(painter.writer, "\n{}", line_number)?,

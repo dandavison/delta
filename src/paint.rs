@@ -400,7 +400,7 @@ mod superimpose_style_sections {
         use syntect::highlighting::FontStyle as SyntectFontStyle;
         use syntect::highlighting::Style as SyntectStyle;
 
-        use crate::style::Style;
+        use crate::style::{DecorationStyle, Style};
 
         lazy_static! {
             static ref SYNTAX_STYLE: SyntectStyle = SyntectStyle {
@@ -417,8 +417,10 @@ mod superimpose_style_sections {
                     is_underline: true,
                     ..ansi_term::Style::new()
                 },
+                is_omitted: false,
+                is_raw: false,
                 is_syntax_highlighted: true,
-                decoration_style: None,
+                decoration_style: DecorationStyle::NoDecoration,
             };
         }
         lazy_static! {
@@ -429,8 +431,10 @@ mod superimpose_style_sections {
                     is_underline: true,
                     ..ansi_term::Style::new()
                 },
+                is_omitted: false,
+                is_raw: false,
                 is_syntax_highlighted: false,
-                decoration_style: None,
+                decoration_style: DecorationStyle::NoDecoration,
             };
         }
         lazy_static! {
@@ -441,8 +445,10 @@ mod superimpose_style_sections {
                     is_underline: true,
                     ..ansi_term::Style::new()
                 },
+                is_omitted: false,
+                is_raw: false,
                 is_syntax_highlighted: true,
-                decoration_style: None,
+                decoration_style: DecorationStyle::NoDecoration,
             };
         }
 

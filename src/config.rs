@@ -3,8 +3,9 @@ use syntect::highlighting::{Theme, ThemeSet};
 use syntect::parsing::SyntaxSet;
 
 use crate::bat::output::PagingMode;
-use crate::cli;
+use crate::cli::{self, unreachable};
 use crate::color;
+use crate::delta::State;
 use crate::env;
 use crate::style::Style;
 use crate::theme;
@@ -36,6 +37,17 @@ pub struct Config<'a> {
     pub null_syntect_style: SyntectStyle,
     pub max_buffered_lines: usize,
     pub paging_mode: PagingMode,
+}
+
+impl<'a> Config<'a> {
+    pub fn get_style(&self, state: &State) -> &Style {
+        match state {
+            State::CommitMeta => &self.commit_style,
+            State::FileMeta => &self.file_style,
+            State::HunkHeader => &self.hunk_header_style,
+            _ => unreachable("Unreachable code reached in get_style."),
+        }
+    }
 }
 
 pub fn get_config<'a>(
