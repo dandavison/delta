@@ -193,6 +193,9 @@ fn handle_commit_meta_header_line(
     line: &str,
     config: &Config,
 ) -> std::io::Result<()> {
+    if config.commit_style.is_omitted {
+        return Ok(());
+    }
     let decoration_ansi_term_style;
     let mut pad = false;
     let draw_fn = match config.commit_style.decoration_style {
@@ -246,6 +249,9 @@ fn handle_generic_file_meta_header_line(
     line: &str,
     config: &Config,
 ) -> std::io::Result<()> {
+    if config.file_style.is_omitted {
+        return Ok(());
+    }
     let decoration_ansi_term_style;
     let mut pad = false;
     let draw_fn = match config.file_style.decoration_style {
@@ -291,6 +297,9 @@ fn handle_hunk_header_line(
     raw_line: &str,
     config: &Config,
 ) -> std::io::Result<()> {
+    if config.hunk_header_style.is_omitted {
+        return Ok(());
+    }
     let decoration_ansi_term_style;
     let draw_fn = match config.hunk_header_style.decoration_style {
         DecorationStyle::Box(style) => {
