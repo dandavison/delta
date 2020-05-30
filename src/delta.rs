@@ -1,8 +1,8 @@
+use std::io::BufRead;
 use std::io::Write;
 
 use bytelines::ByteLines;
 use console::strip_ansi_codes;
-use std::io::BufRead;
 use unicode_segmentation::UnicodeSegmentation;
 
 use crate::config::Config;
@@ -113,9 +113,11 @@ where
         } else if line.starts_with("@@") {
             state = State::HunkHeader;
             painter.set_highlighter();
-            if !config.hunk_header_style.is_raw {
+            if !(config.hunk_header_style.is_raw
+                && config.hunk_header_style.decoration_style == DecorationStyle::NoDecoration)
+            {
                 painter.emit()?;
-                handle_hunk_header_line(&mut painter, &line, config)?;
+                handle_hunk_header_line(&mut painter, &line, &raw_line, config)?;
                 continue;
             }
         } else if source == Source::DiffUnified && line.starts_with("Only in ")
@@ -282,6 +284,7 @@ fn handle_generic_file_meta_header_line(
 fn handle_hunk_header_line(
     painter: &mut Painter,
     line: &str,
+    raw_line: &str,
     config: &Config,
 ) -> std::io::Result<()> {
     let decoration_ansi_term_style;
@@ -308,39 +311,52 @@ fn handle_hunk_header_line(
         }
     };
     let (raw_code_fragment, line_number) = parse::parse_hunk_metadata(&line);
-    let line = match prepare(raw_code_fragment, false, config) {
-        s if s.len() > 0 => format!("{} ", s),
-        s => s,
-    };
-    let lines = vec![line];
-    if !lines[0].is_empty() {
+    if config.hunk_header_style.is_raw {
         writeln!(painter.writer)?;
-        let syntax_style_sections = Painter::get_syntax_style_sections_for_lines(
-            &lines,
-            &State::HunkHeader,
-            &mut painter.highlighter,
-            &painter.config,
-        );
-        Painter::paint_lines(
-            syntax_style_sections,
-            vec![vec![(config.hunk_header_style, lines[0].as_str())]],
-            &mut painter.output_buffer,
-            config,
-            "",
-            config.null_style,
-            config.null_style,
-            Some(false),
-        );
-        painter.output_buffer.pop(); // trim newline
         draw_fn(
             painter.writer,
-            &painter.output_buffer,
+            &format!("{} ", raw_line),
             config.terminal_width,
             config.hunk_header_style.ansi_term_style,
             decoration_ansi_term_style,
         )?;
-        painter.output_buffer.clear();
-    }
+    } else {
+        let line = match prepare(raw_code_fragment, false, config) {
+            s if s.len() > 0 => format!("{} ", s),
+            s => s,
+        };
+        if !line.is_empty() {
+            writeln!(painter.writer)?;
+            let lines = vec![line];
+            let syntax_style_sections = Painter::get_syntax_style_sections_for_lines(
+                &lines,
+                &State::HunkHeader,
+                &mut painter.highlighter,
+                &painter.config,
+            );
+            Painter::paint_lines(
+                syntax_style_sections,
+                vec![vec![(config.hunk_header_style, &lines[0])]],
+                &mut painter.output_buffer,
+                config,
+                "",
+                config.null_style,
+                config.null_style,
+                Some(false),
+            );
+            painter.output_buffer.pop(); // trim newline
+            draw_fn(
+                painter.writer,
+                &painter.output_buffer,
+                config.terminal_width,
+                config.hunk_header_style.ansi_term_style,
+                decoration_ansi_term_style,
+            )?;
+            if !config.hunk_header_style.is_raw {
+                painter.output_buffer.clear()
+            };
+        }
+    };
     match config.hunk_header_style.decoration_ansi_term_style() {
         Some(style) => writeln!(painter.writer, "\n{}", style.paint(line_number))?,
         None => writeln!(painter.writer, "\n{}", line_number)?,
