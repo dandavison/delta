@@ -384,7 +384,7 @@ All delta color options work the same way. There are three ways to specify a col
 </table>
 
 
-## To build delta from source:
+## Build delta from source
 
 You'll need to [install the rust tools](https://www.rust-lang.org/learn/get-started). Then:
 
