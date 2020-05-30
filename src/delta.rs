@@ -83,7 +83,7 @@ where
             state = State::FileMeta;
         } else if (state == State::FileMeta || source == Source::DiffUnified)
             && (line.starts_with("--- ") || line.starts_with("rename from "))
-            && !config.file_style.is_raw
+            && should_handle(&State::FileMeta, config)
         {
             minus_file = parse::get_file_path_from_file_meta_line(&line, source == Source::GitDiff);
             if source == Source::DiffUnified {
@@ -96,7 +96,7 @@ where
                 ));
             }
         } else if (line.starts_with("+++ ") || line.starts_with("rename to "))
-            && !config.file_style.is_raw
+            && should_handle(&State::FileMeta, config)
         {
             plus_file = parse::get_file_path_from_file_meta_line(&line, source == Source::GitDiff);
             painter.set_syntax(parse::get_file_extension_from_file_meta_line_file_path(
@@ -137,7 +137,7 @@ where
 
             state = State::FileMeta;
             painter.paint_buffered_lines();
-            if !config.file_style.is_raw {
+            if should_handle(&State::FileMeta, config) {
                 painter.emit()?;
                 handle_generic_file_meta_header_line(&mut painter, &raw_line, config)?;
                 continue;
@@ -150,7 +150,7 @@ where
             continue;
         }
 
-        if state == State::FileMeta && !config.file_style.is_raw {
+        if state == State::FileMeta && should_handle(&State::FileMeta, config) {
             // The file metadata section is 4 lines. Skip them under non-plain file-styles.
             continue;
         } else {
