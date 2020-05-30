@@ -558,6 +558,15 @@ src/align.rs
     }
 
     #[test]
+    fn test_hunk_header_style_empty_string() {
+        let mut options = integration_test_utils::get_command_line_options();
+        options.hunk_header_style = "".to_string();
+        let (output, _) = integration_test_utils::run_delta(GIT_DIFF_SINGLE_HUNK, options);
+        assert!(output.contains(" impl<'a> Alignment<'a> {"));
+        assert!(!output.contains("@@"));
+    }
+
+    #[test]
     fn test_hunk_header_style_box() {
         let mut options = integration_test_utils::get_command_line_options();
         options.hunk_header_decoration_style = "white box".to_string();
