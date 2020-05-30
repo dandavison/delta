@@ -215,7 +215,6 @@ mod tests {
             0,
             "commit 94907c0f136f46dc46ffae2dc92dca9af7eb7c2e",
         );
-        let output = strip_ansi_codes(&output);
         assert!(output.contains(
             "\
 commit 94907c0f136f46dc46ffae2dc92dca9af7eb7c2e
@@ -321,7 +320,6 @@ commit 94907c0f136f46dc46ffae2dc92dca9af7eb7c2e │
             1,
             "commit 94907c0f136f46dc46ffae2dc92dca9af7eb7c2e │",
         );
-        let output = strip_ansi_codes(&output);
         assert!(output.contains(
             "\
 ────────────────────────────────────────────────┐
@@ -375,7 +373,6 @@ commit 94907c0f136f46dc46ffae2dc92dca9af7eb7c2e
         {
             ansi_test_utils::assert_line_has_no_color(&output, 6 + i, line);
         }
-        let output = strip_ansi_codes(&output);
         assert!(output.contains(
             "
 diff --git a/src/align.rs b/src/align.rs
@@ -475,7 +472,6 @@ src/align.rs │
         options.file_decoration_style = "box".to_string();
         let (output, _) = integration_test_utils::run_delta(GIT_DIFF_SINGLE_HUNK, options);
         ansi_test_utils::assert_line_has_no_color(&output, 8, "src/align.rs │");
-        let output = strip_ansi_codes(&output);
         assert!(output.contains(
             "
 ─────────────┐
@@ -523,7 +519,6 @@ src/align.rs
             9,
             "@@ -71,11 +71,8 @@ impl<'a> Alignment<'a> {",
         );
-        let output = strip_ansi_codes(&output);
         assert!(output.contains("@@ -71,11 +71,8 @@ impl<'a> Alignment<'a> {"));
     }
 
@@ -602,7 +597,6 @@ src/align.rs
             11,
             "@@ -71,11 +71,8 @@ impl<'a> Alignment<'a> { │",
         );
-        let output = strip_ansi_codes(&output);
         assert!(output.contains(
             "
 ────────────────────────────────────────────┐
