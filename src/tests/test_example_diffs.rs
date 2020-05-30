@@ -423,6 +423,27 @@ src/align.rs
     }
 
     #[test]
+    fn test_hunk_header_style_box_raw() {
+        let mut options = integration_test_utils::get_command_line_options();
+        options.hunk_header_style = "raw".to_string();
+        options.hunk_header_decoration_style = "box".to_string();
+        let (output, _) = integration_test_utils::run_delta(GIT_DIFF_SINGLE_HUNK, options);
+        ansi_test_utils::assert_line_has_no_color(
+            &output,
+            11,
+            "@@ -71,11 +71,8 @@ impl<'a> Alignment<'a> { │",
+        );
+        let output = strip_ansi_codes(&output);
+        assert!(output.contains(
+            "
+────────────────────────────────────────────┐
+@@ -71,11 +71,8 @@ impl<'a> Alignment<'a> { │
+────────────────────────────────────────────┘
+"
+        ));
+    }
+
+    #[test]
     fn test_hunk_style_underline() {
         let mut options = integration_test_utils::get_command_line_options();
         options.hunk_header_decoration_style = "black underline".to_string();
