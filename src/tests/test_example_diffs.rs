@@ -415,7 +415,7 @@ src/align.rs
     }
 
     #[test]
-    fn test_hunk_style_raw_no_decoration() {
+    fn test_hunk_header_style_raw_no_decoration() {
         let mut options = integration_test_utils::get_command_line_options();
         options.hunk_header_style = "raw".to_string();
         options.hunk_header_decoration_style = "omit".to_string();
@@ -430,7 +430,7 @@ src/align.rs
     }
 
     #[test]
-    fn test_hunk_style_box() {
+    fn test_hunk_header_style_box() {
         let mut options = integration_test_utils::get_command_line_options();
         options.hunk_header_decoration_style = "white box".to_string();
         let (output, config) = integration_test_utils::run_delta(GIT_DIFF_SINGLE_HUNK, options);
@@ -480,7 +480,7 @@ src/align.rs
     }
 
     #[test]
-    fn test_hunk_style_underline() {
+    fn test_hunk_header_style_underline() {
         let mut options = integration_test_utils::get_command_line_options();
         options.hunk_header_decoration_style = "black underline".to_string();
         let (output, config) = integration_test_utils::run_delta(GIT_DIFF_SINGLE_HUNK, options);
@@ -500,7 +500,7 @@ src/align.rs
     }
 
     #[test]
-    fn test_hunk_style_box_with_syntax_highlighting() {
+    fn test_hunk_header_style_box_with_syntax_highlighting() {
         let mut options = integration_test_utils::get_command_line_options();
         options.hunk_header_style = "syntax".to_string();
         // For this test we are currently forced to disable styling of the decoration, since
