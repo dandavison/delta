@@ -2,6 +2,7 @@
 mod tests {
     use console::strip_ansi_codes;
 
+    use crate::cli;
     use crate::tests::ansi_test_utils::ansi_test_utils;
     use crate::tests::integration_test_utils::integration_test_utils;
 
@@ -223,6 +224,44 @@ commit 94907c0f136f46dc46ffae2dc92dca9af7eb7c2e
     }
 
     #[test]
+    fn test_commit_decoration_style_omit() {
+        let mut options = integration_test_utils::get_command_line_options();
+        options.commit_style = "blue".to_string();
+        options.commit_decoration_style = "omit".to_string();
+        _do_test_commit_style_no_decoration(options);
+    }
+
+    #[test]
+    fn test_commit_decoration_style_empty_string() {
+        let mut options = integration_test_utils::get_command_line_options();
+        options.commit_style = "blue".to_string();
+        options.commit_decoration_style = "".to_string();
+        _do_test_commit_style_no_decoration(options);
+    }
+
+    fn _do_test_commit_style_no_decoration(options: cli::Opt) {
+        let (output, config) = integration_test_utils::run_delta(GIT_DIFF_SINGLE_HUNK, options);
+        if false {
+            // `--commit-style xxx` is not honored yet: always behaves like xxx=raw
+            ansi_test_utils::assert_line_has_foreground_color(
+                &output,
+                0,
+                "commit 94907c0f136f46dc46ffae2dc92dca9af7eb7c2e",
+                "blue",
+                &config,
+            );
+        }
+        let output = strip_ansi_codes(&output);
+        assert!(output.contains("commit 94907c0f136f46dc46ffae2dc92dca9af7eb7c2e"));
+        assert!(!output.contains("commit 94907c0f136f46dc46ffae2dc92dca9af7eb7c2e │"));
+        assert!(!output.contains(
+            "\
+commit 94907c0f136f46dc46ffae2dc92dca9af7eb7c2e
+───────────────────────────────────────────────"
+        ));
+    }
+
+    #[test]
     fn test_commit_style_omit() {
         let mut options = integration_test_utils::get_command_line_options();
         options.commit_style = "omit".to_string();
@@ -348,6 +387,44 @@ index 8e37a9e..6ce4863 100644
     }
 
     #[test]
+    fn test_file_decoration_style_omit() {
+        let mut options = integration_test_utils::get_command_line_options();
+        options.file_style = "green".to_string();
+        options.file_decoration_style = "omit".to_string();
+        _do_test_file_style_no_decoration(options);
+    }
+
+    #[test]
+    fn test_file_decoration_style_empty_string() {
+        let mut options = integration_test_utils::get_command_line_options();
+        options.file_style = "green".to_string();
+        options.file_decoration_style = "".to_string();
+        _do_test_file_style_no_decoration(options);
+    }
+
+    fn _do_test_file_style_no_decoration(options: cli::Opt) {
+        let (output, config) = integration_test_utils::run_delta(GIT_DIFF_SINGLE_HUNK, options);
+        if false {
+            // FIXME
+            ansi_test_utils::assert_line_has_foreground_color(
+                &output,
+                7,
+                "src/align.rs",
+                "green",
+                &config,
+            );
+        }
+        let output = strip_ansi_codes(&output);
+        assert!(output.contains("src/align.rs"));
+        assert!(!output.contains("src/align.rs │"));
+        assert!(!output.contains(
+            "
+src/align.rs
+────────────"
+        ));
+    }
+
+    #[test]
     fn test_file_style_omit() {
         let mut options = integration_test_utils::get_command_line_options();
         options.file_style = "omit".to_string();
@@ -448,6 +525,32 @@ src/align.rs
         );
         let output = strip_ansi_codes(&output);
         assert!(output.contains("@@ -71,11 +71,8 @@ impl<'a> Alignment<'a> {"));
+    }
+
+    #[test]
+    fn test_hunk_header_decoration_style_omit() {
+        let mut options = integration_test_utils::get_command_line_options();
+        options.hunk_header_decoration_style = "omit".to_string();
+        _do_test_hunk_header_style_no_decoration(options);
+    }
+
+    #[test]
+    fn test_hunk_header_decoration_style_empty_string() {
+        let mut options = integration_test_utils::get_command_line_options();
+        options.hunk_header_decoration_style = "".to_string();
+        _do_test_hunk_header_style_no_decoration(options);
+    }
+
+    fn _do_test_hunk_header_style_no_decoration(options: cli::Opt) {
+        let (output, _) = integration_test_utils::run_delta(GIT_DIFF_SINGLE_HUNK, options);
+        let output = strip_ansi_codes(&output);
+        assert!(output.contains(" impl<'a> Alignment<'a> {"));
+        assert!(!output.contains(" impl<'a> Alignment<'a> { │"));
+        assert!(!output.contains(
+            "
+ impl<'a> Alignment<'a> {
+─────────────────────────"
+        ));
     }
 
     #[test]
