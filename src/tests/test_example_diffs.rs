@@ -351,6 +351,22 @@ src/align.rs │
     }
 
     #[test]
+    fn test_file_style_box_raw() {
+        let mut options = integration_test_utils::get_command_line_options();
+        options.file_style = "raw".to_string();
+        options.file_decoration_style = "box".to_string();
+        let (output, _) = integration_test_utils::run_delta(GIT_DIFF_SINGLE_HUNK, options);
+        ansi_test_utils::assert_line_has_no_color(&output, 8, "src/align.rs │");
+        let output = strip_ansi_codes(&output);
+        assert!(output.contains(
+            "
+─────────────┐
+src/align.rs │
+─────────────┴─"
+        ));
+    }
+
+    #[test]
     fn test_file_style_underline() {
         let mut options = integration_test_utils::get_command_line_options();
         options.file_style = "magenta".to_string();
