@@ -384,7 +384,15 @@ All delta color options work the same way. There are three ways to specify a col
 </table>
 
 
+## To build delta from source:
 
+You'll need to [install the rust tools](https://www.rust-lang.org/learn/get-started). Then:
+
+```
+cargo build --release
+```
+
+and use the executable found at `./target/release/delta`.
 
 
 ## Credit
