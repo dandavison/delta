@@ -8,6 +8,7 @@ use crate::color;
 #[derive(Clone, Copy, Debug, PartialEq)]
 pub struct Style {
     pub ansi_term_style: ansi_term::Style,
+    pub is_emph: bool,
     pub is_omitted: bool,
     pub is_raw: bool,
     pub is_syntax_highlighted: bool,
@@ -27,6 +28,7 @@ impl Style {
     pub fn new() -> Self {
         Self {
             ansi_term_style: ansi_term::Style::new(),
+            is_emph: false,
             is_omitted: false,
             is_raw: false,
             is_syntax_highlighted: false,
@@ -44,6 +46,7 @@ impl Style {
         background_default: Option<ansi_term::Color>,
         decoration_style_string: Option<&str>,
         true_color: bool,
+        is_emph: bool,
     ) -> Self {
         let (ansi_term_style, is_omitted, is_raw, is_syntax_highlighted) = parse_ansi_term_style(
             &style_string,
@@ -57,6 +60,7 @@ impl Style {
         };
         Style {
             ansi_term_style,
+            is_emph,
             is_omitted,
             is_raw,
             is_syntax_highlighted,
@@ -71,6 +75,7 @@ impl Style {
         background_default: Option<ansi_term::Color>,
         decoration_style_string: Option<&str>,
         true_color: bool,
+        is_emph: bool,
     ) -> Self {
         let (style_string, special_attribute_from_style_string) =
             extract_special_decoration_attribute(style_string);
@@ -80,6 +85,7 @@ impl Style {
             background_default,
             decoration_style_string,
             true_color,
+            is_emph,
         );
         if let Some(special_attribute) = special_attribute_from_style_string {
             style.decoration_style = DecorationStyle::apply_special_decoration_attribute(
@@ -100,6 +106,7 @@ impl Style {
         decoration_style_string: Option<&str>,
         deprecated_foreground_color_arg: Option<&str>,
         true_color: bool,
+        is_emph: bool,
     ) -> Self {
         let mut style = Self::from_str_with_handling_of_special_decoration_attributes(
             style_string,
@@ -107,6 +114,7 @@ impl Style {
             background_default,
             decoration_style_string,
             true_color,
+            is_emph,
         );
         if let Some(s) = deprecated_foreground_color_arg {
             // The deprecated --{commit,file,hunk}-color args functioned to set the decoration

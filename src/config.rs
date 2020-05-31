@@ -147,6 +147,7 @@ fn make_hunk_styles<'a>(
         )),
         None,
         true_color,
+        false,
     );
 
     let minus_emph_style = Style::from_str(
@@ -158,6 +159,7 @@ fn make_hunk_styles<'a>(
         )),
         None,
         true_color,
+        true,
     );
 
     // The non-emph styles default to the base style.
@@ -168,11 +170,12 @@ fn make_hunk_styles<'a>(
             minus_style.ansi_term_style.background,
             None,
             true_color,
+            false,
         ),
         None => minus_style,
     };
 
-    let zero_style = Style::from_str(&opt.zero_style, None, None, None, true_color);
+    let zero_style = Style::from_str(&opt.zero_style, None, None, None, true_color, false);
 
     let plus_style = Style::from_str(
         &opt.plus_style,
@@ -183,6 +186,7 @@ fn make_hunk_styles<'a>(
         )),
         None,
         true_color,
+        false,
     );
 
     let plus_emph_style = Style::from_str(
@@ -194,6 +198,7 @@ fn make_hunk_styles<'a>(
         )),
         None,
         true_color,
+        true,
     );
 
     // The non-emph styles default to the base style.
@@ -204,6 +209,7 @@ fn make_hunk_styles<'a>(
             plus_style.ansi_term_style.background,
             None,
             true_color,
+            false,
         ),
         None => plus_style,
     };
@@ -228,6 +234,7 @@ fn make_commit_file_hunk_header_styles(opt: &cli::Opt, true_color: bool) -> (Sty
             Some(&opt.commit_decoration_style),
             opt.deprecated_commit_color.as_deref(),
             true_color,
+            false,
         ),
         Style::from_str_with_handling_of_special_decoration_attributes_and_respecting_deprecated_foreground_color_arg(
             &opt.file_style,
@@ -236,6 +243,7 @@ fn make_commit_file_hunk_header_styles(opt: &cli::Opt, true_color: bool) -> (Sty
             Some(&opt.file_decoration_style),
             opt.deprecated_file_color.as_deref(),
             true_color,
+            false,
         ),
         Style::from_str_with_handling_of_special_decoration_attributes_and_respecting_deprecated_foreground_color_arg(
             &opt.hunk_header_style,
@@ -244,6 +252,7 @@ fn make_commit_file_hunk_header_styles(opt: &cli::Opt, true_color: bool) -> (Sty
             Some(&opt.hunk_header_decoration_style),
             opt.deprecated_hunk_color.as_deref(),
             true_color,
+            false,
         ),
     )
 }
