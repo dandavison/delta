@@ -1,4 +1,3 @@
-/// This lower-level module works directly with ansi_term::Style, rather than Delta's higher-level style::Style.
 use std::io::Write;
 
 use ansi_term;
@@ -6,14 +5,21 @@ use box_drawing;
 use console::strip_ansi_codes;
 use unicode_width::UnicodeWidthStr;
 
+use crate::style::Style;
+
 pub fn write_no_decoration(
     writer: &mut dyn Write,
     text: &str,
+    raw_text: &str,
     _line_width: usize, // ignored
-    text_style: ansi_term::Style,
+    text_style: Style,
     _decoration_style: ansi_term::Style,
 ) -> std::io::Result<()> {
-    writeln!(writer, "{}", text_style.paint(text))?;
+    if text_style.is_raw {
+        writeln!(writer, "{}", raw_text)?;
+    } else {
+        writeln!(writer, "{}", text_style.ansi_term_style.paint(text))?;
+    }
     Ok(())
 }
 
@@ -22,8 +28,9 @@ pub fn write_no_decoration(
 pub fn write_boxed(
     writer: &mut dyn Write,
     text: &str,
+    raw_text: &str,
     _line_width: usize, // ignored
-    text_style: ansi_term::Style,
+    text_style: Style,
     decoration_style: ansi_term::Style,
 ) -> std::io::Result<()> {
     let up_left = if decoration_style.is_bold {
@@ -32,7 +39,14 @@ pub fn write_boxed(
         box_drawing::light::UP_LEFT
     };
     let box_width = UnicodeWidthStr::width(strip_ansi_codes(text).as_ref());
-    write_boxed_partial(writer, text, box_width, text_style, decoration_style)?;
+    write_boxed_partial(
+        writer,
+        text,
+        raw_text,
+        box_width,
+        text_style,
+        decoration_style,
+    )?;
     write!(writer, "{}", decoration_style.paint(up_left))?;
     Ok(())
 }
@@ -42,12 +56,20 @@ pub fn write_boxed(
 pub fn write_boxed_with_line(
     writer: &mut dyn Write,
     text: &str,
+    raw_text: &str,
     line_width: usize,
-    text_style: ansi_term::Style,
+    text_style: Style,
     decoration_style: ansi_term::Style,
 ) -> std::io::Result<()> {
-    let box_width = UnicodeWidthStr::width(strip_ansi_codes(text).as_ref());
-    write_boxed_with_horizontal_whisker(writer, text, box_width, text_style, decoration_style)?;
+    let box_width = UnicodeWidthStr::width(text);
+    write_boxed_with_horizontal_whisker(
+        writer,
+        text,
+        raw_text,
+        box_width,
+        text_style,
+        decoration_style,
+    )?;
     write_horizontal_line(
         writer,
         if line_width > box_width {
@@ -71,14 +93,16 @@ enum Underoverline {
 pub fn write_underlined(
     writer: &mut dyn Write,
     text: &str,
+    raw_text: &str,
     line_width: usize,
-    text_style: ansi_term::Style,
+    text_style: Style,
     decoration_style: ansi_term::Style,
 ) -> std::io::Result<()> {
     _write_under_or_over_lined(
         Underoverline::Under,
         writer,
         text,
+        raw_text,
         line_width,
         text_style,
         decoration_style,
@@ -88,14 +112,16 @@ pub fn write_underlined(
 pub fn write_overlined(
     writer: &mut dyn Write,
     text: &str,
+    raw_text: &str,
     line_width: usize,
-    text_style: ansi_term::Style,
+    text_style: Style,
     decoration_style: ansi_term::Style,
 ) -> std::io::Result<()> {
     _write_under_or_over_lined(
         Underoverline::Over,
         writer,
         text,
+        raw_text,
         line_width,
         text_style,
         decoration_style,
@@ -105,14 +131,16 @@ pub fn write_overlined(
 pub fn write_underoverlined(
     writer: &mut dyn Write,
     text: &str,
+    raw_text: &str,
     line_width: usize,
-    text_style: ansi_term::Style,
+    text_style: Style,
     decoration_style: ansi_term::Style,
 ) -> std::io::Result<()> {
     _write_under_or_over_lined(
         Underoverline::Underover,
         writer,
         text,
+        raw_text,
         line_width,
         text_style,
         decoration_style,
@@ -123,8 +151,9 @@ fn _write_under_or_over_lined(
     underoverline: Underoverline,
     writer: &mut dyn Write,
     text: &str,
+    raw_text: &str,
     line_width: usize,
-    text_style: ansi_term::Style,
+    text_style: Style,
     decoration_style: ansi_term::Style,
 ) -> std::io::Result<()> {
     let mut write_line: Box<dyn FnMut(&mut dyn Write) -> std::io::Result<()>> =
@@ -137,7 +166,11 @@ fn _write_under_or_over_lined(
         Underoverline::Under => {}
         _ => write_line(writer)?,
     }
-    writeln!(writer, "{}", text_style.paint(text))?;
+    if text_style.is_raw {
+        writeln!(writer, "{}", raw_text)?;
+    } else {
+        writeln!(writer, "{}", text_style.ansi_term_style.paint(text))?;
+    }
     match underoverline {
         Underoverline::Over => {}
         _ => write_line(writer)?,
@@ -148,7 +181,7 @@ fn _write_under_or_over_lined(
 fn write_horizontal_line(
     writer: &mut dyn Write,
     line_width: usize,
-    _text_style: ansi_term::Style,
+    _text_style: Style,
     decoration_style: ansi_term::Style,
 ) -> std::io::Result<()> {
     let horizontal = if decoration_style.is_bold {
@@ -166,8 +199,9 @@ fn write_horizontal_line(
 fn write_boxed_with_horizontal_whisker(
     writer: &mut dyn Write,
     text: &str,
+    raw_text: &str,
     box_width: usize,
-    text_style: ansi_term::Style,
+    text_style: Style,
     decoration_style: ansi_term::Style,
 ) -> std::io::Result<()> {
     let up_horizontal = if decoration_style.is_bold {
@@ -175,7 +209,14 @@ fn write_boxed_with_horizontal_whisker(
     } else {
         box_drawing::light::UP_HORIZONTAL
     };
-    write_boxed_partial(writer, text, box_width, text_style, decoration_style)?;
+    write_boxed_partial(
+        writer,
+        text,
+        raw_text,
+        box_width,
+        text_style,
+        decoration_style,
+    )?;
     write!(writer, "{}", decoration_style.paint(up_horizontal))?;
     Ok(())
 }
@@ -183,8 +224,9 @@ fn write_boxed_with_horizontal_whisker(
 fn write_boxed_partial(
     writer: &mut dyn Write,
     text: &str,
+    raw_text: &str,
     box_width: usize,
-    text_style: ansi_term::Style,
+    text_style: Style,
     decoration_style: ansi_term::Style,
 ) -> std::io::Result<()> {
     let (horizontal, down_left, vertical) = if decoration_style.is_bold {
@@ -203,10 +245,18 @@ fn write_boxed_partial(
     let horizontal_edge = horizontal.repeat(box_width);
     write!(
         writer,
-        "{}{}\n{}{}\n{}",
+        "{}{}\n",
         decoration_style.paint(&horizontal_edge),
         decoration_style.paint(down_left),
-        text_style.paint(text),
+    )?;
+    if text_style.is_raw {
+        write!(writer, "{}", raw_text)?;
+    } else {
+        write!(writer, "{}", text_style.ansi_term_style.paint(text))?;
+    }
+    write!(
+        writer,
+        "{}\n{}",
         decoration_style.paint(vertical),
         decoration_style.paint(&horizontal_edge),
     )

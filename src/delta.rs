@@ -75,7 +75,7 @@ where
             state = State::CommitMeta;
             if should_handle(&state, config) {
                 painter.emit()?;
-                handle_commit_meta_header_line(&mut painter, &raw_line, config)?;
+                handle_commit_meta_header_line(&mut painter, &line, &raw_line, config)?;
                 continue;
             }
         } else if line.starts_with("diff ") {
@@ -139,7 +139,7 @@ where
             painter.paint_buffered_lines();
             if should_handle(&State::FileMeta, config) {
                 painter.emit()?;
-                handle_generic_file_meta_header_line(&mut painter, &raw_line, config)?;
+                handle_generic_file_meta_header_line(&mut painter, &line, &raw_line, config)?;
                 continue;
             }
         } else if state.is_in_hunk() {
@@ -191,6 +191,7 @@ fn detect_source(line: &str) -> Source {
 fn handle_commit_meta_header_line(
     painter: &mut Painter,
     line: &str,
+    raw_line: &str,
     config: &Config,
 ) -> std::io::Result<()> {
     if config.commit_style.is_omitted {
@@ -224,8 +225,9 @@ fn handle_commit_meta_header_line(
     draw_fn(
         painter.writer,
         &format!("{}{}", line, if pad { " " } else { "" }),
+        &format!("{}{}", raw_line, if pad { " " } else { "" }),
         config.terminal_width,
-        config.commit_style.ansi_term_style,
+        config.commit_style,
         decoration_ansi_term_style,
     )?;
     Ok(())
@@ -240,13 +242,15 @@ fn handle_file_meta_header_line(
     comparing: bool,
 ) -> std::io::Result<()> {
     let line = parse::get_file_change_description_from_file_paths(minus_file, plus_file, comparing);
-    handle_generic_file_meta_header_line(painter, &line, config)
+    // FIXME: no support for 'raw'
+    handle_generic_file_meta_header_line(painter, &line, &line, config)
 }
 
 /// Write `line` with FileMeta styling.
 fn handle_generic_file_meta_header_line(
     painter: &mut Painter,
     line: &str,
+    raw_line: &str,
     config: &Config,
 ) -> std::io::Result<()> {
     if config.file_style.is_omitted {
@@ -281,8 +285,9 @@ fn handle_generic_file_meta_header_line(
     draw_fn(
         painter.writer,
         &format!("{}{}", line, if pad { " " } else { "" }),
+        &format!("{}{}", raw_line, if pad { " " } else { "" }),
         config.terminal_width,
-        config.file_style.ansi_term_style,
+        config.file_style,
         decoration_ansi_term_style,
     )?;
     Ok(())
@@ -325,9 +330,10 @@ fn handle_hunk_header_line(
         writeln!(painter.writer)?;
         draw_fn(
             painter.writer,
+            &format!("{} ", line),
             &format!("{} ", raw_line),
             config.terminal_width,
-            config.hunk_header_style.ansi_term_style,
+            config.hunk_header_style,
             decoration_ansi_term_style,
         )?;
     } else {
@@ -358,8 +364,9 @@ fn handle_hunk_header_line(
             draw_fn(
                 painter.writer,
                 &painter.output_buffer,
+                &painter.output_buffer,
                 config.terminal_width,
-                config.hunk_header_style.ansi_term_style,
+                config.hunk_header_style,
                 decoration_ansi_term_style,
             )?;
             if !config.hunk_header_style.is_raw {
