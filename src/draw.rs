@@ -10,10 +10,10 @@ pub fn write_no_decoration(
     writer: &mut dyn Write,
     text: &str,
     _line_width: usize, // ignored
-    _text_style: ansi_term::Style,
+    text_style: ansi_term::Style,
     _decoration_style: ansi_term::Style,
 ) -> std::io::Result<()> {
-    writeln!(writer, "{}", text)?;
+    writeln!(writer, "{}", text_style.paint(text))?;
     Ok(())
 }
 

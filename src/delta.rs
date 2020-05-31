@@ -280,10 +280,7 @@ fn handle_generic_file_meta_header_line(
     writeln!(painter.writer)?;
     draw_fn(
         painter.writer,
-        &config
-            .file_style
-            .ansi_term_style
-            .paint(format!("{}{}", line, if pad { " " } else { "" })),
+        &format!("{}{}", line, if pad { " " } else { "" }),
         config.terminal_width,
         config.file_style.ansi_term_style,
         decoration_ansi_term_style,
