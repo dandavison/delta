@@ -629,6 +629,17 @@ src/align.rs
     fn test_hunk_header_style_empty_string() {
         let mut options = integration_test_utils::get_command_line_options();
         options.hunk_header_style = "".to_string();
+        _do_test_hunk_header_empty_style(options);
+    }
+
+    #[test]
+    fn test_hunk_header_style_none() {
+        let mut options = integration_test_utils::get_command_line_options();
+        options.hunk_header_style = "None".to_string();
+        _do_test_hunk_header_empty_style(options);
+    }
+
+    fn _do_test_hunk_header_empty_style(options: cli::Opt) {
         let (output, _) = integration_test_utils::run_delta(GIT_DIFF_SINGLE_HUNK, options);
         assert!(output.contains(" impl<'a> Alignment<'a> {"));
         assert!(!output.contains("@@"));

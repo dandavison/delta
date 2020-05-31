@@ -87,14 +87,21 @@ impl Style {
             true_color,
             is_emph,
         );
-        if let Some(special_attribute) = special_attribute_from_style_string {
-            style.decoration_style = DecorationStyle::apply_special_decoration_attribute(
-                style.decoration_style,
-                &special_attribute,
-                true_color,
-            )
+        match special_attribute_from_style_string.as_deref() {
+            Some("none") => {
+                style.ansi_term_style = ansi_term::Style::new();
+                style
+            }
+            Some(special_attribute) => {
+                style.decoration_style = DecorationStyle::apply_special_decoration_attribute(
+                    style.decoration_style,
+                    &special_attribute,
+                    true_color,
+                );
+                style
+            }
+            _ => style,
         }
-        style
     }
 
     /// As from_str_with_handling_of_special_decoration_attributes but respecting an optional
