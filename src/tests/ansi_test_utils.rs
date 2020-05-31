@@ -3,7 +3,6 @@ pub mod ansi_test_utils {
     use ansi_term;
     use console::strip_ansi_codes;
 
-    use crate::color;
     use crate::config::Config;
     use crate::paint;
     use crate::style::Style;
@@ -17,14 +16,17 @@ pub mod ansi_test_utils {
         output: &str,
         line_number: usize,
         expected_prefix: &str,
-        expected_color: &str,
+        expected_style: &str,
         config: &Config,
     ) {
         let line = output.lines().nth(line_number).unwrap();
         assert!(strip_ansi_codes(line).starts_with(expected_prefix));
         assert!(has_foreground_color(
             line,
-            color::color_from_rgb_or_ansi_code(expected_color, config.true_color)
+            Style::from_str(expected_style, None, None, None, config.true_color, false)
+                .ansi_term_style
+                .foreground
+                .unwrap()
         ));
     }
 
