@@ -401,16 +401,13 @@ index 8e37a9e..6ce4863 100644
 
     fn _do_test_file_style_no_decoration(options: cli::Opt) {
         let (output, config) = integration_test_utils::run_delta(GIT_DIFF_SINGLE_HUNK, options);
-        if false {
-            // FIXME
-            ansi_test_utils::assert_line_has_foreground_color(
-                &output,
-                7,
-                "src/align.rs",
-                "green",
-                &config,
-            );
-        }
+        ansi_test_utils::assert_line_has_foreground_color(
+            &output,
+            7,
+            "src/align.rs",
+            "green",
+            &config,
+        );
         let output = strip_ansi_codes(&output);
         assert!(output.contains("src/align.rs"));
         assert!(!output.contains("src/align.rs │"));
