@@ -7,14 +7,14 @@ pub mod ansi_test_utils {
     use crate::paint;
     use crate::style::Style;
 
-    pub fn assert_line_has_foreground_color(
+    pub fn assert_line_has_style(
         output: &str,
         line_number: usize,
         expected_prefix: &str,
         expected_style: &str,
         config: &Config,
     ) {
-        _assert_line_has_foreground_color(
+        _assert_line_has_style(
             output,
             line_number,
             expected_prefix,
@@ -24,14 +24,14 @@ pub mod ansi_test_utils {
         );
     }
 
-    pub fn assert_line_has_4_bit_foreground_color(
+    pub fn assert_line_has_4_bit_color_style(
         output: &str,
         line_number: usize,
         expected_prefix: &str,
         expected_style: &str,
         config: &Config,
     ) {
-        _assert_line_has_foreground_color(
+        _assert_line_has_style(
             output,
             line_number,
             expected_prefix,
@@ -117,17 +117,7 @@ pub mod ansi_test_utils {
         output_buffer
     }
 
-    fn has_foreground_color(string: &str, color: ansi_term::Color, _4_bit_color: bool) -> bool {
-        let color = if _4_bit_color {
-            ansi_term_fixed_foreground_to_4_bit_color(color)
-        } else {
-            color
-        };
-        let style = ansi_term::Style::default().fg(color);
-        string.starts_with(&style.prefix().to_string())
-    }
-
-    fn _assert_line_has_foreground_color(
+    fn _assert_line_has_style(
         output: &str,
         line_number: usize,
         expected_prefix: &str,
@@ -137,14 +127,14 @@ pub mod ansi_test_utils {
     ) {
         let line = output.lines().nth(line_number).unwrap();
         assert!(strip_ansi_codes(line).starts_with(expected_prefix));
-        assert!(has_foreground_color(
-            line,
-            Style::from_str(expected_style, None, None, None, config.true_color, false)
+        let mut style = Style::from_str(expected_style, None, None, None, config.true_color, false);
+        if _4_bit_color {
+            style.ansi_term_style.foreground = style
                 .ansi_term_style
                 .foreground
-                .unwrap(),
-            _4_bit_color
-        ));
+                .map(ansi_term_fixed_foreground_to_4_bit_color);
+        }
+        assert!(line.starts_with(&style.ansi_term_style.prefix().to_string()))
     }
 
     fn ansi_term_fixed_foreground_to_4_bit_color(color: ansi_term::Color) -> ansi_term::Color {
