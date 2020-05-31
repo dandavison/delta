@@ -223,6 +223,40 @@ commit 94907c0f136f46dc46ffae2dc92dca9af7eb7c2e
     }
 
     #[test]
+    fn test_commit_style_colored_input_color_is_stripped_under_normal() {
+        let mut options = integration_test_utils::get_command_line_options();
+        options.commit_style = "normal".to_string();
+        options.commit_decoration_style = "omit".to_string();
+        let (output, _) = integration_test_utils::run_delta(
+            GIT_DIFF_SINGLE_HUNK_WITH_ANSI_ESCAPE_SEQUENCES,
+            options,
+        );
+        ansi_test_utils::assert_line_has_no_color(
+            &output,
+            0,
+            "commit 94907c0f136f46dc46ffae2dc92dca9af7eb7c2e",
+        );
+    }
+
+    #[test]
+    fn test_commit_style_colored_input_color_is_preserved_under_raw() {
+        let mut options = integration_test_utils::get_command_line_options();
+        options.commit_style = "raw".to_string();
+        options.commit_decoration_style = "omit".to_string();
+        let (output, config) = integration_test_utils::run_delta(
+            GIT_DIFF_SINGLE_HUNK_WITH_ANSI_ESCAPE_SEQUENCES,
+            options,
+        );
+        ansi_test_utils::assert_line_has_foreground_color(
+            &output,
+            0,
+            "commit 94907c0f136f46dc46ffae2dc92dca9af7eb7c2e",
+            "bold red",
+            &config,
+        );
+    }
+
+    #[test]
     fn test_commit_decoration_style_omit() {
         let mut options = integration_test_utils::get_command_line_options();
         options.commit_style = "blue".to_string();
@@ -384,6 +418,46 @@ index 8e37a9e..6ce4863 100644
     }
 
     #[test]
+    fn test_file_style_colored_input_color_is_stripped_under_normal() {
+        let mut options = integration_test_utils::get_command_line_options();
+        options.file_style = "normal".to_string();
+        options.file_decoration_style = "omit".to_string();
+        let (output, _) = integration_test_utils::run_delta(
+            GIT_DIFF_SINGLE_HUNK_WITH_ANSI_ESCAPE_SEQUENCES,
+            options,
+        );
+        ansi_test_utils::assert_line_has_no_color(&output, 7, "src/align.rs");
+    }
+
+    #[test]
+    fn test_file_style_colored_input_color_is_preserved_under_raw() {
+        let mut options = integration_test_utils::get_command_line_options();
+        options.file_style = "raw".to_string();
+        options.file_decoration_style = "omit".to_string();
+        let (output, config) = integration_test_utils::run_delta(
+            GIT_DIFF_SINGLE_HUNK_WITH_ANSI_ESCAPE_SEQUENCES,
+            options,
+        );
+        for (i, line) in vec![
+            "diff --git a/src/align.rs b/src/align.rs",
+            "index 8e37a9e..6ce4863 100644",
+            "--- a/src/align.rs",
+            "+++ b/src/align.rs",
+        ]
+        .iter()
+        .enumerate()
+        {
+            ansi_test_utils::assert_line_has_4_bit_foreground_color(
+                &output,
+                6 + i,
+                line,
+                "31",
+                &config,
+            )
+        }
+    }
+
+    #[test]
     fn test_file_decoration_style_omit() {
         let mut options = integration_test_utils::get_command_line_options();
         options.file_style = "green".to_string();
@@ -517,6 +591,38 @@ src/align.rs
             "@@ -71,11 +71,8 @@ impl<'a> Alignment<'a> {",
         );
         assert!(output.contains("@@ -71,11 +71,8 @@ impl<'a> Alignment<'a> {"));
+    }
+
+    #[test]
+    fn test_hunk_header_style_colored_input_color_is_stripped_under_normal() {
+        let mut options = integration_test_utils::get_command_line_options();
+        options.hunk_header_style = "normal".to_string();
+        options.hunk_header_decoration_style = "omit".to_string();
+        let (output, _) = integration_test_utils::run_delta(
+            GIT_DIFF_SINGLE_HUNK_WITH_ANSI_ESCAPE_SEQUENCES,
+            options,
+        );
+        // An additional newline is inserted under anything other than `style=raw,
+        // decoration-style=omit`, to better separate the hunks. Hence 9 + 1.
+        ansi_test_utils::assert_line_has_no_color(&output, 9 + 1, " impl<'a> Alignment<'a> {");
+    }
+
+    #[test]
+    fn test_hunk_header_style_colored_input_color_is_preserved_under_raw() {
+        let mut options = integration_test_utils::get_command_line_options();
+        options.hunk_header_style = "raw".to_string();
+        options.hunk_header_decoration_style = "omit".to_string();
+        let (output, config) = integration_test_utils::run_delta(
+            GIT_DIFF_SINGLE_HUNK_WITH_ANSI_ESCAPE_SEQUENCES,
+            options,
+        );
+        ansi_test_utils::assert_line_has_foreground_color(
+            &output,
+            9,
+            "@@ -71,11 +71,8 @@ impl<'a> Alignment<'a> {",
+            "bold red",
+            &config,
+        );
     }
 
     #[test]
@@ -684,6 +790,58 @@ index 8e37a9e..6ce4863 100644
                  let candidates = [
                      Cell {
                          parent: left,
+";
+
+    const GIT_DIFF_SINGLE_HUNK_WITH_ANSI_ESCAPE_SEQUENCES: &str = "\
+[1;31mcommit 94907c0f136f46dc46ffae2dc92dca9af7eb7c2e[m
+Author: Dan Davison <dandavison7@gmail.com>
+Date:   Thu May 14 11:13:17 2020 -0400
+
+    rustfmt
+
+[31mdiff --git a/src/align.rs b/src/align.rs[m
+[31mindex 8e37a9e..6ce4863 100644[m
+[31m--- a/src/align.rs[m
+[31m+++ b/src/align.rs[m
+[1;31m@@ -71,11 +71,8 @@[m [mimpl<'a> Alignment<'a> {[m
+ [m
+         for (i, x_i) in self.x.iter().enumerate() {[m
+             for (j, y_j) in self.y.iter().enumerate() {[m
+[1;31m-                let (left, diag, up) = ([m
+[1;31m-                    self.index(i, j + 1),[m
+[1;31m-                    self.index(i, j),[m
+[1;31m-                    self.index(i + 1, j),[m
+[1;31m-                );[m
+[1;32m+[m[1;32m                let (left, diag, up) =[m
+[1;32m+[m[1;32m                    (self.index(i, j + 1), self.index(i, j), self.index(i + 1, j));[m
+                 let candidates = [[m
+                     Cell {[m
+                         parent: left,[m
+[31mdiff --git a/src/bat/mod.rs b/src/bat/mod.rs[m
+[31mindex 362ba77..7812e7c 100644[m
+[31m--- a/src/bat/mod.rs[m
+[31m+++ b/src/bat/mod.rs[m
+[1;31m@@ -1,5 +1,5 @@[m
+ pub mod assets;[m
+ pub mod dirs;[m
+[1;32m+[m[1;32mmod less;[m
+ pub mod output;[m
+ pub mod terminal;[m
+[1;31m-mod less;[m
+[31mdiff --git a/src/bat/output.rs b/src/bat/output.rs[m
+[31mindex d23f5e8..e4ed702 100644[m
+[31m--- a/src/bat/output.rs[m
+[31m+++ b/src/bat/output.rs[m
+[1;31m@@ -8,8 +8,8 @@[m [muse std::process::{Child, Command, Stdio};[m
+ [m
+ use shell_words;[m
+ [m
+[1;31m-use crate::env;[m
+ use super::less::retrieve_less_version;[m
+[1;32m+[m[1;32muse crate::env;[m
+ [m
+ #[derive(Debug, Clone, Copy, PartialEq)][m
+ #[allow(dead_code)][m
 ";
 
     const DIFF_IN_DIFF: &str = "\
