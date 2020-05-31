@@ -591,6 +591,13 @@ src/align.rs
     }
 
     #[test]
+    fn test_hunk_header_decoration_style_none() {
+        let mut options = integration_test_utils::get_command_line_options();
+        options.hunk_header_decoration_style = "none".to_string();
+        _do_test_hunk_header_style_no_decoration(options);
+    }
+
+    #[test]
     fn test_hunk_header_decoration_style_empty_string() {
         let mut options = integration_test_utils::get_command_line_options();
         options.hunk_header_decoration_style = "".to_string();

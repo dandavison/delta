@@ -176,6 +176,7 @@ impl DecorationStyle {
             Some("ul") => DecorationStyle::Underline(style),
             Some("overline") => DecorationStyle::Overline(style),
             Some("underoverline") => DecorationStyle::Underoverline(style),
+            Some("none") => DecorationStyle::NoDecoration,
             Some("omit") => DecorationStyle::NoDecoration,
             Some("plain") => DecorationStyle::NoDecoration,
             // TODO: Exit with error if --thing-decoration-style supplied without a decoration type
@@ -296,6 +297,7 @@ fn extract_special_decoration_attribute(style_string: &str) -> (String, Option<S
                 || token == "underline"
                 || token == "overline"
                 || token == "underoverline"
+                || token == "none"
                 || token == "plain"
         });
     match special_attributes {
