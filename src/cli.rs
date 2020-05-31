@@ -33,8 +33,8 @@ Here is an example:
 That means: For removed lines, set the foreground (text) color to 'red', make it bold and
             underlined, and set the background color to '#ffeeee'.
 
-See the COLORS section below for how to specify a color. In addition to real colors, there are 3
-special color names: 'auto', 'normal', 'syntax'.
+See the COLORS section below for how to specify a color. In addition to real colors, there are 4
+special color names: 'auto', 'normal', 'raw', and 'syntax'.
 
 Here is an example of using special color names together with a single attribute:
 
@@ -43,10 +43,14 @@ Here is an example of using special color names together with a single attribute
 That means: For removed lines, syntax-highlight the text, and make it bold, and do whatever delta
             normally does for the background.
 
-The available attributes are: 'blink', 'bold', 'dim', 'hidden', 'italic', 'reverse',
-'strike', 'ul' (or 'underline').
+The available attributes are: 'blink', 'bold', 'dim', 'hidden', 'italic', 'reverse', 'strike',
+and 'ul' (or 'underline').
 
 A complete description of the style string syntax follows:
+
+- If the input that delta is receiving already has colors, and you want delta to output those
+  colors unchanged, then use the special style string 'raw'. Otherwise, delta will strip any colors
+  from its input.
 
 - A style string consists of 0, 1, or 2 colors, together with an arbitrary number of style
   attributes, all separated by spaces.
@@ -57,14 +61,14 @@ A complete description of the style string syntax follows:
 - This means that in order to specify a background color you must also specify a foreground (text)
   color.
 
-- If you just want delta to choose one of the colors automatically, then use the special color
-  'auto'. This can be used for both foreground and background.
+- If you want delta to choose one of the colors automatically, then use the special color 'auto'.
+  This can be used for both foreground and background.
+
+- If you want the foreground/background color to be your terminal's foreground/background color,
+  then use the special color 'normal'.
 
 - If you want the foreground text to be syntax-highlighted according to its language, then use the
   special foreground color 'syntax'. This can only be used for the foreground (text).
-
-- If you want delta to not apply any color, then use the special color 'normal'. This can be used
-  for both foreground and background.
 
 - The minimal style specification is the empty string ''. This means: do not apply any colors or
   styling to the element in question.
@@ -86,7 +90,7 @@ within a style string):
    black, red, green, yellow, blue, magenta, cyan, white.
 
    In addition, all of them have a bright form:
-   bright-black, bright-red, bright-green, bright-yellow, bright-blue, bright-magenta, bright-cyan, bright-white
+   brightblack, brightred, brightgreen, brightyellow, brightblue, brightmagenta, brightcyan, brightwhite.
 
    An example of using an ANSI color name is:
    --file-style=\"green\"
