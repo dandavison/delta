@@ -163,7 +163,7 @@ pub struct Opt {
     /// have an emphasized section. Defaults to --plus-style. See STYLES section.
     pub plus_non_emph_style: Option<String>,
 
-    #[structopt(long = "commit-style", default_value = "yellow")]
+    #[structopt(long = "commit-style", default_value = "raw")]
     /// Style (foreground, background, attributes) for the commit hash line. See STYLES section.
     pub commit_style: String,
 
