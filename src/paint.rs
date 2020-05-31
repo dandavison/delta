@@ -241,34 +241,22 @@ impl<'a> Painter<'a> {
             config.max_line_distance_for_naively_paired_lines,
         );
         if config.minus_non_emph_style != config.minus_emph_style {
-            Self::set_non_emph_styles(
-                &mut diff_sections.0,
-                config.minus_emph_style,
-                config.minus_non_emph_style,
-            );
+            Self::set_non_emph_styles(&mut diff_sections.0, config.minus_non_emph_style);
         }
         if config.plus_non_emph_style != config.plus_emph_style {
-            Self::set_non_emph_styles(
-                &mut diff_sections.1,
-                config.plus_emph_style,
-                config.plus_non_emph_style,
-            );
+            Self::set_non_emph_styles(&mut diff_sections.1, config.plus_non_emph_style);
         }
         diff_sections
     }
 
-    fn set_non_emph_styles(
-        style_sections: &mut Vec<Vec<(Style, &str)>>,
-        emph_style: Style,
-        non_emph_style: Style,
-    ) {
+    fn set_non_emph_styles(style_sections: &mut Vec<Vec<(Style, &str)>>, non_emph_style: Style) {
         for line_sections in style_sections {
             // If there multiple diff styles in the line, then the line must have some inferred
             // edit operations and so the non-emph color style should be used for the non-emph
             // style sections.
             if style_sections_contain_more_than_one_style(line_sections) {
                 for section in line_sections.iter_mut() {
-                    if section.0 != emph_style {
+                    if !section.0.is_emph {
                         *section = (non_emph_style, section.1);
                     }
                 }
