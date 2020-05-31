@@ -247,11 +247,11 @@ commit 94907c0f136f46dc46ffae2dc92dca9af7eb7c2e
             GIT_DIFF_SINGLE_HUNK_WITH_ANSI_ESCAPE_SEQUENCES,
             options,
         );
-        ansi_test_utils::assert_line_has_style(
+        ansi_test_utils::assert_line_has_4_bit_color_style(
             &output,
             0,
             "commit 94907c0f136f46dc46ffae2dc92dca9af7eb7c2e",
-            "bold red",
+            "bold 31",
             &config,
         );
     }
@@ -574,11 +574,11 @@ src/align.rs
             GIT_DIFF_SINGLE_HUNK_WITH_ANSI_ESCAPE_SEQUENCES,
             options,
         );
-        ansi_test_utils::assert_line_has_style(
+        ansi_test_utils::assert_line_has_4_bit_color_style(
             &output,
             9,
             "@@ -71,11 +71,8 @@ impl<'a> Alignment<'a> {",
-            "bold red",
+            "bold 31",
             &config,
         );
     }
