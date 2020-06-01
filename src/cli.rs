@@ -1,6 +1,5 @@
 use std::process;
 
-use console::Term;
 use structopt::clap::AppSettings::{ColorAlways, ColoredHelp, DeriveDisplayOrder};
 use structopt::StructOpt;
 
@@ -310,12 +309,6 @@ pub fn process_command_line_arguments<'a>(mut opt: Opt) -> config::Config<'a> {
 
     rewrite::apply_rewrite_rules(&mut opt);
 
-    // We do not use the full width, in case `less --status-column` is in effect. See #41 and #10.
-    // TODO: There seems to be some confusion in the accounting: we are actually leaving 2
-    // characters unused for less at the right edge of the terminal, despite the subtraction of 1
-    // here.
-    let available_terminal_width = (Term::stdout().size().1 - 1) as usize;
-
     let paging_mode = match opt.paging_mode.as_ref() {
         "always" => PagingMode::Always,
         "never" => PagingMode::Never,
@@ -347,7 +340,6 @@ pub fn process_command_line_arguments<'a>(mut opt: Opt) -> config::Config<'a> {
         assets.syntax_set,
         assets.theme_set,
         true_color,
-        available_terminal_width,
         paging_mode,
     )
 }

@@ -1,3 +1,7 @@
+use std::cmp::min;
+use std::process;
+
+use console::Term;
 use syntect::highlighting::Style as SyntectStyle;
 use syntect::highlighting::{Theme, ThemeSet};
 use syntect::parsing::SyntaxSet;
@@ -29,7 +33,7 @@ pub struct Config<'a> {
     pub file_style: Style,
     pub hunk_header_style: Style,
     pub syntax_set: SyntaxSet,
-    pub terminal_width: usize,
+    pub decorations_width: usize,
     pub true_color: bool,
     pub background_color_extends_to_terminal_width: bool,
     pub tab_width: usize,
@@ -55,10 +59,23 @@ pub fn get_config<'a>(
     syntax_set: SyntaxSet,
     theme_set: ThemeSet,
     true_color: bool,
-    terminal_width: usize,
     paging_mode: PagingMode,
 ) -> Config<'a> {
-    let background_color_extends_to_terminal_width = opt.width != Some("variable".to_string());
+    // Allow one character for e.g. `less --status-column` is in effect. See #41 and #10.
+    let available_terminal_width = (Term::stdout().size().1 - 1) as usize;
+    let (decorations_width, background_color_extends_to_terminal_width) = match opt.width.as_deref()
+    {
+        Some("variable") => (available_terminal_width, false),
+        Some(width) => {
+            let width = width.parse().unwrap_or_else(|_| {
+                eprintln!("Could not parse width as a positive integer: {:?}", width);
+                process::exit(1);
+            });
+            (min(width, available_terminal_width), true)
+        }
+        None => (available_terminal_width, true),
+    };
+
     let theme_name_from_bat_pager = env::get_env_var("BAT_THEME");
     let (is_light_mode, theme_name) = theme::get_is_light_mode_and_theme_name(
         opt.theme.as_ref(),
@@ -122,7 +139,7 @@ pub fn get_config<'a>(
         file_style,
         hunk_header_style,
         true_color,
-        terminal_width,
+        decorations_width,
         background_color_extends_to_terminal_width,
         tab_width: opt.tab_width,
         syntax_set,

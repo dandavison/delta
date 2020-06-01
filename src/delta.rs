@@ -226,7 +226,7 @@ fn handle_commit_meta_header_line(
         painter.writer,
         &format!("{}{}", line, if pad { " " } else { "" }),
         &format!("{}{}", raw_line, if pad { " " } else { "" }),
-        config.terminal_width,
+        config.decorations_width,
         config.commit_style,
         decoration_ansi_term_style,
     )?;
@@ -286,7 +286,7 @@ fn handle_generic_file_meta_header_line(
         painter.writer,
         &format!("{}{}", line, if pad { " " } else { "" }),
         &format!("{}{}", raw_line, if pad { " " } else { "" }),
-        config.terminal_width,
+        config.decorations_width,
         config.file_style,
         decoration_ansi_term_style,
     )?;
@@ -332,7 +332,7 @@ fn handle_hunk_header_line(
             painter.writer,
             &format!("{} ", line),
             &format!("{} ", raw_line),
-            config.terminal_width,
+            config.decorations_width,
             config.hunk_header_style,
             decoration_ansi_term_style,
         )?;
@@ -365,7 +365,7 @@ fn handle_hunk_header_line(
                 painter.writer,
                 &painter.output_buffer,
                 &painter.output_buffer,
-                config.terminal_width,
+                config.decorations_width,
                 config.hunk_header_style,
                 decoration_ansi_term_style,
             )?;
