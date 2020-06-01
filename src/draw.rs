@@ -1,3 +1,4 @@
+use std::cmp::max;
 use std::io::Write;
 
 use ansi_term;
@@ -5,13 +6,14 @@ use box_drawing;
 use console::strip_ansi_codes;
 use unicode_width::UnicodeWidthStr;
 
+use crate::config::Width;
 use crate::style::Style;
 
 pub fn write_no_decoration(
     writer: &mut dyn Write,
     text: &str,
     raw_text: &str,
-    _line_width: usize, // ignored
+    _line_width: &Width, // ignored
     text_style: Style,
     _decoration_style: ansi_term::Style,
 ) -> std::io::Result<()> {
@@ -29,7 +31,7 @@ pub fn write_boxed(
     writer: &mut dyn Write,
     text: &str,
     raw_text: &str,
-    _line_width: usize, // ignored
+    _line_width: &Width, // ignored
     text_style: Style,
     decoration_style: ansi_term::Style,
 ) -> std::io::Result<()> {
@@ -57,11 +59,11 @@ pub fn write_boxed_with_line(
     writer: &mut dyn Write,
     text: &str,
     raw_text: &str,
-    line_width: usize,
+    line_width: &Width,
     text_style: Style,
     decoration_style: ansi_term::Style,
 ) -> std::io::Result<()> {
-    let box_width = UnicodeWidthStr::width(text);
+    let box_width = UnicodeWidthStr::width(strip_ansi_codes(text).as_ref());
     write_boxed_with_horizontal_whisker(
         writer,
         text,
@@ -70,6 +72,10 @@ pub fn write_boxed_with_line(
         text_style,
         decoration_style,
     )?;
+    let line_width = match *line_width {
+        Width::Fixed(n) => n,
+        Width::Variable => box_width,
+    };
     write_horizontal_line(
         writer,
         if line_width > box_width {
@@ -94,7 +100,7 @@ pub fn write_underlined(
     writer: &mut dyn Write,
     text: &str,
     raw_text: &str,
-    line_width: usize,
+    line_width: &Width,
     text_style: Style,
     decoration_style: ansi_term::Style,
 ) -> std::io::Result<()> {
@@ -113,7 +119,7 @@ pub fn write_overlined(
     writer: &mut dyn Write,
     text: &str,
     raw_text: &str,
-    line_width: usize,
+    line_width: &Width,
     text_style: Style,
     decoration_style: ansi_term::Style,
 ) -> std::io::Result<()> {
@@ -132,7 +138,7 @@ pub fn write_underoverlined(
     writer: &mut dyn Write,
     text: &str,
     raw_text: &str,
-    line_width: usize,
+    line_width: &Width,
     text_style: Style,
     decoration_style: ansi_term::Style,
 ) -> std::io::Result<()> {
@@ -152,13 +158,18 @@ fn _write_under_or_over_lined(
     writer: &mut dyn Write,
     text: &str,
     raw_text: &str,
-    line_width: usize,
+    line_width: &Width,
     text_style: Style,
     decoration_style: ansi_term::Style,
 ) -> std::io::Result<()> {
+    let text_width = UnicodeWidthStr::width(strip_ansi_codes(text).as_ref());
+    let line_width = match *line_width {
+        Width::Fixed(n) => max(n, text_width),
+        Width::Variable => text_width,
+    };
     let mut write_line: Box<dyn FnMut(&mut dyn Write) -> std::io::Result<()>> =
         Box::new(|writer| {
-            write_horizontal_line(writer, line_width - 1, text_style, decoration_style)?;
+            write_horizontal_line(writer, line_width, text_style, decoration_style)?;
             write!(writer, "\n")?;
             Ok(())
         });
@@ -180,7 +191,7 @@ fn _write_under_or_over_lined(
 
 fn write_horizontal_line(
     writer: &mut dyn Write,
-    line_width: usize,
+    width: usize,
     _text_style: Style,
     decoration_style: ansi_term::Style,
 ) -> std::io::Result<()> {
@@ -192,7 +203,7 @@ fn write_horizontal_line(
     write!(
         writer,
         "{}",
-        decoration_style.paint(horizontal.repeat(line_width))
+        decoration_style.paint(horizontal.repeat(width))
     )
 }
 

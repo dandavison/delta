@@ -14,7 +14,6 @@ pub mod integration_test_utils {
     pub fn get_command_line_options() -> cli::Opt {
         let mut opt = cli::Opt::from_iter(Vec::<OsString>::new());
         opt.theme = None; // TODO: Why does opt.theme have the value Some("")?
-        opt.width = Some("variable".to_string());
         opt
     }
 

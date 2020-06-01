@@ -75,6 +75,7 @@ mod tests {
         // foreground ansi color codes.)
         let mut options = integration_test_utils::get_command_line_options();
         options.theme = Some("none".to_string());
+        options.width = Some("variable".to_string());
         let input = ADDED_FILE_INPUT.replace("a.py", "a");
         let (output, config) =
             integration_test_utils::get_line_of_code_from_delta(&input, 12, " class X:", options);

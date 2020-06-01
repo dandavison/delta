@@ -14,6 +14,11 @@ use crate::env;
 use crate::style::Style;
 use crate::theme;
 
+pub enum Width {
+    Fixed(usize),
+    Variable,
+}
+
 pub struct Config<'a> {
     pub theme: Option<Theme>,
     pub theme_name: String,
@@ -33,7 +38,7 @@ pub struct Config<'a> {
     pub file_style: Style,
     pub hunk_header_style: Style,
     pub syntax_set: SyntaxSet,
-    pub decorations_width: usize,
+    pub decorations_width: Width,
     pub true_color: bool,
     pub background_color_extends_to_terminal_width: bool,
     pub tab_width: usize,
@@ -65,15 +70,15 @@ pub fn get_config<'a>(
     let available_terminal_width = (Term::stdout().size().1 - 1) as usize;
     let (decorations_width, background_color_extends_to_terminal_width) = match opt.width.as_deref()
     {
-        Some("variable") => (available_terminal_width, false),
+        Some("variable") => (Width::Variable, false),
         Some(width) => {
             let width = width.parse().unwrap_or_else(|_| {
                 eprintln!("Could not parse width as a positive integer: {:?}", width);
                 process::exit(1);
             });
-            (min(width, available_terminal_width), true)
+            (Width::Fixed(min(width, available_terminal_width)), true)
         }
-        None => (available_terminal_width, true),
+        None => (Width::Fixed(available_terminal_width), true),
     };
 
     let theme_name_from_bat_pager = env::get_env_var("BAT_THEME");
