@@ -132,7 +132,7 @@ Alternatively, delta is available in the following package managers:
   </tr>
 </table>
 
-#### Configure git to use delta
+## Configure git to use delta
 
 Set delta to be git's pager in your `.gitconfig`. Delta accepts many command line options to alter colors and other details of the output. An example is
 ```
