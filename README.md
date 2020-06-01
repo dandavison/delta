@@ -396,6 +396,7 @@ and use the executable found at `./target/release/delta`.
 
 
 ## Credit
-  https://github.com/trishume/syntect<br>
+  https://github.com/ogham/rust-ansi-term/<br>
   https://github.com/sharkdp/bat<br>
-  https://github.com/so-fancy/diff-so-fancy
+  https://github.com/so-fancy/diff-so-fancy<br>
+  https://github.com/trishume/syntect
