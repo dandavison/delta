@@ -313,6 +313,18 @@ commit 94907c0f136f46dc46ffae2dc92dca9af7eb7c2e
         let mut options = integration_test_utils::get_command_line_options();
         options.commit_style = "blue".to_string();
         options.commit_decoration_style = "blue box".to_string();
+        _do_test_commit_style_box(options);
+    }
+
+    #[test]
+    fn test_commit_style_box_deprecated_options() {
+        let mut options = integration_test_utils::get_command_line_options();
+        options.deprecated_commit_color = Some("blue".to_string());
+        options.commit_style = "box".to_string();
+        _do_test_commit_style_box(options);
+    }
+
+    fn _do_test_commit_style_box(options: cli::Opt) {
         let (output, config) = integration_test_utils::run_delta(GIT_DIFF_SINGLE_HUNK, options);
         ansi_test_utils::assert_line_has_style(
             &output,
@@ -368,6 +380,18 @@ commit 94907c0f136f46dc46ffae2dc92dca9af7eb7c2e │
         let mut options = integration_test_utils::get_command_line_options();
         options.commit_style = "yellow".to_string();
         options.commit_decoration_style = "yellow underline".to_string();
+        _do_test_commit_style_underline(options);
+    }
+
+    #[test]
+    fn test_commit_style_underline_deprecated_options() {
+        let mut options = integration_test_utils::get_command_line_options();
+        options.deprecated_commit_color = Some("yellow".to_string());
+        options.commit_style = "underline".to_string();
+        _do_test_commit_style_underline(options);
+    }
+
+    fn _do_test_commit_style_underline(options: cli::Opt) {
         let (output, config) = integration_test_utils::run_delta(GIT_DIFF_SINGLE_HUNK, options);
         ansi_test_utils::assert_line_has_style(
             &output,
@@ -494,6 +518,18 @@ src/align.rs
         let mut options = integration_test_utils::get_command_line_options();
         options.file_style = "green".to_string();
         options.file_decoration_style = "green box".to_string();
+        _do_test_file_style_box(options);
+    }
+
+    #[test]
+    fn test_file_style_box_deprecated_options() {
+        let mut options = integration_test_utils::get_command_line_options();
+        options.deprecated_file_color = Some("green".to_string());
+        options.file_style = "box".to_string();
+        _do_test_file_style_box(options);
+    }
+
+    fn _do_test_file_style_box(options: cli::Opt) {
         let (output, config) = integration_test_utils::run_delta(GIT_DIFF_SINGLE_HUNK, options);
         ansi_test_utils::assert_line_has_style(&output, 7, "─────────────┐", "green", &config);
         ansi_test_utils::assert_line_has_style(&output, 8, "src/align.rs │", "green", &config);
@@ -527,6 +563,18 @@ src/align.rs │
         let mut options = integration_test_utils::get_command_line_options();
         options.file_style = "magenta".to_string();
         options.file_decoration_style = "magenta underline".to_string();
+        _do_test_file_style_underline(options);
+    }
+
+    #[test]
+    fn test_file_style_underline_deprecated_options() {
+        let mut options = integration_test_utils::get_command_line_options();
+        options.deprecated_file_color = Some("magenta".to_string());
+        options.file_style = "underline".to_string();
+        _do_test_file_style_underline(options);
+    }
+
+    fn _do_test_file_style_underline(options: cli::Opt) {
         let (output, config) = integration_test_utils::run_delta(GIT_DIFF_SINGLE_HUNK, options);
         ansi_test_utils::assert_line_has_style(&output, 7, "src/align.rs", "magenta", &config);
         ansi_test_utils::assert_line_has_style(&output, 8, "────────────", "magenta", &config);
@@ -650,6 +698,18 @@ src/align.rs
     fn test_hunk_header_style_box() {
         let mut options = integration_test_utils::get_command_line_options();
         options.hunk_header_decoration_style = "white box".to_string();
+        _do_test_hunk_header_style_box(options);
+    }
+
+    #[test]
+    fn test_hunk_header_style_box_deprecated_options() {
+        let mut options = integration_test_utils::get_command_line_options();
+        options.deprecated_hunk_color = Some("white".to_string());
+        options.deprecated_hunk_style = Some("box".to_string());
+        _do_test_hunk_header_style_box(options);
+    }
+
+    fn _do_test_hunk_header_style_box(options: cli::Opt) {
         let (output, config) = integration_test_utils::run_delta(GIT_DIFF_SINGLE_HUNK, options);
         ansi_test_utils::assert_line_has_style(
             &output,
@@ -699,6 +759,18 @@ src/align.rs
     fn test_hunk_header_style_underline() {
         let mut options = integration_test_utils::get_command_line_options();
         options.hunk_header_decoration_style = "black underline".to_string();
+        _do_test_hunk_header_style_underline(options);
+    }
+
+    #[test]
+    fn test_hunk_header_style_underline_deprecated_options() {
+        let mut options = integration_test_utils::get_command_line_options();
+        options.deprecated_hunk_color = Some("black".to_string());
+        options.deprecated_hunk_style = Some("underline".to_string());
+        _do_test_hunk_header_style_underline(options);
+    }
+
+    fn _do_test_hunk_header_style_underline(options: cli::Opt) {
         let (output, config) = integration_test_utils::run_delta(GIT_DIFF_SINGLE_HUNK, options);
         ansi_test_utils::assert_line_has_style(
             &output,
