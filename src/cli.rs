@@ -206,8 +206,9 @@ pub struct Opt {
     /// default behavior is to output a space character in place of these markers.
     pub keep_plus_minus_markers: bool,
 
-    /// Use --width=variable to extend background colors to the end of each line only. Otherwise
-    /// background colors extend to the full terminal width.
+    /// The width of underline/overline decorations. Use --width=variable to extend decorations and
+    /// background colors to the end of the text only. Otherwise background colors extend to the
+    /// full terminal width.
     #[structopt(short = "w", long = "width")]
     pub width: Option<String>,
 
