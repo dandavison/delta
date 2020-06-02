@@ -1,6 +1,7 @@
 use std::process;
 
 use ansi_term;
+use bitflags::bitflags;
 
 use crate::cli::unreachable;
 use crate::color;
@@ -20,8 +21,20 @@ pub enum DecorationStyle {
     Box(ansi_term::Style),
     Underline(ansi_term::Style),
     Overline(ansi_term::Style),
-    Underoverline(ansi_term::Style),
+    UnderOverline(ansi_term::Style),
+    BoxWithUnderline(ansi_term::Style),
+    BoxWithOverline(ansi_term::Style),
+    BoxWithUnderOverline(ansi_term::Style),
     NoDecoration,
+}
+
+bitflags! {
+    struct DecorationAttributes: u8 {
+        const EMPTY = 0b00000000;
+        const BOX = 0b00000001;
+        const OVERLINE = 0b00000010;
+        const UNDERLINE = 0b00000100;
+    }
 }
 
 impl Style {
@@ -54,11 +67,9 @@ impl Style {
             background_default,
             true_color,
         );
-        let decoration_style = match decoration_style_string {
-            Some(s) if s != "" => DecorationStyle::from_str(s, true_color),
-            _ => DecorationStyle::NoDecoration,
-        };
-        Style {
+        let decoration_style =
+            DecorationStyle::from_str(decoration_style_string.unwrap_or(""), true_color);
+        Self {
             ansi_term_style,
             is_emph,
             is_omitted,
@@ -77,31 +88,22 @@ impl Style {
         true_color: bool,
         is_emph: bool,
     ) -> Self {
-        let (style_string, special_attribute_from_style_string) =
-            extract_special_decoration_attribute(style_string);
+        let (special_attributes_from_style_string, style_string) =
+            extract_special_decoration_attributes(style_string);
         let mut style = Style::from_str(
             &style_string,
             foreground_default,
             background_default,
-            decoration_style_string,
+            decoration_style_string.as_deref(),
             true_color,
             is_emph,
         );
-        match special_attribute_from_style_string.as_deref() {
-            Some("none") => {
-                style.ansi_term_style = ansi_term::Style::new();
-                style
-            }
-            Some(special_attribute) => {
-                style.decoration_style = DecorationStyle::apply_special_decoration_attribute(
-                    style.decoration_style,
-                    &special_attribute,
-                    true_color,
-                );
-                style
-            }
-            _ => style,
-        }
+        // TODO: box in this context resulted in box-with-underline for commit and file
+        style.decoration_style = DecorationStyle::apply_special_decoration_attributes(
+            &mut style,
+            special_attributes_from_style_string,
+        );
+        style
     }
 
     /// As from_str_with_handling_of_special_decoration_attributes but respecting an optional
@@ -143,9 +145,21 @@ impl Style {
                     ansi_term_style.foreground = foreground_from_deprecated_arg;
                     DecorationStyle::Overline(ansi_term_style)
                 }
-                DecorationStyle::Underoverline(mut ansi_term_style) => {
+                DecorationStyle::UnderOverline(mut ansi_term_style) => {
                     ansi_term_style.foreground = foreground_from_deprecated_arg;
-                    DecorationStyle::Underoverline(ansi_term_style)
+                    DecorationStyle::UnderOverline(ansi_term_style)
+                }
+                DecorationStyle::BoxWithUnderline(mut ansi_term_style) => {
+                    ansi_term_style.foreground = foreground_from_deprecated_arg;
+                    DecorationStyle::BoxWithUnderline(ansi_term_style)
+                }
+                DecorationStyle::BoxWithOverline(mut ansi_term_style) => {
+                    ansi_term_style.foreground = foreground_from_deprecated_arg;
+                    DecorationStyle::BoxWithOverline(ansi_term_style)
+                }
+                DecorationStyle::BoxWithUnderOverline(mut ansi_term_style) => {
+                    ansi_term_style.foreground = foreground_from_deprecated_arg;
+                    DecorationStyle::BoxWithUnderOverline(ansi_term_style)
                 }
                 DecorationStyle::NoDecoration => style.decoration_style,
             };
@@ -158,7 +172,10 @@ impl Style {
             DecorationStyle::Box(style) => Some(style),
             DecorationStyle::Underline(style) => Some(style),
             DecorationStyle::Overline(style) => Some(style),
-            DecorationStyle::Underoverline(style) => Some(style),
+            DecorationStyle::UnderOverline(style) => Some(style),
+            DecorationStyle::BoxWithUnderline(style) => Some(style),
+            DecorationStyle::BoxWithOverline(style) => Some(style),
+            DecorationStyle::BoxWithUnderOverline(style) => Some(style),
             DecorationStyle::NoDecoration => None,
         }
     }
@@ -166,7 +183,8 @@ impl Style {
 
 impl DecorationStyle {
     pub fn from_str(style_string: &str, true_color: bool) -> Self {
-        let (style_string, special_attribute) = extract_special_decoration_attribute(&style_string);
+        let (special_attributes, style_string) =
+            extract_special_decoration_attributes(&style_string);
         let (style, is_omitted, is_raw, is_syntax_highlighted) =
             parse_ansi_term_style(&style_string, None, None, true_color);
         if is_raw {
@@ -177,40 +195,58 @@ impl DecorationStyle {
             eprintln!("'syntax' may not be used in a decoration style.");
             process::exit(1);
         };
-        match special_attribute.as_deref() {
-            Some("box") => DecorationStyle::Box(style),
-            Some("underline") => DecorationStyle::Underline(style),
-            Some("ul") => DecorationStyle::Underline(style),
-            Some("overline") => DecorationStyle::Overline(style),
-            Some("underoverline") => DecorationStyle::Underoverline(style),
-            Some("none") => DecorationStyle::NoDecoration,
-            Some("omit") => DecorationStyle::NoDecoration,
-            Some("plain") => DecorationStyle::NoDecoration,
-            // TODO: Exit with error if --thing-decoration-style supplied without a decoration type
-            Some("") => DecorationStyle::NoDecoration,
+        #[allow(non_snake_case)]
+        let (BOX, UL, OL, EMPTY) = (
+            DecorationAttributes::BOX,
+            DecorationAttributes::UNDERLINE,
+            DecorationAttributes::OVERLINE,
+            DecorationAttributes::EMPTY,
+        );
+        match special_attributes {
+            bits if bits == EMPTY => DecorationStyle::NoDecoration,
+            bits if bits == BOX => DecorationStyle::Box(style),
+            bits if bits == UL => DecorationStyle::Underline(style),
+            bits if bits == OL => DecorationStyle::Overline(style),
+            bits if bits == UL | OL => DecorationStyle::UnderOverline(style),
+            bits if bits == BOX | UL => DecorationStyle::BoxWithUnderline(style),
+            bits if bits == BOX | OL => DecorationStyle::BoxWithOverline(style),
+            bits if bits == BOX | UL | OL => DecorationStyle::BoxWithUnderOverline(style),
             _ if is_omitted => DecorationStyle::NoDecoration,
             _ => unreachable("Unreachable code path reached in parse_decoration_style."),
         }
     }
 
-    fn apply_special_decoration_attribute(
-        decoration_style: DecorationStyle,
-        special_attribute: &str,
-        true_color: bool,
+    fn apply_special_decoration_attributes(
+        style: &mut Style,
+        special_attributes: DecorationAttributes,
     ) -> DecorationStyle {
-        let ansi_term_style = match decoration_style {
+        let ansi_term_style = match style.decoration_style {
             DecorationStyle::Box(ansi_term_style) => ansi_term_style,
             DecorationStyle::Underline(ansi_term_style) => ansi_term_style,
             DecorationStyle::Overline(ansi_term_style) => ansi_term_style,
-            DecorationStyle::Underoverline(ansi_term_style) => ansi_term_style,
+            DecorationStyle::UnderOverline(ansi_term_style) => ansi_term_style,
+            DecorationStyle::BoxWithUnderline(ansi_term_style) => ansi_term_style,
+            DecorationStyle::BoxWithOverline(ansi_term_style) => ansi_term_style,
+            DecorationStyle::BoxWithUnderOverline(ansi_term_style) => ansi_term_style,
             DecorationStyle::NoDecoration => ansi_term::Style::new(),
         };
-        match DecorationStyle::from_str(special_attribute, true_color) {
-            DecorationStyle::Box(_) => DecorationStyle::Box(ansi_term_style),
-            DecorationStyle::Underline(_) => DecorationStyle::Underline(ansi_term_style),
-            DecorationStyle::Overline(_) => DecorationStyle::Overline(ansi_term_style),
-            DecorationStyle::Underoverline(_) => DecorationStyle::Underoverline(ansi_term_style),
-            DecorationStyle::NoDecoration => DecorationStyle::NoDecoration,
+        #[allow(non_snake_case)]
+        let (BOX, UL, OL, EMPTY) = (
+            DecorationAttributes::BOX,
+            DecorationAttributes::UNDERLINE,
+            DecorationAttributes::OVERLINE,
+            DecorationAttributes::EMPTY,
+        );
+        match special_attributes {
+            bits if bits == EMPTY => style.decoration_style,
+            bits if bits == BOX => DecorationStyle::Box(ansi_term_style),
+            bits if bits == UL => DecorationStyle::Underline(ansi_term_style),
+            bits if bits == OL => DecorationStyle::Overline(ansi_term_style),
+            bits if bits == UL | OL => DecorationStyle::UnderOverline(ansi_term_style),
+            bits if bits == BOX | UL => DecorationStyle::BoxWithUnderline(ansi_term_style),
+            bits if bits == BOX | OL => DecorationStyle::BoxWithOverline(ansi_term_style),
+            bits if bits == BOX | UL | OL => DecorationStyle::BoxWithUnderOverline(ansi_term_style),
+            _ => DecorationStyle::NoDecoration,
         }
     }
 }
@@ -290,30 +326,28 @@ fn parse_ansi_term_style(
     (style, is_omitted, is_raw, is_syntax_highlighted)
 }
 
-/// If the style string contains a 'special decoration attribute' then extract it and return it
-/// along with the modified style string.
-fn extract_special_decoration_attribute(style_string: &str) -> (String, Option<String>) {
+/// Extract set of 'special decoration attributes' and return it along with modified style string.
+fn extract_special_decoration_attributes(style_string: &str) -> (DecorationAttributes, String) {
+    let mut attributes = DecorationAttributes::EMPTY;
+    let mut new_style_string = Vec::new();
     let style_string = style_string.to_lowercase();
-    let (special_attributes, standard_attributes): (Vec<&str>, Vec<&str>) = style_string
+    for token in style_string
         .split_whitespace()
         .map(|word| word.trim_matches(|c| c == '"' || c == '\''))
-        .partition(|&token| {
-            // TODO: This should be tied to the enum
-            token == "box"
-                || token == "ul"
-                || token == "underline"
-                || token == "overline"
-                || token == "underoverline"
-                || token == "none"
-                || token == "plain"
-        });
-    match special_attributes {
-        attrs if attrs.len() == 0 => (style_string.to_string(), None),
-        attrs => (
-            format!("{} {}", attrs[1..].join(" "), standard_attributes.join(" ")),
-            Some(attrs[0].to_string()),
-        ),
+    {
+        match token {
+            "box" => attributes |= DecorationAttributes::BOX,
+            token if token == "ol" || token == "overline" => {
+                attributes |= DecorationAttributes::OVERLINE
+            }
+            token if token == "ul" || token == "underline" => {
+                attributes |= DecorationAttributes::UNDERLINE
+            }
+            token if token == "none" || token == "plain" => {}
+            _ => new_style_string.push(token),
+        }
     }
+    (attributes, new_style_string.join(" "))
 }
 
 #[cfg(test)]
@@ -472,5 +506,227 @@ mod tests {
                 true
             )
         );
+    }
+
+    #[test]
+    fn test_extract_special_decoration_attribute() {
+        #[allow(non_snake_case)]
+        let (BOX, UL, OL, EMPTY) = (
+            DecorationAttributes::BOX,
+            DecorationAttributes::UNDERLINE,
+            DecorationAttributes::OVERLINE,
+            DecorationAttributes::EMPTY,
+        );
+        assert_eq!(
+            extract_special_decoration_attributes(""),
+            (EMPTY, "".to_string(),)
+        );
+        assert_eq!(
+            extract_special_decoration_attributes("box"),
+            (BOX, "".to_string())
+        );
+        assert_eq!(
+            extract_special_decoration_attributes("ul"),
+            (UL, "".to_string())
+        );
+        assert_eq!(
+            extract_special_decoration_attributes("ol"),
+            (OL, "".to_string())
+        );
+        assert_eq!(
+            extract_special_decoration_attributes("box ul"),
+            (BOX | UL, "".to_string())
+        );
+        assert_eq!(
+            extract_special_decoration_attributes("box ol"),
+            (BOX | OL, "".to_string())
+        );
+        assert_eq!(
+            extract_special_decoration_attributes("ul box ol"),
+            (BOX | UL | OL, "".to_string())
+        );
+        assert_eq!(
+            extract_special_decoration_attributes("ol ul"),
+            (UL | OL, "".to_string())
+        );
+    }
+
+    #[test]
+    fn test_decoration_style_from_str_empty_string() {
+        assert_eq!(
+            DecorationStyle::from_str("", true),
+            DecorationStyle::NoDecoration,
+        )
+    }
+
+    #[test]
+    fn test_decoration_style_from_str() {
+        assert_eq!(
+            DecorationStyle::from_str("ol red box bold green ul", true),
+            DecorationStyle::BoxWithUnderOverline(ansi_term::Style {
+                foreground: Some(ansi_term::Color::Fixed(1)),
+                background: Some(ansi_term::Color::Fixed(2)),
+                is_bold: true,
+                ..ansi_term::Style::new()
+            })
+        )
+    }
+
+    #[test]
+    fn test_style_from_str() {
+        let actual_style = Style::from_str(
+            "red green bold",
+            None,
+            None,
+            Some("ol red box bold green ul"),
+            true,
+            false,
+        );
+        let red_green_bold = ansi_term::Style {
+            foreground: Some(ansi_term::Color::Fixed(1)),
+            background: Some(ansi_term::Color::Fixed(2)),
+            is_bold: true,
+            ..ansi_term::Style::new()
+        };
+        assert_eq!(
+            actual_style,
+            Style {
+                ansi_term_style: red_green_bold,
+                decoration_style: DecorationStyle::BoxWithUnderOverline(red_green_bold),
+                ..Style::new()
+            }
+        )
+    }
+
+    #[test]
+    fn test_style_from_str_raw_with_box() {
+        let actual_style = Style::from_str("raw", None, None, Some("box"), true, false);
+        let empty_ansi_term_style = ansi_term::Style::new();
+        assert_eq!(
+            actual_style,
+            Style {
+                ansi_term_style: empty_ansi_term_style,
+                decoration_style: DecorationStyle::Box(empty_ansi_term_style),
+                is_raw: true,
+                ..Style::new()
+            }
+        )
+    }
+
+    #[test]
+    fn test_style_from_str_decoration_style_only() {
+        let actual_style = Style::from_str(
+            "",
+            None,
+            None,
+            Some("ol red box bold green ul"),
+            true,
+            false,
+        );
+        let red_green_bold = ansi_term::Style {
+            foreground: Some(ansi_term::Color::Fixed(1)),
+            background: Some(ansi_term::Color::Fixed(2)),
+            is_bold: true,
+            ..ansi_term::Style::new()
+        };
+        assert_eq!(
+            actual_style,
+            Style {
+                decoration_style: DecorationStyle::BoxWithUnderOverline(red_green_bold),
+                ..Style::new()
+            }
+        )
+    }
+
+    #[test]
+    fn test_style_from_str_with_handling_of_special_decoration_attributes() {
+        let actual_style = Style::from_str_with_handling_of_special_decoration_attributes(
+            "",
+            None,
+            None,
+            Some("ol red box bold green ul"),
+            true,
+            false,
+        );
+        let expected_decoration_style = DecorationStyle::BoxWithUnderOverline(ansi_term::Style {
+            foreground: Some(ansi_term::Color::Fixed(1)),
+            background: Some(ansi_term::Color::Fixed(2)),
+            is_bold: true,
+            ..ansi_term::Style::new()
+        });
+        assert_eq!(
+            actual_style,
+            Style {
+                decoration_style: expected_decoration_style,
+                ..Style::new()
+            }
+        )
+    }
+
+    #[test]
+    fn test_style_from_str_with_handling_of_special_decoration_attributes_raw_with_box() {
+        let actual_style = Style::from_str_with_handling_of_special_decoration_attributes(
+            "raw",
+            None,
+            None,
+            Some("box"),
+            true,
+            false,
+        );
+        let empty_ansi_term_style = ansi_term::Style::new();
+        assert_eq!(
+            actual_style,
+            Style {
+                ansi_term_style: empty_ansi_term_style,
+                decoration_style: DecorationStyle::Box(empty_ansi_term_style),
+                is_raw: true,
+                ..Style::new()
+            }
+        )
+    }
+
+    #[test]
+    fn test_style_from_str_with_handling_of_special_decoration_attributes_and_respecting_deprecated_foreground_color_arg(
+    ) {
+        let expected_decoration_style = DecorationStyle::BoxWithUnderOverline(ansi_term::Style {
+            foreground: Some(ansi_term::Color::Fixed(1)),
+            background: Some(ansi_term::Color::Fixed(2)),
+            is_bold: true,
+            ..ansi_term::Style::new()
+        });
+        let actual_style = Style::from_str_with_handling_of_special_decoration_attributes_and_respecting_deprecated_foreground_color_arg(
+                "", None, None, Some("ol red box bold green ul"), None, true, false
+            );
+        assert_eq!(
+            actual_style,
+            Style {
+                decoration_style: expected_decoration_style,
+                ..Style::new()
+            }
+        )
+    }
+
+    #[test]
+    fn test_style_from_str_with_handling_of_special_decoration_attributes_and_respecting_deprecated_foreground_color_arg_raw_with_box(
+    ) {
+        let actual_style = Style::from_str_with_handling_of_special_decoration_attributes_and_respecting_deprecated_foreground_color_arg(
+            "raw",
+            None,
+            None,
+            Some("box"),
+            None,
+            true,
+            false,
+        );
+        let empty_ansi_term_style = ansi_term::Style::new();
+        assert_eq!(
+            actual_style,
+            Style {
+                ansi_term_style: empty_ansi_term_style,
+                decoration_style: DecorationStyle::Box(empty_ansi_term_style),
+                is_raw: true,
+                ..Style::new()
+            }
+        )
     }
 }

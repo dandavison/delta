@@ -203,7 +203,22 @@ fn handle_commit_meta_header_line(
         DecorationStyle::Box(style) => {
             pad = true;
             decoration_ansi_term_style = style;
-            draw::write_boxed_with_line
+            draw::write_boxed
+        }
+        DecorationStyle::BoxWithUnderline(style) => {
+            pad = true;
+            decoration_ansi_term_style = style;
+            draw::write_boxed_with_underline
+        }
+        DecorationStyle::BoxWithOverline(style) => {
+            pad = true;
+            decoration_ansi_term_style = style;
+            draw::write_boxed // TODO: not implemented
+        }
+        DecorationStyle::BoxWithUnderOverline(style) => {
+            pad = true;
+            decoration_ansi_term_style = style;
+            draw::write_boxed // TODO: not implemented
         }
         DecorationStyle::Underline(style) => {
             decoration_ansi_term_style = style;
@@ -213,7 +228,7 @@ fn handle_commit_meta_header_line(
             decoration_ansi_term_style = style;
             draw::write_overlined
         }
-        DecorationStyle::Underoverline(style) => {
+        DecorationStyle::UnderOverline(style) => {
             decoration_ansi_term_style = style;
             draw::write_underoverlined
         }
@@ -262,7 +277,22 @@ fn handle_generic_file_meta_header_line(
         DecorationStyle::Box(style) => {
             pad = true;
             decoration_ansi_term_style = style;
-            draw::write_boxed_with_line
+            draw::write_boxed
+        }
+        DecorationStyle::BoxWithUnderline(style) => {
+            pad = true;
+            decoration_ansi_term_style = style;
+            draw::write_boxed_with_underline
+        }
+        DecorationStyle::BoxWithOverline(style) => {
+            pad = true;
+            decoration_ansi_term_style = style;
+            draw::write_boxed // TODO: not implemented
+        }
+        DecorationStyle::BoxWithUnderOverline(style) => {
+            pad = true;
+            decoration_ansi_term_style = style;
+            draw::write_boxed // TODO: not implemented
         }
         DecorationStyle::Underline(style) => {
             decoration_ansi_term_style = style;
@@ -272,7 +302,7 @@ fn handle_generic_file_meta_header_line(
             decoration_ansi_term_style = style;
             draw::write_overlined
         }
-        DecorationStyle::Underoverline(style) => {
+        DecorationStyle::UnderOverline(style) => {
             decoration_ansi_term_style = style;
             draw::write_underoverlined
         }
@@ -308,6 +338,18 @@ fn handle_hunk_header_line(
             decoration_ansi_term_style = style;
             draw::write_boxed
         }
+        DecorationStyle::BoxWithUnderline(style) => {
+            decoration_ansi_term_style = style;
+            draw::write_boxed_with_underline
+        }
+        DecorationStyle::BoxWithOverline(style) => {
+            decoration_ansi_term_style = style;
+            draw::write_boxed // TODO: not implemented
+        }
+        DecorationStyle::BoxWithUnderOverline(style) => {
+            decoration_ansi_term_style = style;
+            draw::write_boxed // TODO: not implemented
+        }
         DecorationStyle::Underline(style) => {
             decoration_ansi_term_style = style;
             draw::write_underlined
@@ -316,7 +358,7 @@ fn handle_hunk_header_line(
             decoration_ansi_term_style = style;
             draw::write_overlined
         }
-        DecorationStyle::Underoverline(style) => {
+        DecorationStyle::UnderOverline(style) => {
             decoration_ansi_term_style = style;
             draw::write_underoverlined
         }
@@ -341,8 +383,8 @@ fn handle_hunk_header_line(
             s if s.len() > 0 => format!("{} ", s),
             s => s,
         };
+        writeln!(painter.writer)?;
         if !line.is_empty() {
-            writeln!(painter.writer)?;
             let lines = vec![line];
             let syntax_style_sections = Painter::get_syntax_style_sections_for_lines(
                 &lines,
@@ -375,8 +417,8 @@ fn handle_hunk_header_line(
         }
     };
     match config.hunk_header_style.decoration_ansi_term_style() {
-        Some(style) => writeln!(painter.writer, "\n{}", style.paint(line_number))?,
-        None => writeln!(painter.writer, "\n{}", line_number)?,
+        Some(style) => writeln!(painter.writer, "{}", style.paint(line_number))?,
+        None => writeln!(painter.writer, "{}", line_number)?,
     };
     Ok(())
 }

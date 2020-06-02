@@ -1,3 +1,5 @@
+extern crate bitflags;
+
 #[macro_use]
 extern crate error_chain;
 

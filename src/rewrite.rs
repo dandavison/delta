@@ -8,6 +8,7 @@ use crate::cli;
 
 pub fn apply_rewrite_rules(opt: &mut cli::Opt) {
     _rewrite_style_strings_to_honor_deprecated_minus_plus_options(opt);
+    _rewrite_options_to_implement_deprecated_commit_and_file_style_box_option(opt);
     _rewrite_options_to_implement_deprecated_hunk_style_option(opt);
     _rewrite_options_to_implement_color_only(opt);
 }
@@ -119,6 +120,18 @@ fn _rewrite_style_strings_to_honor_deprecated_minus_plus_options(opt: &mut cli::
         "plus-emph",
     ) {
         opt.plus_emph_style = rewritten.to_string();
+    }
+}
+
+/// For backwards-compatibility, --{commit,file}-style box means --element-decoration-style 'box ul'.
+fn _rewrite_options_to_implement_deprecated_commit_and_file_style_box_option(opt: &mut cli::Opt) {
+    if &opt.commit_style == "box" {
+        opt.commit_decoration_style = format!("box ul {}", opt.commit_decoration_style);
+        opt.commit_style.clear();
+    }
+    if &opt.file_style == "box" {
+        opt.file_decoration_style = format!("box ul {}", opt.file_decoration_style);
+        opt.file_style.clear();
     }
 }
 

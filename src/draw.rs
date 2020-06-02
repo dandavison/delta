@@ -49,13 +49,13 @@ pub fn write_boxed(
         text_style,
         decoration_style,
     )?;
-    write!(writer, "{}", decoration_style.paint(up_left))?;
+    writeln!(writer, "{}", decoration_style.paint(up_left))?;
     Ok(())
 }
 
 /// Write text to stream, surrounded by a box, and extend a line from
 /// the bottom right corner.
-pub fn write_boxed_with_line(
+pub fn write_boxed_with_underline(
     writer: &mut dyn Write,
     text: &str,
     raw_text: &str,
@@ -90,7 +90,7 @@ pub fn write_boxed_with_line(
     Ok(())
 }
 
-enum Underoverline {
+enum UnderOverline {
     Under,
     Over,
     Underover,
@@ -105,7 +105,7 @@ pub fn write_underlined(
     decoration_style: ansi_term::Style,
 ) -> std::io::Result<()> {
     _write_under_or_over_lined(
-        Underoverline::Under,
+        UnderOverline::Under,
         writer,
         text,
         raw_text,
@@ -124,7 +124,7 @@ pub fn write_overlined(
     decoration_style: ansi_term::Style,
 ) -> std::io::Result<()> {
     _write_under_or_over_lined(
-        Underoverline::Over,
+        UnderOverline::Over,
         writer,
         text,
         raw_text,
@@ -143,7 +143,7 @@ pub fn write_underoverlined(
     decoration_style: ansi_term::Style,
 ) -> std::io::Result<()> {
     _write_under_or_over_lined(
-        Underoverline::Underover,
+        UnderOverline::Underover,
         writer,
         text,
         raw_text,
@@ -154,7 +154,7 @@ pub fn write_underoverlined(
 }
 
 fn _write_under_or_over_lined(
-    underoverline: Underoverline,
+    underoverline: UnderOverline,
     writer: &mut dyn Write,
     text: &str,
     raw_text: &str,
@@ -174,7 +174,7 @@ fn _write_under_or_over_lined(
             Ok(())
         });
     match underoverline {
-        Underoverline::Under => {}
+        UnderOverline::Under => {}
         _ => write_line(writer)?,
     }
     if text_style.is_raw {
@@ -183,7 +183,7 @@ fn _write_under_or_over_lined(
         writeln!(writer, "{}", text_style.ansi_term_style.paint(text))?;
     }
     match underoverline {
-        Underoverline::Over => {}
+        UnderOverline::Over => {}
         _ => write_line(writer)?,
     }
     Ok(())
