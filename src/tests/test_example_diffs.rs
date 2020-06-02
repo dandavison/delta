@@ -317,14 +317,63 @@ commit 94907c0f136f46dc46ffae2dc92dca9af7eb7c2e
     }
 
     #[test]
-    fn test_commit_style_box_deprecated_options() {
+    fn test_commit_style_box_ul() {
+        let mut options = integration_test_utils::get_command_line_options();
+        options.commit_style = "blue".to_string();
+        options.commit_decoration_style = "blue box ul".to_string();
+        _do_test_commit_style_box_ul(options);
+    }
+
+    #[test]
+    fn test_commit_style_box_ol() {
+        let mut options = integration_test_utils::get_command_line_options();
+        options.commit_style = "blue".to_string();
+        options.commit_decoration_style = "blue box ol".to_string();
+        _do_test_commit_style_box_ol(options);
+    }
+
+    #[test]
+    fn test_commit_style_box_ul_deprecated_options() {
         let mut options = integration_test_utils::get_command_line_options();
         options.deprecated_commit_color = Some("blue".to_string());
         options.commit_style = "box".to_string();
-        _do_test_commit_style_box(options);
+        _do_test_commit_style_box_ul(options);
     }
 
     fn _do_test_commit_style_box(options: cli::Opt) {
+        let (output, config) = integration_test_utils::run_delta(GIT_DIFF_SINGLE_HUNK, options);
+        ansi_test_utils::assert_line_has_style(
+            &output,
+            0,
+            "────────────────────────────────────────────────┐",
+            "blue",
+            &config,
+        );
+        ansi_test_utils::assert_line_has_style(
+            &output,
+            1,
+            "commit 94907c0f136f46dc46ffae2dc92dca9af7eb7c2e │",
+            "blue",
+            &config,
+        );
+        ansi_test_utils::assert_line_has_style(
+            &output,
+            2,
+            "────────────────────────────────────────────────┘",
+            "blue",
+            &config,
+        );
+        let output = strip_ansi_codes(&output);
+        assert!(output.contains(
+            "\
+────────────────────────────────────────────────┐
+commit 94907c0f136f46dc46ffae2dc92dca9af7eb7c2e │
+────────────────────────────────────────────────┘
+"
+        ));
+    }
+
+    fn _do_test_commit_style_box_ul(options: cli::Opt) {
         let (output, config) = integration_test_utils::run_delta(GIT_DIFF_SINGLE_HUNK, options);
         ansi_test_utils::assert_line_has_style(
             &output,
@@ -356,6 +405,39 @@ commit 94907c0f136f46dc46ffae2dc92dca9af7eb7c2e │
         ));
     }
 
+    fn _do_test_commit_style_box_ol(options: cli::Opt) {
+        let (output, config) = integration_test_utils::run_delta(GIT_DIFF_SINGLE_HUNK, options);
+        ansi_test_utils::assert_line_has_style(
+            &output,
+            0,
+            "────────────────────────────────────────────────┬─",
+            "blue",
+            &config,
+        );
+        ansi_test_utils::assert_line_has_style(
+            &output,
+            1,
+            "commit 94907c0f136f46dc46ffae2dc92dca9af7eb7c2e │",
+            "blue",
+            &config,
+        );
+        ansi_test_utils::assert_line_has_style(
+            &output,
+            2,
+            "────────────────────────────────────────────────┘",
+            "blue",
+            &config,
+        );
+        let output = strip_ansi_codes(&output);
+        assert!(output.contains(
+            "\
+────────────────────────────────────────────────┬─
+commit 94907c0f136f46dc46ffae2dc92dca9af7eb7c2e │
+────────────────────────────────────────────────┘
+"
+        ));
+    }
+
     #[test]
     fn test_commit_style_box_raw() {
         let mut options = integration_test_utils::get_command_line_options();
@@ -374,6 +456,8 @@ commit 94907c0f136f46dc46ffae2dc92dca9af7eb7c2e │
 ────────────────────────────────────────────────┴─"
         ));
     }
+
+    // TODO: test overline
 
     #[test]
     fn test_commit_style_underline() {
@@ -522,7 +606,23 @@ src/align.rs
     }
 
     #[test]
-    fn test_file_style_box_deprecated_options() {
+    fn test_file_style_box_ul() {
+        let mut options = integration_test_utils::get_command_line_options();
+        options.file_style = "green".to_string();
+        options.file_decoration_style = "green box ul".to_string();
+        _do_test_file_style_box_ul(options);
+    }
+
+    #[test]
+    fn test_file_style_box_ol() {
+        let mut options = integration_test_utils::get_command_line_options();
+        options.file_style = "green".to_string();
+        options.file_decoration_style = "green box ol".to_string();
+        _do_test_file_style_box_ol(options);
+    }
+
+    #[test]
+    fn test_file_style_box_ul_deprecated_options() {
         let mut options = integration_test_utils::get_command_line_options();
         options.deprecated_file_color = Some("green".to_string());
         options.file_style = "box".to_string();
@@ -533,6 +633,21 @@ src/align.rs
         let (output, config) = integration_test_utils::run_delta(GIT_DIFF_SINGLE_HUNK, options);
         ansi_test_utils::assert_line_has_style(&output, 7, "─────────────┐", "green", &config);
         ansi_test_utils::assert_line_has_style(&output, 8, "src/align.rs │", "green", &config);
+        ansi_test_utils::assert_line_has_style(&output, 9, "─────────────┘", "green", &config);
+        let output = strip_ansi_codes(&output);
+        assert!(output.contains(
+            "
+─────────────┐
+src/align.rs │
+─────────────┘
+"
+        ));
+    }
+
+    fn _do_test_file_style_box_ul(options: cli::Opt) {
+        let (output, config) = integration_test_utils::run_delta(GIT_DIFF_SINGLE_HUNK, options);
+        ansi_test_utils::assert_line_has_style(&output, 7, "─────────────┐", "green", &config);
+        ansi_test_utils::assert_line_has_style(&output, 8, "src/align.rs │", "green", &config);
         ansi_test_utils::assert_line_has_style(&output, 9, "─────────────┴─", "green", &config);
         let output = strip_ansi_codes(&output);
         assert!(output.contains(
@@ -540,6 +655,21 @@ src/align.rs
 ─────────────┐
 src/align.rs │
 ─────────────┴─"
+        ));
+    }
+
+    fn _do_test_file_style_box_ol(options: cli::Opt) {
+        let (output, config) = integration_test_utils::run_delta(GIT_DIFF_SINGLE_HUNK, options);
+        ansi_test_utils::assert_line_has_style(&output, 7, "─────────────┬─", "green", &config);
+        ansi_test_utils::assert_line_has_style(&output, 8, "src/align.rs │", "green", &config);
+        ansi_test_utils::assert_line_has_style(&output, 9, "─────────────┘", "green", &config);
+        let output = strip_ansi_codes(&output);
+        assert!(output.contains(
+            "
+─────────────┬─
+src/align.rs │
+─────────────┘
+"
         ));
     }
 
