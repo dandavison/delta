@@ -13,50 +13,6 @@ pub fn apply_rewrite_rules(opt: &mut cli::Opt) {
     _rewrite_options_to_implement_color_only(opt);
 }
 
-#[cfg(test)]
-mod tests {
-    use std::ffi::OsString;
-
-    use structopt::StructOpt;
-
-    use crate::cli;
-    use crate::rewrite::apply_rewrite_rules;
-
-    #[test]
-    fn test_default_is_stable_under_rewrites() {
-        let mut opt = cli::Opt::from_iter(Vec::<OsString>::new());
-        let before = opt.clone();
-
-        apply_rewrite_rules(&mut opt);
-
-        assert_eq!(opt, before);
-    }
-
-    /// Since --hunk-header-decoration-style is at its default value of "box",
-    /// the deprecated option is allowed to overwrite it.
-    #[test]
-    fn test_deprecated_hunk_style_is_rewritten() {
-        let mut opt = cli::Opt::from_iter(Vec::<OsString>::new());
-        opt.deprecated_hunk_style = Some("underline".to_string());
-        let default = "blue box";
-        assert_eq!(opt.hunk_header_decoration_style, default);
-        apply_rewrite_rules(&mut opt);
-        assert_eq!(opt.deprecated_hunk_style, None);
-        assert_eq!(opt.hunk_header_decoration_style, "underline");
-    }
-
-    #[test]
-    fn test_deprecated_hunk_style_is_not_rewritten() {
-        let mut opt = cli::Opt::from_iter(Vec::<OsString>::new());
-        opt.deprecated_hunk_style = Some("".to_string());
-        let default = "blue box";
-        assert_eq!(opt.hunk_header_decoration_style, default);
-        apply_rewrite_rules(&mut opt);
-        assert_eq!(opt.deprecated_hunk_style, None);
-        assert_eq!(opt.hunk_header_decoration_style, default);
-    }
-}
-
 /// Implement --color-only
 fn _rewrite_options_to_implement_color_only(opt: &mut cli::Opt) {
     if opt.color_only {
@@ -226,5 +182,49 @@ fn _get_rewritten_minus_plus_style_string(
             );
             process::exit(1);
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use std::ffi::OsString;
+
+    use structopt::StructOpt;
+
+    use crate::cli;
+    use crate::rewrite::apply_rewrite_rules;
+
+    #[test]
+    fn test_default_is_stable_under_rewrites() {
+        let mut opt = cli::Opt::from_iter(Vec::<OsString>::new());
+        let before = opt.clone();
+
+        apply_rewrite_rules(&mut opt);
+
+        assert_eq!(opt, before);
+    }
+
+    /// Since --hunk-header-decoration-style is at its default value of "box",
+    /// the deprecated option is allowed to overwrite it.
+    #[test]
+    fn test_deprecated_hunk_style_is_rewritten() {
+        let mut opt = cli::Opt::from_iter(Vec::<OsString>::new());
+        opt.deprecated_hunk_style = Some("underline".to_string());
+        let default = "blue box";
+        assert_eq!(opt.hunk_header_decoration_style, default);
+        apply_rewrite_rules(&mut opt);
+        assert_eq!(opt.deprecated_hunk_style, None);
+        assert_eq!(opt.hunk_header_decoration_style, "underline");
+    }
+
+    #[test]
+    fn test_deprecated_hunk_style_is_not_rewritten() {
+        let mut opt = cli::Opt::from_iter(Vec::<OsString>::new());
+        opt.deprecated_hunk_style = Some("".to_string());
+        let default = "blue box";
+        assert_eq!(opt.hunk_header_decoration_style, default);
+        apply_rewrite_rules(&mut opt);
+        assert_eq!(opt.deprecated_hunk_style, None);
+        assert_eq!(opt.hunk_header_decoration_style, default);
     }
 }
