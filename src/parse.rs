@@ -27,7 +27,7 @@ pub fn get_file_path_from_file_meta_line(line: &str, git_diff_name: bool) -> Str
             let offset = 4;
             match &line[offset..] {
                 path if path == "/dev/null" => "/dev/null",
-                path if git_diff_name && (path.starts_with("a/") || path.starts_with("b/")) => {
+                path if git_diff_name && DIFF_PREFIXES.iter().any(|s| path.starts_with(s)) => {
                     &path[2..]
                 }
                 path if git_diff_name => &path,
