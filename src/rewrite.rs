@@ -13,7 +13,7 @@ pub fn apply_rewrite_rules(opt: &mut cli::Opt, arg_matches: Option<clap::ArgMatc
     _rewrite_options_to_implement_deprecated_commit_and_file_style_box_option(opt);
     _rewrite_options_to_implement_deprecated_hunk_style_option(opt);
     _rewrite_options_to_implement_color_only(opt);
-    _rewrite_options_to_implement_navigate(opt, arg_matches);
+    _rewrite_options_to_implement_navigate(opt, arg_matches.as_ref());
 }
 
 /// Implement --color-only
@@ -33,11 +33,11 @@ fn _rewrite_options_to_implement_color_only(opt: &mut cli::Opt) {
 /// Implement --navigate
 fn _rewrite_options_to_implement_navigate(
     opt: &mut cli::Opt,
-    arg_matches: Option<clap::ArgMatches>,
+    arg_matches: Option<&clap::ArgMatches>,
 ) {
     if opt.navigate {
         if let Some(arg_matches) = arg_matches {
-            if !cli::user_supplied_option(&arg_matches, "file-modified-label") {
+            if !cli::user_supplied_option("file-modified-label", arg_matches) {
                 opt.file_modified_label = "Δ".to_string();
             }
         }

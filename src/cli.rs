@@ -371,7 +371,7 @@ pub fn process_command_line_arguments<'a>(
 }
 
 /// Did the user supply `option` on the command line?
-pub fn user_supplied_option(arg_matches: &clap::ArgMatches, option: &str) -> bool {
+pub fn user_supplied_option(option: &str, arg_matches: &clap::ArgMatches) -> bool {
     arg_matches.occurrences_of(option) > 0
 }
 
