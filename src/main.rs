@@ -66,7 +66,7 @@ fn main() -> std::io::Result<()> {
         process::exit(0);
     }
 
-    let mut output_type = OutputType::from_mode(config.paging_mode, None).unwrap();
+    let mut output_type = OutputType::from_mode(config.paging_mode, None, &config).unwrap();
     let mut writer = output_type.handle().unwrap();
 
     if let Err(error) = delta(io::stdin().lock().byte_lines(), &mut writer, &config) {
@@ -147,7 +147,8 @@ index f38589a..0f1bb83 100644
             },
             None,
         );
-        let mut output_type = OutputType::from_mode(PagingMode::QuitIfOneScreen, None).unwrap();
+        let mut output_type =
+            OutputType::from_mode(PagingMode::QuitIfOneScreen, None, &config).unwrap();
         let mut writer = output_type.handle().unwrap();
 
         if let Err(error) = delta(

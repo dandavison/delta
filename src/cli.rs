@@ -185,6 +185,12 @@ pub struct Opt {
     /// of the special attributes 'box', 'ul', 'overline', or 'underoverline' must be given.
     pub file_decoration_style: String,
 
+    #[structopt(long = "navigate")]
+    /// Activate diff navigation: use n to jump forwards and N to jump backwards. To change the
+    /// file labels used see --file-modified-label, --file-removed-label, --file-added-label,
+    /// --file-renamed-label.
+    pub navigate: bool,
+
     #[structopt(long = "file-modified-label", default_value = "")]
     /// Text to display in front of a modified file path.
     pub file_modified_label: String,
@@ -327,7 +333,7 @@ pub fn process_command_line_arguments<'a>(
 
     _check_validity(&opt, &assets);
 
-    rewrite::apply_rewrite_rules(&mut opt);
+    rewrite::apply_rewrite_rules(&mut opt, arg_matches);
 
     let paging_mode = match opt.paging_mode.as_ref() {
         "always" => PagingMode::Always,
@@ -362,6 +368,11 @@ pub fn process_command_line_arguments<'a>(
         true_color,
         paging_mode,
     )
+}
+
+/// Did the user supply `option` on the command line?
+pub fn user_supplied_option(arg_matches: &clap::ArgMatches, option: &str) -> bool {
+    arg_matches.occurrences_of(option) > 0
 }
 
 fn _check_validity(opt: &Opt, assets: &HighlightingAssets) {

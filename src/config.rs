@@ -37,6 +37,7 @@ pub struct Config<'a> {
     pub commit_style: Style,
     pub file_style: Style,
     pub hunk_header_style: Style,
+    pub navigate: bool,
     pub file_modified_label: String,
     pub file_removed_label: String,
     pub file_added_label: String,
@@ -60,6 +61,16 @@ impl<'a> Config<'a> {
             State::HunkHeader => &self.hunk_header_style,
             _ => unreachable("Unreachable code reached in get_style."),
         }
+    }
+
+    pub fn make_navigate_regexp(&self) -> String {
+        format!(
+            "^(commit|{}|{}|{}|{})",
+            self.file_modified_label,
+            self.file_added_label,
+            self.file_removed_label,
+            self.file_renamed_label
+        )
     }
 }
 
@@ -147,6 +158,7 @@ pub fn get_config<'a>(
         commit_style,
         file_style,
         hunk_header_style,
+        navigate: opt.navigate,
         file_modified_label: opt.file_modified_label,
         file_removed_label: opt.file_removed_label,
         file_added_label: opt.file_added_label,
