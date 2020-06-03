@@ -400,3 +400,10 @@ and use the executable found at `./target/release/delta`.
   https://github.com/sharkdp/bat<br>
   https://github.com/so-fancy/diff-so-fancy<br>
   https://github.com/trishume/syntect
+
+
+## Projects using delta
+  https://github.com/wfxr/forgit<br>
+  https://github.com/bigH/git-fuzzy<br>
+  https://github.com/jesseduffield/lazygit/<br>
+  https://github.com/ms-jpq/sad
