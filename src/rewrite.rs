@@ -13,6 +13,7 @@ pub fn apply_rewrite_rules(opt: &mut cli::Opt, arg_matches: Option<clap::ArgMatc
     _rewrite_options_to_implement_deprecated_commit_and_file_style_box_option(opt);
     _rewrite_options_to_implement_deprecated_hunk_style_option(opt);
     _rewrite_options_to_implement_color_only(opt);
+    _rewrite_options_to_implement_diff_so_fancy(opt, arg_matches.as_ref());
     _rewrite_options_to_implement_navigate(opt, arg_matches.as_ref());
 }
 
@@ -27,6 +28,50 @@ fn _rewrite_options_to_implement_color_only(opt: &mut cli::Opt) {
         opt.file_decoration_style = "none".to_string();
         opt.hunk_header_style = "raw".to_string();
         opt.hunk_header_decoration_style = "none".to_string();
+    }
+}
+
+/// Implement --diff-so-fancy
+fn _rewrite_options_to_implement_diff_so_fancy(
+    opt: &mut cli::Opt,
+    arg_matches: Option<&clap::ArgMatches>,
+) {
+    if opt.diff_so_fancy {
+        if let Some(arg_matches) = arg_matches {
+            if !cli::user_supplied_option("minus-style", arg_matches) {
+                opt.minus_style = "red bold".to_string();
+            }
+            if !cli::user_supplied_option("minus-emph-style", arg_matches) {
+                opt.minus_emph_style = "red bold 52".to_string();
+            }
+            if !cli::user_supplied_option("zero-style", arg_matches) {
+                opt.zero_style = "normal".to_string();
+            }
+            if !cli::user_supplied_option("plus-style", arg_matches) {
+                opt.plus_style = "green bold".to_string();
+            }
+            if !cli::user_supplied_option("plus-emph-style", arg_matches) {
+                opt.plus_emph_style = "green bold 22".to_string();
+            }
+            if !cli::user_supplied_option("commit-style", arg_matches) {
+                opt.commit_style = "bold yellow".to_string();
+            }
+            if !cli::user_supplied_option("commit-decoration-style", arg_matches) {
+                opt.commit_decoration_style = "none".to_string();
+            }
+            if !cli::user_supplied_option("file-style", arg_matches) {
+                opt.file_style = "bold yellow".to_string();
+            }
+            if !cli::user_supplied_option("file-decoration-style", arg_matches) {
+                opt.file_decoration_style = "bold yellow ul ol".to_string();
+            }
+            if !cli::user_supplied_option("hunk-header-style", arg_matches) {
+                opt.hunk_header_style = "bold syntax".to_string();
+            }
+            if !cli::user_supplied_option("hunk-header-decoration-style", arg_matches) {
+                opt.hunk_header_decoration_style = "magenta box".to_string();
+            }
+        }
     }
 }
 

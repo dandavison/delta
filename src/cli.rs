@@ -185,6 +185,10 @@ pub struct Opt {
     /// of the special attributes 'box', 'ul', 'overline', or 'underoverline' must be given.
     pub file_decoration_style: String,
 
+    #[structopt(long = "diff-so-fancy")]
+    /// Emulate diff-so-fancy (https://github.com/so-fancy/diff-so-fancy)
+    pub diff_so_fancy: bool,
+
     #[structopt(long = "navigate")]
     /// Activate diff navigation: use n to jump forwards and N to jump backwards. To change the
     /// file labels used see --file-modified-label, --file-removed-label, --file-added-label,
