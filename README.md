@@ -396,14 +396,15 @@ and use the executable found at `./target/release/delta`.
 
 
 ## Credit
-  https://github.com/ogham/rust-ansi-term/<br>
-  https://github.com/sharkdp/bat<br>
-  https://github.com/so-fancy/diff-so-fancy<br>
-  https://github.com/trishume/syntect
+- [ogham/rust-ansi-term](https://github.com/ogham/rust-ansi-term)
+- [sharkdp/bat](https://github.com/sharkdp/bat)
+- [so-fancy/diff-so-fancy](https://github.com/so-fancy/diff-so-fancy)
+- [trishume/syntect](https://github.com/trishume/syntect)
 
 
 ## Projects using delta
-  https://github.com/wfxr/forgit<br>
-  https://github.com/bigH/git-fuzzy<br>
-  https://github.com/jesseduffield/lazygit/<br>
-  https://github.com/ms-jpq/sad
+- [wfxr/forgit](https://github.com/wfxr/forgit)
+- [bigH/git-fuzzy](https://github.com/bigH/git-fuzzy)
+- [dandavison/magit-delta](github.com/dandavison/magit-delta)
+- [jesseduffield/lazygit](https://github.com/jesseduffield/lazygit/)
+- [ms-jpq/sad](https://github.com/ms-jpq/sad)
