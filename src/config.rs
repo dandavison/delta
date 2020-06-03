@@ -373,7 +373,7 @@ mod tests {
                     options.dark = false;
                 }
             }
-            let config = cli::process_command_line_arguments(options);
+            let config = cli::process_command_line_arguments(options, None);
             assert_eq!(config.theme_name, expected_theme);
             if theme::is_no_syntax_highlighting_theme_name(expected_theme) {
                 assert!(config.theme.is_none())

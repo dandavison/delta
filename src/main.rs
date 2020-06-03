@@ -43,7 +43,8 @@ mod errors {
 }
 
 fn main() -> std::io::Result<()> {
-    let opt = cli::Opt::from_args();
+    let arg_matches = cli::Opt::clap().get_matches();
+    let opt = cli::Opt::from_clap(&arg_matches);
 
     if opt.list_languages {
         list_languages()?;
@@ -58,7 +59,7 @@ fn main() -> std::io::Result<()> {
 
     let show_background_colors_option = opt.show_background_colors;
 
-    let config = cli::process_command_line_arguments(opt);
+    let config = cli::process_command_line_arguments(opt, Some(arg_matches));
 
     if show_background_colors_option {
         show_background_colors(&config);
@@ -137,12 +138,15 @@ index f38589a..0f1bb83 100644
         }
 
         writeln!(stdout, "\n\nTheme: {}\n", style.paint(theme))?;
-        let config = cli::process_command_line_arguments(cli::Opt {
-            theme: Some(theme.to_string()),
-            file_style: "omit".to_string(),
-            hunk_header_style: "omit".to_string(),
-            ..opt.clone()
-        });
+        let config = cli::process_command_line_arguments(
+            cli::Opt {
+                theme: Some(theme.to_string()),
+                file_style: "omit".to_string(),
+                hunk_header_style: "omit".to_string(),
+                ..opt.clone()
+            },
+            None,
+        );
         let mut output_type = OutputType::from_mode(PagingMode::QuitIfOneScreen, None).unwrap();
         let mut writer = output_type.handle().unwrap();
 

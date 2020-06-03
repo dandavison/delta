@@ -1,7 +1,7 @@
 use std::process;
 
 use structopt::clap::AppSettings::{ColorAlways, ColoredHelp, DeriveDisplayOrder};
-use structopt::StructOpt;
+use structopt::{clap, StructOpt};
 
 use crate::bat::assets::HighlightingAssets;
 use crate::bat::output::PagingMode;
@@ -303,7 +303,10 @@ pub struct Opt {
     pub deprecated_hunk_color: Option<String>,
 }
 
-pub fn process_command_line_arguments<'a>(mut opt: Opt) -> config::Config<'a> {
+pub fn process_command_line_arguments<'a>(
+    mut opt: Opt,
+    arg_matches: Option<clap::ArgMatches>,
+) -> config::Config<'a> {
     let assets = HighlightingAssets::new();
 
     _check_validity(&opt, &assets);
