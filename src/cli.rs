@@ -185,6 +185,22 @@ pub struct Opt {
     /// of the special attributes 'box', 'ul', 'overline', or 'underoverline' must be given.
     pub file_decoration_style: String,
 
+    #[structopt(long = "file-modified-label", default_value = "")]
+    /// Text to display in front of a modified file path.
+    pub file_modified_label: String,
+
+    #[structopt(long = "file-removed-label", default_value = "removed:")]
+    /// Text to display in front of a removed file path.
+    pub file_removed_label: String,
+
+    #[structopt(long = "file-added-label", default_value = "added:")]
+    /// Text to display in front of a added file path.
+    pub file_added_label: String,
+
+    #[structopt(long = "file-renamed-label", default_value = "renamed:")]
+    /// Text to display in front of a renamed file path.
+    pub file_renamed_label: String,
+
     #[structopt(long = "hunk-header-style", default_value = "syntax")]
     /// Style (foreground, background, attributes) for the hunk-header. See STYLES section.
     pub hunk_header_style: String,

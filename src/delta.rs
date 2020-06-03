@@ -256,7 +256,9 @@ fn handle_file_meta_header_line(
     config: &Config,
     comparing: bool,
 ) -> std::io::Result<()> {
-    let line = parse::get_file_change_description_from_file_paths(minus_file, plus_file, comparing);
+    let line = parse::get_file_change_description_from_file_paths(
+        minus_file, plus_file, comparing, config,
+    );
     // FIXME: no support for 'raw'
     handle_generic_file_meta_header_line(painter, &line, &line, config)
 }
