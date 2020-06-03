@@ -1,5 +1,7 @@
 use std::path::Path;
 
+use crate::config::Config;
+
 // https://git-scm.com/docs/git-config#Documentation/git-config.txt-diffmnemonicPrefix
 const DIFF_PREFIXES: [&str; 6] = ["a", "b", "c", "i", "o", "w"];
 
@@ -51,15 +53,36 @@ pub fn get_file_change_description_from_file_paths(
     minus_file: &str,
     plus_file: &str,
     comparing: bool,
+    config: &Config,
 ) -> String {
     if comparing {
         format!("comparing: {} ⟶   {}", minus_file, plus_file)
     } else {
+        let format_label = |label: &str| {
+            if label.len() > 0 {
+                format!("{} ", label)
+            } else {
+                "".to_string()
+            }
+        };
         match (minus_file, plus_file) {
-            (minus_file, plus_file) if minus_file == plus_file => minus_file.to_string(),
-            (minus_file, "/dev/null") => format!("deleted: {}", minus_file),
-            ("/dev/null", plus_file) => format!("added: {}", plus_file),
-            (minus_file, plus_file) => format!("renamed: {} ⟶   {}", minus_file, plus_file),
+            (minus_file, plus_file) if minus_file == plus_file => format!(
+                "{}{}",
+                format_label(&config.file_modified_label),
+                minus_file
+            ),
+            (minus_file, "/dev/null") => {
+                format!("{}{}", format_label(&config.file_removed_label), minus_file)
+            }
+            ("/dev/null", plus_file) => {
+                format!("{}{}", format_label(&config.file_added_label), plus_file)
+            }
+            (minus_file, plus_file) => format!(
+                "{}{} ⟶   {}",
+                format_label(&config.file_renamed_label),
+                minus_file,
+                plus_file
+            ),
         }
     }
 }

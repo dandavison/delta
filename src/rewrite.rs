@@ -4,13 +4,16 @@
 ///    other options.
 use std::process;
 
+use structopt::clap;
+
 use crate::cli;
 
-pub fn apply_rewrite_rules(opt: &mut cli::Opt) {
+pub fn apply_rewrite_rules(opt: &mut cli::Opt, arg_matches: Option<clap::ArgMatches>) {
     _rewrite_style_strings_to_honor_deprecated_minus_plus_options(opt);
     _rewrite_options_to_implement_deprecated_commit_and_file_style_box_option(opt);
     _rewrite_options_to_implement_deprecated_hunk_style_option(opt);
     _rewrite_options_to_implement_color_only(opt);
+    _rewrite_options_to_implement_navigate(opt, arg_matches);
 }
 
 /// Implement --color-only
@@ -24,6 +27,20 @@ fn _rewrite_options_to_implement_color_only(opt: &mut cli::Opt) {
         opt.file_decoration_style = "none".to_string();
         opt.hunk_header_style = "raw".to_string();
         opt.hunk_header_decoration_style = "none".to_string();
+    }
+}
+
+/// Implement --navigate
+fn _rewrite_options_to_implement_navigate(
+    opt: &mut cli::Opt,
+    arg_matches: Option<clap::ArgMatches>,
+) {
+    if opt.navigate {
+        if let Some(arg_matches) = arg_matches {
+            if !cli::user_supplied_option(&arg_matches, "file-modified-label") {
+                opt.file_modified_label = "Δ".to_string();
+            }
+        }
     }
 }
 
@@ -199,7 +216,7 @@ mod tests {
         let mut opt = cli::Opt::from_iter(Vec::<OsString>::new());
         let before = opt.clone();
 
-        apply_rewrite_rules(&mut opt);
+        apply_rewrite_rules(&mut opt, None);
 
         assert_eq!(opt, before);
     }
@@ -212,7 +229,7 @@ mod tests {
         opt.deprecated_hunk_style = Some("underline".to_string());
         let default = "blue box";
         assert_eq!(opt.hunk_header_decoration_style, default);
-        apply_rewrite_rules(&mut opt);
+        apply_rewrite_rules(&mut opt, None);
         assert_eq!(opt.deprecated_hunk_style, None);
         assert_eq!(opt.hunk_header_decoration_style, "underline");
     }
@@ -223,7 +240,7 @@ mod tests {
         opt.deprecated_hunk_style = Some("".to_string());
         let default = "blue box";
         assert_eq!(opt.hunk_header_decoration_style, default);
-        apply_rewrite_rules(&mut opt);
+        apply_rewrite_rules(&mut opt, None);
         assert_eq!(opt.deprecated_hunk_style, None);
         assert_eq!(opt.hunk_header_decoration_style, default);
     }

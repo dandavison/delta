@@ -9,6 +9,8 @@ use std::process::{Child, Command, Stdio};
 use shell_words;
 
 use super::less::retrieve_less_version;
+
+use crate::config::Config;
 use crate::env;
 
 #[derive(Debug, Clone, Copy, PartialEq)]
@@ -26,17 +28,21 @@ pub enum OutputType {
 }
 
 impl OutputType {
-    pub fn from_mode(mode: PagingMode, pager: Option<&str>) -> Result<Self> {
+    pub fn from_mode(mode: PagingMode, pager: Option<&str>, config: &Config) -> Result<Self> {
         use self::PagingMode::*;
         Ok(match mode {
-            Always => OutputType::try_pager(false, pager)?,
-            QuitIfOneScreen => OutputType::try_pager(true, pager)?,
+            Always => OutputType::try_pager(false, pager, config)?,
+            QuitIfOneScreen => OutputType::try_pager(true, pager, config)?,
             _ => OutputType::stdout(),
         })
     }
 
     /// Try to launch the pager. Fall back to stdout in case of errors.
-    fn try_pager(quit_if_one_screen: bool, pager_from_config: Option<&str>) -> Result<Self> {
+    fn try_pager(
+        quit_if_one_screen: bool,
+        pager_from_config: Option<&str>,
+        config: &Config,
+    ) -> Result<Self> {
         let mut replace_arguments_to_less = false;
 
         let pager_from_env = match (env::get_env_var("BAT_PAGER"), env::get_env_var("PAGER")) {
@@ -114,7 +120,9 @@ impl OutputType {
                     p.args(args);
                     p
                 };
-
+                if config.navigate {
+                    process.args(&["--pattern", &config.make_navigate_regexp()]);
+                }
                 Ok(process
                     .env("LESSANSIENDCHARS", "mK")
                     .stdin(Stdio::piped())

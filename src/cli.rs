@@ -1,7 +1,7 @@
 use std::process;
 
 use structopt::clap::AppSettings::{ColorAlways, ColoredHelp, DeriveDisplayOrder};
-use structopt::StructOpt;
+use structopt::{clap, StructOpt};
 
 use crate::bat::assets::HighlightingAssets;
 use crate::bat::output::PagingMode;
@@ -185,6 +185,28 @@ pub struct Opt {
     /// of the special attributes 'box', 'ul', 'overline', or 'underoverline' must be given.
     pub file_decoration_style: String,
 
+    #[structopt(long = "navigate")]
+    /// Activate diff navigation: use n to jump forwards and N to jump backwards. To change the
+    /// file labels used see --file-modified-label, --file-removed-label, --file-added-label,
+    /// --file-renamed-label.
+    pub navigate: bool,
+
+    #[structopt(long = "file-modified-label", default_value = "")]
+    /// Text to display in front of a modified file path.
+    pub file_modified_label: String,
+
+    #[structopt(long = "file-removed-label", default_value = "removed:")]
+    /// Text to display in front of a removed file path.
+    pub file_removed_label: String,
+
+    #[structopt(long = "file-added-label", default_value = "added:")]
+    /// Text to display in front of a added file path.
+    pub file_added_label: String,
+
+    #[structopt(long = "file-renamed-label", default_value = "renamed:")]
+    /// Text to display in front of a renamed file path.
+    pub file_renamed_label: String,
+
     #[structopt(long = "hunk-header-style", default_value = "syntax")]
     /// Style (foreground, background, attributes) for the hunk-header. See STYLES section.
     pub hunk_header_style: String,
@@ -303,12 +325,15 @@ pub struct Opt {
     pub deprecated_hunk_color: Option<String>,
 }
 
-pub fn process_command_line_arguments<'a>(mut opt: Opt) -> config::Config<'a> {
+pub fn process_command_line_arguments<'a>(
+    mut opt: Opt,
+    arg_matches: Option<clap::ArgMatches>,
+) -> config::Config<'a> {
     let assets = HighlightingAssets::new();
 
     _check_validity(&opt, &assets);
 
-    rewrite::apply_rewrite_rules(&mut opt);
+    rewrite::apply_rewrite_rules(&mut opt, arg_matches);
 
     let paging_mode = match opt.paging_mode.as_ref() {
         "always" => PagingMode::Always,
@@ -343,6 +368,11 @@ pub fn process_command_line_arguments<'a>(mut opt: Opt) -> config::Config<'a> {
         true_color,
         paging_mode,
     )
+}
+
+/// Did the user supply `option` on the command line?
+pub fn user_supplied_option(arg_matches: &clap::ArgMatches, option: &str) -> bool {
+    arg_matches.occurrences_of(option) > 0
 }
 
 fn _check_validity(opt: &Opt, assets: &HighlightingAssets) {
