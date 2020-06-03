@@ -405,6 +405,6 @@ and use the executable found at `./target/release/delta`.
 ## Projects using delta
 - [wfxr/forgit](https://github.com/wfxr/forgit)
 - [bigH/git-fuzzy](https://github.com/bigH/git-fuzzy)
-- [dandavison/magit-delta](github.com/dandavison/magit-delta)
+- [dandavison/magit-delta](https://github.com/dandavison/magit-delta)
 - [jesseduffield/lazygit](https://github.com/jesseduffield/lazygit/)
 - [ms-jpq/sad](https://github.com/ms-jpq/sad)
