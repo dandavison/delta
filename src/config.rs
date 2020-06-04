@@ -175,8 +175,8 @@ pub fn get_config<'a>(
         null_syntect_style: SyntectStyle::default(),
         max_buffered_lines: 32,
         paging_mode,
-        minus_file: opt.minus_file,
-        plus_file: opt.plus_file,
+        minus_file: opt.minus_file.map(|s| s.clone()),
+        plus_file: opt.plus_file.map(|s| s.clone()),
     }
 }
 

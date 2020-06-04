@@ -21,7 +21,6 @@ mod tests;
 mod theme;
 
 use std::io::{self, ErrorKind, Read, Write};
-use std::os::unix::process::CommandExt;
 use std::path::PathBuf;
 use std::process;
 
@@ -64,8 +63,11 @@ fn main() -> std::io::Result<()> {
     let config = cli::process_command_line_arguments(opt, Some(arg_matches));
 
     if atty::is(atty::Stream::Stdin) {
-        delta_diff(config);
-        process::exit(0);
+        return diff(
+            config.minus_file.as_ref(),
+            config.plus_file.as_ref(),
+            &config,
+        );
     }
 
     if show_background_colors_option {
@@ -85,42 +87,39 @@ fn main() -> std::io::Result<()> {
     Ok(())
 }
 
-fn delta_diff(config: config::Config) {
-    let mut output_type = OutputType::from_mode(config.paging_mode, None, &config).unwrap();
-    let writer = output_type.handle().unwrap();
+/// Run `diff -u` on the files provided on the command line and display the output.
+fn diff(
+    minus_file: Option<&PathBuf>,
+    plus_file: Option<&PathBuf>,
+    config: &config::Config,
+) -> std::io::Result<()> {
+    use std::io::BufReader;
     let die = || {
         eprintln!("Usage: delta minus_file plus_file");
         process::exit(1);
     };
-    let minus_file = config.minus_file.unwrap_or_else(die);
-    let plus_file = config.plus_file.unwrap_or_else(die);
-
     let diff_process = process::Command::new(PathBuf::from("diff"))
         .arg("-u")
-        .args(&[minus_file, plus_file])
+        .args(&[
+            minus_file.unwrap_or_else(die),
+            plus_file.unwrap_or_else(die),
+        ])
         .stdout(process::Stdio::piped())
-        .spawn()
-        .unwrap();
+        .spawn();
 
-    if cfg!(unix) {
-        process::Command::new(PathBuf::from("delta"))
-            .stdin(diff_process.stdout.unwrap())
-            .exec();
-    } else {
-        // TODO: Send stdout of child delta process directly to less.
-        let mut buf = String::new();
-        process::Command::new(PathBuf::from("delta"))
-            .stdin(diff_process.stdout.unwrap())
-            .stdout(process::Stdio::piped())
-            .spawn()
-            .unwrap()
-            .stdout
-            .unwrap()
-            .read_to_string(&mut buf)
-            .unwrap();
-        write!(writer, "{}", buf).unwrap();
-        process::exit(0);
-    }
+    let mut output_type = OutputType::from_mode(config.paging_mode, None, &config).unwrap();
+    let mut writer = output_type.handle().unwrap();
+    if let Err(error) = delta(
+        BufReader::new(diff_process.unwrap().stdout.unwrap()).byte_lines(),
+        &mut writer,
+        &config,
+    ) {
+        match error.kind() {
+            ErrorKind::BrokenPipe => process::exit(0),
+            _ => eprintln!("{}", error),
+        }
+    };
+    Ok(())
 }
 
 fn show_background_colors(config: &config::Config) {
