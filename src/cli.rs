@@ -1,6 +1,7 @@
 use std::path::PathBuf;
 use std::process;
 
+use git2;
 use structopt::clap::AppSettings::{ColorAlways, ColoredHelp, DeriveDisplayOrder};
 use structopt::{clap, StructOpt};
 
@@ -152,20 +153,20 @@ pub struct Opt {
     /// STYLES section.
     pub minus_emph_style: String,
 
-    #[structopt(long = "minus-non-emph-style")]
+    #[structopt(long = "minus-non-emph-style", default_value = "auto auto")]
     /// Style (foreground, background, attributes) for non-emphasized sections of removed lines
     /// that have an emphasized section. Defaults to --minus-style. See STYLES section.
-    pub minus_non_emph_style: Option<String>,
+    pub minus_non_emph_style: String,
 
     #[structopt(long = "plus-emph-style", default_value = "syntax auto")]
     /// Style (foreground, background, attributes) for emphasized sections of added lines. See
     /// STYLES section.
     pub plus_emph_style: String,
 
-    #[structopt(long = "plus-non-emph-style")]
+    #[structopt(long = "plus-non-emph-style", default_value = "auto auto")]
     /// Style (foreground, background, attributes) for non-emphasized sections of added lines that
     /// have an emphasized section. Defaults to --plus-style. See STYLES section.
-    pub plus_non_emph_style: Option<String>,
+    pub plus_non_emph_style: String,
 
     #[structopt(long = "commit-style", default_value = "raw")]
     /// Style (foreground, background, attributes) for the commit hash line. See STYLES section.
@@ -186,9 +187,13 @@ pub struct Opt {
     /// of the special attributes 'box', 'ul', 'overline', or 'underoverline' must be given.
     pub file_decoration_style: String,
 
-    #[structopt(long = "diff-so-fancy")]
+    #[structopt(long = "emulate-diff-highlight")]
+    /// Emulate diff-highlight (https://github.com/git/git/tree/master/contrib/diff-highlight)
+    pub emulate_diff_highlight: bool,
+
+    #[structopt(long = "emulate-diff-so-fancy")]
     /// Emulate diff-so-fancy (https://github.com/so-fancy/diff-so-fancy)
-    pub diff_so_fancy: bool,
+    pub emulate_diff_so_fancy: bool,
 
     #[structopt(long = "navigate")]
     /// Activate diff navigation: use n to jump forwards and N to jump backwards. To change the
@@ -346,7 +351,18 @@ pub fn process_command_line_arguments<'a>(
 
     _check_validity(&opt, &assets);
 
-    rewrite::apply_rewrite_rules(&mut opt, arg_matches);
+    let mut git_config = match std::env::current_dir() {
+        Ok(dir) => match git2::Repository::discover(dir) {
+            Ok(repo) => match repo.config() {
+                Ok(config) => Some(config),
+                Err(_) => None,
+            },
+            Err(_) => None,
+        },
+        Err(_) => None,
+    };
+
+    rewrite::apply_rewrite_rules(&mut opt, &mut git_config, arg_matches);
 
     let paging_mode = match opt.paging_mode.as_ref() {
         "always" => PagingMode::Always,
@@ -383,9 +399,77 @@ pub fn process_command_line_arguments<'a>(
     )
 }
 
+/// If `opt_name` was not supplied on the command line, then change its value to one of the
+/// following in order of precedence:
+/// 1. The entry for it in the section of gitconfig correspnding to the selected theme, if there is
+///    one.
+/// 2. The entry for it in the main delta section of gitconfig, if there is one.
+/// 3. The default value passed to this macro (which may be the current value).
+macro_rules! set_options {
+    ([$( ($opt_name:expr, $field_ident:ident, $keys:expr, $default:expr) ),* ],
+     $opt:expr, $git_config:expr, $arg_matches:expr) => {
+        $(
+            if $arg_matches.is_none() || !user_supplied_option($opt_name, $arg_matches.unwrap()) {
+                $opt.$field_ident =
+                    value_from_git_config($keys, $git_config)
+                    .unwrap_or_else(|| $default.to_string());
+            };
+        )*
+    };
+    // This second rule handles a trailing comma.
+    ([$(($a:expr, $b:ident, $c:expr, $d:expr)),* ,], $e:expr, $f:expr, $g:expr) => {
+        set_options!([$( ($a, $b, $c, $d) ),*], $e, $f, $g);
+    };
+}
+
+macro_rules! set_delta_options {
+	([$( ($option_name:expr, $field_ident:ident) ),* ],
+     $opt:expr, $git_config:expr, $arg_matches:expr) => {
+		set_options!([
+            $(
+                ($option_name,
+                 $field_ident,
+                 cli::make_git_config_keys_for_delta($option_name, $opt.theme.as_deref()),
+                 &$opt.$field_ident)
+            ),*
+        ],
+        $opt,
+        $git_config,
+        $arg_matches);
+	};
+}
+
 /// Did the user supply `option` on the command line?
 pub fn user_supplied_option(option: &str, arg_matches: &clap::ArgMatches) -> bool {
     arg_matches.occurrences_of(option) > 0
+}
+
+// TODO: user_supplied_option should be used to give precedence to command line options over
+// gitconfig.
+pub fn value_from_git_config(
+    keys: Vec<String>,
+    git_config: &mut Option<git2::Config>,
+) -> Option<String> {
+    match git_config {
+        Some(git_config) => {
+            let git_config = git_config.snapshot().unwrap();
+            for key in keys {
+                let entry = git_config.get_str(&key);
+                if let Ok(entry) = entry {
+                    return Some(entry.to_string());
+                }
+            }
+            return None;
+        }
+        None => None,
+    }
+}
+
+pub fn make_git_config_keys_for_delta(key: &str, theme: Option<&str>) -> Vec<String> {
+    match theme {
+        Some(theme) => vec![format!("delta.{}.{}", theme, key), format!("delta.{}", key)],
+        None => vec![format!("delta.{}", key)],
+    }
 }
 
 fn _check_validity(opt: &Opt, assets: &HighlightingAssets) {
@@ -396,8 +480,7 @@ fn _check_validity(opt: &Opt, assets: &HighlightingAssets) {
     if let Some(ref theme) = opt.theme {
         if !theme::is_no_syntax_highlighting_theme_name(&theme) {
             if !assets.theme_set.themes.contains_key(theme.as_str()) {
-                eprintln!("Invalid theme: '{}'", theme);
-                process::exit(1);
+                return;
             }
             let is_light_theme = theme::is_light_theme(&theme);
             if is_light_theme && opt.dark {

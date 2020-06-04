@@ -6,14 +6,20 @@ use std::process;
 
 use structopt::clap;
 
-use crate::cli;
+use crate::cli::{self, user_supplied_option, value_from_git_config};
 
-pub fn apply_rewrite_rules(opt: &mut cli::Opt, arg_matches: Option<clap::ArgMatches>) {
+pub fn apply_rewrite_rules(
+    opt: &mut cli::Opt,
+    git_config: &mut Option<git2::Config>,
+    arg_matches: Option<clap::ArgMatches>,
+) {
     _rewrite_style_strings_to_honor_deprecated_minus_plus_options(opt);
+    _rewrite_options_to_honor_git_config(opt, git_config, arg_matches.as_ref());
     _rewrite_options_to_implement_deprecated_commit_and_file_style_box_option(opt);
     _rewrite_options_to_implement_deprecated_hunk_style_option(opt);
     _rewrite_options_to_implement_color_only(opt);
-    _rewrite_options_to_implement_diff_so_fancy(opt, arg_matches.as_ref());
+    _rewrite_options_to_implement_diff_highlight_emulation(opt, git_config, arg_matches.as_ref());
+    _rewrite_options_to_implement_diff_so_fancy_emulation(opt, git_config, arg_matches.as_ref());
     _rewrite_options_to_implement_navigate(opt, arg_matches.as_ref());
 }
 
@@ -31,48 +37,151 @@ fn _rewrite_options_to_implement_color_only(opt: &mut cli::Opt) {
     }
 }
 
-/// Implement --diff-so-fancy
-fn _rewrite_options_to_implement_diff_so_fancy(
+fn _rewrite_options_to_honor_git_config(
     opt: &mut cli::Opt,
+    git_config: &mut Option<git2::Config>,
     arg_matches: Option<&clap::ArgMatches>,
 ) {
-    if opt.diff_so_fancy {
-        if let Some(arg_matches) = arg_matches {
-            if !cli::user_supplied_option("minus-style", arg_matches) {
-                opt.minus_style = "red bold".to_string();
-            }
-            if !cli::user_supplied_option("minus-emph-style", arg_matches) {
-                opt.minus_emph_style = "red bold 52".to_string();
-            }
-            if !cli::user_supplied_option("zero-style", arg_matches) {
-                opt.zero_style = "normal".to_string();
-            }
-            if !cli::user_supplied_option("plus-style", arg_matches) {
-                opt.plus_style = "green bold".to_string();
-            }
-            if !cli::user_supplied_option("plus-emph-style", arg_matches) {
-                opt.plus_emph_style = "green bold 22".to_string();
-            }
-            if !cli::user_supplied_option("commit-style", arg_matches) {
-                opt.commit_style = "bold yellow".to_string();
-            }
-            if !cli::user_supplied_option("commit-decoration-style", arg_matches) {
-                opt.commit_decoration_style = "none".to_string();
-            }
-            if !cli::user_supplied_option("file-style", arg_matches) {
-                opt.file_style = "bold yellow".to_string();
-            }
-            if !cli::user_supplied_option("file-decoration-style", arg_matches) {
-                opt.file_decoration_style = "bold yellow ul ol".to_string();
-            }
-            if !cli::user_supplied_option("hunk-header-style", arg_matches) {
-                opt.hunk_header_style = "bold syntax".to_string();
-            }
-            if !cli::user_supplied_option("hunk-header-decoration-style", arg_matches) {
-                opt.hunk_header_decoration_style = "magenta box".to_string();
-            }
-        }
+    set_delta_options!(
+        [
+            ("commit-decoration-style", commit_decoration_style),
+            ("commit-style", commit_style),
+            ("file-added-label", file_added_label),
+            ("file-decoration-style", file_decoration_style),
+            ("file-modified-label", file_modified_label),
+            ("file-removed-label", file_removed_label),
+            ("file-renamed-label", file_renamed_label),
+            ("file-style", file_style),
+            ("hunk-header-decoration-style", hunk_header_decoration_style),
+            ("hunk-header-style", hunk_header_style),
+            // ("max-line-distance", max_line_distance),
+            ("minus-emph-style", minus_emph_style),
+            ("minus-non-emph-style", minus_non_emph_style),
+            ("minus-style", minus_style),
+            ("paging-mode", paging_mode),
+            ("plus-emph-style", plus_emph_style),
+            ("plus-non-emph-style", plus_non_emph_style),
+            ("plus-style", plus_style),
+            // ("tab-width", tab_width),
+            // ("theme", theme),
+            ("true-color", true_color),
+            ("zero-style", zero_style)
+        ],
+        opt,
+        git_config,
+        arg_matches
+    );
+}
+
+/// Implement --emulate-diff-highlight
+fn _rewrite_options_to_implement_diff_highlight_emulation(
+    opt: &mut cli::Opt,
+    git_config: &mut Option<git2::Config>,
+    arg_matches: Option<&clap::ArgMatches>,
+) {
+    if !opt.emulate_diff_highlight {
+        return;
     }
+    set_options!(
+        [
+            (
+                "minus-style",
+                minus_style,
+                vec!["color.diff.old".to_string()],
+                "red"
+            ),
+            (
+                "minus-non-emph-style",
+                minus_non_emph_style,
+                vec!["color.diff-highlight.oldNormal".to_string()],
+                &opt.minus_style
+            ),
+            (
+                "minus-emph-style",
+                minus_emph_style,
+                vec!["color.diff-highlight.oldHighlight".to_string()],
+                &format!("{} reverse", opt.minus_style)
+            ),
+            ("zero-style", zero_style, vec![], "normal"),
+            (
+                "plus-style",
+                plus_style,
+                vec!["color.diff.new".to_string()],
+                "green"
+            ),
+            (
+                "plus-non-emph-style",
+                plus_non_emph_style,
+                vec!["color.diff-highlight.newNormal".to_string()],
+                &opt.plus_style
+            ),
+            (
+                "plus-emph-style",
+                plus_emph_style,
+                vec!["color.diff-highlight.newHighlight".to_string()],
+                &format!("{} reverse", opt.plus_style)
+            ),
+        ],
+        opt,
+        git_config,
+        arg_matches
+    );
+}
+
+/// Implement --emulate-diff-so-fancy
+fn _rewrite_options_to_implement_diff_so_fancy_emulation(
+    opt: &mut cli::Opt,
+    git_config: &mut Option<git2::Config>,
+    arg_matches: Option<&clap::ArgMatches>,
+) {
+    if !opt.emulate_diff_so_fancy {
+        return;
+    }
+    opt.emulate_diff_highlight = true;
+    _rewrite_options_to_implement_diff_highlight_emulation(opt, git_config, arg_matches);
+    set_options!(
+        [
+            (
+                "commit-style",
+                commit_style,
+                vec!["color.diff.commit".to_string()],
+                "bold yellow"
+            ),
+            (
+                "file-style",
+                file_style,
+                vec!["color.diff.meta".to_string()],
+                "bold yellow"
+            ),
+            (
+                "hunk-header-style",
+                hunk_header_style,
+                vec!["color.diff.frag".to_string()],
+                "bold syntax"
+            ),
+            (
+                "commit-decoration-style",
+                commit_decoration_style,
+                vec![],
+                "none"
+            ),
+            (
+                "file-decoration-style",
+                file_decoration_style,
+                vec![],
+                "bold yellow ul ol"
+            ),
+            (
+                "hunk-header-decoration-style",
+                hunk_header_decoration_style,
+                vec![],
+                "magenta box"
+            ),
+        ],
+        opt,
+        git_config,
+        arg_matches
+    );
 }
 
 /// Implement --navigate
@@ -82,7 +191,7 @@ fn _rewrite_options_to_implement_navigate(
 ) {
     if opt.navigate {
         if let Some(arg_matches) = arg_matches {
-            if !cli::user_supplied_option("file-modified-label", arg_matches) {
+            if !user_supplied_option("file-modified-label", arg_matches) {
                 opt.file_modified_label = "Δ".to_string();
             }
         }
@@ -261,7 +370,7 @@ mod tests {
         let mut opt = cli::Opt::from_iter(Vec::<OsString>::new());
         let before = opt.clone();
 
-        apply_rewrite_rules(&mut opt, None);
+        apply_rewrite_rules(&mut opt, &mut None, None);
 
         assert_eq!(opt, before);
     }
@@ -274,7 +383,7 @@ mod tests {
         opt.deprecated_hunk_style = Some("underline".to_string());
         let default = "blue box";
         assert_eq!(opt.hunk_header_decoration_style, default);
-        apply_rewrite_rules(&mut opt, None);
+        apply_rewrite_rules(&mut opt, &mut None, None);
         assert_eq!(opt.deprecated_hunk_style, None);
         assert_eq!(opt.hunk_header_decoration_style, "underline");
     }
@@ -285,7 +394,7 @@ mod tests {
         opt.deprecated_hunk_style = Some("".to_string());
         let default = "blue box";
         assert_eq!(opt.hunk_header_decoration_style, default);
-        apply_rewrite_rules(&mut opt, None);
+        apply_rewrite_rules(&mut opt, &mut None, None);
         assert_eq!(opt.deprecated_hunk_style, None);
         assert_eq!(opt.hunk_header_decoration_style, default);
     }

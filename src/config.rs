@@ -3,7 +3,6 @@ use std::path::PathBuf;
 use std::process;
 
 use console::Term;
-use git2;
 use syntect::highlighting::Style as SyntectStyle;
 use syntect::highlighting::{Theme, ThemeSet};
 use syntect::parsing::SyntaxSet;
@@ -31,7 +30,6 @@ pub struct Config<'a> {
     pub file_removed_label: String,
     pub file_renamed_label: String,
     pub file_style: Style,
-    pub git_config: Option<git2::Config>,
     pub hunk_header_style: Style,
     pub max_buffered_lines: usize,
     pub max_line_distance: f64,
@@ -145,17 +143,6 @@ pub fn get_config<'a>(
             .map(|s| s.parse::<f64>().unwrap_or(0.0))
             .unwrap_or(0.0);
 
-    let git_config = match std::env::current_dir() {
-        Ok(dir) => match git2::Repository::discover(dir) {
-            Ok(repo) => match repo.config() {
-                Ok(config) => Some(config),
-                Err(_) => None,
-            },
-            Err(_) => None,
-        },
-        Err(_) => None,
-    };
-
     Config {
         background_color_extends_to_terminal_width,
         commit_style,
@@ -166,7 +153,6 @@ pub fn get_config<'a>(
         file_removed_label: opt.file_removed_label,
         file_renamed_label: opt.file_renamed_label,
         file_style,
-        git_config,
         hunk_header_style,
         max_buffered_lines: 32,
         max_line_distance: opt.max_line_distance,
@@ -223,18 +209,14 @@ fn make_hunk_styles<'a>(
         true,
     );
 
-    // The non-emph styles default to the base style.
-    let minus_non_emph_style = match &opt.minus_non_emph_style {
-        Some(style_string) => Style::from_str(
-            &style_string,
-            None,
-            minus_style.ansi_term_style.background,
-            None,
-            true_color,
-            false,
-        ),
-        None => minus_style,
-    };
+    let minus_non_emph_style = Style::from_str(
+        &opt.minus_non_emph_style,
+        minus_style.ansi_term_style.foreground,
+        minus_style.ansi_term_style.background,
+        None,
+        true_color,
+        false,
+    );
 
     let zero_style = Style::from_str(&opt.zero_style, None, None, None, true_color, false);
 
@@ -262,18 +244,14 @@ fn make_hunk_styles<'a>(
         true,
     );
 
-    // The non-emph styles default to the base style.
-    let plus_non_emph_style = match &opt.plus_non_emph_style {
-        Some(style_string) => Style::from_str(
-            &style_string,
-            None,
-            plus_style.ansi_term_style.background,
-            None,
-            true_color,
-            false,
-        ),
-        None => plus_style,
-    };
+    let plus_non_emph_style = Style::from_str(
+        &opt.plus_non_emph_style,
+        plus_style.ansi_term_style.foreground,
+        plus_style.ansi_term_style.background,
+        None,
+        true_color,
+        false,
+    );
 
     (
         minus_style,

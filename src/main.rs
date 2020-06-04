@@ -5,6 +5,7 @@ extern crate error_chain;
 
 mod align;
 mod bat;
+#[macro_use]
 mod cli;
 mod color;
 mod config;
