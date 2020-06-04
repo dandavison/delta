@@ -21,6 +21,8 @@ mod tests;
 mod theme;
 
 use std::io::{self, ErrorKind, Read, Write};
+use std::os::unix::process::CommandExt;
+use std::path::PathBuf;
 use std::process;
 
 use ansi_term::{self, Color};
@@ -61,6 +63,11 @@ fn main() -> std::io::Result<()> {
 
     let config = cli::process_command_line_arguments(opt, Some(arg_matches));
 
+    if atty::is(atty::Stream::Stdin) {
+        delta_diff(config);
+        process::exit(0);
+    }
+
     if show_background_colors_option {
         show_background_colors(&config);
         process::exit(0);
@@ -76,6 +83,44 @@ fn main() -> std::io::Result<()> {
         }
     };
     Ok(())
+}
+
+fn delta_diff(config: config::Config) {
+    let mut output_type = OutputType::from_mode(config.paging_mode, None, &config).unwrap();
+    let writer = output_type.handle().unwrap();
+    let die = || {
+        eprintln!("Usage: delta minus_file plus_file");
+        process::exit(1);
+    };
+    let minus_file = config.minus_file.unwrap_or_else(die);
+    let plus_file = config.plus_file.unwrap_or_else(die);
+
+    let diff_process = process::Command::new(PathBuf::from("diff"))
+        .arg("-u")
+        .args(&[minus_file, plus_file])
+        .stdout(process::Stdio::piped())
+        .spawn()
+        .unwrap();
+
+    if cfg!(unix) {
+        process::Command::new(PathBuf::from("delta"))
+            .stdin(diff_process.stdout.unwrap())
+            .exec();
+    } else {
+        // TODO: Send stdout of child delta process directly to less.
+        let mut buf = String::new();
+        process::Command::new(PathBuf::from("delta"))
+            .stdin(diff_process.stdout.unwrap())
+            .stdout(process::Stdio::piped())
+            .spawn()
+            .unwrap()
+            .stdout
+            .unwrap()
+            .read_to_string(&mut buf)
+            .unwrap();
+        write!(writer, "{}", buf).unwrap();
+        process::exit(0);
+    }
 }
 
 fn show_background_colors(config: &config::Config) {

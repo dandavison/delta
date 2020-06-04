@@ -1,4 +1,5 @@
 use std::cmp::min;
+use std::path::PathBuf;
 use std::process;
 
 use console::Term;
@@ -51,6 +52,8 @@ pub struct Config<'a> {
     pub null_syntect_style: SyntectStyle,
     pub max_buffered_lines: usize,
     pub paging_mode: PagingMode,
+    pub minus_file: Option<PathBuf>,
+    pub plus_file: Option<PathBuf>,
 }
 
 impl<'a> Config<'a> {
@@ -172,6 +175,8 @@ pub fn get_config<'a>(
         null_syntect_style: SyntectStyle::default(),
         max_buffered_lines: 32,
         paging_mode,
+        minus_file: opt.minus_file,
+        plus_file: opt.plus_file,
     }
 }
 

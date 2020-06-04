@@ -1,3 +1,4 @@
+use std::path::PathBuf;
 use std::process;
 
 use structopt::clap::AppSettings::{ColorAlways, ColoredHelp, DeriveDisplayOrder};
@@ -286,6 +287,14 @@ pub struct Opt {
     /// or PAGER (BAT_PAGER has priority).
     #[structopt(long = "paging", default_value = "auto")]
     pub paging_mode: String,
+
+    /// First file to be compared when delta is being used in diff mode.
+    #[structopt(parse(from_os_str))]
+    pub minus_file: Option<PathBuf>,
+
+    /// Second file to be compared when delta is being used in diff mode.
+    #[structopt(parse(from_os_str))]
+    pub plus_file: Option<PathBuf>,
 
     #[structopt(long = "minus-color")]
     /// Deprecated: use --minus-style='normal my_background_color'.
