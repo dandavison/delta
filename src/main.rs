@@ -5,7 +5,6 @@ extern crate error_chain;
 
 mod align;
 mod bat;
-#[macro_use]
 mod cli;
 mod color;
 mod config;
@@ -13,6 +12,8 @@ mod delta;
 mod draw;
 mod edits;
 mod env;
+#[macro_use]
+mod gitconfig;
 mod paint;
 mod parse;
 mod rewrite;

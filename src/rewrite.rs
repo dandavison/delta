@@ -6,7 +6,7 @@ use std::process;
 
 use structopt::clap;
 
-use crate::cli::{self, user_supplied_option, value_from_git_config};
+use crate::cli::{self, user_supplied_option};
 
 pub fn apply_rewrite_rules(
     opt: &mut cli::Opt,
@@ -42,7 +42,25 @@ fn _rewrite_options_to_honor_git_config(
     git_config: &mut Option<git2::Config>,
     arg_matches: Option<&clap::ArgMatches>,
 ) {
-    set_delta_options!(
+    set_delta_options__bool!(
+        [
+            ("light", light),
+            ("dark", dark),
+            ("navigate", navigate),
+            ("color-only", color_only),
+            ("keep-plus-minus-markers", keep_plus_minus_markers)
+        ],
+        opt,
+        git_config,
+        arg_matches
+    );
+    set_delta_options__f64!(
+        [("max-line-distance", max_line_distance)],
+        opt,
+        git_config,
+        arg_matches
+    );
+    set_delta_options__string!(
         [
             ("commit-decoration-style", commit_decoration_style),
             ("commit-style", commit_style),
@@ -54,7 +72,6 @@ fn _rewrite_options_to_honor_git_config(
             ("file-style", file_style),
             ("hunk-header-decoration-style", hunk_header_decoration_style),
             ("hunk-header-style", hunk_header_style),
-            // ("max-line-distance", max_line_distance),
             ("minus-emph-style", minus_emph_style),
             ("minus-non-emph-style", minus_non_emph_style),
             ("minus-style", minus_style),
@@ -62,8 +79,6 @@ fn _rewrite_options_to_honor_git_config(
             ("plus-emph-style", plus_emph_style),
             ("plus-non-emph-style", plus_non_emph_style),
             ("plus-style", plus_style),
-            // ("tab-width", tab_width),
-            // ("theme", theme),
             ("true-color", true_color),
             ("zero-style", zero_style)
         ],
@@ -71,6 +86,13 @@ fn _rewrite_options_to_honor_git_config(
         git_config,
         arg_matches
     );
+    set_delta_options__option_string!(
+        [("theme", theme), ("width", width)],
+        opt,
+        git_config,
+        arg_matches
+    );
+    set_delta_usize_options!([("tabs", tab_width)], opt, git_config, arg_matches);
 }
 
 /// Implement --emulate-diff-highlight
@@ -82,7 +104,7 @@ fn _rewrite_options_to_implement_diff_highlight_emulation(
     if !opt.emulate_diff_highlight {
         return;
     }
-    set_options!(
+    set_options__string!(
         [
             (
                 "minus-style",
@@ -120,7 +142,7 @@ fn _rewrite_options_to_implement_diff_highlight_emulation(
                 plus_emph_style,
                 vec!["color.diff-highlight.newHighlight".to_string()],
                 &format!("{} reverse", opt.plus_style)
-            ),
+            )
         ],
         opt,
         git_config,
@@ -139,7 +161,7 @@ fn _rewrite_options_to_implement_diff_so_fancy_emulation(
     }
     opt.emulate_diff_highlight = true;
     _rewrite_options_to_implement_diff_highlight_emulation(opt, git_config, arg_matches);
-    set_options!(
+    set_options__string!(
         [
             (
                 "commit-style",
@@ -176,7 +198,7 @@ fn _rewrite_options_to_implement_diff_so_fancy_emulation(
                 hunk_header_decoration_style,
                 vec![],
                 "magenta box"
-            ),
+            )
         ],
         opt,
         git_config,
