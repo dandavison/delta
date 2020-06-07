@@ -18,9 +18,9 @@ mod paint;
 mod parse;
 mod rewrite;
 mod style;
+mod syntax_theme;
 mod syntect_color;
 mod tests;
-mod theme;
 
 use std::io::{self, ErrorKind, Read, Write};
 use std::path::PathBuf;
@@ -52,11 +52,11 @@ fn main() -> std::io::Result<()> {
     if opt.list_languages {
         list_languages()?;
         process::exit(0);
-    } else if opt.list_theme_names {
-        list_theme_names()?;
+    } else if opt.list_syntax_theme_names {
+        list_syntax_theme_names()?;
         process::exit(0);
-    } else if opt.list_themes {
-        list_themes()?;
+    } else if opt.list_syntax_themes {
+        list_syntax_themes()?;
         process::exit(0);
     }
 
@@ -145,7 +145,7 @@ fn get_painted_rgb_string(color: Color) -> String {
     color.paint(format!("{:?}", color)).to_string()
 }
 
-fn list_themes() -> std::io::Result<()> {
+fn list_syntax_themes() -> std::io::Result<()> {
     use bytelines::ByteLines;
     use std::io::BufReader;
     let opt = cli::Opt::from_args();
@@ -178,15 +178,17 @@ index f38589a..0f1bb83 100644
 
     let assets = HighlightingAssets::new();
 
-    for (theme, _) in assets.theme_set.themes.iter() {
-        if opt.light && !theme::is_light_theme(theme) || opt.dark && theme::is_light_theme(theme) {
+    for (syntax_theme, _) in assets.theme_set.themes.iter() {
+        if opt.light && !syntax_theme::is_light_theme(syntax_theme)
+            || opt.dark && syntax_theme::is_light_theme(syntax_theme)
+        {
             continue;
         }
 
-        writeln!(stdout, "\n\nTheme: {}\n", style.paint(theme))?;
+        writeln!(stdout, "\n\nTheme: {}\n", style.paint(syntax_theme))?;
         let config = cli::process_command_line_arguments(
             cli::Opt {
-                theme: Some(theme.to_string()),
+                syntax_theme: Some(syntax_theme.to_string()),
                 file_style: "omit".to_string(),
                 hunk_header_style: "omit".to_string(),
                 ..opt.clone()
@@ -211,7 +213,7 @@ index f38589a..0f1bb83 100644
     Ok(())
 }
 
-pub fn list_theme_names() -> std::io::Result<()> {
+pub fn list_syntax_theme_names() -> std::io::Result<()> {
     let assets = HighlightingAssets::new();
     let themes = &assets.theme_set.themes;
     let stdout = io::stdout();
@@ -219,13 +221,13 @@ pub fn list_theme_names() -> std::io::Result<()> {
 
     writeln!(stdout, "Light themes:")?;
     for (theme, _) in themes.iter() {
-        if theme::is_light_theme(theme) {
+        if syntax_theme::is_light_theme(theme) {
             writeln!(stdout, "    {}", theme)?;
         }
     }
     writeln!(stdout, "Dark themes:")?;
     for (theme, _) in themes.iter() {
-        if !theme::is_light_theme(theme) {
+        if !syntax_theme::is_light_theme(theme) {
             writeln!(stdout, "    {}", theme)?;
         }
     }

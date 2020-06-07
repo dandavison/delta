@@ -28,7 +28,7 @@ impl<'a> Painter<'a> {
     pub fn new(writer: &'a mut dyn Write, config: &'a config::Config) -> Self {
         let default_syntax = Self::get_syntax(&config.syntax_set, None);
         // TODO: Avoid doing this.
-        let dummy_highlighter = HighlightLines::new(default_syntax, &config.dummy_theme);
+        let dummy_highlighter = HighlightLines::new(default_syntax, &config.syntax_dummy_theme);
         Self {
             minus_lines: Vec::new(),
             plus_lines: Vec::new(),
@@ -51,8 +51,8 @@ impl<'a> Painter<'a> {
     }
 
     pub fn set_highlighter(&mut self) {
-        if let Some(ref theme) = self.config.theme {
-            self.highlighter = HighlightLines::new(self.syntax, &theme)
+        if let Some(ref syntax_theme) = self.config.syntax_theme {
+            self.highlighter = HighlightLines::new(self.syntax, &syntax_theme)
         };
     }
 
@@ -185,7 +185,7 @@ impl<'a> Painter<'a> {
     }
 
     pub fn should_compute_syntax_highlighting(state: &State, config: &config::Config) -> bool {
-        if config.theme.is_none() {
+        if config.syntax_theme.is_none() {
             return false;
         }
         match state {

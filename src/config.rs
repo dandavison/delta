@@ -4,7 +4,7 @@ use std::process;
 
 use console::Term;
 use syntect::highlighting::Style as SyntectStyle;
-use syntect::highlighting::{Theme, ThemeSet};
+use syntect::highlighting::{Theme as SyntaxTheme, ThemeSet as SyntaxThemeSet};
 use syntect::parsing::SyntaxSet;
 
 use crate::bat::output::PagingMode;
@@ -13,7 +13,7 @@ use crate::color;
 use crate::delta::State;
 use crate::env;
 use crate::style::Style;
-use crate::theme;
+use crate::syntax_theme;
 
 pub enum Width {
     Fixed(usize),
@@ -24,7 +24,6 @@ pub struct Config<'a> {
     pub background_color_extends_to_terminal_width: bool,
     pub commit_style: Style,
     pub decorations_width: Width,
-    pub dummy_theme: Theme,
     pub file_added_label: String,
     pub file_modified_label: String,
     pub file_removed_label: String,
@@ -48,10 +47,11 @@ pub struct Config<'a> {
     pub plus_line_marker: &'a str,
     pub plus_non_emph_style: Style,
     pub plus_style: Style,
+    pub syntax_dummy_theme: SyntaxTheme,
     pub syntax_set: SyntaxSet,
+    pub syntax_theme: Option<SyntaxTheme>,
+    pub syntax_theme_name: String,
     pub tab_width: usize,
-    pub theme: Option<Theme>,
-    pub theme_name: String,
     pub true_color: bool,
     pub zero_style: Style,
 }
@@ -80,7 +80,7 @@ impl<'a> Config<'a> {
 pub fn get_config<'a>(
     opt: cli::Opt,
     syntax_set: SyntaxSet,
-    theme_set: ThemeSet,
+    syntax_theme_set: SyntaxThemeSet,
     true_color: bool,
     paging_mode: PagingMode,
 ) -> Config<'a> {
@@ -99,12 +99,12 @@ pub fn get_config<'a>(
         None => (Width::Fixed(available_terminal_width), true),
     };
 
-    let theme_name_from_bat_pager = env::get_env_var("BAT_THEME");
-    let (is_light_mode, theme_name) = theme::get_is_light_mode_and_theme_name(
-        opt.theme.as_ref(),
-        theme_name_from_bat_pager.as_ref(),
+    let syntax_theme_name_from_bat_theme = env::get_env_var("BAT_THEME");
+    let (is_light_mode, syntax_theme_name) = syntax_theme::get_is_light_mode_and_theme_name(
+        opt.syntax_theme.as_ref(),
+        syntax_theme_name_from_bat_theme.as_ref(),
         opt.light,
-        &theme_set,
+        &syntax_theme_set,
     );
 
     let (
@@ -120,12 +120,12 @@ pub fn get_config<'a>(
     let (commit_style, file_style, hunk_header_style) =
         make_commit_file_hunk_header_styles(&opt, true_color);
 
-    let theme = if theme::is_no_syntax_highlighting_theme_name(&theme_name) {
+    let syntax_theme = if syntax_theme::is_no_syntax_highlighting_theme_name(&syntax_theme_name) {
         None
     } else {
-        Some(theme_set.themes[&theme_name].clone())
+        Some(syntax_theme_set.themes[&syntax_theme_name].clone())
     };
-    let dummy_theme = theme_set.themes.values().next().unwrap().clone();
+    let syntax_dummy_theme = syntax_theme_set.themes.values().next().unwrap().clone();
 
     let minus_line_marker = if opt.keep_plus_minus_markers {
         "-"
@@ -147,7 +147,6 @@ pub fn get_config<'a>(
         background_color_extends_to_terminal_width,
         commit_style,
         decorations_width,
-        dummy_theme,
         file_added_label: opt.file_added_label,
         file_modified_label: opt.file_modified_label,
         file_removed_label: opt.file_removed_label,
@@ -171,10 +170,11 @@ pub fn get_config<'a>(
         plus_line_marker,
         plus_non_emph_style,
         plus_style,
+        syntax_dummy_theme,
         syntax_set,
+        syntax_theme,
+        syntax_theme_name,
         tab_width: opt.tab_width,
-        theme,
-        theme_name,
         true_color,
         zero_style,
     }
@@ -307,20 +307,20 @@ mod tests {
 
     #[test]
     #[ignore]
-    fn test_theme_selection() {
+    fn test_syntax_theme_selection() {
         #[derive(PartialEq)]
         enum Mode {
             Light,
             Dark,
         };
         for (
-            theme_option,
+            syntax_theme_option,
             bat_theme_env_var,
             mode_option, // (--light, --dark)
-            expected_theme,
+            expected_syntax_theme,
             expected_mode,
         ) in vec![
-            (None, "", None, theme::DEFAULT_DARK_THEME, Mode::Dark),
+            (None, "", None, syntax_theme::DEFAULT_DARK_THEME, Mode::Dark),
             (Some("GitHub".to_string()), "", None, "GitHub", Mode::Light),
             (
                 Some("GitHub".to_string()),
@@ -334,28 +334,28 @@ mod tests {
                 None,
                 "<not set>",
                 None,
-                theme::DEFAULT_DARK_THEME,
+                syntax_theme::DEFAULT_DARK_THEME,
                 Mode::Dark,
             ),
             (
                 None,
                 "",
                 Some(Mode::Light),
-                theme::DEFAULT_LIGHT_THEME,
+                syntax_theme::DEFAULT_LIGHT_THEME,
                 Mode::Light,
             ),
             (
                 None,
                 "",
                 Some(Mode::Dark),
-                theme::DEFAULT_DARK_THEME,
+                syntax_theme::DEFAULT_DARK_THEME,
                 Mode::Dark,
             ),
             (
                 None,
                 "<@@@@@>",
                 Some(Mode::Light),
-                theme::DEFAULT_LIGHT_THEME,
+                syntax_theme::DEFAULT_LIGHT_THEME,
                 Mode::Light,
             ),
             (None, "1337", Some(Mode::Light), "1337", Mode::Light),
@@ -375,7 +375,7 @@ mod tests {
             }
             let is_true_color = true;
             let mut options = integration_test_utils::get_command_line_options();
-            options.theme = theme_option;
+            options.syntax_theme = syntax_theme_option;
             match mode_option {
                 Some(Mode::Light) => {
                     options.light = true;
@@ -391,11 +391,14 @@ mod tests {
                 }
             }
             let config = cli::process_command_line_arguments(options, None);
-            assert_eq!(config.theme_name, expected_theme);
-            if theme::is_no_syntax_highlighting_theme_name(expected_theme) {
-                assert!(config.theme.is_none())
+            assert_eq!(config.syntax_theme_name, expected_syntax_theme);
+            if syntax_theme::is_no_syntax_highlighting_theme_name(expected_syntax_theme) {
+                assert!(config.syntax_theme.is_none())
             } else {
-                assert_eq!(config.theme.unwrap().name.as_ref().unwrap(), expected_theme);
+                assert_eq!(
+                    config.syntax_theme.unwrap().name.as_ref().unwrap(),
+                    expected_syntax_theme
+                );
             }
             assert_eq!(
                 config.minus_style.ansi_term_style.background.unwrap(),

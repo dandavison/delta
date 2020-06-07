@@ -87,7 +87,7 @@ fn _rewrite_options_to_honor_git_config(
         arg_matches
     );
     set_delta_options__option_string!(
-        [("theme", theme), ("width", width)],
+        [("syntax_theme", syntax_theme), ("width", width)],
         opt,
         git_config,
         arg_matches

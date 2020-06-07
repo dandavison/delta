@@ -90,7 +90,7 @@ mod set_delta_options {
                 $(
                     ($option_name,
                      $field_ident,
-                     $crate::gitconfig::make_git_config_keys_for_delta($option_name, $opt.theme.as_deref()),
+                     $crate::gitconfig::make_git_config_keys_for_delta($option_name, $opt.syntax_theme.as_deref()),
                      &$opt.$field_ident)
                 ),*
             ],
@@ -107,7 +107,7 @@ mod set_delta_options {
                 $(
                     ($option_name,
                      $field_ident,
-                     $crate::gitconfig::make_git_config_keys_for_delta($option_name, $opt.theme.as_deref()),
+                     $crate::gitconfig::make_git_config_keys_for_delta($option_name, $opt.syntax_theme.as_deref()),
                      $opt.$field_ident.as_deref())
                 ),*
             ],
@@ -124,7 +124,7 @@ mod set_delta_options {
                 $(
                     ($option_name,
                      $field_ident,
-                     $crate::gitconfig::make_git_config_keys_for_delta($option_name, $opt.theme.as_deref()),
+                     $crate::gitconfig::make_git_config_keys_for_delta($option_name, $opt.syntax_theme.as_deref()),
                      $opt.$field_ident)
                 ),*
             ],
@@ -141,7 +141,7 @@ mod set_delta_options {
                 $(
                     ($option_name,
                      $field_ident,
-                     $crate::gitconfig::make_git_config_keys_for_delta($option_name, $opt.theme.as_deref()),
+                     $crate::gitconfig::make_git_config_keys_for_delta($option_name, $opt.syntax_theme.as_deref()),
                      $opt.$field_ident)
                 ),*
             ],
@@ -158,7 +158,7 @@ mod set_delta_options {
                 $(
                     ($option_name,
                      $field_ident,
-                     $crate::gitconfig::make_git_config_keys_for_delta($option_name, $opt.theme.as_deref()),
+                     $crate::gitconfig::make_git_config_keys_for_delta($option_name, $opt.syntax_theme.as_deref()),
                      $opt.$field_ident)
                 ),*
             ],

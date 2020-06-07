@@ -59,7 +59,7 @@ mod tests {
     }
 
     #[test]
-    fn test_unrecognized_file_type_with_theme() {
+    fn test_unrecognized_file_type_with_syntax_theme() {
         // In addition to the background color, the code has the foreground color using the default
         // .txt syntax under the theme.
         let options = integration_test_utils::get_command_line_options();
@@ -70,11 +70,11 @@ mod tests {
     }
 
     #[test]
-    fn test_unrecognized_file_type_no_theme() {
+    fn test_unrecognized_file_type_no_syntax_theme() {
         // The code has the background color only. (Since there is no theme, the code has no
         // foreground ansi color codes.)
         let mut options = integration_test_utils::get_command_line_options();
-        options.theme = Some("none".to_string());
+        options.syntax_theme = Some("none".to_string());
         options.width = Some("variable".to_string());
         let input = ADDED_FILE_INPUT.replace("a.py", "a");
         let (output, config) =

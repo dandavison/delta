@@ -10,7 +10,7 @@ use crate::bat::output::PagingMode;
 use crate::config;
 use crate::env;
 use crate::rewrite;
-use crate::theme;
+use crate::syntax_theme;
 
 #[derive(StructOpt, Clone, Debug, PartialEq)]
 #[structopt(
@@ -119,12 +119,12 @@ https://github.com/dandavison/delta/issues.
 "
 )]
 pub struct Opt {
-    #[structopt(long = "theme", env = "BAT_THEME")]
-    /// The code syntax highlighting theme to use. Use --list-themes to demo available themes. If
-    /// the theme is not set using this option, it will be taken from the BAT_THEME environment
-    /// variable, if that contains a valid theme name. --theme=none disables all syntax
-    /// highlighting.
-    pub theme: Option<String>,
+    #[structopt(long = "syntax-theme", env = "BAT_THEME")]
+    /// The code syntax-highlighting theme to use. Use --list-syntax-themes to demo available
+    /// themes. If the syntax-highlighting theme is not set using this option, it will be taken
+    /// from the BAT_THEME environment variable, if that contains a valid theme name.
+    /// --syntax-theme=none disables all syntax highlighting.
+    pub syntax_theme: Option<String>,
 
     /// Use default colors appropriate for a light terminal background. For more control, see the
     /// style options.
@@ -264,14 +264,14 @@ pub struct Opt {
     pub list_languages: bool,
 
     /// List available syntax-highlighting color themes.
-    #[structopt(long = "list-theme-names")]
-    pub list_theme_names: bool,
+    #[structopt(long = "list-syntax-theme-names")]
+    pub list_syntax_theme_names: bool,
 
-    /// List available syntax highlighting themes, each with an example of highlighted diff output.
+    /// List available syntax-highlighting themes, each with an example of highlighted diff output.
     /// If diff output is supplied on standard input then this will be used for the demo. For
-    /// example: `git show --color=always | delta --list-themes`.
-    #[structopt(long = "list-themes")]
-    pub list_themes: bool,
+    /// example: `git show --color=always | delta --list-syntax-themes`.
+    #[structopt(long = "list-syntax-themes")]
+    pub list_syntax_themes: bool,
 
     /// The maximum distance between two lines for them to be inferred to be homologous. Homologous
     /// line pairs are highlighted according to the deletion and insertion operations transforming
@@ -409,24 +409,24 @@ fn _check_validity(opt: &Opt, assets: &HighlightingAssets) {
         eprintln!("--light and --dark cannot be used together.");
         process::exit(1);
     }
-    if let Some(ref theme) = opt.theme {
-        if !theme::is_no_syntax_highlighting_theme_name(&theme) {
-            if !assets.theme_set.themes.contains_key(theme.as_str()) {
+    if let Some(ref syntax_theme) = opt.syntax_theme {
+        if !syntax_theme::is_no_syntax_highlighting_theme_name(&syntax_theme) {
+            if !assets.theme_set.themes.contains_key(syntax_theme.as_str()) {
                 return;
             }
-            let is_light_theme = theme::is_light_theme(&theme);
-            if is_light_theme && opt.dark {
+            let is_light_syntax_theme = syntax_theme::is_light_theme(&syntax_theme);
+            if is_light_syntax_theme && opt.dark {
                 eprintln!(
-                    "{} is a light theme, but you supplied --dark. \
-                     If you use --theme, you do not need to supply --light or --dark.",
-                    theme
+                    "{} is a light syntax theme, but you supplied --dark. \
+                     If you use --syntax-theme, you do not need to supply --light or --dark.",
+                    syntax_theme
                 );
                 process::exit(1);
-            } else if !is_light_theme && opt.light {
+            } else if !is_light_syntax_theme && opt.light {
                 eprintln!(
-                    "{} is a dark theme, but you supplied --light. \
-                     If you use --theme, you do not need to supply --light or --dark.",
-                    theme
+                    "{} is a dark syntax theme, but you supplied --light. \
+                     If you use --syntax-theme, you do not need to supply --light or --dark.",
+                    syntax_theme
                 );
                 process::exit(1);
             }
