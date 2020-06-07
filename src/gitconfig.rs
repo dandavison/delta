@@ -233,3 +233,68 @@ pub fn make_git_config_keys_for_delta(key: &str, preset: Option<&str>) -> Vec<St
         None => vec![format!("delta.{}", key)],
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use std::fs::{remove_file, File};
+    use std::io::Write;
+    use std::path::Path;
+
+    use git2;
+    use structopt::StructOpt;
+
+    use crate::cli;
+    use crate::config;
+    use crate::style::Style;
+
+    const TEST_GIT_CONFIG_FILE: &str = "/tmp/delta-test-gitconfig";
+
+    #[test]
+    fn test_delta_main_section_is_honored() {
+        let args = vec![
+            "delta",
+            "/dev/null",
+            "/dev/null",
+            "--minus-style",
+            "red",
+            "--24-bit-color",
+            "always",
+        ];
+        let mut config = get_config(&args, None);
+        assert_eq!(config.minus_style, make_style("red"));
+        config = get_config(
+            &args,
+            Some(
+                b"
+[delta]
+    minus-style = blue
+",
+            ),
+        );
+        assert_eq!(config.minus_style, make_style("blue"));
+        remove_file(TEST_GIT_CONFIG_FILE).unwrap();
+    }
+
+    fn make_style(s: &str) -> Style {
+        Style::from_str(s, None, None, None, true, false)
+    }
+
+    fn make_git_config(contents: &[u8]) -> git2::Config {
+        let path = Path::new(TEST_GIT_CONFIG_FILE);
+        let mut file = File::create(path).unwrap();
+        file.write_all(contents).unwrap();
+        git2::Config::open(&path).unwrap()
+    }
+
+    fn get_config<'a>(
+        args: &Vec<&'a str>,
+        git_config_contents: Option<&[u8]>,
+    ) -> config::Config<'a> {
+        let options = cli::Opt::from_iter(args);
+        let mut git_config = match git_config_contents {
+            Some(contents) => Some(make_git_config(contents)),
+            None => None,
+        };
+        cli::process_command_line_arguments(options, &mut git_config, None)
+    }
+}
