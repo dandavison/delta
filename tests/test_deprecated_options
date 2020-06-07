@@ -19,3 +19,5 @@ background_color=blue
 for option in --minus-color --plus-color --minus-emph-color --plus-emph-color; do
     git show | ./target/release/delta $option $background_color
 done
+
+git show | ./target/release/delta --theme=GitHub --highlight-removed
