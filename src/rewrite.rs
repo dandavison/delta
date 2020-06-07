@@ -17,6 +17,7 @@ pub fn apply_rewrite_rules(
     _rewrite_options_to_honor_git_config(opt, git_config, arg_matches.as_ref());
     _rewrite_options_to_implement_deprecated_commit_and_file_style_box_option(opt);
     _rewrite_options_to_implement_deprecated_hunk_style_option(opt);
+    _rewrite_options_to_implement_deprecated_theme_option(opt, arg_matches.as_ref());
     _rewrite_options_to_implement_color_only(opt);
     _rewrite_options_to_implement_diff_highlight_emulation(opt, git_config, arg_matches.as_ref());
     _rewrite_options_to_implement_diff_so_fancy_emulation(opt, git_config, arg_matches.as_ref());
@@ -215,6 +216,20 @@ fn _rewrite_options_to_implement_navigate(
         if let Some(arg_matches) = arg_matches {
             if !user_supplied_option("file-modified-label", arg_matches) {
                 opt.file_modified_label = "Δ".to_string();
+            }
+        }
+    }
+}
+
+/// Honor deprecated --theme
+fn _rewrite_options_to_implement_deprecated_theme_option(
+    opt: &mut cli::Opt,
+    arg_matches: Option<&clap::ArgMatches>,
+) {
+    if let Some(arg_matches) = arg_matches {
+        if user_supplied_option("theme", arg_matches) {
+            if let Some(syntax_theme) = opt.deprecated_theme.as_ref() {
+                opt.syntax_theme = Some(syntax_theme.to_string());
             }
         }
     }

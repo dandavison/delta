@@ -341,6 +341,10 @@ pub struct Opt {
     /// Deprecated: use --hunk-header-style='my_foreground_color'
     /// --hunk-header-decoration-style='my_foreground_color'.
     pub deprecated_hunk_color: Option<String>,
+
+    #[structopt(long = "theme")]
+    /// Deprecated: use --syntax-theme.
+    pub deprecated_theme: Option<String>,
 }
 
 pub fn process_command_line_arguments<'a>(
