@@ -93,7 +93,7 @@ fn _rewrite_options_to_honor_git_config(
         git_config,
         arg_matches
     );
-    set_delta_usize_options!([("tabs", tab_width)], opt, git_config, arg_matches);
+    set_delta_options__usize!([("tabs", tab_width)], opt, git_config, arg_matches);
 }
 
 /// Implement --emulate-diff-highlight

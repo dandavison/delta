@@ -151,7 +151,7 @@ mod set_delta_options {
 	    };
     }
 
-    macro_rules! set_delta_usize_options {
+    macro_rules! set_delta_options__usize {
 	    ([$( ($option_name:expr, $field_ident:ident) ),* ],
          $opt:expr, $git_config:expr, $arg_matches:expr) => {
 		    set_options__usize!([
