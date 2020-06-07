@@ -107,6 +107,7 @@ pub mod ansi_test_utils {
         paint::Painter::paint_lines(
             vec![syntax_style_sections],
             vec![vec![(syntax_highlighted_style, lines[0])]],
+            vec![None],
             &mut output_buffer,
             config,
             "",

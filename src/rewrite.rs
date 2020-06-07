@@ -49,7 +49,8 @@ fn _rewrite_options_to_honor_git_config(
             ("dark", dark),
             ("navigate", navigate),
             ("color-only", color_only),
-            ("keep-plus-minus-markers", keep_plus_minus_markers)
+            ("keep-plus-minus-markers", keep_plus_minus_markers),
+            ("number", show_line_numbers)
         ],
         opt,
         git_config,
@@ -76,6 +77,12 @@ fn _rewrite_options_to_honor_git_config(
             ("minus-emph-style", minus_emph_style),
             ("minus-non-emph-style", minus_non_emph_style),
             ("minus-style", minus_style),
+            ("number-minus-format", number_minus_format),
+            ("number-minus-format-style", number_minus_format_style),
+            ("number-minus-style", number_minus_style),
+            ("number-plus-format", number_plus_format),
+            ("number-plus-format-style", number_plus_format_style),
+            ("number-plus-style", number_plus_style),
             ("paging-mode", paging_mode),
             ("plus-emph-style", plus_emph_style),
             ("plus-non-emph-style", plus_non_emph_style),
