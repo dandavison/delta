@@ -20,6 +20,19 @@ use crate::syntax_theme;
     setting(ColoredHelp),
     setting(DeriveDisplayOrder),
     after_help = "\
+PRESETS
+-------
+A preset is a named collection of delta options in ~/.gitconfig. An example is:
+
+[delta \"my-delta-preset\"]
+    syntax-theme = Dracula
+    plus-style = bold syntax \"#002800\"
+    ...
+
+To activate those options, you would use:
+
+delta --preset my-delta-preset.
+
 STYLES
 ------
 
@@ -119,6 +132,11 @@ https://github.com/dandavison/delta/issues.
 "
 )]
 pub struct Opt {
+    #[structopt(long = "preset", env = "DELTA_PRESET")]
+    /// The delta preset to use. A preset is a named collection of delta options in ~/.gitconfig.
+    /// See PRESETS section.
+    pub preset: Option<String>,
+
     #[structopt(long = "syntax-theme", env = "BAT_THEME")]
     /// The code syntax-highlighting theme to use. Use --list-syntax-themes to demo available
     /// themes. If the syntax-highlighting theme is not set using this option, it will be taken

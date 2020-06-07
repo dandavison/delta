@@ -4,7 +4,7 @@
 mod set_options {
     /// If `opt_name` was not supplied on the command line, then change its value to one of the
     /// following in order of precedence:
-    /// 1. The entry for it in the section of gitconfig correspnding to the selected theme, if there is
+    /// 1. The entry for it in the section of gitconfig corresponding to the selected preset, if there is
     ///    one.
     /// 2. The entry for it in the main delta section of gitconfig, if there is one.
     /// 3. The default value passed to this macro (which may be the current value).
@@ -90,7 +90,7 @@ mod set_delta_options {
                 $(
                     ($option_name,
                      $field_ident,
-                     $crate::gitconfig::make_git_config_keys_for_delta($option_name, $opt.syntax_theme.as_deref()),
+                     $crate::gitconfig::make_git_config_keys_for_delta($option_name, $opt.preset.as_deref()),
                      &$opt.$field_ident)
                 ),*
             ],
@@ -107,7 +107,7 @@ mod set_delta_options {
                 $(
                     ($option_name,
                      $field_ident,
-                     $crate::gitconfig::make_git_config_keys_for_delta($option_name, $opt.syntax_theme.as_deref()),
+                     $crate::gitconfig::make_git_config_keys_for_delta($option_name, $opt.preset.as_deref()),
                      $opt.$field_ident.as_deref())
                 ),*
             ],
@@ -124,7 +124,7 @@ mod set_delta_options {
                 $(
                     ($option_name,
                      $field_ident,
-                     $crate::gitconfig::make_git_config_keys_for_delta($option_name, $opt.syntax_theme.as_deref()),
+                     $crate::gitconfig::make_git_config_keys_for_delta($option_name, $opt.preset.as_deref()),
                      $opt.$field_ident)
                 ),*
             ],
@@ -141,7 +141,7 @@ mod set_delta_options {
                 $(
                     ($option_name,
                      $field_ident,
-                     $crate::gitconfig::make_git_config_keys_for_delta($option_name, $opt.syntax_theme.as_deref()),
+                     $crate::gitconfig::make_git_config_keys_for_delta($option_name, $opt.preset.as_deref()),
                      $opt.$field_ident)
                 ),*
             ],
@@ -158,7 +158,7 @@ mod set_delta_options {
                 $(
                     ($option_name,
                      $field_ident,
-                     $crate::gitconfig::make_git_config_keys_for_delta($option_name, $opt.syntax_theme.as_deref()),
+                     $crate::gitconfig::make_git_config_keys_for_delta($option_name, $opt.preset.as_deref()),
                      $opt.$field_ident)
                 ),*
             ],
@@ -224,9 +224,12 @@ pub mod git_config_get {
     }
 }
 
-pub fn make_git_config_keys_for_delta(key: &str, theme: Option<&str>) -> Vec<String> {
-    match theme {
-        Some(theme) => vec![format!("delta.{}.{}", theme, key), format!("delta.{}", key)],
+pub fn make_git_config_keys_for_delta(key: &str, preset: Option<&str>) -> Vec<String> {
+    match preset {
+        Some(preset) => vec![
+            format!("delta.{}.{}", preset, key),
+            format!("delta.{}", key),
+        ],
         None => vec![format!("delta.{}", key)],
     }
 }
