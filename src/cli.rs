@@ -20,6 +20,19 @@ use crate::syntax_theme;
     setting(ColoredHelp),
     setting(DeriveDisplayOrder),
     after_help = "\
+GIT CONFIG
+----------
+
+By default, delta takes settings from a section named \"delta\" in git config files, if one is
+present. The git config file to use for delta options will usually be ~/.gitconfig, but delta
+follows the rules given in https://git-scm.com/docs/git-config#FILES. Most delta options can be
+given in a git config file, using the usual option names but without the initial '--'. An example
+is
+
+[delta]
+    number = true
+    zero-style = dim syntax
+
 PRESETS
 -------
 A preset is a named collection of delta options in ~/.gitconfig. An example is:
@@ -31,7 +44,13 @@ A preset is a named collection of delta options in ~/.gitconfig. An example is:
 
 To activate those options, you would use:
 
-delta --preset my-delta-preset.
+delta --preset my-delta-preset
+
+or in ~/.gitconfig
+
+[delta]
+    preset = my-delta-preset
+
 
 STYLES
 ------
