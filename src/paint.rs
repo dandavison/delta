@@ -151,47 +151,40 @@ impl<'a> Painter<'a> {
             } else {
                 style
             };
-            let mut ansi_strings = Vec::new();
+
             let mut handled_prefix = false;
-            if config.show_line_numbers && line_numbers.is_some() {
+            let mut ansi_strings = if config.show_line_numbers && line_numbers.is_some() {
                 let (minus, plus) = line_numbers.unwrap();
                 let (minus_before, minus_number, minus_after) =
                     get_line_number_components(minus, &config.number_minus_format);
                 let (plus_before, plus_number, plus_after) =
                     get_line_number_components(plus, &config.number_plus_format);
-
-                ansi_strings.push(
+                vec![
                     config
                         .number_minus_format_style
                         .ansi_term_style
                         .paint(minus_before),
-                );
-                ansi_strings.push(
                     config
                         .number_minus_style
                         .ansi_term_style
                         .paint(minus_number),
-                );
-                ansi_strings.push(
                     config
                         .number_minus_format_style
                         .ansi_term_style
                         .paint(minus_after),
-                );
-                ansi_strings.push(
                     config
                         .number_plus_format_style
                         .ansi_term_style
                         .paint(plus_before),
-                );
-                ansi_strings.push(config.number_plus_style.ansi_term_style.paint(plus_number));
-                ansi_strings.push(
+                    config.number_plus_style.ansi_term_style.paint(plus_number),
                     config
                         .number_plus_format_style
                         .ansi_term_style
                         .paint(plus_after),
-                );
-            }
+                ]
+            } else {
+                Vec::new()
+            };
             for (section_style, mut text) in superimpose_style_sections(
                 syntax_sections,
                 diff_sections,
@@ -578,23 +571,21 @@ fn get_line_number_components(
     number: Option<usize>,
     number_format: &str,
 ) -> (String, String, String) {
-    let _caps = LINE_NUMBER_REGEXP.captures(number_format);
-
-    let caps = match _caps {
-        Some(_) => _caps.unwrap(),
+    let captures = match LINE_NUMBER_REGEXP.captures(number_format) {
+        Some(captures) => captures,
         None => return (number_format.to_string(), "".to_string(), "".to_string()),
     };
 
-    let before = caps.name("before").unwrap().as_str();
-    let ln = caps.name("ln");
-    let after = caps.name("after").unwrap().as_str();
-    let display_number = match ln {
+    let before = captures.name("before").unwrap().as_str();
+    let placeholder = captures.name("ln");
+    let after = captures.name("after").unwrap().as_str();
+    let number = match placeholder {
         Some(_) => number,
         None => None,
     };
     (
         before.to_string(),
-        format_line_number(display_number),
+        format_line_number(number),
         after.to_string(),
     )
 }

@@ -130,17 +130,15 @@ within a style string):
 LINE NUMBERS
 ------------
 
-Options that have a name like --*-format allow you to specify a string to display for the line
-number columns. The string should specify the location of the line number using the placeholder
-%ln.
+Options --number-minus-format and --number-plus-format allow you to specify a custom string to
+display for the line number columns. The string should specify the location of the line number
+using the placeholder %ln.
 
-For example, to display the line numbers divided by specific characters:
+For example, to display the line numbers like
 
     8 ⋮   9 │ Here is an output line
-    9 ⋮  10 │ Here is another output line
-   10 ⋮  11 │ Here is the line number
 
-you would use the following input:
+you would use
 
 --number-minus-format '%ln ⋮'
 --number-plus-format '%ln │'
@@ -272,40 +270,38 @@ pub struct Opt {
     pub show_line_numbers: bool,
 
     /// Style (foreground, background, attributes) for the left (minus) column of line numbers
-    /// (--number), if --number is set. See STYLES section.
-    /// Defaults to --hunk-style.
+    /// (--number), if --number is set. See STYLES section. Defaults to
+    /// --hunk-header-decoration-style.
     #[structopt(long = "number-minus-style", default_value = "auto")]
     pub number_minus_style: String,
 
     /// Style (foreground, background, attributes) for the right (plus) column of line numbers
-    /// (--number), if --number is set. See STYLES section.
-    /// Defaults to --hunk-style.
+    /// (--number), if --number is set. See STYLES section. Defaults to
+    /// --hunk-header-decoration-style.
     #[structopt(long = "number-plus-style", default_value = "auto")]
     pub number_plus_style: String,
 
     /// Format string for the left (minus) column of line numbers (--number), if --number is set.
     /// Should include the placeholder %ln to indicate the position of the line number.
     /// See the LINE NUMBERS section.
-    /// Defaults to '%ln⋮'
     #[structopt(long = "number-minus-format", default_value = "%ln⋮")]
     pub number_minus_format: String,
 
     /// Format string for the right (plus) column of line numbers (--number), if --number is set.
     /// Should include the placeholder %ln to indicate the position of the line number.
     /// See the LINE NUMBERS section.
-    /// Defaults to '%ln│ '
     #[structopt(long = "number-plus-format", default_value = "%ln│ ")]
     pub number_plus_format: String,
 
     /// Style (foreground, background, attributes) for the left (minus) line number format string
-    /// (--number), if --number is set. See STYLES section.
-    /// Defaults to --hunk-style.
+    /// (--number), if --number is set. See STYLES section. Defaults to
+    /// --hunk-header-decoration-style.
     #[structopt(long = "number-minus-format-style", default_value = "auto")]
     pub number_minus_format_style: String,
 
     /// Style (foreground, background, attributes) for the right (plus) line number format string
-    /// (--number), if --number is set. See STYLES section.
-    /// Defaults to --hunk-style.
+    /// (--number), if --number is set. See STYLES section. Defaults to
+    /// --hunk-header-decoration-style.
     #[structopt(long = "number-plus-format-style", default_value = "auto")]
     pub number_plus_format_style: String,
 
