@@ -43,6 +43,9 @@ fn _rewrite_options_to_honor_git_config(
     git_config: &mut Option<git2::Config>,
     arg_matches: Option<&clap::ArgMatches>,
 ) {
+    if opt.no_gitconfig {
+        return;
+    }
     // --preset must be set first
     set_delta_options__option_string!([("preset", preset)], opt, git_config, arg_matches);
     set_delta_options__bool!(

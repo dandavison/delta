@@ -330,6 +330,10 @@ pub struct Opt {
     /// --file-decoration '' --hunk-decoration ''`.
     pub color_only: bool,
 
+    #[structopt(long = "no-gitconfig")]
+    /// Do not take settings from git config files. See GIT CONFIG section.
+    pub no_gitconfig: bool,
+
     #[structopt(long = "keep-plus-minus-markers")]
     /// Prefix added/removed lines with a +/- character, respectively, exactly as git does. The
     /// default behavior is to output a space character in place of these markers.

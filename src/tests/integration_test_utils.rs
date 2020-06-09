@@ -14,6 +14,7 @@ pub mod integration_test_utils {
     pub fn get_command_line_options() -> cli::Opt {
         let mut opt = cli::Opt::from_iter(Vec::<OsString>::new());
         opt.syntax_theme = None; // TODO: Why does opt.syntax_theme have the value Some("")?
+        opt.no_gitconfig = true;
         opt
     }
 
