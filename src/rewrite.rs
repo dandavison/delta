@@ -239,7 +239,7 @@ fn _rewrite_options_to_implement_deprecated_theme_option(
     arg_matches: Option<&clap::ArgMatches>,
 ) {
     if let Some(arg_matches) = arg_matches {
-        if user_supplied_option("theme", arg_matches) {
+        if user_supplied_option("deprecated-theme", arg_matches) {
             if let Some(syntax_theme) = opt.deprecated_theme.as_ref() {
                 opt.syntax_theme = Some(syntax_theme.to_string());
             }
