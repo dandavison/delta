@@ -74,14 +74,16 @@ pub fn set_options(
                 minus_empty_line_marker_style
             ),
             ("minus-non-emph-style", minus_non_emph_style),
+            ("minus-non-emph-style", minus_non_emph_style),
             ("navigate", navigate),
             ("number", show_line_numbers),
-            ("number-minus-format", number_minus_format),
-            ("number-minus-format-style", number_minus_format_style),
+            ("number-left-format", number_left_format),
+            ("number-left-format-style", number_left_format_style),
             ("number-minus-style", number_minus_style),
-            ("number-plus-format", number_plus_format),
-            ("number-plus-format-style", number_plus_format_style),
             ("number-plus-style", number_plus_style),
+            ("number-right-format", number_right_format),
+            ("number-right-format-style", number_right_format_style),
+            ("number-zero-style", number_zero_style),
             ("paging-mode", paging_mode),
             // Hack: plus-style must come before plus-*emph-style because the latter default
             // dynamically to the value of the former.

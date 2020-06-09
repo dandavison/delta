@@ -157,9 +157,10 @@ within a style string):
 LINE NUMBERS
 ------------
 
-Options --number-minus-format and --number-plus-format allow you to specify a custom string to
+Options --number-left-format and --number-right-format allow you to specify a custom string to
 display for the line number columns. The string should specify the location of the line number
-using the placeholder %ln.
+using the placeholder %lm for the line number associated with the original file and %lp for the
+line number associated with the updated file.
 
 For example, to display the line numbers like
 
@@ -167,8 +168,8 @@ For example, to display the line numbers like
 
 you would use
 
---number-minus-format '%ln ⋮'
---number-plus-format '%ln │'
+--number-left-format '%lm ⋮'
+--number-right-format '%lp │'
 
 If something isn't working correctly, or you have a feature request, please open an issue at
 https://github.com/dandavison/delta/issues.
@@ -298,41 +299,50 @@ pub struct Opt {
     #[structopt(short = "n", long = "number")]
     pub show_line_numbers: bool,
 
-    /// Style (foreground, background, attributes) for the left (minus) column of line numbers
+    /// Style (foreground, background, attributes) for the minus line numbers
     /// (--number), if --number is set. See STYLES section. Defaults to
     /// --hunk-header-decoration-style.
     #[structopt(long = "number-minus-style", default_value = "auto")]
     pub number_minus_style: String,
 
-    /// Style (foreground, background, attributes) for the right (plus) column of line numbers
+    /// Style (foreground, background, attributes) for the plus line numbers
     /// (--number), if --number is set. See STYLES section. Defaults to
     /// --hunk-header-decoration-style.
     #[structopt(long = "number-plus-style", default_value = "auto")]
     pub number_plus_style: String,
 
-    /// Format string for the left (minus) column of line numbers (--number), if --number is set.
-    /// Should include the placeholder %ln to indicate the position of the line number.
-    /// See the LINE NUMBERS section.
-    #[structopt(long = "number-minus-format", default_value = "%ln⋮")]
-    pub number_minus_format: String,
+    /// Style (foreground, background, attributes) to apply on unchanged lines (if --number is set),
+    /// overriding --number-minus-style and --number-plus-style. See STYLES section.
+    #[structopt(long = "number-zero-style")]
+    pub number_zero_style: Option<String>,
 
-    /// Format string for the right (plus) column of line numbers (--number), if --number is set.
-    /// Should include the placeholder %ln to indicate the position of the line number.
+    /// Format string for the left column of line numbers (--number), if --number is set. Displays
+    /// the minus column by default.
+    /// Should include the placeholder %lm or %lp to indicate the position of the minus or plus
+    /// line number, respectively.
     /// See the LINE NUMBERS section.
-    #[structopt(long = "number-plus-format", default_value = "%ln│ ")]
-    pub number_plus_format: String,
+    #[structopt(long = "number-left-format", default_value = "%lm⋮")]
+    pub number_left_format: String,
 
-    /// Style (foreground, background, attributes) for the left (minus) line number format string
+    /// Format string for the right column of line numbers (--number), if --number is set. Displays
+    /// the plus column by default.
+    /// Should include the placeholder %lm or %lp to indicate the position of the minus or plus
+    /// line number, respectively.
+    /// See the LINE NUMBERS section.
+    #[structopt(long = "number-right-format", default_value = "%lp│ ")]
+    pub number_right_format: String,
+
+    /// Style (foreground, background, attributes) for the left line number format string
     /// (--number), if --number is set. See STYLES section. Defaults to
     /// --hunk-header-decoration-style.
-    #[structopt(long = "number-minus-format-style", default_value = "auto")]
-    pub number_minus_format_style: String,
+    #[structopt(long = "number-left-format-style", default_value = "auto")]
+    pub number_left_format_style: String,
 
-    /// Style (foreground, background, attributes) for the right (plus) line number format string
+    /// Style (foreground, background, attributes) for the right line number format string
     /// (--number), if --number is set. See STYLES section. Defaults to
     /// --hunk-header-decoration-style.
-    #[structopt(long = "number-plus-format-style", default_value = "auto")]
-    pub number_plus_format_style: String,
+    #[structopt(long = "number-right-format-style", default_value = "auto")]
+    pub number_right_format_style: String,
 
     #[structopt(long = "color-only")]
     /// Do not alter the input in any way other than applying colors. Equivalent to
