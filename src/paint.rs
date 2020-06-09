@@ -1,3 +1,5 @@
+use lazy_static::lazy_static;
+use regex::Regex;
 use std::io::Write;
 
 use ansi_term;
@@ -22,6 +24,8 @@ pub struct Painter<'a> {
     pub highlighter: HighlightLines<'a>,
     pub config: &'a config::Config<'a>,
     pub output_buffer: String,
+    pub minus_line_number: usize,
+    pub plus_line_number: usize,
 }
 
 impl<'a> Painter<'a> {
@@ -37,6 +41,8 @@ impl<'a> Painter<'a> {
             highlighter: dummy_highlighter,
             writer,
             config,
+            minus_line_number: 0,
+            plus_line_number: 0,
         }
     }
 
@@ -71,11 +77,23 @@ impl<'a> Painter<'a> {
         );
         let (minus_line_diff_style_sections, plus_line_diff_style_sections) =
             Self::get_diff_style_sections(&self.minus_lines, &self.plus_lines, self.config);
+
+        let mut minus_line_numbers = Vec::new();
+        let mut plus_line_numbers = Vec::new();
+        for _line in &self.minus_lines {
+            minus_line_numbers.push(Some((Some(self.minus_line_number), None)));
+            self.minus_line_number += 1;
+        }
+        for _line in &self.plus_lines {
+            plus_line_numbers.push(Some((None, Some(self.plus_line_number))));
+            self.plus_line_number += 1;
+        }
         // TODO: lines and style sections contain identical line text
         if !self.minus_lines.is_empty() {
             Painter::paint_lines(
                 minus_line_syntax_style_sections,
                 minus_line_diff_style_sections,
+                minus_line_numbers,
                 &mut self.output_buffer,
                 self.config,
                 self.config.minus_line_marker,
@@ -88,6 +106,7 @@ impl<'a> Painter<'a> {
             Painter::paint_lines(
                 plus_line_syntax_style_sections,
                 plus_line_diff_style_sections,
+                plus_line_numbers,
                 &mut self.output_buffer,
                 self.config,
                 self.config.plus_line_marker,
@@ -105,6 +124,7 @@ impl<'a> Painter<'a> {
     pub fn paint_lines(
         syntax_style_sections: Vec<Vec<(SyntectStyle, &str)>>,
         diff_style_sections: Vec<Vec<(Style, &str)>>,
+        line_number_sections: Vec<Option<(Option<usize>, Option<usize>)>>,
         output_buffer: &mut String,
         config: &config::Config,
         prefix: &str,
@@ -120,8 +140,11 @@ impl<'a> Painter<'a> {
         // 2. We must ensure that we fill rightwards with the appropriate
         //    non-emph background color. In that case we don't use the last
         //    style of the line, because this might be emph.
-        for (syntax_sections, diff_sections) in
-            syntax_style_sections.iter().zip(diff_style_sections.iter())
+
+        for ((syntax_sections, diff_sections), line_numbers) in syntax_style_sections
+            .iter()
+            .zip(diff_style_sections.iter())
+            .zip(line_number_sections.iter())
         {
             let non_emph_style = if style_sections_contain_more_than_one_style(diff_sections) {
                 non_emph_style // line contains an emph section
@@ -130,6 +153,45 @@ impl<'a> Painter<'a> {
             };
             let mut ansi_strings = Vec::new();
             let mut handled_prefix = false;
+            if config.show_line_numbers && line_numbers.is_some() {
+                let (minus, plus) = line_numbers.unwrap();
+                let (minus_before, minus_number, minus_after) =
+                    get_line_number_components(minus, &config.number_minus_format);
+                let (plus_before, plus_number, plus_after) =
+                    get_line_number_components(plus, &config.number_plus_format);
+
+                ansi_strings.push(
+                    config
+                        .number_minus_format_style
+                        .ansi_term_style
+                        .paint(minus_before),
+                );
+                ansi_strings.push(
+                    config
+                        .number_minus_style
+                        .ansi_term_style
+                        .paint(minus_number),
+                );
+                ansi_strings.push(
+                    config
+                        .number_minus_format_style
+                        .ansi_term_style
+                        .paint(minus_after),
+                );
+                ansi_strings.push(
+                    config
+                        .number_plus_format_style
+                        .ansi_term_style
+                        .paint(plus_before),
+                );
+                ansi_strings.push(config.number_plus_style.ansi_term_style.paint(plus_number));
+                ansi_strings.push(
+                    config
+                        .number_plus_format_style
+                        .ansi_term_style
+                        .paint(plus_after),
+                );
+            }
             for (section_style, mut text) in superimpose_style_sections(
                 syntax_sections,
                 diff_sections,
@@ -498,4 +560,41 @@ mod superimpose_style_sections {
             );
         }
     }
+}
+
+lazy_static! {
+    static ref LINE_NUMBER_REGEXP: Regex =
+        Regex::new(r"(?P<before>.*)(?P<ln>%ln)(?P<after>.*)").unwrap();
+}
+
+fn format_line_number(line_number: Option<usize>) -> String {
+    match line_number {
+        Some(x) => format!("{:^4}", x),
+        None => format!("    "),
+    }
+}
+
+fn get_line_number_components(
+    number: Option<usize>,
+    number_format: &str,
+) -> (String, String, String) {
+    let _caps = LINE_NUMBER_REGEXP.captures(number_format);
+
+    let caps = match _caps {
+        Some(_) => _caps.unwrap(),
+        None => return (number_format.to_string(), "".to_string(), "".to_string()),
+    };
+
+    let before = caps.name("before").unwrap().as_str();
+    let ln = caps.name("ln");
+    let after = caps.name("after").unwrap().as_str();
+    let display_number = match ln {
+        Some(_) => number,
+        None => None,
+    };
+    (
+        before.to_string(),
+        format_line_number(display_number),
+        after.to_string(),
+    )
 }

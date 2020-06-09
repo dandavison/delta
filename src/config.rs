@@ -41,12 +41,19 @@ pub struct Config<'a> {
     pub navigate: bool,
     pub null_style: Style,
     pub null_syntect_style: SyntectStyle,
+    pub number_minus_format: String,
+    pub number_minus_format_style: Style,
+    pub number_minus_style: Style,
+    pub number_plus_format: String,
+    pub number_plus_format_style: Style,
+    pub number_plus_style: Style,
     pub paging_mode: PagingMode,
     pub plus_emph_style: Style,
     pub plus_file: Option<PathBuf>,
     pub plus_line_marker: &'a str,
     pub plus_non_emph_style: Style,
     pub plus_style: Style,
+    pub show_line_numbers: bool,
     pub syntax_dummy_theme: SyntaxTheme,
     pub syntax_set: SyntaxSet,
     pub syntax_theme: Option<SyntaxTheme>,
@@ -120,6 +127,17 @@ pub fn get_config<'a>(
     let (commit_style, file_style, hunk_header_style) =
         make_commit_file_hunk_header_styles(&opt, true_color);
 
+    let (
+        number_minus_format_style,
+        number_minus_style,
+        number_plus_format_style,
+        number_plus_style,
+    ) = make_line_number_styles(
+        &opt,
+        hunk_header_style.decoration_ansi_term_style(),
+        true_color,
+    );
+
     let syntax_theme = if syntax_theme::is_no_syntax_highlighting_theme_name(&syntax_theme_name) {
         None
     } else {
@@ -164,12 +182,19 @@ pub fn get_config<'a>(
         navigate: opt.navigate,
         null_style: Style::new(),
         null_syntect_style: SyntectStyle::default(),
+        number_minus_format: opt.number_minus_format,
+        number_minus_format_style: number_minus_format_style,
+        number_minus_style: number_minus_style,
+        number_plus_format: opt.number_plus_format,
+        number_plus_format_style: number_plus_format_style,
+        number_plus_style: number_plus_style,
         paging_mode,
         plus_emph_style,
         plus_file: opt.plus_file.map(|s| s.clone()),
         plus_line_marker,
         plus_non_emph_style,
         plus_style,
+        show_line_numbers: opt.show_line_numbers,
         syntax_dummy_theme,
         syntax_set,
         syntax_theme,
@@ -261,6 +286,60 @@ fn make_hunk_styles<'a>(
         plus_style,
         plus_emph_style,
         plus_non_emph_style,
+    )
+}
+
+fn make_line_number_styles<'a>(
+    opt: &'a cli::Opt,
+    default_style: Option<ansi_term::Style>,
+    true_color: bool,
+) -> (Style, Style, Style, Style) {
+    let (default_foreground, default_background) = match default_style {
+        Some(default_style) => (default_style.foreground, default_style.background),
+        None => (None, None),
+    };
+
+    let number_minus_format_style = Style::from_str(
+        &opt.number_minus_format_style,
+        default_foreground,
+        default_background,
+        None,
+        true_color,
+        false,
+    );
+
+    let number_minus_style = Style::from_str(
+        &opt.number_minus_style,
+        default_foreground,
+        default_background,
+        None,
+        true_color,
+        false,
+    );
+
+    let number_plus_format_style = Style::from_str(
+        &opt.number_plus_format_style,
+        default_foreground,
+        default_background,
+        None,
+        true_color,
+        false,
+    );
+
+    let number_plus_style = Style::from_str(
+        &opt.number_plus_style,
+        default_foreground,
+        default_background,
+        None,
+        true_color,
+        false,
+    );
+
+    (
+        number_minus_format_style,
+        number_minus_style,
+        number_plus_format_style,
+        number_plus_style,
     )
 }
 

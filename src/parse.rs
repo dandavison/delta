@@ -1,3 +1,5 @@
+use lazy_static::lazy_static;
+use regex::Regex;
 use std::path::Path;
 
 use crate::config::Config;
@@ -87,17 +89,36 @@ pub fn get_file_change_description_from_file_paths(
     }
 }
 
+lazy_static! {
+    static ref HUNK_METADATA_REGEXP: Regex =
+        Regex::new(r"@+ (?P<lns>([-+]\d+(?:,\d+)? ){2,4})@+(?P<cf>.*\s?)").unwrap();
+}
+
+lazy_static! {
+    static ref LINE_NUMBER_REGEXP: Regex = Regex::new(r"[-+]").unwrap();
+}
+
+fn _make_line_number_vec(line: &str) -> Vec<usize> {
+    let mut numbers = Vec::<usize>::new();
+
+    for s in LINE_NUMBER_REGEXP.split(line) {
+        let number = s.split(',').nth(0).unwrap().split_whitespace().nth(0);
+        match number {
+            Some(number) => numbers.push(number.parse::<usize>().unwrap()),
+            None => continue,
+        }
+    }
+    return numbers;
+}
+
 /// Given input like
 /// "@@ -74,15 +74,14 @@ pub fn delta("
-/// Return " pub fn delta("
-pub fn parse_hunk_metadata(line: &str) -> (&str, &str) {
-    let mut iter = line.split("@@").skip(1);
-    let line_number = iter
-        .next()
-        .and_then(|s| s.split('+').nth(1).and_then(|s| s.split(',').next()))
-        .unwrap_or("");
-    let code_fragment = iter.next().unwrap_or("");
-    (code_fragment, line_number)
+/// Return " pub fn delta(" and a vector of line numbers
+pub fn parse_hunk_metadata(line: &str) -> (&str, Vec<usize>) {
+    let caps = HUNK_METADATA_REGEXP.captures(line).unwrap();
+    let line_numbers = _make_line_number_vec(caps.name("lns").unwrap().as_str());
+    let code_fragment = caps.name("cf").unwrap().as_str();
+    return (code_fragment, line_numbers);
 }
 
 /// Attempt to parse input as a file path and return extension as a &str.
@@ -249,9 +270,42 @@ mod tests {
 
     #[test]
     fn test_parse_hunk_metadata() {
-        assert_eq!(
-            parse_hunk_metadata("@@ -74,15 +75,14 @@ pub fn delta(\n"),
-            (" pub fn delta(\n", "75")
-        );
+        let parsed = parse_hunk_metadata("@@ -74,15 +75,14 @@ pub fn delta(\n");
+        let code_fragment = parsed.0;
+        let line_numbers = parsed.1;
+        assert_eq!(code_fragment, " pub fn delta(\n",);
+        assert_eq!(line_numbers[0], 74,);
+        assert_eq!(line_numbers[1], 75,);
+    }
+
+    #[test]
+    fn test_parse_hunk_metadata_added_file() {
+        let parsed = parse_hunk_metadata("@@ -1,22 +0,0 @@");
+        let code_fragment = parsed.0;
+        let line_numbers = parsed.1;
+        assert_eq!(code_fragment, "",);
+        assert_eq!(line_numbers[0], 1,);
+        assert_eq!(line_numbers[1], 0,);
+    }
+
+    #[test]
+    fn test_parse_hunk_metadata_deleted_file() {
+        let parsed = parse_hunk_metadata("@@ -0,0 +1,3 @@");
+        let code_fragment = parsed.0;
+        let line_numbers = parsed.1;
+        assert_eq!(code_fragment, "",);
+        assert_eq!(line_numbers[0], 0,);
+        assert_eq!(line_numbers[1], 1,);
+    }
+
+    #[test]
+    fn test_parse_hunk_metadata_merge() {
+        let parsed = parse_hunk_metadata("@@@ -293,11 -358,15 +358,16 @@@ dependencies =");
+        let code_fragment = parsed.0;
+        let line_numbers = parsed.1;
+        assert_eq!(code_fragment, " dependencies =",);
+        assert_eq!(line_numbers[0], 293,);
+        assert_eq!(line_numbers[1], 358,);
+        assert_eq!(line_numbers[2], 358,);
     }
 }

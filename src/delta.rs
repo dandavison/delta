@@ -369,7 +369,9 @@ fn handle_hunk_header_line(
             draw::write_no_decoration
         }
     };
-    let (raw_code_fragment, line_number) = parse::parse_hunk_metadata(&line);
+    let (raw_code_fragment, line_numbers) = parse::parse_hunk_metadata(&line);
+    painter.minus_line_number = line_numbers[0];
+    painter.plus_line_number = line_numbers[line_numbers.len() - 1];
     if config.hunk_header_style.is_raw {
         writeln!(painter.writer)?;
         draw_fn(
@@ -397,6 +399,7 @@ fn handle_hunk_header_line(
             Painter::paint_lines(
                 syntax_style_sections,
                 vec![vec![(config.hunk_header_style, &lines[0])]],
+                vec![None],
                 &mut painter.output_buffer,
                 config,
                 "",
@@ -418,10 +421,14 @@ fn handle_hunk_header_line(
             };
         }
     };
-    match config.hunk_header_style.decoration_ansi_term_style() {
-        Some(style) => writeln!(painter.writer, "{}", style.paint(line_number))?,
-        None => writeln!(painter.writer, "{}", line_number)?,
-    };
+
+    if !config.show_line_numbers {
+        let line_number = &format!("{}", painter.plus_line_number);
+        match config.hunk_header_style.decoration_ansi_term_style() {
+            Some(style) => writeln!(painter.writer, "{}", style.paint(line_number))?,
+            None => writeln!(painter.writer, "{}", line_number)?,
+        }
+    }
     Ok(())
 }
 
@@ -474,6 +481,10 @@ fn handle_hunk_line(
             Painter::paint_lines(
                 syntax_style_sections,
                 vec![diff_style_sections],
+                vec![Some((
+                    Some(painter.minus_line_number),
+                    Some(painter.plus_line_number),
+                ))],
                 &mut painter.output_buffer,
                 config,
                 prefix,
@@ -481,6 +492,8 @@ fn handle_hunk_line(
                 config.zero_style,
                 None,
             );
+            painter.minus_line_number += 1;
+            painter.plus_line_number += 1;
             state
         }
         _ => {
