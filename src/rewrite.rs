@@ -13,8 +13,8 @@ pub fn apply_rewrite_rules(
     git_config: &mut Option<git2::Config>,
     arg_matches: Option<clap::ArgMatches>,
 ) {
-    _rewrite_style_strings_to_honor_deprecated_minus_plus_options(opt);
     _rewrite_options_to_honor_git_config(opt, git_config, arg_matches.as_ref());
+    _rewrite_style_strings_to_honor_deprecated_minus_plus_options(opt);
     _rewrite_options_to_implement_deprecated_commit_and_file_style_box_option(opt);
     _rewrite_options_to_implement_deprecated_hunk_style_option(opt);
     _rewrite_options_to_implement_deprecated_theme_option(opt, arg_matches.as_ref());
@@ -43,6 +43,8 @@ fn _rewrite_options_to_honor_git_config(
     git_config: &mut Option<git2::Config>,
     arg_matches: Option<&clap::ArgMatches>,
 ) {
+    // --preset must be set first
+    set_delta_options__option_string!([("preset", preset)], opt, git_config, arg_matches);
     set_delta_options__bool!(
         [
             ("light", light),
