@@ -241,6 +241,7 @@ mod tests {
     use std::path::Path;
 
     use git2;
+    use itertools;
     use structopt::StructOpt;
 
     use crate::cli;
@@ -253,42 +254,16 @@ mod tests {
     fn test_delta_main_section_is_honored() {
         // First check that it doesn't default to blue, because that's going to be used to signal
         // that gitconfig has set the style.
-        let config = make_config(
-            &[
-                "delta",
-                "/dev/null",
-                "/dev/null",
-                "--24-bit-color",
-                "always",
-            ],
-            None,
-        );
+        let config = make_config(&[], None);
         assert_ne!(config.minus_style, make_style("blue"));
 
         // Check that --minus-style is honored as we expect.
-        let config = make_config(
-            &[
-                "/dev/null",
-                "/dev/null",
-                "--24-bit-color",
-                "always",
-                "--minus-style",
-                "red",
-            ],
-            None,
-        );
+        let config = make_config(&["--minus-style", "red"], None);
         assert_eq!(config.minus_style, make_style("red"));
 
         // Check that gitconfig does not override a command line argument
         let config = make_config(
-            &[
-                "/dev/null",
-                "/dev/null",
-                "--24-bit-color",
-                "always",
-                "--minus-style",
-                "red",
-            ],
+            &["--minus-style", "red"],
             Some(
                 b"
 [delta]
@@ -300,7 +275,7 @@ mod tests {
 
         // Finally, check that gitconfig is honored when not overridden by a command line argument.
         let config = make_config(
-            &["/dev/null", "/dev/null", "--24-bit-color", "always"],
+            &[],
             Some(
                 b"
 [delta]
@@ -325,6 +300,10 @@ mod tests {
     }
 
     fn make_config<'a>(args: &[&str], git_config_contents: Option<&[u8]>) -> config::Config<'a> {
+        let args = itertools::chain(
+            &["/dev/null", "/dev/null", "--24-bit-color", "always"],
+            args,
+        );
         let mut git_config = match git_config_contents {
             Some(contents) => Some(make_git_config(contents)),
             None => None,
