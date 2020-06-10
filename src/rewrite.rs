@@ -10,18 +10,18 @@ use crate::cli::{self, user_supplied_option};
 
 pub fn apply_rewrite_rules(
     opt: &mut cli::Opt,
-    arg_matches: Option<clap::ArgMatches>,
+    arg_matches: clap::ArgMatches,
     git_config: &mut Option<git2::Config>,
 ) {
-    _rewrite_options_to_honor_git_config(opt, arg_matches.as_ref(), git_config);
+    _rewrite_options_to_honor_git_config(opt, &arg_matches, git_config);
     _rewrite_style_strings_to_honor_deprecated_minus_plus_options(opt);
     _rewrite_options_to_implement_deprecated_commit_and_file_style_box_option(opt);
     _rewrite_options_to_implement_deprecated_hunk_style_option(opt);
-    _rewrite_options_to_implement_deprecated_theme_option(opt, arg_matches.as_ref());
+    _rewrite_options_to_implement_deprecated_theme_option(opt, &arg_matches);
     _rewrite_options_to_implement_color_only(opt);
-    _rewrite_options_to_implement_diff_highlight_emulation(opt, arg_matches.as_ref(), git_config);
-    _rewrite_options_to_implement_diff_so_fancy_emulation(opt, arg_matches.as_ref(), git_config);
-    _rewrite_options_to_implement_navigate(opt, arg_matches.as_ref());
+    _rewrite_options_to_implement_diff_highlight_emulation(opt, &arg_matches, git_config);
+    _rewrite_options_to_implement_diff_so_fancy_emulation(opt, &arg_matches, git_config);
+    _rewrite_options_to_implement_navigate(opt, &arg_matches);
 }
 
 /// Implement --color-only
@@ -40,7 +40,7 @@ fn _rewrite_options_to_implement_color_only(opt: &mut cli::Opt) {
 
 fn _rewrite_options_to_honor_git_config(
     opt: &mut cli::Opt,
-    arg_matches: Option<&clap::ArgMatches>,
+    arg_matches: &clap::ArgMatches,
     git_config: &mut Option<git2::Config>,
 ) {
     if opt.no_gitconfig {
@@ -111,7 +111,7 @@ fn _rewrite_options_to_honor_git_config(
 /// Implement --emulate-diff-highlight
 fn _rewrite_options_to_implement_diff_highlight_emulation(
     opt: &mut cli::Opt,
-    arg_matches: Option<&clap::ArgMatches>,
+    arg_matches: &clap::ArgMatches,
     git_config: &mut Option<git2::Config>,
 ) {
     if !opt.emulate_diff_highlight {
@@ -166,7 +166,7 @@ fn _rewrite_options_to_implement_diff_highlight_emulation(
 /// Implement --emulate-diff-so-fancy
 fn _rewrite_options_to_implement_diff_so_fancy_emulation(
     opt: &mut cli::Opt,
-    arg_matches: Option<&clap::ArgMatches>,
+    arg_matches: &clap::ArgMatches,
     git_config: &mut Option<git2::Config>,
 ) {
     if !opt.emulate_diff_so_fancy {
@@ -220,15 +220,10 @@ fn _rewrite_options_to_implement_diff_so_fancy_emulation(
 }
 
 /// Implement --navigate
-fn _rewrite_options_to_implement_navigate(
-    opt: &mut cli::Opt,
-    arg_matches: Option<&clap::ArgMatches>,
-) {
+fn _rewrite_options_to_implement_navigate(opt: &mut cli::Opt, arg_matches: &clap::ArgMatches) {
     if opt.navigate {
-        if let Some(arg_matches) = arg_matches {
-            if !user_supplied_option("file-modified-label", arg_matches) {
-                opt.file_modified_label = "Δ".to_string();
-            }
+        if !user_supplied_option("file-modified-label", arg_matches) {
+            opt.file_modified_label = "Δ".to_string();
         }
     }
 }
@@ -236,13 +231,11 @@ fn _rewrite_options_to_implement_navigate(
 /// Honor deprecated --theme
 fn _rewrite_options_to_implement_deprecated_theme_option(
     opt: &mut cli::Opt,
-    arg_matches: Option<&clap::ArgMatches>,
+    arg_matches: &clap::ArgMatches,
 ) {
-    if let Some(arg_matches) = arg_matches {
-        if user_supplied_option("deprecated-theme", arg_matches) {
-            if let Some(syntax_theme) = opt.deprecated_theme.as_ref() {
-                opt.syntax_theme = Some(syntax_theme.to_string());
-            }
+    if user_supplied_option("deprecated-theme", arg_matches) {
+        if let Some(syntax_theme) = opt.deprecated_theme.as_ref() {
+            opt.syntax_theme = Some(syntax_theme.to_string());
         }
     }
 }
@@ -409,7 +402,7 @@ fn _get_rewritten_minus_plus_style_string(
 mod tests {
     use std::ffi::OsString;
 
-    use structopt::StructOpt;
+    use structopt::{clap, StructOpt};
 
     use crate::cli;
     use crate::rewrite::apply_rewrite_rules;
@@ -419,7 +412,7 @@ mod tests {
         let mut opt = cli::Opt::from_iter(Vec::<OsString>::new());
         let before = opt.clone();
 
-        apply_rewrite_rules(&mut opt, None, &mut None);
+        apply_rewrite_rules(&mut opt, clap::ArgMatches::new(), &mut None);
 
         assert_eq!(opt, before);
     }
@@ -432,7 +425,7 @@ mod tests {
         opt.deprecated_hunk_style = Some("underline".to_string());
         let default = "blue box";
         assert_eq!(opt.hunk_header_decoration_style, default);
-        apply_rewrite_rules(&mut opt, None, &mut None);
+        apply_rewrite_rules(&mut opt, clap::ArgMatches::new(), &mut None);
         assert_eq!(opt.deprecated_hunk_style, None);
         assert_eq!(opt.hunk_header_decoration_style, "underline");
     }
@@ -443,7 +436,7 @@ mod tests {
         opt.deprecated_hunk_style = Some("".to_string());
         let default = "blue box";
         assert_eq!(opt.hunk_header_decoration_style, default);
-        apply_rewrite_rules(&mut opt, None, &mut None);
+        apply_rewrite_rules(&mut opt, clap::ArgMatches::new(), &mut None);
         assert_eq!(opt.deprecated_hunk_style, None);
         assert_eq!(opt.hunk_header_decoration_style, default);
     }

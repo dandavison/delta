@@ -13,7 +13,7 @@ mod set_options {
         ([$( ($opt_name:expr, $field_ident:ident, $keys:expr, $default:expr) ),* ],
          $opt:expr, $arg_matches:expr, $git_config:expr) => {
             $(
-                if $arg_matches.is_none() || !$crate::cli::user_supplied_option($opt_name, $arg_matches.unwrap()) {
+                if !$crate::cli::user_supplied_option($opt_name, $arg_matches) {
                     $opt.$field_ident =
                         $crate::gitconfig::git_config_get::_string($keys, $git_config)
                         .unwrap_or_else(|| $default.to_string());
@@ -26,7 +26,7 @@ mod set_options {
         ([$( ($opt_name:expr, $field_ident:ident, $keys:expr, $default:expr) ),* ],
          $opt:expr, $arg_matches:expr, $git_config:expr) => {
             $(
-                if $arg_matches.is_none() || !$crate::cli::user_supplied_option($opt_name, $arg_matches.unwrap()) {
+                if !$crate::cli::user_supplied_option($opt_name, $arg_matches) {
                     $opt.$field_ident = match ($crate::gitconfig::git_config_get::_string($keys, $git_config), $default) {
                         (Some(s), _) => Some(s),
                         (None, Some(default)) => Some(default.to_string()),
@@ -41,7 +41,7 @@ mod set_options {
         ([$( ($opt_name:expr, $field_ident:ident, $keys:expr, $default:expr) ),* ],
          $opt:expr, $arg_matches:expr, $git_config:expr) => {
             $(
-                if $arg_matches.is_none() || !$crate::cli::user_supplied_option($opt_name, $arg_matches.unwrap()) {
+                if !$crate::cli::user_supplied_option($opt_name, $arg_matches) {
                     $opt.$field_ident =
                         $crate::gitconfig::git_config_get::_bool($keys, $git_config)
                         .unwrap_or_else(|| $default);
@@ -54,7 +54,7 @@ mod set_options {
         ([$( ($opt_name:expr, $field_ident:ident, $keys:expr, $default:expr) ),* ],
          $opt:expr, $arg_matches:expr, $git_config:expr) => {
             $(
-                if $arg_matches.is_none() || !$crate::cli::user_supplied_option($opt_name, $arg_matches.unwrap()) {
+                if !$crate::cli::user_supplied_option($opt_name, $arg_matches) {
                     $opt.$field_ident = match $crate::gitconfig::git_config_get::_string($keys, $git_config) {
                         Some(s) => s.parse::<f64>().unwrap_or($default),
                         None => $default,
@@ -68,7 +68,7 @@ mod set_options {
         ([$( ($opt_name:expr, $field_ident:ident, $keys:expr, $default:expr) ),* ],
          $opt:expr, $arg_matches:expr, $git_config:expr) => {
             $(
-                if $arg_matches.is_none() || !$crate::cli::user_supplied_option($opt_name, $arg_matches.unwrap()) {
+                if !$crate::cli::user_supplied_option($opt_name, $arg_matches) {
                     $opt.$field_ident = match $crate::gitconfig::git_config_get::_i64($keys, $git_config) {
                         Some(int) => int as usize,
                         None => $default,
@@ -241,7 +241,7 @@ mod tests {
     use std::path::Path;
 
     use git2;
-    use structopt::StructOpt;
+    use structopt::{clap, StructOpt};
 
     use crate::cli;
     use crate::config;
@@ -295,6 +295,6 @@ mod tests {
             Some(contents) => Some(make_git_config(contents)),
             None => None,
         };
-        cli::process_command_line_arguments(options, None, &mut git_config)
+        cli::process_command_line_arguments(options, clap::ArgMatches::new(), &mut git_config)
     }
 }

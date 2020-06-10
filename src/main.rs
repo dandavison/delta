@@ -29,7 +29,7 @@ use std::process;
 use ansi_term::{self, Color};
 use atty;
 use bytelines::ByteLinesReader;
-use structopt::StructOpt;
+use structopt::{clap, StructOpt};
 
 use crate::bat::assets::{list_languages, HighlightingAssets};
 use crate::bat::output::{OutputType, PagingMode};
@@ -73,7 +73,7 @@ fn main() -> std::io::Result<()> {
         Err(_) => None,
     };
 
-    let config = cli::process_command_line_arguments(opt, Some(arg_matches), &mut git_config);
+    let config = cli::process_command_line_arguments(opt, arg_matches, &mut git_config);
 
     if atty::is(atty::Stream::Stdin) {
         return diff(
@@ -204,7 +204,7 @@ index f38589a..0f1bb83 100644
                 hunk_header_style: "omit".to_string(),
                 ..opt.clone()
             },
-            None,
+            clap::ArgMatches::new(),
             &mut None,
         );
         let mut output_type =

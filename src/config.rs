@@ -380,6 +380,8 @@ mod tests {
     use super::*;
     use std::env;
 
+    use structopt::clap;
+
     use crate::cli;
     use crate::color;
     use crate::tests::integration_test_utils::integration_test_utils;
@@ -469,7 +471,8 @@ mod tests {
                     options.dark = false;
                 }
             }
-            let config = cli::process_command_line_arguments(options, None, &mut None);
+            let config =
+                cli::process_command_line_arguments(options, clap::ArgMatches::new(), &mut None);
             assert_eq!(config.syntax_theme_name, expected_syntax_theme);
             if syntax_theme::is_no_syntax_highlighting_theme_name(expected_syntax_theme) {
                 assert!(config.syntax_theme.is_none())
