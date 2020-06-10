@@ -49,19 +49,6 @@ fn main() -> std::io::Result<()> {
     let arg_matches = cli::Opt::clap().get_matches();
     let opt = cli::Opt::from_clap(&arg_matches);
 
-    if opt.list_languages {
-        list_languages()?;
-        process::exit(0);
-    } else if opt.list_syntax_theme_names {
-        list_syntax_theme_names()?;
-        process::exit(0);
-    } else if opt.list_syntax_themes {
-        list_syntax_themes()?;
-        process::exit(0);
-    }
-
-    let show_background_colors_option = opt.show_background_colors;
-
     let mut git_config = match std::env::current_dir() {
         Ok(dir) => match git2::Repository::discover(dir) {
             Ok(repo) => match repo.config() {
@@ -83,7 +70,16 @@ fn main() -> std::io::Result<()> {
         );
     }
 
-    if show_background_colors_option {
+    if config.list_languages {
+        list_languages()?;
+        process::exit(0);
+    } else if config.list_syntax_theme_names {
+        list_syntax_theme_names()?;
+        process::exit(0);
+    } else if config.list_syntax_themes {
+        list_syntax_themes()?;
+        process::exit(0);
+    } else if config.show_background_colors {
         show_background_colors(&config);
         process::exit(0);
     }
