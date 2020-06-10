@@ -241,7 +241,7 @@ mod tests {
     use std::path::Path;
 
     use git2;
-    use structopt::clap;
+    use structopt::StructOpt;
 
     use crate::cli;
     use crate::config;
@@ -251,19 +251,56 @@ mod tests {
 
     #[test]
     fn test_delta_main_section_is_honored() {
-        let args = vec![
-            "delta",
-            "/dev/null",
-            "/dev/null",
-            "--minus-style",
-            "red",
-            "--24-bit-color",
-            "always",
-        ];
-        let mut config = get_config(&args, None);
+        // First check that it doesn't default to blue, because that's going to be used to signal
+        // that gitconfig has set the style.
+        let config = make_config(
+            &[
+                "delta",
+                "/dev/null",
+                "/dev/null",
+                "--24-bit-color",
+                "always",
+            ],
+            None,
+        );
+        assert_ne!(config.minus_style, make_style("blue"));
+
+        // Check that --minus-style is honored as we expect.
+        let config = make_config(
+            &[
+                "/dev/null",
+                "/dev/null",
+                "--24-bit-color",
+                "always",
+                "--minus-style",
+                "red",
+            ],
+            None,
+        );
         assert_eq!(config.minus_style, make_style("red"));
-        config = get_config(
-            &args,
+
+        // Check that gitconfig does not override a command line argument
+        let config = make_config(
+            &[
+                "/dev/null",
+                "/dev/null",
+                "--24-bit-color",
+                "always",
+                "--minus-style",
+                "red",
+            ],
+            Some(
+                b"
+[delta]
+    minus-style = blue
+",
+            ),
+        );
+        assert_eq!(config.minus_style, make_style("red"));
+
+        // Finally, check that gitconfig is honored when not overridden by a command line argument.
+        let config = make_config(
+            &["/dev/null", "/dev/null", "--24-bit-color", "always"],
             Some(
                 b"
 [delta]
@@ -272,6 +309,7 @@ mod tests {
             ),
         );
         assert_eq!(config.minus_style, make_style("blue"));
+
         remove_file(TEST_GIT_CONFIG_FILE).unwrap();
     }
 
@@ -286,14 +324,14 @@ mod tests {
         git2::Config::open(&path).unwrap()
     }
 
-    fn get_config<'a>(
-        args: &Vec<&'a str>,
-        git_config_contents: Option<&[u8]>,
-    ) -> config::Config<'a> {
+    fn make_config<'a>(args: &[&str], git_config_contents: Option<&[u8]>) -> config::Config<'a> {
         let mut git_config = match git_config_contents {
             Some(contents) => Some(make_git_config(contents)),
             None => None,
         };
-        cli::process_command_line_arguments(clap::ArgMatches::new(), &mut git_config)
+        cli::process_command_line_arguments(
+            cli::Opt::clap().get_matches_from(args),
+            &mut git_config,
+        )
     }
 }
