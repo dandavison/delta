@@ -10,17 +10,17 @@ use crate::cli::{self, user_supplied_option};
 
 pub fn apply_rewrite_rules(
     opt: &mut cli::Opt,
-    git_config: &mut Option<git2::Config>,
     arg_matches: Option<clap::ArgMatches>,
+    git_config: &mut Option<git2::Config>,
 ) {
-    _rewrite_options_to_honor_git_config(opt, git_config, arg_matches.as_ref());
+    _rewrite_options_to_honor_git_config(opt, arg_matches.as_ref(), git_config);
     _rewrite_style_strings_to_honor_deprecated_minus_plus_options(opt);
     _rewrite_options_to_implement_deprecated_commit_and_file_style_box_option(opt);
     _rewrite_options_to_implement_deprecated_hunk_style_option(opt);
     _rewrite_options_to_implement_deprecated_theme_option(opt, arg_matches.as_ref());
     _rewrite_options_to_implement_color_only(opt);
-    _rewrite_options_to_implement_diff_highlight_emulation(opt, git_config, arg_matches.as_ref());
-    _rewrite_options_to_implement_diff_so_fancy_emulation(opt, git_config, arg_matches.as_ref());
+    _rewrite_options_to_implement_diff_highlight_emulation(opt, arg_matches.as_ref(), git_config);
+    _rewrite_options_to_implement_diff_so_fancy_emulation(opt, arg_matches.as_ref(), git_config);
     _rewrite_options_to_implement_navigate(opt, arg_matches.as_ref());
 }
 
@@ -40,14 +40,14 @@ fn _rewrite_options_to_implement_color_only(opt: &mut cli::Opt) {
 
 fn _rewrite_options_to_honor_git_config(
     opt: &mut cli::Opt,
-    git_config: &mut Option<git2::Config>,
     arg_matches: Option<&clap::ArgMatches>,
+    git_config: &mut Option<git2::Config>,
 ) {
     if opt.no_gitconfig {
         return;
     }
     // --preset must be set first
-    set_delta_options__option_string!([("preset", preset)], opt, git_config, arg_matches);
+    set_delta_options__option_string!([("preset", preset)], opt, arg_matches, git_config);
     set_delta_options__bool!(
         [
             ("light", light),
@@ -58,14 +58,14 @@ fn _rewrite_options_to_honor_git_config(
             ("number", show_line_numbers)
         ],
         opt,
-        git_config,
-        arg_matches
+        arg_matches,
+        git_config
     );
     set_delta_options__f64!(
         [("max-line-distance", max_line_distance)],
         opt,
-        git_config,
-        arg_matches
+        arg_matches,
+        git_config
     );
     set_delta_options__string!(
         [
@@ -96,23 +96,23 @@ fn _rewrite_options_to_honor_git_config(
             ("zero-style", zero_style)
         ],
         opt,
-        git_config,
-        arg_matches
+        arg_matches,
+        git_config
     );
     set_delta_options__option_string!(
         [("syntax_theme", syntax_theme), ("width", width)],
         opt,
-        git_config,
-        arg_matches
+        arg_matches,
+        git_config
     );
-    set_delta_options__usize!([("tabs", tab_width)], opt, git_config, arg_matches);
+    set_delta_options__usize!([("tabs", tab_width)], opt, arg_matches, git_config);
 }
 
 /// Implement --emulate-diff-highlight
 fn _rewrite_options_to_implement_diff_highlight_emulation(
     opt: &mut cli::Opt,
-    git_config: &mut Option<git2::Config>,
     arg_matches: Option<&clap::ArgMatches>,
+    git_config: &mut Option<git2::Config>,
 ) {
     if !opt.emulate_diff_highlight {
         return;
@@ -158,22 +158,22 @@ fn _rewrite_options_to_implement_diff_highlight_emulation(
             )
         ],
         opt,
-        git_config,
-        arg_matches
+        arg_matches,
+        git_config
     );
 }
 
 /// Implement --emulate-diff-so-fancy
 fn _rewrite_options_to_implement_diff_so_fancy_emulation(
     opt: &mut cli::Opt,
-    git_config: &mut Option<git2::Config>,
     arg_matches: Option<&clap::ArgMatches>,
+    git_config: &mut Option<git2::Config>,
 ) {
     if !opt.emulate_diff_so_fancy {
         return;
     }
     opt.emulate_diff_highlight = true;
-    _rewrite_options_to_implement_diff_highlight_emulation(opt, git_config, arg_matches);
+    _rewrite_options_to_implement_diff_highlight_emulation(opt, arg_matches, git_config);
     set_options__string!(
         [
             (
@@ -214,8 +214,8 @@ fn _rewrite_options_to_implement_diff_so_fancy_emulation(
             )
         ],
         opt,
-        git_config,
-        arg_matches
+        arg_matches,
+        git_config
     );
 }
 
@@ -419,7 +419,7 @@ mod tests {
         let mut opt = cli::Opt::from_iter(Vec::<OsString>::new());
         let before = opt.clone();
 
-        apply_rewrite_rules(&mut opt, &mut None, None);
+        apply_rewrite_rules(&mut opt, None, &mut None);
 
         assert_eq!(opt, before);
     }
@@ -432,7 +432,7 @@ mod tests {
         opt.deprecated_hunk_style = Some("underline".to_string());
         let default = "blue box";
         assert_eq!(opt.hunk_header_decoration_style, default);
-        apply_rewrite_rules(&mut opt, &mut None, None);
+        apply_rewrite_rules(&mut opt, None, &mut None);
         assert_eq!(opt.deprecated_hunk_style, None);
         assert_eq!(opt.hunk_header_decoration_style, "underline");
     }
@@ -443,7 +443,7 @@ mod tests {
         opt.deprecated_hunk_style = Some("".to_string());
         let default = "blue box";
         assert_eq!(opt.hunk_header_decoration_style, default);
-        apply_rewrite_rules(&mut opt, &mut None, None);
+        apply_rewrite_rules(&mut opt, None, &mut None);
         assert_eq!(opt.deprecated_hunk_style, None);
         assert_eq!(opt.hunk_header_decoration_style, default);
     }

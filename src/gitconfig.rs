@@ -11,7 +11,7 @@ mod set_options {
 
     macro_rules! set_options__string {
         ([$( ($opt_name:expr, $field_ident:ident, $keys:expr, $default:expr) ),* ],
-         $opt:expr, $git_config:expr, $arg_matches:expr) => {
+         $opt:expr, $arg_matches:expr, $git_config:expr) => {
             $(
                 if $arg_matches.is_none() || !$crate::cli::user_supplied_option($opt_name, $arg_matches.unwrap()) {
                     $opt.$field_ident =
@@ -24,7 +24,7 @@ mod set_options {
 
     macro_rules! set_options__option_string {
         ([$( ($opt_name:expr, $field_ident:ident, $keys:expr, $default:expr) ),* ],
-         $opt:expr, $git_config:expr, $arg_matches:expr) => {
+         $opt:expr, $arg_matches:expr, $git_config:expr) => {
             $(
                 if $arg_matches.is_none() || !$crate::cli::user_supplied_option($opt_name, $arg_matches.unwrap()) {
                     $opt.$field_ident = match ($crate::gitconfig::git_config_get::_string($keys, $git_config), $default) {
@@ -39,7 +39,7 @@ mod set_options {
 
     macro_rules! set_options__bool {
         ([$( ($opt_name:expr, $field_ident:ident, $keys:expr, $default:expr) ),* ],
-         $opt:expr, $git_config:expr, $arg_matches:expr) => {
+         $opt:expr, $arg_matches:expr, $git_config:expr) => {
             $(
                 if $arg_matches.is_none() || !$crate::cli::user_supplied_option($opt_name, $arg_matches.unwrap()) {
                     $opt.$field_ident =
@@ -52,7 +52,7 @@ mod set_options {
 
     macro_rules! set_options__f64 {
         ([$( ($opt_name:expr, $field_ident:ident, $keys:expr, $default:expr) ),* ],
-         $opt:expr, $git_config:expr, $arg_matches:expr) => {
+         $opt:expr, $arg_matches:expr, $git_config:expr) => {
             $(
                 if $arg_matches.is_none() || !$crate::cli::user_supplied_option($opt_name, $arg_matches.unwrap()) {
                     $opt.$field_ident = match $crate::gitconfig::git_config_get::_string($keys, $git_config) {
@@ -66,7 +66,7 @@ mod set_options {
 
     macro_rules! set_options__usize {
         ([$( ($opt_name:expr, $field_ident:ident, $keys:expr, $default:expr) ),* ],
-         $opt:expr, $git_config:expr, $arg_matches:expr) => {
+         $opt:expr, $arg_matches:expr, $git_config:expr) => {
             $(
                 if $arg_matches.is_none() || !$crate::cli::user_supplied_option($opt_name, $arg_matches.unwrap()) {
                     $opt.$field_ident = match $crate::gitconfig::git_config_get::_i64($keys, $git_config) {
@@ -85,7 +85,7 @@ mod set_delta_options {
 
     macro_rules! set_delta_options__string {
 	    ([$( ($option_name:expr, $field_ident:ident) ),* ],
-         $opt:expr, $git_config:expr, $arg_matches:expr) => {
+         $opt:expr, $arg_matches:expr, $git_config:expr) => {
 		    set_options__string!([
                 $(
                     ($option_name,
@@ -95,14 +95,14 @@ mod set_delta_options {
                 ),*
             ],
             $opt,
-            $git_config,
-            $arg_matches);
+            $arg_matches,
+            $git_config);
 	    };
     }
 
     macro_rules! set_delta_options__option_string {
 	    ([$( ($option_name:expr, $field_ident:ident) ),* ],
-         $opt:expr, $git_config:expr, $arg_matches:expr) => {
+         $opt:expr, $arg_matches:expr, $git_config:expr) => {
 		    set_options__option_string!([
                 $(
                     ($option_name,
@@ -112,14 +112,14 @@ mod set_delta_options {
                 ),*
             ],
             $opt,
-            $git_config,
-            $arg_matches);
+            $arg_matches,
+            $git_config);
 	    };
     }
 
     macro_rules! set_delta_options__bool {
 	    ([$( ($option_name:expr, $field_ident:ident) ),* ],
-         $opt:expr, $git_config:expr, $arg_matches:expr) => {
+         $opt:expr, $arg_matches:expr, $git_config:expr) => {
 		    set_options__bool!([
                 $(
                     ($option_name,
@@ -129,14 +129,14 @@ mod set_delta_options {
                 ),*
             ],
             $opt,
-            $git_config,
-            $arg_matches);
+            $arg_matches,
+            $git_config);
 	    };
     }
 
     macro_rules! set_delta_options__f64 {
 	    ([$( ($option_name:expr, $field_ident:ident) ),* ],
-         $opt:expr, $git_config:expr, $arg_matches:expr) => {
+         $opt:expr, $arg_matches:expr, $git_config:expr) => {
 		    set_options__f64!([
                 $(
                     ($option_name,
@@ -146,14 +146,14 @@ mod set_delta_options {
                 ),*
             ],
             $opt,
-            $git_config,
-            $arg_matches);
+            $arg_matches,
+            $git_config);
 	    };
     }
 
     macro_rules! set_delta_options__usize {
 	    ([$( ($option_name:expr, $field_ident:ident) ),* ],
-         $opt:expr, $git_config:expr, $arg_matches:expr) => {
+         $opt:expr, $arg_matches:expr, $git_config:expr) => {
 		    set_options__usize!([
                 $(
                     ($option_name,
@@ -163,8 +163,8 @@ mod set_delta_options {
                 ),*
             ],
             $opt,
-            $git_config,
-            $arg_matches);
+            $arg_matches,
+            $git_config);
 	    };
     }
 }
@@ -295,6 +295,6 @@ mod tests {
             Some(contents) => Some(make_git_config(contents)),
             None => None,
         };
-        cli::process_command_line_arguments(options, &mut git_config, None)
+        cli::process_command_line_arguments(options, None, &mut git_config)
     }
 }

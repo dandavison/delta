@@ -469,7 +469,7 @@ mod tests {
                     options.dark = false;
                 }
             }
-            let config = cli::process_command_line_arguments(options, &mut None, None);
+            let config = cli::process_command_line_arguments(options, None, &mut None);
             assert_eq!(config.syntax_theme_name, expected_syntax_theme);
             if syntax_theme::is_no_syntax_highlighting_theme_name(expected_syntax_theme) {
                 assert!(config.syntax_theme.is_none())

@@ -73,7 +73,7 @@ fn main() -> std::io::Result<()> {
         Err(_) => None,
     };
 
-    let config = cli::process_command_line_arguments(opt, &mut git_config, Some(arg_matches));
+    let config = cli::process_command_line_arguments(opt, Some(arg_matches), &mut git_config);
 
     if atty::is(atty::Stream::Stdin) {
         return diff(
@@ -204,8 +204,8 @@ index f38589a..0f1bb83 100644
                 hunk_header_style: "omit".to_string(),
                 ..opt.clone()
             },
-            &mut None,
             None,
+            &mut None,
         );
         let mut output_type =
             OutputType::from_mode(PagingMode::QuitIfOneScreen, None, &config).unwrap();

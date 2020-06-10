@@ -450,14 +450,14 @@ pub struct Opt {
 
 pub fn process_command_line_arguments<'a>(
     mut opt: Opt,
-    git_config: &mut Option<git2::Config>,
     arg_matches: Option<clap::ArgMatches>,
+    git_config: &mut Option<git2::Config>,
 ) -> config::Config<'a> {
     let assets = HighlightingAssets::new();
 
     _check_validity(&opt, &assets);
 
-    rewrite::apply_rewrite_rules(&mut opt, git_config, arg_matches);
+    rewrite::apply_rewrite_rules(&mut opt, arg_matches, git_config);
 
     let paging_mode = match opt.paging_mode.as_ref() {
         "always" => PagingMode::Always,
