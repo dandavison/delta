@@ -241,7 +241,7 @@ mod tests {
     use std::path::Path;
 
     use git2;
-    use structopt::{clap, StructOpt};
+    use structopt::clap;
 
     use crate::cli;
     use crate::config;
@@ -290,11 +290,10 @@ mod tests {
         args: &Vec<&'a str>,
         git_config_contents: Option<&[u8]>,
     ) -> config::Config<'a> {
-        let options = cli::Opt::from_iter(args);
         let mut git_config = match git_config_contents {
             Some(contents) => Some(make_git_config(contents)),
             None => None,
         };
-        cli::process_command_line_arguments(options, clap::ArgMatches::new(), &mut git_config)
+        cli::process_command_line_arguments(clap::ArgMatches::new(), &mut git_config)
     }
 }

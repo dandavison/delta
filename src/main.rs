@@ -29,7 +29,7 @@ use std::process;
 use ansi_term::{self, Color};
 use atty;
 use bytelines::ByteLinesReader;
-use structopt::{clap, StructOpt};
+use structopt::StructOpt;
 
 use crate::bat::assets::{list_languages, HighlightingAssets};
 use crate::bat::output::{OutputType, PagingMode};
@@ -46,9 +46,6 @@ mod errors {
 }
 
 fn main() -> std::io::Result<()> {
-    let arg_matches = cli::Opt::clap().get_matches();
-    let opt = cli::Opt::from_clap(&arg_matches);
-
     let mut git_config = match std::env::current_dir() {
         Ok(dir) => match git2::Repository::discover(dir) {
             Ok(repo) => match repo.config() {
@@ -60,7 +57,8 @@ fn main() -> std::io::Result<()> {
         Err(_) => None,
     };
 
-    let config = cli::process_command_line_arguments(opt, arg_matches, &mut git_config);
+    let config =
+        cli::process_command_line_arguments(cli::Opt::clap().get_matches(), &mut git_config);
 
     if atty::is(atty::Stream::Stdin) {
         return diff(
@@ -193,16 +191,15 @@ index f38589a..0f1bb83 100644
         }
 
         writeln!(stdout, "\n\nTheme: {}\n", style.paint(syntax_theme))?;
-        let config = cli::process_command_line_arguments(
-            cli::Opt {
-                syntax_theme: Some(syntax_theme.to_string()),
-                file_style: "omit".to_string(),
-                hunk_header_style: "omit".to_string(),
-                ..opt.clone()
-            },
-            clap::ArgMatches::new(),
-            &mut None,
-        );
+        let arg_matches = cli::Opt::clap().get_matches_from(vec![
+            "--syntax-theme",
+            syntax_theme,
+            "--file-style",
+            "omit",
+            "--hunk-header-style",
+            "omit",
+        ]);
+        let config = cli::process_command_line_arguments(arg_matches, &mut None);
         let mut output_type =
             OutputType::from_mode(PagingMode::QuitIfOneScreen, None, &config).unwrap();
         let mut writer = output_type.handle().unwrap();

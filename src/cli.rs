@@ -449,10 +449,10 @@ pub struct Opt {
 }
 
 pub fn process_command_line_arguments<'a>(
-    mut opt: Opt,
     arg_matches: clap::ArgMatches,
     git_config: &mut Option<git2::Config>,
 ) -> config::Config<'a> {
+    let mut opt = Opt::from_clap(&arg_matches);
     let assets = HighlightingAssets::new();
 
     _check_validity(&opt, &assets);

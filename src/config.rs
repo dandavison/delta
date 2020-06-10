@@ -388,9 +388,6 @@ mod tests {
     use super::*;
     use std::env;
 
-    use structopt::clap;
-
-    use crate::cli;
     use crate::color;
     use crate::tests::integration_test_utils::integration_test_utils;
 
@@ -403,21 +400,15 @@ mod tests {
             Dark,
         };
         for (
-            syntax_theme_option,
+            syntax_theme,
             bat_theme_env_var,
-            mode_option, // (--light, --dark)
+            mode, // (--light, --dark)
             expected_syntax_theme,
             expected_mode,
         ) in vec![
             (None, "", None, syntax_theme::DEFAULT_DARK_THEME, Mode::Dark),
-            (Some("GitHub".to_string()), "", None, "GitHub", Mode::Light),
-            (
-                Some("GitHub".to_string()),
-                "1337",
-                None,
-                "GitHub",
-                Mode::Light,
-            ),
+            (Some("GitHub"), "", None, "GitHub", Mode::Light),
+            (Some("GitHub"), "1337", None, "GitHub", Mode::Light),
             (None, "1337", None, "1337", Mode::Dark),
             (
                 None,
@@ -448,14 +439,8 @@ mod tests {
                 Mode::Light,
             ),
             (None, "1337", Some(Mode::Light), "1337", Mode::Light),
-            (Some("none".to_string()), "", None, "none", Mode::Dark),
-            (
-                Some("None".to_string()),
-                "",
-                Some(Mode::Light),
-                "None",
-                Mode::Light,
-            ),
+            (Some("none"), "", None, "none", Mode::Dark),
+            (Some("None"), "", Some(Mode::Light), "None", Mode::Light),
         ] {
             if bat_theme_env_var == "<not set>" {
                 env::remove_var("BAT_THEME")
@@ -463,24 +448,21 @@ mod tests {
                 env::set_var("BAT_THEME", bat_theme_env_var);
             }
             let is_true_color = true;
-            let mut options = integration_test_utils::get_command_line_options();
-            options.syntax_theme = syntax_theme_option;
-            match mode_option {
+            let mut args = vec![];
+            if let Some(syntax_theme) = syntax_theme {
+                args.push("--syntax-theme");
+                args.push(syntax_theme);
+            }
+            match mode {
                 Some(Mode::Light) => {
-                    options.light = true;
-                    options.dark = false;
+                    args.push("--light");
                 }
                 Some(Mode::Dark) => {
-                    options.light = false;
-                    options.dark = true;
+                    args.push("--dark");
                 }
-                None => {
-                    options.light = false;
-                    options.dark = false;
-                }
+                None => {}
             }
-            let config =
-                cli::process_command_line_arguments(options, clap::ArgMatches::new(), &mut None);
+            let config = integration_test_utils::get_config_from_args(&args);
             assert_eq!(config.syntax_theme_name, expected_syntax_theme);
             if syntax_theme::is_no_syntax_highlighting_theme_name(expected_syntax_theme) {
                 assert!(config.syntax_theme.is_none())
