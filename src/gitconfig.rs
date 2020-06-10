@@ -288,6 +288,43 @@ mod tests {
         remove_file(TEST_GIT_CONFIG_FILE).unwrap();
     }
 
+    #[test]
+    fn test_preset() {
+        assert_eq!(
+            make_config(
+                &[],
+                Some(
+                    b"
+[delta]
+    minus-style = blue
+
+[delta \"my-preset\"]
+    minus-style = green
+",
+                ),
+            )
+            .minus_style,
+            make_style("blue")
+        );
+        assert_eq!(
+            make_config(
+                &["--preset", "my-preset"],
+                Some(
+                    b"
+[delta]
+    minus-style = blue
+
+[delta \"my-preset\"]
+    minus-style = green
+",
+                ),
+            )
+            .minus_style,
+            make_style("green")
+        );
+        remove_file(TEST_GIT_CONFIG_FILE).unwrap();
+    }
+
     fn make_style(s: &str) -> Style {
         Style::from_str(s, None, None, None, true, false)
     }
