@@ -462,7 +462,7 @@ mod tests {
                 }
                 None => {}
             }
-            let config = integration_test_utils::get_config_from_args(&args);
+            let config = integration_test_utils::make_config(&args);
             assert_eq!(config.syntax_theme_name, expected_syntax_theme);
             if syntax_theme::is_no_syntax_highlighting_theme_name(expected_syntax_theme) {
                 assert!(config.syntax_theme.is_none())

@@ -10,7 +10,7 @@ pub mod integration_test_utils {
     use crate::config;
     use crate::delta::delta;
 
-    pub fn get_config_from_args<'a>(_args: &[&str]) -> config::Config<'a> {
+    pub fn make_config<'a>(_args: &[&str]) -> config::Config<'a> {
         // FIXME: should not be necessary
         let (dummy_minus_file, dummy_plus_file) = ("/dev/null", "/dev/null");
         let mut args = vec![dummy_minus_file, dummy_plus_file];
@@ -21,10 +21,6 @@ pub mod integration_test_utils {
         args.push("--no-gitconfig");
         let arg_matches = cli::Opt::clap().get_matches_from(args);
         cli::process_command_line_arguments(arg_matches, &mut None)
-    }
-
-    pub fn get_config<'a>() -> config::Config<'a> {
-        get_config_from_args(&vec![][0..])
     }
 
     pub fn get_line_of_code_from_delta<'a>(
