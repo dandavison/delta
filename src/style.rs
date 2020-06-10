@@ -89,7 +89,7 @@ impl Style {
         is_emph: bool,
     ) -> Self {
         let (special_attributes_from_style_string, style_string) =
-            extract_special_decoration_attributes(style_string);
+            extract_special_decoration_attributes_from_non_decoration_style_string(style_string);
         let mut style = Style::from_str(
             &style_string,
             foreground_default,
@@ -328,6 +328,22 @@ fn parse_ansi_term_style(
 
 /// Extract set of 'special decoration attributes' and return it along with modified style string.
 fn extract_special_decoration_attributes(style_string: &str) -> (DecorationAttributes, String) {
+    _extract_special_decoration_attributes(style_string, true)
+}
+
+fn extract_special_decoration_attributes_from_non_decoration_style_string(
+    style_string: &str,
+) -> (DecorationAttributes, String) {
+    _extract_special_decoration_attributes(style_string, false)
+}
+
+// If this is being called in the context of processing a decoration style string then we treat
+// ul/ol as a request for an underline/overline decoration respectively. Otherwise they are
+// conventional character style attributes.
+fn _extract_special_decoration_attributes(
+    style_string: &str,
+    is_decoration_style_string: bool,
+) -> (DecorationAttributes, String) {
     let mut attributes = DecorationAttributes::EMPTY;
     let mut new_style_string = Vec::new();
     let style_string = style_string.to_lowercase();
@@ -337,10 +353,10 @@ fn extract_special_decoration_attributes(style_string: &str) -> (DecorationAttri
     {
         match token {
             "box" => attributes |= DecorationAttributes::BOX,
-            token if token == "ol" || token == "overline" => {
+            token if token == "overline" || is_decoration_style_string && token == "ol" => {
                 attributes |= DecorationAttributes::OVERLINE
             }
-            token if token == "ul" || token == "underline" => {
+            token if token == "underline" || is_decoration_style_string && token == "ul" => {
                 attributes |= DecorationAttributes::UNDERLINE
             }
             token if token == "none" || token == "plain" => {}
