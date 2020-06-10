@@ -33,7 +33,7 @@ pub mod integration_test_utils {
     pub fn run_delta<'a>(input: &str, options: cli::Opt) -> (String, config::Config<'a>) {
         let mut writer: Vec<u8> = Vec::new();
 
-        let config = cli::process_command_line_arguments(options, None);
+        let config = cli::process_command_line_arguments(options, &mut None, None);
 
         delta(
             ByteLines::new(BufReader::new(input.as_bytes())),

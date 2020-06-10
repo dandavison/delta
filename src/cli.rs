@@ -450,24 +450,14 @@ pub struct Opt {
 
 pub fn process_command_line_arguments<'a>(
     mut opt: Opt,
+    git_config: &mut Option<git2::Config>,
     arg_matches: Option<clap::ArgMatches>,
 ) -> config::Config<'a> {
     let assets = HighlightingAssets::new();
 
     _check_validity(&opt, &assets);
 
-    let mut git_config = match std::env::current_dir() {
-        Ok(dir) => match git2::Repository::discover(dir) {
-            Ok(repo) => match repo.config() {
-                Ok(config) => Some(config),
-                Err(_) => None,
-            },
-            Err(_) => None,
-        },
-        Err(_) => None,
-    };
-
-    rewrite::apply_rewrite_rules(&mut opt, &mut git_config, arg_matches);
+    rewrite::apply_rewrite_rules(&mut opt, git_config, arg_matches);
 
     let paging_mode = match opt.paging_mode.as_ref() {
         "always" => PagingMode::Always,

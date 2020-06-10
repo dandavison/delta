@@ -62,7 +62,18 @@ fn main() -> std::io::Result<()> {
 
     let show_background_colors_option = opt.show_background_colors;
 
-    let config = cli::process_command_line_arguments(opt, Some(arg_matches));
+    let mut git_config = match std::env::current_dir() {
+        Ok(dir) => match git2::Repository::discover(dir) {
+            Ok(repo) => match repo.config() {
+                Ok(config) => Some(config),
+                Err(_) => None,
+            },
+            Err(_) => None,
+        },
+        Err(_) => None,
+    };
+
+    let config = cli::process_command_line_arguments(opt, &mut git_config, Some(arg_matches));
 
     if atty::is(atty::Stream::Stdin) {
         return diff(
@@ -193,6 +204,7 @@ index f38589a..0f1bb83 100644
                 hunk_header_style: "omit".to_string(),
                 ..opt.clone()
             },
+            &mut None,
             None,
         );
         let mut output_type =
