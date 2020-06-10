@@ -248,17 +248,16 @@ mod tests {
     use crate::config;
     use crate::style::Style;
 
-    const TEST_GIT_CONFIG_FILE: &str = "/tmp/delta-test-gitconfig";
-
     #[test]
     fn test_delta_main_section_is_honored() {
+        let git_config_path = "test_delta_main_section_is_honored";
         // First check that it doesn't default to blue, because that's going to be used to signal
         // that gitconfig has set the style.
-        let config = make_config(&[], None);
+        let config = make_config(&[], None, None);
         assert_ne!(config.minus_style, make_style("blue"));
 
         // Check that --minus-style is honored as we expect.
-        let config = make_config(&["--minus-style", "red"], None);
+        let config = make_config(&["--minus-style", "red"], None, None);
         assert_eq!(config.minus_style, make_style("red"));
 
         // Check that gitconfig does not override a command line argument
@@ -270,6 +269,7 @@ mod tests {
     minus-style = blue
 ",
             ),
+            Some(git_config_path),
         );
         assert_eq!(config.minus_style, make_style("red"));
 
@@ -282,14 +282,16 @@ mod tests {
     minus-style = blue
 ",
             ),
+            Some(git_config_path),
         );
         assert_eq!(config.minus_style, make_style("blue"));
 
-        remove_file(TEST_GIT_CONFIG_FILE).unwrap();
+        remove_file("test_delta_main_section_is_honored").unwrap();
     }
 
     #[test]
     fn test_preset() {
+        let git_config_path = "test_preset";
         assert_eq!(
             make_config(
                 &[],
@@ -302,6 +304,7 @@ mod tests {
     minus-style = green
 ",
                 ),
+                Some(git_config_path),
             )
             .minus_style,
             make_style("blue")
@@ -318,32 +321,37 @@ mod tests {
     minus-style = green
 ",
                 ),
+                Some(git_config_path),
             )
             .minus_style,
             make_style("green")
         );
-        remove_file(TEST_GIT_CONFIG_FILE).unwrap();
+        remove_file("test_preset").unwrap();
     }
 
     fn make_style(s: &str) -> Style {
         Style::from_str(s, None, None, None, true, false)
     }
 
-    fn make_git_config(contents: &[u8]) -> git2::Config {
-        let path = Path::new(TEST_GIT_CONFIG_FILE);
+    fn make_git_config(contents: &[u8], path: &str) -> git2::Config {
+        let path = Path::new(path);
         let mut file = File::create(path).unwrap();
         file.write_all(contents).unwrap();
         git2::Config::open(&path).unwrap()
     }
 
-    fn make_config<'a>(args: &[&str], git_config_contents: Option<&[u8]>) -> config::Config<'a> {
+    fn make_config<'a>(
+        args: &[&str],
+        git_config_contents: Option<&[u8]>,
+        path: Option<&str>,
+    ) -> config::Config<'a> {
         let args = itertools::chain(
             &["/dev/null", "/dev/null", "--24-bit-color", "always"],
             args,
         );
-        let mut git_config = match git_config_contents {
-            Some(contents) => Some(make_git_config(contents)),
-            None => None,
+        let mut git_config = match (git_config_contents, path) {
+            (Some(contents), Some(path)) => Some(make_git_config(contents, path)),
+            _ => None,
         };
         cli::process_command_line_arguments(
             cli::Opt::clap().get_matches_from(args),
