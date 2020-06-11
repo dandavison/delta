@@ -249,78 +249,65 @@ mod tests {
     use crate::style::Style;
 
     #[test]
-    fn test_delta_main_section_is_honored() {
-        let git_config_path = "test_delta_main_section_is_honored";
+    fn test_main_section() {
+        let git_config_contents = b"
+[delta]
+    minus-style = blue
+";
+        let git_config_path = "/tmp/delta__test_main_section.gitconfig";
+
         // First check that it doesn't default to blue, because that's going to be used to signal
         // that gitconfig has set the style.
-        let config = make_config(&[], None, None);
-        assert_ne!(config.minus_style, make_style("blue"));
+        assert_ne!(make_config(&[], None, None).minus_style, make_style("blue"));
 
         // Check that --minus-style is honored as we expect.
-        let config = make_config(&["--minus-style", "red"], None, None);
-        assert_eq!(config.minus_style, make_style("red"));
+        assert_eq!(
+            make_config(&["--minus-style", "red"], None, None).minus_style,
+            make_style("red")
+        );
 
         // Check that gitconfig does not override a command line argument
-        let config = make_config(
-            &["--minus-style", "red"],
-            Some(
-                b"
-[delta]
-    minus-style = blue
-",
-            ),
-            Some(git_config_path),
+        assert_eq!(
+            make_config(
+                &["--minus-style", "red"],
+                Some(git_config_contents),
+                Some(git_config_path),
+            )
+            .minus_style,
+            make_style("red")
         );
-        assert_eq!(config.minus_style, make_style("red"));
 
         // Finally, check that gitconfig is honored when not overridden by a command line argument.
-        let config = make_config(
-            &[],
-            Some(
-                b"
-[delta]
-    minus-style = blue
-",
-            ),
-            Some(git_config_path),
+        assert_eq!(
+            make_config(&[], Some(git_config_contents), Some(git_config_path)).minus_style,
+            make_style("blue")
         );
-        assert_eq!(config.minus_style, make_style("blue"));
 
         remove_file(git_config_path).unwrap();
     }
 
     #[test]
     fn test_preset() {
-        let git_config_path = "test_preset";
-        assert_eq!(
-            make_config(
-                &[],
-                Some(
-                    b"
+        let git_config_contents = b"
 [delta]
     minus-style = blue
 
 [delta \"my-preset\"]
     minus-style = green
-",
-                ),
-                Some(git_config_path),
-            )
-            .minus_style,
+";
+        let git_config_path = "/tmp/delta__test_preset.gitconfig";
+
+        // Without --preset the main section takes effect
+        assert_eq!(
+            make_config(&[], Some(git_config_contents), Some(git_config_path),).minus_style,
             make_style("blue")
         );
+
+        // With --preset the preset takes effect
         assert_eq!(
             make_config(
                 &["--preset", "my-preset"],
-                Some(
-                    b"
-[delta]
-    minus-style = blue
-
-[delta \"my-preset\"]
-    minus-style = green
-",
-                ),
+                Some(git_config_contents),
                 Some(git_config_path),
             )
             .minus_style,
