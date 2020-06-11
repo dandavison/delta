@@ -286,7 +286,7 @@ mod tests {
         );
         assert_eq!(config.minus_style, make_style("blue"));
 
-        remove_file("test_delta_main_section_is_honored").unwrap();
+        remove_file(git_config_path).unwrap();
     }
 
     #[test]
@@ -326,7 +326,7 @@ mod tests {
             .minus_style,
             make_style("green")
         );
-        remove_file("test_preset").unwrap();
+        remove_file(git_config_path).unwrap();
     }
 
     fn make_style(s: &str) -> Style {
