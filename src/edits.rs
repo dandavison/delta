@@ -86,6 +86,9 @@ fn tokenize(line: &str) -> Vec<&str> {
     let mut tokens = Vec::new();
     let mut offset = 0;
     for m in TOKENIZATION_REGEXP.find_iter(line) {
+        if offset == 0 && m.start() > 0 {
+            tokens.push("");
+        }
         // Align separating text as multiple single-character tokens.
         for i in offset..m.start() {
             tokens.push(&line[i..i + 1]);
@@ -94,6 +97,9 @@ fn tokenize(line: &str) -> Vec<&str> {
         offset = m.end();
     }
     if offset < line.len() {
+        if offset == 0 {
+            tokens.push("");
+        }
         for i in offset..line.len() {
             tokens.push(&line[i..i + 1]);
         }
@@ -336,6 +342,7 @@ mod tests {
         assert_tokenize(
             "         let col = Color::from_str(s).unwrap_or_else(|_| die());",
             &[
+                "",
                 " ",
                 " ",
                 " ",
