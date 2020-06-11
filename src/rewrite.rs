@@ -197,7 +197,7 @@ fn rewrite_options_to_implement_diff_so_fancy_emulation(
                 "file-style",
                 file_style,
                 vec!["color.diff.meta".to_string()],
-                "bold yellow"
+                "11"
             ),
             (
                 "hunk-header-style",

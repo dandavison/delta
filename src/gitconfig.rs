@@ -315,7 +315,20 @@ mod tests {
     }
 
     #[test]
-    fn test_diff_highlight() {
+    fn test_diff_highlight_defaults() {
+        let config = make_config(&["--preset", "diff-highlight"], None, None);
+
+        assert_eq!(config.minus_style, make_style("red"));
+        assert_eq!(config.minus_non_emph_style, make_style("red"));
+        assert_eq!(config.minus_emph_style, make_emph_style("red reverse"));
+        assert_eq!(config.zero_style, make_style(""));
+        assert_eq!(config.plus_style, make_style("green"));
+        assert_eq!(config.plus_non_emph_style, make_style("green"));
+        assert_eq!(config.plus_emph_style, make_emph_style("green reverse"));
+    }
+
+    #[test]
+    fn test_diff_highlight_respects_gitconfig() {
         let git_config_contents = b"
 [color \"diff\"]
     old = red bold
@@ -347,7 +360,39 @@ mod tests {
     }
 
     #[test]
-    fn test_diff_so_fancy() {
+    fn test_diff_so_fancy_defaults() {
+        let config = make_config(&["--preset", "diff-so-fancy"], None, None);
+
+        assert_eq!(
+            config.commit_style.ansi_term_style,
+            make_style("bold yellow").ansi_term_style
+        );
+        assert_eq!(
+            config.commit_style.decoration_style,
+            make_decoration_style("none")
+        );
+
+        assert_eq!(
+            config.file_style.ansi_term_style,
+            make_style("11").ansi_term_style
+        );
+        assert_eq!(
+            config.file_style.decoration_style,
+            make_decoration_style("bold yellow ul ol")
+        );
+
+        assert_eq!(
+            config.hunk_header_style.ansi_term_style,
+            make_style("bold syntax").ansi_term_style
+        );
+        assert_eq!(
+            config.hunk_header_style.decoration_style,
+            make_decoration_style("magenta box")
+        );
+    }
+
+    #[test]
+    fn test_diff_so_fancy_respects_git_config() {
         let git_config_contents = b"
 [color \"diff\"]
     meta = 11
