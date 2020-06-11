@@ -328,6 +328,49 @@ mod tests {
     }
 
     #[test]
+    fn test_tokenize_5() {
+        assert_eq!(
+            tokenize("         let col = Color::from_str(s).unwrap_or_else(|_| die());"),
+            vec![
+                " ",
+                " ",
+                " ",
+                " ",
+                " ",
+                " ",
+                " ",
+                " ",
+                " ",
+                "let",
+                " ",
+                "col",
+                " ",
+                "=",
+                " ",
+                "Color",
+                ":",
+                ":",
+                "from_str",
+                "(",
+                "s",
+                ")",
+                ".",
+                "unwrap_or_else",
+                "(",
+                "|",
+                "_",
+                "|",
+                " ",
+                "die",
+                "(",
+                ")",
+                ")",
+                ";",
+            ]
+        )
+    }
+
+    #[test]
     fn test_infer_edits_1() {
         assert_paired_edits(
             vec!["aaa"],
