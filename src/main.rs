@@ -59,14 +59,6 @@ fn main() -> std::io::Result<()> {
 
     let config = config::Config::from_arg_matches(cli::Opt::clap().get_matches(), &mut git_config);
 
-    if atty::is(atty::Stream::Stdin) {
-        return diff(
-            config.minus_file.as_ref(),
-            config.plus_file.as_ref(),
-            &config,
-        );
-    }
-
     if config.list_languages {
         list_languages()?;
         process::exit(0);
@@ -79,6 +71,12 @@ fn main() -> std::io::Result<()> {
     } else if config.show_background_colors {
         show_background_colors(&config);
         process::exit(0);
+    } else if atty::is(atty::Stream::Stdin) {
+        return diff(
+            config.minus_file.as_ref(),
+            config.plus_file.as_ref(),
+            &config,
+        );
     }
 
     let mut output_type = OutputType::from_mode(config.paging_mode, None, &config).unwrap();
