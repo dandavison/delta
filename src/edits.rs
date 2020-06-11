@@ -226,6 +226,7 @@ where
 #[cfg(test)]
 mod tests {
     use super::*;
+    use itertools::Itertools;
     use unicode_segmentation::UnicodeSegmentation;
 
     #[derive(Clone, Copy, Debug, PartialEq)]
@@ -256,14 +257,14 @@ mod tests {
 
     #[test]
     fn test_tokenize_1() {
-        assert_eq!(tokenize("aaa bbb"), vec!["aaa", " ", "bbb"])
+        assert_tokenize("aaa bbb", &["aaa", " ", "bbb"])
     }
 
     #[test]
     fn test_tokenize_2() {
-        assert_eq!(
-            tokenize("fn coalesce_edits<'a, EditOperation>("),
-            vec![
+        assert_tokenize(
+            "fn coalesce_edits<'a, EditOperation>(",
+            &[
                 "fn",
                 " ",
                 "coalesce_edits",
@@ -274,16 +275,16 @@ mod tests {
                 " ",
                 "EditOperation",
                 ">",
-                "("
-            ]
+                "(",
+            ],
         );
     }
 
     #[test]
     fn test_tokenize_3() {
-        assert_eq!(
-            tokenize("fn coalesce_edits<'a, 'b, EditOperation>("),
-            vec![
+        assert_tokenize(
+            "fn coalesce_edits<'a, 'b, EditOperation>(",
+            &[
                 "fn",
                 " ",
                 "coalesce_edits",
@@ -298,16 +299,16 @@ mod tests {
                 " ",
                 "EditOperation",
                 ">",
-                "("
-            ]
+                "(",
+            ],
         );
     }
 
     #[test]
     fn test_tokenize_4() {
-        assert_eq!(
-            tokenize("annotated_plus_lines.push(vec![(noop_insertion, plus_line)]);"),
-            vec![
+        assert_tokenize(
+            "annotated_plus_lines.push(vec![(noop_insertion, plus_line)]);",
+            &[
                 "annotated_plus_lines",
                 ".",
                 "push",
@@ -322,16 +323,16 @@ mod tests {
                 ")",
                 "]",
                 ")",
-                ";"
-            ]
+                ";",
+            ],
         );
     }
 
     #[test]
     fn test_tokenize_5() {
-        assert_eq!(
-            tokenize("         let col = Color::from_str(s).unwrap_or_else(|_| die());"),
-            vec![
+        assert_tokenize(
+            "         let col = Color::from_str(s).unwrap_or_else(|_| die());",
+            &[
                 " ",
                 " ",
                 " ",
@@ -366,8 +367,14 @@ mod tests {
                 ")",
                 ")",
                 ";",
-            ]
+            ],
         )
+    }
+
+    fn assert_tokenize(text: &str, expected_tokens: &[&str]) {
+        let actual_tokens = tokenize(text);
+        assert_eq!(text, expected_tokens.iter().join(""));
+        assert_eq!(actual_tokens, expected_tokens);
     }
 
     #[test]
