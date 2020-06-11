@@ -3,15 +3,19 @@ use std::path::PathBuf;
 use std::process;
 
 use console::Term;
+use git2;
+use structopt::{clap, StructOpt};
 use syntect::highlighting::Style as SyntectStyle;
-use syntect::highlighting::{Theme as SyntaxTheme, ThemeSet as SyntaxThemeSet};
+use syntect::highlighting::Theme as SyntaxTheme;
 use syntect::parsing::SyntaxSet;
 
+use crate::bat::assets::HighlightingAssets;
 use crate::bat::output::PagingMode;
-use crate::cli::{self, unreachable};
+use crate::cli;
 use crate::color;
 use crate::delta::State;
 use crate::env;
+use crate::rewrite;
 use crate::style::Style;
 use crate::syntax_theme;
 
@@ -68,6 +72,19 @@ pub struct Config<'a> {
 }
 
 impl<'a> Config<'a> {
+    pub fn from_args(args: &[&str], git_config: &mut Option<git2::Config>) -> Self {
+        Self::from_arg_matches(cli::Opt::clap().get_matches_from(args), git_config)
+    }
+
+    pub fn from_arg_matches(
+        arg_matches: clap::ArgMatches,
+        git_config: &mut Option<git2::Config>,
+    ) -> Self {
+        let mut opt = cli::Opt::from_clap(&arg_matches);
+        rewrite::apply_rewrite_rules(&mut opt, arg_matches, git_config);
+        Self::from(opt)
+    }
+
     pub fn get_style(&self, state: &State) -> &Style {
         match state {
             State::CommitMeta => &self.commit_style,
@@ -76,140 +93,207 @@ impl<'a> Config<'a> {
             _ => unreachable("Unreachable code reached in get_style."),
         }
     }
+}
 
-    pub fn make_navigate_regexp(&self) -> String {
-        format!(
-            "^(commit|{}|{}|{}|{})",
-            self.file_modified_label,
-            self.file_added_label,
-            self.file_removed_label,
-            self.file_renamed_label
-        )
+fn _check_validity(opt: &cli::Opt, assets: &HighlightingAssets) {
+    if opt.light && opt.dark {
+        eprintln!("--light and --dark cannot be used together.");
+        process::exit(1);
+    }
+    if let Some(ref syntax_theme) = opt.syntax_theme {
+        if !syntax_theme::is_no_syntax_highlighting_theme_name(&syntax_theme) {
+            if !assets.theme_set.themes.contains_key(syntax_theme.as_str()) {
+                return;
+            }
+            let is_light_syntax_theme = syntax_theme::is_light_theme(&syntax_theme);
+            if is_light_syntax_theme && opt.dark {
+                eprintln!(
+                    "{} is a light syntax theme, but you supplied --dark. \
+                     If you use --syntax-theme, you do not need to supply --light or --dark.",
+                    syntax_theme
+                );
+                process::exit(1);
+            } else if !is_light_syntax_theme && opt.light {
+                eprintln!(
+                    "{} is a dark syntax theme, but you supplied --light. \
+                     If you use --syntax-theme, you do not need to supply --light or --dark.",
+                    syntax_theme
+                );
+                process::exit(1);
+            }
+        }
     }
 }
 
-pub fn get_config<'a>(
-    opt: cli::Opt,
-    syntax_set: SyntaxSet,
-    syntax_theme_set: SyntaxThemeSet,
-    true_color: bool,
-    paging_mode: PagingMode,
-) -> Config<'a> {
-    // Allow one character for e.g. `less --status-column` is in effect. See #41 and #10.
-    let available_terminal_width = (Term::stdout().size().1 - 1) as usize;
-    let (decorations_width, background_color_extends_to_terminal_width) = match opt.width.as_deref()
-    {
-        Some("variable") => (Width::Variable, false),
-        Some(width) => {
-            let width = width.parse().unwrap_or_else(|_| {
-                eprintln!("Could not parse width as a positive integer: {:?}", width);
+/// Did the user supply `option` on the command line?
+pub fn user_supplied_option(option: &str, arg_matches: &clap::ArgMatches) -> bool {
+    arg_matches.occurrences_of(option) > 0
+}
+
+pub fn unreachable(message: &str) -> ! {
+    eprintln!(
+        "{} This should not be possible. \
+         Please report the bug at https://github.com/dandavison/delta/issues.",
+        message
+    );
+    process::exit(1);
+}
+
+fn is_truecolor_terminal() -> bool {
+    env::get_env_var("COLORTERM")
+        .map(|colorterm| colorterm == "truecolor" || colorterm == "24bit")
+        .unwrap_or(false)
+}
+
+impl<'a> From<cli::Opt> for Config<'a> {
+    fn from(opt: cli::Opt) -> Self {
+        let assets = HighlightingAssets::new();
+
+        _check_validity(&opt, &assets);
+
+        let paging_mode = match opt.paging_mode.as_ref() {
+            "always" => PagingMode::Always,
+            "never" => PagingMode::Never,
+            "auto" => PagingMode::QuitIfOneScreen,
+            _ => {
+                eprintln!(
+                "Invalid value for --paging option: {} (valid values are \"always\", \"never\", and \"auto\")",
+                opt.paging_mode
+            );
                 process::exit(1);
-            });
-            (Width::Fixed(min(width, available_terminal_width)), true)
+            }
+        };
+
+        let true_color = match opt.true_color.as_ref() {
+            "always" => true,
+            "never" => false,
+            "auto" => is_truecolor_terminal(),
+            _ => {
+                eprintln!(
+                "Invalid value for --24-bit-color option: {} (valid values are \"always\", \"never\", and \"auto\")",
+                opt.true_color
+            );
+                process::exit(1);
+            }
+        };
+
+        // Allow one character in case e.g. `less --status-column` is in effect. See #41 and #10.
+        let available_terminal_width = (Term::stdout().size().1 - 1) as usize;
+        let (decorations_width, background_color_extends_to_terminal_width) =
+            match opt.width.as_deref() {
+                Some("variable") => (Width::Variable, false),
+                Some(width) => {
+                    let width = width.parse().unwrap_or_else(|_| {
+                        eprintln!("Could not parse width as a positive integer: {:?}", width);
+                        process::exit(1);
+                    });
+                    (Width::Fixed(min(width, available_terminal_width)), true)
+                }
+                None => (Width::Fixed(available_terminal_width), true),
+            };
+
+        let syntax_theme_name_from_bat_theme = env::get_env_var("BAT_THEME");
+        let (is_light_mode, syntax_theme_name) = syntax_theme::get_is_light_mode_and_theme_name(
+            opt.syntax_theme.as_ref(),
+            syntax_theme_name_from_bat_theme.as_ref(),
+            opt.light,
+            &assets.theme_set,
+        );
+
+        let (
+            minus_style,
+            minus_emph_style,
+            minus_non_emph_style,
+            zero_style,
+            plus_style,
+            plus_emph_style,
+            plus_non_emph_style,
+        ) = make_hunk_styles(&opt, is_light_mode, true_color);
+
+        let (commit_style, file_style, hunk_header_style) =
+            make_commit_file_hunk_header_styles(&opt, true_color);
+
+        let (
+            number_minus_format_style,
+            number_minus_style,
+            number_plus_format_style,
+            number_plus_style,
+        ) = make_line_number_styles(
+            &opt,
+            hunk_header_style.decoration_ansi_term_style(),
+            true_color,
+        );
+
+        let syntax_theme = if syntax_theme::is_no_syntax_highlighting_theme_name(&syntax_theme_name)
+        {
+            None
+        } else {
+            Some(assets.theme_set.themes[&syntax_theme_name].clone())
+        };
+        let syntax_dummy_theme = assets.theme_set.themes.values().next().unwrap().clone();
+
+        let minus_line_marker = if opt.keep_plus_minus_markers {
+            "-"
+        } else {
+            " "
+        };
+        let plus_line_marker = if opt.keep_plus_minus_markers {
+            "+"
+        } else {
+            " "
+        };
+
+        let max_line_distance_for_naively_paired_lines =
+            env::get_env_var("DELTA_EXPERIMENTAL_MAX_LINE_DISTANCE_FOR_NAIVELY_PAIRED_LINES")
+                .map(|s| s.parse::<f64>().unwrap_or(0.0))
+                .unwrap_or(0.0);
+
+        Self {
+            background_color_extends_to_terminal_width,
+            commit_style,
+            decorations_width,
+            file_added_label: opt.file_added_label,
+            file_modified_label: opt.file_modified_label,
+            file_removed_label: opt.file_removed_label,
+            file_renamed_label: opt.file_renamed_label,
+            file_style,
+            hunk_header_style,
+            list_languages: opt.list_languages,
+            list_syntax_theme_names: opt.list_syntax_theme_names,
+            list_syntax_themes: opt.list_syntax_themes,
+            max_buffered_lines: 32,
+            max_line_distance: opt.max_line_distance,
+            max_line_distance_for_naively_paired_lines,
+            minus_emph_style,
+            minus_file: opt.minus_file.map(|s| s.clone()),
+            minus_line_marker,
+            minus_non_emph_style,
+            minus_style,
+            navigate: opt.navigate,
+            null_style: Style::new(),
+            null_syntect_style: SyntectStyle::default(),
+            number_minus_format: opt.number_minus_format,
+            number_minus_format_style,
+            number_minus_style,
+            number_plus_format: opt.number_plus_format,
+            number_plus_format_style,
+            number_plus_style,
+            paging_mode,
+            plus_emph_style,
+            plus_file: opt.plus_file.map(|s| s.clone()),
+            plus_line_marker,
+            plus_non_emph_style,
+            plus_style,
+            show_background_colors: opt.show_background_colors,
+            show_line_numbers: opt.show_line_numbers,
+            syntax_dummy_theme,
+            syntax_set: assets.syntax_set,
+            syntax_theme,
+            syntax_theme_name,
+            tab_width: opt.tab_width,
+            true_color,
+            zero_style,
         }
-        None => (Width::Fixed(available_terminal_width), true),
-    };
-
-    let syntax_theme_name_from_bat_theme = env::get_env_var("BAT_THEME");
-    let (is_light_mode, syntax_theme_name) = syntax_theme::get_is_light_mode_and_theme_name(
-        opt.syntax_theme.as_ref(),
-        syntax_theme_name_from_bat_theme.as_ref(),
-        opt.light,
-        &syntax_theme_set,
-    );
-
-    let (
-        minus_style,
-        minus_emph_style,
-        minus_non_emph_style,
-        zero_style,
-        plus_style,
-        plus_emph_style,
-        plus_non_emph_style,
-    ) = make_hunk_styles(&opt, is_light_mode, true_color);
-
-    let (commit_style, file_style, hunk_header_style) =
-        make_commit_file_hunk_header_styles(&opt, true_color);
-
-    let (
-        number_minus_format_style,
-        number_minus_style,
-        number_plus_format_style,
-        number_plus_style,
-    ) = make_line_number_styles(
-        &opt,
-        hunk_header_style.decoration_ansi_term_style(),
-        true_color,
-    );
-
-    let syntax_theme = if syntax_theme::is_no_syntax_highlighting_theme_name(&syntax_theme_name) {
-        None
-    } else {
-        Some(syntax_theme_set.themes[&syntax_theme_name].clone())
-    };
-    let syntax_dummy_theme = syntax_theme_set.themes.values().next().unwrap().clone();
-
-    let minus_line_marker = if opt.keep_plus_minus_markers {
-        "-"
-    } else {
-        " "
-    };
-    let plus_line_marker = if opt.keep_plus_minus_markers {
-        "+"
-    } else {
-        " "
-    };
-
-    let max_line_distance_for_naively_paired_lines =
-        env::get_env_var("DELTA_EXPERIMENTAL_MAX_LINE_DISTANCE_FOR_NAIVELY_PAIRED_LINES")
-            .map(|s| s.parse::<f64>().unwrap_or(0.0))
-            .unwrap_or(0.0);
-
-    Config {
-        background_color_extends_to_terminal_width,
-        commit_style,
-        decorations_width,
-        file_added_label: opt.file_added_label,
-        file_modified_label: opt.file_modified_label,
-        file_removed_label: opt.file_removed_label,
-        file_renamed_label: opt.file_renamed_label,
-        file_style,
-        hunk_header_style,
-        list_languages: opt.list_languages,
-        list_syntax_theme_names: opt.list_syntax_theme_names,
-        list_syntax_themes: opt.list_syntax_themes,
-        max_buffered_lines: 32,
-        max_line_distance: opt.max_line_distance,
-        max_line_distance_for_naively_paired_lines,
-        minus_emph_style,
-        minus_file: opt.minus_file.map(|s| s.clone()),
-        minus_line_marker,
-        minus_non_emph_style,
-        minus_style,
-        navigate: opt.navigate,
-        null_style: Style::new(),
-        null_syntect_style: SyntectStyle::default(),
-        number_minus_format: opt.number_minus_format,
-        number_minus_format_style: number_minus_format_style,
-        number_minus_style: number_minus_style,
-        number_plus_format: opt.number_plus_format,
-        number_plus_format_style: number_plus_format_style,
-        number_plus_style: number_plus_style,
-        paging_mode,
-        plus_emph_style,
-        plus_file: opt.plus_file.map(|s| s.clone()),
-        plus_line_marker,
-        plus_non_emph_style,
-        plus_style,
-        show_background_colors: opt.show_background_colors,
-        show_line_numbers: opt.show_line_numbers,
-        syntax_dummy_theme,
-        syntax_set,
-        syntax_theme,
-        syntax_theme_name,
-        tab_width: opt.tab_width,
-        true_color,
-        zero_style,
     }
 }
 
@@ -380,6 +464,16 @@ fn make_commit_file_hunk_header_styles(opt: &cli::Opt, true_color: bool) -> (Sty
             true_color,
             false,
         ),
+    )
+}
+
+pub fn make_navigate_regexp(config: &Config) -> String {
+    format!(
+        "^(commit|{}|{}|{}|{})",
+        config.file_modified_label,
+        config.file_added_label,
+        config.file_removed_label,
+        config.file_renamed_label
     )
 }
 

@@ -10,7 +10,7 @@ use shell_words;
 
 use super::less::retrieve_less_version;
 
-use crate::config::Config;
+use crate::config;
 use crate::env;
 
 #[derive(Debug, Clone, Copy, PartialEq)]
@@ -28,7 +28,11 @@ pub enum OutputType {
 }
 
 impl OutputType {
-    pub fn from_mode(mode: PagingMode, pager: Option<&str>, config: &Config) -> Result<Self> {
+    pub fn from_mode(
+        mode: PagingMode,
+        pager: Option<&str>,
+        config: &config::Config,
+    ) -> Result<Self> {
         use self::PagingMode::*;
         Ok(match mode {
             Always => OutputType::try_pager(false, pager, config)?,
@@ -41,7 +45,7 @@ impl OutputType {
     fn try_pager(
         quit_if_one_screen: bool,
         pager_from_config: Option<&str>,
-        config: &Config,
+        config: &config::Config,
     ) -> Result<Self> {
         let mut replace_arguments_to_less = false;
 
@@ -121,7 +125,7 @@ impl OutputType {
                     p
                 };
                 if config.navigate {
-                    process.args(&["--pattern", &config.make_navigate_regexp()]);
+                    process.args(&["--pattern", &config::make_navigate_regexp(&config)]);
                 }
                 Ok(process
                     .env("LESSANSIENDCHARS", "mK")

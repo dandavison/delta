@@ -3,8 +3,8 @@ use std::process;
 use ansi_term;
 use bitflags::bitflags;
 
-use crate::cli::unreachable;
 use crate::color;
+use crate::config::unreachable;
 
 #[derive(Clone, Copy, Debug, PartialEq)]
 pub struct Style {

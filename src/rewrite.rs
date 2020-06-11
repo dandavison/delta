@@ -6,7 +6,8 @@ use std::process;
 
 use structopt::clap;
 
-use crate::cli::{self, user_supplied_option};
+use crate::cli;
+use crate::config::user_supplied_option;
 
 pub fn apply_rewrite_rules(
     opt: &mut cli::Opt,

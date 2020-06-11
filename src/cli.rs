@@ -1,16 +1,7 @@
 use std::path::PathBuf;
-use std::process;
 
-use git2;
 use structopt::clap::AppSettings::{ColorAlways, ColoredHelp, DeriveDisplayOrder};
-use structopt::{clap, StructOpt};
-
-use crate::bat::assets::HighlightingAssets;
-use crate::bat::output::PagingMode;
-use crate::config;
-use crate::env;
-use crate::rewrite;
-use crate::syntax_theme;
+use structopt::StructOpt;
 
 #[derive(StructOpt, Clone, Debug, PartialEq)]
 #[structopt(
@@ -446,100 +437,4 @@ pub struct Opt {
     #[structopt(long = "theme")]
     /// Deprecated: use --syntax-theme.
     pub deprecated_theme: Option<String>,
-}
-
-pub fn process_command_line_arguments<'a>(
-    arg_matches: clap::ArgMatches,
-    git_config: &mut Option<git2::Config>,
-) -> config::Config<'a> {
-    let mut opt = Opt::from_clap(&arg_matches);
-    let assets = HighlightingAssets::new();
-
-    _check_validity(&opt, &assets);
-
-    rewrite::apply_rewrite_rules(&mut opt, arg_matches, git_config);
-
-    let paging_mode = match opt.paging_mode.as_ref() {
-        "always" => PagingMode::Always,
-        "never" => PagingMode::Never,
-        "auto" => PagingMode::QuitIfOneScreen,
-        _ => {
-            eprintln!(
-                "Invalid value for --paging option: {} (valid values are \"always\", \"never\", and \"auto\")",
-                opt.paging_mode
-            );
-            process::exit(1);
-        }
-    };
-
-    let true_color = match opt.true_color.as_ref() {
-        "always" => true,
-        "never" => false,
-        "auto" => is_truecolor_terminal(),
-        _ => {
-            eprintln!(
-                "Invalid value for --24-bit-color option: {} (valid values are \"always\", \"never\", and \"auto\")",
-                opt.true_color
-            );
-            process::exit(1);
-        }
-    };
-
-    config::get_config(
-        opt,
-        assets.syntax_set,
-        assets.theme_set,
-        true_color,
-        paging_mode,
-    )
-}
-
-/// Did the user supply `option` on the command line?
-pub fn user_supplied_option(option: &str, arg_matches: &clap::ArgMatches) -> bool {
-    arg_matches.occurrences_of(option) > 0
-}
-
-fn _check_validity(opt: &Opt, assets: &HighlightingAssets) {
-    if opt.light && opt.dark {
-        eprintln!("--light and --dark cannot be used together.");
-        process::exit(1);
-    }
-    if let Some(ref syntax_theme) = opt.syntax_theme {
-        if !syntax_theme::is_no_syntax_highlighting_theme_name(&syntax_theme) {
-            if !assets.theme_set.themes.contains_key(syntax_theme.as_str()) {
-                return;
-            }
-            let is_light_syntax_theme = syntax_theme::is_light_theme(&syntax_theme);
-            if is_light_syntax_theme && opt.dark {
-                eprintln!(
-                    "{} is a light syntax theme, but you supplied --dark. \
-                     If you use --syntax-theme, you do not need to supply --light or --dark.",
-                    syntax_theme
-                );
-                process::exit(1);
-            } else if !is_light_syntax_theme && opt.light {
-                eprintln!(
-                    "{} is a dark syntax theme, but you supplied --light. \
-                     If you use --syntax-theme, you do not need to supply --light or --dark.",
-                    syntax_theme
-                );
-                process::exit(1);
-            }
-        }
-    }
-}
-
-pub fn unreachable(message: &str) -> ! {
-    eprintln!(
-        "{} This should not be possible. \
-         Please report the bug at https://github.com/dandavison/delta/issues.",
-        message
-    );
-    process::exit(1);
-}
-
-fn is_truecolor_terminal() -> bool {
-    env::get_env_var("COLORTERM")
-        .map(|colorterm| colorterm == "truecolor" || colorterm == "24bit")
-        .unwrap_or(false)
 }

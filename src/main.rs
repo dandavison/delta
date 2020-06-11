@@ -57,8 +57,7 @@ fn main() -> std::io::Result<()> {
         Err(_) => None,
     };
 
-    let config =
-        cli::process_command_line_arguments(cli::Opt::clap().get_matches(), &mut git_config);
+    let config = config::Config::from_arg_matches(cli::Opt::clap().get_matches(), &mut git_config);
 
     if atty::is(atty::Stream::Stdin) {
         return diff(
@@ -191,15 +190,17 @@ index f38589a..0f1bb83 100644
         }
 
         writeln!(stdout, "\n\nTheme: {}\n", style.paint(syntax_theme))?;
-        let arg_matches = cli::Opt::clap().get_matches_from(vec![
-            "--syntax-theme",
-            syntax_theme,
-            "--file-style",
-            "omit",
-            "--hunk-header-style",
-            "omit",
-        ]);
-        let config = cli::process_command_line_arguments(arg_matches, &mut None);
+        let config = config::Config::from_args(
+            &[
+                "--syntax-theme",
+                syntax_theme,
+                "--file-style",
+                "omit",
+                "--hunk-header-style",
+                "omit",
+            ],
+            &mut None,
+        );
         let mut output_type =
             OutputType::from_mode(PagingMode::QuitIfOneScreen, None, &config).unwrap();
         let mut writer = output_type.handle().unwrap();

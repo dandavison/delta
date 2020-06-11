@@ -4,9 +4,7 @@ pub mod integration_test_utils {
 
     use bytelines::ByteLines;
     use console::strip_ansi_codes;
-    use structopt::StructOpt;
 
-    use crate::cli;
     use crate::config;
     use crate::delta::delta;
 
@@ -19,8 +17,7 @@ pub mod integration_test_utils {
             args.push(arg);
         }
         args.push("--no-gitconfig");
-        let arg_matches = cli::Opt::clap().get_matches_from(args);
-        cli::process_command_line_arguments(arg_matches, &mut None)
+        config::Config::from_args(&args, &mut None)
     }
 
     pub fn get_line_of_code_from_delta<'a>(
