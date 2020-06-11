@@ -1,6 +1,7 @@
 use regex::Regex;
 
 use lazy_static::lazy_static;
+use unicode_segmentation::UnicodeSegmentation;
 use unicode_width::UnicodeWidthStr;
 
 use crate::align;
@@ -90,8 +91,8 @@ fn tokenize(line: &str) -> Vec<&str> {
             tokens.push("");
         }
         // Align separating text as multiple single-character tokens.
-        for i in offset..m.start() {
-            tokens.push(&line[i..i + 1]);
+        for t in line[offset..m.start()].graphemes(true) {
+            tokens.push(t);
         }
         tokens.push(&line[m.start()..m.end()]);
         offset = m.end();
@@ -100,8 +101,8 @@ fn tokenize(line: &str) -> Vec<&str> {
         if offset == 0 {
             tokens.push("");
         }
-        for i in offset..line.len() {
-            tokens.push(&line[i..i + 1]);
+        for t in line[offset..line.len()].graphemes(true) {
+            tokens.push(t);
         }
     }
     tokens
