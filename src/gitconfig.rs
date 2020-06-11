@@ -316,8 +316,48 @@ mod tests {
         remove_file(git_config_path).unwrap();
     }
 
+    #[test]
+    fn test_diff_highlight() {
+        let git_config_contents = b"
+[color \"diff\"]
+    old = red bold
+    new = green bold
+
+[color \"diff-highlight\"]
+    oldNormal = ul red bold
+    oldHighlight = red bold 52
+    newNormal = ul green bold
+    newHighlight = green bold 22
+";
+        let git_config_path = "/tmp/delta__test_diff_highlight.gitconfig";
+
+        let config = make_config(
+            &["--emulate-diff-highlight"],
+            Some(git_config_contents),
+            Some(git_config_path),
+        );
+
+        assert_eq!(config.minus_style, make_style("red bold"));
+        assert_eq!(config.minus_non_emph_style, make_style("ul red bold"));
+        assert_eq!(config.minus_emph_style, make_emph_style("red bold 52"));
+        assert_eq!(config.zero_style, make_style(""));
+        assert_eq!(config.plus_style, make_style("green bold"));
+        assert_eq!(config.plus_non_emph_style, make_style("ul green bold"));
+        assert_eq!(config.plus_emph_style, make_emph_style("green bold 22"));
+
+        remove_file(git_config_path).unwrap();
+    }
+
     fn make_style(s: &str) -> Style {
-        Style::from_str(s, None, None, None, true, false)
+        _make_style(s, false)
+    }
+
+    fn make_emph_style(s: &str) -> Style {
+        _make_style(s, true)
+    }
+
+    fn _make_style(s: &str, is_emph: bool) -> Style {
+        Style::from_str(s, None, None, None, true, is_emph)
     }
 
     fn make_git_config(contents: &[u8], path: &str) -> git2::Config {
