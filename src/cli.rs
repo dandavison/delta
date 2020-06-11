@@ -163,8 +163,10 @@ https://github.com/dandavison/delta/issues.
 )]
 pub struct Opt {
     #[structopt(long = "preset", env = "DELTA_PRESET")]
-    /// The delta preset to use. A preset is a named collection of delta options in ~/.gitconfig.
-    /// See PRESETS section.
+    /// Name of a delta preset to use. A preset is a named collection of delta options in
+    /// ~/.gitconfig. The preset name can also be set using an environment variable named
+    /// DELTA_PRESET. Two built-in presets are available: 'diff-highlight' and 'diff-so-fancy'. See
+    /// PRESETS section.
     pub preset: Option<String>,
 
     #[structopt(long = "syntax-theme", env = "BAT_THEME")]
