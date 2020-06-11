@@ -540,11 +540,18 @@ mod tests {
             } else {
                 env::set_var("BAT_THEME", bat_theme_env_var);
             }
-            let is_true_color = true;
             let mut args = vec![];
             if let Some(syntax_theme) = syntax_theme {
                 args.push("--syntax-theme");
                 args.push(syntax_theme);
+            }
+            let is_true_color = true;
+            if is_true_color {
+                args.push("--24-bit-color");
+                args.push("always");
+            } else {
+                args.push("--24-bit-color");
+                args.push("never");
             }
             match mode {
                 Some(Mode::Light) => {
