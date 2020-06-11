@@ -244,6 +244,17 @@ mod tests {
     use EditOperation::*;
 
     #[test]
+    fn test_tokenize_0() {
+        assert_tokenize("", &[]);
+        assert_tokenize(";", &["", ";"]);
+        assert_tokenize(";;", &["", ";", ";"]);
+        assert_tokenize(";;a", &["", ";", ";", "a"]);
+        assert_tokenize(";;ab", &["", ";", ";", "ab"]);
+        assert_tokenize(";;ab;", &["", ";", ";", "ab", ";"]);
+        assert_tokenize(";;ab;;", &["", ";", ";", "ab", ";", ";"]);
+    }
+
+    #[test]
     fn test_tokenize_1() {
         assert_eq!(tokenize("aaa bbb"), vec!["aaa", " ", "bbb"])
     }
