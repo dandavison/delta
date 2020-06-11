@@ -115,6 +115,15 @@ fn rewrite_options_to_implement_diff_highlight_emulation(
     arg_matches: &clap::ArgMatches,
     git_config: &mut Option<git2::Config>,
 ) {
+    _rewrite_options_to_implement_diff_highlight_emulation(opt, arg_matches, git_config, false)
+}
+
+fn _rewrite_options_to_implement_diff_highlight_emulation(
+    opt: &mut cli::Opt,
+    arg_matches: &clap::ArgMatches,
+    git_config: &mut Option<git2::Config>,
+    bold: bool,
+) {
     if opt.preset.as_deref().map(str::to_lowercase).as_deref() != Some("diff-highlight")
         && opt.preset.as_deref().map(str::to_lowercase).as_deref() != Some("diff-so-fancy")
     {
@@ -126,7 +135,7 @@ fn rewrite_options_to_implement_diff_highlight_emulation(
                 "minus-style",
                 minus_style,
                 vec!["color.diff.old".to_string()],
-                "red"
+                if bold { "bold red" } else { "red" }
             ),
             (
                 "minus-non-emph-style",
@@ -145,7 +154,7 @@ fn rewrite_options_to_implement_diff_highlight_emulation(
                 "plus-style",
                 plus_style,
                 vec!["color.diff.new".to_string()],
-                "green"
+                if bold { "bold green" } else { "green" }
             ),
             (
                 "plus-non-emph-style",
@@ -175,7 +184,7 @@ fn rewrite_options_to_implement_diff_so_fancy_emulation(
     if opt.preset.as_deref().map(str::to_lowercase).as_deref() != Some("diff-so-fancy") {
         return;
     }
-    rewrite_options_to_implement_diff_highlight_emulation(opt, arg_matches, git_config);
+    _rewrite_options_to_implement_diff_highlight_emulation(opt, arg_matches, git_config, true);
     set_options__string!(
         [
             (
