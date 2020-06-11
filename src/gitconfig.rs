@@ -246,7 +246,7 @@ mod tests {
 
     use crate::cli;
     use crate::config;
-    use crate::style::Style;
+    use crate::style::{DecorationStyle, Style};
 
     #[test]
     fn test_main_section() {
@@ -348,6 +348,53 @@ mod tests {
         remove_file(git_config_path).unwrap();
     }
 
+    #[test]
+    fn test_diff_so_fancy() {
+        let git_config_contents = b"
+[color \"diff\"]
+    meta = 11
+    frag = magenta bold
+    commit = yellow bold
+    old = red bold
+    new = green bold
+    whitespace = red reverse
+";
+        let git_config_path = "/tmp/delta__test_diff_so_fancy.gitconfig";
+
+        let config = make_config(
+            &["--emulate-diff-so-fancy"],
+            Some(git_config_contents),
+            Some(git_config_path),
+        );
+
+        assert_eq!(
+            config.commit_style.ansi_term_style,
+            make_style("yellow bold").ansi_term_style
+        );
+        assert_eq!(
+            config.file_style.ansi_term_style,
+            make_style("11").ansi_term_style
+        );
+        assert_eq!(
+            config.hunk_header_style.ansi_term_style,
+            make_style("magenta bold").ansi_term_style
+        );
+        assert_eq!(
+            config.commit_style.decoration_style,
+            make_decoration_style("none")
+        );
+        assert_eq!(
+            config.file_style.decoration_style,
+            make_decoration_style("yellow bold ul ol")
+        );
+        assert_eq!(
+            config.hunk_header_style.decoration_style,
+            make_decoration_style("magenta box")
+        );
+
+        remove_file(git_config_path).unwrap();
+    }
+
     fn make_style(s: &str) -> Style {
         _make_style(s, false)
     }
@@ -358,6 +405,10 @@ mod tests {
 
     fn _make_style(s: &str, is_emph: bool) -> Style {
         Style::from_str(s, None, None, None, true, is_emph)
+    }
+
+    fn make_decoration_style(s: &str) -> DecorationStyle {
+        DecorationStyle::from_str(s, true)
     }
 
     fn make_git_config(contents: &[u8], path: &str) -> git2::Config {
