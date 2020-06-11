@@ -14,19 +14,19 @@ pub fn apply_rewrite_rules(
     arg_matches: clap::ArgMatches,
     git_config: &mut Option<git2::Config>,
 ) {
-    _rewrite_options_to_honor_git_config(opt, &arg_matches, git_config);
-    _rewrite_style_strings_to_honor_deprecated_minus_plus_options(opt);
-    _rewrite_options_to_implement_deprecated_commit_and_file_style_box_option(opt);
-    _rewrite_options_to_implement_deprecated_hunk_style_option(opt);
-    _rewrite_options_to_implement_deprecated_theme_option(opt, &arg_matches);
-    _rewrite_options_to_implement_color_only(opt);
-    _rewrite_options_to_implement_diff_highlight_emulation(opt, &arg_matches, git_config);
-    _rewrite_options_to_implement_diff_so_fancy_emulation(opt, &arg_matches, git_config);
-    _rewrite_options_to_implement_navigate(opt, &arg_matches);
+    rewrite_options_to_honor_git_config(opt, &arg_matches, git_config);
+    rewrite_style_strings_to_honor_deprecated_minus_plus_options(opt);
+    rewrite_options_to_implement_deprecated_commit_and_file_style_box_option(opt);
+    rewrite_options_to_implement_deprecated_hunk_style_option(opt);
+    rewrite_options_to_implement_deprecated_theme_option(opt, &arg_matches);
+    rewrite_options_to_implement_color_only(opt);
+    rewrite_options_to_implement_diff_highlight_emulation(opt, &arg_matches, git_config);
+    rewrite_options_to_implement_diff_so_fancy_emulation(opt, &arg_matches, git_config);
+    rewrite_options_to_implement_navigate(opt, &arg_matches);
 }
 
 /// Implement --color-only
-fn _rewrite_options_to_implement_color_only(opt: &mut cli::Opt) {
+fn rewrite_options_to_implement_color_only(opt: &mut cli::Opt) {
     if opt.color_only {
         opt.keep_plus_minus_markers = true;
         opt.tab_width = 0;
@@ -39,7 +39,7 @@ fn _rewrite_options_to_implement_color_only(opt: &mut cli::Opt) {
     }
 }
 
-fn _rewrite_options_to_honor_git_config(
+fn rewrite_options_to_honor_git_config(
     opt: &mut cli::Opt,
     arg_matches: &clap::ArgMatches,
     git_config: &mut Option<git2::Config>,
@@ -110,7 +110,7 @@ fn _rewrite_options_to_honor_git_config(
 }
 
 /// Implement --preset=diff-highlight
-fn _rewrite_options_to_implement_diff_highlight_emulation(
+fn rewrite_options_to_implement_diff_highlight_emulation(
     opt: &mut cli::Opt,
     arg_matches: &clap::ArgMatches,
     git_config: &mut Option<git2::Config>,
@@ -167,7 +167,7 @@ fn _rewrite_options_to_implement_diff_highlight_emulation(
 }
 
 /// Implement --preset=diff-so-fancy
-fn _rewrite_options_to_implement_diff_so_fancy_emulation(
+fn rewrite_options_to_implement_diff_so_fancy_emulation(
     opt: &mut cli::Opt,
     arg_matches: &clap::ArgMatches,
     git_config: &mut Option<git2::Config>,
@@ -175,7 +175,7 @@ fn _rewrite_options_to_implement_diff_so_fancy_emulation(
     if opt.preset.as_deref().map(str::to_lowercase).as_deref() != Some("diff-so-fancy") {
         return;
     }
-    _rewrite_options_to_implement_diff_highlight_emulation(opt, arg_matches, git_config);
+    rewrite_options_to_implement_diff_highlight_emulation(opt, arg_matches, git_config);
     set_options__string!(
         [
             (
@@ -222,7 +222,7 @@ fn _rewrite_options_to_implement_diff_so_fancy_emulation(
 }
 
 /// Implement --navigate
-fn _rewrite_options_to_implement_navigate(opt: &mut cli::Opt, arg_matches: &clap::ArgMatches) {
+fn rewrite_options_to_implement_navigate(opt: &mut cli::Opt, arg_matches: &clap::ArgMatches) {
     if opt.navigate {
         if !user_supplied_option("file-modified-label", arg_matches) {
             opt.file_modified_label = "Δ".to_string();
@@ -231,7 +231,7 @@ fn _rewrite_options_to_implement_navigate(opt: &mut cli::Opt, arg_matches: &clap
 }
 
 /// Honor deprecated --theme
-fn _rewrite_options_to_implement_deprecated_theme_option(
+fn rewrite_options_to_implement_deprecated_theme_option(
     opt: &mut cli::Opt,
     arg_matches: &clap::ArgMatches,
 ) {
@@ -245,7 +245,7 @@ fn _rewrite_options_to_implement_deprecated_theme_option(
 /// Honor deprecated arguments by rewriting the canonical --*-style arguments if appropriate.
 // TODO: How to avoid repeating the default values for style options here and in
 // the structopt definition?
-fn _rewrite_style_strings_to_honor_deprecated_minus_plus_options(opt: &mut cli::Opt) {
+fn rewrite_style_strings_to_honor_deprecated_minus_plus_options(opt: &mut cli::Opt) {
     // If --highlight-removed was passed then we should set minus and minus emph foreground to
     // "syntax", if they are still at their default values.
     let deprecated_minus_foreground_arg = if opt.deprecated_highlight_minus_lines {
@@ -295,7 +295,7 @@ fn _rewrite_style_strings_to_honor_deprecated_minus_plus_options(opt: &mut cli::
 }
 
 /// For backwards-compatibility, --{commit,file}-style box means --element-decoration-style 'box ul'.
-fn _rewrite_options_to_implement_deprecated_commit_and_file_style_box_option(opt: &mut cli::Opt) {
+fn rewrite_options_to_implement_deprecated_commit_and_file_style_box_option(opt: &mut cli::Opt) {
     if &opt.commit_style == "box" {
         opt.commit_decoration_style = format!("box ul {}", opt.commit_decoration_style);
         opt.commit_style.clear();
@@ -306,7 +306,7 @@ fn _rewrite_options_to_implement_deprecated_commit_and_file_style_box_option(opt
     }
 }
 
-fn _rewrite_options_to_implement_deprecated_hunk_style_option(opt: &mut cli::Opt) {
+fn rewrite_options_to_implement_deprecated_hunk_style_option(opt: &mut cli::Opt) {
     // Examples of how --hunk-style was originally used are
     // --hunk-style box       => --hunk-header-decoration-style box
     // --hunk-style underline => --hunk-header-decoration-style underline
