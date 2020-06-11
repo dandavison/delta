@@ -486,7 +486,6 @@ mod tests {
     use crate::tests::integration_test_utils::integration_test_utils;
 
     #[test]
-    #[ignore]
     fn test_syntax_theme_selection() {
         #[derive(PartialEq)]
         enum Mode {
@@ -532,7 +531,7 @@ mod tests {
                 syntax_theme::DEFAULT_LIGHT_THEME,
                 Mode::Light,
             ),
-            (None, "1337", Some(Mode::Light), "1337", Mode::Light),
+            (None, "GitHub", Some(Mode::Light), "GitHub", Mode::Light),
             (Some("none"), "", None, "none", Mode::Dark),
             (Some("None"), "", Some(Mode::Light), "None", Mode::Light),
         ] {
