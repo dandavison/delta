@@ -381,6 +381,56 @@ mod tests {
         )
     }
 
+    #[test]
+    fn test_tokenize_6() {
+        assert_tokenize(
+            "         (minus_file, plus_file) => format!(\"renamed: {} ⟶  {}\", minus_file, plus_file),",
+            &["",
+              " ",
+              " ",
+              " ",
+              " ",
+              " ",
+              " ",
+              " ",
+              " ",
+              " ",
+              "(",
+              "minus_file",
+              ",",
+              " ",
+              "plus_file",
+              ")",
+              " ",
+              "=",
+              ">",
+              " ",
+              "format",
+              "!",
+              "(",
+              "\"",
+              "renamed",
+              ":",
+              " ",
+              "{",
+              "}",
+              " ",
+              "⟶",
+              " ",
+              " ",
+              "{",
+              "}",
+              "\"",
+              ",",
+              " ",
+              "minus_file",
+              ",",
+              " ",
+              "plus_file",
+              ")",
+              ","])
+    }
+
     fn assert_tokenize(text: &str, expected_tokens: &[&str]) {
         let actual_tokens = tokenize(text);
         assert_eq!(text, expected_tokens.iter().join(""));
