@@ -330,7 +330,7 @@ mod tests {
         let git_config_path = "/tmp/delta__test_diff_highlight.gitconfig";
 
         let config = make_config(
-            &["--emulate-diff-highlight"],
+            &["--preset", "diff-highlight"],
             Some(git_config_contents),
             Some(git_config_path),
         );
@@ -360,7 +360,7 @@ mod tests {
         let git_config_path = "/tmp/delta__test_diff_so_fancy.gitconfig";
 
         let config = make_config(
-            &["--emulate-diff-so-fancy"],
+            &["--preset", "diff-so-fancy"],
             Some(git_config_contents),
             Some(git_config_path),
         );

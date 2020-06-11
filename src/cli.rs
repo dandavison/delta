@@ -42,6 +42,10 @@ or in ~/.gitconfig
 [delta]
     preset = my-delta-preset
 
+There are two built-in presets:
+
+--preset diff-highlight (https://github.com/git/git/tree/master/contrib/diff-highlight)
+--preset diff-so-fancy (https://github.com/so-fancy/diff-so-fancy)
 
 STYLES
 ------
@@ -230,14 +234,6 @@ pub struct Opt {
     /// Style (foreground, background, attributes) for the file decoration. See STYLES section. One
     /// of the special attributes 'box', 'ul', 'overline', or 'underoverline' must be given.
     pub file_decoration_style: String,
-
-    #[structopt(long = "emulate-diff-highlight")]
-    /// Emulate diff-highlight (https://github.com/git/git/tree/master/contrib/diff-highlight)
-    pub emulate_diff_highlight: bool,
-
-    #[structopt(long = "emulate-diff-so-fancy")]
-    /// Emulate diff-so-fancy (https://github.com/so-fancy/diff-so-fancy)
-    pub emulate_diff_so_fancy: bool,
 
     #[structopt(long = "navigate")]
     /// Activate diff navigation: use n to jump forwards and N to jump backwards. To change the
