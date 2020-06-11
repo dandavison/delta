@@ -252,7 +252,7 @@ mod tests {
 [delta]
     minus-style = blue
 ";
-        let git_config_path = "/tmp/delta__test_main_section.gitconfig";
+        let git_config_path = "delta__test_main_section.gitconfig";
 
         // First check that it doesn't default to blue, because that's going to be used to signal
         // that gitconfig has set the style.
@@ -293,7 +293,7 @@ mod tests {
 [delta \"my-preset\"]
     minus-style = green
 ";
-        let git_config_path = "/tmp/delta__test_preset.gitconfig";
+        let git_config_path = "delta__test_preset.gitconfig";
 
         // Without --preset the main section takes effect
         assert_eq!(
@@ -327,7 +327,7 @@ mod tests {
     newNormal = ul green bold
     newHighlight = green bold 22
 ";
-        let git_config_path = "/tmp/delta__test_diff_highlight.gitconfig";
+        let git_config_path = "delta__test_diff_highlight.gitconfig";
 
         let config = make_config(
             &["--preset", "diff-highlight"],
@@ -357,7 +357,7 @@ mod tests {
     new = green bold
     whitespace = red reverse
 ";
-        let git_config_path = "/tmp/delta__test_diff_so_fancy.gitconfig";
+        let git_config_path = "delta__test_diff_so_fancy.gitconfig";
 
         let config = make_config(
             &["--preset", "diff-so-fancy"],
