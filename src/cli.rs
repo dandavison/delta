@@ -35,17 +35,24 @@ A preset is a named collection of delta options in ~/.gitconfig. An example is:
 
 To activate those options, you would use:
 
-delta --preset my-delta-preset
+delta --presets my-delta-preset
 
 or in ~/.gitconfig
 
 [delta]
-    preset = my-delta-preset
+    presets = my-delta-preset
+
+A single preset name may not contain whitespace. You can activate multiple presets:
+
+[delta]
+    presets = my-highlight-styles-colors-preset my-line-number-styles-preset
+
+If more than one preset sets the same option, the last one wins.
 
 There are two built-in presets:
 
---preset diff-highlight (https://github.com/git/git/tree/master/contrib/diff-highlight)
---preset diff-so-fancy (https://github.com/so-fancy/diff-so-fancy)
+--presets diff-highlight (https://github.com/git/git/tree/master/contrib/diff-highlight)
+--presets diff-so-fancy (https://github.com/so-fancy/diff-so-fancy)
 
 STYLES
 ------
@@ -162,12 +169,12 @@ https://github.com/dandavison/delta/issues.
 "
 )]
 pub struct Opt {
-    #[structopt(long = "preset", env = "DELTA_PRESET")]
-    /// Name of a delta preset to use. A preset is a named collection of delta options in
-    /// ~/.gitconfig. The preset name can also be set using an environment variable named
-    /// DELTA_PRESET. Two built-in presets are available: 'diff-highlight' and 'diff-so-fancy'. See
-    /// PRESETS section.
-    pub preset: Option<String>,
+    #[structopt(long = "presets", env = "DELTA_PRESET")]
+    /// Name of delta presets to use (space-separated). A preset is a named collection of delta
+    /// options in ~/.gitconfig. The preset names can also be set using an environment variable
+    /// named DELTA_PRESETS. Two built-in presets are available: 'diff-highlight' and
+    /// 'diff-so-fancy'. See PRESETS section.
+    pub presets: Option<String>,
 
     #[structopt(long = "syntax-theme", env = "BAT_THEME")]
     /// The code syntax-highlighting theme to use. Use --list-syntax-themes to demo available

@@ -4,8 +4,9 @@
 mod set_options {
     /// If `opt_name` was not supplied on the command line, then change its value to one of the
     /// following in order of precedence:
-    /// 1. The entry for it in the section of gitconfig corresponding to the selected preset, if there is
-    ///    one.
+    /// 1. The entry for it in the section of gitconfig corresponding to the active presets (if
+    ///    presets disagree over an option value, the preset named last in the presets string has
+    ///    priority).
     /// 2. The entry for it in the main delta section of gitconfig, if there is one.
     /// 3. The default value passed to this macro (which may be the current value).
 
@@ -90,7 +91,7 @@ mod set_delta_options {
                 $(
                     ($option_name,
                      $field_ident,
-                     $crate::gitconfig::make_git_config_keys_for_delta($option_name, $opt.preset.as_deref()),
+                     $crate::gitconfig::make_git_config_keys_for_delta($option_name, $opt.presets.as_deref()),
                      &$opt.$field_ident)
                 ),*
             ],
@@ -107,7 +108,7 @@ mod set_delta_options {
                 $(
                     ($option_name,
                      $field_ident,
-                     $crate::gitconfig::make_git_config_keys_for_delta($option_name, $opt.preset.as_deref()),
+                     $crate::gitconfig::make_git_config_keys_for_delta($option_name, $opt.presets.as_deref()),
                      $opt.$field_ident.as_deref())
                 ),*
             ],
@@ -124,7 +125,7 @@ mod set_delta_options {
                 $(
                     ($option_name,
                      $field_ident,
-                     $crate::gitconfig::make_git_config_keys_for_delta($option_name, $opt.preset.as_deref()),
+                     $crate::gitconfig::make_git_config_keys_for_delta($option_name, $opt.presets.as_deref()),
                      $opt.$field_ident)
                 ),*
             ],
@@ -141,7 +142,7 @@ mod set_delta_options {
                 $(
                     ($option_name,
                      $field_ident,
-                     $crate::gitconfig::make_git_config_keys_for_delta($option_name, $opt.preset.as_deref()),
+                     $crate::gitconfig::make_git_config_keys_for_delta($option_name, $opt.presets.as_deref()),
                      $opt.$field_ident)
                 ),*
             ],
@@ -158,7 +159,7 @@ mod set_delta_options {
                 $(
                     ($option_name,
                      $field_ident,
-                     $crate::gitconfig::make_git_config_keys_for_delta($option_name, $opt.preset.as_deref()),
+                     $crate::gitconfig::make_git_config_keys_for_delta($option_name, $opt.presets.as_deref()),
                      $opt.$field_ident)
                 ),*
             ],
@@ -224,12 +225,16 @@ pub mod git_config_get {
     }
 }
 
-pub fn make_git_config_keys_for_delta(key: &str, preset: Option<&str>) -> Vec<String> {
-    match preset {
-        Some(preset) => vec![
-            format!("delta.{}.{}", preset, key),
-            format!("delta.{}", key),
-        ],
+pub fn make_git_config_keys_for_delta(key: &str, presets: Option<&str>) -> Vec<String> {
+    match presets {
+        Some(presets) => {
+            let mut keys = Vec::new();
+            for preset in presets.split_whitespace().rev() {
+                keys.push(format!("delta.{}.{}", preset, key));
+            }
+            keys.push(format!("delta.{}", key));
+            keys
+        }
         None => vec![format!("delta.{}", key)],
     }
 }
@@ -295,16 +300,16 @@ mod tests {
 ";
         let git_config_path = "delta__test_preset.gitconfig";
 
-        // Without --preset the main section takes effect
+        // Without --presets the main section takes effect
         assert_eq!(
-            make_config(&[], Some(git_config_contents), Some(git_config_path),).minus_style,
+            make_config(&[], Some(git_config_contents), Some(git_config_path)).minus_style,
             make_style("blue")
         );
 
-        // With --preset the preset takes effect
+        // With --presets the preset takes effect
         assert_eq!(
             make_config(
-                &["--preset", "my-preset"],
+                &["--presets", "my-preset"],
                 Some(git_config_contents),
                 Some(git_config_path),
             )
@@ -315,8 +320,112 @@ mod tests {
     }
 
     #[test]
+    fn test_multiple_presets() {
+        let git_config_contents = b"
+[delta]
+    minus-style = blue
+
+[delta \"my-preset-1\"]
+    minus-style = green
+
+[delta \"my-preset-2\"]
+    minus-style = yellow
+";
+        let git_config_path = "delta__test_multiple_presets.gitconfig";
+
+        assert_eq!(
+            make_config(
+                &["--presets", "my-preset-1"],
+                Some(git_config_contents),
+                Some(git_config_path),
+            )
+            .minus_style,
+            make_style("green")
+        );
+
+        assert_eq!(
+            make_config(
+                &["--presets", "my-preset-1 my-preset-2"],
+                Some(git_config_contents),
+                Some(git_config_path),
+            )
+            .minus_style,
+            make_style("yellow")
+        );
+
+        assert_eq!(
+            make_config(
+                &["--presets", "my-preset-2 my-preset-1"],
+                Some(git_config_contents),
+                Some(git_config_path),
+            )
+            .minus_style,
+            make_style("green")
+        );
+
+        remove_file(git_config_path).unwrap();
+    }
+
+    #[test]
+    fn test_invalid_presets() {
+        let git_config_contents = b"
+[delta]
+    minus-style = blue
+
+[delta \"my-preset-1\"]
+    minus-style = green
+
+[delta \"my-preset-2\"]
+    minus-style = yellow
+";
+        let git_config_path = "delta__test_invalid_presets.gitconfig";
+
+        assert_eq!(
+            make_config(
+                &["--presets", "my-preset-1"],
+                Some(git_config_contents),
+                Some(git_config_path),
+            )
+            .minus_style,
+            make_style("green")
+        );
+
+        assert_eq!(
+            make_config(
+                &["--presets", "my-preset-x"],
+                Some(git_config_contents),
+                Some(git_config_path),
+            )
+            .minus_style,
+            make_style("blue")
+        );
+
+        assert_eq!(
+            make_config(
+                &["--presets", "my-preset-1 my-preset-x"],
+                Some(git_config_contents),
+                Some(git_config_path),
+            )
+            .minus_style,
+            make_style("green")
+        );
+
+        assert_eq!(
+            make_config(
+                &["--presets", "my-preset-x my-preset-2 my-preset-x"],
+                Some(git_config_contents),
+                Some(git_config_path),
+            )
+            .minus_style,
+            make_style("yellow")
+        );
+
+        remove_file(git_config_path).unwrap();
+    }
+
+    #[test]
     fn test_diff_highlight_defaults() {
-        let config = make_config(&["--preset", "diff-highlight"], None, None);
+        let config = make_config(&["--presets", "diff-highlight"], None, None);
 
         assert_eq!(config.minus_style, make_style("red"));
         assert_eq!(config.minus_non_emph_style, make_style("red"));
@@ -343,7 +452,7 @@ mod tests {
         let git_config_path = "delta__test_diff_highlight.gitconfig";
 
         let config = make_config(
-            &["--preset", "diff-highlight"],
+            &["--presets", "diff-highlight"],
             Some(git_config_contents),
             Some(git_config_path),
         );
@@ -361,7 +470,7 @@ mod tests {
 
     #[test]
     fn test_diff_so_fancy_defaults() {
-        let config = make_config(&["--preset", "diff-so-fancy"], None, None);
+        let config = make_config(&["--presets", "diff-so-fancy"], None, None);
 
         assert_eq!(
             config.commit_style.ansi_term_style,
@@ -405,7 +514,7 @@ mod tests {
         let git_config_path = "delta__test_diff_so_fancy.gitconfig";
 
         let config = make_config(
-            &["--preset", "diff-so-fancy"],
+            &["--presets", "diff-so-fancy"],
             Some(git_config_contents),
             Some(git_config_path),
         );

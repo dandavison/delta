@@ -47,8 +47,8 @@ fn rewrite_options_to_honor_git_config(
     if opt.no_gitconfig {
         return;
     }
-    // --preset must be set first
-    set_delta_options__option_string!([("preset", preset)], opt, arg_matches, git_config);
+    // --presets must be set first
+    set_delta_options__option_string!([("presets", presets)], opt, arg_matches, git_config);
     set_delta_options__bool!(
         [
             ("light", light),
@@ -110,7 +110,7 @@ fn rewrite_options_to_honor_git_config(
     set_delta_options__usize!([("tabs", tab_width)], opt, arg_matches, git_config);
 }
 
-/// Implement --preset=diff-highlight
+/// Implement --presets=diff-highlight
 fn rewrite_options_to_implement_diff_highlight_emulation(
     opt: &mut cli::Opt,
     arg_matches: &clap::ArgMatches,
@@ -125,8 +125,8 @@ fn _rewrite_options_to_implement_diff_highlight_emulation(
     git_config: &mut Option<git2::Config>,
     bold: bool,
 ) {
-    if opt.preset.as_deref().map(str::to_lowercase).as_deref() != Some("diff-highlight")
-        && opt.preset.as_deref().map(str::to_lowercase).as_deref() != Some("diff-so-fancy")
+    if opt.presets.as_deref().map(str::to_lowercase).as_deref() != Some("diff-highlight")
+        && opt.presets.as_deref().map(str::to_lowercase).as_deref() != Some("diff-so-fancy")
     {
         return;
     }
@@ -176,13 +176,13 @@ fn _rewrite_options_to_implement_diff_highlight_emulation(
     );
 }
 
-/// Implement --preset=diff-so-fancy
+/// Implement --presets=diff-so-fancy
 fn rewrite_options_to_implement_diff_so_fancy_emulation(
     opt: &mut cli::Opt,
     arg_matches: &clap::ArgMatches,
     git_config: &mut Option<git2::Config>,
 ) {
-    if opt.preset.as_deref().map(str::to_lowercase).as_deref() != Some("diff-so-fancy") {
+    if opt.presets.as_deref().map(str::to_lowercase).as_deref() != Some("diff-so-fancy") {
         return;
     }
     _rewrite_options_to_implement_diff_highlight_emulation(opt, arg_matches, git_config, true);
