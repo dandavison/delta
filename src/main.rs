@@ -16,6 +16,7 @@ mod env;
 mod gitconfig;
 mod paint;
 mod parse;
+mod preset;
 mod rewrite;
 mod style;
 mod syntax_theme;

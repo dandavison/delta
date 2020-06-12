@@ -8,6 +8,7 @@ use structopt::clap;
 
 use crate::cli;
 use crate::config::user_supplied_option;
+use crate::gitconfig::GetOptionValue;
 
 pub fn apply_rewrite_rules(
     opt: &mut cli::Opt,
@@ -20,8 +21,6 @@ pub fn apply_rewrite_rules(
     rewrite_options_to_implement_deprecated_hunk_style_option(opt);
     rewrite_options_to_implement_deprecated_theme_option(opt, &arg_matches);
     rewrite_options_to_implement_color_only(opt);
-    rewrite_options_to_implement_diff_highlight_emulation(opt, &arg_matches, git_config);
-    rewrite_options_to_implement_diff_so_fancy_emulation(opt, &arg_matches, git_config);
     rewrite_options_to_implement_navigate(opt, &arg_matches);
 }
 
@@ -48,8 +47,8 @@ fn rewrite_options_to_honor_git_config(
         return;
     }
     // --presets must be set first
-    set_delta_options__option_string!([("presets", presets)], opt, arg_matches, git_config);
-    set_delta_options__bool!(
+    set_options__option_string!([("presets", presets)], opt, arg_matches, git_config);
+    set_options__bool!(
         [
             ("light", light),
             ("dark", dark),
@@ -62,13 +61,13 @@ fn rewrite_options_to_honor_git_config(
         arg_matches,
         git_config
     );
-    set_delta_options__f64!(
+    set_options__f64!(
         [("max-line-distance", max_line_distance)],
         opt,
         arg_matches,
         git_config
     );
-    set_delta_options__string!(
+    set_options__string!(
         [
             ("commit-decoration-style", commit_decoration_style),
             ("commit-style", commit_style),
@@ -80,9 +79,11 @@ fn rewrite_options_to_honor_git_config(
             ("file-style", file_style),
             ("hunk-header-decoration-style", hunk_header_decoration_style),
             ("hunk-header-style", hunk_header_style),
+            // Hack: minus-style must come before minus-*emph-style because the latter default
+            // dynamically to the value of the former.
+            ("minus-style", minus_style),
             ("minus-emph-style", minus_emph_style),
             ("minus-non-emph-style", minus_non_emph_style),
-            ("minus-style", minus_style),
             ("number-minus-format", number_minus_format),
             ("number-minus-format-style", number_minus_format_style),
             ("number-minus-style", number_minus_style),
@@ -90,9 +91,11 @@ fn rewrite_options_to_honor_git_config(
             ("number-plus-format-style", number_plus_format_style),
             ("number-plus-style", number_plus_style),
             ("paging-mode", paging_mode),
+            // Hack: plus-style must come before plus-*emph-style because the latter default
+            // dynamically to the value of the former.
+            ("plus-style", plus_style),
             ("plus-emph-style", plus_emph_style),
             ("plus-non-emph-style", plus_non_emph_style),
-            ("plus-style", plus_style),
             ("true-color", true_color),
             ("word-diff-regex", tokenization_regex),
             ("zero-style", zero_style)
@@ -101,134 +104,13 @@ fn rewrite_options_to_honor_git_config(
         arg_matches,
         git_config
     );
-    set_delta_options__option_string!(
+    set_options__option_string!(
         [("syntax_theme", syntax_theme), ("width", width)],
         opt,
         arg_matches,
         git_config
     );
-    set_delta_options__usize!([("tabs", tab_width)], opt, arg_matches, git_config);
-}
-
-/// Implement --presets=diff-highlight
-fn rewrite_options_to_implement_diff_highlight_emulation(
-    opt: &mut cli::Opt,
-    arg_matches: &clap::ArgMatches,
-    git_config: &mut Option<git2::Config>,
-) {
-    _rewrite_options_to_implement_diff_highlight_emulation(opt, arg_matches, git_config, false)
-}
-
-fn _rewrite_options_to_implement_diff_highlight_emulation(
-    opt: &mut cli::Opt,
-    arg_matches: &clap::ArgMatches,
-    git_config: &mut Option<git2::Config>,
-    bold: bool,
-) {
-    if !(has_preset("diff-highlight", opt.presets.as_deref())
-        || has_preset("diff-so-fancy", opt.presets.as_deref()))
-    {
-        return;
-    }
-    set_options__string!(
-        [
-            (
-                "minus-style",
-                minus_style,
-                vec!["color.diff.old".to_string()],
-                if bold { "bold red" } else { "red" }
-            ),
-            (
-                "minus-non-emph-style",
-                minus_non_emph_style,
-                vec!["color.diff-highlight.oldNormal".to_string()],
-                &opt.minus_style
-            ),
-            (
-                "minus-emph-style",
-                minus_emph_style,
-                vec!["color.diff-highlight.oldHighlight".to_string()],
-                &format!("{} reverse", opt.minus_style)
-            ),
-            ("zero-style", zero_style, vec![], "normal"),
-            (
-                "plus-style",
-                plus_style,
-                vec!["color.diff.new".to_string()],
-                if bold { "bold green" } else { "green" }
-            ),
-            (
-                "plus-non-emph-style",
-                plus_non_emph_style,
-                vec!["color.diff-highlight.newNormal".to_string()],
-                &opt.plus_style
-            ),
-            (
-                "plus-emph-style",
-                plus_emph_style,
-                vec!["color.diff-highlight.newHighlight".to_string()],
-                &format!("{} reverse", opt.plus_style)
-            )
-        ],
-        opt,
-        arg_matches,
-        git_config
-    );
-}
-
-/// Implement --presets=diff-so-fancy
-fn rewrite_options_to_implement_diff_so_fancy_emulation(
-    opt: &mut cli::Opt,
-    arg_matches: &clap::ArgMatches,
-    git_config: &mut Option<git2::Config>,
-) {
-    if !has_preset("diff-so-fancy", opt.presets.as_deref()) {
-        return;
-    }
-    _rewrite_options_to_implement_diff_highlight_emulation(opt, arg_matches, git_config, true);
-    set_options__string!(
-        [
-            (
-                "commit-style",
-                commit_style,
-                vec!["color.diff.commit".to_string()],
-                "bold yellow"
-            ),
-            (
-                "file-style",
-                file_style,
-                vec!["color.diff.meta".to_string()],
-                "11"
-            ),
-            (
-                "hunk-header-style",
-                hunk_header_style,
-                vec!["color.diff.frag".to_string()],
-                "bold syntax"
-            ),
-            (
-                "commit-decoration-style",
-                commit_decoration_style,
-                vec![],
-                "none"
-            ),
-            (
-                "file-decoration-style",
-                file_decoration_style,
-                vec![],
-                "bold yellow ul ol"
-            ),
-            (
-                "hunk-header-decoration-style",
-                hunk_header_decoration_style,
-                vec![],
-                "magenta box"
-            )
-        ],
-        opt,
-        arg_matches,
-        git_config
-    );
+    set_options__usize!([("tabs", tab_width)], opt, arg_matches, git_config);
 }
 
 /// Implement --navigate
@@ -410,13 +292,6 @@ fn _get_rewritten_minus_plus_style_string(
     }
 }
 
-fn has_preset(preset: &str, presets: Option<&str>) -> bool {
-    match presets.map(str::to_lowercase).as_deref() {
-        Some(presets) => presets.split_whitespace().any(|s| s == preset),
-        None => false,
-    }
-}
-
 #[cfg(test)]
 mod tests {
     use std::ffi::OsString;
@@ -424,19 +299,7 @@ mod tests {
     use structopt::{clap, StructOpt};
 
     use crate::cli;
-    use crate::rewrite::{apply_rewrite_rules, has_preset};
-
-    #[test]
-    fn test_has_preset() {
-        assert!(!has_preset("a", Some("")));
-        assert!(has_preset("a", Some("a")));
-        assert!(has_preset("a", Some("a b")));
-        assert!(has_preset("b", Some("a b")));
-        assert!(has_preset(
-            "diff-so-fancy",
-            Some("diff-so-fancy some-other-preset")
-        ));
-    }
+    use crate::rewrite::apply_rewrite_rules;
 
     #[test]
     fn test_default_is_stable_under_rewrites() {
