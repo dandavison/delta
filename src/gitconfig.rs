@@ -493,7 +493,7 @@ mod tests {
         let git_config_path = "delta__test_diff_so_fancy.gitconfig";
 
         let config = make_config(
-            &["--presets", "diff-so-fancy"],
+            &["--presets", "diff-so-fancy some-other-preset"],
             Some(git_config_contents),
             Some(git_config_path),
         );
