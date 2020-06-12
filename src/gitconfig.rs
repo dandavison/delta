@@ -28,11 +28,8 @@ mod set_options {
          $opt:expr, $arg_matches:expr, $git_config:expr) => {
             $(
                 if !$crate::config::user_supplied_option($opt_name, $arg_matches) {
-                    $opt.$field_ident = match ($crate::gitconfig::git_config_get::_string($keys, $git_config), $default) {
-                        (Some(s), _) => Some(s),
-                        (None, Some(default)) => Some(default.to_string()),
-                        (None, None) => None,
-                    }
+                    $opt.$field_ident = $crate::gitconfig::git_config_get::_string($keys, $git_config)
+                                        .or_else(|| $default.map(str::to_string));
                 };
             )*
         };
