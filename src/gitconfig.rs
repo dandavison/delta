@@ -179,9 +179,9 @@ pub mod git_config_get {
             Some(git_config) => {
                 let git_config = git_config.snapshot().unwrap();
                 for key in keys {
-                    let entry = git_config.get_str(&key);
+                    let entry = git_config.get_string(&key);
                     if let Ok(entry) = entry {
-                        return Some(entry.to_string());
+                        return Some(entry);
                     }
                 }
                 return None;
