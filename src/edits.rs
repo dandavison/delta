@@ -227,8 +227,19 @@ where
             }
         }
     }
-    let distance = (d_numer as f64) / (d_denom as f64);
-    (annotated_minus_line, annotated_plus_line, distance)
+    (
+        annotated_minus_line,
+        annotated_plus_line,
+        compute_distance(d_numer as f64, d_denom as f64),
+    )
+}
+
+fn compute_distance(d_numer: f64, d_denom: f64) -> f64 {
+    if d_denom > 0.0 {
+        d_numer / d_denom
+    } else {
+        0.0
+    }
 }
 
 #[cfg(test)]
