@@ -173,55 +173,37 @@ mod set_delta_options {
 pub mod git_config_get {
     use git2;
 
+    macro_rules! _git_config_get {
+        ($keys:expr, $git_config:expr, $getter:ident) => {
+            match $git_config {
+                Some(git_config) => {
+                    let git_config = git_config.snapshot().unwrap();
+                    for key in $keys {
+                        let entry = git_config.$getter(&key);
+                        if let Ok(entry) = entry {
+                            return Some(entry);
+                        }
+                    }
+                    None
+                }
+                None => None,
+            }
+        };
+    }
+
     /// Get String value from gitconfig
     pub fn _string(keys: Vec<String>, git_config: &mut Option<git2::Config>) -> Option<String> {
-        match git_config {
-            Some(git_config) => {
-                let git_config = git_config.snapshot().unwrap();
-                for key in keys {
-                    let entry = git_config.get_string(&key);
-                    if let Ok(entry) = entry {
-                        return Some(entry);
-                    }
-                }
-                return None;
-            }
-            None => None,
-        }
+        _git_config_get!(keys, git_config, get_string)
     }
 
     /// Get bool value from gitconfig
     pub fn _bool(keys: Vec<String>, git_config: &mut Option<git2::Config>) -> Option<bool> {
-        match git_config {
-            Some(git_config) => {
-                let git_config = git_config.snapshot().unwrap();
-                for key in keys {
-                    let entry = git_config.get_bool(&key);
-                    if let Ok(entry) = entry {
-                        return Some(entry);
-                    }
-                }
-                return None;
-            }
-            None => None,
-        }
+        _git_config_get!(keys, git_config, get_bool)
     }
 
     /// Get i64 value from gitconfig
     pub fn _i64(keys: Vec<String>, git_config: &mut Option<git2::Config>) -> Option<i64> {
-        match git_config {
-            Some(git_config) => {
-                let git_config = git_config.snapshot().unwrap();
-                for key in keys {
-                    let entry = git_config.get_i64(&key);
-                    if let Ok(entry) = entry {
-                        return Some(entry);
-                    }
-                }
-                return None;
-            }
-            None => None,
-        }
+        _git_config_get!(keys, git_config, get_i64)
     }
 }
 
