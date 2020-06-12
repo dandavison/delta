@@ -1,6 +1,5 @@
 use regex::Regex;
 
-use lazy_static::lazy_static;
 use unicode_segmentation::UnicodeSegmentation;
 use unicode_width::UnicodeWidthStr;
 
@@ -17,6 +16,7 @@ pub fn infer_edits<'a, EditOperation>(
     deletion: EditOperation,
     noop_insertion: EditOperation,
     insertion: EditOperation,
+    tokenization_regex: &Regex,
     max_line_distance: f64,
     max_line_distance_for_naively_paired_lines: f64,
 ) -> (
@@ -35,7 +35,10 @@ where
     'minus_lines_loop: for minus_line in minus_lines {
         let mut considered = 0; // plus lines considered so far as match for minus_line
         for plus_line in &plus_lines[emitted..] {
-            let alignment = align::Alignment::new(tokenize(minus_line), tokenize(plus_line));
+            let alignment = align::Alignment::new(
+                tokenize(minus_line, tokenization_regex),
+                tokenize(plus_line, tokenization_regex),
+            );
             let (annotated_minus_line, annotated_plus_line, distance) = annotate(
                 alignment,
                 noop_deletion,
@@ -77,16 +80,12 @@ where
     (annotated_minus_lines, annotated_plus_lines)
 }
 
-lazy_static! {
-    static ref TOKENIZATION_REGEXP: Regex = Regex::new(r#"\w+"#).unwrap();
-}
-
 /// Split line into tokens for alignment. The alignment algorithm aligns sequences of substrings;
 /// not individual characters.
-fn tokenize(line: &str) -> Vec<&str> {
+fn tokenize<'a>(line: &'a str, regex: &Regex) -> Vec<&'a str> {
     let mut tokens = Vec::new();
     let mut offset = 0;
-    for m in TOKENIZATION_REGEXP.find_iter(line) {
+    for m in regex.find_iter(line) {
         if offset == 0 && m.start() > 0 {
             tokens.push("");
         }
@@ -236,7 +235,12 @@ where
 mod tests {
     use super::*;
     use itertools::Itertools;
+    use lazy_static::lazy_static;
     use unicode_segmentation::UnicodeSegmentation;
+
+    lazy_static! {
+        static ref DEFAULT_TOKENIZATION_REGEXP: Regex = Regex::new(r#"\w+"#).unwrap();
+    }
 
     #[derive(Clone, Copy, Debug, PartialEq)]
     enum EditOperation {
@@ -433,7 +437,7 @@ mod tests {
     }
 
     fn assert_tokenize(text: &str, expected_tokens: &[&str]) {
-        let actual_tokens = tokenize(text);
+        let actual_tokens = tokenize(text, &*DEFAULT_TOKENIZATION_REGEXP);
         assert_eq!(text, expected_tokens.iter().join(""));
         assert_eq!(actual_tokens, expected_tokens);
     }
@@ -712,6 +716,7 @@ mod tests {
             Deletion,
             PlusNoop,
             Insertion,
+            &*DEFAULT_TOKENIZATION_REGEXP,
             max_line_distance,
             0.0,
         );

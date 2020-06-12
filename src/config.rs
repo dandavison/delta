@@ -4,6 +4,7 @@ use std::process;
 
 use console::Term;
 use git2;
+use regex::Regex;
 use structopt::{clap, StructOpt};
 use syntect::highlighting::Style as SyntectStyle;
 use syntect::highlighting::Theme as SyntaxTheme;
@@ -68,6 +69,7 @@ pub struct Config<'a> {
     pub syntax_theme_name: String,
     pub tab_width: usize,
     pub true_color: bool,
+    pub tokenization_regex: Regex,
     pub zero_style: Style,
 }
 
@@ -248,6 +250,16 @@ impl<'a> From<cli::Opt> for Config<'a> {
                 .map(|s| s.parse::<f64>().unwrap_or(0.0))
                 .unwrap_or(0.0);
 
+        let tokenization_regex = Regex::new(&opt.tokenization_regex).unwrap_or_else(|_| {
+            eprintln!(
+                "Invalid word-diff-regex: {}. \
+                 The value must be a valid Rust regular expression. \
+                 See https://docs.rs/regex.",
+                opt.tokenization_regex
+            );
+            process::exit(1);
+        });
+
         Self {
             background_color_extends_to_terminal_width,
             commit_style,
@@ -291,6 +303,7 @@ impl<'a> From<cli::Opt> for Config<'a> {
             syntax_theme,
             syntax_theme_name,
             tab_width: opt.tab_width,
+            tokenization_regex,
             true_color,
             zero_style,
         }

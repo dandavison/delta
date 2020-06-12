@@ -94,6 +94,7 @@ fn rewrite_options_to_honor_git_config(
             ("plus-non-emph-style", plus_non_emph_style),
             ("plus-style", plus_style),
             ("true-color", true_color),
+            ("word-diff-regex", tokenization_regex),
             ("zero-style", zero_style)
         ],
         opt,
