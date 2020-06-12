@@ -125,8 +125,8 @@ fn _rewrite_options_to_implement_diff_highlight_emulation(
     git_config: &mut Option<git2::Config>,
     bold: bool,
 ) {
-    if opt.presets.as_deref().map(str::to_lowercase).as_deref() != Some("diff-highlight")
-        && opt.presets.as_deref().map(str::to_lowercase).as_deref() != Some("diff-so-fancy")
+    if !(has_preset("diff-highlight", opt.presets.as_deref())
+        || has_preset("diff-so-fancy", opt.presets.as_deref()))
     {
         return;
     }
@@ -182,7 +182,7 @@ fn rewrite_options_to_implement_diff_so_fancy_emulation(
     arg_matches: &clap::ArgMatches,
     git_config: &mut Option<git2::Config>,
 ) {
-    if opt.presets.as_deref().map(str::to_lowercase).as_deref() != Some("diff-so-fancy") {
+    if !has_preset("diff-so-fancy", opt.presets.as_deref()) {
         return;
     }
     _rewrite_options_to_implement_diff_highlight_emulation(opt, arg_matches, git_config, true);
@@ -410,6 +410,13 @@ fn _get_rewritten_minus_plus_style_string(
     }
 }
 
+fn has_preset(preset: &str, presets: Option<&str>) -> bool {
+    match presets.map(str::to_lowercase).as_deref() {
+        Some(presets) => presets.split_whitespace().any(|s| s == preset),
+        None => false,
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use std::ffi::OsString;
@@ -417,7 +424,19 @@ mod tests {
     use structopt::{clap, StructOpt};
 
     use crate::cli;
-    use crate::rewrite::apply_rewrite_rules;
+    use crate::rewrite::{apply_rewrite_rules, has_preset};
+
+    #[test]
+    fn test_has_preset() {
+        assert!(!has_preset("a", Some("")));
+        assert!(has_preset("a", Some("a")));
+        assert!(has_preset("a", Some("a b")));
+        assert!(has_preset("b", Some("a b")));
+        assert!(has_preset(
+            "diff-so-fancy",
+            Some("diff-so-fancy some-other-preset")
+        ));
+    }
 
     #[test]
     fn test_default_is_stable_under_rewrites() {
