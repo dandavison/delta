@@ -363,6 +363,12 @@ pub struct Opt {
     #[structopt(long = "list-syntax-themes")]
     pub list_syntax_themes: bool,
 
+    /// The regular expression used to decide what a word is for the within-line highlight
+    /// algorithm. For less fine-grained matching than the default try --word-diff-regex="\S+"
+    /// --max-line-distance=1.0 (this is more similar to `git --word-diff`).
+    #[structopt(long = "word-diff-regex", default_value = r"\w+")]
+    pub tokenization_regex: String,
+
     /// The maximum distance between two lines for them to be inferred to be homologous. Homologous
     /// line pairs are highlighted according to the deletion and insertion operations transforming
     /// one into the other.

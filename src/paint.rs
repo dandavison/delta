@@ -292,6 +292,7 @@ impl<'a> Painter<'a> {
             config.minus_emph_style,
             config.plus_style,
             config.plus_emph_style,
+            &config.tokenization_regex,
             config.max_line_distance,
             config.max_line_distance_for_naively_paired_lines,
         );

@@ -136,6 +136,18 @@ mod tests {
     }
 
     #[test]
+    // A bug appeared with the change to the tokenization regex in
+    // b5d87819a1f76de9ef8f16f1bfb413468af50b62. This test asserts that the bug is not present.
+    fn test_no_post_tokenization_regex_change_truncation_bug() {
+        for input in vec![DIFF_EXHIBITING_TRUNCATION_BUG] {
+            let config = integration_test_utils::make_config(&["--color-only"]);
+            let output = integration_test_utils::run_delta(input, &config);
+            assert_eq!(strip_ansi_codes(&output), input);
+            assert_ne!(output, input);
+        }
+    }
+
+    #[test]
     fn test_delta_paints_diff_when_there_is_unrecognized_initial_content() {
         for input in vec![
             DIFF_WITH_UNRECOGNIZED_PRECEDING_MATERIAL_1,
@@ -1421,5 +1433,15 @@ index 759070d,3daf9eb..0000000
 
   release:
   	@make -f release.Makefile release
+"#;
+
+    const DIFF_EXHIBITING_TRUNCATION_BUG: &str = r#"
+diff --git a/a.rs b/b.rs
+index cba6064..ba1a4de 100644
+--- a/a.rs
++++ b/b.rs
+@@ -1,1 +1,1 @@
+- Co
++ let col = Co
 "#;
 }
