@@ -8,20 +8,14 @@ use structopt::clap;
 
 use crate::cli;
 use crate::config::user_supplied_option;
-use crate::gitconfig::GetOptionValue;
 
-pub fn apply_rewrite_rules(
-    opt: &mut cli::Opt,
-    arg_matches: clap::ArgMatches,
-    git_config: &mut Option<git2::Config>,
-) {
-    rewrite_options_to_honor_git_config(opt, &arg_matches, git_config);
+pub fn apply_rewrite_rules(opt: &mut cli::Opt, arg_matches: &clap::ArgMatches) {
     rewrite_style_strings_to_honor_deprecated_minus_plus_options(opt);
     rewrite_options_to_implement_deprecated_commit_and_file_style_box_option(opt);
     rewrite_options_to_implement_deprecated_hunk_style_option(opt);
-    rewrite_options_to_implement_deprecated_theme_option(opt, &arg_matches);
+    rewrite_options_to_implement_deprecated_theme_option(opt, arg_matches);
     rewrite_options_to_implement_color_only(opt);
-    rewrite_options_to_implement_navigate(opt, &arg_matches);
+    rewrite_options_to_implement_navigate(opt, arg_matches);
 }
 
 /// Implement --color-only
@@ -36,81 +30,6 @@ fn rewrite_options_to_implement_color_only(opt: &mut cli::Opt) {
         opt.hunk_header_style = "raw".to_string();
         opt.hunk_header_decoration_style = "none".to_string();
     }
-}
-
-fn rewrite_options_to_honor_git_config(
-    opt: &mut cli::Opt,
-    arg_matches: &clap::ArgMatches,
-    git_config: &mut Option<git2::Config>,
-) {
-    if opt.no_gitconfig {
-        return;
-    }
-    // --presets must be set first
-    set_options__option_string!([("presets", presets)], opt, arg_matches, git_config);
-    set_options__bool!(
-        [
-            ("light", light),
-            ("dark", dark),
-            ("navigate", navigate),
-            ("color-only", color_only),
-            ("keep-plus-minus-markers", keep_plus_minus_markers),
-            ("number", show_line_numbers)
-        ],
-        opt,
-        arg_matches,
-        git_config
-    );
-    set_options__f64!(
-        [("max-line-distance", max_line_distance)],
-        opt,
-        arg_matches,
-        git_config
-    );
-    set_options__string!(
-        [
-            ("commit-decoration-style", commit_decoration_style),
-            ("commit-style", commit_style),
-            ("file-added-label", file_added_label),
-            ("file-decoration-style", file_decoration_style),
-            ("file-modified-label", file_modified_label),
-            ("file-removed-label", file_removed_label),
-            ("file-renamed-label", file_renamed_label),
-            ("file-style", file_style),
-            ("hunk-header-decoration-style", hunk_header_decoration_style),
-            ("hunk-header-style", hunk_header_style),
-            // Hack: minus-style must come before minus-*emph-style because the latter default
-            // dynamically to the value of the former.
-            ("minus-style", minus_style),
-            ("minus-emph-style", minus_emph_style),
-            ("minus-non-emph-style", minus_non_emph_style),
-            ("number-minus-format", number_minus_format),
-            ("number-minus-format-style", number_minus_format_style),
-            ("number-minus-style", number_minus_style),
-            ("number-plus-format", number_plus_format),
-            ("number-plus-format-style", number_plus_format_style),
-            ("number-plus-style", number_plus_style),
-            ("paging-mode", paging_mode),
-            // Hack: plus-style must come before plus-*emph-style because the latter default
-            // dynamically to the value of the former.
-            ("plus-style", plus_style),
-            ("plus-emph-style", plus_emph_style),
-            ("plus-non-emph-style", plus_non_emph_style),
-            ("true-color", true_color),
-            ("word-diff-regex", tokenization_regex),
-            ("zero-style", zero_style)
-        ],
-        opt,
-        arg_matches,
-        git_config
-    );
-    set_options__option_string!(
-        [("syntax_theme", syntax_theme), ("width", width)],
-        opt,
-        arg_matches,
-        git_config
-    );
-    set_options__usize!([("tabs", tab_width)], opt, arg_matches, git_config);
 }
 
 /// Implement --navigate
@@ -299,14 +218,14 @@ mod tests {
     use structopt::{clap, StructOpt};
 
     use crate::cli;
-    use crate::rewrite::apply_rewrite_rules;
+    use crate::rewrite_options::apply_rewrite_rules;
 
     #[test]
     fn test_default_is_stable_under_rewrites() {
         let mut opt = cli::Opt::from_iter(Vec::<OsString>::new());
         let before = opt.clone();
 
-        apply_rewrite_rules(&mut opt, clap::ArgMatches::new(), &mut None);
+        apply_rewrite_rules(&mut opt, &clap::ArgMatches::new());
 
         assert_eq!(opt, before);
     }
@@ -319,7 +238,7 @@ mod tests {
         opt.deprecated_hunk_style = Some("underline".to_string());
         let default = "blue box";
         assert_eq!(opt.hunk_header_decoration_style, default);
-        apply_rewrite_rules(&mut opt, clap::ArgMatches::new(), &mut None);
+        apply_rewrite_rules(&mut opt, &clap::ArgMatches::new());
         assert_eq!(opt.deprecated_hunk_style, None);
         assert_eq!(opt.hunk_header_decoration_style, "underline");
     }
@@ -330,7 +249,7 @@ mod tests {
         opt.deprecated_hunk_style = Some("".to_string());
         let default = "blue box";
         assert_eq!(opt.hunk_header_decoration_style, default);
-        apply_rewrite_rules(&mut opt, clap::ArgMatches::new(), &mut None);
+        apply_rewrite_rules(&mut opt, &clap::ArgMatches::new());
         assert_eq!(opt.deprecated_hunk_style, None);
         assert_eq!(opt.hunk_header_decoration_style, default);
     }

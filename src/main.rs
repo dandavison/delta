@@ -12,12 +12,12 @@ mod delta;
 mod draw;
 mod edits;
 mod env;
-#[macro_use]
-mod gitconfig;
+mod git_config;
 mod paint;
 mod parse;
 mod preset;
-mod rewrite;
+mod rewrite_options;
+mod set_options;
 mod style;
 mod syntax_theme;
 mod syntect_color;

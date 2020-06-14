@@ -16,7 +16,8 @@ use crate::cli;
 use crate::color;
 use crate::delta::State;
 use crate::env;
-use crate::rewrite;
+use crate::rewrite_options;
+use crate::set_options;
 use crate::style::Style;
 use crate::syntax_theme;
 
@@ -83,7 +84,8 @@ impl<'a> Config<'a> {
         git_config: &mut Option<git2::Config>,
     ) -> Self {
         let mut opt = cli::Opt::from_clap(&arg_matches);
-        rewrite::apply_rewrite_rules(&mut opt, arg_matches, git_config);
+        set_options::set_options(&mut opt, git_config, &arg_matches);
+        rewrite_options::apply_rewrite_rules(&mut opt, &arg_matches);
         Self::from(opt)
     }
 
