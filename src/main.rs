@@ -47,18 +47,10 @@ mod errors {
 }
 
 fn main() -> std::io::Result<()> {
-    let mut git_config = match std::env::current_dir() {
-        Ok(dir) => match git2::Repository::discover(dir) {
-            Ok(repo) => match repo.config() {
-                Ok(config) => Some(config),
-                Err(_) => None,
-            },
-            Err(_) => None,
-        },
-        Err(_) => None,
-    };
-
-    let config = config::Config::from_arg_matches(cli::Opt::clap().get_matches(), &mut git_config);
+    let config = config::Config::from_arg_matches(
+        cli::Opt::clap().get_matches(),
+        &mut git_config::get_git_config(),
+    );
 
     if config.list_languages {
         list_languages()?;

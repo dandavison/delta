@@ -1,4 +1,19 @@
-pub fn git_config_get<T>(key: &str, git_config: git2::Config) -> Option<T>
+use git2;
+
+pub fn get_git_config() -> Option<git2::Config> {
+    match std::env::current_dir() {
+        Ok(dir) => match git2::Repository::discover(dir) {
+            Ok(repo) => match repo.config() {
+                Ok(config) => Some(config),
+                Err(_) => None,
+            },
+            Err(_) => None,
+        },
+        Err(_) => None,
+    }
+}
+
+pub fn git_config_get<T>(key: &str, git_config: &git2::Config) -> Option<T>
 where
     T: GitConfigGet,
 {

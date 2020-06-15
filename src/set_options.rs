@@ -74,7 +74,7 @@ trait GetOptionValue {
                 process::exit(1)
             });
             if let Some(value) =
-                git_config_get::<Self>(&format!("delta.{}.{}", preset, option_name), git_config)
+                git_config_get::<Self>(&format!("delta.{}.{}", preset, option_name), &git_config)
             {
                 return Some(value);
             }
