@@ -1,5 +1,4 @@
 use std::collections::HashMap;
-use std::process;
 use structopt::clap;
 
 use crate::cli;
@@ -43,10 +42,6 @@ trait GetOptionValue {
             }
         }
         if let Some(git_config) = git_config {
-            let git_config = git_config.snapshot().unwrap_or_else(|err| {
-                eprintln!("Failed to read git config: {}", err);
-                process::exit(1)
-            });
             if let Some(value) =
                 git_config_get::<Self>(&format!("delta.{}", option_name), git_config)
             {
@@ -69,10 +64,6 @@ trait GetOptionValue {
         Self: GetValueFunctionFromBuiltinPreset,
     {
         if let Some(git_config) = git_config {
-            let git_config = git_config.snapshot().unwrap_or_else(|err| {
-                eprintln!("Failed to read git config: {}", err);
-                process::exit(1)
-            });
             if let Some(value) =
                 git_config_get::<Self>(&format!("delta.{}.{}", preset, option_name), &git_config)
             {

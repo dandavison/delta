@@ -1,10 +1,15 @@
+use std::process;
+
 use git2;
 
 pub fn get_git_config() -> Option<git2::Config> {
     match std::env::current_dir() {
         Ok(dir) => match git2::Repository::discover(dir) {
             Ok(repo) => match repo.config() {
-                Ok(config) => Some(config),
+                Ok(mut config) => Some(config.snapshot().unwrap_or_else(|err| {
+                    eprintln!("Failed to read git config: {}", err);
+                    process::exit(1)
+                })),
                 Err(_) => None,
             },
             Err(_) => None,
