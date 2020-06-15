@@ -11,21 +11,23 @@ pub struct GitConfig {
 
 impl GitConfig {
     pub fn try_create() -> Option<Self> {
-        match std::env::current_dir() {
-            Ok(dir) => match git2::Repository::discover(dir) {
-                Ok(repo) => match repo.config() {
-                    Ok(mut config) => {
-                        let config = config.snapshot().unwrap_or_else(|err| {
-                            eprintln!("Failed to read git config: {}", err);
-                            process::exit(1)
-                        });
-                        Some(Self { config })
-                    }
-                    Err(_) => None,
-                },
-                Err(_) => None,
-            },
-            Err(_) => None,
+        let repo = match std::env::current_dir() {
+            Ok(dir) => git2::Repository::discover(dir).ok(),
+            _ => None,
+        };
+        let config = match repo {
+            Some(repo) => repo.config().ok(),
+            None => git2::Config::open_default().ok(),
+        };
+        match config {
+            Some(mut config) => {
+                let config = config.snapshot().unwrap_or_else(|err| {
+                    eprintln!("Failed to read git config: {}", err);
+                    process::exit(1)
+                });
+                Some(Self { config })
+            }
+            None => None,
         }
     }
 
