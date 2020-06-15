@@ -1,8 +1,9 @@
 use std::collections::HashMap;
 
 use crate::cli;
+use crate::git_config::GitConfig;
 
-type PresetValueFunction<T> = Box<dyn Fn(&cli::Opt, &Option<git2::Config>) -> T>;
+type PresetValueFunction<T> = Box<dyn Fn(&cli::Opt, &Option<GitConfig>) -> T>;
 pub type BuiltinPreset<T> = HashMap<String, PresetValueFunction<T>>;
 
 pub trait GetValueFunctionFromBuiltinPreset {
@@ -51,9 +52,9 @@ fn _make_diff_highlight_preset<'a>(bold: bool) -> Vec<(String, PresetValueFuncti
     vec![
         (
             "minus-style".to_string(),
-            Box::new(move |_opt: &cli::Opt, git_config: &Option<git2::Config>| {
+            Box::new(move |_opt: &cli::Opt, git_config: &Option<GitConfig>| {
                 match git_config {
-                    Some(git_config) => git_config.get_string("color.diff.old").ok(),
+                    Some(git_config) => git_config.get::<String>("color.diff.old"),
                     None => None,
                 }
                 .unwrap_or_else(|| (if bold { "bold red" } else { "red" }).to_string())
@@ -61,11 +62,9 @@ fn _make_diff_highlight_preset<'a>(bold: bool) -> Vec<(String, PresetValueFuncti
         ),
         (
             "minus-non-emph-style".to_string(),
-            Box::new(|opt: &cli::Opt, git_config: &Option<git2::Config>| {
+            Box::new(|opt: &cli::Opt, git_config: &Option<GitConfig>| {
                 match git_config {
-                    Some(git_config) => {
-                        git_config.get_string("color.diff-highlight.oldNormal").ok()
-                    }
+                    Some(git_config) => git_config.get::<String>("color.diff-highlight.oldNormal"),
                     None => None,
                 }
                 .unwrap_or_else(|| opt.minus_style.clone())
@@ -73,11 +72,11 @@ fn _make_diff_highlight_preset<'a>(bold: bool) -> Vec<(String, PresetValueFuncti
         ),
         (
             "minus-emph-style".to_string(),
-            Box::new(|opt: &cli::Opt, git_config: &Option<git2::Config>| {
+            Box::new(|opt: &cli::Opt, git_config: &Option<GitConfig>| {
                 match git_config {
-                    Some(git_config) => git_config
-                        .get_string("color.diff-highlight.oldHighlight")
-                        .ok(),
+                    Some(git_config) => {
+                        git_config.get::<String>("color.diff-highlight.oldHighlight")
+                    }
                     None => None,
                 }
                 .unwrap_or_else(|| format!("{} reverse", opt.minus_style))
@@ -85,13 +84,13 @@ fn _make_diff_highlight_preset<'a>(bold: bool) -> Vec<(String, PresetValueFuncti
         ),
         (
             "zero-style".to_string(),
-            Box::new(|_opt: &cli::Opt, _git_config: &Option<git2::Config>| "normal".to_string()),
+            Box::new(|_opt: &cli::Opt, _git_config: &Option<GitConfig>| "normal".to_string()),
         ),
         (
             "plus-style".to_string(),
-            Box::new(move |_opt: &cli::Opt, git_config: &Option<git2::Config>| {
+            Box::new(move |_opt: &cli::Opt, git_config: &Option<GitConfig>| {
                 match git_config {
-                    Some(git_config) => git_config.get_string("color.diff.new").ok(),
+                    Some(git_config) => git_config.get::<String>("color.diff.new"),
                     None => None,
                 }
                 .unwrap_or_else(|| (if bold { "bold green" } else { "green" }).to_string())
@@ -99,11 +98,9 @@ fn _make_diff_highlight_preset<'a>(bold: bool) -> Vec<(String, PresetValueFuncti
         ),
         (
             "plus-non-emph-style".to_string(),
-            Box::new(|opt: &cli::Opt, git_config: &Option<git2::Config>| {
+            Box::new(|opt: &cli::Opt, git_config: &Option<GitConfig>| {
                 match git_config {
-                    Some(git_config) => {
-                        git_config.get_string("color.diff-highlight.newNormal").ok()
-                    }
+                    Some(git_config) => git_config.get::<String>("color.diff-highlight.newNormal"),
                     None => None,
                 }
                 .unwrap_or_else(|| opt.plus_style.clone())
@@ -111,11 +108,11 @@ fn _make_diff_highlight_preset<'a>(bold: bool) -> Vec<(String, PresetValueFuncti
         ),
         (
             "plus-emph-style".to_string(),
-            Box::new(|opt: &cli::Opt, git_config: &Option<git2::Config>| {
+            Box::new(|opt: &cli::Opt, git_config: &Option<GitConfig>| {
                 match git_config {
-                    Some(git_config) => git_config
-                        .get_string("color.diff-highlight.newHighlight")
-                        .ok(),
+                    Some(git_config) => {
+                        git_config.get::<String>("color.diff-highlight.newHighlight")
+                    }
                     None => None,
                 }
                 .unwrap_or_else(|| format!("{} reverse", opt.plus_style))
@@ -132,17 +129,17 @@ fn make_diff_so_fancy_preset() -> Vec<(String, PresetValueFunction<String>)> {
     let mut preset = _make_diff_highlight_preset(true);
     preset.push((
         "commit-style".to_string(),
-        Box::new(|_opt: &cli::Opt, _git_config: &Option<git2::Config>| "bold yellow".to_string()),
+        Box::new(|_opt: &cli::Opt, _git_config: &Option<GitConfig>| "bold yellow".to_string()),
     ));
     preset.push((
         "commit-decoration-style".to_string(),
-        Box::new(|_opt: &cli::Opt, _git_config: &Option<git2::Config>| "none".to_string()),
+        Box::new(|_opt: &cli::Opt, _git_config: &Option<GitConfig>| "none".to_string()),
     ));
     preset.push((
         "file-style".to_string(),
-        Box::new(|_opt: &cli::Opt, git_config: &Option<git2::Config>| {
+        Box::new(|_opt: &cli::Opt, git_config: &Option<GitConfig>| {
             match git_config {
-                Some(git_config) => git_config.get_string("color.diff.meta").ok(),
+                Some(git_config) => git_config.get::<String>("color.diff.meta"),
                 None => None,
             }
             .unwrap_or_else(|| "11".to_string())
@@ -150,15 +147,15 @@ fn make_diff_so_fancy_preset() -> Vec<(String, PresetValueFunction<String>)> {
     ));
     preset.push((
         "file-decoration-style".to_string(),
-        Box::new(|_opt: &cli::Opt, _git_config: &Option<git2::Config>| {
+        Box::new(|_opt: &cli::Opt, _git_config: &Option<GitConfig>| {
             "bold yellow ul ol".to_string()
         }),
     ));
     preset.push((
         "hunk-header-style".to_string(),
-        Box::new(|_opt: &cli::Opt, git_config: &Option<git2::Config>| {
+        Box::new(|_opt: &cli::Opt, git_config: &Option<GitConfig>| {
             match git_config {
-                Some(git_config) => git_config.get_string("color.diff.frag").ok(),
+                Some(git_config) => git_config.get::<String>("color.diff.frag"),
                 None => None,
             }
             .unwrap_or_else(|| "bold syntax".to_string())
@@ -166,7 +163,7 @@ fn make_diff_so_fancy_preset() -> Vec<(String, PresetValueFunction<String>)> {
     ));
     preset.push((
         "hunk-header-decoration-style".to_string(),
-        Box::new(|_opt: &cli::Opt, _git_config: &Option<git2::Config>| "magenta box".to_string()),
+        Box::new(|_opt: &cli::Opt, _git_config: &Option<GitConfig>| "magenta box".to_string()),
     ));
     preset
 }
@@ -177,10 +174,10 @@ mod tests {
     use std::io::Write;
     use std::path::Path;
 
-    use git2;
     use itertools;
 
     use crate::config;
+    use crate::git_config::GitConfig;
     use crate::style::{DecorationStyle, Style};
 
     #[test]
@@ -548,11 +545,11 @@ mod tests {
         DecorationStyle::from_str(s, true)
     }
 
-    fn make_git_config(contents: &[u8], path: &str) -> git2::Config {
+    fn make_git_config(contents: &[u8], path: &str) -> GitConfig {
         let path = Path::new(path);
         let mut file = File::create(path).unwrap();
         file.write_all(contents).unwrap();
-        git2::Config::open(&path).unwrap()
+        GitConfig::from_path(&path)
     }
 
     fn make_config<'a>(

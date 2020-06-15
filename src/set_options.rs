@@ -2,7 +2,7 @@ use std::collections::HashMap;
 use structopt::clap;
 
 use crate::cli;
-use crate::git_config::{git_config_get, GitConfigGet};
+use crate::git_config::{self, GitConfigGet};
 use crate::preset::{self, GetValueFunctionFromBuiltinPreset};
 
 // A type T implementing this trait gains a static method allowing an option value of type T to be
@@ -21,7 +21,7 @@ trait GetOptionValue {
         option_name: &str,
         builtin_presets: &HashMap<String, preset::BuiltinPreset<String>>,
         opt: &cli::Opt,
-        git_config: &mut Option<git2::Config>,
+        git_config: &mut Option<git_config::GitConfig>,
     ) -> Option<Self>
     where
         Self: Sized,
@@ -42,9 +42,7 @@ trait GetOptionValue {
             }
         }
         if let Some(git_config) = git_config {
-            if let Some(value) =
-                git_config_get::<Self>(&format!("delta.{}", option_name), git_config)
-            {
+            if let Some(value) = git_config.get::<Self>(&format!("delta.{}", option_name)) {
                 return Some(value);
             }
         }
@@ -56,7 +54,7 @@ trait GetOptionValue {
         preset: &str,
         builtin_presets: &HashMap<String, preset::BuiltinPreset<String>>,
         opt: &cli::Opt,
-        git_config: &mut Option<git2::Config>,
+        git_config: &mut Option<git_config::GitConfig>,
     ) -> Option<Self>
     where
         Self: Sized,
@@ -65,7 +63,7 @@ trait GetOptionValue {
     {
         if let Some(git_config) = git_config {
             if let Some(value) =
-                git_config_get::<Self>(&format!("delta.{}.{}", preset, option_name), &git_config)
+                git_config.get::<Self>(&format!("delta.{}.{}", preset, option_name))
             {
                 return Some(value);
             }
@@ -164,7 +162,7 @@ mod set_options {
 
 pub fn set_options(
     opt: &mut cli::Opt,
-    git_config: &mut Option<git2::Config>,
+    git_config: &mut Option<git_config::GitConfig>,
     arg_matches: &clap::ArgMatches,
 ) {
     if opt.no_gitconfig {

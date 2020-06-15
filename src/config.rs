@@ -3,7 +3,6 @@ use std::path::PathBuf;
 use std::process;
 
 use console::Term;
-use git2;
 use regex::Regex;
 use structopt::{clap, StructOpt};
 use syntect::highlighting::Style as SyntectStyle;
@@ -16,6 +15,7 @@ use crate::cli;
 use crate::color;
 use crate::delta::State;
 use crate::env;
+use crate::git_config::GitConfig;
 use crate::rewrite_options;
 use crate::set_options;
 use crate::style::Style;
@@ -75,13 +75,13 @@ pub struct Config<'a> {
 }
 
 impl<'a> Config<'a> {
-    pub fn from_args(args: &[&str], git_config: &mut Option<git2::Config>) -> Self {
+    pub fn from_args(args: &[&str], git_config: &mut Option<GitConfig>) -> Self {
         Self::from_arg_matches(cli::Opt::clap().get_matches_from(args), git_config)
     }
 
     pub fn from_arg_matches(
         arg_matches: clap::ArgMatches,
-        git_config: &mut Option<git2::Config>,
+        git_config: &mut Option<GitConfig>,
     ) -> Self {
         let mut opt = cli::Opt::from_clap(&arg_matches);
         set_options::set_options(&mut opt, git_config, &arg_matches);

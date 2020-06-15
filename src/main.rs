@@ -49,7 +49,7 @@ mod errors {
 fn main() -> std::io::Result<()> {
     let config = config::Config::from_arg_matches(
         cli::Opt::clap().get_matches(),
-        &mut git_config::get_git_config(),
+        &mut git_config::GitConfig::try_create(),
     );
 
     if config.list_languages {
