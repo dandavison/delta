@@ -14,21 +14,6 @@ pub fn apply_rewrite_rules(opt: &mut cli::Opt, arg_matches: &clap::ArgMatches) {
     rewrite_options_to_implement_deprecated_commit_and_file_style_box_option(opt);
     rewrite_options_to_implement_deprecated_hunk_style_option(opt);
     rewrite_options_to_implement_deprecated_theme_option(opt, arg_matches);
-    rewrite_options_to_implement_color_only(opt);
-}
-
-/// Implement --color-only
-fn rewrite_options_to_implement_color_only(opt: &mut cli::Opt) {
-    if opt.color_only {
-        opt.keep_plus_minus_markers = true;
-        opt.tab_width = 0;
-        opt.commit_style = "raw".to_string();
-        opt.commit_decoration_style = "none".to_string();
-        opt.file_style = "raw".to_string();
-        opt.file_decoration_style = "none".to_string();
-        opt.hunk_header_style = "raw".to_string();
-        opt.hunk_header_decoration_style = "none".to_string();
-    }
 }
 
 /// Honor deprecated --theme

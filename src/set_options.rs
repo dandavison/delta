@@ -23,6 +23,9 @@ pub fn set_options(
     git_config: &mut Option<git_config::GitConfig>,
     arg_matches: &clap::ArgMatches,
 ) {
+    if opt.color_only {
+        opt.features = format!("{} color-only", opt.features);
+    }
     // Handle options which default to an arbitrary git config value.
     // TODO: incorporate this logic into the set_options macro.
     if !config::user_supplied_option("whitespace-error-style", arg_matches) {

@@ -27,6 +27,10 @@ type OptionValueFunction = Box<dyn Fn(&cli::Opt, &Option<GitConfig>) -> Provenan
 pub fn make_builtin_features() -> HashMap<String, BuiltinFeature> {
     vec![
         (
+            "color-only".to_string(),
+            color_only::make_feature().into_iter().collect(),
+        ),
+        (
             "diff-highlight".to_string(),
             diff_highlight::make_feature().into_iter().collect(),
         ),
@@ -65,6 +69,7 @@ macro_rules! builtin_feature {
     }
 }
 
+pub mod color_only;
 pub mod diff_highlight;
 pub mod diff_so_fancy;
 pub mod navigate;
