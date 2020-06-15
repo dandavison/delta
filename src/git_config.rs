@@ -58,6 +58,15 @@ impl GitConfigGet for String {
     }
 }
 
+impl GitConfigGet for Option<String> {
+    fn git_config_get(key: &str, git_config: &GitConfig) -> Option<Self> {
+        match git_config.config.get_string(key) {
+            Ok(value) => Some(Some(value)),
+            _ => None,
+        }
+    }
+}
+
 impl GitConfigGet for bool {
     fn git_config_get(key: &str, git_config: &GitConfig) -> Option<Self> {
         git_config.config.get_bool(key).ok()
@@ -67,5 +76,23 @@ impl GitConfigGet for bool {
 impl GitConfigGet for i64 {
     fn git_config_get(key: &str, git_config: &GitConfig) -> Option<Self> {
         git_config.config.get_i64(key).ok()
+    }
+}
+
+impl GitConfigGet for usize {
+    fn git_config_get(key: &str, git_config: &GitConfig) -> Option<Self> {
+        match git_config.config.get_i64(key) {
+            Ok(value) => Some(value as usize),
+            _ => None,
+        }
+    }
+}
+
+impl GitConfigGet for f64 {
+    fn git_config_get(key: &str, git_config: &GitConfig) -> Option<Self> {
+        match git_config.config.get_string(key) {
+            Ok(value) => value.parse::<f64>().ok(),
+            _ => None,
+        }
     }
 }

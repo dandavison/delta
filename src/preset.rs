@@ -6,6 +6,8 @@ use crate::git_config::GitConfig;
 type PresetValueFunction<T> = Box<dyn Fn(&cli::Opt, &Option<GitConfig>) -> T>;
 pub type BuiltinPreset<T> = HashMap<String, PresetValueFunction<T>>;
 
+// Currently the builtin presets only have String values. This default implementation is used by all
+// other types.
 pub trait GetValueFunctionFromBuiltinPreset {
     fn get_value_function_from_builtin_preset<'a>(
         _option_name: &str,
@@ -29,6 +31,9 @@ impl GetValueFunctionFromBuiltinPreset for String {
 
 impl GetValueFunctionFromBuiltinPreset for bool {}
 impl GetValueFunctionFromBuiltinPreset for i64 {}
+impl GetValueFunctionFromBuiltinPreset for usize {}
+impl GetValueFunctionFromBuiltinPreset for f64 {}
+impl GetValueFunctionFromBuiltinPreset for Option<String> {}
 
 // Construct a 2-level hash map: (preset name) -> (option name) -> (value function). A value
 // function is a function that takes an Opt struct, and a git Config struct, and returns the value
