@@ -559,11 +559,11 @@ mod tests {
         GitConfig::from_path(&path)
     }
 
-    fn make_config<'a>(
+    fn make_config(
         args: &[&str],
         git_config_contents: Option<&[u8]>,
         path: Option<&str>,
-    ) -> config::Config<'a> {
+    ) -> config::Config {
         let args: Vec<&str> = itertools::chain(
             &["/dev/null", "/dev/null", "--24-bit-color", "always"],
             args,

@@ -26,7 +26,7 @@ pub enum Width {
     Variable,
 }
 
-pub struct Config<'a> {
+pub struct Config {
     pub background_color_extends_to_terminal_width: bool,
     pub commit_style: Style,
     pub decorations_width: Width,
@@ -35,6 +35,7 @@ pub struct Config<'a> {
     pub file_removed_label: String,
     pub file_renamed_label: String,
     pub file_style: Style,
+    pub keep_plus_minus_markers: bool,
     pub hunk_header_style: Style,
     pub list_languages: bool,
     pub list_syntax_theme_names: bool,
@@ -44,7 +45,6 @@ pub struct Config<'a> {
     pub max_line_distance_for_naively_paired_lines: f64,
     pub minus_emph_style: Style,
     pub minus_file: Option<PathBuf>,
-    pub minus_line_marker: &'a str,
     pub minus_non_emph_style: Style,
     pub minus_style: Style,
     pub navigate: bool,
@@ -59,7 +59,6 @@ pub struct Config<'a> {
     pub paging_mode: PagingMode,
     pub plus_emph_style: Style,
     pub plus_file: Option<PathBuf>,
-    pub plus_line_marker: &'a str,
     pub plus_non_emph_style: Style,
     pub plus_style: Style,
     pub show_background_colors: bool,
@@ -74,7 +73,7 @@ pub struct Config<'a> {
     pub zero_style: Style,
 }
 
-impl<'a> Config<'a> {
+impl Config {
     pub fn from_args(args: &[&str], git_config: &mut Option<GitConfig>) -> Self {
         Self::from_arg_matches(cli::Opt::clap().get_matches_from(args), git_config)
     }
@@ -149,7 +148,7 @@ fn is_truecolor_terminal() -> bool {
         .unwrap_or(false)
 }
 
-impl<'a> From<cli::Opt> for Config<'a> {
+impl From<cli::Opt> for Config {
     fn from(opt: cli::Opt) -> Self {
         let assets = HighlightingAssets::new();
 
@@ -236,17 +235,6 @@ impl<'a> From<cli::Opt> for Config<'a> {
         };
         let syntax_dummy_theme = assets.theme_set.themes.values().next().unwrap().clone();
 
-        let minus_line_marker = if opt.keep_plus_minus_markers {
-            "-"
-        } else {
-            " "
-        };
-        let plus_line_marker = if opt.keep_plus_minus_markers {
-            "+"
-        } else {
-            " "
-        };
-
         let max_line_distance_for_naively_paired_lines =
             env::get_env_var("DELTA_EXPERIMENTAL_MAX_LINE_DISTANCE_FOR_NAIVELY_PAIRED_LINES")
                 .map(|s| s.parse::<f64>().unwrap_or(0.0))
@@ -271,6 +259,7 @@ impl<'a> From<cli::Opt> for Config<'a> {
             file_removed_label: opt.file_removed_label,
             file_renamed_label: opt.file_renamed_label,
             file_style,
+            keep_plus_minus_markers: opt.keep_plus_minus_markers,
             hunk_header_style,
             list_languages: opt.list_languages,
             list_syntax_theme_names: opt.list_syntax_theme_names,
@@ -280,7 +269,6 @@ impl<'a> From<cli::Opt> for Config<'a> {
             max_line_distance_for_naively_paired_lines,
             minus_emph_style,
             minus_file: opt.minus_file.map(|s| s.clone()),
-            minus_line_marker,
             minus_non_emph_style,
             minus_style,
             navigate: opt.navigate,
@@ -295,7 +283,6 @@ impl<'a> From<cli::Opt> for Config<'a> {
             paging_mode,
             plus_emph_style,
             plus_file: opt.plus_file.map(|s| s.clone()),
-            plus_line_marker,
             plus_non_emph_style,
             plus_style,
             show_background_colors: opt.show_background_colors,

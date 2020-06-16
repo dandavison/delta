@@ -22,7 +22,7 @@ pub struct Painter<'a> {
     pub writer: &'a mut dyn Write,
     pub syntax: &'a SyntaxReference,
     pub highlighter: HighlightLines<'a>,
-    pub config: &'a config::Config<'a>,
+    pub config: &'a config::Config,
     pub output_buffer: String,
     pub minus_line_number: usize,
     pub plus_line_number: usize,
@@ -96,7 +96,11 @@ impl<'a> Painter<'a> {
                 minus_line_numbers,
                 &mut self.output_buffer,
                 self.config,
-                self.config.minus_line_marker,
+                if self.config.keep_plus_minus_markers {
+                    "-"
+                } else {
+                    ""
+                },
                 self.config.minus_style,
                 self.config.minus_non_emph_style,
                 None,
@@ -109,7 +113,11 @@ impl<'a> Painter<'a> {
                 plus_line_numbers,
                 &mut self.output_buffer,
                 self.config,
-                self.config.plus_line_marker,
+                if self.config.keep_plus_minus_markers {
+                    "+"
+                } else {
+                    ""
+                },
                 self.config.plus_style,
                 self.config.plus_non_emph_style,
                 None,
