@@ -103,6 +103,16 @@ fn make_diff_so_fancy_preset() -> Vec<(String, PresetValueFunction<String>)> {
     let mut preset = _make_diff_highlight_preset(true);
     preset.extend(builtin_preset!([
         (
+            "minus-emph-style",
+            Some("color.diff-highlight.oldHighlight"),
+            _opt => "bold red 52".to_string()
+        ),
+        (
+            "plus-emph-style",
+            Some("color.diff-highlight.newHighlight"),
+            _opt => "bold green 22".to_string()
+        ),
+        (
             "commit-style",
             None,
             _opt => "bold yellow".to_string()
