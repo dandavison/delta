@@ -200,7 +200,9 @@ impl<'a> Painter<'a> {
                     }
                     handled_prefix = true;
                 }
-                ansi_strings.push(section_style.ansi_term_style.paint(text));
+                if !text.is_empty() {
+                    ansi_strings.push(section_style.ansi_term_style.paint(text));
+                }
             }
             // Set style for the right-fill.
             let mut have_background_for_right_fill = false;
