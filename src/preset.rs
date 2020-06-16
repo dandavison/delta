@@ -3,37 +3,20 @@ use std::collections::HashMap;
 use crate::cli;
 use crate::git_config::GitConfig;
 
-type PresetValueFunction<T> = Box<dyn Fn(&cli::Opt, &Option<GitConfig>) -> T>;
+/// A preset is a named set of command line (option, value) pairs, supplied in a git config file.
+/// I.e. it might look like
+///
+/// [delta "decorations"]
+///     commit-decoration-style = bold box ul
+///     file-style = bold 19 ul
+///     file-decoration-style = none
+///
+/// A builtin preset is a named set of command line (option, value) pairs that is built in to
+/// delta. The implementation stores each value as a function, which allows the value (a) to depend
+/// dynamically on the value of other command line options, and (b) to be taken from git config.
+// Currently, all values in builtin presets are of type String.
 pub type BuiltinPreset<T> = HashMap<String, PresetValueFunction<T>>;
-
-// Currently the builtin presets only have String values. This default implementation is used by
-// all other types.
-pub trait GetValueFunctionFromBuiltinPreset {
-    fn get_value_function_from_builtin_preset<'a>(
-        _option_name: &str,
-        _builtin_preset: &'a BuiltinPreset<String>,
-    ) -> Option<&'a PresetValueFunction<Self>>
-    where
-        Self: Sized,
-    {
-        None
-    }
-}
-
-impl GetValueFunctionFromBuiltinPreset for String {
-    fn get_value_function_from_builtin_preset<'a>(
-        option_name: &str,
-        builtin_preset: &'a BuiltinPreset<String>,
-    ) -> Option<&'a PresetValueFunction<String>> {
-        builtin_preset.get(option_name)
-    }
-}
-
-impl GetValueFunctionFromBuiltinPreset for bool {}
-impl GetValueFunctionFromBuiltinPreset for i64 {}
-impl GetValueFunctionFromBuiltinPreset for usize {}
-impl GetValueFunctionFromBuiltinPreset for f64 {}
-impl GetValueFunctionFromBuiltinPreset for Option<String> {}
+type PresetValueFunction<T> = Box<dyn Fn(&cli::Opt, &Option<GitConfig>) -> T>;
 
 // Construct a 2-level hash map: (preset name) -> (option name) -> (value function). A value
 // function is a function that takes an Opt struct, and a git Config struct, and returns the value
@@ -53,17 +36,19 @@ pub fn make_builtin_presets() -> HashMap<String, BuiltinPreset<String>> {
     .collect()
 }
 
+/// The macro permits the values of a builtin preset to be specified as either (a) a git config
+/// entry or (b) a value, which may be computed from the other command line options (cli::Opt).
 macro_rules! builtin_preset {
-    ([$( ($option_name:expr, $key:expr, $opt:ident => $default:expr) ),*]) => {
+    ([$( ($option_name:expr, $git_config_key:expr, $opt:ident => $value:expr) ),*]) => {
         vec![$(
             (
                 $option_name.to_string(),
                 Box::new(move |$opt: &cli::Opt, git_config: &Option<GitConfig>| {
-                    match (git_config, $key) {
-                        (Some(git_config), Some(key)) => git_config.get::<String>(key),
+                    match (git_config, $git_config_key) {
+                        (Some(git_config), Some(git_config_key)) => git_config.get::<String>(git_config_key),
                         _ => None,
                     }
-                    .unwrap_or_else(|| $default)
+                    .unwrap_or_else(|| $value)
                 }) as PresetValueFunction<String>
             )
         ),*]
@@ -117,38 +102,68 @@ fn make_diff_highlight_preset() -> Vec<(String, PresetValueFunction<String>)> {
 fn make_diff_so_fancy_preset() -> Vec<(String, PresetValueFunction<String>)> {
     let mut preset = _make_diff_highlight_preset(true);
     preset.extend(builtin_preset!([
-            (
-                "commit-style",
-                None,
-                _opt => "bold yellow".to_string()),
-            (
-                "commit-decoration-style",
-                None,
-                _opt => "none".to_string()
-            ),
-            (
-                "file-style",
-                Some("color.diff.meta"),
-                _opt => "11".to_string()
-            ),
-            (
-                "file-decoration-style",
-                None,
-                _opt => "bold yellow ul ol".to_string()
-            ),
-            (
-                "hunk-header-style",
-                Some("color.diff.frag"),
-                _opt => "bold syntax".to_string()
-            ),
-            (
-                "hunk-header-decoration-style",
-                None,
-                _opt => "magenta box".to_string()
-            )
-        ]));
+        (
+            "commit-style",
+            None,
+            _opt => "bold yellow".to_string()
+        ),
+        (
+            "commit-decoration-style",
+            None,
+            _opt => "none".to_string()
+        ),
+        (
+            "file-style",
+            Some("color.diff.meta"),
+            _opt => "11".to_string()
+        ),
+        (
+            "file-decoration-style",
+            None,
+            _opt => "bold yellow ul ol".to_string()
+        ),
+        (
+            "hunk-header-style",
+            Some("color.diff.frag"),
+            _opt => "bold syntax".to_string()
+        ),
+        (
+            "hunk-header-decoration-style",
+            None,
+            _opt => "magenta box".to_string()
+        )
+    ]));
     preset
 }
+
+// Currently the builtin presets only have String values. The trait is implemented for other types
+// out of necessity.
+pub trait GetValueFunctionFromBuiltinPreset {
+    fn get_value_function_from_builtin_preset<'a>(
+        _option_name: &str,
+        _builtin_preset: &'a BuiltinPreset<String>,
+    ) -> Option<&'a PresetValueFunction<Self>>
+    where
+        Self: Sized,
+    {
+        None
+    }
+}
+
+impl GetValueFunctionFromBuiltinPreset for String {
+    fn get_value_function_from_builtin_preset<'a>(
+        option_name: &str,
+        builtin_preset: &'a BuiltinPreset<String>,
+    ) -> Option<&'a PresetValueFunction<String>> {
+        builtin_preset.get(option_name)
+    }
+}
+
+impl GetValueFunctionFromBuiltinPreset for bool {}
+impl GetValueFunctionFromBuiltinPreset for i64 {}
+impl GetValueFunctionFromBuiltinPreset for usize {}
+impl GetValueFunctionFromBuiltinPreset for f64 {}
+impl GetValueFunctionFromBuiltinPreset for Option<String> {}
 
 #[cfg(test)]
 mod tests {
