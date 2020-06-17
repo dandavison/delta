@@ -2,6 +2,8 @@
 mod tests {
     use console::strip_ansi_codes;
 
+    use crate::paint;
+    use crate::style;
     use crate::tests::ansi_test_utils::ansi_test_utils;
     use crate::tests::integration_test_utils::integration_test_utils;
 
@@ -51,7 +53,7 @@ mod tests {
         let output = integration_test_utils::get_line_of_code_from_delta(
             &ADDED_FILE_INPUT,
             12,
-            " class X:",
+            "class X:",
             &config,
         );
         ansi_test_utils::assert_has_color_other_than_plus_color(&output, &config);
@@ -64,7 +66,7 @@ mod tests {
         let config = integration_test_utils::make_config(&[]);
         let input = ADDED_FILE_INPUT.replace("a.py", "a");
         let output =
-            integration_test_utils::get_line_of_code_from_delta(&input, 12, " class X:", &config);
+            integration_test_utils::get_line_of_code_from_delta(&input, 12, "class X:", &config);
         ansi_test_utils::assert_has_color_other_than_plus_color(&output, &config);
     }
 
@@ -76,7 +78,7 @@ mod tests {
             integration_test_utils::make_config(&["--syntax-theme", "none", "--width", "variable"]);
         let input = ADDED_FILE_INPUT.replace("a.py", "a");
         let output =
-            integration_test_utils::get_line_of_code_from_delta(&input, 12, " class X:", &config);
+            integration_test_utils::get_line_of_code_from_delta(&input, 12, "class X:", &config);
         ansi_test_utils::assert_has_plus_color_only(&output, &config);
     }
 
@@ -92,11 +94,11 @@ mod tests {
         // Line
         assert_eq!(lines.nth(2).unwrap(), "5");
         // Change
-        assert_eq!(lines.nth(2).unwrap(), " println!(\"Hello ruster\");");
+        assert_eq!(lines.nth(2).unwrap(), "println!(\"Hello ruster\");");
         // Next chunk
         assert_eq!(lines.nth(2).unwrap(), "43");
         // Unchanged in second chunk
-        assert_eq!(lines.nth(2).unwrap(), " Unchanged");
+        assert_eq!(lines.nth(2).unwrap(), "Unchanged");
     }
 
     #[test]
@@ -114,7 +116,7 @@ mod tests {
         // Line number
         assert_eq!(lines.nth(2).unwrap(), "1");
         // Change
-        assert_eq!(lines.nth(2).unwrap(), " This is different from b");
+        assert_eq!(lines.nth(2).unwrap(), "This is different from b");
         // File uniqueness
         assert_eq!(lines.nth(2).unwrap(), "Only in a/: just_a");
         // FileMeta divider
@@ -191,9 +193,7 @@ mod tests {
         let output =
             integration_test_utils::run_delta(TRIPLE_DASH_AT_BEGINNING_OF_LINE_IN_CODE, &config);
         let output = strip_ansi_codes(&output);
-        assert!(
-            output.contains(" -- instance (Category p, Category q) => Category (p ∧ q) where\n")
-        );
+        assert!(output.contains("-- instance (Category p, Category q) => Category (p ∧ q) where\n"));
     }
 
     #[test]
@@ -209,8 +209,8 @@ mod tests {
         let config = integration_test_utils::make_config(&[]);
         let output = integration_test_utils::run_delta(DIFF_IN_DIFF, &config);
         let output = strip_ansi_codes(&output);
-        assert!(output.contains("\n ---\n"));
-        assert!(output.contains("\n Subject: [PATCH] Init\n"));
+        assert!(output.contains("\n---\n"));
+        assert!(output.contains("\nSubject: [PATCH] Init\n"));
     }
 
     #[test]
@@ -806,7 +806,7 @@ src/align.rs
         );
         // An additional newline is inserted under anything other than `style=raw,
         // decoration-style=omit`, to better separate the hunks. Hence 9 + 1.
-        ansi_test_utils::assert_line_has_no_color(&output, 9 + 1, " impl<'a> Alignment<'a> {");
+        ansi_test_utils::assert_line_has_no_color(&output, 9 + 1, "impl<'a> Alignment<'a> {");
     }
 
     #[test]
@@ -849,12 +849,12 @@ src/align.rs
         let config = integration_test_utils::make_config(args);
         let output = integration_test_utils::run_delta(GIT_DIFF_SINGLE_HUNK, &config);
         let output = strip_ansi_codes(&output);
-        assert!(output.contains(" impl<'a> Alignment<'a> {"));
-        assert!(!output.contains(" impl<'a> Alignment<'a> { │"));
+        assert!(output.contains("impl<'a> Alignment<'a> {"));
+        assert!(!output.contains("impl<'a> Alignment<'a> { │"));
         assert!(!output.contains(
             "
- impl<'a> Alignment<'a> {
-─────────────────────────"
+impl<'a> Alignment<'a> {
+────────────────────────"
         ));
     }
 
@@ -879,7 +879,7 @@ src/align.rs
     fn _do_test_hunk_header_empty_style(args: &[&str]) {
         let config = integration_test_utils::make_config(args);
         let output = integration_test_utils::run_delta(GIT_DIFF_SINGLE_HUNK, &config);
-        assert!(output.contains(" impl<'a> Alignment<'a> {"));
+        assert!(output.contains("impl<'a> Alignment<'a> {"));
         assert!(!output.contains("@@"));
     }
 
@@ -899,23 +899,23 @@ src/align.rs
         ansi_test_utils::assert_line_has_style(
             &output,
             10,
-            "──────────────────────────┐",
+            "─────────────────────────┐",
             "white",
             &config,
         );
         ansi_test_utils::assert_line_has_style(
             &output,
             12,
-            "──────────────────────────┘",
+            "─────────────────────────┘",
             "white",
             &config,
         );
         let output = strip_ansi_codes(&output);
         assert!(output.contains(
             "
-──────────────────────────┐
- impl<'a> Alignment<'a> { │
-──────────────────────────┘
+─────────────────────────┐
+impl<'a> Alignment<'a> { │
+─────────────────────────┘
 "
         ));
     }
@@ -974,8 +974,8 @@ src/align.rs
         let output = strip_ansi_codes(&output);
         assert!(output.contains(
             "
- impl<'a> Alignment<'a> { 
-─────────────────────────"
+impl<'a> Alignment<'a> { 
+────────────────────────"
         ));
     }
 
@@ -990,23 +990,140 @@ src/align.rs
             "box",
         ]);
         let output = integration_test_utils::run_delta(GIT_DIFF_SINGLE_HUNK, &config);
-        ansi_test_utils::assert_line_has_no_color(&output, 10, "──────────────────────────┐");
+        ansi_test_utils::assert_line_has_no_color(&output, 10, "─────────────────────────┐");
         ansi_test_utils::assert_line_is_syntax_highlighted(
             &output,
             11,
-            " impl<'a> Alignment<'a> { ",
+            "impl<'a> Alignment<'a> { ",
             "rs",
             &config,
         );
-        ansi_test_utils::assert_line_has_no_color(&output, 12, "──────────────────────────┘");
+        ansi_test_utils::assert_line_has_no_color(&output, 12, "─────────────────────────┘");
         let output = strip_ansi_codes(&output);
         assert!(output.contains(
             "
-──────────────────────────┐
- impl<'a> Alignment<'a> { │
-──────────────────────────┘
+─────────────────────────┐
+impl<'a> Alignment<'a> { │
+─────────────────────────┘
 "
         ));
+    }
+
+    #[test]
+    fn test_removed_empty_line_highlight() {
+        let minus_empty_line_marker_style = "bold yellow magenta ul";
+        _do_test_removed_empty_line_highlight(minus_empty_line_marker_style, "red reverse", true);
+        _do_test_removed_empty_line_highlight(minus_empty_line_marker_style, "normal red", true);
+        _do_test_removed_empty_line_highlight(minus_empty_line_marker_style, "red", false);
+        _do_test_removed_empty_line_highlight(
+            minus_empty_line_marker_style,
+            "normal red reverse",
+            false,
+        );
+    }
+
+    fn _do_test_removed_empty_line_highlight(
+        empty_line_marker_style: &str,
+        base_style: &str,
+        base_style_has_background_color: bool,
+    ) {
+        _do_test_empty_line_highlight(
+            "--minus-empty-line-marker-style",
+            empty_line_marker_style,
+            "--minus-style",
+            base_style,
+            base_style_has_background_color,
+            DIFF_WITH_REMOVED_EMPTY_LINE,
+        );
+    }
+
+    #[test]
+    fn test_added_empty_line_highlight() {
+        let plus_empty_line_marker_style = "bold yellow magenta ul";
+        _do_test_added_empty_line_highlight(plus_empty_line_marker_style, "green reverse", true);
+        _do_test_added_empty_line_highlight(plus_empty_line_marker_style, "normal green", true);
+        _do_test_added_empty_line_highlight(plus_empty_line_marker_style, "green", false);
+        _do_test_added_empty_line_highlight(
+            plus_empty_line_marker_style,
+            "normal green reverse",
+            false,
+        );
+    }
+
+    fn _do_test_added_empty_line_highlight(
+        empty_line_marker_style: &str,
+        base_style: &str,
+        base_style_has_background_color: bool,
+    ) {
+        _do_test_empty_line_highlight(
+            "--plus-empty-line-marker-style",
+            empty_line_marker_style,
+            "--plus-style",
+            base_style,
+            base_style_has_background_color,
+            DIFF_WITH_ADDED_EMPTY_LINE,
+        );
+    }
+
+    fn _do_test_empty_line_highlight(
+        empty_line_marker_style_name: &str,
+        empty_line_marker_style: &str,
+        base_style_name: &str,
+        base_style: &str,
+        base_style_has_background_color: bool,
+        example_diff: &str,
+    ) {
+        let config = integration_test_utils::make_config(&[
+            base_style_name,
+            base_style,
+            empty_line_marker_style_name,
+            empty_line_marker_style,
+        ]);
+        let output = integration_test_utils::run_delta(example_diff, &config);
+        let line = output.lines().nth(6).unwrap();
+        if base_style_has_background_color {
+            let style = style::Style::from_str(base_style, None, None, None, true, false);
+            assert_eq!(
+                line,
+                &style
+                    .ansi_term_style
+                    .paint(paint::ANSI_CSI_CLEAR_TO_EOL)
+                    .to_string()
+            );
+        } else {
+            let style =
+                style::Style::from_str(empty_line_marker_style, None, None, None, true, false);
+            assert_eq!(
+                line,
+                &style
+                    .ansi_term_style
+                    .paint(format!(
+                        "{}{}",
+                        paint::ANSI_CSI_CLEAR_TO_BOL,
+                        paint::ANSI_CSI_CURSOR_BACK_1
+                    ))
+                    .to_string()
+            );
+        }
+    }
+
+    #[test]
+    fn test_whitespace_error() {
+        let whitespace_error_style = "bold yellow magenta ul";
+        let config = integration_test_utils::make_config(&[
+            "--whitespace-error-style",
+            whitespace_error_style,
+        ]);
+        let output = integration_test_utils::run_delta(DIFF_WITH_WHITESPACE_ERROR, &config);
+        ansi_test_utils::assert_line_has_style(&output, 6, " ", whitespace_error_style, &config);
+        let output = integration_test_utils::run_delta(DIFF_WITH_REMOVED_WHITESPACE_ERROR, &config);
+        ansi_test_utils::assert_line_does_not_have_style(
+            &output,
+            6,
+            " ",
+            whitespace_error_style,
+            &config,
+        );
     }
 
     const GIT_DIFF_SINGLE_HUNK: &str = "\
@@ -1444,4 +1561,42 @@ index cba6064..ba1a4de 100644
 - Co
 + let col = Co
 "#;
+
+    const DIFF_WITH_REMOVED_EMPTY_LINE: &str = r"
+diff --git i/a w/a
+index 8b13789..e69de29 100644
+--- i/a
++++ w/a
+@@ -1 +0,0 @@
+-
+";
+
+    const DIFF_WITH_ADDED_EMPTY_LINE: &str = r"
+diff --git i/a w/a
+index e69de29..8b13789 100644
+--- i/a
++++ w/a
+@@ -0,0 +1 @@
++
+";
+
+    const DIFF_WITH_WHITESPACE_ERROR: &str = r"
+diff --git c/a i/a
+new file mode 100644
+index 0000000..8d1c8b6
+--- /dev/null
++++ i/a
+@@ -0,0 +1 @@
++ 
+";
+
+    const DIFF_WITH_REMOVED_WHITESPACE_ERROR: &str = r"
+diff --git i/a w/a
+index 8d1c8b6..8b13789 100644
+--- i/a
++++ w/a
+@@ -1 +1 @@
+- 
++
+";
 }

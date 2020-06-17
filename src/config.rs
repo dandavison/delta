@@ -26,7 +26,7 @@ pub enum Width {
     Variable,
 }
 
-pub struct Config<'a> {
+pub struct Config {
     pub background_color_extends_to_terminal_width: bool,
     pub commit_style: Style,
     pub decorations_width: Width,
@@ -35,6 +35,7 @@ pub struct Config<'a> {
     pub file_removed_label: String,
     pub file_renamed_label: String,
     pub file_style: Style,
+    pub keep_plus_minus_markers: bool,
     pub hunk_header_style: Style,
     pub list_languages: bool,
     pub list_syntax_theme_names: bool,
@@ -43,8 +44,8 @@ pub struct Config<'a> {
     pub max_line_distance: f64,
     pub max_line_distance_for_naively_paired_lines: f64,
     pub minus_emph_style: Style,
+    pub minus_empty_line_marker_style: Style,
     pub minus_file: Option<PathBuf>,
-    pub minus_line_marker: &'a str,
     pub minus_non_emph_style: Style,
     pub minus_style: Style,
     pub navigate: bool,
@@ -58,8 +59,8 @@ pub struct Config<'a> {
     pub number_plus_style: Style,
     pub paging_mode: PagingMode,
     pub plus_emph_style: Style,
+    pub plus_empty_line_marker_style: Style,
     pub plus_file: Option<PathBuf>,
-    pub plus_line_marker: &'a str,
     pub plus_non_emph_style: Style,
     pub plus_style: Style,
     pub show_background_colors: bool,
@@ -71,10 +72,11 @@ pub struct Config<'a> {
     pub tab_width: usize,
     pub true_color: bool,
     pub tokenization_regex: Regex,
+    pub whitespace_error_style: Style,
     pub zero_style: Style,
 }
 
-impl<'a> Config<'a> {
+impl Config {
     pub fn from_args(args: &[&str], git_config: &mut Option<GitConfig>) -> Self {
         Self::from_arg_matches(cli::Opt::clap().get_matches_from(args), git_config)
     }
@@ -149,7 +151,7 @@ fn is_truecolor_terminal() -> bool {
         .unwrap_or(false)
 }
 
-impl<'a> From<cli::Opt> for Config<'a> {
+impl From<cli::Opt> for Config {
     fn from(opt: cli::Opt) -> Self {
         let assets = HighlightingAssets::new();
 
@@ -208,10 +210,13 @@ impl<'a> From<cli::Opt> for Config<'a> {
             minus_style,
             minus_emph_style,
             minus_non_emph_style,
+            minus_empty_line_marker_style,
             zero_style,
             plus_style,
             plus_emph_style,
             plus_non_emph_style,
+            plus_empty_line_marker_style,
+            whitespace_error_style,
         ) = make_hunk_styles(&opt, is_light_mode, true_color);
 
         let (commit_style, file_style, hunk_header_style) =
@@ -235,17 +240,6 @@ impl<'a> From<cli::Opt> for Config<'a> {
             Some(assets.theme_set.themes[&syntax_theme_name].clone())
         };
         let syntax_dummy_theme = assets.theme_set.themes.values().next().unwrap().clone();
-
-        let minus_line_marker = if opt.keep_plus_minus_markers {
-            "-"
-        } else {
-            " "
-        };
-        let plus_line_marker = if opt.keep_plus_minus_markers {
-            "+"
-        } else {
-            " "
-        };
 
         let max_line_distance_for_naively_paired_lines =
             env::get_env_var("DELTA_EXPERIMENTAL_MAX_LINE_DISTANCE_FOR_NAIVELY_PAIRED_LINES")
@@ -271,6 +265,7 @@ impl<'a> From<cli::Opt> for Config<'a> {
             file_removed_label: opt.file_removed_label,
             file_renamed_label: opt.file_renamed_label,
             file_style,
+            keep_plus_minus_markers: opt.keep_plus_minus_markers,
             hunk_header_style,
             list_languages: opt.list_languages,
             list_syntax_theme_names: opt.list_syntax_theme_names,
@@ -279,8 +274,8 @@ impl<'a> From<cli::Opt> for Config<'a> {
             max_line_distance: opt.max_line_distance,
             max_line_distance_for_naively_paired_lines,
             minus_emph_style,
+            minus_empty_line_marker_style,
             minus_file: opt.minus_file.map(|s| s.clone()),
-            minus_line_marker,
             minus_non_emph_style,
             minus_style,
             navigate: opt.navigate,
@@ -294,8 +289,8 @@ impl<'a> From<cli::Opt> for Config<'a> {
             number_plus_style,
             paging_mode,
             plus_emph_style,
+            plus_empty_line_marker_style,
             plus_file: opt.plus_file.map(|s| s.clone()),
-            plus_line_marker,
             plus_non_emph_style,
             plus_style,
             show_background_colors: opt.show_background_colors,
@@ -307,6 +302,7 @@ impl<'a> From<cli::Opt> for Config<'a> {
             tab_width: opt.tab_width,
             tokenization_regex,
             true_color,
+            whitespace_error_style,
             zero_style,
         }
     }
@@ -316,7 +312,18 @@ fn make_hunk_styles<'a>(
     opt: &'a cli::Opt,
     is_light_mode: bool,
     true_color: bool,
-) -> (Style, Style, Style, Style, Style, Style, Style) {
+) -> (
+    Style,
+    Style,
+    Style,
+    Style,
+    Style,
+    Style,
+    Style,
+    Style,
+    Style,
+    Style,
+) {
     let minus_style = Style::from_str(
         &opt.minus_style,
         None,
@@ -345,6 +352,20 @@ fn make_hunk_styles<'a>(
         &opt.minus_non_emph_style,
         minus_style.ansi_term_style.foreground,
         minus_style.ansi_term_style.background,
+        None,
+        true_color,
+        false,
+    );
+
+    // The style used to highlight a removed empty line when otherwise it would be invisible due to
+    // lack of background color in minus-style.
+    let minus_empty_line_marker_style = Style::from_str(
+        &opt.minus_empty_line_marker_style,
+        None,
+        Some(color::get_minus_background_color_default(
+            is_light_mode,
+            true_color,
+        )),
         None,
         true_color,
         false,
@@ -385,14 +406,40 @@ fn make_hunk_styles<'a>(
         false,
     );
 
+    // The style used to highlight an added empty line when otherwise it would be invisible due to
+    // lack of background color in plus-style.
+    let plus_empty_line_marker_style = Style::from_str(
+        &opt.plus_empty_line_marker_style,
+        None,
+        Some(color::get_plus_background_color_default(
+            is_light_mode,
+            true_color,
+        )),
+        None,
+        true_color,
+        false,
+    );
+
+    let whitespace_error_style = Style::from_str(
+        &opt.whitespace_error_style,
+        None,
+        None,
+        None,
+        true_color,
+        false,
+    );
+
     (
         minus_style,
         minus_emph_style,
         minus_non_emph_style,
+        minus_empty_line_marker_style,
         zero_style,
         plus_style,
         plus_emph_style,
         plus_non_emph_style,
+        plus_empty_line_marker_style,
+        whitespace_error_style,
     )
 }
 

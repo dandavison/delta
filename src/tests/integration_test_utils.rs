@@ -8,7 +8,7 @@ pub mod integration_test_utils {
     use crate::config;
     use crate::delta::delta;
 
-    pub fn make_config<'a>(_args: &[&str]) -> config::Config<'a> {
+    pub fn make_config(_args: &[&str]) -> config::Config {
         // FIXME: should not be necessary
         let (dummy_minus_file, dummy_plus_file) = ("/dev/null", "/dev/null");
         let mut args = vec![dummy_minus_file, dummy_plus_file];
@@ -20,11 +20,11 @@ pub mod integration_test_utils {
         config::Config::from_args(&args, &mut None)
     }
 
-    pub fn get_line_of_code_from_delta<'a>(
+    pub fn get_line_of_code_from_delta(
         input: &str,
         line_number: usize,
         expected_text: &str,
-        config: &config::Config<'a>,
+        config: &config::Config,
     ) -> String {
         let output = run_delta(&input, config);
         let line_of_code = output.lines().nth(line_number).unwrap();
@@ -32,7 +32,7 @@ pub mod integration_test_utils {
         line_of_code.to_string()
     }
 
-    pub fn run_delta<'a>(input: &str, config: &config::Config<'a>) -> String {
+    pub fn run_delta(input: &str, config: &config::Config) -> String {
         let mut writer: Vec<u8> = Vec::new();
 
         delta(

@@ -14,6 +14,8 @@ use crate::paint::superimpose_style_sections::superimpose_style_sections;
 use crate::style::Style;
 
 pub const ANSI_CSI_CLEAR_TO_EOL: &str = "\x1b[0K";
+pub const ANSI_CSI_CLEAR_TO_BOL: &str = "\x1b[1K";
+pub const ANSI_CSI_CURSOR_BACK_1: &str = "\x1b[1D";
 pub const ANSI_SGR_RESET: &str = "\x1b[0m";
 
 pub struct Painter<'a> {
@@ -22,7 +24,7 @@ pub struct Painter<'a> {
     pub writer: &'a mut dyn Write,
     pub syntax: &'a SyntaxReference,
     pub highlighter: HighlightLines<'a>,
-    pub config: &'a config::Config<'a>,
+    pub config: &'a config::Config,
     pub output_buffer: String,
     pub minus_line_number: usize,
     pub plus_line_number: usize,
@@ -96,9 +98,14 @@ impl<'a> Painter<'a> {
                 minus_line_numbers,
                 &mut self.output_buffer,
                 self.config,
-                self.config.minus_line_marker,
+                if self.config.keep_plus_minus_markers {
+                    "-"
+                } else {
+                    ""
+                },
                 self.config.minus_style,
                 self.config.minus_non_emph_style,
+                Some(self.config.minus_empty_line_marker_style),
                 None,
             );
         }
@@ -109,9 +116,14 @@ impl<'a> Painter<'a> {
                 plus_line_numbers,
                 &mut self.output_buffer,
                 self.config,
-                self.config.plus_line_marker,
+                if self.config.keep_plus_minus_markers {
+                    "+"
+                } else {
+                    ""
+                },
                 self.config.plus_style,
                 self.config.plus_non_emph_style,
+                Some(self.config.plus_empty_line_marker_style),
                 None,
             );
         }
@@ -130,6 +142,7 @@ impl<'a> Painter<'a> {
         prefix: &str,
         style: Style,          // style for right fill if line contains no emph sections
         non_emph_style: Style, // style for right fill if line contains emph sections
+        empty_line_style: Option<Style>, // a style with background color to highlight an empty line
         background_color_extends_to_terminal_width: Option<bool>,
     ) {
         // There's some unfortunate hackery going on here for two reasons:
@@ -204,19 +217,14 @@ impl<'a> Painter<'a> {
                     ansi_strings.push(section_style.ansi_term_style.paint(text));
                 }
             }
-            // Set style for the right-fill.
-            let mut have_background_for_right_fill = false;
-            if non_emph_style.ansi_term_style.background.is_some() {
+            let right_fill_background_color = non_emph_style.has_background_color()
+                && background_color_extends_to_terminal_width
+                    .unwrap_or(config.background_color_extends_to_terminal_width);
+            if right_fill_background_color {
                 ansi_strings.push(non_emph_style.ansi_term_style.paint(""));
-                have_background_for_right_fill = true;
             }
             let line = &mut ansi_term::ANSIStrings(&ansi_strings).to_string();
-            let background_color_extends_to_terminal_width =
-                match background_color_extends_to_terminal_width {
-                    Some(boolean) => boolean,
-                    None => config.background_color_extends_to_terminal_width,
-                };
-            if background_color_extends_to_terminal_width && have_background_for_right_fill {
+            if right_fill_background_color {
                 // HACK: How to properly incorporate the ANSI_CSI_CLEAR_TO_EOL into ansi_strings?
                 if line
                     .to_lowercase()
@@ -227,6 +235,18 @@ impl<'a> Painter<'a> {
                 output_buffer.push_str(&line);
                 output_buffer.push_str(ANSI_CSI_CLEAR_TO_EOL);
                 output_buffer.push_str(ANSI_SGR_RESET);
+            } else if line.is_empty() {
+                if let Some(empty_line_style) = empty_line_style {
+                    output_buffer.push_str(
+                        &empty_line_style
+                            .ansi_term_style
+                            .paint(format!(
+                                "{}{}",
+                                ANSI_CSI_CLEAR_TO_BOL, ANSI_CSI_CURSOR_BACK_1
+                            ))
+                            .to_string(),
+                    );
+                }
             } else {
                 output_buffer.push_str(&line);
             }
@@ -304,13 +324,17 @@ impl<'a> Painter<'a> {
         } else {
             None
         };
-        Self::update_styles(&mut diff_sections.0, minus_non_emph_style);
+        Self::update_styles(&mut diff_sections.0, None, minus_non_emph_style);
         let plus_non_emph_style = if config.plus_non_emph_style != config.plus_emph_style {
             Some(config.plus_non_emph_style)
         } else {
             None
         };
-        Self::update_styles(&mut diff_sections.1, plus_non_emph_style);
+        Self::update_styles(
+            &mut diff_sections.1,
+            Some(config.whitespace_error_style),
+            plus_non_emph_style,
+        );
         diff_sections
     }
 
@@ -320,15 +344,31 @@ impl<'a> Painter<'a> {
     ///    inferred edit operations and so, if there is a special non-emph style that is
     ///    distinct from the default style, then it should be used for the non-emph style
     ///    sections.
-    fn update_styles(style_sections: &mut Vec<Vec<(Style, &str)>>, non_emph_style: Option<Style>) {
+    /// 2. If the line constitutes a whitespace error, then the whitespace error style
+    ///    should be applied to the added material.
+    fn update_styles(
+        style_sections: &mut Vec<Vec<(Style, &str)>>,
+        whitespace_error_style: Option<Style>,
+        non_emph_style: Option<Style>,
+    ) {
         for line_sections in style_sections {
             let line_has_emph_and_non_emph_sections =
                 style_sections_contain_more_than_one_style(line_sections);
             let should_update_non_emph_styles =
                 non_emph_style.is_some() && line_has_emph_and_non_emph_sections;
+            let is_whitespace_error =
+                whitespace_error_style.is_some() && is_whitespace_error(line_sections);
             for section in line_sections.iter_mut() {
-                // Update the style if this is a non-emph section that needs updating.
-                if should_update_non_emph_styles && !section.0.is_emph {
+                // If the line as a whole constitutes a whitespace error then highlight this
+                // section if either (a) it is an emph section, or (b) the line lacks any
+                // emph/non-emph distinction.
+                if is_whitespace_error
+                    && (section.0.is_emph || !line_has_emph_and_non_emph_sections)
+                {
+                    *section = (whitespace_error_style.unwrap(), section.1);
+                }
+                // Otherwise, update the style if this is a non-emph section that needs updating.
+                else if should_update_non_emph_styles && !section.0.is_emph {
                     *section = (non_emph_style.unwrap(), section.1);
                 }
             }
@@ -349,6 +389,20 @@ fn style_sections_contain_more_than_one_style(sections: &Vec<(Style, &str)>) -> 
     } else {
         false
     }
+}
+
+lazy_static! {
+    static ref NON_WHITESPACE_REGEX: Regex = Regex::new(r"\S").unwrap();
+}
+
+/// True iff the line represented by `sections` constitutes a whitespace error.
+// TODO: Git recognizes blank lines at end of file (blank-at-eof) as a whitespace error but delta
+// does not yet.
+// https://git-scm.com/docs/git-config#Documentation/git-config.txt-corewhitespace
+fn is_whitespace_error(sections: &Vec<(Style, &str)>) -> bool {
+    !sections
+        .iter()
+        .any(|(_, s)| NON_WHITESPACE_REGEX.is_match(s))
 }
 
 mod superimpose_style_sections {

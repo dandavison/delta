@@ -2,6 +2,7 @@ use std::collections::HashMap;
 use structopt::clap;
 
 use crate::cli;
+use crate::config;
 use crate::git_config::{self, GitConfigGet};
 use crate::preset::{self, GetValueFunctionFromBuiltinPreset};
 
@@ -161,6 +162,17 @@ pub fn set_options(
     if opt.no_gitconfig {
         return;
     }
+    // Handle options which default to an arbitrary git config value.
+    // TODO: incorporate this logic into the set_options macro.
+    if !config::user_supplied_option("whitespace-error-style", arg_matches) {
+        opt.whitespace_error_style = if let Some(git_config) = git_config {
+            git_config.get::<String>("color.diff.whitespace")
+        } else {
+            None
+        }
+        .unwrap_or_else(|| "magenta reverse".to_string())
+    }
+
     set_options!(
         [
             // --presets must be set first
@@ -188,6 +200,7 @@ pub fn set_options(
             // dynamically to the value of the former.
             ("minus-style", String, minus_style),
             ("minus-emph-style", String, minus_emph_style),
+            ("minus-empty-line-marker-style", String, minus_empty_line_marker_style),
             ("minus-non-emph-style", String, minus_non_emph_style),
             ("navigate", bool, navigate),
             ("number", bool, show_line_numbers),
@@ -206,10 +219,12 @@ pub fn set_options(
             // dynamically to the value of the former.
             ("plus-style", String, plus_style),
             ("plus-emph-style", String, plus_emph_style),
+            ("plus-empty-line-marker-style", String, plus_empty_line_marker_style),
             ("plus-non-emph-style", String, plus_non_emph_style),
             ("syntax_theme", Option<String>, syntax_theme),
             ("tabs", usize, tab_width),
             ("true-color", String, true_color),
+            ("whitespace-error-style", String, whitespace_error_style),
             ("width", Option<String>, width),
             ("word-diff-regex", String, tokenization_regex),
             ("zero-style", String, zero_style)

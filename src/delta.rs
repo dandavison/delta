@@ -405,6 +405,7 @@ fn handle_hunk_header_line(
                 "",
                 config.null_style,
                 config.null_style,
+                None,
                 Some(false),
             );
             painter.output_buffer.pop(); // trim newline
@@ -467,7 +468,11 @@ fn handle_hunk_line(
         }
         Some(' ') => {
             let state = State::HunkZero;
-            let prefix = if line.is_empty() { "" } else { &line[..1] };
+            let prefix = if config.keep_plus_minus_markers && !line.is_empty() {
+                &line[..1]
+            } else {
+                ""
+            };
             painter.paint_buffered_lines();
             let lines = vec![prepare(&line, true, config)];
             let syntax_style_sections = Painter::get_syntax_style_sections_for_lines(
@@ -490,6 +495,7 @@ fn handle_hunk_line(
                 prefix,
                 config.zero_style,
                 config.zero_style,
+                None,
                 None,
             );
             painter.minus_line_number += 1;
@@ -520,12 +526,22 @@ fn prepare(line: &str, append_newline: bool, config: &Config) -> String {
     if !line.is_empty() {
         let mut line = line.graphemes(true);
 
-        // The first column contains a -/+/space character, added by git. We substitute it for a
-        // space now, so that it is not present during syntax highlighting, and substitute again
-        // when emitting the line.
+        // The first column contains a -/+/space character, added by git. If we are retaining them
+        // (--keep-plus-minus-markers), then we substitute it for a space now, so that it is not
+        // present during syntax highlighting, and reinstate it when emitting the line in
+        // Painter::paint_lines. If we not retaining them, then we drop it now, and
+        // Painter::paint_lines doesn't inject anything.
         line.next();
-
-        format!(" {}{}", expand_tabs(line, config.tab_width), terminator)
+        format!(
+            "{}{}{}",
+            if config.keep_plus_minus_markers {
+                " "
+            } else {
+                ""
+            },
+            expand_tabs(line, config.tab_width),
+            terminator
+        )
     } else {
         terminator.to_string()
     }
