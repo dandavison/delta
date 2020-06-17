@@ -217,20 +217,13 @@ impl<'a> Painter<'a> {
                     ansi_strings.push(section_style.ansi_term_style.paint(text));
                 }
             }
-            // Set style for the right-fill.
-            let mut have_background_for_right_fill = false;
-            if non_emph_style.has_background_color() {
+            let right_fill_background_color = non_emph_style.has_background_color()
+                && background_color_extends_to_terminal_width
+                    .unwrap_or(config.background_color_extends_to_terminal_width);
+            if right_fill_background_color {
                 ansi_strings.push(non_emph_style.ansi_term_style.paint(""));
-                have_background_for_right_fill = true;
             }
             let line = &mut ansi_term::ANSIStrings(&ansi_strings).to_string();
-            let background_color_extends_to_terminal_width =
-                match background_color_extends_to_terminal_width {
-                    Some(boolean) => boolean,
-                    None => config.background_color_extends_to_terminal_width,
-                };
-            let right_fill_background_color =
-                background_color_extends_to_terminal_width && have_background_for_right_fill;
             if right_fill_background_color {
                 // HACK: How to properly incorporate the ANSI_CSI_CLEAR_TO_EOL into ansi_strings?
                 if line
@@ -242,10 +235,7 @@ impl<'a> Painter<'a> {
                 output_buffer.push_str(&line);
                 output_buffer.push_str(ANSI_CSI_CLEAR_TO_EOL);
                 output_buffer.push_str(ANSI_SGR_RESET);
-            } else {
-                output_buffer.push_str(&line);
-            }
-            if line.is_empty() && !right_fill_background_color {
+            } else if line.is_empty() {
                 if let Some(empty_line_style) = empty_line_style {
                     output_buffer.push_str(
                         &empty_line_style
@@ -257,6 +247,8 @@ impl<'a> Painter<'a> {
                             .to_string(),
                     );
                 }
+            } else {
+                output_buffer.push_str(&line);
             }
             output_buffer.push_str("\n");
         }
