@@ -13,7 +13,7 @@ use crate::edits;
 use crate::paint::superimpose_style_sections::superimpose_style_sections;
 use crate::style::Style;
 
-pub const ANSI_CSI_ERASE_IN_LINE: &str = "\x1b[K";
+pub const ANSI_CSI_CLEAR_TO_EOL: &str = "\x1b[0K";
 pub const ANSI_SGR_RESET: &str = "\x1b[0m";
 
 pub struct Painter<'a> {
@@ -217,7 +217,7 @@ impl<'a> Painter<'a> {
                     None => config.background_color_extends_to_terminal_width,
                 };
             if background_color_extends_to_terminal_width && have_background_for_right_fill {
-                // HACK: How to properly incorporate the ANSI_CSI_ERASE_IN_LINE into ansi_strings?
+                // HACK: How to properly incorporate the ANSI_CSI_CLEAR_TO_EOL into ansi_strings?
                 if line
                     .to_lowercase()
                     .ends_with(&ANSI_SGR_RESET.to_lowercase())
@@ -225,7 +225,7 @@ impl<'a> Painter<'a> {
                     line.truncate(line.len() - ANSI_SGR_RESET.len());
                 }
                 output_buffer.push_str(&line);
-                output_buffer.push_str(ANSI_CSI_ERASE_IN_LINE);
+                output_buffer.push_str(ANSI_CSI_CLEAR_TO_EOL);
                 output_buffer.push_str(ANSI_SGR_RESET);
             } else {
                 output_buffer.push_str(&line);
