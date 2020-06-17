@@ -14,14 +14,14 @@ pub mod ansi_test_utils {
         expected_style: &str,
         config: &Config,
     ) {
-        _assert_line_has_style(
+        assert!(_line_has_style(
             output,
             line_number,
             expected_prefix,
             expected_style,
             config,
             false,
-        );
+        ));
     }
 
     pub fn assert_line_has_4_bit_color_style(
@@ -31,14 +31,14 @@ pub mod ansi_test_utils {
         expected_style: &str,
         config: &Config,
     ) {
-        _assert_line_has_style(
+        assert!(_line_has_style(
             output,
             line_number,
             expected_prefix,
             expected_style,
             config,
             true,
-        );
+        ));
     }
 
     pub fn assert_line_has_no_color(output: &str, line_number: usize, expected_prefix: &str) {
@@ -119,14 +119,14 @@ pub mod ansi_test_utils {
         output_buffer
     }
 
-    fn _assert_line_has_style(
+    fn _line_has_style(
         output: &str,
         line_number: usize,
         expected_prefix: &str,
         expected_style: &str,
         config: &Config,
         _4_bit_color: bool,
-    ) {
+    ) -> bool {
         let line = output.lines().nth(line_number).unwrap();
         assert!(strip_ansi_codes(line).starts_with(expected_prefix));
         let mut style = Style::from_str(expected_style, None, None, None, config.true_color, false);
@@ -136,7 +136,7 @@ pub mod ansi_test_utils {
                 .foreground
                 .map(ansi_term_fixed_foreground_to_4_bit_color);
         }
-        assert!(line.starts_with(&style.ansi_term_style.prefix().to_string()))
+        line.starts_with(&style.ansi_term_style.prefix().to_string())
     }
 
     fn ansi_term_fixed_foreground_to_4_bit_color(color: ansi_term::Color) -> ansi_term::Color {
