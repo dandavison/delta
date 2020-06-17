@@ -1107,6 +1107,17 @@ impl<'a> Alignment<'a> { │
         }
     }
 
+    #[test]
+    fn test_whitespace_error() {
+        let whitespace_error_style = "bold yellow magenta ul";
+        let config = integration_test_utils::make_config(&[
+            "--whitespace-error-style",
+            whitespace_error_style,
+        ]);
+        let output = integration_test_utils::run_delta(DIFF_WITH_WHITESPACE_ERROR, &config);
+        ansi_test_utils::assert_line_has_style(&output, 6, " ", whitespace_error_style, &config);
+    }
+
     const GIT_DIFF_SINGLE_HUNK: &str = "\
 commit 94907c0f136f46dc46ffae2dc92dca9af7eb7c2e
 Author: Dan Davison <dandavison7@gmail.com>
@@ -1559,5 +1570,15 @@ index e69de29..8b13789 100644
 +++ w/a
 @@ -0,0 +1 @@
 +
+";
+
+    const DIFF_WITH_WHITESPACE_ERROR: &str = r"
+diff --git c/a i/a
+new file mode 100644
+index 0000000..8d1c8b6
+--- /dev/null
++++ i/a
+@@ -0,0 +1 @@
++ 
 ";
 }
