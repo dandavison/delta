@@ -24,6 +24,23 @@ pub mod ansi_test_utils {
         ));
     }
 
+    pub fn assert_line_does_not_have_style(
+        output: &str,
+        line_number: usize,
+        expected_prefix: &str,
+        expected_style: &str,
+        config: &Config,
+    ) {
+        assert!(!_line_has_style(
+            output,
+            line_number,
+            expected_prefix,
+            expected_style,
+            config,
+            false,
+        ));
+    }
+
     pub fn assert_line_has_4_bit_color_style(
         output: &str,
         line_number: usize,

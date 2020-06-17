@@ -1116,6 +1116,14 @@ impl<'a> Alignment<'a> { │
         ]);
         let output = integration_test_utils::run_delta(DIFF_WITH_WHITESPACE_ERROR, &config);
         ansi_test_utils::assert_line_has_style(&output, 6, " ", whitespace_error_style, &config);
+        let output = integration_test_utils::run_delta(DIFF_WITH_REMOVED_WHITESPACE_ERROR, &config);
+        ansi_test_utils::assert_line_does_not_have_style(
+            &output,
+            6,
+            " ",
+            whitespace_error_style,
+            &config,
+        );
     }
 
     const GIT_DIFF_SINGLE_HUNK: &str = "\
@@ -1580,5 +1588,15 @@ index 0000000..8d1c8b6
 +++ i/a
 @@ -0,0 +1 @@
 + 
+";
+
+    const DIFF_WITH_REMOVED_WHITESPACE_ERROR: &str = r"
+diff --git i/a w/a
+index 8d1c8b6..8b13789 100644
+--- i/a
++++ w/a
+@@ -1 +1 @@
+- 
++
 ";
 }
