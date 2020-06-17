@@ -13,10 +13,6 @@ mod tests {
         let output = integration_test_utils::run_delta(ADDED_FILE_INPUT, &config);
         let output = strip_ansi_codes(&output);
         assert!(output.contains("\nadded: a.py\n"));
-        if false {
-            // TODO: hline width
-            assert_eq!(output, ADDED_FILE_EXPECTED_OUTPUT);
-        }
     }
 
     #[test]
@@ -1260,24 +1256,6 @@ index 0000000..8c55b7d
 +# hello
 +class X:
 +    pass";
-
-    const ADDED_FILE_EXPECTED_OUTPUT: &str = "\
-commit d28dc1ac57e53432567ec5bf19ad49ff90f0f7a5
-Author: Dan Davison <dandavison7@gmail.com>
-Date:   Thu Jul 11 10:41:11 2019 -0400
-
-    .
-
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-added: a.py
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-────────────────────────────────────────────────────────────────────────────────
-
-────────────────────────────────────────────────────────────────────────────────
- # hello
- class X:
-     pass
-";
 
     const ADDED_EMPTY_FILE: &str = "
 commit c0a18433cb6e0ca8f796bfae9e31d95b06b91597 (HEAD -> master)
