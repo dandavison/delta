@@ -49,6 +49,14 @@ impl Style {
         }
     }
 
+    pub fn has_background_color(&self) -> bool {
+        if self.ansi_term_style.is_reverse {
+            self.ansi_term_style.foreground.is_some()
+        } else {
+            self.ansi_term_style.background.is_some()
+        }
+    }
+
     /// Construct Style from style and decoration-style strings supplied on command line, together
     /// with defaults. A style string is a space-separated string containing 0, 1, or 2 colors
     /// (foreground and then background) and an arbitrary number of style attributes. See `delta

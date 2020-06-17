@@ -2,6 +2,8 @@
 mod tests {
     use console::strip_ansi_codes;
 
+    use crate::paint;
+    use crate::style;
     use crate::tests::ansi_test_utils::ansi_test_utils;
     use crate::tests::integration_test_utils::integration_test_utils;
 
@@ -1007,6 +1009,104 @@ impl<'a> Alignment<'a> { │
         ));
     }
 
+    #[test]
+    fn test_removed_empty_line_highlight() {
+        let minus_empty_line_marker_style = "bold yellow magenta ul";
+        _do_test_removed_empty_line_highlight(minus_empty_line_marker_style, "red reverse", true);
+        _do_test_removed_empty_line_highlight(minus_empty_line_marker_style, "normal red", true);
+        _do_test_removed_empty_line_highlight(minus_empty_line_marker_style, "red", false);
+        _do_test_removed_empty_line_highlight(
+            minus_empty_line_marker_style,
+            "normal red reverse",
+            false,
+        );
+    }
+
+    fn _do_test_removed_empty_line_highlight(
+        empty_line_marker_style: &str,
+        base_style: &str,
+        base_style_has_background_color: bool,
+    ) {
+        _do_test_empty_line_highlight(
+            "--minus-empty-line-marker-style",
+            empty_line_marker_style,
+            "--minus-style",
+            base_style,
+            base_style_has_background_color,
+            DIFF_WITH_REMOVED_EMPTY_LINE,
+        );
+    }
+
+    #[test]
+    fn test_added_empty_line_highlight() {
+        let plus_empty_line_marker_style = "bold yellow magenta ul";
+        _do_test_added_empty_line_highlight(plus_empty_line_marker_style, "green reverse", true);
+        _do_test_added_empty_line_highlight(plus_empty_line_marker_style, "normal green", true);
+        _do_test_added_empty_line_highlight(plus_empty_line_marker_style, "green", false);
+        _do_test_added_empty_line_highlight(
+            plus_empty_line_marker_style,
+            "normal green reverse",
+            false,
+        );
+    }
+
+    fn _do_test_added_empty_line_highlight(
+        empty_line_marker_style: &str,
+        base_style: &str,
+        base_style_has_background_color: bool,
+    ) {
+        _do_test_empty_line_highlight(
+            "--plus-empty-line-marker-style",
+            empty_line_marker_style,
+            "--plus-style",
+            base_style,
+            base_style_has_background_color,
+            DIFF_WITH_ADDED_EMPTY_LINE,
+        );
+    }
+
+    fn _do_test_empty_line_highlight(
+        empty_line_marker_style_name: &str,
+        empty_line_marker_style: &str,
+        base_style_name: &str,
+        base_style: &str,
+        base_style_has_background_color: bool,
+        example_diff: &str,
+    ) {
+        let config = integration_test_utils::make_config(&[
+            base_style_name,
+            base_style,
+            empty_line_marker_style_name,
+            empty_line_marker_style,
+        ]);
+        let output = integration_test_utils::run_delta(example_diff, &config);
+        let line = output.lines().nth(6).unwrap();
+        if base_style_has_background_color {
+            let style = style::Style::from_str(base_style, None, None, None, true, false);
+            assert_eq!(
+                line,
+                &style
+                    .ansi_term_style
+                    .paint(paint::ANSI_CSI_CLEAR_TO_EOL)
+                    .to_string()
+            );
+        } else {
+            let style =
+                style::Style::from_str(empty_line_marker_style, None, None, None, true, false);
+            assert_eq!(
+                line,
+                &style
+                    .ansi_term_style
+                    .paint(format!(
+                        "{}{}",
+                        paint::ANSI_CSI_CLEAR_TO_BOL,
+                        paint::ANSI_CSI_CURSOR_BACK_1
+                    ))
+                    .to_string()
+            );
+        }
+    }
+
     const GIT_DIFF_SINGLE_HUNK: &str = "\
 commit 94907c0f136f46dc46ffae2dc92dca9af7eb7c2e
 Author: Dan Davison <dandavison7@gmail.com>
@@ -1442,4 +1542,22 @@ index cba6064..ba1a4de 100644
 - Co
 + let col = Co
 "#;
+
+    const DIFF_WITH_REMOVED_EMPTY_LINE: &str = r"
+diff --git i/a w/a
+index 8b13789..e69de29 100644
+--- i/a
++++ w/a
+@@ -1 +0,0 @@
+-
+";
+
+    const DIFF_WITH_ADDED_EMPTY_LINE: &str = r"
+diff --git i/a w/a
+index e69de29..8b13789 100644
+--- i/a
++++ w/a
+@@ -0,0 +1 @@
++
+";
 }

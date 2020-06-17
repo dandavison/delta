@@ -114,6 +114,7 @@ pub mod ansi_test_utils {
             config.null_style,
             config.null_style,
             None,
+            None,
         );
         output_buffer
     }

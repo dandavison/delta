@@ -14,6 +14,8 @@ use crate::paint::superimpose_style_sections::superimpose_style_sections;
 use crate::style::Style;
 
 pub const ANSI_CSI_CLEAR_TO_EOL: &str = "\x1b[0K";
+pub const ANSI_CSI_CLEAR_TO_BOL: &str = "\x1b[1K";
+pub const ANSI_CSI_CURSOR_BACK_1: &str = "\x1b[1D";
 pub const ANSI_SGR_RESET: &str = "\x1b[0m";
 
 pub struct Painter<'a> {
@@ -103,6 +105,7 @@ impl<'a> Painter<'a> {
                 },
                 self.config.minus_style,
                 self.config.minus_non_emph_style,
+                Some(self.config.minus_empty_line_marker_style),
                 None,
             );
         }
@@ -120,6 +123,7 @@ impl<'a> Painter<'a> {
                 },
                 self.config.plus_style,
                 self.config.plus_non_emph_style,
+                Some(self.config.plus_empty_line_marker_style),
                 None,
             );
         }
@@ -138,6 +142,7 @@ impl<'a> Painter<'a> {
         prefix: &str,
         style: Style,          // style for right fill if line contains no emph sections
         non_emph_style: Style, // style for right fill if line contains emph sections
+        empty_line_style: Option<Style>, // a style with background color to highlight an empty line
         background_color_extends_to_terminal_width: Option<bool>,
     ) {
         // There's some unfortunate hackery going on here for two reasons:
@@ -214,7 +219,7 @@ impl<'a> Painter<'a> {
             }
             // Set style for the right-fill.
             let mut have_background_for_right_fill = false;
-            if non_emph_style.ansi_term_style.background.is_some() {
+            if non_emph_style.has_background_color() {
                 ansi_strings.push(non_emph_style.ansi_term_style.paint(""));
                 have_background_for_right_fill = true;
             }
@@ -224,7 +229,9 @@ impl<'a> Painter<'a> {
                     Some(boolean) => boolean,
                     None => config.background_color_extends_to_terminal_width,
                 };
-            if background_color_extends_to_terminal_width && have_background_for_right_fill {
+            let right_fill_background_color =
+                background_color_extends_to_terminal_width && have_background_for_right_fill;
+            if right_fill_background_color {
                 // HACK: How to properly incorporate the ANSI_CSI_CLEAR_TO_EOL into ansi_strings?
                 if line
                     .to_lowercase()
@@ -237,6 +244,19 @@ impl<'a> Painter<'a> {
                 output_buffer.push_str(ANSI_SGR_RESET);
             } else {
                 output_buffer.push_str(&line);
+            }
+            if line.is_empty() && !right_fill_background_color {
+                if let Some(empty_line_style) = empty_line_style {
+                    output_buffer.push_str(
+                        &empty_line_style
+                            .ansi_term_style
+                            .paint(format!(
+                                "{}{}",
+                                ANSI_CSI_CLEAR_TO_BOL, ANSI_CSI_CURSOR_BACK_1
+                            ))
+                            .to_string(),
+                    );
+                }
             }
             output_buffer.push_str("\n");
         }

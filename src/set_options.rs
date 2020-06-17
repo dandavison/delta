@@ -188,6 +188,7 @@ pub fn set_options(
             // dynamically to the value of the former.
             ("minus-style", String, minus_style),
             ("minus-emph-style", String, minus_emph_style),
+            ("minus-empty-line-marker-style", String, minus_empty_line_marker_style),
             ("minus-non-emph-style", String, minus_non_emph_style),
             ("navigate", bool, navigate),
             ("number", bool, show_line_numbers),
@@ -206,6 +207,7 @@ pub fn set_options(
             // dynamically to the value of the former.
             ("plus-style", String, plus_style),
             ("plus-emph-style", String, plus_emph_style),
+            ("plus-empty-line-marker-style", String, plus_empty_line_marker_style),
             ("plus-non-emph-style", String, plus_non_emph_style),
             ("syntax_theme", Option<String>, syntax_theme),
             ("tabs", usize, tab_width),

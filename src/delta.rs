@@ -405,6 +405,7 @@ fn handle_hunk_header_line(
                 "",
                 config.null_style,
                 config.null_style,
+                None,
                 Some(false),
             );
             painter.output_buffer.pop(); // trim newline
@@ -494,6 +495,7 @@ fn handle_hunk_line(
                 prefix,
                 config.zero_style,
                 config.zero_style,
+                None,
                 None,
             );
             painter.minus_line_number += 1;

@@ -44,6 +44,7 @@ pub struct Config {
     pub max_line_distance: f64,
     pub max_line_distance_for_naively_paired_lines: f64,
     pub minus_emph_style: Style,
+    pub minus_empty_line_marker_style: Style,
     pub minus_file: Option<PathBuf>,
     pub minus_non_emph_style: Style,
     pub minus_style: Style,
@@ -58,6 +59,7 @@ pub struct Config {
     pub number_plus_style: Style,
     pub paging_mode: PagingMode,
     pub plus_emph_style: Style,
+    pub plus_empty_line_marker_style: Style,
     pub plus_file: Option<PathBuf>,
     pub plus_non_emph_style: Style,
     pub plus_style: Style,
@@ -207,10 +209,12 @@ impl From<cli::Opt> for Config {
             minus_style,
             minus_emph_style,
             minus_non_emph_style,
+            minus_empty_line_marker_style,
             zero_style,
             plus_style,
             plus_emph_style,
             plus_non_emph_style,
+            plus_empty_line_marker_style,
         ) = make_hunk_styles(&opt, is_light_mode, true_color);
 
         let (commit_style, file_style, hunk_header_style) =
@@ -268,6 +272,7 @@ impl From<cli::Opt> for Config {
             max_line_distance: opt.max_line_distance,
             max_line_distance_for_naively_paired_lines,
             minus_emph_style,
+            minus_empty_line_marker_style,
             minus_file: opt.minus_file.map(|s| s.clone()),
             minus_non_emph_style,
             minus_style,
@@ -282,6 +287,7 @@ impl From<cli::Opt> for Config {
             number_plus_style,
             paging_mode,
             plus_emph_style,
+            plus_empty_line_marker_style,
             plus_file: opt.plus_file.map(|s| s.clone()),
             plus_non_emph_style,
             plus_style,
@@ -303,7 +309,17 @@ fn make_hunk_styles<'a>(
     opt: &'a cli::Opt,
     is_light_mode: bool,
     true_color: bool,
-) -> (Style, Style, Style, Style, Style, Style, Style) {
+) -> (
+    Style,
+    Style,
+    Style,
+    Style,
+    Style,
+    Style,
+    Style,
+    Style,
+    Style,
+) {
     let minus_style = Style::from_str(
         &opt.minus_style,
         None,
@@ -332,6 +348,20 @@ fn make_hunk_styles<'a>(
         &opt.minus_non_emph_style,
         minus_style.ansi_term_style.foreground,
         minus_style.ansi_term_style.background,
+        None,
+        true_color,
+        false,
+    );
+
+    // The style used to highlight a removed empty line when otherwise it would be invisible due to
+    // lack of background color in minus-style.
+    let minus_empty_line_marker_style = Style::from_str(
+        &opt.minus_empty_line_marker_style,
+        None,
+        Some(color::get_minus_background_color_default(
+            is_light_mode,
+            true_color,
+        )),
         None,
         true_color,
         false,
@@ -372,14 +402,30 @@ fn make_hunk_styles<'a>(
         false,
     );
 
+    // The style used to highlight an added empty line when otherwise it would be invisible due to
+    // lack of background color in plus-style.
+    let plus_empty_line_marker_style = Style::from_str(
+        &opt.plus_empty_line_marker_style,
+        None,
+        Some(color::get_plus_background_color_default(
+            is_light_mode,
+            true_color,
+        )),
+        None,
+        true_color,
+        false,
+    );
+
     (
         minus_style,
         minus_emph_style,
         minus_non_emph_style,
+        minus_empty_line_marker_style,
         zero_style,
         plus_style,
         plus_emph_style,
         plus_non_emph_style,
+        plus_empty_line_marker_style,
     )
 }
 
