@@ -2,6 +2,7 @@ use std::collections::HashMap;
 use structopt::clap;
 
 use crate::cli;
+use crate::config;
 use crate::git_config::{self, GitConfigGet};
 use crate::preset::{self, GetValueFunctionFromBuiltinPreset};
 
@@ -161,6 +162,17 @@ pub fn set_options(
     if opt.no_gitconfig {
         return;
     }
+    // Handle options which default to an arbitrary git config value.
+    // TODO: incorporate this logic into the set_options macro.
+    if !config::user_supplied_option("whitespace-error-style", arg_matches) {
+        opt.whitespace_error_style = if let Some(git_config) = git_config {
+            git_config.get::<String>("color.diff.whitespace")
+        } else {
+            None
+        }
+        .unwrap_or_else(|| "magenta reverse".to_string())
+    }
+
     set_options!(
         [
             // --presets must be set first
@@ -212,6 +224,7 @@ pub fn set_options(
             ("syntax_theme", Option<String>, syntax_theme),
             ("tabs", usize, tab_width),
             ("true-color", String, true_color),
+            ("whitespace-error-style", String, whitespace_error_style),
             ("width", Option<String>, width),
             ("word-diff-regex", String, tokenization_regex),
             ("zero-style", String, zero_style)

@@ -415,6 +415,11 @@ pub struct Opt {
     #[structopt(long = "--plus-empty-line-marker-style", default_value = "normal auto")]
     pub plus_empty_line_marker_style: String,
 
+    /// Style for whitespace errors. Defaults to color.diff.whitespace if that is set in git
+    /// config, or else 'magenta reverse'.
+    #[structopt(long = "whitespace-error-style", default_value = "auto auto")]
+    pub whitespace_error_style: String,
+
     #[structopt(long = "minus-color")]
     /// Deprecated: use --minus-style='normal my_background_color'.
     pub deprecated_minus_background_color: Option<String>,

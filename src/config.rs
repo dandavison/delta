@@ -72,6 +72,7 @@ pub struct Config {
     pub tab_width: usize,
     pub true_color: bool,
     pub tokenization_regex: Regex,
+    pub whitespace_error_style: Style,
     pub zero_style: Style,
 }
 
@@ -215,6 +216,7 @@ impl From<cli::Opt> for Config {
             plus_emph_style,
             plus_non_emph_style,
             plus_empty_line_marker_style,
+            whitespace_error_style,
         ) = make_hunk_styles(&opt, is_light_mode, true_color);
 
         let (commit_style, file_style, hunk_header_style) =
@@ -300,6 +302,7 @@ impl From<cli::Opt> for Config {
             tab_width: opt.tab_width,
             tokenization_regex,
             true_color,
+            whitespace_error_style,
             zero_style,
         }
     }
@@ -310,6 +313,7 @@ fn make_hunk_styles<'a>(
     is_light_mode: bool,
     true_color: bool,
 ) -> (
+    Style,
     Style,
     Style,
     Style,
@@ -416,6 +420,15 @@ fn make_hunk_styles<'a>(
         false,
     );
 
+    let whitespace_error_style = Style::from_str(
+        &opt.whitespace_error_style,
+        None,
+        None,
+        None,
+        true_color,
+        false,
+    );
+
     (
         minus_style,
         minus_emph_style,
@@ -426,6 +439,7 @@ fn make_hunk_styles<'a>(
         plus_emph_style,
         plus_non_emph_style,
         plus_empty_line_marker_style,
+        whitespace_error_style,
     )
 }
 

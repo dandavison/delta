@@ -536,6 +536,81 @@ mod tests {
         remove_file(git_config_path).unwrap();
     }
 
+    #[test]
+    fn test_whitespace_error_style() {
+        let git_config_contents = b"
+[color \"diff\"]
+    whitespace = yellow dim ul magenta
+";
+        let git_config_path = "delta__test_whitespace_error_style.gitconfig";
+
+        // Git config disabled: hard-coded delta default wins
+        assert_eq!(
+            make_config(&[], None, None).whitespace_error_style,
+            make_style("magenta reverse")
+        );
+
+        // Unspecified by user: color.diff.whitespace wins
+        assert_eq!(
+            make_config(&[], Some(git_config_contents), Some(git_config_path))
+                .whitespace_error_style,
+            make_style("yellow dim ul magenta")
+        );
+
+        // Command line argument wins
+        assert_eq!(
+            make_config(
+                &["--whitespace-error-style", "red reverse"],
+                Some(git_config_contents),
+                Some(git_config_path)
+            )
+            .whitespace_error_style,
+            make_style("reverse red")
+        );
+
+        let git_config_contents = b"
+[color \"diff\"]
+    whitespace = yellow dim ul magenta
+
+[delta]
+    whitespace-error-style = blue reverse
+
+[delta \"my-whitespace-error-style-preset\"]
+    whitespace-error-style = green reverse
+";
+
+        // Command line argument wins
+        assert_eq!(
+            make_config(
+                &["--whitespace-error-style", "red reverse"],
+                Some(git_config_contents),
+                Some(git_config_path)
+            )
+            .whitespace_error_style,
+            make_style("reverse red")
+        );
+
+        // No command line argument; main [delta] section wins
+        assert_eq!(
+            make_config(&[], Some(git_config_contents), Some(git_config_path))
+                .whitespace_error_style,
+            make_style("blue reverse")
+        );
+
+        // No command line argument; preset section wins
+        assert_eq!(
+            make_config(
+                &["--presets", "my-whitespace-error-style-preset"],
+                Some(git_config_contents),
+                Some(git_config_path)
+            )
+            .whitespace_error_style,
+            make_style("reverse green")
+        );
+
+        remove_file(git_config_path).unwrap();
+    }
+
     fn make_style(s: &str) -> Style {
         _make_style(s, false)
     }

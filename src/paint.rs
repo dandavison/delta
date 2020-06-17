@@ -332,13 +332,21 @@ impl<'a> Painter<'a> {
         } else {
             None
         };
-        Self::update_styles(&mut diff_sections.0, minus_non_emph_style);
+        Self::update_styles(
+            &mut diff_sections.0,
+            config.whitespace_error_style,
+            minus_non_emph_style,
+        );
         let plus_non_emph_style = if config.plus_non_emph_style != config.plus_emph_style {
             Some(config.plus_non_emph_style)
         } else {
             None
         };
-        Self::update_styles(&mut diff_sections.1, plus_non_emph_style);
+        Self::update_styles(
+            &mut diff_sections.1,
+            config.whitespace_error_style,
+            plus_non_emph_style,
+        );
         diff_sections
     }
 
@@ -348,15 +356,30 @@ impl<'a> Painter<'a> {
     ///    inferred edit operations and so, if there is a special non-emph style that is
     ///    distinct from the default style, then it should be used for the non-emph style
     ///    sections.
-    fn update_styles(style_sections: &mut Vec<Vec<(Style, &str)>>, non_emph_style: Option<Style>) {
+    /// 2. If the line constitutes a whitespace error, then the whitespace error style
+    ///    should be applied to the added material.
+    fn update_styles(
+        style_sections: &mut Vec<Vec<(Style, &str)>>,
+        whitespace_error_style: Style,
+        non_emph_style: Option<Style>,
+    ) {
         for line_sections in style_sections {
             let line_has_emph_and_non_emph_sections =
                 style_sections_contain_more_than_one_style(line_sections);
             let should_update_non_emph_styles =
                 non_emph_style.is_some() && line_has_emph_and_non_emph_sections;
+            let is_whitespace_error = is_whitespace_error(line_sections);
             for section in line_sections.iter_mut() {
-                // Update the style if this is a non-emph section that needs updating.
-                if should_update_non_emph_styles && !section.0.is_emph {
+                // If the line as a whole constitutes a whitespace error then highlight this
+                // section if either (a) it is an emph section, or (b) the line lacks any
+                // emph/non-emph distinction.
+                if is_whitespace_error
+                    && (section.0.is_emph || !line_has_emph_and_non_emph_sections)
+                {
+                    *section = (whitespace_error_style, section.1);
+                }
+                // Otherwise, update the style if this is a non-emph section that needs updating.
+                else if should_update_non_emph_styles && !section.0.is_emph {
                     *section = (non_emph_style.unwrap(), section.1);
                 }
             }
@@ -377,6 +400,20 @@ fn style_sections_contain_more_than_one_style(sections: &Vec<(Style, &str)>) -> 
     } else {
         false
     }
+}
+
+lazy_static! {
+    static ref NON_WHITESPACE_REGEX: Regex = Regex::new(r"\S").unwrap();
+}
+
+/// True iff the line represented by `sections` constitutes a whitespace error.
+// TODO: Git recognizes blank lines at end of file (blank-at-eof) as a whitespace error but delta
+// does not yet.
+// https://git-scm.com/docs/git-config#Documentation/git-config.txt-corewhitespace
+fn is_whitespace_error(sections: &Vec<(Style, &str)>) -> bool {
+    !sections
+        .iter()
+        .any(|(_, s)| NON_WHITESPACE_REGEX.is_match(s))
 }
 
 mod superimpose_style_sections {
