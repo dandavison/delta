@@ -298,25 +298,38 @@ impl<'a> Painter<'a> {
             config.max_line_distance,
             config.max_line_distance_for_naively_paired_lines,
         );
-        if config.minus_non_emph_style != config.minus_emph_style {
-            Self::set_non_emph_styles(&mut diff_sections.0, config.minus_non_emph_style);
-        }
-        if config.plus_non_emph_style != config.plus_emph_style {
-            Self::set_non_emph_styles(&mut diff_sections.1, config.plus_non_emph_style);
-        }
+
+        let minus_non_emph_style = if config.minus_non_emph_style != config.minus_emph_style {
+            Some(config.minus_non_emph_style)
+        } else {
+            None
+        };
+        Self::update_styles(&mut diff_sections.0, minus_non_emph_style);
+        let plus_non_emph_style = if config.plus_non_emph_style != config.plus_emph_style {
+            Some(config.plus_non_emph_style)
+        } else {
+            None
+        };
+        Self::update_styles(&mut diff_sections.1, plus_non_emph_style);
         diff_sections
     }
 
-    fn set_non_emph_styles(style_sections: &mut Vec<Vec<(Style, &str)>>, non_emph_style: Style) {
+    /// There are some rules according to which we update line section styles that were computed
+    /// during the initial edit inference pass. This function applies those rules. The rules are
+    /// 1. If there are multiple diff styles in the line, then the line must have some
+    ///    inferred edit operations and so, if there is a special non-emph style that is
+    ///    distinct from the default style, then it should be used for the non-emph style
+    ///    sections.
+    fn update_styles(style_sections: &mut Vec<Vec<(Style, &str)>>, non_emph_style: Option<Style>) {
         for line_sections in style_sections {
-            // If there multiple diff styles in the line, then the line must have some inferred
-            // edit operations and so the non-emph color style should be used for the non-emph
-            // style sections.
-            if style_sections_contain_more_than_one_style(line_sections) {
-                for section in line_sections.iter_mut() {
-                    if !section.0.is_emph {
-                        *section = (non_emph_style, section.1);
-                    }
+            let line_has_emph_and_non_emph_sections =
+                style_sections_contain_more_than_one_style(line_sections);
+            let should_update_non_emph_styles =
+                non_emph_style.is_some() && line_has_emph_and_non_emph_sections;
+            for section in line_sections.iter_mut() {
+                // Update the style if this is a non-emph section that needs updating.
+                if should_update_non_emph_styles && !section.0.is_emph {
+                    *section = (non_emph_style.unwrap(), section.1);
                 }
             }
         }
