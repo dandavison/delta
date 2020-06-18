@@ -221,7 +221,7 @@ pub fn set_options(
             ("plus-emph-style", String, plus_emph_style),
             ("plus-empty-line-marker-style", String, plus_empty_line_marker_style),
             ("plus-non-emph-style", String, plus_non_emph_style),
-            ("syntax_theme", Option<String>, syntax_theme),
+            ("syntax-theme", Option<String>, syntax_theme),
             ("tabs", usize, tab_width),
             ("true-color", String, true_color),
             ("whitespace-error-style", String, whitespace_error_style),
