@@ -1093,11 +1093,7 @@ impl<'a> Alignment<'a> { │
                 line,
                 &style
                     .ansi_term_style
-                    .paint(format!(
-                        "{}{}",
-                        paint::ANSI_CSI_CLEAR_TO_BOL,
-                        paint::ANSI_CSI_CURSOR_BACK_1
-                    ))
+                    .paint(paint::ANSI_CSI_CLEAR_TO_BOL)
                     .to_string()
             );
         }

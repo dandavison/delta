@@ -15,7 +15,6 @@ use crate::style::Style;
 
 pub const ANSI_CSI_CLEAR_TO_EOL: &str = "\x1b[0K";
 pub const ANSI_CSI_CLEAR_TO_BOL: &str = "\x1b[1K";
-pub const ANSI_CSI_CURSOR_BACK_1: &str = "\x1b[1D";
 pub const ANSI_SGR_RESET: &str = "\x1b[0m";
 
 pub struct Painter<'a> {
@@ -240,10 +239,7 @@ impl<'a> Painter<'a> {
                     output_buffer.push_str(
                         &empty_line_style
                             .ansi_term_style
-                            .paint(format!(
-                                "{}{}",
-                                ANSI_CSI_CLEAR_TO_BOL, ANSI_CSI_CURSOR_BACK_1
-                            ))
+                            .paint(ANSI_CSI_CLEAR_TO_BOL)
                             .to_string(),
                     );
                 }
