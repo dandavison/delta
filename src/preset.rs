@@ -360,6 +360,46 @@ mod tests {
     }
 
     #[test]
+    fn test_file_modified_label() {
+        let git_config_contents = b"
+[delta]
+    navigate = true
+    file-modified-label = \"modified: \"
+";
+        let git_config_path = "delta__test_file_modified_label.gitconfig";
+
+        assert_eq!(make_config(&[], None, None).file_modified_label, "");
+        assert_eq!(
+            make_config(&["--navigate"], None, None).file_modified_label,
+            "Δ"
+        );
+        assert_eq!(
+            make_config(&[], Some(git_config_contents), Some(git_config_path)).file_modified_label,
+            "modified: "
+        );
+
+        let git_config_contents = b"
+[delta \"my-navigate-preset\"]
+    navigate = true
+    file-modified-label = \"modified: \"
+";
+
+        assert_eq!(
+            make_config(&[], Some(git_config_contents), Some(git_config_path)).file_modified_label,
+            ""
+        );
+        assert_eq!(
+            make_config(
+                &["--presets", "my-navigate-preset"],
+                Some(git_config_contents),
+                Some(git_config_path)
+            )
+            .file_modified_label,
+            "modified: "
+        );
+    }
+
+    #[test]
     fn test_diff_highlight_defaults() {
         let config = make_config(&["--presets", "diff-highlight"], None, None);
 
