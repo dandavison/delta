@@ -1118,6 +1118,19 @@ impl<'a> Alignment<'a> { │
         );
     }
 
+    #[test]
+    fn test_color_only() {
+        let config = integration_test_utils::make_config(&["--color-only"]);
+        let output = integration_test_utils::run_delta(GIT_DIFF_SINGLE_HUNK, &config);
+        ansi_test_utils::assert_line_is_syntax_highlighted(
+            &output,
+            12,
+            "         for (i, x_i) in self.x.iter().enumerate() {",
+            "rs",
+            &config,
+        );
+    }
+
     const GIT_DIFF_SINGLE_HUNK: &str = "\
 commit 94907c0f136f46dc46ffae2dc92dca9af7eb7c2e
 Author: Dan Davison <dandavison7@gmail.com>
