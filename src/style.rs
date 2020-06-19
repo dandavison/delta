@@ -1,3 +1,5 @@
+use std::borrow::Cow;
+use std::fmt;
 use std::process;
 
 use ansi_term;
@@ -47,6 +49,17 @@ impl Style {
             is_syntax_highlighted: false,
             decoration_style: DecorationStyle::NoDecoration,
         }
+    }
+
+    pub fn paint<'a, I, S: 'a + ToOwned + ?Sized>(
+        self,
+        input: I,
+    ) -> ansi_term::ANSIGenericString<'a, S>
+    where
+        I: Into<Cow<'a, S>>,
+        <S as ToOwned>::Owned: fmt::Debug,
+    {
+        self.ansi_term_style.paint(input)
     }
 
     pub fn has_background_color(&self) -> bool {

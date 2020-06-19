@@ -20,7 +20,7 @@ pub fn write_no_decoration(
     if text_style.is_raw {
         writeln!(writer, "{}", raw_text)?;
     } else {
-        writeln!(writer, "{}", text_style.ansi_term_style.paint(text))?;
+        writeln!(writer, "{}", text_style.paint(text))?;
     }
     Ok(())
 }
@@ -180,7 +180,7 @@ fn _write_under_or_over_lined(
     if text_style.is_raw {
         writeln!(writer, "{}", raw_text)?;
     } else {
-        writeln!(writer, "{}", text_style.ansi_term_style.paint(text))?;
+        writeln!(writer, "{}", text_style.paint(text))?;
     }
     match underoverline {
         UnderOverline::Over => {}
@@ -263,7 +263,7 @@ fn write_boxed_partial(
     if text_style.is_raw {
         write!(writer, "{}", raw_text)?;
     } else {
-        write!(writer, "{}", text_style.ansi_term_style.paint(text))?;
+        write!(writer, "{}", text_style.paint(text))?;
     }
     write!(
         writer,

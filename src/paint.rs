@@ -188,7 +188,7 @@ impl<'a> Painter<'a> {
                         .number_plus_format_style
                         .ansi_term_style
                         .paint(plus_before),
-                    config.number_plus_style.ansi_term_style.paint(plus_number),
+                    config.number_plus_style.paint(plus_number),
                     config
                         .number_plus_format_style
                         .ansi_term_style
@@ -205,7 +205,7 @@ impl<'a> Painter<'a> {
             ) {
                 if !handled_prefix {
                     if prefix != "" {
-                        ansi_strings.push(section_style.ansi_term_style.paint(prefix));
+                        ansi_strings.push(section_style.paint(prefix));
                         if text.len() > 0 {
                             text.remove(0);
                         }
@@ -213,14 +213,14 @@ impl<'a> Painter<'a> {
                     handled_prefix = true;
                 }
                 if !text.is_empty() {
-                    ansi_strings.push(section_style.ansi_term_style.paint(text));
+                    ansi_strings.push(section_style.paint(text));
                 }
             }
             let right_fill_background_color = non_emph_style.has_background_color()
                 && background_color_extends_to_terminal_width
                     .unwrap_or(config.background_color_extends_to_terminal_width);
             if right_fill_background_color {
-                ansi_strings.push(non_emph_style.ansi_term_style.paint(""));
+                ansi_strings.push(non_emph_style.paint(""));
             }
             let line = &mut ansi_term::ANSIStrings(&ansi_strings).to_string();
             if right_fill_background_color {
