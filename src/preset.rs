@@ -14,14 +14,22 @@ use crate::git_config::GitConfig;
 /// A builtin preset is a named set of command line (option, value) pairs that is built in to
 /// delta. The implementation stores each value as a function, which allows the value (a) to depend
 /// dynamically on the value of other command line options, and (b) to be taken from git config.
-// Currently, all values in builtin presets are of type String.
-pub type BuiltinPreset<T> = HashMap<String, PresetValueFunction<T>>;
-type PresetValueFunction<T> = Box<dyn Fn(&cli::Opt, &Option<GitConfig>) -> T>;
+pub type BuiltinPreset = HashMap<String, PresetValueFunction>;
+
+type PresetValueFunction = Box<dyn Fn(&cli::Opt, &Option<GitConfig>) -> OptionValue>;
+
+pub enum OptionValue {
+    Boolean(bool),
+    Float(f64),
+    OptionString(Option<String>),
+    String(String),
+    Int(usize),
+}
 
 // Construct a 2-level hash map: (preset name) -> (option name) -> (value function). A value
 // function is a function that takes an Opt struct, and a git Config struct, and returns the value
 // for the option.
-pub fn make_builtin_presets() -> HashMap<String, BuiltinPreset<String>> {
+pub fn make_builtin_presets() -> HashMap<String, BuiltinPreset> {
     vec![
         (
             "diff-highlight".to_string(),
@@ -39,141 +47,211 @@ pub fn make_builtin_presets() -> HashMap<String, BuiltinPreset<String>> {
 /// The macro permits the values of a builtin preset to be specified as either (a) a git config
 /// entry or (b) a value, which may be computed from the other command line options (cli::Opt).
 macro_rules! builtin_preset {
-    ([$( ($option_name:expr, $git_config_key:expr, $opt:ident => $value:expr) ),*]) => {
+    ([$( ($option_name:expr, $type:ty, $git_config_key:expr, $opt:ident => $value:expr) ),*]) => {
         vec![$(
             (
                 $option_name.to_string(),
                 Box::new(move |$opt: &cli::Opt, git_config: &Option<GitConfig>| {
                     match (git_config, $git_config_key) {
-                        (Some(git_config), Some(git_config_key)) => git_config.get::<String>(git_config_key),
+                        (Some(git_config), Some(git_config_key)) => match git_config.get::<$type>(git_config_key) {
+                            Some(value) => Some(value.into()),
+                            _ => None,
+                        },
                         _ => None,
                     }
-                    .unwrap_or_else(|| $value)
-                }) as PresetValueFunction<String>
+                    .unwrap_or_else(|| $value.into())
+                }) as PresetValueFunction
             )
         ),*]
     }
 }
 
-fn _make_diff_highlight_preset<'a>(bold: bool) -> Vec<(String, PresetValueFunction<String>)> {
+fn _make_diff_highlight_preset<'a>(bold: bool) -> Vec<(String, PresetValueFunction)> {
     builtin_preset!([
         (
             "minus-style",
+            String,
             Some("color.diff.old"),
-            _opt => (if bold { "bold red" } else { "red" }).to_string()
+            _opt => if bold { "bold red" } else { "red" }
         ),
         (
             "minus-non-emph-style",
+            String,
             Some("color.diff-highlight.oldNormal"),
             opt => opt.minus_style.clone()
         ),
         (
             "minus-emph-style",
+            String,
             Some("color.diff-highlight.oldHighlight"),
             opt => format!("{} reverse", opt.minus_style)
         ),
         (
             "zero-style",
+            String,
             None,
-            _opt => "normal".to_string()
+            _opt => "normal"
         ),
         (
             "plus-style",
+            String,
             Some("color.diff.new"),
-            _opt => (if bold { "bold green" } else { "green" }).to_string()
+            _opt => if bold { "bold green" } else { "green" }
         ),
         (
             "plus-non-emph-style",
+            String,
             Some("color.diff-highlight.newNormal"),
             opt => opt.plus_style.clone()
         ),
         (
             "plus-emph-style",
+            String,
             Some("color.diff-highlight.newHighlight"),
             opt => format!("{} reverse", opt.plus_style)
         )
     ])
 }
 
-fn make_diff_highlight_preset() -> Vec<(String, PresetValueFunction<String>)> {
+fn make_diff_highlight_preset() -> Vec<(String, PresetValueFunction)> {
     _make_diff_highlight_preset(false)
 }
 
-fn make_diff_so_fancy_preset() -> Vec<(String, PresetValueFunction<String>)> {
+fn make_diff_so_fancy_preset() -> Vec<(String, PresetValueFunction)> {
     let mut preset = _make_diff_highlight_preset(true);
     preset.extend(builtin_preset!([
         (
             "minus-emph-style",
+            String,
             Some("color.diff-highlight.oldHighlight"),
-            _opt => "bold red 52".to_string()
+            _opt => "bold red 52"
         ),
         (
             "plus-emph-style",
+            String,
             Some("color.diff-highlight.newHighlight"),
-            _opt => "bold green 22".to_string()
+            _opt => "bold green 22"
         ),
         (
             "commit-style",
+            String,
             None,
-            _opt => "bold yellow".to_string()
+            _opt => "bold yellow"
         ),
         (
             "commit-decoration-style",
+            String,
             None,
-            _opt => "none".to_string()
+            _opt => "none"
         ),
         (
             "file-style",
+            String,
             Some("color.diff.meta"),
-            _opt => "11".to_string()
+            _opt => "11"
         ),
         (
             "file-decoration-style",
+            String,
             None,
-            _opt => "bold yellow ul ol".to_string()
+            _opt => "bold yellow ul ol"
         ),
         (
             "hunk-header-style",
+            String,
             Some("color.diff.frag"),
-            _opt => "bold syntax".to_string()
+            _opt => "bold syntax"
         ),
         (
             "hunk-header-decoration-style",
+            String,
             None,
-            _opt => "magenta box".to_string()
+            _opt => "magenta box"
         )
     ]));
     preset
 }
 
-// Currently the builtin presets only have String values. The trait is implemented for other types
-// out of necessity.
-pub trait GetValueFunctionFromBuiltinPreset {
-    fn get_value_function_from_builtin_preset<'a>(
-        _option_name: &str,
-        _builtin_preset: &'a BuiltinPreset<String>,
-    ) -> Option<&'a PresetValueFunction<Self>>
-    where
-        Self: Sized,
-    {
-        None
+impl From<bool> for OptionValue {
+    fn from(value: bool) -> Self {
+        OptionValue::Boolean(value)
     }
 }
 
-impl GetValueFunctionFromBuiltinPreset for String {
-    fn get_value_function_from_builtin_preset<'a>(
-        option_name: &str,
-        builtin_preset: &'a BuiltinPreset<String>,
-    ) -> Option<&'a PresetValueFunction<String>> {
-        builtin_preset.get(option_name)
+impl From<OptionValue> for bool {
+    fn from(value: OptionValue) -> Self {
+        match value {
+            OptionValue::Boolean(value) => value,
+            _ => panic!(),
+        }
     }
 }
 
-impl GetValueFunctionFromBuiltinPreset for bool {}
-impl GetValueFunctionFromBuiltinPreset for i64 {}
-impl GetValueFunctionFromBuiltinPreset for usize {}
-impl GetValueFunctionFromBuiltinPreset for f64 {}
-impl GetValueFunctionFromBuiltinPreset for Option<String> {}
+impl From<f64> for OptionValue {
+    fn from(value: f64) -> Self {
+        OptionValue::Float(value)
+    }
+}
+
+impl From<OptionValue> for f64 {
+    fn from(value: OptionValue) -> Self {
+        match value {
+            OptionValue::Float(value) => value,
+            _ => panic!(),
+        }
+    }
+}
+
+impl From<Option<String>> for OptionValue {
+    fn from(value: Option<String>) -> Self {
+        OptionValue::OptionString(value)
+    }
+}
+
+impl From<OptionValue> for Option<String> {
+    fn from(value: OptionValue) -> Self {
+        match value {
+            OptionValue::OptionString(value) => value,
+            _ => panic!(),
+        }
+    }
+}
+
+impl From<String> for OptionValue {
+    fn from(value: String) -> Self {
+        OptionValue::String(value)
+    }
+}
+
+impl From<&str> for OptionValue {
+    fn from(value: &str) -> Self {
+        value.to_string().into()
+    }
+}
+
+impl From<OptionValue> for String {
+    fn from(value: OptionValue) -> Self {
+        match value {
+            OptionValue::String(value) => value,
+            _ => panic!(),
+        }
+    }
+}
+
+impl From<usize> for OptionValue {
+    fn from(value: usize) -> Self {
+        OptionValue::Int(value)
+    }
+}
+
+impl From<OptionValue> for usize {
+    fn from(value: OptionValue) -> Self {
+        match value {
+            OptionValue::Int(value) => value,
+            _ => panic!(),
+        }
+    }
+}
 
 #[cfg(test)]
 mod tests {

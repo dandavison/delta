@@ -1,6 +1,5 @@
 #[cfg(test)]
 use std::path::Path;
-
 use std::process;
 
 use git2;
@@ -70,12 +69,6 @@ impl GitConfigGet for Option<String> {
 impl GitConfigGet for bool {
     fn git_config_get(key: &str, git_config: &GitConfig) -> Option<Self> {
         git_config.config.get_bool(key).ok()
-    }
-}
-
-impl GitConfigGet for i64 {
-    fn git_config_get(key: &str, git_config: &GitConfig) -> Option<Self> {
-        git_config.config.get_i64(key).ok()
     }
 }
 

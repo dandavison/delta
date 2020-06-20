@@ -4,7 +4,7 @@ use structopt::clap;
 use crate::cli;
 use crate::config;
 use crate::git_config::{self, GitConfigGet};
-use crate::preset::{self, GetValueFunctionFromBuiltinPreset};
+use crate::preset;
 
 // A type T implementing this trait gains a static method allowing an option value of type T to be
 // looked up, implementing delta's rules for looking up option values.
@@ -19,14 +19,14 @@ trait GetOptionValue {
     // 3. The value for n in the main git config section for delta (i.e. git config value delta.$n)
     fn get_option_value(
         option_name: &str,
-        builtin_presets: &HashMap<String, preset::BuiltinPreset<String>>,
+        builtin_presets: &HashMap<String, preset::BuiltinPreset>,
         opt: &cli::Opt,
         git_config: &mut Option<git_config::GitConfig>,
     ) -> Option<Self>
     where
         Self: Sized,
         Self: GitConfigGet,
-        Self: GetValueFunctionFromBuiltinPreset,
+        Self: From<preset::OptionValue>,
     {
         if let Some(presets) = &opt.presets {
             for preset in presets.to_lowercase().split_whitespace().rev() {
@@ -52,14 +52,14 @@ trait GetOptionValue {
     fn get_option_value_for_preset(
         option_name: &str,
         preset: &str,
-        builtin_presets: &HashMap<String, preset::BuiltinPreset<String>>,
+        builtin_presets: &HashMap<String, preset::BuiltinPreset>,
         opt: &cli::Opt,
         git_config: &mut Option<git_config::GitConfig>,
     ) -> Option<Self>
     where
         Self: Sized,
         Self: GitConfigGet,
-        Self: GetValueFunctionFromBuiltinPreset,
+        Self: From<preset::OptionValue>,
     {
         if let Some(git_config) = git_config {
             if let Some(value) =
@@ -69,84 +69,40 @@ trait GetOptionValue {
             }
         }
         if let Some(builtin_preset) = builtin_presets.get(preset) {
-            if let Some(value_function) =
-                Self::get_value_function_from_builtin_preset(option_name, builtin_preset)
-            {
-                return Some(value_function(opt, &git_config));
+            if let Some(value_function) = builtin_preset.get(option_name) {
+                return Some(value_function(opt, &git_config).into());
             }
         }
         return None;
     }
 }
 
+impl GetOptionValue for Option<String> {}
 impl GetOptionValue for String {}
-
-impl GetOptionValue for Option<String> {
-    fn get_option_value(
-        option_name: &str,
-        builtin_presets: &HashMap<String, preset::BuiltinPreset<String>>,
-        opt: &cli::Opt,
-        git_config: &mut Option<git_config::GitConfig>,
-    ) -> Option<Self> {
-        match get_option_value::<String>(option_name, builtin_presets, opt, git_config) {
-            Some(value) => Some(Some(value)),
-            None => None,
-        }
-    }
-}
-
 impl GetOptionValue for bool {}
-
-impl GetOptionValue for i64 {}
-
-impl GetOptionValue for usize {
-    fn get_option_value(
-        option_name: &str,
-        builtin_presets: &HashMap<String, preset::BuiltinPreset<String>>,
-        opt: &cli::Opt,
-        git_config: &mut Option<git_config::GitConfig>,
-    ) -> Option<Self> {
-        match get_option_value::<i64>(option_name, builtin_presets, opt, git_config) {
-            Some(value) => Some(value as usize),
-            None => None,
-        }
-    }
-}
-
-impl GetOptionValue for f64 {
-    fn get_option_value(
-        option_name: &str,
-        builtin_presets: &HashMap<String, preset::BuiltinPreset<String>>,
-        opt: &cli::Opt,
-        git_config: &mut Option<git_config::GitConfig>,
-    ) -> Option<Self> {
-        match get_option_value::<String>(option_name, builtin_presets, opt, git_config) {
-            Some(value) => value.parse::<f64>().ok(),
-            None => None,
-        }
-    }
-}
+impl GetOptionValue for f64 {}
+impl GetOptionValue for usize {}
 
 fn get_option_value<T>(
     option_name: &str,
-    builtin_presets: &HashMap<String, preset::BuiltinPreset<String>>,
+    builtin_presets: &HashMap<String, preset::BuiltinPreset>,
     opt: &cli::Opt,
     git_config: &mut Option<git_config::GitConfig>,
 ) -> Option<T>
 where
     T: GitConfigGet,
     T: GetOptionValue,
-    T: GetValueFunctionFromBuiltinPreset,
+    T: From<preset::OptionValue>,
 {
     T::get_option_value(option_name, builtin_presets, opt, git_config)
 }
 
 macro_rules! set_options {
-	([$( ($option_name:expr, $type:ty, $field_ident:ident) ),* ],
+	([$( ($option_name:expr, $field_ident:ident) ),* ],
      $opt:expr, $builtin_presets:expr, $git_config:expr, $arg_matches:expr) => {
         $(
             if !$crate::config::user_supplied_option($option_name, $arg_matches) {
-                if let Some(value) = get_option_value::<$type>($option_name, &$builtin_presets, $opt, $git_config) {
+                if let Some(value) = get_option_value($option_name, &$builtin_presets, $opt, $git_config) {
                     $opt.$field_ident = value;
                 }
             };
@@ -176,58 +132,53 @@ pub fn set_options(
     set_options!(
         [
             // --presets must be set first
-            ("presets", Option<String>, presets),
-            ("color-only", bool, color_only),
-            ("commit-decoration-style", String, commit_decoration_style),
-            ("commit-style", String, commit_style),
-            ("dark", bool, dark),
-            ("file-added-label", String, file_added_label),
-            ("file-decoration-style", String, file_decoration_style),
-            ("file-modified-label", String, file_modified_label),
-            ("file-removed-label", String, file_removed_label),
-            ("file-renamed-label", String, file_renamed_label),
-            ("file-style", String, file_style),
-            (
-                "hunk-header-decoration-style",
-                String,
-                hunk_header_decoration_style
-            ),
-            ("hunk-header-style", String, hunk_header_style),
-            ("keep-plus-minus-markers", bool, keep_plus_minus_markers),
-            ("light", bool, light),
-            ("max-line-distance", f64, max_line_distance),
+            ("presets", presets),
+            ("color-only", color_only),
+            ("commit-decoration-style", commit_decoration_style),
+            ("commit-style", commit_style),
+            ("dark", dark),
+            ("file-added-label", file_added_label),
+            ("file-decoration-style", file_decoration_style),
+            ("file-modified-label", file_modified_label),
+            ("file-removed-label", file_removed_label),
+            ("file-renamed-label", file_renamed_label),
+            ("file-style", file_style),
+            ("hunk-header-decoration-style", hunk_header_decoration_style),
+            ("hunk-header-style", hunk_header_style),
+            ("keep-plus-minus-markers", keep_plus_minus_markers),
+            ("light", light),
+            ("max-line-distance", max_line_distance),
             // Hack: minus-style must come before minus-*emph-style because the latter default
             // dynamically to the value of the former.
-            ("minus-style", String, minus_style),
-            ("minus-emph-style", String, minus_emph_style),
-            ("minus-empty-line-marker-style", String, minus_empty_line_marker_style),
-            ("minus-non-emph-style", String, minus_non_emph_style),
-            ("navigate", bool, navigate),
-            ("number", bool, show_line_numbers),
-            ("number-minus-format", String, number_minus_format),
+            ("minus-style", minus_style),
+            ("minus-emph-style", minus_emph_style),
             (
-                "number-minus-format-style",
-                String,
-                number_minus_format_style
+                "minus-empty-line-marker-style",
+                minus_empty_line_marker_style
             ),
-            ("number-minus-style", String, number_minus_style),
-            ("number-plus-format", String, number_plus_format),
-            ("number-plus-format-style", String, number_plus_format_style),
-            ("number-plus-style", String, number_plus_style),
-            ("paging-mode", String, paging_mode),
+            ("minus-non-emph-style", minus_non_emph_style),
+            ("navigate", navigate),
+            ("number", show_line_numbers),
+            ("number-minus-format", number_minus_format),
+            ("number-minus-format-style", number_minus_format_style),
+            ("number-minus-style", number_minus_style),
+            ("number-plus-format", number_plus_format),
+            ("number-plus-format-style", number_plus_format_style),
+            ("number-plus-style", number_plus_style),
+            ("paging-mode", paging_mode),
             // Hack: plus-style must come before plus-*emph-style because the latter default
             // dynamically to the value of the former.
-            ("plus-style", String, plus_style),
-            ("plus-emph-style", String, plus_emph_style),
-            ("plus-empty-line-marker-style", String, plus_empty_line_marker_style),
-            ("plus-non-emph-style", String, plus_non_emph_style),
-            ("syntax-theme", Option<String>, syntax_theme),
-            ("tabs", usize, tab_width),
-            ("true-color", String, true_color),
-            ("whitespace-error-style", String, whitespace_error_style),
-            ("width", Option<String>, width),
-            ("word-diff-regex", String, tokenization_regex),
-            ("zero-style", String, zero_style)
+            ("plus-style", plus_style),
+            ("plus-emph-style", plus_emph_style),
+            ("plus-empty-line-marker-style", plus_empty_line_marker_style),
+            ("plus-non-emph-style", plus_non_emph_style),
+            ("syntax-theme", syntax_theme),
+            ("tabs", tab_width),
+            ("true-color", true_color),
+            ("whitespace-error-style", whitespace_error_style),
+            ("width", width),
+            ("word-diff-regex", tokenization_regex),
+            ("zero-style", zero_style)
         ],
         opt,
         preset::make_builtin_presets(),
