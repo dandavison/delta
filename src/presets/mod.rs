@@ -33,11 +33,11 @@ pub fn make_builtin_presets() -> HashMap<String, BuiltinPreset> {
     vec![
         (
             "diff-highlight".to_string(),
-            make_diff_highlight_preset().into_iter().collect(),
+            diff_highlight::make_preset().into_iter().collect(),
         ),
         (
             "diff-so-fancy".to_string(),
-            make_diff_so_fancy_preset().into_iter().collect(),
+            diff_so_fancy::make_preset().into_iter().collect(),
         ),
     ]
     .into_iter()
@@ -51,7 +51,7 @@ macro_rules! builtin_preset {
         vec![$(
             (
                 $option_name.to_string(),
-                Box::new(move |$opt: &cli::Opt, git_config: &Option<GitConfig>| {
+                Box::new(move |$opt: &$crate::cli::Opt, git_config: &Option<$crate::git_config::GitConfig>| {
                     match (git_config, $git_config_key) {
                         (Some(git_config), Some(git_config_key)) => match git_config.get::<$type>(git_config_key) {
                             Some(value) => Some(value.into()),
@@ -66,111 +66,8 @@ macro_rules! builtin_preset {
     }
 }
 
-fn _make_diff_highlight_preset<'a>(bold: bool) -> Vec<(String, PresetValueFunction)> {
-    builtin_preset!([
-        (
-            "minus-style",
-            String,
-            Some("color.diff.old"),
-            _opt => if bold { "bold red" } else { "red" }
-        ),
-        (
-            "minus-non-emph-style",
-            String,
-            Some("color.diff-highlight.oldNormal"),
-            opt => opt.minus_style.clone()
-        ),
-        (
-            "minus-emph-style",
-            String,
-            Some("color.diff-highlight.oldHighlight"),
-            opt => format!("{} reverse", opt.minus_style)
-        ),
-        (
-            "zero-style",
-            String,
-            None,
-            _opt => "normal"
-        ),
-        (
-            "plus-style",
-            String,
-            Some("color.diff.new"),
-            _opt => if bold { "bold green" } else { "green" }
-        ),
-        (
-            "plus-non-emph-style",
-            String,
-            Some("color.diff-highlight.newNormal"),
-            opt => opt.plus_style.clone()
-        ),
-        (
-            "plus-emph-style",
-            String,
-            Some("color.diff-highlight.newHighlight"),
-            opt => format!("{} reverse", opt.plus_style)
-        )
-    ])
-}
-
-fn make_diff_highlight_preset() -> Vec<(String, PresetValueFunction)> {
-    _make_diff_highlight_preset(false)
-}
-
-fn make_diff_so_fancy_preset() -> Vec<(String, PresetValueFunction)> {
-    let mut preset = _make_diff_highlight_preset(true);
-    preset.extend(builtin_preset!([
-        (
-            "minus-emph-style",
-            String,
-            Some("color.diff-highlight.oldHighlight"),
-            _opt => "bold red 52"
-        ),
-        (
-            "plus-emph-style",
-            String,
-            Some("color.diff-highlight.newHighlight"),
-            _opt => "bold green 22"
-        ),
-        (
-            "commit-style",
-            String,
-            None,
-            _opt => "bold yellow"
-        ),
-        (
-            "commit-decoration-style",
-            String,
-            None,
-            _opt => "none"
-        ),
-        (
-            "file-style",
-            String,
-            Some("color.diff.meta"),
-            _opt => "11"
-        ),
-        (
-            "file-decoration-style",
-            String,
-            None,
-            _opt => "bold yellow ul ol"
-        ),
-        (
-            "hunk-header-style",
-            String,
-            Some("color.diff.frag"),
-            _opt => "bold syntax"
-        ),
-        (
-            "hunk-header-decoration-style",
-            String,
-            None,
-            _opt => "magenta box"
-        )
-    ]));
-    preset
-}
+pub mod diff_highlight;
+pub mod diff_so_fancy;
 
 impl From<bool> for OptionValue {
     fn from(value: bool) -> Self {

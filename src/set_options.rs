@@ -4,7 +4,7 @@ use structopt::clap;
 use crate::cli;
 use crate::config;
 use crate::git_config::{self, GitConfigGet};
-use crate::preset;
+use crate::presets;
 
 // A type T implementing this trait gains a static method allowing an option value of type T to be
 // looked up, implementing delta's rules for looking up option values.
@@ -19,14 +19,14 @@ trait GetOptionValue {
     // 3. The value for n in the main git config section for delta (i.e. git config value delta.$n)
     fn get_option_value(
         option_name: &str,
-        builtin_presets: &HashMap<String, preset::BuiltinPreset>,
+        builtin_presets: &HashMap<String, presets::BuiltinPreset>,
         opt: &cli::Opt,
         git_config: &mut Option<git_config::GitConfig>,
     ) -> Option<Self>
     where
         Self: Sized,
         Self: GitConfigGet,
-        Self: From<preset::OptionValue>,
+        Self: From<presets::OptionValue>,
     {
         if let Some(presets) = &opt.presets {
             for preset in presets.to_lowercase().split_whitespace().rev() {
@@ -52,14 +52,14 @@ trait GetOptionValue {
     fn get_option_value_for_preset(
         option_name: &str,
         preset: &str,
-        builtin_presets: &HashMap<String, preset::BuiltinPreset>,
+        builtin_presets: &HashMap<String, presets::BuiltinPreset>,
         opt: &cli::Opt,
         git_config: &mut Option<git_config::GitConfig>,
     ) -> Option<Self>
     where
         Self: Sized,
         Self: GitConfigGet,
-        Self: From<preset::OptionValue>,
+        Self: From<presets::OptionValue>,
     {
         if let Some(git_config) = git_config {
             if let Some(value) =
@@ -85,14 +85,14 @@ impl GetOptionValue for usize {}
 
 fn get_option_value<T>(
     option_name: &str,
-    builtin_presets: &HashMap<String, preset::BuiltinPreset>,
+    builtin_presets: &HashMap<String, presets::BuiltinPreset>,
     opt: &cli::Opt,
     git_config: &mut Option<git_config::GitConfig>,
 ) -> Option<T>
 where
     T: GitConfigGet,
     T: GetOptionValue,
-    T: From<preset::OptionValue>,
+    T: From<presets::OptionValue>,
 {
     T::get_option_value(option_name, builtin_presets, opt, git_config)
 }
@@ -181,7 +181,7 @@ pub fn set_options(
             ("zero-style", zero_style)
         ],
         opt,
-        preset::make_builtin_presets(),
+        presets::make_builtin_presets(),
         git_config,
         arg_matches
     );

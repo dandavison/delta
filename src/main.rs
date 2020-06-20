@@ -15,7 +15,7 @@ mod env;
 mod git_config;
 mod paint;
 mod parse;
-mod preset;
+mod presets;
 mod rewrite_options;
 mod set_options;
 mod style;
