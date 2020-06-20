@@ -35,11 +35,7 @@ fn rewrite_options_to_implement_color_only(opt: &mut cli::Opt) {
 /// Implement --navigate
 fn rewrite_options_to_implement_navigate(opt: &mut cli::Opt, arg_matches: &clap::ArgMatches) {
     if opt.navigate {
-        // Hack: perhaps navigate should be a built-in feature
-        let default_value = "";
-        if !user_supplied_option("file-modified-label", arg_matches)
-            && opt.file_modified_label == default_value
-        {
+        if !user_supplied_option("file-modified-label", arg_matches) {
             opt.file_modified_label = "Δ".to_string();
         }
     }
