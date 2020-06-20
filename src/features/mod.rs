@@ -156,7 +156,7 @@ impl From<OptionValue> for usize {
 }
 
 #[cfg(test)]
-mod tests {
+pub mod tests {
     use std::fs::{remove_file, File};
     use std::io::Write;
     use std::path::Path;
@@ -340,183 +340,6 @@ mod tests {
     }
 
     #[test]
-    fn test_diff_highlight_defaults() {
-        let config = make_config(&["--features", "diff-highlight"], None, None);
-
-        assert_eq!(config.minus_style, make_style("red"));
-        assert_eq!(config.minus_non_emph_style, make_style("red"));
-        assert_eq!(config.minus_emph_style, make_emph_style("red reverse"));
-        assert_eq!(config.zero_style, make_style(""));
-        assert_eq!(config.plus_style, make_style("green"));
-        assert_eq!(config.plus_non_emph_style, make_style("green"));
-        assert_eq!(config.plus_emph_style, make_emph_style("green reverse"));
-    }
-
-    #[test]
-    fn test_diff_highlight_respects_gitconfig() {
-        let git_config_contents = b"
-[color \"diff\"]
-    old = red bold
-    new = green bold
-
-[color \"diff-highlight\"]
-    oldNormal = ul red bold
-    oldHighlight = red bold 52
-    newNormal = ul green bold
-    newHighlight = green bold 22
-";
-        let git_config_path = "delta__test_diff_highlight.gitconfig";
-
-        let config = make_config(
-            &["--features", "diff-highlight"],
-            Some(git_config_contents),
-            Some(git_config_path),
-        );
-
-        assert_eq!(config.minus_style, make_style("red bold"));
-        assert_eq!(config.minus_non_emph_style, make_style("ul red bold"));
-        assert_eq!(config.minus_emph_style, make_emph_style("red bold 52"));
-        assert_eq!(config.zero_style, make_style(""));
-        assert_eq!(config.plus_style, make_style("green bold"));
-        assert_eq!(config.plus_non_emph_style, make_style("ul green bold"));
-        assert_eq!(config.plus_emph_style, make_emph_style("green bold 22"));
-
-        remove_file(git_config_path).unwrap();
-    }
-
-    #[test]
-    fn test_diff_so_fancy_defaults() {
-        let config = make_config(&["--features", "diff-so-fancy"], None, None);
-
-        assert_eq!(
-            config.commit_style.ansi_term_style,
-            make_style("bold yellow").ansi_term_style
-        );
-        assert_eq!(
-            config.commit_style.decoration_style,
-            make_decoration_style("none")
-        );
-
-        assert_eq!(
-            config.file_style.ansi_term_style,
-            make_style("11").ansi_term_style
-        );
-        assert_eq!(
-            config.file_style.decoration_style,
-            make_decoration_style("bold yellow ul ol")
-        );
-
-        assert_eq!(
-            config.hunk_header_style.ansi_term_style,
-            make_style("bold syntax").ansi_term_style
-        );
-        assert_eq!(
-            config.hunk_header_style.decoration_style,
-            make_decoration_style("magenta box")
-        );
-    }
-
-    #[test]
-    fn test_diff_so_fancy_respects_git_config() {
-        let git_config_contents = b"
-[color \"diff\"]
-    meta = 11
-    frag = magenta bold
-    commit = yellow bold
-    old = red bold
-    new = green bold
-    whitespace = red reverse
-";
-        let git_config_path = "delta__test_diff_so_fancy.gitconfig";
-
-        let config = make_config(
-            &["--features", "diff-so-fancy some-other-feature"],
-            Some(git_config_contents),
-            Some(git_config_path),
-        );
-
-        assert_eq!(
-            config.commit_style.ansi_term_style,
-            make_style("yellow bold").ansi_term_style
-        );
-        assert_eq!(
-            config.file_style.ansi_term_style,
-            make_style("11").ansi_term_style
-        );
-        assert_eq!(
-            config.hunk_header_style.ansi_term_style,
-            make_style("magenta bold").ansi_term_style
-        );
-        assert_eq!(
-            config.commit_style.decoration_style,
-            make_decoration_style("none")
-        );
-        assert_eq!(
-            config.file_style.decoration_style,
-            make_decoration_style("yellow bold ul ol")
-        );
-        assert_eq!(
-            config.hunk_header_style.decoration_style,
-            make_decoration_style("magenta box")
-        );
-
-        remove_file(git_config_path).unwrap();
-    }
-
-    #[test]
-    fn test_diff_so_fancy_obeys_feature_precedence_rules() {
-        let git_config_contents = b"
-[color \"diff\"]
-    meta = 11
-    frag = magenta bold
-    commit = yellow bold
-    old = red bold
-    new = green bold
-    whitespace = red reverse
-
-[delta \"decorations\"]
-    commit-decoration-style = bold box ul
-    file-style = bold 19 ul
-    file-decoration-style = none
-";
-        let git_config_path = "delta__test_diff_so_fancy_obeys_feature_precedence_rules.gitconfig";
-
-        let config = make_config(
-            &["--features", "decorations diff-so-fancy"],
-            Some(git_config_contents),
-            Some(git_config_path),
-        );
-
-        assert_eq!(
-            config.file_style.ansi_term_style,
-            make_style("11").ansi_term_style
-        );
-
-        assert_eq!(
-            config.file_style.decoration_style,
-            make_decoration_style("yellow bold ul ol")
-        );
-
-        let config = make_config(
-            &["--features", "diff-so-fancy decorations"],
-            Some(git_config_contents),
-            Some(git_config_path),
-        );
-
-        assert_eq!(
-            config.file_style.ansi_term_style,
-            make_style("ul bold 19").ansi_term_style
-        );
-
-        assert_eq!(
-            config.file_style.decoration_style,
-            make_decoration_style("none")
-        );
-
-        remove_file(git_config_path).unwrap();
-    }
-
-    #[test]
     fn test_whitespace_error_style() {
         let git_config_contents = b"
 [color \"diff\"]
@@ -591,11 +414,11 @@ mod tests {
         remove_file(git_config_path).unwrap();
     }
 
-    fn make_style(s: &str) -> Style {
+    pub fn make_style(s: &str) -> Style {
         _make_style(s, false)
     }
 
-    fn make_emph_style(s: &str) -> Style {
+    pub fn make_emph_style(s: &str) -> Style {
         _make_style(s, true)
     }
 
@@ -603,7 +426,7 @@ mod tests {
         Style::from_str(s, None, None, None, true, is_emph)
     }
 
-    fn make_decoration_style(s: &str) -> DecorationStyle {
+    pub fn make_decoration_style(s: &str) -> DecorationStyle {
         DecorationStyle::from_str(s, true)
     }
 
@@ -614,7 +437,7 @@ mod tests {
         GitConfig::from_path(&path)
     }
 
-    fn make_config(
+    pub fn make_config(
         args: &[&str],
         git_config_contents: Option<&[u8]>,
         path: Option<&str>,

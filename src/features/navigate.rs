@@ -22,48 +22,53 @@ pub fn make_feature() -> Vec<(String, FeatureValueFunction)> {
 
 #[cfg(test)]
 mod tests {
-    use std::fs::{remove_file, File};
-    use std::io::Write;
-    use std::path::Path;
+    use std::fs::remove_file;
 
-    use itertools;
-
-    use crate::config;
-    use crate::git_config::GitConfig;
-    use crate::style::Style;
+    use crate::features;
 
     #[test]
-    fn test_navigate() {
+    fn test_navigate_with_overriden_key_in_custom_navigate_section() {
         let git_config_contents = b"
 [delta]
     features = navigate
+
 [delta \"navigate\"]
     file-modified-label = \"modified: \"
 ";
-        let git_config_path = "delta__test_file_modified_label.gitconfig";
+        let git_config_path =
+            "delta__test_navigate_with_overriden_key_in_custom_navigate_section.gitconfig";
 
-        assert_eq!(make_config(&[], None, None).file_modified_label, "");
+        assert_eq!(features::tests::make_config(&[], None, None).file_modified_label, "");
         assert_eq!(
-            make_config(&["--features", "navigate"], None, None).file_modified_label,
+            features::tests::make_config(&["--features", "navigate"], None, None)
+                .file_modified_label,
             "Δ"
         );
         assert_eq!(
-            make_config(&[], Some(git_config_contents), Some(git_config_path)).file_modified_label,
+            features::tests::make_config(&[], Some(git_config_contents), Some(git_config_path))
+                .file_modified_label,
             "modified: "
         );
 
+        remove_file(git_config_path).unwrap();
+    }
+
+    #[test]
+    fn test_navigate_activated_by_custom_feature() {
         let git_config_contents = b"
 [delta \"my-navigate-feature\"]
     features = navigate
     file-modified-label = \"modified: \"
 ";
+        let git_config_path = "delta__test_navigate_activated_by_custom_feature.gitconfig";
 
         assert_eq!(
-            make_config(&[], Some(git_config_contents), Some(git_config_path)).file_modified_label,
+            features::tests::make_config(&[], Some(git_config_contents), Some(git_config_path))
+                .file_modified_label,
             ""
         );
         assert_eq!(
-            make_config(
+            features::tests::make_config(
                 &["--features", "my-navigate-feature"],
                 Some(git_config_contents),
                 Some(git_config_path)
@@ -73,34 +78,5 @@ mod tests {
         );
 
         remove_file(git_config_path).unwrap();
-    }
-
-    fn _make_style(s: &str, is_emph: bool) -> Style {
-        Style::from_str(s, None, None, None, true, is_emph)
-    }
-
-    fn make_git_config(contents: &[u8], path: &str) -> GitConfig {
-        let path = Path::new(path);
-        let mut file = File::create(path).unwrap();
-        file.write_all(contents).unwrap();
-        GitConfig::from_path(&path)
-    }
-
-    fn make_config(
-        args: &[&str],
-        git_config_contents: Option<&[u8]>,
-        path: Option<&str>,
-    ) -> config::Config {
-        let args: Vec<&str> = itertools::chain(
-            &["/dev/null", "/dev/null", "--24-bit-color", "always"],
-            args,
-        )
-        .map(|s| *s)
-        .collect();
-        let mut git_config = match (git_config_contents, path) {
-            (Some(contents), Some(path)) => Some(make_git_config(contents, path)),
-            _ => None,
-        };
-        config::Config::from_args(&args, &mut git_config)
     }
 }
