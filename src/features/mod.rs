@@ -39,6 +39,10 @@ pub fn make_builtin_features() -> HashMap<String, BuiltinFeature> {
             "diff-so-fancy".to_string(),
             diff_so_fancy::make_feature().into_iter().collect(),
         ),
+        (
+            "navigate".to_string(),
+            navigate::make_feature().into_iter().collect(),
+        ),
     ]
     .into_iter()
     .collect()
@@ -68,6 +72,7 @@ macro_rules! builtin_feature {
 
 pub mod diff_highlight;
 pub mod diff_so_fancy;
+pub mod navigate;
 
 impl From<bool> for OptionValue {
     fn from(value: bool) -> Self {
@@ -332,46 +337,6 @@ mod tests {
         );
 
         remove_file(git_config_path).unwrap();
-    }
-
-    #[test]
-    fn test_file_modified_label() {
-        let git_config_contents = b"
-[delta]
-    navigate = true
-    file-modified-label = \"modified: \"
-";
-        let git_config_path = "delta__test_file_modified_label.gitconfig";
-
-        assert_eq!(make_config(&[], None, None).file_modified_label, "");
-        assert_eq!(
-            make_config(&["--navigate"], None, None).file_modified_label,
-            "Δ"
-        );
-        assert_eq!(
-            make_config(&[], Some(git_config_contents), Some(git_config_path)).file_modified_label,
-            "modified: "
-        );
-
-        let git_config_contents = b"
-[delta \"my-navigate-feature\"]
-    navigate = true
-    file-modified-label = \"modified: \"
-";
-
-        assert_eq!(
-            make_config(&[], Some(git_config_contents), Some(git_config_path)).file_modified_label,
-            ""
-        );
-        assert_eq!(
-            make_config(
-                &["--features", "my-navigate-feature"],
-                Some(git_config_contents),
-                Some(git_config_path)
-            )
-            .file_modified_label,
-            "modified: "
-        );
     }
 
     #[test]

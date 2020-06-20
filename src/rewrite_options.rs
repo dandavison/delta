@@ -15,7 +15,6 @@ pub fn apply_rewrite_rules(opt: &mut cli::Opt, arg_matches: &clap::ArgMatches) {
     rewrite_options_to_implement_deprecated_hunk_style_option(opt);
     rewrite_options_to_implement_deprecated_theme_option(opt, arg_matches);
     rewrite_options_to_implement_color_only(opt);
-    rewrite_options_to_implement_navigate(opt, arg_matches);
 }
 
 /// Implement --color-only
@@ -29,15 +28,6 @@ fn rewrite_options_to_implement_color_only(opt: &mut cli::Opt) {
         opt.file_decoration_style = "none".to_string();
         opt.hunk_header_style = "raw".to_string();
         opt.hunk_header_decoration_style = "none".to_string();
-    }
-}
-
-/// Implement --navigate
-fn rewrite_options_to_implement_navigate(opt: &mut cli::Opt, arg_matches: &clap::ArgMatches) {
-    if opt.navigate {
-        if !user_supplied_option("file-modified-label", arg_matches) {
-            opt.file_modified_label = "Δ".to_string();
-        }
     }
 }
 
