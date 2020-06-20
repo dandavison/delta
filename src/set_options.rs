@@ -3,8 +3,8 @@ use structopt::clap;
 
 use crate::cli;
 use crate::config;
+use crate::features;
 use crate::git_config::{self, GitConfigGet};
-use crate::presets;
 
 // A type T implementing this trait gains a static method allowing an option value of type T to be
 // looked up, implementing delta's rules for looking up option values.
@@ -12,28 +12,28 @@ trait GetOptionValue {
     // If the value for option name n was not supplied on the command line, then a search is performed
     // as follows. The first value encountered is used:
     //
-    // 1. For each preset p (moving right to left through the listed presets):
-    //    1.1 The value of n under p interpreted as a user-supplied preset (i.e. git config value
+    // 1. For each feature p (moving right to left through the listed features):
+    //    1.1 The value of n under p interpreted as a user-supplied feature (i.e. git config value
     //        delta.$p.$n)
-    //    1.2 The value for n under p interpreted as a builtin preset
+    //    1.2 The value for n under p interpreted as a builtin feature
     // 3. The value for n in the main git config section for delta (i.e. git config value delta.$n)
     fn get_option_value(
         option_name: &str,
-        builtin_presets: &HashMap<String, presets::BuiltinPreset>,
+        builtin_features: &HashMap<String, features::BuiltinFeature>,
         opt: &cli::Opt,
         git_config: &mut Option<git_config::GitConfig>,
     ) -> Option<Self>
     where
         Self: Sized,
         Self: GitConfigGet,
-        Self: From<presets::OptionValue>,
+        Self: From<features::OptionValue>,
     {
-        if let Some(presets) = &opt.presets {
-            for preset in presets.to_lowercase().split_whitespace().rev() {
-                if let Some(value) = Self::get_option_value_for_preset(
+        if let Some(features) = &opt.features {
+            for feature in features.to_lowercase().split_whitespace().rev() {
+                if let Some(value) = Self::get_option_value_for_feature(
                     option_name,
-                    &preset,
-                    &builtin_presets,
+                    &feature,
+                    &builtin_features,
                     opt,
                     git_config,
                 ) {
@@ -49,27 +49,27 @@ trait GetOptionValue {
         None
     }
 
-    fn get_option_value_for_preset(
+    fn get_option_value_for_feature(
         option_name: &str,
-        preset: &str,
-        builtin_presets: &HashMap<String, presets::BuiltinPreset>,
+        feature: &str,
+        builtin_features: &HashMap<String, features::BuiltinFeature>,
         opt: &cli::Opt,
         git_config: &mut Option<git_config::GitConfig>,
     ) -> Option<Self>
     where
         Self: Sized,
         Self: GitConfigGet,
-        Self: From<presets::OptionValue>,
+        Self: From<features::OptionValue>,
     {
         if let Some(git_config) = git_config {
             if let Some(value) =
-                git_config.get::<Self>(&format!("delta.{}.{}", preset, option_name))
+                git_config.get::<Self>(&format!("delta.{}.{}", feature, option_name))
             {
                 return Some(value);
             }
         }
-        if let Some(builtin_preset) = builtin_presets.get(preset) {
-            if let Some(value_function) = builtin_preset.get(option_name) {
+        if let Some(builtin_feature) = builtin_features.get(feature) {
+            if let Some(value_function) = builtin_feature.get(option_name) {
                 return Some(value_function(opt, &git_config).into());
             }
         }
@@ -85,24 +85,24 @@ impl GetOptionValue for usize {}
 
 fn get_option_value<T>(
     option_name: &str,
-    builtin_presets: &HashMap<String, presets::BuiltinPreset>,
+    builtin_features: &HashMap<String, features::BuiltinFeature>,
     opt: &cli::Opt,
     git_config: &mut Option<git_config::GitConfig>,
 ) -> Option<T>
 where
     T: GitConfigGet,
     T: GetOptionValue,
-    T: From<presets::OptionValue>,
+    T: From<features::OptionValue>,
 {
-    T::get_option_value(option_name, builtin_presets, opt, git_config)
+    T::get_option_value(option_name, builtin_features, opt, git_config)
 }
 
 macro_rules! set_options {
 	([$( ($option_name:expr, $field_ident:ident) ),* ],
-     $opt:expr, $builtin_presets:expr, $git_config:expr, $arg_matches:expr) => {
+     $opt:expr, $builtin_features:expr, $git_config:expr, $arg_matches:expr) => {
         $(
             if !$crate::config::user_supplied_option($option_name, $arg_matches) {
-                if let Some(value) = get_option_value($option_name, &$builtin_presets, $opt, $git_config) {
+                if let Some(value) = get_option_value($option_name, &$builtin_features, $opt, $git_config) {
                     $opt.$field_ident = value;
                 }
             };
@@ -131,8 +131,8 @@ pub fn set_options(
 
     set_options!(
         [
-            // --presets must be set first
-            ("presets", presets),
+            // --features must be set first
+            ("features", features),
             ("color-only", color_only),
             ("commit-decoration-style", commit_decoration_style),
             ("commit-style", commit_style),
@@ -181,7 +181,7 @@ pub fn set_options(
             ("zero-style", zero_style)
         ],
         opt,
-        presets::make_builtin_presets(),
+        features::make_builtin_features(),
         git_config,
         arg_matches
     );

@@ -3,7 +3,7 @@ use std::collections::HashMap;
 use crate::cli;
 use crate::git_config::GitConfig;
 
-/// A preset is a named set of command line (option, value) pairs, supplied in a git config file.
+/// A feature is a named set of command line (option, value) pairs, supplied in a git config file.
 /// I.e. it might look like
 ///
 /// [delta "decorations"]
@@ -11,12 +11,12 @@ use crate::git_config::GitConfig;
 ///     file-style = bold 19 ul
 ///     file-decoration-style = none
 ///
-/// A builtin preset is a named set of command line (option, value) pairs that is built in to
+/// A builtin feature is a named set of command line (option, value) pairs that is built in to
 /// delta. The implementation stores each value as a function, which allows the value (a) to depend
 /// dynamically on the value of other command line options, and (b) to be taken from git config.
-pub type BuiltinPreset = HashMap<String, PresetValueFunction>;
+pub type BuiltinFeature = HashMap<String, FeatureValueFunction>;
 
-type PresetValueFunction = Box<dyn Fn(&cli::Opt, &Option<GitConfig>) -> OptionValue>;
+type FeatureValueFunction = Box<dyn Fn(&cli::Opt, &Option<GitConfig>) -> OptionValue>;
 
 pub enum OptionValue {
     Boolean(bool),
@@ -26,27 +26,27 @@ pub enum OptionValue {
     Int(usize),
 }
 
-// Construct a 2-level hash map: (preset name) -> (option name) -> (value function). A value
+// Construct a 2-level hash map: (feature name) -> (option name) -> (value function). A value
 // function is a function that takes an Opt struct, and a git Config struct, and returns the value
 // for the option.
-pub fn make_builtin_presets() -> HashMap<String, BuiltinPreset> {
+pub fn make_builtin_features() -> HashMap<String, BuiltinFeature> {
     vec![
         (
             "diff-highlight".to_string(),
-            diff_highlight::make_preset().into_iter().collect(),
+            diff_highlight::make_feature().into_iter().collect(),
         ),
         (
             "diff-so-fancy".to_string(),
-            diff_so_fancy::make_preset().into_iter().collect(),
+            diff_so_fancy::make_feature().into_iter().collect(),
         ),
     ]
     .into_iter()
     .collect()
 }
 
-/// The macro permits the values of a builtin preset to be specified as either (a) a git config
+/// The macro permits the values of a builtin feature to be specified as either (a) a git config
 /// entry or (b) a value, which may be computed from the other command line options (cli::Opt).
-macro_rules! builtin_preset {
+macro_rules! builtin_feature {
     ([$( ($option_name:expr, $type:ty, $git_config_key:expr, $opt:ident => $value:expr) ),*]) => {
         vec![$(
             (
@@ -60,7 +60,7 @@ macro_rules! builtin_preset {
                         _ => None,
                     }
                     .unwrap_or_else(|| $value.into())
-                }) as PresetValueFunction
+                }) as FeatureValueFunction
             )
         ),*]
     }
@@ -201,26 +201,26 @@ mod tests {
     }
 
     #[test]
-    fn test_preset() {
+    fn test_feature() {
         let git_config_contents = b"
 [delta]
     minus-style = blue
 
-[delta \"my-preset\"]
+[delta \"my-feature\"]
     minus-style = green
 ";
-        let git_config_path = "delta__test_preset.gitconfig";
+        let git_config_path = "delta__test_feature.gitconfig";
 
-        // Without --presets the main section takes effect
+        // Without --features the main section takes effect
         assert_eq!(
             make_config(&[], Some(git_config_contents), Some(git_config_path)).minus_style,
             make_style("blue")
         );
 
-        // With --presets the preset takes effect
+        // With --features the feature takes effect
         assert_eq!(
             make_config(
-                &["--presets", "my-preset"],
+                &["--features", "my-feature"],
                 Some(git_config_contents),
                 Some(git_config_path),
             )
@@ -231,22 +231,22 @@ mod tests {
     }
 
     #[test]
-    fn test_multiple_presets() {
+    fn test_multiple_features() {
         let git_config_contents = b"
 [delta]
     minus-style = blue
 
-[delta \"my-preset-1\"]
+[delta \"my-feature-1\"]
     minus-style = green
 
-[delta \"my-preset-2\"]
+[delta \"my-feature-2\"]
     minus-style = yellow
 ";
-        let git_config_path = "delta__test_multiple_presets.gitconfig";
+        let git_config_path = "delta__test_multiple_features.gitconfig";
 
         assert_eq!(
             make_config(
-                &["--presets", "my-preset-1"],
+                &["--features", "my-feature-1"],
                 Some(git_config_contents),
                 Some(git_config_path),
             )
@@ -256,7 +256,7 @@ mod tests {
 
         assert_eq!(
             make_config(
-                &["--presets", "my-preset-1 my-preset-2"],
+                &["--features", "my-feature-1 my-feature-2"],
                 Some(git_config_contents),
                 Some(git_config_path),
             )
@@ -266,7 +266,7 @@ mod tests {
 
         assert_eq!(
             make_config(
-                &["--presets", "my-preset-2 my-preset-1"],
+                &["--features", "my-feature-2 my-feature-1"],
                 Some(git_config_contents),
                 Some(git_config_path),
             )
@@ -278,22 +278,22 @@ mod tests {
     }
 
     #[test]
-    fn test_invalid_presets() {
+    fn test_invalid_features() {
         let git_config_contents = b"
 [delta]
     minus-style = blue
 
-[delta \"my-preset-1\"]
+[delta \"my-feature-1\"]
     minus-style = green
 
-[delta \"my-preset-2\"]
+[delta \"my-feature-2\"]
     minus-style = yellow
 ";
-        let git_config_path = "delta__test_invalid_presets.gitconfig";
+        let git_config_path = "delta__test_invalid_features.gitconfig";
 
         assert_eq!(
             make_config(
-                &["--presets", "my-preset-1"],
+                &["--features", "my-feature-1"],
                 Some(git_config_contents),
                 Some(git_config_path),
             )
@@ -303,7 +303,7 @@ mod tests {
 
         assert_eq!(
             make_config(
-                &["--presets", "my-preset-x"],
+                &["--features", "my-feature-x"],
                 Some(git_config_contents),
                 Some(git_config_path),
             )
@@ -313,7 +313,7 @@ mod tests {
 
         assert_eq!(
             make_config(
-                &["--presets", "my-preset-1 my-preset-x"],
+                &["--features", "my-feature-1 my-feature-x"],
                 Some(git_config_contents),
                 Some(git_config_path),
             )
@@ -323,7 +323,7 @@ mod tests {
 
         assert_eq!(
             make_config(
-                &["--presets", "my-preset-x my-preset-2 my-preset-x"],
+                &["--features", "my-feature-x my-feature-2 my-feature-x"],
                 Some(git_config_contents),
                 Some(git_config_path),
             )
@@ -354,7 +354,7 @@ mod tests {
         );
 
         let git_config_contents = b"
-[delta \"my-navigate-preset\"]
+[delta \"my-navigate-feature\"]
     navigate = true
     file-modified-label = \"modified: \"
 ";
@@ -365,7 +365,7 @@ mod tests {
         );
         assert_eq!(
             make_config(
-                &["--presets", "my-navigate-preset"],
+                &["--features", "my-navigate-feature"],
                 Some(git_config_contents),
                 Some(git_config_path)
             )
@@ -376,7 +376,7 @@ mod tests {
 
     #[test]
     fn test_diff_highlight_defaults() {
-        let config = make_config(&["--presets", "diff-highlight"], None, None);
+        let config = make_config(&["--features", "diff-highlight"], None, None);
 
         assert_eq!(config.minus_style, make_style("red"));
         assert_eq!(config.minus_non_emph_style, make_style("red"));
@@ -403,7 +403,7 @@ mod tests {
         let git_config_path = "delta__test_diff_highlight.gitconfig";
 
         let config = make_config(
-            &["--presets", "diff-highlight"],
+            &["--features", "diff-highlight"],
             Some(git_config_contents),
             Some(git_config_path),
         );
@@ -421,7 +421,7 @@ mod tests {
 
     #[test]
     fn test_diff_so_fancy_defaults() {
-        let config = make_config(&["--presets", "diff-so-fancy"], None, None);
+        let config = make_config(&["--features", "diff-so-fancy"], None, None);
 
         assert_eq!(
             config.commit_style.ansi_term_style,
@@ -465,7 +465,7 @@ mod tests {
         let git_config_path = "delta__test_diff_so_fancy.gitconfig";
 
         let config = make_config(
-            &["--presets", "diff-so-fancy some-other-preset"],
+            &["--features", "diff-so-fancy some-other-feature"],
             Some(git_config_contents),
             Some(git_config_path),
         );
@@ -499,7 +499,7 @@ mod tests {
     }
 
     #[test]
-    fn test_diff_so_fancy_obeys_preset_precedence_rules() {
+    fn test_diff_so_fancy_obeys_feature_precedence_rules() {
         let git_config_contents = b"
 [color \"diff\"]
     meta = 11
@@ -514,10 +514,10 @@ mod tests {
     file-style = bold 19 ul
     file-decoration-style = none
 ";
-        let git_config_path = "delta__test_diff_so_fancy_obeys_preset_precedence_rules.gitconfig";
+        let git_config_path = "delta__test_diff_so_fancy_obeys_feature_precedence_rules.gitconfig";
 
         let config = make_config(
-            &["--presets", "decorations diff-so-fancy"],
+            &["--features", "decorations diff-so-fancy"],
             Some(git_config_contents),
             Some(git_config_path),
         );
@@ -533,7 +533,7 @@ mod tests {
         );
 
         let config = make_config(
-            &["--presets", "diff-so-fancy decorations"],
+            &["--features", "diff-so-fancy decorations"],
             Some(git_config_contents),
             Some(git_config_path),
         );
@@ -590,7 +590,7 @@ mod tests {
 [delta]
     whitespace-error-style = blue reverse
 
-[delta \"my-whitespace-error-style-preset\"]
+[delta \"my-whitespace-error-style-feature\"]
     whitespace-error-style = green reverse
 ";
 
@@ -612,10 +612,10 @@ mod tests {
             make_style("blue reverse")
         );
 
-        // No command line argument; preset section wins
+        // No command line argument; feature section wins
         assert_eq!(
             make_config(
-                &["--presets", "my-whitespace-error-style-preset"],
+                &["--features", "my-whitespace-error-style-feature"],
                 Some(git_config_contents),
                 Some(git_config_path)
             )

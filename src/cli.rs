@@ -24,35 +24,35 @@ is
     number = true
     zero-style = dim syntax
 
-PRESETS
+FEATURES
 -------
-A preset is a named collection of delta options in ~/.gitconfig. An example is:
+A feature is a named collection of delta options in ~/.gitconfig. An example is:
 
-[delta \"my-delta-preset\"]
+[delta \"my-delta-feature\"]
     syntax-theme = Dracula
     plus-style = bold syntax \"#002800\"
     ...
 
 To activate those options, you would use:
 
-delta --presets my-delta-preset
+delta --features my-delta-feature
 
 or in ~/.gitconfig
 
 [delta]
-    presets = my-delta-preset
+    features = my-delta-feature
 
-A single preset name may not contain whitespace. You can activate multiple presets:
+A single feature name may not contain whitespace. You can activate multiple features:
 
 [delta]
-    presets = my-highlight-styles-colors-preset my-line-number-styles-preset
+    features = my-highlight-styles-colors-feature my-line-number-styles-feature
 
-If more than one preset sets the same option, the last one wins.
+If more than one feature sets the same option, the last one wins.
 
-There are two built-in presets:
+There are two built-in features:
 
---presets diff-highlight (https://github.com/git/git/tree/master/contrib/diff-highlight)
---presets diff-so-fancy (https://github.com/so-fancy/diff-so-fancy)
+--features diff-highlight (https://github.com/git/git/tree/master/contrib/diff-highlight)
+--features diff-so-fancy (https://github.com/so-fancy/diff-so-fancy)
 
 STYLES
 ------
@@ -169,12 +169,12 @@ https://github.com/dandavison/delta/issues.
 "
 )]
 pub struct Opt {
-    #[structopt(long = "presets", env = "DELTA_PRESET")]
-    /// Name of delta presets to use (space-separated). A preset is a named collection of delta
-    /// options in ~/.gitconfig. The preset names can also be set using an environment variable
-    /// named DELTA_PRESETS. Two built-in presets are available: 'diff-highlight' and
-    /// 'diff-so-fancy'. See PRESETS section.
-    pub presets: Option<String>,
+    #[structopt(long = "features", env = "DELTA_FEATURE")]
+    /// Name of delta features to use (space-separated). A feature is a named collection of delta
+    /// options in ~/.gitconfig. The feature names can also be set using an environment variable
+    /// named DELTA_FEATURES. Two built-in features are available: 'diff-highlight' and
+    /// 'diff-so-fancy'. See FEATURES section.
+    pub features: Option<String>,
 
     #[structopt(long = "syntax-theme", env = "BAT_THEME")]
     /// The code syntax-highlighting theme to use. Use --list-syntax-themes to demo available

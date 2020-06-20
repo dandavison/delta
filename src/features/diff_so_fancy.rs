@@ -1,9 +1,9 @@
-use crate::presets::diff_highlight;
-use crate::presets::PresetValueFunction;
+use crate::features::diff_highlight;
+use crate::features::FeatureValueFunction;
 
-pub fn make_preset() -> Vec<(String, PresetValueFunction)> {
-    let mut preset = diff_highlight::_make_preset(true);
-    preset.extend(builtin_preset!([
+pub fn make_feature() -> Vec<(String, FeatureValueFunction)> {
+    let mut feature = diff_highlight::_make_feature(true);
+    feature.extend(builtin_feature!([
         (
             "minus-emph-style",
             String,
@@ -53,5 +53,5 @@ pub fn make_preset() -> Vec<(String, PresetValueFunction)> {
             _opt => "magenta box"
         )
     ]));
-    preset
+    feature
 }

@@ -1,11 +1,11 @@
-use crate::presets::PresetValueFunction;
+use crate::features::FeatureValueFunction;
 
-pub fn make_preset() -> Vec<(String, PresetValueFunction)> {
-    _make_preset(false)
+pub fn make_feature() -> Vec<(String, FeatureValueFunction)> {
+    _make_feature(false)
 }
 
-pub fn _make_preset<'a>(bold: bool) -> Vec<(String, PresetValueFunction)> {
-    builtin_preset!([
+pub fn _make_feature(bold: bool) -> Vec<(String, FeatureValueFunction)> {
+    builtin_feature!([
         (
             "minus-style",
             String,
