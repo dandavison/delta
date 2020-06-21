@@ -2,29 +2,24 @@ use std::collections::HashMap;
 
 use crate::cli;
 use crate::git_config::GitConfig;
+use crate::option_value::ProvenancedOptionValue;
+use ProvenancedOptionValue::*;
 
-/// A feature is a named set of command line (option, value) pairs, supplied in a git config file.
-/// I.e. it might look like
+/// A custom feature is a named set of command line (option, value) pairs, supplied in a git config
+/// file. I.e. it might look like
 ///
 /// [delta "decorations"]
 ///     commit-decoration-style = bold box ul
 ///     file-style = bold 19 ul
 ///     file-decoration-style = none
 ///
-/// A builtin feature is a named set of command line (option, value) pairs that is built in to
-/// delta. The implementation stores each value as a function, which allows the value (a) to depend
-/// dynamically on the value of other command line options, and (b) to be taken from git config.
+/// A builtin feature is a named set of command line (option, value) pairs that is built-in to
+/// delta. The valueof a builtin feature is a function. This function is passed the current set of
+/// all command-line option-value pairs, and GitConfig, and returns either a GitConfigValue, or a
+/// DefaultValue. (It may use the set of all option-value pairs when computing its default).
 pub type BuiltinFeature = HashMap<String, OptionValueFunction>;
 
-type OptionValueFunction = Box<dyn Fn(&cli::Opt, &Option<GitConfig>) -> OptionValue>;
-
-pub enum OptionValue {
-    Boolean(bool),
-    Float(f64),
-    OptionString(Option<String>),
-    String(String),
-    Int(usize),
-}
+type OptionValueFunction = Box<dyn Fn(&cli::Opt, &Option<GitConfig>) -> ProvenancedOptionValue>;
 
 // Construct a 2-level hash map: (feature name) -> (option name) -> (value function). A value
 // function is a function that takes an Opt struct, and a git Config struct, and returns the value
@@ -58,12 +53,12 @@ macro_rules! builtin_feature {
                 Box::new(move |$opt: &$crate::cli::Opt, git_config: &Option<$crate::git_config::GitConfig>| {
                     match (git_config, $git_config_key) {
                         (Some(git_config), Some(git_config_key)) => match git_config.get::<$type>(git_config_key) {
-                            Some(value) => Some(value.into()),
+                            Some(value) => Some($crate::features::GitConfigValue(value.into())),
                             _ => None,
                         },
                         _ => None,
                     }
-                    .unwrap_or_else(|| $value.into())
+                    .unwrap_or_else(|| $crate::features::DefaultValue($value.into()))
                 }) as OptionValueFunction
             )
         ),*]
@@ -73,87 +68,6 @@ macro_rules! builtin_feature {
 pub mod diff_highlight;
 pub mod diff_so_fancy;
 pub mod navigate;
-
-impl From<bool> for OptionValue {
-    fn from(value: bool) -> Self {
-        OptionValue::Boolean(value)
-    }
-}
-
-impl From<OptionValue> for bool {
-    fn from(value: OptionValue) -> Self {
-        match value {
-            OptionValue::Boolean(value) => value,
-            _ => panic!(),
-        }
-    }
-}
-
-impl From<f64> for OptionValue {
-    fn from(value: f64) -> Self {
-        OptionValue::Float(value)
-    }
-}
-
-impl From<OptionValue> for f64 {
-    fn from(value: OptionValue) -> Self {
-        match value {
-            OptionValue::Float(value) => value,
-            _ => panic!(),
-        }
-    }
-}
-
-impl From<Option<String>> for OptionValue {
-    fn from(value: Option<String>) -> Self {
-        OptionValue::OptionString(value)
-    }
-}
-
-impl From<OptionValue> for Option<String> {
-    fn from(value: OptionValue) -> Self {
-        match value {
-            OptionValue::OptionString(value) => value,
-            _ => panic!(),
-        }
-    }
-}
-
-impl From<String> for OptionValue {
-    fn from(value: String) -> Self {
-        OptionValue::String(value)
-    }
-}
-
-impl From<&str> for OptionValue {
-    fn from(value: &str) -> Self {
-        value.to_string().into()
-    }
-}
-
-impl From<OptionValue> for String {
-    fn from(value: OptionValue) -> Self {
-        match value {
-            OptionValue::String(value) => value,
-            _ => panic!(),
-        }
-    }
-}
-
-impl From<usize> for OptionValue {
-    fn from(value: usize) -> Self {
-        OptionValue::Int(value)
-    }
-}
-
-impl From<OptionValue> for usize {
-    fn from(value: OptionValue) -> Self {
-        match value {
-            OptionValue::Int(value) => value,
-            _ => panic!(),
-        }
-    }
-}
 
 #[cfg(test)]
 pub mod tests {
