@@ -76,15 +76,33 @@ pub mod navigate;
 
 #[cfg(test)]
 pub mod tests {
+    use std::collections::HashSet;
     use std::fs::{remove_file, File};
     use std::io::Write;
     use std::path::Path;
 
     use itertools;
+    use structopt::{clap, StructOpt};
 
+    use crate::cli;
     use crate::config;
+    use crate::features::make_builtin_features;
     use crate::git_config::GitConfig;
+    use crate::set_options::set_options;
     use crate::style::{DecorationStyle, Style};
+
+    #[test]
+    fn test_builtin_features_have_flags() {
+        let builtin_features = make_builtin_features();
+        let mut args = vec!["delta".to_string()];
+        args.extend(builtin_features.keys().map(|s| format!("--{}", s)));
+        let mut opt = cli::Opt::from_iter(args);
+        set_options(&mut opt, &mut None, &clap::ArgMatches::new());
+        let features: HashSet<&str> = opt.features.split_whitespace().collect();
+        for feature in builtin_features.keys() {
+            assert!(features.contains(feature.as_str()))
+        }
+    }
 
     #[test]
     fn test_main_section() {
