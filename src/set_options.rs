@@ -23,9 +23,6 @@ pub fn set_options(
     git_config: &mut Option<git_config::GitConfig>,
     arg_matches: &clap::ArgMatches,
 ) {
-    if opt.no_gitconfig {
-        return;
-    }
     // Handle options which default to an arbitrary git config value.
     // TODO: incorporate this logic into the set_options macro.
     if !config::user_supplied_option("whitespace-error-style", arg_matches) {
