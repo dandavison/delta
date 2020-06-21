@@ -1120,7 +1120,6 @@ impl<'a> Alignment<'a> { │
     }
 
     #[test]
-    #[ignore]
     fn test_color_only() {
         let config = integration_test_utils::make_config(&["--color-only"]);
         let output = integration_test_utils::run_delta(GIT_DIFF_SINGLE_HUNK, &config);

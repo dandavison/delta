@@ -83,7 +83,6 @@ where
             state = State::FileMeta;
         } else if (state == State::FileMeta || source == Source::DiffUnified)
             && (line.starts_with("--- ") || line.starts_with("rename from "))
-            && should_handle(&State::FileMeta, config)
         {
             minus_file = parse::get_file_path_from_file_meta_line(&line, source == Source::GitDiff);
             if source == Source::DiffUnified {
@@ -95,21 +94,21 @@ where
                     &minus_file,
                 ));
             }
-        } else if (line.starts_with("+++ ") || line.starts_with("rename to "))
-            && should_handle(&State::FileMeta, config)
-        {
+        } else if line.starts_with("+++ ") || line.starts_with("rename to ") {
             plus_file = parse::get_file_path_from_file_meta_line(&line, source == Source::GitDiff);
             painter.set_syntax(parse::get_file_extension_from_file_meta_line_file_path(
                 &plus_file,
             ));
-            painter.emit()?;
-            handle_file_meta_header_line(
-                &mut painter,
-                &minus_file,
-                &plus_file,
-                config,
-                source == Source::DiffUnified,
-            )?;
+            if should_handle(&State::FileMeta, config) {
+                painter.emit()?;
+                handle_file_meta_header_line(
+                    &mut painter,
+                    &minus_file,
+                    &plus_file,
+                    config,
+                    source == Source::DiffUnified,
+                )?;
+            }
         } else if line.starts_with("@@") {
             state = State::HunkHeader;
             painter.set_highlighter();
