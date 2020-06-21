@@ -56,20 +56,18 @@ pub trait GetOptionValue {
                 return Some(value);
             }
         }
-        if let Some(features) = &opt.features {
-            for feature in features.to_lowercase().split_whitespace().rev() {
-                match Self::get_provenanced_value_for_feature(
-                    option_name,
-                    &feature,
-                    &builtin_features,
-                    opt,
-                    git_config,
-                ) {
-                    Some(GitConfigValue(value)) | Some(DefaultValue(value)) => {
-                        return Some(value.into());
-                    }
-                    None => {}
+        for feature in opt.features.to_lowercase().split_whitespace().rev() {
+            match Self::get_provenanced_value_for_feature(
+                option_name,
+                &feature,
+                &builtin_features,
+                opt,
+                git_config,
+            ) {
+                Some(GitConfigValue(value)) | Some(DefaultValue(value)) => {
+                    return Some(value.into());
                 }
+                None => {}
             }
         }
         None

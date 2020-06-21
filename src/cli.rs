@@ -169,12 +169,12 @@ https://github.com/dandavison/delta/issues.
 "
 )]
 pub struct Opt {
-    #[structopt(long = "features", env = "DELTA_FEATURES")]
+    #[structopt(long = "features", env = "DELTA_FEATURES", default_value = "")]
     /// Name of delta features to use (space-separated). A feature is a named collection of delta
     /// options in ~/.gitconfig. The feature names can also be set using an environment variable
     /// named DELTA_FEATURES. Two built-in features are available: 'diff-highlight' and
     /// 'diff-so-fancy'. See FEATURES section.
-    pub features: Option<String>,
+    pub features: String,
 
     #[structopt(long = "syntax-theme", env = "BAT_THEME")]
     /// The code syntax-highlighting theme to use. Use --list-syntax-themes to demo available
