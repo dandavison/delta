@@ -244,8 +244,10 @@ pub struct Opt {
     /// of the special attributes 'box', 'ul', 'overline', or 'underoverline' must be given.
     pub file_decoration_style: String,
 
-    #[structopt(skip = false)]
-    /// Navigate feature: users enable the feature by adding "navigate" to their feature list.
+    #[structopt(long = "navigate")]
+    /// Activate diff navigation: use n to jump forwards and N to jump backwards. To change the
+    /// file labels used see --file-modified-label, --file-removed-label, --file-added-label,
+    /// --file-renamed-label.
     pub navigate: bool,
 
     #[structopt(long = "file-modified-label", default_value = "")]

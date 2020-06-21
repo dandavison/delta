@@ -1,6 +1,3 @@
-/// Activate diff navigation: use n to jump forwards and N to jump backwards. To change the
-/// file labels used see --file-modified-label, --file-removed-label, --file-added-label,
-/// --file-renamed-label.
 use crate::features::OptionValueFunction;
 
 pub fn make_feature() -> Vec<(String, OptionValueFunction)> {
@@ -39,6 +36,10 @@ mod tests {
         assert_eq!(
             features::tests::make_config(&["--features", "navigate"], None, None)
                 .file_modified_label,
+            "Δ"
+        );
+        assert_eq!(
+            features::tests::make_config(&["--navigate"], None, None).file_modified_label,
             "Δ"
         );
         assert_eq!(
