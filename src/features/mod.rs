@@ -123,20 +123,13 @@ pub mod tests {
     fn test_feature() {
         let git_config_contents = b"
 [delta]
-    minus-style = blue
+
 
 [delta \"my-feature\"]
     minus-style = green
 ";
         let git_config_path = "delta__test_feature.gitconfig";
 
-        // Without --features the main section takes effect
-        assert_eq!(
-            make_config(&[], Some(git_config_contents), Some(git_config_path)).minus_style,
-            make_style("blue")
-        );
-
-        // With --features the feature takes effect
         assert_eq!(
             make_config(
                 &["--features", "my-feature"],
@@ -150,10 +143,40 @@ pub mod tests {
     }
 
     #[test]
-    fn test_multiple_features() {
+    fn test_main_section_overrides_feature() {
         let git_config_contents = b"
 [delta]
     minus-style = blue
+
+[delta \"my-feature-1\"]
+    minus-style = green
+";
+        let git_config_path = "delta__test_main_section_overrides_feature.gitconfig";
+
+        // Without --features the main section takes effect
+        assert_eq!(
+            make_config(&[], Some(git_config_contents), Some(git_config_path)).minus_style,
+            make_style("blue")
+        );
+
+        // Event with --features the main section overrides the feature.
+        assert_eq!(
+            make_config(
+                &["--features", "my-feature-1"],
+                Some(git_config_contents),
+                Some(git_config_path),
+            )
+            .minus_style,
+            make_style("blue")
+        );
+        remove_file(git_config_path).unwrap();
+    }
+
+    #[test]
+    fn test_multiple_features() {
+        let git_config_contents = b"
+[delta]
+
 
 [delta \"my-feature-1\"]
     minus-style = green
@@ -162,16 +185,6 @@ pub mod tests {
     minus-style = yellow
 ";
         let git_config_path = "delta__test_multiple_features.gitconfig";
-
-        assert_eq!(
-            make_config(
-                &["--features", "my-feature-1"],
-                Some(git_config_contents),
-                Some(git_config_path),
-            )
-            .minus_style,
-            make_style("green")
-        );
 
         assert_eq!(
             make_config(
@@ -199,9 +212,6 @@ pub mod tests {
     #[test]
     fn test_invalid_features() {
         let git_config_contents = b"
-[delta]
-    minus-style = blue
-
 [delta \"my-feature-1\"]
     minus-style = green
 
@@ -209,6 +219,10 @@ pub mod tests {
     minus-style = yellow
 ";
         let git_config_path = "delta__test_invalid_features.gitconfig";
+
+        let default = make_config(&[], None, None).minus_style;
+        assert_ne!(default, make_style("green"));
+        assert_ne!(default, make_style("yellow"));
 
         assert_eq!(
             make_config(
@@ -227,7 +241,7 @@ pub mod tests {
                 Some(git_config_path),
             )
             .minus_style,
-            make_style("blue")
+            default
         );
 
         assert_eq!(
@@ -307,14 +321,21 @@ pub mod tests {
             make_style("reverse red")
         );
 
-        // No command line argument; main [delta] section wins
+        // No command line argument or features; main [delta] section wins
         assert_eq!(
             make_config(&[], Some(git_config_contents), Some(git_config_path))
                 .whitespace_error_style,
             make_style("blue reverse")
         );
 
-        // No command line argument; feature section wins
+        // Feature contains key, but main [delta] section still wins.
+        // This is equivalent to
+        //
+        // [delta]
+        //     features = my-whitespace-error-style-feature
+        //     whitespace-error-style = blue reverse
+        //
+        // In this situation, the value from the feature is overridden.
         assert_eq!(
             make_config(
                 &["--features", "my-whitespace-error-style-feature"],
@@ -322,7 +343,7 @@ pub mod tests {
                 Some(git_config_path)
             )
             .whitespace_error_style,
-            make_style("reverse green")
+            make_style("reverse blue")
         );
 
         remove_file(git_config_path).unwrap();

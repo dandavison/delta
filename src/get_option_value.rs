@@ -8,19 +8,19 @@ use ProvenancedOptionValue::*;
 
 /// Look up a value of type `T` associated with `option name`. The search rules are:
 ///
-/// 1. For each feature in the ordered list of enabled features:
+/// 1. If there is a value associated with `option_name` in the main [delta] git config
+///    section, then stop searching and return that value.
 ///
-///    1.1 Look-up the value, treating `feature` as a custom feature.
+/// 2. For each feature in the ordered list of enabled features:
+///
+///    2.1 Look-up the value, treating `feature` as a custom feature.
 ///        I.e., if there is a value associated with `option_name` in a git config section
 ///        named [delta "`feature`"] then stop searching and return that value.
 ///
-///    1.2 Look-up the value, treating `feature` as a builtin feature.
+///    2.2 Look-up the value, treating `feature` as a builtin feature.
 ///        I.e., if there is a value (not a default value) associated with `option_name` in a
 ///        builtin feature named `feature`, then stop searching and return that value.
 ///        Otherwise, record the default value and continue searching.
-///
-/// 2. If there is a value associated with `option_name` in the main [delta] git config
-///    section, then stop searching and return that value.
 ///
 /// 3. Return the last default value that was encountered.
 pub fn get_option_value<T>(
@@ -51,7 +51,11 @@ pub trait GetOptionValue {
         Self: From<OptionValue>,
         Self: Into<OptionValue>,
     {
-        let mut default = None;
+        if let Some(git_config) = git_config {
+            if let Some(value) = git_config.get::<Self>(&format!("delta.{}", option_name)) {
+                return Some(value);
+            }
+        }
         if let Some(features) = &opt.features {
             for feature in features.to_lowercase().split_whitespace().rev() {
                 match Self::get_provenanced_value_for_feature(
@@ -61,22 +65,14 @@ pub trait GetOptionValue {
                     opt,
                     git_config,
                 ) {
-                    Some(GitConfigValue(value)) => {
+                    Some(GitConfigValue(value)) | Some(DefaultValue(value)) => {
                         return Some(value.into());
-                    }
-                    Some(DefaultValue(value)) => {
-                        default = Some(value.into());
                     }
                     None => {}
                 }
             }
         }
-        if let Some(git_config) = git_config {
-            if let Some(value) = git_config.get::<Self>(&format!("delta.{}", option_name)) {
-                return Some(value);
-            }
-        }
-        default
+        None
     }
 
     /// Return the value, or default value, associated with `option_name` under feature name
