@@ -9,14 +9,15 @@ use crate::git_config::{self, GitConfigGet};
 // A type T implementing this trait gains a static method allowing an option value of type T to be
 // looked up, implementing delta's rules for looking up option values.
 trait GetOptionValue {
-    // If the value for option name n was not supplied on the command line, then a search is performed
+    // If the value for option name k was not supplied on the command line, then a search is performed
     // as follows. The first value encountered is used:
     //
-    // 1. For each feature p (moving right to left through the listed features):
-    //    1.1 The value of n under p interpreted as a user-supplied feature (i.e. git config value
-    //        delta.$p.$n)
-    //    1.2 The value for n under p interpreted as a builtin feature
-    // 3. The value for n in the main git config section for delta (i.e. git config value delta.$n)
+    // 1. For each feature f (moving right to left through the listed features):
+    //    1.1 The value of k under f interpreted as a user-supplied feature (i.e. git config value
+    //        delta.f.k)
+    //    1.2 The value for k under f interpreted as a builtin feature
+    // 2. The value for k in the main git config section for delta (i.e. git config value delta.k)
+    // 3. The default value for k.
     fn get_option_value(
         option_name: &str,
         builtin_features: &HashMap<String, features::BuiltinFeature>,

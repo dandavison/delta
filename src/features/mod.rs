@@ -14,9 +14,9 @@ use crate::git_config::GitConfig;
 /// A builtin feature is a named set of command line (option, value) pairs that is built in to
 /// delta. The implementation stores each value as a function, which allows the value (a) to depend
 /// dynamically on the value of other command line options, and (b) to be taken from git config.
-pub type BuiltinFeature = HashMap<String, FeatureValueFunction>;
+pub type BuiltinFeature = HashMap<String, OptionValueFunction>;
 
-type FeatureValueFunction = Box<dyn Fn(&cli::Opt, &Option<GitConfig>) -> OptionValue>;
+type OptionValueFunction = Box<dyn Fn(&cli::Opt, &Option<GitConfig>) -> OptionValue>;
 
 pub enum OptionValue {
     Boolean(bool),
@@ -64,7 +64,7 @@ macro_rules! builtin_feature {
                         _ => None,
                     }
                     .unwrap_or_else(|| $value.into())
-                }) as FeatureValueFunction
+                }) as OptionValueFunction
             )
         ),*]
     }

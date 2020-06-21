@@ -1,10 +1,10 @@
-use crate::features::FeatureValueFunction;
+use crate::features::OptionValueFunction;
 
-pub fn make_feature() -> Vec<(String, FeatureValueFunction)> {
+pub fn make_feature() -> Vec<(String, OptionValueFunction)> {
     _make_feature(false)
 }
 
-pub fn _make_feature(bold: bool) -> Vec<(String, FeatureValueFunction)> {
+pub fn _make_feature(bold: bool) -> Vec<(String, OptionValueFunction)> {
     builtin_feature!([
         (
             "minus-style",

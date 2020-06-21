@@ -1,9 +1,9 @@
 /// Activate diff navigation: use n to jump forwards and N to jump backwards. To change the
 /// file labels used see --file-modified-label, --file-removed-label, --file-added-label,
 /// --file-renamed-label.
-use crate::features::FeatureValueFunction;
+use crate::features::OptionValueFunction;
 
-pub fn make_feature() -> Vec<(String, FeatureValueFunction)> {
+pub fn make_feature() -> Vec<(String, OptionValueFunction)> {
     builtin_feature!([
         (
             "navigate",
