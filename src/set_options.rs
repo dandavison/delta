@@ -26,6 +26,12 @@ pub fn set_options(
     if opt.color_only {
         opt.features = format!("{} color-only", opt.features);
     }
+    if opt.diff_highlight {
+        opt.features = format!("{} diff-highlight", opt.features);
+    }
+    if opt.diff_so_fancy {
+        opt.features = format!("{} diff-so-fancy", opt.features);
+    }
     if opt.navigate {
         opt.features = format!("{} navigate", opt.features);
     }

@@ -193,6 +193,14 @@ pub struct Opt {
     #[structopt(long = "dark")]
     pub dark: bool,
 
+    #[structopt(long = "diff-highlight")]
+    /// Emulate diff-highlight (https://github.com/git/git/tree/master/contrib/diff-highlight)
+    pub diff_highlight: bool,
+
+    #[structopt(long = "diff-so-fancy")]
+    /// Emulate diff-so-fancy (https://github.com/so-fancy/diff-so-fancy)
+    pub diff_so_fancy: bool,
+
     #[structopt(long = "minus-style", default_value = "normal auto")]
     /// Style (foreground, background, attributes) for removed lines. See STYLES section.
     pub minus_style: String,
