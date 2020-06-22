@@ -1,8 +1,13 @@
+use std::collections::HashMap;
+use std::collections::HashSet;
 use structopt::clap;
+
+use itertools::Itertools;
 
 use crate::cli;
 use crate::config;
 use crate::features;
+use crate::get_option_value::get_option_value;
 use crate::git_config;
 
 macro_rules! set_options {
@@ -23,18 +28,8 @@ pub fn set_options(
     git_config: &mut Option<git_config::GitConfig>,
     arg_matches: &clap::ArgMatches,
 ) {
-    if opt.color_only {
-        opt.features = format!("{} color-only", opt.features);
-    }
-    if opt.diff_highlight {
-        opt.features = format!("{} diff-highlight", opt.features);
-    }
-    if opt.diff_so_fancy {
-        opt.features = format!("{} diff-so-fancy", opt.features);
-    }
-    if opt.navigate {
-        opt.features = format!("{} navigate", opt.features);
-    }
+    let builtin_features = features::make_builtin_features();
+    set_features(opt, git_config, &builtin_features);
     // Handle options which default to an arbitrary git config value.
     // TODO: incorporate this logic into the set_options macro.
     if !config::user_supplied_option("whitespace-error-style", arg_matches) {
@@ -48,8 +43,6 @@ pub fn set_options(
 
     set_options!(
         [
-            // --features must be set first
-            ("features", features),
             ("color-only", color_only),
             ("commit-decoration-style", commit_decoration_style),
             ("commit-style", commit_style),
@@ -98,8 +91,45 @@ pub fn set_options(
             ("zero-style", zero_style)
         ],
         opt,
-        features::make_builtin_features(),
+        builtin_features,
         git_config,
         arg_matches
     );
+}
+
+fn set_features(
+    opt: &mut cli::Opt,
+    git_config: &mut Option<git_config::GitConfig>,
+    builtin_features: &HashMap<String, features::BuiltinFeature>,
+) {
+    if opt.color_only {
+        opt.features = format!("{} color-only", opt.features);
+    }
+    if opt.diff_highlight {
+        opt.features = format!("{} diff-highlight", opt.features);
+    }
+    if opt.diff_so_fancy {
+        opt.features = format!("{} diff-so-fancy", opt.features);
+    }
+    if opt.navigate {
+        opt.features = format!("{} navigate", opt.features);
+    }
+
+    if let Some(more_features) =
+        get_option_value::<String>("features", builtin_features, opt, git_config)
+    {
+        opt.features = append_features(&opt.features, &more_features);
+    }
+}
+
+fn append_features(features: &str, more_features: &str) -> String {
+    let feature_set: HashSet<_> = features.split_whitespace().collect();
+
+    let more_features = more_features
+        .to_lowercase()
+        .split_whitespace()
+        .filter(|s| !feature_set.contains(s))
+        .join(" ");
+
+    [features, &more_features].join(" ")
 }
