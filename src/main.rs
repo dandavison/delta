@@ -49,10 +49,8 @@ mod errors {
 }
 
 fn main() -> std::io::Result<()> {
-    let config = config::Config::from_arg_matches(
-        cli::Opt::clap().get_matches(),
-        &mut git_config::GitConfig::try_create(),
-    );
+    let opt = cli::Opt::from_args_and_git_config(&mut git_config::GitConfig::try_create());
+    let config = config::Config::from(opt);
 
     if config.list_languages {
         list_languages()?;
@@ -183,17 +181,16 @@ index f38589a..0f1bb83 100644
         }
 
         writeln!(stdout, "\n\nTheme: {}\n", style.paint(syntax_theme))?;
-        let config = config::Config::from_args(
-            &[
-                "--syntax-theme",
-                syntax_theme,
-                "--file-style",
-                "omit",
-                "--hunk-header-style",
-                "omit",
-            ],
-            &mut None,
-        );
+
+        let opt_2 = cli::Opt::from_iter(&[
+            "--syntax-theme",
+            syntax_theme,
+            "--file-style",
+            "omit",
+            "--hunk-header-style",
+            "omit",
+        ]);
+        let config = config::Config::from(opt_2);
         let mut output_type =
             OutputType::from_mode(PagingMode::QuitIfOneScreen, None, &config).unwrap();
         let mut writer = output_type.handle().unwrap();

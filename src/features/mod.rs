@@ -85,11 +85,9 @@ pub mod tests {
     use structopt::{clap, StructOpt};
 
     use crate::cli;
-    use crate::config;
     use crate::features::make_builtin_features;
     use crate::git_config::GitConfig;
     use crate::set_options::set_options;
-    use crate::style::{DecorationStyle, Style};
 
     #[test]
     fn test_builtin_features_have_flags() {
@@ -134,29 +132,29 @@ pub mod tests {
 
         // First check that it doesn't default to blue, because that's going to be used to signal
         // that gitconfig has set the style.
-        assert_ne!(make_config(&[], None, None).minus_style, make_style("blue"));
+        assert_ne!(make_options(&[], None, None).minus_style, "blue");
 
         // Check that --minus-style is honored as we expect.
         assert_eq!(
-            make_config(&["--minus-style", "red"], None, None).minus_style,
-            make_style("red")
+            make_options(&["--minus-style", "red"], None, None).minus_style,
+            "red"
         );
 
         // Check that gitconfig does not override a command line argument
         assert_eq!(
-            make_config(
+            make_options(
                 &["--minus-style", "red"],
                 Some(git_config_contents),
                 Some(git_config_path),
             )
             .minus_style,
-            make_style("red")
+            "red"
         );
 
         // Finally, check that gitconfig is honored when not overridden by a command line argument.
         assert_eq!(
-            make_config(&[], Some(git_config_contents), Some(git_config_path)).minus_style,
-            make_style("blue")
+            make_options(&[], Some(git_config_contents), Some(git_config_path)).minus_style,
+            "blue"
         );
 
         remove_file(git_config_path).unwrap();
@@ -174,13 +172,13 @@ pub mod tests {
         let git_config_path = "delta__test_feature.gitconfig";
 
         assert_eq!(
-            make_config(
+            make_options(
                 &["--features", "my-feature"],
                 Some(git_config_contents),
                 Some(git_config_path),
             )
             .minus_style,
-            make_style("green")
+            "green"
         );
         remove_file(git_config_path).unwrap();
     }
@@ -198,19 +196,19 @@ pub mod tests {
 
         // Without --features the main section takes effect
         assert_eq!(
-            make_config(&[], Some(git_config_contents), Some(git_config_path)).minus_style,
-            make_style("blue")
+            make_options(&[], Some(git_config_contents), Some(git_config_path)).minus_style,
+            "blue"
         );
 
         // Event with --features the main section overrides the feature.
         assert_eq!(
-            make_config(
+            make_options(
                 &["--features", "my-feature-1"],
                 Some(git_config_contents),
                 Some(git_config_path),
             )
             .minus_style,
-            make_style("blue")
+            "blue"
         );
         remove_file(git_config_path).unwrap();
     }
@@ -230,23 +228,23 @@ pub mod tests {
         let git_config_path = "delta__test_multiple_features.gitconfig";
 
         assert_eq!(
-            make_config(
+            make_options(
                 &["--features", "my-feature-1 my-feature-2"],
                 Some(git_config_contents),
                 Some(git_config_path),
             )
             .minus_style,
-            make_style("yellow")
+            "yellow"
         );
 
         assert_eq!(
-            make_config(
+            make_options(
                 &["--features", "my-feature-2 my-feature-1"],
                 Some(git_config_contents),
                 Some(git_config_path),
             )
             .minus_style,
-            make_style("green")
+            "green"
         );
 
         remove_file(git_config_path).unwrap();
@@ -263,22 +261,22 @@ pub mod tests {
 ";
         let git_config_path = "delta__test_invalid_features.gitconfig";
 
-        let default = make_config(&[], None, None).minus_style;
-        assert_ne!(default, make_style("green"));
-        assert_ne!(default, make_style("yellow"));
+        let default = make_options(&[], None, None).minus_style;
+        assert_ne!(default, "green");
+        assert_ne!(default, "yellow");
 
         assert_eq!(
-            make_config(
+            make_options(
                 &["--features", "my-feature-1"],
                 Some(git_config_contents),
                 Some(git_config_path),
             )
             .minus_style,
-            make_style("green")
+            "green"
         );
 
         assert_eq!(
-            make_config(
+            make_options(
                 &["--features", "my-feature-x"],
                 Some(git_config_contents),
                 Some(git_config_path),
@@ -288,23 +286,23 @@ pub mod tests {
         );
 
         assert_eq!(
-            make_config(
+            make_options(
                 &["--features", "my-feature-1 my-feature-x"],
                 Some(git_config_contents),
                 Some(git_config_path),
             )
             .minus_style,
-            make_style("green")
+            "green"
         );
 
         assert_eq!(
-            make_config(
+            make_options(
                 &["--features", "my-feature-x my-feature-2 my-feature-x"],
                 Some(git_config_contents),
                 Some(git_config_path),
             )
             .minus_style,
-            make_style("yellow")
+            "yellow"
         );
 
         remove_file(git_config_path).unwrap();
@@ -320,26 +318,26 @@ pub mod tests {
 
         // Git config disabled: hard-coded delta default wins
         assert_eq!(
-            make_config(&[], None, None).whitespace_error_style,
-            make_style("magenta reverse")
+            make_options(&[], None, None).whitespace_error_style,
+            "magenta reverse"
         );
 
         // Unspecified by user: color.diff.whitespace wins
         assert_eq!(
-            make_config(&[], Some(git_config_contents), Some(git_config_path))
+            make_options(&[], Some(git_config_contents), Some(git_config_path))
                 .whitespace_error_style,
-            make_style("yellow dim ul magenta")
+            "yellow dim ul magenta"
         );
 
         // Command line argument wins
         assert_eq!(
-            make_config(
+            make_options(
                 &["--whitespace-error-style", "red reverse"],
                 Some(git_config_contents),
                 Some(git_config_path)
             )
             .whitespace_error_style,
-            make_style("reverse red")
+            "red reverse"
         );
 
         let git_config_contents = b"
@@ -355,20 +353,20 @@ pub mod tests {
 
         // Command line argument wins
         assert_eq!(
-            make_config(
+            make_options(
                 &["--whitespace-error-style", "red reverse"],
                 Some(git_config_contents),
                 Some(git_config_path)
             )
             .whitespace_error_style,
-            make_style("reverse red")
+            "red reverse"
         );
 
         // No command line argument or features; main [delta] section wins
         assert_eq!(
-            make_config(&[], Some(git_config_contents), Some(git_config_path))
+            make_options(&[], Some(git_config_contents), Some(git_config_path))
                 .whitespace_error_style,
-            make_style("blue reverse")
+            "blue reverse"
         );
 
         // Feature contains key, but main [delta] section still wins.
@@ -380,32 +378,16 @@ pub mod tests {
         //
         // In this situation, the value from the feature is overridden.
         assert_eq!(
-            make_config(
+            make_options(
                 &["--features", "my-whitespace-error-style-feature"],
                 Some(git_config_contents),
                 Some(git_config_path)
             )
             .whitespace_error_style,
-            make_style("reverse blue")
+            "blue reverse"
         );
 
         remove_file(git_config_path).unwrap();
-    }
-
-    pub fn make_style(s: &str) -> Style {
-        _make_style(s, false)
-    }
-
-    pub fn make_emph_style(s: &str) -> Style {
-        _make_style(s, true)
-    }
-
-    fn _make_style(s: &str, is_emph: bool) -> Style {
-        Style::from_str(s, None, None, None, true, is_emph)
-    }
-
-    pub fn make_decoration_style(s: &str) -> DecorationStyle {
-        DecorationStyle::from_str(s, true)
     }
 
     fn make_git_config(contents: &[u8], path: &str) -> GitConfig {
@@ -415,21 +397,21 @@ pub mod tests {
         GitConfig::from_path(&path)
     }
 
-    pub fn make_config(
+    pub fn make_options(
         args: &[&str],
         git_config_contents: Option<&[u8]>,
-        path: Option<&str>,
-    ) -> config::Config {
+        git_config_path: Option<&str>,
+    ) -> cli::Opt {
         let args: Vec<&str> = itertools::chain(
             &["/dev/null", "/dev/null", "--24-bit-color", "always"],
             args,
         )
         .map(|s| *s)
         .collect();
-        let mut git_config = match (git_config_contents, path) {
+        let mut git_config = match (git_config_contents, git_config_path) {
             (Some(contents), Some(path)) => Some(make_git_config(contents, path)),
             _ => None,
         };
-        config::Config::from_args(&args, &mut git_config)
+        cli::Opt::from_iter_and_git_config(args, &mut git_config)
     }
 }

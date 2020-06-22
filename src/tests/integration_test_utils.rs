@@ -5,19 +5,24 @@ pub mod integration_test_utils {
     use bytelines::ByteLines;
     use console::strip_ansi_codes;
 
+    use crate::cli;
     use crate::config;
     use crate::delta::delta;
 
-    pub fn make_config(_args: &[&str]) -> config::Config {
+    fn make_options(args: &[&str]) -> cli::Opt {
         // FIXME: should not be necessary
         let (dummy_minus_file, dummy_plus_file) = ("/dev/null", "/dev/null");
-        let mut args = vec![dummy_minus_file, dummy_plus_file];
+        let mut augmented_args = vec![dummy_minus_file, dummy_plus_file];
 
-        for arg in _args {
-            args.push(arg);
+        for arg in args {
+            augmented_args.push(arg);
         }
-        args.push("--no-gitconfig");
-        config::Config::from_args(&args, &mut None)
+        augmented_args.push("--no-gitconfig");
+        cli::Opt::from_iter_and_git_config(augmented_args, &mut None)
+    }
+
+    pub fn make_config(args: &[&str]) -> config::Config {
+        config::Config::from(make_options(args))
     }
 
     pub fn get_line_of_code_from_delta(

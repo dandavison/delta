@@ -32,18 +32,18 @@ mod tests {
 ";
         let git_config_path = "delta__test_navigate_with_overriden_key_in_main_section.gitconfig";
 
-        assert_eq!(features::tests::make_config(&[], None, None).file_modified_label, "");
+        assert_eq!(features::tests::make_options(&[], None, None).file_modified_label, "");
         assert_eq!(
-            features::tests::make_config(&["--features", "navigate"], None, None)
+            features::tests::make_options(&["--features", "navigate"], None, None)
                 .file_modified_label,
             "Δ"
         );
         assert_eq!(
-            features::tests::make_config(&["--navigate"], None, None).file_modified_label,
+            features::tests::make_options(&["--navigate"], None, None).file_modified_label,
             "Δ"
         );
         assert_eq!(
-            features::tests::make_config(&[], Some(git_config_contents), Some(git_config_path))
+            features::tests::make_options(&[], Some(git_config_contents), Some(git_config_path))
                 .file_modified_label,
             "modified: "
         );
@@ -64,16 +64,16 @@ mod tests {
             "delta__test_navigate_with_overriden_key_in_custom_navigate_section.gitconfig";
 
         assert_eq!(
-            features::tests::make_config(&[], None, None).file_modified_label,
+            features::tests::make_options(&[], None, None).file_modified_label,
             ""
         );
         assert_eq!(
-            features::tests::make_config(&["--features", "navigate"], None, None)
+            features::tests::make_options(&["--features", "navigate"], None, None)
                 .file_modified_label,
             "Δ"
         );
         assert_eq!(
-            features::tests::make_config(&[], Some(git_config_contents), Some(git_config_path))
+            features::tests::make_options(&[], Some(git_config_contents), Some(git_config_path))
                 .file_modified_label,
             "modified: "
         );
@@ -91,12 +91,12 @@ mod tests {
         let git_config_path = "delta__test_navigate_activated_by_custom_feature.gitconfig";
 
         assert_eq!(
-            features::tests::make_config(&[], Some(git_config_contents), Some(git_config_path))
+            features::tests::make_options(&[], Some(git_config_contents), Some(git_config_path))
                 .file_modified_label,
             ""
         );
         assert_eq!(
-            features::tests::make_config(
+            features::tests::make_options(
                 &["--features", "my-navigate-feature"],
                 Some(git_config_contents),
                 Some(git_config_path)

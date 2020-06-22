@@ -64,34 +64,16 @@ pub mod tests {
 
     #[test]
     fn test_diff_so_fancy_defaults() {
-        let config = features::tests::make_config(&["--features", "diff-so-fancy"], None, None);
+        let opt = features::tests::make_options(&["--features", "diff-so-fancy"], None, None);
 
-        assert_eq!(
-            config.commit_style.ansi_term_style,
-            features::tests::make_style("bold yellow").ansi_term_style
-        );
-        assert_eq!(
-            config.commit_style.decoration_style,
-            features::tests::make_decoration_style("none")
-        );
+        assert_eq!(opt.commit_style, "bold yellow");
+        assert_eq!(opt.commit_decoration_style, "none");
 
-        assert_eq!(
-            config.file_style.ansi_term_style,
-            features::tests::make_style("11").ansi_term_style
-        );
-        assert_eq!(
-            config.file_style.decoration_style,
-            features::tests::make_decoration_style("bold yellow ul ol")
-        );
+        assert_eq!(opt.file_style, "11");
+        assert_eq!(opt.file_decoration_style, "bold yellow ul ol");
 
-        assert_eq!(
-            config.hunk_header_style.ansi_term_style,
-            features::tests::make_style("bold syntax").ansi_term_style
-        );
-        assert_eq!(
-            config.hunk_header_style.decoration_style,
-            features::tests::make_decoration_style("magenta box")
-        );
+        assert_eq!(opt.hunk_header_style, "bold syntax");
+        assert_eq!(opt.hunk_header_decoration_style, "magenta box");
     }
 
     #[test]
@@ -107,36 +89,18 @@ pub mod tests {
 ";
         let git_config_path = "delta__test_diff_so_fancy.gitconfig";
 
-        let config = features::tests::make_config(
+        let opt = features::tests::make_options(
             &["--features", "diff-so-fancy some-other-feature"],
             Some(git_config_contents),
             Some(git_config_path),
         );
 
-        assert_eq!(
-            config.commit_style.ansi_term_style,
-            features::tests::make_style("yellow bold").ansi_term_style
-        );
-        assert_eq!(
-            config.file_style.ansi_term_style,
-            features::tests::make_style("11").ansi_term_style
-        );
-        assert_eq!(
-            config.hunk_header_style.ansi_term_style,
-            features::tests::make_style("magenta bold").ansi_term_style
-        );
-        assert_eq!(
-            config.commit_style.decoration_style,
-            features::tests::make_decoration_style("none")
-        );
-        assert_eq!(
-            config.file_style.decoration_style,
-            features::tests::make_decoration_style("yellow bold ul ol")
-        );
-        assert_eq!(
-            config.hunk_header_style.decoration_style,
-            features::tests::make_decoration_style("magenta box")
-        );
+        assert_eq!(opt.commit_style, "bold yellow");
+        assert_eq!(opt.file_style, "11");
+        assert_eq!(opt.hunk_header_style, "magenta bold");
+        assert_eq!(opt.commit_decoration_style, "none");
+        assert_eq!(opt.file_decoration_style, "bold yellow ul ol");
+        assert_eq!(opt.hunk_header_decoration_style, "magenta box");
 
         remove_file(git_config_path).unwrap();
     }
@@ -159,37 +123,25 @@ pub mod tests {
 ";
         let git_config_path = "delta__test_diff_so_fancy_obeys_feature_precedence_rules.gitconfig";
 
-        let config = features::tests::make_config(
+        let opt = features::tests::make_options(
             &["--features", "decorations diff-so-fancy"],
             Some(git_config_contents),
             Some(git_config_path),
         );
 
-        assert_eq!(
-            config.file_style.ansi_term_style,
-            features::tests::make_style("11").ansi_term_style
-        );
+        assert_eq!(opt.file_style, "11");
 
-        assert_eq!(
-            config.file_style.decoration_style,
-            features::tests::make_decoration_style("yellow bold ul ol")
-        );
+        assert_eq!(opt.file_decoration_style, "bold yellow ul ol");
 
-        let config = features::tests::make_config(
+        let opt = features::tests::make_options(
             &["--features", "diff-so-fancy decorations"],
             Some(git_config_contents),
             Some(git_config_path),
         );
 
-        assert_eq!(
-            config.file_style.ansi_term_style,
-            features::tests::make_style("ul bold 19").ansi_term_style
-        );
+        assert_eq!(opt.file_style, "bold 19 ul");
 
-        assert_eq!(
-            config.file_style.decoration_style,
-            features::tests::make_decoration_style("none")
-        );
+        assert_eq!(opt.file_decoration_style, "none");
 
         remove_file(git_config_path).unwrap();
     }

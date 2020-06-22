@@ -1,7 +1,13 @@
+#[cfg(test)]
+use std::ffi::OsString;
 use std::path::PathBuf;
 
 use structopt::clap::AppSettings::{ColorAlways, ColoredHelp, DeriveDisplayOrder};
-use structopt::StructOpt;
+use structopt::{clap, StructOpt};
+
+use crate::git_config::GitConfig;
+use crate::rewrite_options;
+use crate::set_options;
 
 #[derive(StructOpt, Clone, Debug, PartialEq)]
 #[structopt(
@@ -472,4 +478,29 @@ pub struct Opt {
     #[structopt(long = "theme")]
     /// Deprecated: use --syntax-theme.
     pub deprecated_theme: Option<String>,
+}
+
+impl Opt {
+    pub fn from_args_and_git_config(git_config: &mut Option<GitConfig>) -> Self {
+        Self::from_clap_and_git_config(Self::clap().get_matches(), git_config)
+    }
+
+    #[cfg(test)]
+    pub fn from_iter_and_git_config<I>(iter: I, git_config: &mut Option<GitConfig>) -> Self
+    where
+        I: IntoIterator,
+        I::Item: Into<OsString> + Clone,
+    {
+        Self::from_clap_and_git_config(Self::clap().get_matches_from(iter), git_config)
+    }
+
+    fn from_clap_and_git_config(
+        arg_matches: clap::ArgMatches,
+        git_config: &mut Option<GitConfig>,
+    ) -> Self {
+        let mut opt = Opt::from_clap(&arg_matches);
+        set_options::set_options(&mut opt, git_config, &arg_matches);
+        rewrite_options::apply_rewrite_rules(&mut opt, &arg_matches);
+        opt
+    }
 }
