@@ -105,6 +105,26 @@ pub mod tests {
     }
 
     #[test]
+    fn test_feature_is_not_removed_by_addition_of_another_feature() {
+        let dummy_arg_matches = clap::ArgMatches::new();
+        let mut opt = cli::Opt::from_iter(&["delta", "--color-only"]);
+        set_options(&mut opt, &mut None, &dummy_arg_matches);
+        let features: HashSet<&str> = opt.features.split_whitespace().collect();
+        assert!(features.contains("color-only"));
+        let git_config_contents = b"
+[delta]
+    features = my-feature
+";
+        let git_config_path =
+            "delta__test_feature_is_not_removed_by_addition_of_another_feature.gitconfig";
+        let git_config = make_git_config(git_config_contents, git_config_path);
+        set_options(&mut opt, &mut Some(git_config), &dummy_arg_matches);
+        let features: HashSet<&str> = opt.features.split_whitespace().collect();
+        assert!(features.contains("my-feature"));
+        assert!(features.contains("color-only"));
+    }
+
+    #[test]
     fn test_main_section() {
         let git_config_contents = b"
 [delta]
