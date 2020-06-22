@@ -88,7 +88,7 @@ pub mod tests {
     use crate::git_config::GitConfig;
 
     #[test]
-    fn test_builtin_features_have_flags() {
+    fn test_builtin_features_have_flags_and_these_set_features() {
         let builtin_features = make_builtin_features();
         let mut args = vec!["delta".to_string()];
         args.extend(builtin_features.keys().map(|s| format!("--{}", s)));
@@ -100,22 +100,55 @@ pub mod tests {
     }
 
     #[test]
-    fn test_feature_is_not_removed_by_addition_of_another_feature() {
-        let opt = cli::Opt::from_iter_and_git_config(&["delta", "--color-only"], &mut None);
-        let features: HashSet<&str> = opt.features.split_whitespace().collect();
-        assert!(features.contains("color-only"));
+    fn test_features_on_command_line_replace_features_in_gitconfig() {
         let git_config_contents = b"
 [delta]
     features = my-feature
 ";
         let git_config_path =
-            "delta__test_feature_is_not_removed_by_addition_of_another_feature.gitconfig";
-        let git_config = make_git_config(git_config_contents, git_config_path);
-        let opt =
-            cli::Opt::from_iter_and_git_config(&["delta", "--color-only"], &mut Some(git_config));
-        let features: HashSet<&str> = opt.features.split_whitespace().collect();
-        assert!(features.contains("my-feature"));
-        assert!(features.contains("color-only"));
+            "delta__test_features_on_command_line_replace_features_in_gitconfig.gitconfig";
+
+        assert_eq!(
+            make_options(
+                &["--features", "navigate color-only"],
+                Some(git_config_contents),
+                Some(git_config_path),
+            )
+            .features,
+            "navigate color-only"
+        );
+        assert_eq!(
+            make_options(
+                &["--navigate", "--features", "color-only"],
+                Some(git_config_contents),
+                Some(git_config_path),
+            )
+            .features,
+            "navigate color-only"
+        );
+
+        remove_file(git_config_path).unwrap();
+    }
+
+    #[test]
+    fn test_feature_flag_on_command_line_does_not_replace_features_in_gitconfig() {
+        let git_config_contents = b"
+[delta]
+    features = my-feature
+";
+        let git_config_path =
+            "delta__test_feature_flag_on_command_line_does_not_replace_features_in_gitconfig.gitconfig";
+        assert_eq!(
+            make_options(
+                &["--navigate", "--color-only"],
+                Some(git_config_contents),
+                Some(git_config_path),
+            )
+            .features,
+            "my-feature navigate color-only"
+        );
+
+        remove_file(git_config_path).unwrap();
     }
 
     #[test]
