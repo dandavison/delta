@@ -85,7 +85,7 @@ mod tests {
     fn test_navigate_activated_by_custom_feature() {
         let git_config_contents = b"
 [delta \"my-navigate-feature\"]
-    navigate = true
+    features = navigate
     file-modified-label = \"modified: \"
 ";
         let git_config_path = "delta__test_navigate_activated_by_custom_feature.gitconfig";

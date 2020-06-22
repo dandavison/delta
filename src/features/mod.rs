@@ -100,6 +100,22 @@ pub mod tests {
     }
 
     #[test]
+    fn test_builtin_feature_from_gitconfig() {
+        let git_config_contents = b"
+[delta]
+    navigate = true
+";
+        let git_config_path = "delta__test_builtin_feature_from_gitconfig.gitconfig";
+
+        assert_eq!(
+            make_options(&[], Some(git_config_contents), Some(git_config_path)).features,
+            "navigate"
+        );
+
+        remove_file(git_config_path).unwrap();
+    }
+
+    #[test]
     fn test_features_on_command_line_replace_features_in_gitconfig() {
         let git_config_contents = b"
 [delta]
@@ -147,6 +163,57 @@ pub mod tests {
             .features,
             "my-feature navigate color-only"
         );
+
+        remove_file(git_config_path).unwrap();
+    }
+
+    #[test]
+    fn test_recursive_feature_gathering_1() {
+        let git_config_contents = b"
+[delta]
+    features = h g
+
+[delta \"a\"]
+    features = c b
+    diff-highlight = true
+
+[delta \"d\"]
+    features = f e
+    diff-so-fancy = true
+";
+        let git_config_path = "delta__test_feature_collection.gitconfig";
+
+        assert_eq!(
+            make_options(
+                &["--color-only", "--features", "d a"],
+                Some(git_config_contents),
+                Some(git_config_path),
+            )
+            .features,
+            "color-only diff-so-fancy f e d diff-highlight c b a"
+        );
+
+        remove_file(git_config_path).unwrap();
+    }
+
+    #[test]
+    fn test_recursive_feature_gathering_2() {
+        let git_config_contents = b"
+[delta]
+    features = feature-1
+
+[delta \"feature-1\"]
+    features = feature-2 feature-3
+
+[delta \"feature-2\"]
+    features = feature-4
+
+[delta \"feature-4\"]
+    minus-style = blue
+";
+        let git_config_path = "delta__test_recursive_features.gitconfig";
+        let opt = make_options(&["delta"], Some(git_config_contents), Some(git_config_path));
+        assert_eq!(opt.features, "feature-4 feature-2 feature-3 feature-1");
 
         remove_file(git_config_path).unwrap();
     }
