@@ -82,20 +82,17 @@ pub mod tests {
     use std::path::Path;
 
     use itertools;
-    use structopt::{clap, StructOpt};
 
     use crate::cli;
     use crate::features::make_builtin_features;
     use crate::git_config::GitConfig;
-    use crate::set_options::set_options;
 
     #[test]
     fn test_builtin_features_have_flags() {
         let builtin_features = make_builtin_features();
         let mut args = vec!["delta".to_string()];
         args.extend(builtin_features.keys().map(|s| format!("--{}", s)));
-        let mut opt = cli::Opt::from_iter(args);
-        set_options(&mut opt, &mut None, &clap::ArgMatches::new());
+        let opt = cli::Opt::from_iter_and_git_config(args, &mut None);
         let features: HashSet<&str> = opt.features.split_whitespace().collect();
         for feature in builtin_features.keys() {
             assert!(features.contains(feature.as_str()))
@@ -104,9 +101,7 @@ pub mod tests {
 
     #[test]
     fn test_feature_is_not_removed_by_addition_of_another_feature() {
-        let dummy_arg_matches = clap::ArgMatches::new();
-        let mut opt = cli::Opt::from_iter(&["delta", "--color-only"]);
-        set_options(&mut opt, &mut None, &dummy_arg_matches);
+        let opt = cli::Opt::from_iter_and_git_config(&["delta", "--color-only"], &mut None);
         let features: HashSet<&str> = opt.features.split_whitespace().collect();
         assert!(features.contains("color-only"));
         let git_config_contents = b"
@@ -116,7 +111,8 @@ pub mod tests {
         let git_config_path =
             "delta__test_feature_is_not_removed_by_addition_of_another_feature.gitconfig";
         let git_config = make_git_config(git_config_contents, git_config_path);
-        set_options(&mut opt, &mut Some(git_config), &dummy_arg_matches);
+        let opt =
+            cli::Opt::from_iter_and_git_config(&["delta", "--color-only"], &mut Some(git_config));
         let features: HashSet<&str> = opt.features.split_whitespace().collect();
         assert!(features.contains("my-feature"));
         assert!(features.contains("color-only"));
