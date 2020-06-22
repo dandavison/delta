@@ -11,7 +11,7 @@ macro_rules! set_options {
         $(
             if !$crate::config::user_supplied_option($option_name, $arg_matches) {
                 if let Some(value) = $crate::get_option_value::get_option_value($option_name, &$builtin_features, $opt, $git_config) {
-                    $opt.$field_ident = value; // TODO: defer .into() to here?
+                    $opt.$field_ident = value;
                 }
             };
         )*
