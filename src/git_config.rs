@@ -6,6 +6,7 @@ use git2;
 
 pub struct GitConfig {
     config: git2::Config,
+    pub enabled: bool,
 }
 
 impl GitConfig {
@@ -24,7 +25,10 @@ impl GitConfig {
                     eprintln!("Failed to read git config: {}", err);
                     process::exit(1)
                 });
-                Some(Self { config })
+                Some(Self {
+                    config,
+                    enabled: true,
+                })
             }
             None => None,
         }
@@ -34,6 +38,7 @@ impl GitConfig {
     pub fn from_path(path: &Path) -> Self {
         Self {
             config: git2::Config::open(path).unwrap(),
+            enabled: true,
         }
     }
 
@@ -41,7 +46,11 @@ impl GitConfig {
     where
         T: GitConfigGet,
     {
-        T::git_config_get(key, self)
+        if self.enabled {
+            T::git_config_get(key, self)
+        } else {
+            None
+        }
     }
 }
 

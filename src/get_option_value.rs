@@ -51,11 +51,9 @@ pub trait GetOptionValue {
         Self: From<OptionValue>,
         Self: Into<OptionValue>,
     {
-        if !opt.no_gitconfig {
-            if let Some(git_config) = git_config {
-                if let Some(value) = git_config.get::<Self>(&format!("delta.{}", option_name)) {
-                    return Some(value);
-                }
+        if let Some(git_config) = git_config {
+            if let Some(value) = git_config.get::<Self>(&format!("delta.{}", option_name)) {
+                return Some(value);
             }
         }
         for feature in opt.features.to_lowercase().split_whitespace().rev() {
@@ -90,13 +88,11 @@ pub trait GetOptionValue {
         Self: GitConfigGet,
         Self: Into<OptionValue>,
     {
-        if !opt.no_gitconfig {
-            if let Some(git_config) = git_config {
-                if let Some(value) =
-                    git_config.get::<Self>(&format!("delta.{}.{}", feature, option_name))
-                {
-                    return Some(GitConfigValue(value.into()));
-                }
+        if let Some(git_config) = git_config {
+            if let Some(value) =
+                git_config.get::<Self>(&format!("delta.{}.{}", feature, option_name))
+            {
+                return Some(GitConfigValue(value.into()));
             }
         }
         if let Some(builtin_feature) = builtin_features.get(feature) {

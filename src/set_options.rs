@@ -25,6 +25,11 @@ pub fn set_options(
     git_config: &mut Option<git_config::GitConfig>,
     arg_matches: &clap::ArgMatches,
 ) {
+    if let Some(git_config) = git_config {
+        if opt.no_gitconfig {
+            git_config.enabled = false;
+        }
+    }
     let builtin_features = features::make_builtin_features();
     opt.features = gather_features(
         opt,
