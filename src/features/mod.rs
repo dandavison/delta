@@ -73,6 +73,7 @@ pub mod color_only;
 pub mod diff_highlight;
 pub mod diff_so_fancy;
 pub mod navigate;
+pub mod numbers;
 
 #[cfg(test)]
 pub mod tests {
