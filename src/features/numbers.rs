@@ -116,10 +116,33 @@ pub mod tests {
             "%lp│",
         ]);
         let output = run_delta(TWO_MINUS_LINES_DIFF, &config);
-        let output = strip_ansi_codes(&output);
         let mut lines = output.lines().skip(4);
-        assert_eq!(lines.next().unwrap(), " 1  ⋮    │a = 1");
-        assert_eq!(lines.next().unwrap(), " 2  ⋮    │b = 2");
+        let (line_1, line_2) = (lines.next().unwrap(), lines.next().unwrap());
+        assert_eq!(strip_ansi_codes(line_1), " 1  ⋮    │a = 1");
+        assert_eq!(strip_ansi_codes(line_2), " 2  ⋮    │b = 2");
+
+        assert!(line_1.starts_with(
+            &ansi_term::ANSIStrings(&[
+                config.number_left_format_style.paint(" "),
+                config.number_minus_style.paint("1  "),
+                config.number_left_format_style.paint("⋮"),
+                config.number_right_format_style.paint(" "),
+                config.number_plus_style.paint("   "),
+                config.number_right_format_style.paint("│"),
+            ])
+            .to_string()
+        ));
+        assert!(line_2.starts_with(
+            &ansi_term::ANSIStrings(&[
+                config.number_left_format_style.paint(" "),
+                config.number_minus_style.paint("2  "),
+                config.number_left_format_style.paint("⋮"),
+                config.number_right_format_style.paint(" "),
+                config.number_plus_style.paint("   "),
+                config.number_right_format_style.paint("│"),
+            ])
+            .to_string()
+        ));
     }
 
     #[test]
