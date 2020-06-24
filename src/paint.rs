@@ -618,7 +618,7 @@ fn get_zero_or_default_style(
     }
 }
 
-fn format_number_components <'a>(
+fn format_number_components<'a>(
     minus: Option<usize>,
     plus: Option<usize>,
     format_string: &'a str,
@@ -664,11 +664,10 @@ fn format_number_components <'a>(
     formatted_number_strings
 }
 
-fn get_formatted_line_number_components <'a>(
+fn get_formatted_line_number_components<'a>(
     line_numbers: &'a Option<(Option<usize>, Option<usize>)>,
     config: &'a config::Config,
 ) -> Vec<ansi_term::ANSIGenericString<'a, str>> {
-
     let (minus, plus) = line_numbers.unwrap();
 
     let number_minus_style = get_zero_or_default_style(
@@ -687,8 +686,22 @@ fn get_formatted_line_number_components <'a>(
 
     let mut formatted_numbers = Vec::new();
 
-    formatted_numbers.extend(format_number_components(minus, plus, &config.number_left_format, &config.number_left_format_style, &number_minus_style, &number_plus_style));
-    formatted_numbers.extend(format_number_components(minus, plus,&config.number_right_format, &config.number_right_format_style, &number_minus_style, &number_plus_style));
+    formatted_numbers.extend(format_number_components(
+        minus,
+        plus,
+        &config.number_left_format,
+        &config.number_left_format_style,
+        &number_minus_style,
+        &number_plus_style,
+    ));
+    formatted_numbers.extend(format_number_components(
+        minus,
+        plus,
+        &config.number_right_format,
+        &config.number_right_format_style,
+        &number_minus_style,
+        &number_plus_style,
+    ));
 
     formatted_numbers
 }
