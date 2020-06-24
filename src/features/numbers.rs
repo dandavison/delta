@@ -82,10 +82,13 @@ fn format_number_components<'a>(
 }
 
 fn format_line_number(line_number: Option<usize>) -> String {
-    match line_number {
-        Some(x) => format!("{:^4}", x),
-        None => format!("    "),
-    }
+    format!(
+        "{:^4}",
+        line_number
+            .map(|n| format!("{}", n))
+            .as_deref()
+            .unwrap_or_else(|| "")
+    )
 }
 
 fn get_zero_or_default_style(
