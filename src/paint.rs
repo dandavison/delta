@@ -10,6 +10,7 @@ use syntect::parsing::{SyntaxReference, SyntaxSet};
 use crate::config;
 use crate::delta::State;
 use crate::edits;
+use crate::features::numbers;
 use crate::paint::superimpose_style_sections::superimpose_style_sections;
 use crate::style::Style;
 
@@ -166,7 +167,7 @@ impl<'a> Painter<'a> {
 
             let mut handled_prefix = false;
             let mut ansi_strings = if config.show_line_numbers && line_numbers.is_some() {
-                get_formatted_line_number_components(line_numbers, config)
+                numbers::get_formatted_line_number_components(line_numbers, config)
             } else {
                 Vec::new()
             };
@@ -592,97 +593,4 @@ mod superimpose_style_sections {
             );
         }
     }
-}
-
-lazy_static! {
-    static ref LINE_NUMBER_REGEXP: Regex = Regex::new(r"%(lm|lp)").unwrap();
-}
-
-fn format_line_number(line_number: Option<usize>) -> String {
-    match line_number {
-        Some(x) => format!("{:^4}", x),
-        None => format!("    "),
-    }
-}
-
-fn get_zero_or_default_style(
-    minus: Option<usize>,
-    plus: Option<usize>,
-    zero_style: Option<Style>,
-    default_style: Style,
-) -> Style {
-    match (zero_style, minus, plus) {
-        (Some(z), Some(_), Some(_)) => z,
-        _ => default_style,
-    }
-}
-
-fn format_number_components<'a>(
-    minus: Option<usize>,
-    plus: Option<usize>,
-    format_string: &'a str,
-    number_format_style: &Style,
-    number_minus_style: &Style,
-    number_plus_style: &Style,
-) -> Vec<ansi_term::ANSIGenericString<'a, str>> {
-    let mut formatted_number_strings = Vec::new();
-
-    let mut offset = 0;
-    for m in LINE_NUMBER_REGEXP.find_iter(&format_string) {
-        let before = &format_string[offset..m.start()];
-        let number_placeholder = &format_string[m.start()..m.end()];
-
-        formatted_number_strings.push(number_format_style.paint(before));
-
-        if number_placeholder == "%lm" {
-            formatted_number_strings.push(number_minus_style.paint(format_line_number(minus)))
-        } else if number_placeholder == "%lp" {
-            formatted_number_strings.push(number_plus_style.paint(format_line_number(plus)))
-        }
-        offset = m.end();
-    }
-    formatted_number_strings.push(number_format_style.paint(&format_string[offset..]));
-    formatted_number_strings
-}
-
-fn get_formatted_line_number_components<'a>(
-    line_numbers: &'a Option<(Option<usize>, Option<usize>)>,
-    config: &'a config::Config,
-) -> Vec<ansi_term::ANSIGenericString<'a, str>> {
-    let (minus, plus) = line_numbers.unwrap();
-
-    let number_minus_style = get_zero_or_default_style(
-        minus,
-        plus,
-        config.number_zero_style,
-        config.number_minus_style,
-    );
-
-    let number_plus_style = get_zero_or_default_style(
-        minus,
-        plus,
-        config.number_zero_style,
-        config.number_plus_style,
-    );
-
-    let mut formatted_numbers = Vec::new();
-
-    formatted_numbers.extend(format_number_components(
-        minus,
-        plus,
-        &config.number_left_format,
-        &config.number_left_format_style,
-        &number_minus_style,
-        &number_plus_style,
-    ));
-    formatted_numbers.extend(format_number_components(
-        minus,
-        plus,
-        &config.number_right_format,
-        &config.number_right_format_style,
-        &number_minus_style,
-        &number_plus_style,
-    ));
-
-    formatted_numbers
 }
