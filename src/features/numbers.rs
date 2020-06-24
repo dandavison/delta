@@ -66,9 +66,9 @@ pub mod tests {
         println!("{}", output);
         let output = strip_ansi_codes(&output);
         let mut lines = output.lines().skip(4);
-        assert_eq!(lines.next().unwrap(), " 1   1  ⋮ 1  │a = 1");
-        assert_eq!(lines.next().unwrap(), " 2   2  ⋮    │b = 2");
-        assert_eq!(lines.next().unwrap(), "        ⋮ 2  │bb = 2");
+        assert_eq!(lines.next().unwrap(), " 1    1  ⋮ 1  │a = 1");
+        assert_eq!(lines.next().unwrap(), " 2    2  ⋮    │b = 2");
+        assert_eq!(lines.next().unwrap(), "         ⋮ 2  │bb = 2");
     }
 
     const TWO_MINUS_LINES_DIFF: &str = "\

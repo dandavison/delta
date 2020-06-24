@@ -595,8 +595,7 @@ mod superimpose_style_sections {
 }
 
 lazy_static! {
-    static ref LINE_NUMBER_REGEXP: Regex =
-        Regex::new(r"(?P<before>.*?)(?P<ln>(%(lm|lp)))(?P<after>.*)").unwrap();
+    static ref LINE_NUMBER_REGEXP: Regex = Regex::new(r"%(lm|lp)").unwrap();
 }
 
 fn format_line_number(line_number: Option<usize>) -> String {
@@ -628,39 +627,21 @@ fn format_number_components<'a>(
 ) -> Vec<ansi_term::ANSIGenericString<'a, str>> {
     let mut formatted_number_strings = Vec::new();
 
-    for cap in LINE_NUMBER_REGEXP.captures_iter(&format_string) {
-        let number_placeholder = cap.name("ln");
-        let before = cap.name("before");
-        let after = cap.name("after");
+    let mut offset = 0;
+    for m in LINE_NUMBER_REGEXP.find_iter(&format_string) {
+        let before = &format_string[offset..m.start()];
+        let number_placeholder = &format_string[m.start()..m.end()];
 
-        match before {
-            Some(s) => formatted_number_strings.push(
-                number_format_style.paint(s.as_str())
-            ),
-            _ => (),
+        formatted_number_strings.push(number_format_style.paint(before));
+
+        if number_placeholder == "%lm" {
+            formatted_number_strings.push(number_minus_style.paint(format_line_number(minus)))
+        } else if number_placeholder == "%lp" {
+            formatted_number_strings.push(number_plus_style.paint(format_line_number(plus)))
         }
-
-        match number_placeholder {
-            Some(s) if Some(s.as_str()) == Some("%lm") => formatted_number_strings.push(
-                number_minus_style.paint(format_line_number(minus))
-            ),
-            Some(s) if Some(s.as_str()) == Some("%lp") => formatted_number_strings.push(
-                number_plus_style.paint(format_line_number(plus))
-            ),
-            Some(s) => formatted_number_strings.push(
-                number_format_style.paint(s.as_str())
-            ),
-            _ => (),
-        }
-
-        match after {
-            Some(s) => formatted_number_strings.push(
-                number_format_style.paint(s.as_str())
-            ),
-            _ => (),
-        }
-
+        offset = m.end();
     }
+    formatted_number_strings.push(number_format_style.paint(&format_string[offset..]));
     formatted_number_strings
 }
 
