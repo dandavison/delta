@@ -11,37 +11,30 @@ pub fn format_and_paint_line_numbers<'a>(
     line_numbers: &'a Option<(Option<usize>, Option<usize>)>,
     config: &'a config::Config,
 ) -> Vec<ansi_term::ANSIGenericString<'a, str>> {
-    let (minus, plus) = line_numbers.unwrap();
+    let (minus_number, plus_number) = line_numbers.unwrap();
 
-    let number_minus_style = get_zero_or_default_style(
-        minus,
-        plus,
-        config.number_zero_style,
-        config.number_minus_style,
-    );
-
-    let number_plus_style = get_zero_or_default_style(
-        minus,
-        plus,
-        config.number_zero_style,
-        config.number_plus_style,
-    );
+    // If both minus and plus numbers are present then the line is a zero line.
+    let (number_minus_style, number_plus_style) =
+        match (minus_number, plus_number, config.number_zero_style) {
+            (Some(_), Some(_), Some(zero_style)) => (zero_style, zero_style),
+            _ => (config.number_minus_style, config.number_plus_style),
+        };
 
     let mut formatted_numbers = Vec::new();
 
     formatted_numbers.extend(format_and_paint_line_number_field(
         &config.number_left_format,
         &config.number_left_format_style,
-        minus,
-        plus,
+        minus_number,
+        plus_number,
         &number_minus_style,
         &number_plus_style,
     ));
     formatted_numbers.extend(format_and_paint_line_number_field(
         &config.number_right_format,
         &config.number_right_format_style,
-        minus,
-        plus,
+        minus_number,
+        plus_number,
         &number_minus_style,
         &number_plus_style,
     ));
@@ -109,20 +102,6 @@ fn format_line_number(line_number: Option<usize>, alignment: &str, width: &str) 
         "^" | "" => format!("{0:^1$}", n, w),
         ">" => format!("{0:>1$}", n, w),
         _ => unreachable!(),
-    }
-}
-
-// If both minus and plus numbers are present then the line must be a zero line: return the zero
-// style. Otherwise, return `default-style`.
-fn get_zero_or_default_style(
-    minus: Option<usize>,
-    plus: Option<usize>,
-    zero_style: Option<Style>,
-    default_style: Style,
-) -> Style {
-    match (zero_style, minus, plus) {
-        (Some(z), Some(_), Some(_)) => z,
-        _ => default_style,
     }
 }
 
