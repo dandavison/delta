@@ -166,11 +166,10 @@ impl<'a> Painter<'a> {
             };
 
             let mut handled_prefix = false;
-            let mut ansi_strings = if config.show_line_numbers && line_numbers.is_some() {
-                numbers::get_formatted_line_number_components(line_numbers, config)
-            } else {
-                Vec::new()
-            };
+            let mut ansi_strings = Vec::new();
+            if config.show_line_numbers && line_numbers.is_some() {
+                ansi_strings.extend(numbers::format_and_paint_line_numbers(line_numbers, config))
+            }
             for (section_style, mut text) in superimpose_style_sections(
                 syntax_sections,
                 diff_sections,

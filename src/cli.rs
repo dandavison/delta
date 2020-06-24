@@ -154,22 +154,49 @@ within a style string):
    Specifying colors like this is useful if your terminal only supports 256 colors (i.e. doesn\'t
    support 24-bit color).
 
+
 LINE NUMBERS
 ------------
 
-Options --number-left-format and --number-right-format allow you to specify a custom string to
-display for the line number columns. The string should specify the location of the line number
-using the placeholder %lm for the line number associated with the original file and %lp for the
-line number associated with the updated file.
+To display line numbers, use --line-numbers.
 
-For example, to display the line numbers like
+Line numbers are displayed in two columns. Here's what it looks like by default:
 
-    8 ⋮   9 │ Here is an output line
+ 1  ⋮ 1  │ unchanged line
+ 2  ⋮    │ removed line
+    ⋮ 2  │ added line
 
-you would use
+In that output, the line numbers for the old (minus) version of the file appear in the left column,
+and the line numbers for the new (plus) version of the file appear in the right column. In an
+unchanged (zero) line, both columns contain a line number.
 
---number-left-format '%lm ⋮'
---number-right-format '%lp │'
+The following options allow the line number display to be customized:
+
+--line-numbers-left-format:  Change the contents of the left column
+--line-numbers-right-format: Change the contents of the right column
+--line-numbers-left-style:   Change the style applied to the left column
+--line-numbers-right-style:  Change the style applied to the right column
+--line-numbers-minus-style:  Change the style applied to line numbers in minus lines
+--line-numbers-zero-style:   Change the style applied to line numbers in unchanged lines
+--line-numbers-plus-style:   Change the style applied to line numbers in plus lines
+
+Options --line-numbers-left-format and --line-numbers-right-format allow you to change the contents
+of the line number columns. Their values are arbitrary format strings, which are allowed to contain
+the placeholders {nm} for the line number associated with the old version of the file and {np} for
+the line number associated with the new version of the file. The placeholders support a subset of
+the string formatting syntax documented here: https://doc.rust-lang.org/std/fmt/#formatting-parameters.
+Specifically, you can use the alignment, width, and fill syntax.
+
+For example, the default value of --line-numbers-left-format is '{nm:^4}⋮'. This means that the
+left column should display the minus line number (nm), center-aligned, padded with spaces to a
+width of 4 characters, followed by a unicode dividing-line character (⋮).
+
+Similarly, the default value of --line-numbers-right-format is '{np:^4}│ '. This means that the
+right column should display the plus line number (np), center-aligned, padded with spaces to a
+width of 4 characters, followed by a unicode dividing-line character (│), and a space.
+
+Use '<' for left-align, '^' for center-align, and '>' for right-align.
+
 
 If something isn't working correctly, or you have a feature request, please open an issue at
 https://github.com/dandavison/delta/issues.
@@ -316,20 +343,16 @@ pub struct Opt {
     #[structopt(long = "number-zero-style")]
     pub number_zero_style: Option<String>,
 
-    /// Format string for the left column of line numbers (--number), if --number is set. Displays
-    /// the minus column by default.
-    /// Should include the placeholder %lm or %lp to indicate the position of the minus or plus
-    /// line number, respectively.
-    /// See the LINE NUMBERS section.
-    #[structopt(long = "number-left-format", default_value = "%lm⋮")]
+    /// Format string for the left column of line numbers. A typical value would be "{nm:^4}⋮"
+    /// which means to display the line numbers of the minus file (old version), followed by a
+    /// dividing character. See the LINE NUMBERS section.
+    #[structopt(long = "number-left-format", default_value = "{nm:^4}⋮")]
     pub number_left_format: String,
 
-    /// Format string for the right column of line numbers (--number), if --number is set. Displays
-    /// the plus column by default.
-    /// Should include the placeholder %lm or %lp to indicate the position of the minus or plus
-    /// line number, respectively.
-    /// See the LINE NUMBERS section.
-    #[structopt(long = "number-right-format", default_value = "%lp│ ")]
+    /// Format string for the right column of line numbers. A typical value would be "{np:^4}│ "
+    /// which means to display the line numbers of the plus file (new version), followed by a
+    /// dividing character, and a space. See the LINE NUMBERS section.
+    #[structopt(long = "number-right-format", default_value = "{np:^4}│ ")]
     pub number_right_format: String,
 
     /// Style (foreground, background, attributes) for the left line number format string
