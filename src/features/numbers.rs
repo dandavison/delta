@@ -155,10 +155,10 @@ pub mod tests {
             "%lp│",
         ]);
         let output = run_delta(TWO_PLUS_LINES_DIFF, &config);
-        let output = strip_ansi_codes(&output);
         let mut lines = output.lines().skip(4);
-        assert_eq!(lines.next().unwrap(), "    ⋮ 1  │a = 1");
-        assert_eq!(lines.next().unwrap(), "    ⋮ 2  │b = 2");
+        let (line_1, line_2) = (lines.next().unwrap(), lines.next().unwrap());
+        assert_eq!(strip_ansi_codes(line_1), "    ⋮ 1  │a = 1");
+        assert_eq!(strip_ansi_codes(line_2), "    ⋮ 2  │b = 2");
     }
 
     #[test]
