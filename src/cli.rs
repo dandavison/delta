@@ -351,13 +351,13 @@ pub struct Opt {
 
     /// Style (foreground, background, attributes) for the left column of line numbers. See STYLES
     /// and LINE NUMBERS sections.
-    #[structopt(long = "line-numbers-left-format-style", default_value = "auto")]
-    pub line_numbers_left_format_style: String,
+    #[structopt(long = "line-numbers-left-style", default_value = "auto")]
+    pub line_numbers_left_style: String,
 
     /// Style (foreground, background, attributes) for the right column of line numbers. See STYLES
     /// and LINE NUMBERS sections.
-    #[structopt(long = "line-numbers-right-format-style", default_value = "auto")]
-    pub line_numbers_right_format_style: String,
+    #[structopt(long = "line-numbers-right-style", default_value = "auto")]
+    pub line_numbers_right_style: String,
 
     #[structopt(long = "color-only")]
     /// Do not alter the input in any way other than applying colors. Equivalent to

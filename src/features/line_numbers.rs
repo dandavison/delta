@@ -44,7 +44,7 @@ pub fn format_and_paint_line_numbers<'a>(
     let (minus_number, plus_number) = line_numbers.unwrap();
 
     // If both minus and plus numbers are present then the line is a zero line.
-    let (minus_style, plus_style) = match (minus_number, plus_number) {
+    let (minus_number_style, plus_number_style) = match (minus_number, plus_number) {
         (Some(_), Some(_)) => (
             config.line_numbers_zero_style,
             config.line_numbers_zero_style,
@@ -59,19 +59,19 @@ pub fn format_and_paint_line_numbers<'a>(
 
     formatted_numbers.extend(format_and_paint_line_number_field(
         &config.line_numbers_left_format,
-        &config.line_numbers_left_format_style,
+        &config.line_numbers_left_style,
         minus_number,
         plus_number,
-        &minus_style,
-        &plus_style,
+        &minus_number_style,
+        &plus_number_style,
     ));
     formatted_numbers.extend(format_and_paint_line_number_field(
         &config.line_numbers_right_format,
-        &config.line_numbers_right_format_style,
+        &config.line_numbers_right_style,
         minus_number,
         plus_number,
-        &minus_style,
-        &plus_style,
+        &minus_number_style,
+        &plus_number_style,
     ));
 
     formatted_numbers
@@ -98,32 +98,36 @@ lazy_static! {
 
 fn format_and_paint_line_number_field<'a>(
     format_string: &'a str,
-    number_format_style: &Style,
-    minus: Option<usize>,
-    plus: Option<usize>,
-    line_numbers_minus_style: &Style,
-    line_numbers_plus_style: &Style,
+    style: &Style,
+    minus_number: Option<usize>,
+    plus_number: Option<usize>,
+    minus_number_style: &Style,
+    plus_number_style: &Style,
 ) -> Vec<ansi_term::ANSIGenericString<'a, str>> {
-    let mut formatted_number_strings = Vec::new();
+    let mut ansi_strings = Vec::new();
 
     let mut offset = 0;
     for caps in LINE_NUMBER_FORMAT_REGEX.captures_iter(&format_string) {
         let _match = caps.get(0).unwrap();
-        formatted_number_strings
-            .push(number_format_style.paint(&format_string[offset.._match.start()]));
+        ansi_strings.push(style.paint(&format_string[offset.._match.start()]));
 
         match &caps[1] {
-            "nm" => formatted_number_strings.push(
-                line_numbers_minus_style.paint(format_line_number(minus, &caps[3], &caps[4])),
-            ),
-            "np" => formatted_number_strings
-                .push(line_numbers_plus_style.paint(format_line_number(plus, &caps[3], &caps[4]))),
+            "nm" => ansi_strings.push(minus_number_style.paint(format_line_number(
+                minus_number,
+                &caps[3],
+                &caps[4],
+            ))),
+            "np" => ansi_strings.push(plus_number_style.paint(format_line_number(
+                plus_number,
+                &caps[3],
+                &caps[4],
+            ))),
             _ => unreachable!(),
         }
         offset = _match.end();
     }
-    formatted_number_strings.push(number_format_style.paint(&format_string[offset..]));
-    formatted_number_strings
+    ansi_strings.push(style.paint(&format_string[offset..]));
+    ansi_strings
 }
 
 /// Return line number formatted according to `alignment` and `width`.
@@ -210,11 +214,11 @@ pub mod tests {
             "{nm:^4}⋮",
             "--line-numbers-right-format",
             "{np:^4}│",
-            "--line-numbers-left-format-style",
+            "--line-numbers-left-style",
             "0 1",
             "--line-numbers-minus-style",
             "0 2",
-            "--line-numbers-right-format-style",
+            "--line-numbers-right-style",
             "0 3",
             "--line-numbers-plus-style",
             "0 4",
@@ -235,11 +239,11 @@ pub mod tests {
             "{nm:^4}⋮",
             "--line-numbers-right-format",
             "{np:^4}│",
-            "--line-numbers-left-format-style",
+            "--line-numbers-left-style",
             "0 1",
             "--line-numbers-minus-style",
             "0 2",
-            "--line-numbers-right-format-style",
+            "--line-numbers-right-style",
             "0 3",
             "--line-numbers-plus-style",
             "0 4",
@@ -259,11 +263,11 @@ pub mod tests {
             "{nm:^4}⋮",
             "--line-numbers-right-format",
             "{np:^4}│",
-            "--line-numbers-left-format-style",
+            "--line-numbers-left-style",
             "0 1",
             "--line-numbers-minus-style",
             "0 2",
-            "--line-numbers-right-format-style",
+            "--line-numbers-right-style",
             "0 3",
             "--line-numbers-plus-style",
             "0 4",
@@ -284,11 +288,11 @@ pub mod tests {
             "{nm:^4} {nm:^4}⋮",
             "--line-numbers-right-format",
             "{np:^4}│",
-            "--line-numbers-left-format-style",
+            "--line-numbers-left-style",
             "0 1",
             "--line-numbers-minus-style",
             "0 2",
-            "--line-numbers-right-format-style",
+            "--line-numbers-right-style",
             "0 3",
             "--line-numbers-plus-style",
             "0 4",

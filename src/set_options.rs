@@ -78,17 +78,11 @@ pub fn set_options(
             ("navigate", navigate),
             ("line-numbers", line_numbers),
             ("line-numbers-left-format", line_numbers_left_format),
-            (
-                "line-numbers-left-format-style",
-                line_numbers_left_format_style
-            ),
+            ("line-numbers-left-style", line_numbers_left_style),
             ("line-numbers-minus-style", line_numbers_minus_style),
             ("line-numbers-plus-style", line_numbers_plus_style),
             ("line-numbers-right-format", line_numbers_right_format),
-            (
-                "line-numbers-right-format-style",
-                line_numbers_right_format_style
-            ),
+            ("line-numbers-right-style", line_numbers_right_style),
             ("line-numbers-zero-style", line_numbers_zero_style),
             ("paging-mode", paging_mode),
             // Hack: plus-style must come before plus-*emph-style because the latter default
