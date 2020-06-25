@@ -24,7 +24,7 @@ pub fn make_feature() -> Vec<(String, OptionValueFunction)> {
             "line-numbers-zero-style",
             String,
             None,
-            _opt => "#dddddd"
+            _opt => "#bbbbbb"
         ),
         (
             "line-numbers-plus-style",
