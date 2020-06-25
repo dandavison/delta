@@ -54,7 +54,7 @@ pub struct Config {
     pub number_plus_style: Style,
     pub number_right_format: String,
     pub number_right_format_style: Style,
-    pub number_zero_style: Option<Style>,
+    pub number_zero_style: Style,
     pub paging_mode: PagingMode,
     pub plus_emph_style: Style,
     pub plus_empty_line_marker_style: Style,
@@ -157,11 +157,11 @@ impl From<cli::Opt> for Config {
             make_commit_file_hunk_header_styles(&opt, true_color);
 
         let (
-            number_left_format_style,
             number_minus_style,
-            number_right_format_style,
-            number_plus_style,
             number_zero_style,
+            number_plus_style,
+            number_left_format_style,
+            number_right_format_style,
         ) = make_line_number_styles(&opt, true_color);
 
         let syntax_theme = if syntax_theme::is_no_syntax_highlighting_theme_name(&syntax_theme_name)
@@ -378,7 +378,7 @@ fn make_hunk_styles<'a>(
 fn make_line_number_styles<'a>(
     opt: &'a cli::Opt,
     true_color: bool,
-) -> (Style, Style, Style, Style, Option<Style>) {
+) -> (Style, Style, Style, Style, Style) {
     let number_left_format_style = Style::from_str(
         &opt.number_left_format_style,
         None,
@@ -390,6 +390,9 @@ fn make_line_number_styles<'a>(
 
     let number_minus_style =
         Style::from_str(&opt.number_minus_style, None, None, None, true_color, false);
+
+    let number_zero_style =
+        Style::from_str(&opt.number_zero_style, None, None, None, true_color, false);
 
     let number_plus_style =
         Style::from_str(&opt.number_plus_style, None, None, None, true_color, false);
@@ -403,17 +406,12 @@ fn make_line_number_styles<'a>(
         false,
     );
 
-    let number_zero_style = match &opt.number_zero_style {
-        Some(x) => Some(Style::from_str(x, None, None, None, true_color, false)),
-        None => None,
-    };
-
     (
-        number_left_format_style,
         number_minus_style,
-        number_right_format_style,
-        number_plus_style,
         number_zero_style,
+        number_plus_style,
+        number_left_format_style,
+        number_right_format_style,
     )
 }
 

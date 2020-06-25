@@ -22,9 +22,9 @@ pub fn make_feature() -> Vec<(String, OptionValueFunction)> {
         ),
         (
             "number-zero-style",
-            Option<String>,
+            String,
             None,
-            _opt => Some("#dddddd".to_string())
+            _opt => "#dddddd"
         ),
         (
             "number-plus-style",
@@ -44,11 +44,10 @@ pub fn format_and_paint_line_numbers<'a>(
     let (minus_number, plus_number) = line_numbers.unwrap();
 
     // If both minus and plus numbers are present then the line is a zero line.
-    let (number_minus_style, number_plus_style) =
-        match (minus_number, plus_number, config.number_zero_style) {
-            (Some(_), Some(_), Some(zero_style)) => (zero_style, zero_style),
-            _ => (config.number_minus_style, config.number_plus_style),
-        };
+    let (number_minus_style, number_plus_style) = match (minus_number, plus_number) {
+        (Some(_), Some(_)) => (config.number_zero_style, config.number_zero_style),
+        _ => (config.number_minus_style, config.number_plus_style),
+    };
 
     let mut formatted_numbers = Vec::new();
 

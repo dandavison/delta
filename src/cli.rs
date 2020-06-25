@@ -338,8 +338,8 @@ pub struct Opt {
 
     /// Style (foreground, background, attributes) to apply on unchanged lines (if --number is set),
     /// overriding --number-minus-style and --number-plus-style. See STYLES section.
-    #[structopt(long = "number-zero-style")]
-    pub number_zero_style: Option<String>,
+    #[structopt(long = "number-zero-style", default_value = "auto")]
+    pub number_zero_style: String,
 
     /// Format string for the left column of line numbers. A typical value would be "{nm:^4}⋮"
     /// which means to display the line numbers of the minus file (old version), followed by a
