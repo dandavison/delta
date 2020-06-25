@@ -174,35 +174,21 @@ pub mod tests {
             "{nm:^4}⋮",
             "--number-right-format",
             "{np:^4}│",
+            "--number-left-format-style",
+            "0 1",
+            "--number-minus-style",
+            "0 2",
+            "--number-right-format-style",
+            "0 3",
+            "--number-plus-style",
+            "0 4",
         ]);
         let output = run_delta(TWO_MINUS_LINES_DIFF, &config);
+        println!("{}", &output);
         let mut lines = output.lines().skip(4);
         let (line_1, line_2) = (lines.next().unwrap(), lines.next().unwrap());
         assert_eq!(strip_ansi_codes(line_1), " 1  ⋮    │a = 1");
         assert_eq!(strip_ansi_codes(line_2), " 2  ⋮    │b = 2");
-
-        assert!(line_1.starts_with(
-            &ansi_term::ANSIStrings(&[
-                config.number_left_format_style.paint(" "),
-                config.number_minus_style.paint("1  "),
-                config.number_left_format_style.paint("⋮"),
-                config.number_right_format_style.paint(" "),
-                config.number_plus_style.paint("   "),
-                config.number_right_format_style.paint("│"),
-            ])
-            .to_string()
-        ));
-        assert!(line_2.starts_with(
-            &ansi_term::ANSIStrings(&[
-                config.number_left_format_style.paint(" "),
-                config.number_minus_style.paint("2  "),
-                config.number_left_format_style.paint("⋮"),
-                config.number_right_format_style.paint(" "),
-                config.number_plus_style.paint("   "),
-                config.number_right_format_style.paint("│"),
-            ])
-            .to_string()
-        ));
     }
 
     #[test]
@@ -213,6 +199,14 @@ pub mod tests {
             "{nm:^4}⋮",
             "--number-right-format",
             "{np:^4}│",
+            "--number-left-format-style",
+            "0 1",
+            "--number-minus-style",
+            "0 2",
+            "--number-right-format-style",
+            "0 3",
+            "--number-plus-style",
+            "0 4",
         ]);
         let output = run_delta(TWO_PLUS_LINES_DIFF, &config);
         let mut lines = output.lines().skip(4);
@@ -229,6 +223,14 @@ pub mod tests {
             "{nm:^4}⋮",
             "--number-right-format",
             "{np:^4}│",
+            "--number-left-format-style",
+            "0 1",
+            "--number-minus-style",
+            "0 2",
+            "--number-right-format-style",
+            "0 3",
+            "--number-plus-style",
+            "0 4",
         ]);
         let output = run_delta(ONE_MINUS_ONE_PLUS_LINE_DIFF, &config);
         let output = strip_ansi_codes(&output);
@@ -246,6 +248,14 @@ pub mod tests {
             "{nm:^4} {nm:^4}⋮",
             "--number-right-format",
             "{np:^4}│",
+            "--number-left-format-style",
+            "0 1",
+            "--number-minus-style",
+            "0 2",
+            "--number-right-format-style",
+            "0 3",
+            "--number-plus-style",
+            "0 4",
         ]);
         let output = run_delta(ONE_MINUS_ONE_PLUS_LINE_DIFF, &config);
         println!("{}", output);
