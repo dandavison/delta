@@ -423,7 +423,7 @@ fn handle_hunk_header_line(
         }
     };
 
-    if !config.show_line_numbers {
+    if !config.line_numbers {
         let line_number = &format!("{}", painter.plus_line_number);
         match config.hunk_header_style.decoration_ansi_term_style() {
             Some(style) => writeln!(painter.writer, "{}", style.paint(line_number))?,

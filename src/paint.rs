@@ -10,7 +10,7 @@ use syntect::parsing::{SyntaxReference, SyntaxSet};
 use crate::config;
 use crate::delta::State;
 use crate::edits;
-use crate::features::numbers;
+use crate::features::line_numbers;
 use crate::paint::superimpose_style_sections::superimpose_style_sections;
 use crate::style::Style;
 
@@ -167,8 +167,11 @@ impl<'a> Painter<'a> {
 
             let mut handled_prefix = false;
             let mut ansi_strings = Vec::new();
-            if config.show_line_numbers && line_numbers.is_some() {
-                ansi_strings.extend(numbers::format_and_paint_line_numbers(line_numbers, config))
+            if config.line_numbers && line_numbers.is_some() {
+                ansi_strings.extend(line_numbers::format_and_paint_line_numbers(
+                    line_numbers,
+                    config,
+                ))
             }
             for (section_style, mut text) in superimpose_style_sections(
                 syntax_sections,

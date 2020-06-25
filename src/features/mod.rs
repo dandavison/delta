@@ -39,8 +39,8 @@ pub fn make_builtin_features() -> HashMap<String, BuiltinFeature> {
             diff_so_fancy::make_feature().into_iter().collect(),
         ),
         (
-            "numbers".to_string(),
-            numbers::make_feature().into_iter().collect(),
+            "line-numbers".to_string(),
+            line_numbers::make_feature().into_iter().collect(),
         ),
         (
             "navigate".to_string(),
@@ -76,8 +76,8 @@ macro_rules! builtin_feature {
 pub mod color_only;
 pub mod diff_highlight;
 pub mod diff_so_fancy;
+pub mod line_numbers;
 pub mod navigate;
-pub mod numbers;
 
 #[cfg(test)]
 pub mod tests {

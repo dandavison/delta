@@ -9,25 +9,25 @@ use crate::style::Style;
 pub fn make_feature() -> Vec<(String, OptionValueFunction)> {
     builtin_feature!([
         (
-            "numbers",
+            "line-numbers",
             bool,
             None,
             _opt => true
         ),
         (
-            "number-minus-style",
+            "line-numbers-minus-style",
             String,
             Some("color.diff.old"),
             _opt => "red"
         ),
         (
-            "number-zero-style",
+            "line-numbers-zero-style",
             String,
             None,
             _opt => "#dddddd"
         ),
         (
-            "number-plus-style",
+            "line-numbers-plus-style",
             String,
             Some("color.diff.new"),
             _opt => "green"
@@ -44,28 +44,34 @@ pub fn format_and_paint_line_numbers<'a>(
     let (minus_number, plus_number) = line_numbers.unwrap();
 
     // If both minus and plus numbers are present then the line is a zero line.
-    let (number_minus_style, number_plus_style) = match (minus_number, plus_number) {
-        (Some(_), Some(_)) => (config.number_zero_style, config.number_zero_style),
-        _ => (config.number_minus_style, config.number_plus_style),
+    let (minus_style, plus_style) = match (minus_number, plus_number) {
+        (Some(_), Some(_)) => (
+            config.line_numbers_zero_style,
+            config.line_numbers_zero_style,
+        ),
+        _ => (
+            config.line_numbers_minus_style,
+            config.line_numbers_plus_style,
+        ),
     };
 
     let mut formatted_numbers = Vec::new();
 
     formatted_numbers.extend(format_and_paint_line_number_field(
-        &config.number_left_format,
-        &config.number_left_format_style,
+        &config.line_numbers_left_format,
+        &config.line_numbers_left_format_style,
         minus_number,
         plus_number,
-        &number_minus_style,
-        &number_plus_style,
+        &minus_style,
+        &plus_style,
     ));
     formatted_numbers.extend(format_and_paint_line_number_field(
-        &config.number_right_format,
-        &config.number_right_format_style,
+        &config.line_numbers_right_format,
+        &config.line_numbers_right_format_style,
         minus_number,
         plus_number,
-        &number_minus_style,
-        &number_plus_style,
+        &minus_style,
+        &plus_style,
     ));
 
     formatted_numbers
@@ -95,8 +101,8 @@ fn format_and_paint_line_number_field<'a>(
     number_format_style: &Style,
     minus: Option<usize>,
     plus: Option<usize>,
-    number_minus_style: &Style,
-    number_plus_style: &Style,
+    line_numbers_minus_style: &Style,
+    line_numbers_plus_style: &Style,
 ) -> Vec<ansi_term::ANSIGenericString<'a, str>> {
     let mut formatted_number_strings = Vec::new();
 
@@ -107,10 +113,11 @@ fn format_and_paint_line_number_field<'a>(
             .push(number_format_style.paint(&format_string[offset.._match.start()]));
 
         match &caps[1] {
-            "nm" => formatted_number_strings
-                .push(number_minus_style.paint(format_line_number(minus, &caps[3], &caps[4]))),
+            "nm" => formatted_number_strings.push(
+                line_numbers_minus_style.paint(format_line_number(minus, &caps[3], &caps[4])),
+            ),
             "np" => formatted_number_strings
-                .push(number_plus_style.paint(format_line_number(plus, &caps[3], &caps[4]))),
+                .push(line_numbers_plus_style.paint(format_line_number(plus, &caps[3], &caps[4]))),
             _ => unreachable!(),
         }
         offset = _match.end();
@@ -198,18 +205,18 @@ pub mod tests {
     #[test]
     fn test_two_minus_lines() {
         let config = make_config(&[
-            "--number",
-            "--number-left-format",
+            "--line-numbers",
+            "--line-numbers-left-format",
             "{nm:^4}⋮",
-            "--number-right-format",
+            "--line-numbers-right-format",
             "{np:^4}│",
-            "--number-left-format-style",
+            "--line-numbers-left-format-style",
             "0 1",
-            "--number-minus-style",
+            "--line-numbers-minus-style",
             "0 2",
-            "--number-right-format-style",
+            "--line-numbers-right-format-style",
             "0 3",
-            "--number-plus-style",
+            "--line-numbers-plus-style",
             "0 4",
         ]);
         let output = run_delta(TWO_MINUS_LINES_DIFF, &config);
@@ -223,18 +230,18 @@ pub mod tests {
     #[test]
     fn test_two_plus_lines() {
         let config = make_config(&[
-            "--number",
-            "--number-left-format",
+            "--line-numbers",
+            "--line-numbers-left-format",
             "{nm:^4}⋮",
-            "--number-right-format",
+            "--line-numbers-right-format",
             "{np:^4}│",
-            "--number-left-format-style",
+            "--line-numbers-left-format-style",
             "0 1",
-            "--number-minus-style",
+            "--line-numbers-minus-style",
             "0 2",
-            "--number-right-format-style",
+            "--line-numbers-right-format-style",
             "0 3",
-            "--number-plus-style",
+            "--line-numbers-plus-style",
             "0 4",
         ]);
         let output = run_delta(TWO_PLUS_LINES_DIFF, &config);
@@ -247,18 +254,18 @@ pub mod tests {
     #[test]
     fn test_one_minus_one_plus_line() {
         let config = make_config(&[
-            "--number",
-            "--number-left-format",
+            "--line-numbers",
+            "--line-numbers-left-format",
             "{nm:^4}⋮",
-            "--number-right-format",
+            "--line-numbers-right-format",
             "{np:^4}│",
-            "--number-left-format-style",
+            "--line-numbers-left-format-style",
             "0 1",
-            "--number-minus-style",
+            "--line-numbers-minus-style",
             "0 2",
-            "--number-right-format-style",
+            "--line-numbers-right-format-style",
             "0 3",
-            "--number-plus-style",
+            "--line-numbers-plus-style",
             "0 4",
         ]);
         let output = run_delta(ONE_MINUS_ONE_PLUS_LINE_DIFF, &config);
@@ -272,18 +279,18 @@ pub mod tests {
     #[test]
     fn test_repeated_placeholder() {
         let config = make_config(&[
-            "--number",
-            "--number-left-format",
+            "--line-numbers",
+            "--line-numbers-left-format",
             "{nm:^4} {nm:^4}⋮",
-            "--number-right-format",
+            "--line-numbers-right-format",
             "{np:^4}│",
-            "--number-left-format-style",
+            "--line-numbers-left-format-style",
             "0 1",
-            "--number-minus-style",
+            "--line-numbers-minus-style",
             "0 2",
-            "--number-right-format-style",
+            "--line-numbers-right-format-style",
             "0 3",
-            "--number-plus-style",
+            "--line-numbers-plus-style",
             "0 4",
         ]);
         let output = run_delta(ONE_MINUS_ONE_PLUS_LINE_DIFF, &config);

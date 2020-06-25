@@ -48,13 +48,13 @@ pub struct Config {
     pub navigate: bool,
     pub null_style: Style,
     pub null_syntect_style: SyntectStyle,
-    pub number_left_format: String,
-    pub number_left_format_style: Style,
-    pub number_minus_style: Style,
-    pub number_plus_style: Style,
-    pub number_right_format: String,
-    pub number_right_format_style: Style,
-    pub number_zero_style: Style,
+    pub line_numbers_left_format: String,
+    pub line_numbers_left_format_style: Style,
+    pub line_numbers_minus_style: Style,
+    pub line_numbers_plus_style: Style,
+    pub line_numbers_right_format: String,
+    pub line_numbers_right_format_style: Style,
+    pub line_numbers_zero_style: Style,
     pub paging_mode: PagingMode,
     pub plus_emph_style: Style,
     pub plus_empty_line_marker_style: Style,
@@ -62,7 +62,7 @@ pub struct Config {
     pub plus_non_emph_style: Style,
     pub plus_style: Style,
     pub show_background_colors: bool,
-    pub show_line_numbers: bool,
+    pub line_numbers: bool,
     pub syntax_dummy_theme: SyntaxTheme,
     pub syntax_set: SyntaxSet,
     pub syntax_theme: Option<SyntaxTheme>,
@@ -157,11 +157,11 @@ impl From<cli::Opt> for Config {
             make_commit_file_hunk_header_styles(&opt, true_color);
 
         let (
-            number_minus_style,
-            number_zero_style,
-            number_plus_style,
-            number_left_format_style,
-            number_right_format_style,
+            line_numbers_minus_style,
+            line_numbers_zero_style,
+            line_numbers_plus_style,
+            line_numbers_left_format_style,
+            line_numbers_right_format_style,
         ) = make_line_number_styles(&opt, true_color);
 
         let syntax_theme = if syntax_theme::is_no_syntax_highlighting_theme_name(&syntax_theme_name)
@@ -212,13 +212,13 @@ impl From<cli::Opt> for Config {
             navigate: opt.navigate,
             null_style: Style::new(),
             null_syntect_style: SyntectStyle::default(),
-            number_left_format: opt.number_left_format,
-            number_left_format_style,
-            number_minus_style,
-            number_plus_style,
-            number_right_format: opt.number_right_format,
-            number_right_format_style,
-            number_zero_style,
+            line_numbers_left_format: opt.line_numbers_left_format,
+            line_numbers_left_format_style,
+            line_numbers_minus_style,
+            line_numbers_plus_style,
+            line_numbers_right_format: opt.line_numbers_right_format,
+            line_numbers_right_format_style,
+            line_numbers_zero_style,
             paging_mode,
             plus_emph_style,
             plus_empty_line_marker_style,
@@ -226,7 +226,7 @@ impl From<cli::Opt> for Config {
             plus_non_emph_style,
             plus_style,
             show_background_colors: opt.show_background_colors,
-            show_line_numbers: opt.show_line_numbers,
+            line_numbers: opt.line_numbers,
             syntax_dummy_theme,
             syntax_set: assets.syntax_set,
             syntax_theme,
@@ -379,8 +379,8 @@ fn make_line_number_styles<'a>(
     opt: &'a cli::Opt,
     true_color: bool,
 ) -> (Style, Style, Style, Style, Style) {
-    let number_left_format_style = Style::from_str(
-        &opt.number_left_format_style,
+    let line_numbers_left_format_style = Style::from_str(
+        &opt.line_numbers_left_format_style,
         None,
         None,
         None,
@@ -388,17 +388,35 @@ fn make_line_number_styles<'a>(
         false,
     );
 
-    let number_minus_style =
-        Style::from_str(&opt.number_minus_style, None, None, None, true_color, false);
+    let line_numbers_minus_style = Style::from_str(
+        &opt.line_numbers_minus_style,
+        None,
+        None,
+        None,
+        true_color,
+        false,
+    );
 
-    let number_zero_style =
-        Style::from_str(&opt.number_zero_style, None, None, None, true_color, false);
+    let line_numbers_zero_style = Style::from_str(
+        &opt.line_numbers_zero_style,
+        None,
+        None,
+        None,
+        true_color,
+        false,
+    );
 
-    let number_plus_style =
-        Style::from_str(&opt.number_plus_style, None, None, None, true_color, false);
+    let line_numbers_plus_style = Style::from_str(
+        &opt.line_numbers_plus_style,
+        None,
+        None,
+        None,
+        true_color,
+        false,
+    );
 
-    let number_right_format_style = Style::from_str(
-        &opt.number_right_format_style,
+    let line_numbers_right_format_style = Style::from_str(
+        &opt.line_numbers_right_format_style,
         None,
         None,
         None,
@@ -407,11 +425,11 @@ fn make_line_number_styles<'a>(
     );
 
     (
-        number_minus_style,
-        number_zero_style,
-        number_plus_style,
-        number_left_format_style,
-        number_right_format_style,
+        line_numbers_minus_style,
+        line_numbers_zero_style,
+        line_numbers_plus_style,
+        line_numbers_left_format_style,
+        line_numbers_right_format_style,
     )
 }
 
