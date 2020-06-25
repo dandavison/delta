@@ -10,6 +10,7 @@ use syntect::parsing::{SyntaxReference, SyntaxSet};
 use crate::config;
 use crate::delta::State;
 use crate::edits;
+use crate::features::line_numbers;
 use crate::paint::superimpose_style_sections::superimpose_style_sections;
 use crate::style::Style;
 
@@ -165,38 +166,13 @@ impl<'a> Painter<'a> {
             };
 
             let mut handled_prefix = false;
-            let mut ansi_strings = if config.show_line_numbers && line_numbers.is_some() {
-                let (minus, plus) = line_numbers.unwrap();
-                let (minus_before, minus_number, minus_after) =
-                    get_line_number_components(minus, &config.number_minus_format);
-                let (plus_before, plus_number, plus_after) =
-                    get_line_number_components(plus, &config.number_plus_format);
-                vec![
-                    config
-                        .number_minus_format_style
-                        .ansi_term_style
-                        .paint(minus_before),
-                    config
-                        .number_minus_style
-                        .ansi_term_style
-                        .paint(minus_number),
-                    config
-                        .number_minus_format_style
-                        .ansi_term_style
-                        .paint(minus_after),
-                    config
-                        .number_plus_format_style
-                        .ansi_term_style
-                        .paint(plus_before),
-                    config.number_plus_style.paint(plus_number),
-                    config
-                        .number_plus_format_style
-                        .ansi_term_style
-                        .paint(plus_after),
-                ]
-            } else {
-                Vec::new()
-            };
+            let mut ansi_strings = Vec::new();
+            if config.line_numbers && line_numbers.is_some() {
+                ansi_strings.extend(line_numbers::format_and_paint_line_numbers(
+                    line_numbers,
+                    config,
+                ))
+            }
             for (section_style, mut text) in superimpose_style_sections(
                 syntax_sections,
                 diff_sections,
@@ -619,39 +595,4 @@ mod superimpose_style_sections {
             );
         }
     }
-}
-
-lazy_static! {
-    static ref LINE_NUMBER_REGEXP: Regex =
-        Regex::new(r"(?P<before>.*)(?P<ln>%ln)(?P<after>.*)").unwrap();
-}
-
-fn format_line_number(line_number: Option<usize>) -> String {
-    match line_number {
-        Some(x) => format!("{:^4}", x),
-        None => format!("    "),
-    }
-}
-
-fn get_line_number_components(
-    number: Option<usize>,
-    number_format: &str,
-) -> (String, String, String) {
-    let captures = match LINE_NUMBER_REGEXP.captures(number_format) {
-        Some(captures) => captures,
-        None => return (number_format.to_string(), "".to_string(), "".to_string()),
-    };
-
-    let before = captures.name("before").unwrap().as_str();
-    let placeholder = captures.name("ln");
-    let after = captures.name("after").unwrap().as_str();
-    let number = match placeholder {
-        Some(_) => number,
-        None => None,
-    };
-    (
-        before.to_string(),
-        format_line_number(number),
-        after.to_string(),
-    )
 }

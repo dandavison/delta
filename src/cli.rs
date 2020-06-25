@@ -154,21 +154,49 @@ within a style string):
    Specifying colors like this is useful if your terminal only supports 256 colors (i.e. doesn\'t
    support 24-bit color).
 
+
 LINE NUMBERS
 ------------
 
-Options --number-minus-format and --number-plus-format allow you to specify a custom string to
-display for the line number columns. The string should specify the location of the line number
-using the placeholder %ln.
+To display line numbers, use --line-numbers.
 
-For example, to display the line numbers like
+Line numbers are displayed in two columns. Here's what it looks like by default:
 
-    8 ⋮   9 │ Here is an output line
+ 1  ⋮ 1  │ unchanged line
+ 2  ⋮    │ removed line
+    ⋮ 2  │ added line
 
-you would use
+In that output, the line numbers for the old (minus) version of the file appear in the left column,
+and the line numbers for the new (plus) version of the file appear in the right column. In an
+unchanged (zero) line, both columns contain a line number.
 
---number-minus-format '%ln ⋮'
---number-plus-format '%ln │'
+The following options allow the line number display to be customized:
+
+--line-numbers-left-format:  Change the contents of the left column
+--line-numbers-right-format: Change the contents of the right column
+--line-numbers-left-style:   Change the style applied to the left column
+--line-numbers-right-style:  Change the style applied to the right column
+--line-numbers-minus-style:  Change the style applied to line numbers in minus lines
+--line-numbers-zero-style:   Change the style applied to line numbers in unchanged lines
+--line-numbers-plus-style:   Change the style applied to line numbers in plus lines
+
+Options --line-numbers-left-format and --line-numbers-right-format allow you to change the contents
+of the line number columns. Their values are arbitrary format strings, which are allowed to contain
+the placeholders {nm} for the line number associated with the old version of the file and {np} for
+the line number associated with the new version of the file. The placeholders support a subset of
+the string formatting syntax documented here: https://doc.rust-lang.org/std/fmt/#formatting-parameters.
+Specifically, you can use the alignment, width, and fill syntax.
+
+For example, the default value of --line-numbers-left-format is '{nm:^4}⋮'. This means that the
+left column should display the minus line number (nm), center-aligned, padded with spaces to a
+width of 4 characters, followed by a unicode dividing-line character (⋮).
+
+Similarly, the default value of --line-numbers-right-format is '{np:^4}│ '. This means that the
+right column should display the plus line number (np), center-aligned, padded with spaces to a
+width of 4 characters, followed by a unicode dividing-line character (│), and a space.
+
+Use '<' for left-align, '^' for center-align, and '>' for right-align.
+
 
 If something isn't working correctly, or you have a feature request, please open an issue at
 https://github.com/dandavison/delta/issues.
@@ -290,49 +318,46 @@ pub struct Opt {
     /// given.
     pub hunk_header_decoration_style: String,
 
-    /// Display line numbers next to the diff. The first column contains line
-    /// numbers in the previous version of the file, and the second column contains
-    /// line number in the new version of the file. A blank cell in the first or
-    /// second column indicates that the line does not exist in that file (it was
-    /// added or removed, respectively).
-    #[structopt(short = "n", long = "number")]
-    pub show_line_numbers: bool,
+    /// Display line numbers next to the diff. See LINE NUMBERS section.
+    #[structopt(short = "n", long = "line-numbers")]
+    pub line_numbers: bool,
 
-    /// Style (foreground, background, attributes) for the left (minus) column of line numbers
-    /// (--number), if --number is set. See STYLES section. Defaults to
-    /// --hunk-header-decoration-style.
-    #[structopt(long = "number-minus-style", default_value = "auto")]
-    pub number_minus_style: String,
+    /// Style (foreground, background, attributes) for line numbers in the old (minus) version of
+    /// the file. See STYLES and LINE NUMBERS sections.
+    #[structopt(long = "line-numbers-minus-style", default_value = "auto")]
+    pub line_numbers_minus_style: String,
 
-    /// Style (foreground, background, attributes) for the right (plus) column of line numbers
-    /// (--number), if --number is set. See STYLES section. Defaults to
-    /// --hunk-header-decoration-style.
-    #[structopt(long = "number-plus-style", default_value = "auto")]
-    pub number_plus_style: String,
+    /// Style (foreground, background, attributes) for line numbers in unchanged (zero) lines. See
+    /// STYLES and LINE NUMBERS sections.
+    #[structopt(long = "line-numbers-zero-style", default_value = "auto")]
+    pub line_numbers_zero_style: String,
 
-    /// Format string for the left (minus) column of line numbers (--number), if --number is set.
-    /// Should include the placeholder %ln to indicate the position of the line number.
-    /// See the LINE NUMBERS section.
-    #[structopt(long = "number-minus-format", default_value = "%ln⋮")]
-    pub number_minus_format: String,
+    /// Style (foreground, background, attributes) for line numbers in the new (plus) version of
+    /// the file. See STYLES and LINE NUMBERS sections.
+    #[structopt(long = "line-numbers-plus-style", default_value = "auto")]
+    pub line_numbers_plus_style: String,
 
-    /// Format string for the right (plus) column of line numbers (--number), if --number is set.
-    /// Should include the placeholder %ln to indicate the position of the line number.
-    /// See the LINE NUMBERS section.
-    #[structopt(long = "number-plus-format", default_value = "%ln│ ")]
-    pub number_plus_format: String,
+    /// Format string for the left column of line numbers. A typical value would be "{nm:^4}⋮"
+    /// which means to display the line numbers of the minus file (old version), followed by a
+    /// dividing character. See the LINE NUMBERS section.
+    #[structopt(long = "line-numbers-left-format", default_value = "{nm:^4}⋮")]
+    pub line_numbers_left_format: String,
 
-    /// Style (foreground, background, attributes) for the left (minus) line number format string
-    /// (--number), if --number is set. See STYLES section. Defaults to
-    /// --hunk-header-decoration-style.
-    #[structopt(long = "number-minus-format-style", default_value = "auto")]
-    pub number_minus_format_style: String,
+    /// Format string for the right column of line numbers. A typical value would be "{np:^4}│ "
+    /// which means to display the line numbers of the plus file (new version), followed by a
+    /// dividing character, and a space. See the LINE NUMBERS section.
+    #[structopt(long = "line-numbers-right-format", default_value = "{np:^4}│ ")]
+    pub line_numbers_right_format: String,
 
-    /// Style (foreground, background, attributes) for the right (plus) line number format string
-    /// (--number), if --number is set. See STYLES section. Defaults to
-    /// --hunk-header-decoration-style.
-    #[structopt(long = "number-plus-format-style", default_value = "auto")]
-    pub number_plus_format_style: String,
+    /// Style (foreground, background, attributes) for the left column of line numbers. See STYLES
+    /// and LINE NUMBERS sections.
+    #[structopt(long = "line-numbers-left-style", default_value = "auto")]
+    pub line_numbers_left_style: String,
+
+    /// Style (foreground, background, attributes) for the right column of line numbers. See STYLES
+    /// and LINE NUMBERS sections.
+    #[structopt(long = "line-numbers-right-style", default_value = "auto")]
+    pub line_numbers_right_style: String,
 
     #[structopt(long = "color-only")]
     /// Do not alter the input in any way other than applying colors. Equivalent to

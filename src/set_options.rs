@@ -74,14 +74,16 @@ pub fn set_options(
                 minus_empty_line_marker_style
             ),
             ("minus-non-emph-style", minus_non_emph_style),
+            ("minus-non-emph-style", minus_non_emph_style),
             ("navigate", navigate),
-            ("number", show_line_numbers),
-            ("number-minus-format", number_minus_format),
-            ("number-minus-format-style", number_minus_format_style),
-            ("number-minus-style", number_minus_style),
-            ("number-plus-format", number_plus_format),
-            ("number-plus-format-style", number_plus_format_style),
-            ("number-plus-style", number_plus_style),
+            ("line-numbers", line_numbers),
+            ("line-numbers-left-format", line_numbers_left_format),
+            ("line-numbers-left-style", line_numbers_left_style),
+            ("line-numbers-minus-style", line_numbers_minus_style),
+            ("line-numbers-plus-style", line_numbers_plus_style),
+            ("line-numbers-right-format", line_numbers_right_format),
+            ("line-numbers-right-style", line_numbers_right_style),
+            ("line-numbers-zero-style", line_numbers_zero_style),
             ("paging-mode", paging_mode),
             // Hack: plus-style must come before plus-*emph-style because the latter default
             // dynamically to the value of the former.
@@ -181,6 +183,9 @@ fn gather_features<'a>(
     }
     if opt.diff_so_fancy {
         features.push_front("diff-so-fancy".to_string());
+    }
+    if opt.line_numbers {
+        features.push_front("line-numbers".to_string());
     }
     if opt.navigate {
         features.push_front("navigate".to_string());
