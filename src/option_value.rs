@@ -1,3 +1,5 @@
+use crate::config::unreachable;
+
 /// A value associated with a Delta command-line option name.
 pub enum OptionValue {
     Boolean(bool),
@@ -23,7 +25,7 @@ impl From<OptionValue> for bool {
     fn from(value: OptionValue) -> Self {
         match value {
             OptionValue::Boolean(value) => value,
-            _ => panic!(),
+            _ => unreachable("Error converting OptionValue to bool."),
         }
     }
 }
@@ -38,7 +40,7 @@ impl From<OptionValue> for f64 {
     fn from(value: OptionValue) -> Self {
         match value {
             OptionValue::Float(value) => value,
-            _ => panic!(),
+            _ => unreachable("Error converting OptionValue to f64."),
         }
     }
 }
@@ -53,7 +55,7 @@ impl From<OptionValue> for Option<String> {
     fn from(value: OptionValue) -> Self {
         match value {
             OptionValue::OptionString(value) => value,
-            _ => panic!(),
+            _ => unreachable("Error converting OptionValue to Option<String>."),
         }
     }
 }
@@ -74,7 +76,7 @@ impl From<OptionValue> for String {
     fn from(value: OptionValue) -> Self {
         match value {
             OptionValue::String(value) => value,
-            _ => panic!(),
+            _ => unreachable("Error converting OptionValue to String."),
         }
     }
 }
@@ -89,7 +91,7 @@ impl From<OptionValue> for usize {
     fn from(value: OptionValue) -> Self {
         match value {
             OptionValue::Int(value) => value,
-            _ => panic!(),
+            _ => unreachable("Error converting OptionValue to usize."),
         }
     }
 }
