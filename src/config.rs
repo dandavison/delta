@@ -162,11 +162,7 @@ impl From<cli::Opt> for Config {
             number_right_format_style,
             number_plus_style,
             number_zero_style,
-        ) = make_line_number_styles(
-            &opt,
-            hunk_header_style.decoration_ansi_term_style(),
-            true_color,
-        );
+        ) = make_line_number_styles(&opt, true_color);
 
         let syntax_theme = if syntax_theme::is_no_syntax_highlighting_theme_name(&syntax_theme_name)
         {
@@ -381,59 +377,34 @@ fn make_hunk_styles<'a>(
 
 fn make_line_number_styles<'a>(
     opt: &'a cli::Opt,
-    default_style: Option<ansi_term::Style>,
     true_color: bool,
 ) -> (Style, Style, Style, Style, Option<Style>) {
-    let (default_foreground, default_background) = match default_style {
-        Some(default_style) => (default_style.foreground, default_style.background),
-        None => (None, None),
-    };
-
     let number_left_format_style = Style::from_str(
         &opt.number_left_format_style,
-        default_foreground,
-        default_background,
+        None,
+        None,
         None,
         true_color,
         false,
     );
 
-    let number_minus_style = Style::from_str(
-        &opt.number_minus_style,
-        default_foreground,
-        default_background,
-        None,
-        true_color,
-        false,
-    );
+    let number_minus_style =
+        Style::from_str(&opt.number_minus_style, None, None, None, true_color, false);
 
-    let number_plus_style = Style::from_str(
-        &opt.number_plus_style,
-        default_foreground,
-        default_background,
-        None,
-        true_color,
-        false,
-    );
+    let number_plus_style =
+        Style::from_str(&opt.number_plus_style, None, None, None, true_color, false);
 
     let number_right_format_style = Style::from_str(
         &opt.number_right_format_style,
-        default_foreground,
-        default_background,
+        None,
+        None,
         None,
         true_color,
         false,
     );
 
     let number_zero_style = match &opt.number_zero_style {
-        Some(x) => Some(Style::from_str(
-            x,
-            default_foreground,
-            default_background,
-            None,
-            true_color,
-            false,
-        )),
+        Some(x) => Some(Style::from_str(x, None, None, None, true_color, false)),
         None => None,
     };
 

@@ -184,6 +184,9 @@ fn gather_features<'a>(
     if opt.diff_so_fancy {
         features.push_front("diff-so-fancy".to_string());
     }
+    if opt.show_line_numbers {
+        features.push_front("numbers".to_string());
+    }
     if opt.navigate {
         features.push_front("navigate".to_string());
     }

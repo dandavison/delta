@@ -3,7 +3,37 @@ use lazy_static::lazy_static;
 use regex::Regex;
 
 use crate::config;
+use crate::features::OptionValueFunction;
 use crate::style::Style;
+
+pub fn make_feature() -> Vec<(String, OptionValueFunction)> {
+    builtin_feature!([
+        (
+            "numbers",
+            bool,
+            None,
+            _opt => true
+        ),
+        (
+            "number-minus-style",
+            String,
+            Some("color.diff.old"),
+            _opt => "red"
+        ),
+        (
+            "number-zero-style",
+            Option<String>,
+            None,
+            _opt => Some("#dddddd".to_string())
+        ),
+        (
+            "number-plus-style",
+            String,
+            Some("color.diff.new"),
+            _opt => "green"
+        )
+    ])
+}
 
 /// Return a vec of `ansi_term::ANSIGenericString`s representing the left and right fields of the
 /// two-column line number display.

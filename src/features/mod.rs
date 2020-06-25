@@ -39,6 +39,10 @@ pub fn make_builtin_features() -> HashMap<String, BuiltinFeature> {
             diff_so_fancy::make_feature().into_iter().collect(),
         ),
         (
+            "numbers".to_string(),
+            numbers::make_feature().into_iter().collect(),
+        ),
+        (
             "navigate".to_string(),
             navigate::make_feature().into_iter().collect(),
         ),

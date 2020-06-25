@@ -323,18 +323,16 @@ pub struct Opt {
     /// line number in the new version of the file. A blank cell in the first or
     /// second column indicates that the line does not exist in that file (it was
     /// added or removed, respectively).
-    #[structopt(short = "n", long = "number")]
+    #[structopt(short = "n", long = "numbers")]
     pub show_line_numbers: bool,
 
     /// Style (foreground, background, attributes) for the minus file line numbers (line numbers in
-    /// the old version) See STYLES and LINE NUMBERS sections. Defaults to
-    /// --hunk-header-decoration-style.
+    /// the old version) See STYLES and LINE NUMBERS sections.
     #[structopt(long = "number-minus-style", default_value = "auto")]
     pub number_minus_style: String,
 
     /// Style (foreground, background, attributes) for the plus file line numbers (line numbers in
-    /// the old version) See STYLES and LINE NUMBERS sections. Defaults to
-    /// --hunk-header-decoration-style.
+    /// the old version) See STYLES and LINE NUMBERS sections.
     #[structopt(long = "number-plus-style", default_value = "auto")]
     pub number_plus_style: String,
 
