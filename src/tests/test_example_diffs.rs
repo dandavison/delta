@@ -135,7 +135,10 @@ mod tests {
 
     #[test]
     fn test_certain_bugs_are_not_present() {
-        for input in vec![DIFF_EXHIBITING_TRUNCATION_BUG] {
+        for input in vec![
+            DIFF_EXHIBITING_PARSE_FILE_NAME_BUG,
+            DIFF_EXHIBITING_TRUNCATION_BUG,
+        ] {
             let config = integration_test_utils::make_config(&["--color-only"]);
             let output = integration_test_utils::run_delta(input, &config);
             assert_eq!(strip_ansi_codes(&output), input);
@@ -1549,6 +1552,16 @@ index cba6064..ba1a4de 100644
 - Co
 + let col = Co
 "#;
+
+    const DIFF_EXHIBITING_PARSE_FILE_NAME_BUG: &str = r"
+diff --git c/a i/a
+new file mode 100644
+index 0000000..eea55b6
+--- /dev/null
++++ i/a
+@@ -0,0 +1 @@
++++ a
+";
 
     const DIFF_WITH_REMOVED_EMPTY_LINE: &str = r"
 diff --git i/a w/a
