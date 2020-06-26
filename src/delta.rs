@@ -94,7 +94,9 @@ where
                     &minus_file,
                 ));
             }
-        } else if line.starts_with("+++ ") || line.starts_with("rename to ") {
+        } else if (state == State::FileMeta || source == Source::DiffUnified)
+            && (line.starts_with("+++ ") || line.starts_with("rename to "))
+        {
             plus_file = parse::get_file_path_from_file_meta_line(&line, source == Source::GitDiff);
             painter.set_syntax(parse::get_file_extension_from_file_meta_line_file_path(
                 &plus_file,
