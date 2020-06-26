@@ -1,0 +1,7 @@
+diff --git i/diff-test.txt w/diff-test.txt
+index 5fd0037..3f0bbd0 100644
+--- i/diff-test.txt
++++ w/diff-test.txt
+@@ -1,1 +1,1 @@
+- [
++= (

@@ -1,0 +1,19 @@
+diff --git i/diff-test.txt w/diff-test.txt
+index 5fd0037..3f0bbd0 100644
+--- i/diff-test.txt
++++ w/diff-test.txt
+@@ -1,6 +1,10 @@
+-foo
++foo yeah
+ 	bar
+-return parent_names + [self.tree_name.value]
++parent_names += (self.tree_name.value,)
++if include_module_names:
++	skdjfh
++	kjlkfjs
++return parent_names
+
+-foo
+-bar
++foo-one
++bar-two

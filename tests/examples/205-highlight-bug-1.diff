@@ -1,0 +1,7 @@
+diff --git a/b b/b
+index 1b647ff..b6467a2 100644
+--- a/b
++++ b/b
+@@ -1 +1 @@
+-return parent_names
++parent_names
