@@ -124,6 +124,7 @@ fn annotate<'a, Annotation>(
 ) -> (Vec<(Annotation, &'a str)>, Vec<(Annotation, &'a str)>, f64)
 where
     Annotation: Copy,
+    Annotation: PartialEq,
 {
     let mut annotated_minus_line = Vec::new();
     let mut annotated_plus_line = Vec::new();
@@ -188,8 +189,11 @@ where
                 let n_d = distance_contribution(minus_section);
                 d_denom += n_d;
                 let is_space = minus_section.trim().is_empty();
+                let coalesce_space_with_previous = is_space
+                    && ((minus_op_prev == deletion && plus_op_prev == insertion)
+                        || (minus_op_prev == noop_deletion && plus_op_prev == noop_insertion));
                 annotated_minus_line.push((
-                    if is_space {
+                    if coalesce_space_with_previous {
                         minus_op_prev
                     } else {
                         noop_deletion
@@ -197,7 +201,7 @@ where
                     minus_section,
                 ));
                 annotated_plus_line.push((
-                    if is_space {
+                    if coalesce_space_with_previous {
                         plus_op_prev
                     } else {
                         noop_insertion
