@@ -12,7 +12,7 @@ use crate::set_options;
 #[derive(StructOpt, Clone, Debug, PartialEq)]
 #[structopt(
     name = "delta",
-    about = "A syntax-highlighter for git and diff output",
+    about = "A front-end for git and diff",
     setting(ColorAlways),
     setting(ColoredHelp),
     setting(DeriveDisplayOrder),
@@ -34,10 +34,9 @@ FEATURES
 -------
 A feature is a named collection of delta options in ~/.gitconfig. An example is:
 
-[delta \"my-delta-feature\"]
+[delta \"my-delta-theme-feature\"]
     syntax-theme = Dracula
     plus-style = bold syntax \"#002800\"
-    ...
 
 To activate those options, you would use:
 
@@ -48,7 +47,7 @@ or in ~/.gitconfig
 [delta]
     features = my-delta-feature
 
-A single feature name may not contain whitespace. You can activate multiple features:
+A feature name may not contain whitespace. You can activate multiple features:
 
 [delta]
     features = my-highlight-styles-colors-feature my-line-number-styles-feature
