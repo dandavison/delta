@@ -18,6 +18,7 @@ mod git_config;
 mod option_value;
 mod paint;
 mod parse;
+mod parse_style;
 mod rewrite_options;
 mod set_options;
 mod style;
