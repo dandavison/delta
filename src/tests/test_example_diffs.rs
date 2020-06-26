@@ -134,9 +134,7 @@ mod tests {
     }
 
     #[test]
-    // A bug appeared with the change to the tokenization regex in
-    // b5d87819a1f76de9ef8f16f1bfb413468af50b62. This test asserts that the bug is not present.
-    fn test_no_post_tokenization_regex_change_truncation_bug() {
+    fn test_certain_bugs_are_not_present() {
         for input in vec![DIFF_EXHIBITING_TRUNCATION_BUG] {
             let config = integration_test_utils::make_config(&["--color-only"]);
             let output = integration_test_utils::run_delta(input, &config);
@@ -1540,6 +1538,8 @@ index 759070d,3daf9eb..0000000
   	@make -f release.Makefile release
 "#;
 
+    // A bug appeared with the change to the tokenization regex in
+    // b5d87819a1f76de9ef8f16f1bfb413468af50b62. The bug was triggered by this diff.
     const DIFF_EXHIBITING_TRUNCATION_BUG: &str = r#"
 diff --git a/a.rs b/b.rs
 index cba6064..ba1a4de 100644
