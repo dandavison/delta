@@ -137,6 +137,7 @@ mod tests {
     fn test_certain_bugs_are_not_present() {
         for input in vec![
             DIFF_EXHIBITING_PARSE_FILE_NAME_BUG,
+            DIFF_EXHIBITING_STATE_MACHINE_PARSER_BUG,
             DIFF_EXHIBITING_TRUNCATION_BUG,
         ] {
             let config = integration_test_utils::make_config(&["--color-only"]);
@@ -1551,6 +1552,19 @@ index cba6064..ba1a4de 100644
 - Co
 + let col = Co
 "#;
+
+    // A bug appeared with the change to the state machine parser in
+    // 5adc445ec38142046fc4cc4518e7019fe54f2e35. The bug was triggered by this diff. The bug was
+    // present prior to that commit.
+    const DIFF_EXHIBITING_STATE_MACHINE_PARSER_BUG: &str = r"
+diff --git a/src/delta.rs b/src/delta.rs
+index 20aef29..20416c0 100644
+--- a/src/delta.rs
++++ b/src/delta.rs
+@@ -994,0 +1014,2 @@ index cba6064..ba1a4de 100644
++++ a
++++ b
+";
 
     const DIFF_EXHIBITING_PARSE_FILE_NAME_BUG: &str = r"
 diff --git c/a i/a
