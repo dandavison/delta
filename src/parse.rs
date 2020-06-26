@@ -5,7 +5,7 @@ use std::path::Path;
 use crate::config::Config;
 
 // https://git-scm.com/docs/git-config#Documentation/git-config.txt-diffmnemonicPrefix
-const DIFF_PREFIXES: [&str; 6] = ["a", "b", "c", "i", "o", "w"];
+const DIFF_PREFIXES: [&str; 6] = ["a/", "b/", "c/", "i/", "o/", "w/"];
 
 /// Given input like
 /// "--- one.rs	2019-11-20 06:16:08.000000000 +0100"
@@ -202,7 +202,7 @@ mod tests {
         );
         for prefix in &DIFF_PREFIXES {
             assert_eq!(
-                get_file_path_from_file_meta_line(&format!("--- {}/src/delta.rs", prefix), true),
+                get_file_path_from_file_meta_line(&format!("--- {}src/delta.rs", prefix), true),
                 "src/delta.rs"
             );
         }
