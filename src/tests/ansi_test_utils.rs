@@ -119,8 +119,9 @@ pub mod ansi_test_utils {
         };
         painter.set_syntax(Some(language_extension));
         painter.set_highlighter();
-        let lines = vec![line];
-        let syntax_style_sections = painter.highlighter.highlight(line, &config.syntax_set);
+        let line = format!(" {}", line); // TODO: a leading space must be added, as delta::prepare() does
+        let lines = vec![&line];
+        let syntax_style_sections = painter.highlighter.highlight(&line, &config.syntax_set);
         paint::Painter::paint_lines(
             vec![syntax_style_sections],
             vec![vec![(syntax_highlighted_style, lines[0])]],

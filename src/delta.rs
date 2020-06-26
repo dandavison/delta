@@ -526,22 +526,14 @@ fn prepare(line: &str, append_newline: bool, config: &Config) -> String {
     if !line.is_empty() {
         let mut line = line.graphemes(true);
 
-        // The first column contains a -/+/space character, added by git. If we are retaining them
-        // (--keep-plus-minus-markers), then we substitute it for a space now, so that it is not
-        // present during syntax highlighting, and reinstate it when emitting the line in
-        // Painter::paint_lines. If we not retaining them, then we drop it now, and
-        // Painter::paint_lines doesn't inject anything.
+        // The first column contains a -/+/space character, added by git. We substitute it for a
+        // space now, so that it is not present during syntax highlighting. When emitting the line
+        // in Painter::paint_lines, we drop the space (unless --keep-plus-minus-markers is in
+        // effect in which case we replace it with the appropriate marker).
+        // TODO: Things should, but do not, work if this leading space is omitted at this stage.
+        // See comment in align::Alignment::new.
         line.next();
-        format!(
-            "{}{}{}",
-            if config.keep_plus_minus_markers {
-                " "
-            } else {
-                ""
-            },
-            expand_tabs(line, config.tab_width),
-            terminator
-        )
+        format!(" {}{}", expand_tabs(line, config.tab_width), terminator)
     } else {
         terminator.to_string()
     }

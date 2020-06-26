@@ -182,9 +182,9 @@ impl<'a> Painter<'a> {
                 if !handled_prefix {
                     if prefix != "" {
                         ansi_strings.push(section_style.paint(prefix));
-                        if text.len() > 0 {
-                            text.remove(0);
-                        }
+                    }
+                    if text.len() > 0 {
+                        text.remove(0);
                     }
                     handled_prefix = true;
                 }

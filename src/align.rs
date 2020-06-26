@@ -34,6 +34,9 @@ pub struct Alignment<'a> {
 impl<'a> Alignment<'a> {
     /// Fill table for Levenshtein distance / alignment computation
     pub fn new(x: Vec<&'a str>, y: Vec<&'a str>) -> Self {
+        // TODO: Something about the alignment algorithm requires that the first two items in the
+        // token stream are ["", " "]. In practice this means that the line must have a leading
+        // space, and that the tokenization regex cooperates.
         let dim = [y.len() + 1, x.len() + 1];
         let table = vec![
             Cell {
