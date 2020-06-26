@@ -89,7 +89,6 @@ where
                 state = State::FileMeta;
                 painter.set_syntax(parse::get_file_extension_from_marker_line(&line));
             } else {
-                state = State::FileMeta;
                 painter.set_syntax(parse::get_file_extension_from_file_meta_line_file_path(
                     &minus_file,
                 ));
