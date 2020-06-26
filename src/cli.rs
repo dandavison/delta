@@ -384,13 +384,11 @@ pub struct Opt {
     #[structopt(long = "tabs", default_value = "4")]
     pub tab_width: usize,
 
-    /// Show the command-line arguments (RGB hex codes) for the background colors that are in
-    /// effect. The hex codes are displayed with their associated background color. This option can
-    /// be combined with --light and --dark to view the background colors for those modes. It can
-    /// also be used to experiment with different RGB hex codes by combining this option with style
-    /// options such as --minus-style, --zero-style, --plus-style, etc.
-    #[structopt(long = "show-background-colors")]
-    pub show_background_colors: bool,
+    /// Print the style strings for all style options. This can be used to experiment with
+    /// different colors by combining this option with other options such as --minus-style,
+    /// --zero-style, --plus-style, --light, --dark, etc.
+    #[structopt(long = "show-styles")]
+    pub show_styles: bool,
 
     /// List supported languages and associated file extensions.
     #[structopt(long = "list-languages")]

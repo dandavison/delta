@@ -39,6 +39,21 @@ pub fn color_from_rgb_or_ansi_code_with_default(
     }
 }
 
+pub fn color_to_string(color: Color) -> String {
+    match color {
+        Color::Fixed(n) => format!("{}", n),
+        Color::RGB(r, g, b) => format!("#{:02x?}{:02x?}{:02x?}", r, g, b),
+        Color::Black => "black".to_string(),
+        Color::Red => "red".to_string(),
+        Color::Green => "green".to_string(),
+        Color::Yellow => "yellow".to_string(),
+        Color::Blue => "blue".to_string(),
+        Color::Purple => "purple".to_string(),
+        Color::Cyan => "cyan".to_string(),
+        Color::White => "white".to_string(),
+    }
+}
+
 // See
 // https://en.wikipedia.org/wiki/ANSI_escape_code#8-bit
 pub fn ansi_color_name_to_number(name: &str) -> Option<u8> {

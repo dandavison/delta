@@ -3,6 +3,8 @@ use std::fmt;
 
 use ansi_term;
 
+use crate::color;
+
 #[derive(Clone, Copy, Debug, PartialEq)]
 pub struct Style {
     pub ansi_term_style: ansi_term::Style,
@@ -67,5 +69,23 @@ impl Style {
             DecorationStyle::BoxWithUnderOverline(style) => Some(style),
             DecorationStyle::NoDecoration => None,
         }
+    }
+
+    pub fn to_painted_string(&self) -> ansi_term::ANSIGenericString<str> {
+        self.paint(self.to_string())
+    }
+
+    fn to_string(&self) -> String {
+        format!(
+            "{} {}",
+            self.ansi_term_style
+                .foreground
+                .map(color::color_to_string)
+                .unwrap_or("normal".to_string()),
+            self.ansi_term_style
+                .background
+                .map(color::color_to_string)
+                .unwrap_or("".to_string())
+        )
     }
 }

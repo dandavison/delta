@@ -30,7 +30,7 @@ use std::io::{self, ErrorKind, Read, Write};
 use std::path::PathBuf;
 use std::process;
 
-use ansi_term::{self, Color};
+use ansi_term;
 use atty;
 use bytelines::ByteLinesReader;
 use structopt::StructOpt;
@@ -62,8 +62,8 @@ fn main() -> std::io::Result<()> {
     } else if config.list_syntax_themes {
         list_syntax_themes()?;
         process::exit(0);
-    } else if config.show_background_colors {
-        show_background_colors(&config);
+    } else if config.show_styles {
+        show_styles(&config);
         process::exit(0);
     } else if atty::is(atty::Stream::Stdin) {
         return diff(
@@ -120,25 +120,52 @@ fn diff(
     Ok(())
 }
 
-fn show_background_colors(config: &config::Config) {
-    println!(
-        "delta \
-         --minus-color=\"{minus_color}\" \
-         --minus-emph-color=\"{minus_emph_color}\" \
-         --plus-color=\"{plus_color}\" \
-         --plus-emph-color=\"{plus_emph_color}\"",
-        minus_color =
-            get_painted_rgb_string(config.minus_style.ansi_term_style.background.unwrap()),
-        minus_emph_color =
-            get_painted_rgb_string(config.minus_emph_style.ansi_term_style.background.unwrap()),
-        plus_color = get_painted_rgb_string(config.plus_style.ansi_term_style.background.unwrap()),
-        plus_emph_color =
-            get_painted_rgb_string(config.plus_emph_style.ansi_term_style.background.unwrap()),
-    )
-}
-
-fn get_painted_rgb_string(color: Color) -> String {
-    color.paint(format!("{:?}", color)).to_string()
+fn show_styles(config: &config::Config) {
+    print!(
+        "\
+--commit-style {commit_style}
+--file-style {file_style}
+--hunk-header-style {hunk_header_style}
+--minus-style {minus_style}
+--minus-non-emph-style {minus_non_emph_style}
+--minus-emph-style {minus_emph_style}
+--minus-empty-line-marker-style {minus_empty_line_marker_style}
+--zero-style {zero_style}
+--plus-style {plus_style}
+--plus-non-emph-style {plus_non_emph_style}
+--plus-emph-style {plus_emph_style}
+--plus-empty-line-marker-style {plus_empty_line_marker_style}
+--whitespace-error-style {whitespace_error_style}",
+        minus_style = config.minus_style.to_painted_string(),
+        zero_style = config.zero_style.to_painted_string(),
+        plus_style = config.plus_style.to_painted_string(),
+        minus_emph_style = config.minus_emph_style.to_painted_string(),
+        minus_non_emph_style = config.minus_non_emph_style.to_painted_string(),
+        plus_emph_style = config.plus_emph_style.to_painted_string(),
+        plus_non_emph_style = config.plus_non_emph_style.to_painted_string(),
+        commit_style = config.commit_style.to_painted_string(),
+        file_style = config.file_style.to_painted_string(),
+        hunk_header_style = config.hunk_header_style.to_painted_string(),
+        minus_empty_line_marker_style = config.minus_empty_line_marker_style.to_painted_string(),
+        plus_empty_line_marker_style = config.plus_empty_line_marker_style.to_painted_string(),
+        whitespace_error_style = config.whitespace_error_style.to_painted_string(),
+    );
+    if config.line_numbers {
+        print!(
+            "\
+--line-numbers-minus-style {line_numbers_minus_style}
+--line-numbers-zero-style {line_numbers_zero_style}
+--line-numbers-plus-style {line_numbers_plus_style}
+--line-numbers-left-style {line_numbers_left_style}
+--line-numbers-right-style {line_numbers_right_style}",
+            line_numbers_minus_style = config.line_numbers_minus_style.to_painted_string(),
+            line_numbers_zero_style = config.line_numbers_zero_style.to_painted_string(),
+            line_numbers_plus_style = config.line_numbers_plus_style.to_painted_string(),
+            line_numbers_left_style = config.line_numbers_left_style.to_painted_string(),
+            line_numbers_right_style = config.line_numbers_right_style.to_painted_string(),
+        )
+    }
+    println!();
 }
 
 fn list_syntax_themes() -> std::io::Result<()> {
