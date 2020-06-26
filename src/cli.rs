@@ -12,7 +12,7 @@ use crate::set_options;
 #[derive(StructOpt, Clone, Debug, PartialEq)]
 #[structopt(
     name = "delta",
-    about = "A front-end for git and diff",
+    about = "A viewer for git and diff output",
     setting(ColorAlways),
     setting(ColoredHelp),
     setting(DeriveDisplayOrder),

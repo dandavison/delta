@@ -1,7 +1,7 @@
 [![Build Status](https://travis-ci.com/dandavison/delta.svg?branch=master)](https://travis-ci.com/dandavison/delta)
 [![Gitter](https://badges.gitter.im/dandavison-delta/community.svg)](https://gitter.im/dandavison-delta/community?utm_source=badge&utm_medium=badge&utm_campaign=pr-badge)
 
-## A front-end for git and diff
+## A viewer for git and diff output
 
 Code evolves, and studying diffs to understand how some code has changed is a fundamental mode of work. Delta aims to allow you to study diffs in exactly the way that you want. Some people stay fairly close to the default git/diff output, whereas others make extensive changes to layout and visual appearance. Delta wants your work to be both efficient and enjoyable, and it supports all of the above.
 
@@ -54,7 +54,7 @@ Contents
    * [Mouse scrolling](#mouse-scrolling)
    * [Using Delta with Magit](#using-delta-with-magit)
    * [Using Delta with Mercurial](#using-delta-with-mercurial)
-* [Comparisons with similar tools](#comparisons-with-similar-tools)
+* [Comparisons with other tools](#comparisons-with-other-tools)
 * [Build delta from source](#build-delta-from-source)
 * [Credit](#credit)
 * [Projects using delta](#projects-using-delta)
@@ -273,7 +273,7 @@ Add delta to the `[pager]` section of `.hgrc`, the same way as `~/.gitconfig`.
 
 
 
-## Comparisons with similar tools
+## Comparisons with other tools
 
 (`delta --light`)
 
@@ -358,7 +358,7 @@ and use the executable found at `./target/release/delta`.
 
 ```
 delta 0.2.0
-A front-end for git and diff
+A viewer for git and diff output
 
 USAGE:
     delta [FLAGS] [OPTIONS] [ARGS]
