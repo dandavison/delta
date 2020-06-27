@@ -208,7 +208,7 @@ pub struct Opt {
     pub features: String,
 
     #[structopt(long = "syntax-theme", env = "BAT_THEME")]
-    /// The code syntax-highlighting theme to use. Use --list-syntax-themes to demo available
+    /// The code syntax-highlighting theme to use. Use --show-syntax-themes to demo available
     /// themes. If the syntax-highlighting theme is not set using this option, it will be taken
     /// from the BAT_THEME environment variable, if that contains a valid theme name.
     /// --syntax-theme=none disables all syntax highlighting.
@@ -384,25 +384,26 @@ pub struct Opt {
     #[structopt(long = "tabs", default_value = "4")]
     pub tab_width: usize,
 
-    /// Print the style strings for all style options. This can be used to experiment with
-    /// different colors by combining this option with other options such as --minus-style,
-    /// --zero-style, --plus-style, --light, --dark, etc.
-    #[structopt(long = "show-styles")]
-    pub show_styles: bool,
+    /// Display the active values for all Delta options. Style options are displayed with
+    /// foreground and background colors. This can be used to experiment with colors by combining
+    /// this option with other options such as --minus-style, --zero-style, --plus-style, --light,
+    /// --dark, etc.
+    #[structopt(long = "show-config")]
+    pub show_config: bool,
 
     /// List supported languages and associated file extensions.
     #[structopt(long = "list-languages")]
     pub list_languages: bool,
 
     /// List available syntax-highlighting color themes.
-    #[structopt(long = "list-syntax-theme-names")]
-    pub list_syntax_theme_names: bool,
-
-    /// List available syntax-highlighting themes, each with an example of highlighted diff output.
-    /// If diff output is supplied on standard input then this will be used for the demo. For
-    /// example: `git show --color=always | delta --list-syntax-themes`.
     #[structopt(long = "list-syntax-themes")]
     pub list_syntax_themes: bool,
+
+    /// Show all available syntax-highlighting themes, each with an example of highlighted diff output.
+    /// If diff output is supplied on standard input then this will be used for the demo. For
+    /// example: `git show --color=always | delta --show-syntax-themes`.
+    #[structopt(long = "show-syntax-themes")]
+    pub show_syntax_themes: bool,
 
     /// The regular expression used to decide what a word is for the within-line highlight
     /// algorithm. For less fine-grained matching than the default try --word-diff-regex="\S+"

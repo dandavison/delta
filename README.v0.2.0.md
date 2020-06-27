@@ -388,10 +388,10 @@ FLAGS:
                                      combining this option with style options such as --minus-style, --zero-style,
                                      --plus-style, etc
         --list-languages             List supported languages and associated file extensions
-        --list-syntax-theme-names    List available syntax-highlighting color themes
-        --list-syntax-themes         List available syntax-highlighting themes, each with an example of highlighted diff
+        --list-syntax-themes         List available syntax-highlighting color themes
+        --show-syntax-themes         List available syntax-highlighting themes, each with an example of highlighted diff
                                      output. If diff output is supplied on standard input then this will be used for the
-                                     demo. For example: `git show --color=always | delta --list-syntax-themes`
+                                     demo. For example: `git show --color=always | delta --show-syntax-themes`
         --highlight-removed          Deprecated: use --minus-style='syntax'
     -h, --help                       Prints help information
     -V, --version                    Prints version information
@@ -401,7 +401,7 @@ OPTIONS:
             Name of delta features to use (space-separated). A feature is a named collection of delta options in
             ~/.gitconfig. See FEATURES section [default: ]
         --syntax-theme <syntax-theme>
-            The code syntax-highlighting theme to use. Use --list-syntax-themes to demo available themes. If the syntax-
+            The code syntax-highlighting theme to use. Use --show-syntax-themes to demo available themes. If the syntax-
             highlighting theme is not set using this option, it will be taken from the BAT_THEME environment
             variable, if that contains a valid theme name. --syntax-theme=none disables all syntax highlighting [env:
             BAT_THEME=base16]

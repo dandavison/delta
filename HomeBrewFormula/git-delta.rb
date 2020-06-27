@@ -20,6 +20,6 @@ class GitDelta < Formula
   end
 
   test do
-    shell_output "#{bin}/delta --list-syntax-themes"
+    shell_output "#{bin}/delta --show-syntax-themes"
   end
 end

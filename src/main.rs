@@ -51,19 +51,23 @@ mod errors {
 
 fn main() -> std::io::Result<()> {
     let opt = cli::Opt::from_args_and_git_config(&mut git_config::GitConfig::try_create());
-    let config = config::Config::from(opt);
 
-    if config.list_languages {
+    if opt.list_languages {
         list_languages()?;
         process::exit(0);
-    } else if config.list_syntax_theme_names {
-        list_syntax_theme_names()?;
-        process::exit(0);
-    } else if config.list_syntax_themes {
+    } else if opt.list_syntax_themes {
         list_syntax_themes()?;
         process::exit(0);
-    } else if config.show_styles {
-        show_styles(&config);
+    } else if opt.show_syntax_themes {
+        show_syntax_themes()?;
+        process::exit(0);
+    }
+
+    let _show_config = opt.show_config;
+    let config = config::Config::from(opt);
+
+    if _show_config {
+        show_config(&config);
         process::exit(0);
     } else if atty::is(atty::Stream::Stdin) {
         return diff(
@@ -120,7 +124,7 @@ fn diff(
     Ok(())
 }
 
-fn show_styles(config: &config::Config) {
+fn show_config(config: &config::Config) {
     print!(
         "\
 commit-style                  = {commit_style}
@@ -168,7 +172,7 @@ line-numbers-right-style      = {line_numbers_right_style}",
     println!();
 }
 
-fn list_syntax_themes() -> std::io::Result<()> {
+fn show_syntax_themes() -> std::io::Result<()> {
     use bytelines::ByteLines;
     use std::io::BufReader;
     let opt = cli::Opt::from_args();
@@ -237,7 +241,7 @@ index f38589a..0f1bb83 100644
     Ok(())
 }
 
-pub fn list_syntax_theme_names() -> std::io::Result<()> {
+pub fn list_syntax_themes() -> std::io::Result<()> {
     let assets = HighlightingAssets::new();
     let themes = &assets.theme_set.themes;
     let stdout = io::stdout();
