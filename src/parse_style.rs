@@ -3,7 +3,7 @@ use std::process;
 use bitflags::bitflags;
 
 use crate::color;
-use crate::config::unreachable;
+use crate::config::delta_unreachable;
 use crate::style::{DecorationStyle, Style};
 
 impl Style {
@@ -156,7 +156,7 @@ impl DecorationStyle {
             bits if bits == BOX | OL => DecorationStyle::BoxWithOverline(style),
             bits if bits == BOX | UL | OL => DecorationStyle::BoxWithUnderOverline(style),
             _ if is_omitted => DecorationStyle::NoDecoration,
-            _ => unreachable("Unreachable code path reached in parse_decoration_style."),
+            _ => delta_unreachable("Unreachable code path reached in parse_decoration_style."),
         }
     }
 

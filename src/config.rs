@@ -76,7 +76,7 @@ impl Config {
             State::CommitMeta => &self.commit_style,
             State::FileMeta => &self.file_style,
             State::HunkHeader => &self.hunk_header_style,
-            _ => unreachable("Unreachable code reached in get_style."),
+            _ => delta_unreachable("Unreachable code reached in get_style."),
         }
     }
 }
@@ -473,7 +473,7 @@ pub fn user_supplied_option(option: &str, arg_matches: &clap::ArgMatches) -> boo
     arg_matches.occurrences_of(option) > 0
 }
 
-pub fn unreachable(message: &str) -> ! {
+pub fn delta_unreachable(message: &str) -> ! {
     eprintln!(
         "{} This should not be possible. \
          Please report the bug at https://github.com/dandavison/delta/issues.",
