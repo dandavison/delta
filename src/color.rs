@@ -1,7 +1,9 @@
+use std::collections::HashMap;
 use std::process;
 use std::str::FromStr;
 
 use ansi_term::Color;
+use lazy_static::lazy_static;
 use syntect::highlighting::Color as SyntectColor;
 
 use crate::bat::terminal::to_ansi_color;
@@ -48,37 +50,44 @@ pub fn color_to_string(color: Color) -> String {
 
 // See
 // https://en.wikipedia.org/wiki/ANSI_escape_code#8-bit
-pub fn ansi_color_name_to_number(name: &str) -> Option<u8> {
-    match name.to_lowercase().as_ref() {
-        "black" => Some(0),
-        "red" => Some(1),
-        "green" => Some(2),
-        "yellow" => Some(3),
-        "blue" => Some(4),
-        "magenta" => Some(5),
-        "purple" => Some(5),
-        "cyan" => Some(6),
-        "white" => Some(7),
-        "bright-black" => Some(8),
-        "brightblack" => Some(8),
-        "bright-red" => Some(9),
-        "brightred" => Some(9),
-        "bright-green" => Some(10),
-        "brightgreen" => Some(10),
-        "bright-yellow" => Some(11),
-        "brightyellow" => Some(11),
-        "bright-blue" => Some(12),
-        "brightblue" => Some(12),
-        "bright-magenta" => Some(13),
-        "brightmagenta" => Some(13),
-        "bright-purple" => Some(13),
-        "brightpurple" => Some(13),
-        "bright-cyan" => Some(14),
-        "brightcyan" => Some(14),
-        "bright-white" => Some(15),
-        "brightwhite" => Some(15),
-        _ => None,
-    }
+lazy_static! {
+    static ref ANSI_16_COLORS: HashMap<&'static str, u8> = {
+        vec![
+            ("black", 0),
+            ("red", 1),
+            ("green", 2),
+            ("yellow", 3),
+            ("blue", 4),
+            ("magenta", 5),
+            ("purple", 5),
+            ("cyan", 6),
+            ("white", 7),
+            ("bright-black", 8),
+            ("brightblack", 8),
+            ("bright-red", 9),
+            ("brightred", 9),
+            ("bright-green", 10),
+            ("brightgreen", 10),
+            ("bright-yellow", 11),
+            ("brightyellow", 11),
+            ("bright-blue", 12),
+            ("brightblue", 12),
+            ("bright-magenta", 13),
+            ("brightmagenta", 13),
+            ("bright-purple", 13),
+            ("brightpurple", 13),
+            ("bright-cyan", 14),
+            ("brightcyan", 14),
+            ("bright-white", 15),
+            ("brightwhite", 15),
+        ]
+        .into_iter()
+        .collect()
+    };
+}
+
+pub fn ansi_16_color_name_to_number(name: &str) -> Option<u8> {
+    ANSI_16_COLORS.get(name).map(|n| *n)
 }
 
 pub fn get_minus_background_color_default(is_light_mode: bool, is_true_color: bool) -> Color {

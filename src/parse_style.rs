@@ -330,7 +330,7 @@ mod tests {
 
     use ansi_term;
 
-    use crate::color::ansi_color_name_to_number;
+    use crate::color::ansi_16_color_name_to_number;
 
     #[test]
     fn test_parse_ansi_term_style() {
@@ -343,7 +343,7 @@ mod tests {
             (
                 ansi_term::Style {
                     foreground: Some(ansi_term::Color::Fixed(
-                        ansi_color_name_to_number("red").unwrap()
+                        ansi_16_color_name_to_number("red").unwrap()
                     )),
                     ..ansi_term::Style::new()
                 },
@@ -357,10 +357,10 @@ mod tests {
             (
                 ansi_term::Style {
                     foreground: Some(ansi_term::Color::Fixed(
-                        ansi_color_name_to_number("red").unwrap()
+                        ansi_16_color_name_to_number("red").unwrap()
                     )),
                     background: Some(ansi_term::Color::Fixed(
-                        ansi_color_name_to_number("green").unwrap()
+                        ansi_16_color_name_to_number("green").unwrap()
                     )),
                     ..ansi_term::Style::new()
                 },
@@ -374,10 +374,10 @@ mod tests {
             (
                 ansi_term::Style {
                     foreground: Some(ansi_term::Color::Fixed(
-                        ansi_color_name_to_number("red").unwrap()
+                        ansi_16_color_name_to_number("red").unwrap()
                     )),
                     background: Some(ansi_term::Color::Fixed(
-                        ansi_color_name_to_number("green").unwrap()
+                        ansi_16_color_name_to_number("green").unwrap()
                     )),
                     is_blink: true,
                     is_bold: true,
@@ -402,7 +402,7 @@ mod tests {
             (
                 ansi_term::Style {
                     background: Some(ansi_term::Color::Fixed(
-                        ansi_color_name_to_number("white").unwrap()
+                        ansi_16_color_name_to_number("white").unwrap()
                     )),
                     is_italic: true,
                     is_hidden: true,
@@ -418,7 +418,7 @@ mod tests {
             (
                 ansi_term::Style {
                     background: Some(ansi_term::Color::Fixed(
-                        ansi_color_name_to_number("white").unwrap()
+                        ansi_16_color_name_to_number("white").unwrap()
                     )),
                     is_bold: true,
                     is_italic: true,
@@ -444,7 +444,7 @@ mod tests {
             (
                 ansi_term::Style {
                     background: Some(ansi_term::Color::Fixed(
-                        ansi_color_name_to_number("white").unwrap()
+                        ansi_16_color_name_to_number("white").unwrap()
                     )),
                     is_italic: true,
                     is_hidden: true,
@@ -469,7 +469,7 @@ mod tests {
             (
                 ansi_term::Style {
                     background: Some(ansi_term::Color::Fixed(
-                        ansi_color_name_to_number("white").unwrap()
+                        ansi_16_color_name_to_number("white").unwrap()
                     )),
                     is_italic: true,
                     is_hidden: true,
