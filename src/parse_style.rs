@@ -203,8 +203,12 @@ fn parse_ansi_term_style(
     let mut style = ansi_term::Style::new();
     let mut seen_foreground = false;
     let mut seen_background = false;
+    let mut foreground_is_auto = false;
+    let mut background_is_auto = false;
     let mut is_omitted = false;
     let mut is_raw = false;
+    let mut seen_omit = false;
+    let mut seen_raw = false;
     let mut is_syntax_highlighted = false;
     for word in s
         .to_lowercase()
@@ -222,10 +226,12 @@ fn parse_ansi_term_style(
         } else if word == "italic" {
             style.is_italic = true;
         } else if word == "omit" {
+            seen_omit = true;
             is_omitted = true;
         } else if word == "reverse" {
             style.is_reverse = true;
         } else if word == "raw" {
+            seen_raw = true;
             is_raw = true;
         } else if word == "strike" {
             style.is_strikethrough = true;
@@ -235,7 +241,9 @@ fn parse_ansi_term_style(
             if word == "syntax" {
                 is_syntax_highlighted = true;
             } else if word == "auto" {
+                foreground_is_auto = true;
                 style.foreground = default.and_then(|s| s.ansi_term_style.foreground);
+                is_syntax_highlighted = default.map(|s| s.is_syntax_highlighted).unwrap_or(false);
             } else {
                 style.foreground =
                     color::color_from_rgb_or_ansi_code_with_default(word, true_color);
@@ -250,6 +258,7 @@ fn parse_ansi_term_style(
                 );
                 process::exit(1);
             } else if word == "auto" {
+                background_is_auto = true;
                 style.background = default.and_then(|s| s.ansi_term_style.background);
             } else {
                 style.background =
@@ -262,6 +271,14 @@ fn parse_ansi_term_style(
                 s
             );
             process::exit(1);
+        }
+    }
+    if foreground_is_auto && background_is_auto {
+        if !seen_omit {
+            is_omitted = default.map(|s| s.is_omitted).unwrap_or(false);
+        }
+        if !seen_raw {
+            is_raw = default.map(|s| s.is_raw).unwrap_or(false);
         }
     }
     (style, is_omitted, is_raw, is_syntax_highlighted)
