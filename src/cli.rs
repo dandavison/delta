@@ -1,7 +1,10 @@
+use std::collections::HashSet;
 #[cfg(test)]
 use std::ffi::OsString;
 use std::path::PathBuf;
 
+use itertools;
+use lazy_static::lazy_static;
 use structopt::clap::AppSettings::{ColorAlways, ColoredHelp, DeriveDisplayOrder};
 use structopt::{clap, StructOpt};
 
@@ -524,4 +527,37 @@ impl Opt {
         rewrite_options::apply_rewrite_rules(&mut opt, &arg_matches);
         opt
     }
+
+    pub fn get_option_or_flag_names<'a>() -> HashSet<&'a str> {
+        let names: HashSet<&str> = itertools::chain(
+            Self::clap().p.opts.iter().filter_map(|opt| opt.s.long),
+            Self::clap().p.flags.iter().filter_map(|opt| opt.s.long),
+        )
+        .collect();
+        &names - &*IGNORED_OPTION_OR_FLAG_NAMES
+    }
+}
+
+// Option names to exclude when listing options to process for various purposes. These are
+// (1) Deprecated options
+// (2) Pseudo-flag commands such as --list-languages
+lazy_static! {
+    static ref IGNORED_OPTION_OR_FLAG_NAMES: HashSet<&'static str> = vec![
+        "commit-color",
+        "file-color",
+        "highlight-removed",
+        "hunk-color",
+        "hunk-style",
+        "list-languages",
+        "list-syntax-themes",
+        "minus-color",
+        "minus-emph-color",
+        "plus-color",
+        "plus-emph-color",
+        "show-config",
+        "show-syntax-themes",
+        "theme",
+    ]
+    .into_iter()
+    .collect();
 }

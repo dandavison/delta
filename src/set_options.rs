@@ -1,4 +1,4 @@
-use std::collections::VecDeque;
+use std::collections::{HashSet, VecDeque};
 
 use structopt::clap;
 
@@ -10,6 +10,7 @@ use crate::git_config;
 macro_rules! set_options {
 	([$( ($option_name:expr, $field_ident:ident) ),* ],
      $opt:expr, $builtin_features:expr, $git_config:expr, $arg_matches:expr) => {
+        let mut option_names = HashSet::new();
         $(
             if !$crate::config::user_supplied_option($option_name, $arg_matches) {
                 if let Some(value) = $crate::get_option_value::get_option_value(
@@ -21,7 +22,21 @@ macro_rules! set_options {
                     $opt.$field_ident = value;
                 }
             };
+            option_names.insert($option_name);
         )*
+        option_names.extend(&[
+            "diff-highlight", // Does not exist as a flag on config
+            "diff-so-fancy", // Does not exist as a flag on config
+            "features",
+            "no-gitconfig",
+        ]);
+        let expected_option_names = $crate::cli::Opt::get_option_or_flag_names();
+        if option_names != expected_option_names {
+            $crate::config::delta_unreachable(
+                &format!("Error processing options.\nUnhandled names: {:?}\nInvalid names: {:?}.\n",
+                         &expected_option_names - &option_names,
+                         &option_names - &expected_option_names));
+        }
 	};
 }
 
@@ -55,6 +70,7 @@ pub fn set_options(
 
     set_options!(
         [
+            ("24-bit-color", true_color),
             ("color-only", color_only),
             ("commit-decoration-style", commit_decoration_style),
             ("commit-style", commit_style),
@@ -89,7 +105,7 @@ pub fn set_options(
             ("line-numbers-right-format", line_numbers_right_format),
             ("line-numbers-right-style", line_numbers_right_style),
             ("line-numbers-zero-style", line_numbers_zero_style),
-            ("paging-mode", paging_mode),
+            ("paging", paging_mode),
             // Hack: plus-style must come before plus-*emph-style because the latter default
             // dynamically to the value of the former.
             ("plus-style", plus_style),
@@ -98,7 +114,6 @@ pub fn set_options(
             ("plus-non-emph-style", plus_non_emph_style),
             ("syntax-theme", syntax_theme),
             ("tabs", tab_width),
-            ("true-color", true_color),
             ("whitespace-error-style", whitespace_error_style),
             ("width", width),
             ("word-diff-regex", tokenization_regex),
