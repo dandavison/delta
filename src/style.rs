@@ -90,16 +90,46 @@ impl Style {
     }
 
     fn to_string(&self) -> String {
-        format!(
-            "{} {}",
-            self.ansi_term_style
-                .foreground
-                .map(color::color_to_string)
-                .unwrap_or("normal".to_string()),
-            self.ansi_term_style
-                .background
-                .map(color::color_to_string)
-                .unwrap_or("".to_string())
-        )
+        if self.is_raw {
+            return "raw".to_string();
+        }
+        let mut words = Vec::<String>::new();
+        if self.is_omitted {
+            words.push("omit".to_string());
+        }
+        if self.ansi_term_style.is_blink {
+            words.push("blink".to_string());
+        }
+        if self.ansi_term_style.is_bold {
+            words.push("bold".to_string());
+        }
+        if self.ansi_term_style.is_dimmed {
+            words.push("dim".to_string());
+        }
+        if self.ansi_term_style.is_italic {
+            words.push("italic".to_string());
+        }
+        if self.ansi_term_style.is_reverse {
+            words.push("reverse".to_string());
+        }
+        if self.ansi_term_style.is_strikethrough {
+            words.push("strike".to_string());
+        }
+        if self.ansi_term_style.is_underline {
+            words.push("ul".to_string());
+        }
+
+        match (self.is_syntax_highlighted, self.ansi_term_style.foreground) {
+            (true, _) => words.push("syntax".to_string()),
+            (false, Some(color)) => {
+                words.push(color::color_to_string(color));
+            }
+            (false, None) => words.push("normal".to_string()),
+        }
+        match self.ansi_term_style.background {
+            Some(color) => words.push(color::color_to_string(color)),
+            None => {}
+        }
+        words.join(" ")
     }
 }

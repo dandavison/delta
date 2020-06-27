@@ -35,6 +35,7 @@ pub fn color_from_rgb_or_ansi_code_with_default(arg: &str, true_color: bool) -> 
 
 pub fn color_to_string(color: Color) -> String {
     match color {
+        Color::Fixed(n) if n < 16 => ansi_16_color_number_to_name(n).unwrap().to_string(),
         Color::Fixed(n) => format!("{}", n),
         Color::RGB(r, g, b) => format!("#{:02x?}{:02x?}{:02x?}", r, g, b),
         Color::Black => "black".to_string(),
@@ -88,6 +89,15 @@ lazy_static! {
 
 pub fn ansi_16_color_name_to_number(name: &str) -> Option<u8> {
     ANSI_16_COLORS.get(name).map(|n| *n)
+}
+
+fn ansi_16_color_number_to_name(n: u8) -> Option<&'static str> {
+    for (k, _n) in &*ANSI_16_COLORS {
+        if *_n == n {
+            return Some(&*k);
+        }
+    }
+    None
 }
 
 pub fn get_minus_background_color_default(is_light_mode: bool, is_true_color: bool) -> Color {

@@ -123,19 +123,19 @@ fn diff(
 fn show_styles(config: &config::Config) {
     print!(
         "\
---commit-style {commit_style}
---file-style {file_style}
---hunk-header-style {hunk_header_style}
---minus-style {minus_style}
---minus-non-emph-style {minus_non_emph_style}
---minus-emph-style {minus_emph_style}
---minus-empty-line-marker-style {minus_empty_line_marker_style}
---zero-style {zero_style}
---plus-style {plus_style}
---plus-non-emph-style {plus_non_emph_style}
---plus-emph-style {plus_emph_style}
---plus-empty-line-marker-style {plus_empty_line_marker_style}
---whitespace-error-style {whitespace_error_style}",
+commit-style                  = {commit_style}
+file-style                    = {file_style}
+hunk-header-style             = {hunk_header_style}
+minus-style                   = {minus_style}
+minus-non-emph-style          = {minus_non_emph_style}
+minus-emph-style              = {minus_emph_style}
+minus-empty-line-marker-style = {minus_empty_line_marker_style}
+zero-style                    = {zero_style}
+plus-style                    = {plus_style}
+plus-non-emph-style           = {plus_non_emph_style}
+plus-emph-style               = {plus_emph_style}
+plus-empty-line-marker-style  = {plus_empty_line_marker_style}
+whitespace-error-style        = {whitespace_error_style}",
         minus_style = config.minus_style.to_painted_string(),
         zero_style = config.zero_style.to_painted_string(),
         plus_style = config.plus_style.to_painted_string(),
@@ -152,12 +152,12 @@ fn show_styles(config: &config::Config) {
     );
     if config.line_numbers {
         print!(
-            "\
---line-numbers-minus-style {line_numbers_minus_style}
---line-numbers-zero-style {line_numbers_zero_style}
---line-numbers-plus-style {line_numbers_plus_style}
---line-numbers-left-style {line_numbers_left_style}
---line-numbers-right-style {line_numbers_right_style}",
+            "
+line-numbers-minus-style      = {line_numbers_minus_style}
+line-numbers-zero-style       = {line_numbers_zero_style}
+line-numbers-plus-style       = {line_numbers_plus_style}
+line-numbers-left-style       = {line_numbers_left_style}
+line-numbers-right-style      = {line_numbers_right_style}",
             line_numbers_minus_style = config.line_numbers_minus_style.to_painted_string(),
             line_numbers_zero_style = config.line_numbers_zero_style.to_painted_string(),
             line_numbers_plus_style = config.line_numbers_plus_style.to_painted_string(),
