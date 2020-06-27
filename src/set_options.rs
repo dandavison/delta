@@ -12,7 +12,12 @@ macro_rules! set_options {
      $opt:expr, $builtin_features:expr, $git_config:expr, $arg_matches:expr) => {
         $(
             if !$crate::config::user_supplied_option($option_name, $arg_matches) {
-                if let Some(value) = $crate::get_option_value::get_option_value($option_name, &$builtin_features, $opt, $git_config) {
+                if let Some(value) = $crate::get_option_value::get_option_value(
+                    $option_name,
+                    &$builtin_features,
+                    $opt,
+                    $git_config
+                ) {
                     $opt.$field_ident = value;
                 }
             };
