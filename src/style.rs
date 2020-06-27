@@ -39,6 +39,20 @@ impl Style {
         }
     }
 
+    pub fn from_colors(
+        foreground: Option<ansi_term::Color>,
+        background: Option<ansi_term::Color>,
+    ) -> Self {
+        Self {
+            ansi_term_style: ansi_term::Style {
+                foreground,
+                background,
+                ..ansi_term::Style::new()
+            },
+            ..Self::new()
+        }
+    }
+
     pub fn paint<'a, I, S: 'a + ToOwned + ?Sized>(
         self,
         input: I,

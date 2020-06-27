@@ -258,10 +258,12 @@ fn make_hunk_styles<'a>(
 ) {
     let minus_style = Style::from_str(
         &opt.minus_style,
-        None,
-        Some(color::get_minus_background_color_default(
-            is_light_mode,
-            true_color,
+        Some(Style::from_colors(
+            None,
+            Some(color::get_minus_background_color_default(
+                is_light_mode,
+                true_color,
+            )),
         )),
         None,
         true_color,
@@ -270,10 +272,12 @@ fn make_hunk_styles<'a>(
 
     let minus_emph_style = Style::from_str(
         &opt.minus_emph_style,
-        None,
-        Some(color::get_minus_emph_background_color_default(
-            is_light_mode,
-            true_color,
+        Some(Style::from_colors(
+            None,
+            Some(color::get_minus_emph_background_color_default(
+                is_light_mode,
+                true_color,
+            )),
         )),
         None,
         true_color,
@@ -282,8 +286,7 @@ fn make_hunk_styles<'a>(
 
     let minus_non_emph_style = Style::from_str(
         &opt.minus_non_emph_style,
-        minus_style.ansi_term_style.foreground,
-        minus_style.ansi_term_style.background,
+        Some(minus_style),
         None,
         true_color,
         false,
@@ -293,24 +296,28 @@ fn make_hunk_styles<'a>(
     // lack of background color in minus-style.
     let minus_empty_line_marker_style = Style::from_str(
         &opt.minus_empty_line_marker_style,
-        None,
-        Some(color::get_minus_background_color_default(
-            is_light_mode,
-            true_color,
+        Some(Style::from_colors(
+            None,
+            Some(color::get_minus_background_color_default(
+                is_light_mode,
+                true_color,
+            )),
         )),
         None,
         true_color,
         false,
     );
 
-    let zero_style = Style::from_str(&opt.zero_style, None, None, None, true_color, false);
+    let zero_style = Style::from_str(&opt.zero_style, None, None, true_color, false);
 
     let plus_style = Style::from_str(
         &opt.plus_style,
-        None,
-        Some(color::get_plus_background_color_default(
-            is_light_mode,
-            true_color,
+        Some(Style::from_colors(
+            None,
+            Some(color::get_plus_background_color_default(
+                is_light_mode,
+                true_color,
+            )),
         )),
         None,
         true_color,
@@ -319,10 +326,12 @@ fn make_hunk_styles<'a>(
 
     let plus_emph_style = Style::from_str(
         &opt.plus_emph_style,
-        None,
-        Some(color::get_plus_emph_background_color_default(
-            is_light_mode,
-            true_color,
+        Some(Style::from_colors(
+            None,
+            Some(color::get_plus_emph_background_color_default(
+                is_light_mode,
+                true_color,
+            )),
         )),
         None,
         true_color,
@@ -331,8 +340,7 @@ fn make_hunk_styles<'a>(
 
     let plus_non_emph_style = Style::from_str(
         &opt.plus_non_emph_style,
-        plus_style.ansi_term_style.foreground,
-        plus_style.ansi_term_style.background,
+        Some(plus_style),
         None,
         true_color,
         false,
@@ -342,24 +350,20 @@ fn make_hunk_styles<'a>(
     // lack of background color in plus-style.
     let plus_empty_line_marker_style = Style::from_str(
         &opt.plus_empty_line_marker_style,
-        None,
-        Some(color::get_plus_background_color_default(
-            is_light_mode,
-            true_color,
+        Some(Style::from_colors(
+            None,
+            Some(color::get_plus_background_color_default(
+                is_light_mode,
+                true_color,
+            )),
         )),
         None,
         true_color,
         false,
     );
 
-    let whitespace_error_style = Style::from_str(
-        &opt.whitespace_error_style,
-        None,
-        None,
-        None,
-        true_color,
-        false,
-    );
+    let whitespace_error_style =
+        Style::from_str(&opt.whitespace_error_style, None, None, true_color, false);
 
     (
         minus_style,
@@ -379,50 +383,20 @@ fn make_line_number_styles<'a>(
     opt: &'a cli::Opt,
     true_color: bool,
 ) -> (Style, Style, Style, Style, Style) {
-    let line_numbers_left_style = Style::from_str(
-        &opt.line_numbers_left_style,
-        None,
-        None,
-        None,
-        true_color,
-        false,
-    );
+    let line_numbers_left_style =
+        Style::from_str(&opt.line_numbers_left_style, None, None, true_color, false);
 
-    let line_numbers_minus_style = Style::from_str(
-        &opt.line_numbers_minus_style,
-        None,
-        None,
-        None,
-        true_color,
-        false,
-    );
+    let line_numbers_minus_style =
+        Style::from_str(&opt.line_numbers_minus_style, None, None, true_color, false);
 
-    let line_numbers_zero_style = Style::from_str(
-        &opt.line_numbers_zero_style,
-        None,
-        None,
-        None,
-        true_color,
-        false,
-    );
+    let line_numbers_zero_style =
+        Style::from_str(&opt.line_numbers_zero_style, None, None, true_color, false);
 
-    let line_numbers_plus_style = Style::from_str(
-        &opt.line_numbers_plus_style,
-        None,
-        None,
-        None,
-        true_color,
-        false,
-    );
+    let line_numbers_plus_style =
+        Style::from_str(&opt.line_numbers_plus_style, None, None, true_color, false);
 
-    let line_numbers_right_style = Style::from_str(
-        &opt.line_numbers_right_style,
-        None,
-        None,
-        None,
-        true_color,
-        false,
-    );
+    let line_numbers_right_style =
+        Style::from_str(&opt.line_numbers_right_style, None, None, true_color, false);
 
     (
         line_numbers_minus_style,
@@ -438,7 +412,6 @@ fn make_commit_file_hunk_header_styles(opt: &cli::Opt, true_color: bool) -> (Sty
         Style::from_str_with_handling_of_special_decoration_attributes_and_respecting_deprecated_foreground_color_arg(
             &opt.commit_style,
             None,
-            None,
             Some(&opt.commit_decoration_style),
             opt.deprecated_commit_color.as_deref(),
             true_color,
@@ -447,7 +420,6 @@ fn make_commit_file_hunk_header_styles(opt: &cli::Opt, true_color: bool) -> (Sty
         Style::from_str_with_handling_of_special_decoration_attributes_and_respecting_deprecated_foreground_color_arg(
             &opt.file_style,
             None,
-            None,
             Some(&opt.file_decoration_style),
             opt.deprecated_file_color.as_deref(),
             true_color,
@@ -455,7 +427,6 @@ fn make_commit_file_hunk_header_styles(opt: &cli::Opt, true_color: bool) -> (Sty
         ),
         Style::from_str_with_handling_of_special_decoration_attributes_and_respecting_deprecated_foreground_color_arg(
             &opt.hunk_header_style,
-            None,
             None,
             Some(&opt.hunk_header_decoration_style),
             opt.deprecated_hunk_color.as_deref(),

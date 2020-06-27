@@ -147,7 +147,7 @@ pub mod ansi_test_utils {
     ) -> bool {
         let line = output.lines().nth(line_number).unwrap();
         assert!(strip_ansi_codes(line).starts_with(expected_prefix));
-        let mut style = Style::from_str(expected_style, None, None, None, config.true_color, false);
+        let mut style = Style::from_str(expected_style, None, None, config.true_color, false);
         if _4_bit_color {
             style.ansi_term_style.foreground = style
                 .ansi_term_style

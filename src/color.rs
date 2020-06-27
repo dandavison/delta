@@ -24,18 +24,10 @@ pub fn color_from_rgb_or_ansi_code(s: &str, true_color: bool) -> Color {
     to_ansi_color(syntect_color, true_color)
 }
 
-pub fn color_from_rgb_or_ansi_code_with_default(
-    arg: &str,
-    default: Option<Color>,
-    true_color: bool,
-) -> Option<Color> {
-    let arg = arg.to_lowercase();
-    if arg == "normal" {
-        None
-    } else if arg == "auto" {
-        default
-    } else {
-        Some(color_from_rgb_or_ansi_code(&arg, true_color))
+pub fn color_from_rgb_or_ansi_code_with_default(arg: &str, true_color: bool) -> Option<Color> {
+    match arg {
+        "normal" => None,
+        s => Some(color_from_rgb_or_ansi_code(s, true_color)),
     }
 }
 
