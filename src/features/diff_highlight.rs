@@ -1,3 +1,4 @@
+use crate::features::raw;
 use crate::features::OptionValueFunction;
 
 pub fn make_feature() -> Vec<(String, OptionValueFunction)> {
@@ -5,42 +6,13 @@ pub fn make_feature() -> Vec<(String, OptionValueFunction)> {
 }
 
 pub fn _make_feature(bold: bool) -> Vec<(String, OptionValueFunction)> {
-    builtin_feature!([
+    let mut feature = raw::make_feature();
+    feature.extend(builtin_feature!([
         (
-            "commit-style",
-            String,
+            "keep-plus-minus-markers",
+            bool,
             None,
-            _opt => "raw"
-        ),
-        (
-            "commit-decoration-style",
-            String,
-            None,
-            _opt => "none"
-        ),
-        (
-            "file-style",
-            String,
-            None,
-            _opt => "raw"
-        ),
-        (
-            "file-decoration-style",
-            String,
-            None,
-            _opt => "none"
-        ),
-        (
-            "hunk-header-style",
-            String,
-            None,
-            _opt => "raw"
-        ),
-        (
-            "hunk-header-decoration-style",
-            String,
-            None,
-            _opt => "none"
+            _opt => false
         ),
         (
             "minus-style",
@@ -84,7 +56,8 @@ pub fn _make_feature(bold: bool) -> Vec<(String, OptionValueFunction)> {
             Some("color.diff-highlight.newHighlight"),
             opt => format!("{} reverse", opt.plus_style)
         )
-    ])
+    ]));
+    feature
 }
 
 #[cfg(test)]
