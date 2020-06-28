@@ -16,7 +16,7 @@ _delta() {
     shopt -s extglob
 
     local commands=(
-        --color-only
+        --raw
         --commit-style
         --dark
         --file-style

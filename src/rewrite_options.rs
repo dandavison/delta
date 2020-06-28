@@ -1,6 +1,6 @@
 /// This module applies rewrite rules to the command line options, in order to
 /// 1. Express deprecated usages in the new non-deprecated form
-/// 2. Implement options such as --color-only which are defined to be equivalent to some set of
+/// 2. Implement options such as --raw which are defined to be equivalent to some set of
 ///    other options.
 use std::process;
 

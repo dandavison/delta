@@ -140,7 +140,7 @@ mod tests {
             DIFF_EXHIBITING_STATE_MACHINE_PARSER_BUG,
             DIFF_EXHIBITING_TRUNCATION_BUG,
         ] {
-            let config = integration_test_utils::make_config(&["--color-only"]);
+            let config = integration_test_utils::make_config(&["--raw"]);
             let output = integration_test_utils::run_delta(input, &config);
             assert_eq!(strip_ansi_codes(&output), input);
             assert_ne!(output, input);
@@ -153,7 +153,7 @@ mod tests {
             DIFF_WITH_UNRECOGNIZED_PRECEDING_MATERIAL_1,
             DIFF_WITH_UNRECOGNIZED_PRECEDING_MATERIAL_2,
         ] {
-            let config = integration_test_utils::make_config(&["--color-only"]);
+            let config = integration_test_utils::make_config(&["--raw"]);
             let output = integration_test_utils::run_delta(input, &config);
             assert_eq!(strip_ansi_codes(&output), input);
             assert_ne!(output, input);
@@ -170,8 +170,8 @@ mod tests {
     }
 
     #[test]
-    fn test_diff_with_merge_conflict_is_passed_on_unchanged_under_color_only() {
-        let config = integration_test_utils::make_config(&["--color-only"]);
+    fn test_diff_with_merge_conflict_is_passed_on_unchanged_under_raw() {
+        let config = integration_test_utils::make_config(&["--raw"]);
         let output = integration_test_utils::run_delta(DIFF_WITH_MERGE_CONFLICT, &config);
         assert_eq!(strip_ansi_codes(&output), DIFF_WITH_MERGE_CONFLICT);
     }
@@ -1120,8 +1120,8 @@ impl<'a> Alignment<'a> { │
     }
 
     #[test]
-    fn test_color_only() {
-        let config = integration_test_utils::make_config(&["--color-only"]);
+    fn test_raw() {
+        let config = integration_test_utils::make_config(&["--raw"]);
         let output = integration_test_utils::run_delta(GIT_DIFF_SINGLE_HUNK, &config);
         ansi_test_utils::assert_line_is_syntax_highlighted(
             &output,

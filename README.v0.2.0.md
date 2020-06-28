@@ -204,7 +204,7 @@ Set delta to be git's pager in your `.gitconfig`. Delta accepts many command lin
     theme = 'Monokai Extended'
 
 [interactive]
-    diffFilter = delta --color-only
+    diffFilter = delta --raw
 ```
 
 Note that delta argument values in ~/.gitconfig should be in double quotes, like `--minus-color="#340001"`. For a theme name containing a space, use single quotes, like `--theme='Monokai Extended'`.
@@ -375,7 +375,7 @@ FLAGS:
                                      the file labels used see --file-modified-label, --file-removed-label, --file-added-
                                      label, --file-renamed-label
     -n, --line-numbers               Display line numbers next to the diff. See LINE NUMBERS section
-        --color-only                 Do not alter the input in any way other than applying colors. Equivalent to
+        --raw                        Do not alter the input in any way other than applying colors. Equivalent to
                                      `--keep-plus-minus-markers --width variable --tabs 0 --commit-decoration '' --file-
                                      decoration '' --hunk-decoration ''`
         --no-gitconfig               Do not take settings from git config files. See GIT CONFIG section
@@ -427,8 +427,7 @@ OPTIONS:
             Style (foreground, background, attributes) for non-emphasized sections of added lines that have an
             emphasized section. Defaults to --plus-style. See STYLES section [default: auto auto]
         --commit-style <commit-style>
-            Style (foreground, background, attributes) for the commit hash line. See STYLES section [default:
-            raw]
+            Style (foreground, background, attributes) for the commit hash line. See STYLES section [default: raw]
         --commit-decoration-style <commit-decoration-style>
             Style (foreground, background, attributes) for the commit hash decoration. See STYLES section. One of the
             special attributes 'box', 'ul', 'overline', or 'underoverline' must be given [default: ]

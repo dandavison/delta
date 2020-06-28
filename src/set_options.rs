@@ -71,7 +71,7 @@ pub fn set_options(
     set_options!(
         [
             ("24-bit-color", true_color),
-            ("color-only", color_only),
+            ("raw", raw),
             ("commit-decoration-style", commit_decoration_style),
             ("commit-style", commit_style),
             ("dark", dark),
@@ -149,10 +149,10 @@ pub fn set_options(
 ///    - `e`, followed by e's "ordered descendents"
 ///    - `d`, followed by d's "ordered descendents"
 ///
-/// 4. Suppose the main [delta] section has `diff-highlight = true` followed by `color-only = true`.
+/// 4. Suppose the main [delta] section has `diff-highlight = true` followed by `raw = true`.
 ///    Then
 ///    - `diff-highlight`
-///    - `color-only`
+///    - `raw`
 ///
 /// The "ordered descendents" of a feature `f` is a list of features obtained via a pre-order
 /// traversal of the feature tree rooted at `f`. This tree arises because it is allowed for a
@@ -195,9 +195,6 @@ fn gather_features<'a>(
 
     // Gather builtin feature flags supplied on command line.
     // TODO: Iterate over programatically-obtained names of builtin features.
-    if opt.color_only {
-        features.push_front("color-only".to_string());
-    }
     if opt.diff_highlight {
         features.push_front("diff-highlight".to_string());
     }
@@ -209,6 +206,9 @@ fn gather_features<'a>(
     }
     if opt.navigate {
         features.push_front("navigate".to_string());
+    }
+    if opt.raw {
+        features.push_front("raw".to_string());
     }
 
     if let Some(git_config) = git_config {

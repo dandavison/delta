@@ -1,4 +1,4 @@
 #!/bin/bash
-DELTA="./target/release/delta --no-gitconfig --color-only"
+DELTA="./target/release/delta --no-gitconfig --raw"
 GIT_ARGS="log --patch --stat --numstat"
 diff -u <(git $GIT_ARGS | perl -pe 's/\e\[[0-9;]*[mK]//g') <(git $GIT_ARGS | $DELTA | perl -pe 's/\e\[[0-9;]*[mK]//g')

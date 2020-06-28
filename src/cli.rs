@@ -349,11 +349,11 @@ pub struct Opt {
     #[structopt(long = "line-numbers-right-style", default_value = "auto")]
     pub line_numbers_right_style: String,
 
-    #[structopt(long = "color-only")]
+    #[structopt(long = "raw")]
     /// Do not alter the input in any way other than applying colors. Equivalent to
     /// `--keep-plus-minus-markers --width variable --tabs 0 --commit-decoration ''
     /// --file-decoration '' --hunk-decoration ''`.
-    pub color_only: bool,
+    pub raw: bool,
 
     #[structopt(long = "no-gitconfig")]
     /// Do not take settings from git config files. See GIT CONFIG section.

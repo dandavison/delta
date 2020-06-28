@@ -27,10 +27,6 @@ type OptionValueFunction = Box<dyn Fn(&cli::Opt, &Option<GitConfig>) -> Provenan
 pub fn make_builtin_features() -> HashMap<String, BuiltinFeature> {
     vec![
         (
-            "color-only".to_string(),
-            color_only::make_feature().into_iter().collect(),
-        ),
-        (
             "diff-highlight".to_string(),
             diff_highlight::make_feature().into_iter().collect(),
         ),
@@ -46,6 +42,7 @@ pub fn make_builtin_features() -> HashMap<String, BuiltinFeature> {
             "navigate".to_string(),
             navigate::make_feature().into_iter().collect(),
         ),
+        ("raw".to_string(), raw::make_feature().into_iter().collect()),
     ]
     .into_iter()
     .collect()
@@ -73,11 +70,11 @@ macro_rules! builtin_feature {
     }
 }
 
-pub mod color_only;
 pub mod diff_highlight;
 pub mod diff_so_fancy;
 pub mod line_numbers;
 pub mod navigate;
+pub mod raw;
 
 #[cfg(test)]
 pub mod tests {
@@ -131,21 +128,21 @@ pub mod tests {
 
         assert_eq!(
             make_options(
-                &["--features", "navigate color-only"],
+                &["--features", "navigate raw"],
                 Some(git_config_contents),
                 Some(git_config_path),
             )
             .features,
-            "navigate color-only"
+            "navigate raw"
         );
         assert_eq!(
             make_options(
-                &["--navigate", "--features", "color-only"],
+                &["--navigate", "--features", "raw"],
                 Some(git_config_contents),
                 Some(git_config_path),
             )
             .features,
-            "navigate color-only"
+            "navigate raw"
         );
 
         remove_file(git_config_path).unwrap();
@@ -161,12 +158,12 @@ pub mod tests {
             "delta__test_feature_flag_on_command_line_does_not_replace_features_in_gitconfig.gitconfig";
         assert_eq!(
             make_options(
-                &["--navigate", "--color-only"],
+                &["--navigate", "--raw"],
                 Some(git_config_contents),
                 Some(git_config_path),
             )
             .features,
-            "my-feature navigate color-only"
+            "my-feature raw navigate"
         );
 
         remove_file(git_config_path).unwrap();
@@ -190,12 +187,12 @@ pub mod tests {
 
         assert_eq!(
             make_options(
-                &["--color-only", "--features", "d a"],
+                &["--raw", "--features", "d a"],
                 Some(git_config_contents),
                 Some(git_config_path),
             )
             .features,
-            "color-only diff-so-fancy f e d diff-highlight c b a"
+            "raw diff-so-fancy f e d diff-highlight c b a"
         );
 
         remove_file(git_config_path).unwrap();

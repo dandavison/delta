@@ -3,7 +3,7 @@ use crate::features::OptionValueFunction;
 pub fn make_feature() -> Vec<(String, OptionValueFunction)> {
     builtin_feature!([
         (
-            "color-only",
+            "raw",
             bool,
             None,
             _opt => true
