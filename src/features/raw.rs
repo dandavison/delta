@@ -39,6 +39,36 @@ pub fn make_feature() -> Vec<(String, OptionValueFunction)> {
             _opt => "raw"
         ),
         (
+            "minus-style",
+            String,
+            Some("color.diff.old"),
+            _opt => "red"
+        ),
+        (
+            "minus-emph-style",
+            String,
+            Some("color.diff.old"),
+            _opt => "red"
+        ),
+        (
+            "zero-style",
+            String,
+            None,
+            _opt => "normal"
+        ),
+        (
+            "plus-style",
+            String,
+            Some("color.diff.new"),
+            _opt => "green"
+        ),
+        (
+            "plus-emph-style",
+            String,
+            Some("color.diff.new"),
+            _opt => "green"
+        ),
+        (
             "keep-plus-minus-markers",
             bool,
             None,

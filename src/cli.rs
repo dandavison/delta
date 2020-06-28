@@ -350,9 +350,9 @@ pub struct Opt {
     pub line_numbers_right_style: String,
 
     #[structopt(long = "raw")]
-    /// Do not alter the input in any way other than applying colors. Equivalent to
-    /// `--keep-plus-minus-markers --width variable --tabs 0 --commit-decoration ''
-    /// --file-decoration '' --hunk-decoration ''`.
+    /// Do not alter the input in any way. The only exceptions are the coloring of hunk lines:
+    /// minus lines use color.diff.old (with fallback to "red") and plus lines use color.diff.new
+    /// (with fallback to "green").
     pub raw: bool,
 
     #[structopt(long = "no-gitconfig")]

@@ -33,12 +33,6 @@ pub fn _make_feature(bold: bool) -> Vec<(String, OptionValueFunction)> {
             opt => format!("{} reverse", opt.minus_style)
         ),
         (
-            "zero-style",
-            String,
-            None,
-            _opt => "normal"
-        ),
-        (
             "plus-style",
             String,
             Some("color.diff.new"),
