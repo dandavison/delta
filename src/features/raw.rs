@@ -3,12 +3,6 @@ use crate::features::OptionValueFunction;
 pub fn make_feature() -> Vec<(String, OptionValueFunction)> {
     builtin_feature!([
         (
-            "raw",
-            bool,
-            None,
-            _opt => true
-        ),
-        (
             "commit-decoration-style",
             String,
             None,
