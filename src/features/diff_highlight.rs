@@ -7,6 +7,42 @@ pub fn make_feature() -> Vec<(String, OptionValueFunction)> {
 pub fn _make_feature(bold: bool) -> Vec<(String, OptionValueFunction)> {
     builtin_feature!([
         (
+            "commit-style",
+            String,
+            Some("color.diff.commit"),
+            _opt => "none"
+        ),
+        (
+            "commit-decoration-style",
+            String,
+            None,
+            _opt => "none"
+        ),
+        (
+            "file-style",
+            String,
+            Some("color.diff.meta"),
+            _opt => "none"
+        ),
+        (
+            "file-decoration-style",
+            String,
+            None,
+            _opt => "none"
+        ),
+        (
+            "hunk-header-style",
+            String,
+            Some("color.diff.frag"),
+            _opt => "bold syntax"
+        ),
+        (
+            "hunk-header-decoration-style",
+            String,
+            None,
+            _opt => "magenta box"
+        ),
+        (
             "minus-style",
             String,
             Some("color.diff.old"),

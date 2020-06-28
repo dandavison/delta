@@ -23,12 +23,6 @@ pub fn make_feature() -> Vec<(String, OptionValueFunction)> {
             _opt => "bold yellow"
         ),
         (
-            "commit-decoration-style",
-            String,
-            None,
-            _opt => "none"
-        ),
-        (
             "file-style",
             String,
             Some("color.diff.meta"),
