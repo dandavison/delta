@@ -71,7 +71,7 @@ pub fn set_options(
     set_options!(
         [
             ("24-bit-color", true_color),
-            ("raw", raw),
+            ("color-only", color_only),
             ("commit-decoration-style", commit_decoration_style),
             ("commit-style", commit_style),
             ("dark", dark),
@@ -112,6 +112,7 @@ pub fn set_options(
             ("plus-emph-style", plus_emph_style),
             ("plus-empty-line-marker-style", plus_empty_line_marker_style),
             ("plus-non-emph-style", plus_non_emph_style),
+            ("raw", raw),
             ("syntax-theme", syntax_theme),
             ("tabs", tab_width),
             ("whitespace-error-style", whitespace_error_style),
@@ -195,6 +196,12 @@ fn gather_features<'a>(
 
     // Gather builtin feature flags supplied on command line.
     // TODO: Iterate over programatically-obtained names of builtin features.
+    if opt.raw {
+        features.push_front("raw".to_string());
+    }
+    if opt.color_only {
+        features.push_front("color-only".to_string());
+    }
     if opt.diff_highlight {
         features.push_front("diff-highlight".to_string());
     }
@@ -206,9 +213,6 @@ fn gather_features<'a>(
     }
     if opt.navigate {
         features.push_front("navigate".to_string());
-    }
-    if opt.raw {
-        features.push_front("raw".to_string());
     }
 
     if let Some(git_config) = git_config {

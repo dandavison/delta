@@ -355,6 +355,10 @@ pub struct Opt {
     /// (with fallback to "green").
     pub raw: bool,
 
+    #[structopt(long = "color-only")]
+    /// Do not alter the input in any way except for coloring hunk lines.
+    pub color_only: bool,
+
     #[structopt(long = "no-gitconfig")]
     /// Do not take settings from git config files. See GIT CONFIG section.
     pub no_gitconfig: bool,

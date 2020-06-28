@@ -1120,8 +1120,8 @@ impl<'a> Alignment<'a> { │
     }
 
     #[test]
-    fn test_raw() {
-        let config = integration_test_utils::make_config(&["--raw"]);
+    fn test_color_only() {
+        let config = integration_test_utils::make_config(&["--color-only"]);
         let output = integration_test_utils::run_delta(GIT_DIFF_SINGLE_HUNK, &config);
         ansi_test_utils::assert_line_is_syntax_highlighted(
             &output,
