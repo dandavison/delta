@@ -12,6 +12,7 @@ use super::less::retrieve_less_version;
 
 use crate::config;
 use crate::env;
+use crate::features::navigate;
 
 #[derive(Debug, Clone, Copy, PartialEq)]
 #[allow(dead_code)]
@@ -125,7 +126,7 @@ impl OutputType {
                     p
                 };
                 if config.navigate {
-                    process.args(&["--pattern", &config::make_navigate_regexp(&config)]);
+                    process.args(&["--pattern", &navigate::make_navigate_regexp(&config)]);
                 }
                 Ok(process
                     .env("LESSANSIENDCHARS", "mK")

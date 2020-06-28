@@ -428,16 +428,6 @@ fn make_commit_file_hunk_header_styles(opt: &cli::Opt, true_color: bool) -> (Sty
     )
 }
 
-pub fn make_navigate_regexp(config: &Config) -> String {
-    format!(
-        "^(commit|{}|{}|{}|{})",
-        config.file_modified_label,
-        config.file_added_label,
-        config.file_removed_label,
-        config.file_renamed_label
-    )
-}
-
 fn _check_validity(opt: &cli::Opt, assets: &HighlightingAssets) {
     if opt.light && opt.dark {
         eprintln!("--light and --dark cannot be used together.");

@@ -1,3 +1,4 @@
+use crate::config::Config;
 use crate::features::OptionValueFunction;
 
 pub fn make_feature() -> Vec<(String, OptionValueFunction)> {
@@ -17,6 +18,16 @@ pub fn make_feature() -> Vec<(String, OptionValueFunction)> {
     ])
 }
 
+pub fn make_navigate_regexp(config: &Config) -> String {
+    format!(
+        "^(commit|{}|{}|{}|{})",
+        config.file_modified_label,
+        config.file_added_label,
+        config.file_removed_label,
+        config.file_renamed_label
+    )
+}
+
 #[cfg(test)]
 mod tests {
     use std::fs::remove_file;
@@ -32,7 +43,10 @@ mod tests {
 ";
         let git_config_path = "delta__test_navigate_with_overriden_key_in_main_section.gitconfig";
 
-        assert_eq!(features::tests::make_options(&[], None, None).file_modified_label, "");
+        assert_eq!(
+            features::tests::make_options(&[], None, None).file_modified_label,
+            ""
+        );
         assert_eq!(
             features::tests::make_options(&["--features", "navigate"], None, None)
                 .file_modified_label,
