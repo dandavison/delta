@@ -34,10 +34,10 @@ is
     zero-style = dim syntax
 
 FEATURES
--------
-A feature is a named collection of delta options in ~/.gitconfig. An example is:
+--------
+A feature is a named collection of delta options in git config. An example is:
 
-[delta \"my-delta-theme-feature\"]
+[delta \"my-delta-feature\"]
     syntax-theme = Dracula
     plus-style = bold syntax \"#002800\"
 
@@ -45,22 +45,12 @@ To activate those options, you would use:
 
 delta --features my-delta-feature
 
-or in ~/.gitconfig
-
-[delta]
-    features = my-delta-feature
-
 A feature name may not contain whitespace. You can activate multiple features:
 
 [delta]
     features = my-highlight-styles-colors-feature my-line-number-styles-feature
 
 If more than one feature sets the same option, the last one wins.
-
-There are two built-in features:
-
---features diff-highlight (https://github.com/git/git/tree/master/contrib/diff-highlight)
---features diff-so-fancy (https://github.com/so-fancy/diff-so-fancy)
 
 STYLES
 ------
