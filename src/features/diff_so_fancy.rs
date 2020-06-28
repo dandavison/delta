@@ -19,7 +19,7 @@ pub fn make_feature() -> Vec<(String, OptionValueFunction)> {
         (
             "commit-style",
             String,
-            None,
+            Some("color.diff.commit"),
             _opt => "bold yellow"
         ),
         (
@@ -76,7 +76,7 @@ pub mod tests {
 [color \"diff\"]
     meta = 11
     frag = magenta bold
-    commit = yellow bold
+    commit = purple bold
     old = red bold
     new = green bold
     whitespace = red reverse
@@ -89,7 +89,7 @@ pub mod tests {
             Some(git_config_path),
         );
 
-        assert_eq!(opt.commit_style, "bold yellow");
+        assert_eq!(opt.commit_style, "purple bold");
         assert_eq!(opt.file_style, "11");
         assert_eq!(opt.hunk_header_style, "magenta bold");
         assert_eq!(opt.commit_decoration_style, "none");
