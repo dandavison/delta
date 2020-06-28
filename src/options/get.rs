@@ -3,7 +3,7 @@ use std::collections::HashMap;
 use crate::cli;
 use crate::features;
 use crate::git_config::{self, GitConfigGet};
-use crate::option_value::{OptionValue, ProvenancedOptionValue};
+use crate::options::option_value::{OptionValue, ProvenancedOptionValue};
 use ProvenancedOptionValue::*;
 
 /// Look up a value of type `T` associated with `option name`. The search rules are:

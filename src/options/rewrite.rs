@@ -193,7 +193,7 @@ mod tests {
     use structopt::{clap, StructOpt};
 
     use crate::cli;
-    use crate::rewrite_options::apply_rewrite_rules;
+    use crate::options::rewrite::apply_rewrite_rules;
 
     #[test]
     fn test_default_is_stable_under_rewrites() {

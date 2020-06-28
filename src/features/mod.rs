@@ -2,7 +2,7 @@ use std::collections::HashMap;
 
 use crate::cli;
 use crate::git_config::GitConfig;
-use crate::option_value::ProvenancedOptionValue;
+use crate::options::option_value::ProvenancedOptionValue;
 use ProvenancedOptionValue::*;
 
 /// A custom feature is a named set of command line (option, value) pairs, supplied in a git config

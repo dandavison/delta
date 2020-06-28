@@ -9,8 +9,7 @@ use structopt::clap::AppSettings::{ColorAlways, ColoredHelp, DeriveDisplayOrder}
 use structopt::{clap, StructOpt};
 
 use crate::git_config::GitConfig;
-use crate::rewrite_options;
-use crate::set_options;
+use crate::options;
 
 #[derive(StructOpt, Clone, Debug, PartialEq)]
 #[structopt(
@@ -517,8 +516,8 @@ impl Opt {
         git_config: &mut Option<GitConfig>,
     ) -> Self {
         let mut opt = Opt::from_clap(&arg_matches);
-        set_options::set_options(&mut opt, git_config, &arg_matches);
-        rewrite_options::apply_rewrite_rules(&mut opt, &arg_matches);
+        options::set::set_options(&mut opt, git_config, &arg_matches);
+        options::rewrite::apply_rewrite_rules(&mut opt, &arg_matches);
         opt
     }
 

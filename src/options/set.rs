@@ -4,6 +4,7 @@ use structopt::clap;
 
 use crate::cli;
 use crate::config;
+
 use crate::features;
 use crate::git_config;
 
@@ -13,7 +14,7 @@ macro_rules! set_options {
         let mut option_names = HashSet::new();
         $(
             if !$crate::config::user_supplied_option($option_name, $arg_matches) {
-                if let Some(value) = $crate::get_option_value::get_option_value(
+                if let Some(value) = $crate::options::get::get_option_value(
                     $option_name,
                     &$builtin_features,
                     $opt,
