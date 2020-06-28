@@ -9,8 +9,8 @@ pub fn _make_feature(bold: bool) -> Vec<(String, OptionValueFunction)> {
         (
             "commit-style",
             String,
-            Some("color.diff.commit"),
-            _opt => "none"
+            None,
+            _opt => "raw"
         ),
         (
             "commit-decoration-style",
@@ -21,8 +21,8 @@ pub fn _make_feature(bold: bool) -> Vec<(String, OptionValueFunction)> {
         (
             "file-style",
             String,
-            Some("color.diff.meta"),
-            _opt => "none"
+            None,
+            _opt => "raw"
         ),
         (
             "file-decoration-style",
@@ -33,14 +33,14 @@ pub fn _make_feature(bold: bool) -> Vec<(String, OptionValueFunction)> {
         (
             "hunk-header-style",
             String,
-            Some("color.diff.frag"),
-            _opt => "bold syntax"
+            None,
+            _opt => "raw"
         ),
         (
             "hunk-header-decoration-style",
             String,
             None,
-            _opt => "magenta box"
+            _opt => "none"
         ),
         (
             "minus-style",
