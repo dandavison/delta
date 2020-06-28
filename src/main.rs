@@ -125,21 +125,21 @@ fn diff(
 }
 
 fn show_config(config: &config::Config) {
-    print!(
-        "\
-commit-style                  = {commit_style}
-file-style                    = {file_style}
-hunk-header-style             = {hunk_header_style}
-minus-style                   = {minus_style}
-minus-non-emph-style          = {minus_non_emph_style}
-minus-emph-style              = {minus_emph_style}
-minus-empty-line-marker-style = {minus_empty_line_marker_style}
-zero-style                    = {zero_style}
-plus-style                    = {plus_style}
-plus-non-emph-style           = {plus_non_emph_style}
-plus-emph-style               = {plus_emph_style}
-plus-empty-line-marker-style  = {plus_empty_line_marker_style}
-whitespace-error-style        = {whitespace_error_style}",
+    println!(
+        "    commit-style                  = {commit_style}
+    file-style                    = {file_style}
+    hunk-header-style             = {hunk_header_style}
+    minus-style                   = {minus_style}
+    minus-non-emph-style          = {minus_non_emph_style}
+    minus-emph-style              = {minus_emph_style}
+    minus-empty-line-marker-style = {minus_empty_line_marker_style}
+    zero-style                    = {zero_style}
+    plus-style                    = {plus_style}
+    plus-non-emph-style           = {plus_non_emph_style}
+    plus-emph-style               = {plus_emph_style}
+    plus-empty-line-marker-style  = {plus_empty_line_marker_style}
+    whitespace-error-style        = {whitespace_error_style}
+    line-numbers                  = {line_numbers}",
         minus_style = config.minus_style.to_painted_string(),
         zero_style = config.zero_style.to_painted_string(),
         plus_style = config.plus_style.to_painted_string(),
@@ -153,23 +153,74 @@ whitespace-error-style        = {whitespace_error_style}",
         minus_empty_line_marker_style = config.minus_empty_line_marker_style.to_painted_string(),
         plus_empty_line_marker_style = config.plus_empty_line_marker_style.to_painted_string(),
         whitespace_error_style = config.whitespace_error_style.to_painted_string(),
+        line_numbers = config.line_numbers,
     );
     if config.line_numbers {
-        print!(
-            "
-line-numbers-minus-style      = {line_numbers_minus_style}
-line-numbers-zero-style       = {line_numbers_zero_style}
-line-numbers-plus-style       = {line_numbers_plus_style}
-line-numbers-left-style       = {line_numbers_left_style}
-line-numbers-right-style      = {line_numbers_right_style}",
+        println!(
+            "    line-numbers-minus-style      = {line_numbers_minus_style}
+    line-numbers-zero-style       = {line_numbers_zero_style}
+    line-numbers-plus-style       = {line_numbers_plus_style}
+    line-numbers-left-style       = {line_numbers_left_style}
+    line-numbers-right-style      = {line_numbers_right_style}
+    line-numbers-left-format      = {line_numbers_left_format}
+    line-numbers-right-format     = {line_numbers_right_format}",
             line_numbers_minus_style = config.line_numbers_minus_style.to_painted_string(),
             line_numbers_zero_style = config.line_numbers_zero_style.to_painted_string(),
             line_numbers_plus_style = config.line_numbers_plus_style.to_painted_string(),
             line_numbers_left_style = config.line_numbers_left_style.to_painted_string(),
             line_numbers_right_style = config.line_numbers_right_style.to_painted_string(),
+            line_numbers_left_format = format_option_value(&config.line_numbers_left_format),
+            line_numbers_right_format = format_option_value(&config.line_numbers_right_format),
         )
     }
-    println!();
+    println!(
+        "    24-bit-color                  = {true_color}
+    file-added-label              = {file_added_label}
+    file-modified-label           = {file_modified_label}
+    file-removed-label            = {file_removed_label}
+    file-renamed-label            = {file_renamed_label}
+    keep-plus-minus-markers       = {keep_plus_minus_markers}
+    max-line-distance             = {max_line_distance}
+    navigate                      = {navigate}
+    paging                        = {paging_mode}
+    syntax-theme                  = {syntax_theme}
+    tabs                          = {tab_width}
+    word-diff-regex               = {tokenization_regex}",
+        true_color = config.true_color,
+        file_added_label = format_option_value(&config.file_added_label),
+        file_modified_label = format_option_value(&config.file_modified_label),
+        file_removed_label = format_option_value(&config.file_removed_label),
+        file_renamed_label = format_option_value(&config.file_renamed_label),
+        keep_plus_minus_markers = config.keep_plus_minus_markers,
+        max_line_distance = config.max_line_distance,
+        navigate = config.navigate,
+        paging_mode = match config.paging_mode {
+            PagingMode::Always => "always",
+            PagingMode::Never => "never",
+            PagingMode::QuitIfOneScreen => "auto",
+        },
+        syntax_theme = config.syntax_theme_name,
+        tab_width = config.tab_width,
+        tokenization_regex = format_option_value(&config.tokenization_regex.to_string()),
+    );
+}
+
+// Heuristics determining whether to quote string option values when printing values intended for
+// git config.
+fn format_option_value<S>(s: S) -> String
+where
+    S: AsRef<str>,
+{
+    let s = s.as_ref();
+    if s.ends_with(" ")
+        || s.starts_with(" ")
+        || s.contains(&['\\', '{', '}', ':'][..])
+        || s.is_empty()
+    {
+        format!("'{}'", s)
+    } else {
+        s.to_string()
+    }
 }
 
 fn show_syntax_themes() -> std::io::Result<()> {

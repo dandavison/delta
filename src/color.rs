@@ -37,7 +37,7 @@ pub fn color_to_string(color: Color) -> String {
     match color {
         Color::Fixed(n) if n < 16 => ansi_16_color_number_to_name(n).unwrap().to_string(),
         Color::Fixed(n) => format!("{}", n),
-        Color::RGB(r, g, b) => format!("#{:02x?}{:02x?}{:02x?}", r, g, b),
+        Color::RGB(r, g, b) => format!("\"#{:02x?}{:02x?}{:02x?}\"", r, g, b),
         Color::Black => "black".to_string(),
         Color::Red => "red".to_string(),
         Color::Green => "green".to_string(),
