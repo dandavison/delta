@@ -7,7 +7,7 @@ use syntect::easy::HighlightLines;
 use syntect::highlighting::Style as SyntectStyle;
 use syntect::parsing::{SyntaxReference, SyntaxSet};
 
-use crate::config;
+use crate::config::{self, delta_unreachable};
 use crate::delta::State;
 use crate::edits;
 use crate::features::line_numbers;
@@ -53,9 +53,16 @@ impl<'a> Painter<'a> {
     }
 
     fn get_syntax(syntax_set: &'a SyntaxSet, extension: Option<&str>) -> &'a SyntaxReference {
-        syntax_set
-            .find_syntax_by_extension(extension.unwrap_or("txt"))
-            .unwrap_or_else(|| Painter::get_syntax(syntax_set, Some("txt")))
+        if let Some(extension) = extension {
+            if let Some(syntax) = syntax_set.find_syntax_by_extension(extension) {
+                return syntax;
+            }
+        }
+        return syntax_set
+            .find_syntax_by_extension("txt")
+            .unwrap_or_else(|| {
+                delta_unreachable("Failed to find any language syntax definitions.")
+            });
     }
 
     pub fn set_highlighter(&mut self) {
