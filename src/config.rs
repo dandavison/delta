@@ -478,10 +478,10 @@ fn is_truecolor_terminal() -> bool {
 
 #[cfg(test)]
 mod tests {
-    use super::*;
     use std::env;
 
     use crate::color;
+    use crate::syntax_theme;
     use crate::tests::integration_test_utils::integration_test_utils;
 
     #[test]

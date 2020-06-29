@@ -247,7 +247,8 @@ index f38589a..0f1bb83 100644
 +fn print_cube(num: f64) {
 +    let result = f64::powf(num, 3.0);
 +    println!(\"The cube of {:.2} is {:.2}.\", num, result);
- }"
+ }
+"
         .to_vec()
     };
 

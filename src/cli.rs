@@ -7,11 +7,13 @@ use itertools;
 use lazy_static::lazy_static;
 use structopt::clap::AppSettings::{ColorAlways, ColoredHelp, DeriveDisplayOrder};
 use structopt::{clap, StructOpt};
+use syntect::highlighting::Theme as SyntaxTheme;
+use syntect::parsing::SyntaxSet;
 
 use crate::git_config::GitConfig;
 use crate::options;
 
-#[derive(StructOpt, Clone, Debug, PartialEq)]
+#[derive(StructOpt, Clone)]
 #[structopt(
     name = "delta",
     about = "A viewer for git and diff output",
@@ -495,6 +497,16 @@ pub struct Opt {
     #[structopt(long = "theme")]
     /// Deprecated: use --syntax-theme.
     pub deprecated_theme: Option<String>,
+    #[structopt(skip)]
+    pub computed: ComputedValues,
+}
+
+#[derive(Default, Clone, Debug)]
+pub struct ComputedValues {
+    pub is_light_mode: bool,
+    pub syntax_set: SyntaxSet,
+    pub syntax_theme: Option<SyntaxTheme>,
+    pub syntax_dummy_theme: SyntaxTheme,
 }
 
 impl Opt {

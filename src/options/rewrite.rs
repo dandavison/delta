@@ -195,16 +195,6 @@ mod tests {
     use crate::cli;
     use crate::options::rewrite::apply_rewrite_rules;
 
-    #[test]
-    fn test_default_is_stable_under_rewrites() {
-        let mut opt = cli::Opt::from_iter(Vec::<OsString>::new());
-        let before = opt.clone();
-
-        apply_rewrite_rules(&mut opt, &clap::ArgMatches::new());
-
-        assert_eq!(opt, before);
-    }
-
     /// Since --hunk-header-decoration-style is at its default value of "box",
     /// the deprecated option is allowed to overwrite it.
     #[test]
