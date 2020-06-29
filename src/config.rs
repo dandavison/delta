@@ -146,7 +146,7 @@ impl From<cli::Opt> for Config {
             plus_non_emph_style,
             plus_empty_line_marker_style,
             whitespace_error_style,
-        ) = make_hunk_styles(&opt, is_light_mode, true_color);
+        ) = make_hunk_styles(&opt, true_color);
 
         let (commit_style, file_style, hunk_header_style) =
             make_commit_file_hunk_header_styles(&opt, true_color);
@@ -232,7 +232,6 @@ impl From<cli::Opt> for Config {
 
 fn make_hunk_styles<'a>(
     opt: &'a cli::Opt,
-    is_light_mode: bool,
     true_color: bool,
 ) -> (
     Style,
@@ -251,7 +250,7 @@ fn make_hunk_styles<'a>(
         Some(Style::from_colors(
             None,
             Some(color::get_minus_background_color_default(
-                is_light_mode,
+                opt.computed.is_light_mode,
                 true_color,
             )),
         )),
@@ -265,7 +264,7 @@ fn make_hunk_styles<'a>(
         Some(Style::from_colors(
             None,
             Some(color::get_minus_emph_background_color_default(
-                is_light_mode,
+                opt.computed.is_light_mode,
                 true_color,
             )),
         )),
@@ -289,7 +288,7 @@ fn make_hunk_styles<'a>(
         Some(Style::from_colors(
             None,
             Some(color::get_minus_background_color_default(
-                is_light_mode,
+                opt.computed.is_light_mode,
                 true_color,
             )),
         )),
@@ -305,7 +304,7 @@ fn make_hunk_styles<'a>(
         Some(Style::from_colors(
             None,
             Some(color::get_plus_background_color_default(
-                is_light_mode,
+                opt.computed.is_light_mode,
                 true_color,
             )),
         )),
@@ -319,7 +318,7 @@ fn make_hunk_styles<'a>(
         Some(Style::from_colors(
             None,
             Some(color::get_plus_emph_background_color_default(
-                is_light_mode,
+                opt.computed.is_light_mode,
                 true_color,
             )),
         )),
@@ -343,7 +342,7 @@ fn make_hunk_styles<'a>(
         Some(Style::from_colors(
             None,
             Some(color::get_plus_background_color_default(
-                is_light_mode,
+                opt.computed.is_light_mode,
                 true_color,
             )),
         )),
