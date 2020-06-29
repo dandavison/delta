@@ -498,6 +498,7 @@ pub struct Opt {
     #[structopt(long = "theme")]
     /// Deprecated: use --syntax-theme.
     pub deprecated_theme: Option<String>,
+
     #[structopt(skip)]
     pub computed: ComputedValues,
 }
@@ -534,6 +535,7 @@ impl Opt {
         assets: HighlightingAssets,
     ) -> Self {
         let mut opt = Opt::from_clap(&arg_matches);
+        options::preprocess::preprocess_options(&mut opt, assets);
         options::set::set_options(&mut opt, git_config, &arg_matches);
         options::rewrite::apply_rewrite_rules(&mut opt, &arg_matches);
         opt
