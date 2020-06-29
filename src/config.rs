@@ -62,7 +62,6 @@ pub struct Config {
     pub syntax_dummy_theme: SyntaxTheme,
     pub syntax_set: SyntaxSet,
     pub syntax_theme: Option<SyntaxTheme>,
-    pub syntax_theme_name: String,
     pub tab_width: usize,
     pub true_color: bool,
     pub tokenization_regex: Regex,
@@ -222,7 +221,6 @@ impl From<cli::Opt> for Config {
             syntax_dummy_theme,
             syntax_set: assets.syntax_set,
             syntax_theme,
-            syntax_theme_name,
             tab_width: opt.tab_width,
             tokenization_regex,
             true_color,
@@ -534,7 +532,7 @@ mod tests {
             ),
             (None, "GitHub", Some(Mode::Light), "GitHub", Mode::Light),
             (Some("none"), "", None, "none", Mode::Dark),
-            (Some("None"), "", Some(Mode::Light), "None", Mode::Light),
+            (Some("None"), "", Some(Mode::Light), "none", Mode::Light),
         ] {
             if bat_theme_env_var == "<not set>" {
                 env::remove_var("BAT_THEME")
@@ -564,7 +562,14 @@ mod tests {
                 None => {}
             }
             let config = integration_test_utils::make_config(&args);
-            assert_eq!(config.syntax_theme_name, expected_syntax_theme);
+            assert_eq!(
+                &config
+                    .syntax_theme
+                    .clone()
+                    .map(|t| t.name.unwrap())
+                    .unwrap_or("none".to_string()),
+                expected_syntax_theme
+            );
             if syntax_theme::is_no_syntax_highlighting_theme_name(expected_syntax_theme) {
                 assert!(config.syntax_theme.is_none())
             } else {

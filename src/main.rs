@@ -199,7 +199,11 @@ fn show_config(config: &config::Config) {
             PagingMode::Never => "never",
             PagingMode::QuitIfOneScreen => "auto",
         },
-        syntax_theme = config.syntax_theme_name,
+        syntax_theme = config
+            .syntax_theme
+            .clone()
+            .map(|t| t.name.unwrap_or("none".to_string()))
+            .unwrap_or("none".to_string()),
         tab_width = config.tab_width,
         tokenization_regex = format_option_value(&config.tokenization_regex.to_string()),
     );
