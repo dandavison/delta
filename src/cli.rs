@@ -10,6 +10,7 @@ use structopt::{clap, StructOpt};
 use syntect::highlighting::Theme as SyntaxTheme;
 use syntect::parsing::SyntaxSet;
 
+use crate::bat::assets::HighlightingAssets;
 use crate::git_config::GitConfig;
 use crate::options;
 
@@ -510,8 +511,11 @@ pub struct ComputedValues {
 }
 
 impl Opt {
-    pub fn from_args_and_git_config(git_config: &mut Option<GitConfig>) -> Self {
-        Self::from_clap_and_git_config(Self::clap().get_matches(), git_config)
+    pub fn from_args_and_git_config(
+        git_config: &mut Option<GitConfig>,
+        assets: HighlightingAssets,
+    ) -> Self {
+        Self::from_clap_and_git_config(Self::clap().get_matches(), git_config, assets)
     }
 
     #[cfg(test)]
@@ -520,12 +524,14 @@ impl Opt {
         I: IntoIterator,
         I::Item: Into<OsString> + Clone,
     {
-        Self::from_clap_and_git_config(Self::clap().get_matches_from(iter), git_config)
+        let assets = HighlightingAssets::new();
+        Self::from_clap_and_git_config(Self::clap().get_matches_from(iter), git_config, assets)
     }
 
     fn from_clap_and_git_config(
         arg_matches: clap::ArgMatches,
         git_config: &mut Option<GitConfig>,
+        assets: HighlightingAssets,
     ) -> Self {
         let mut opt = Opt::from_clap(&arg_matches);
         options::set::set_options(&mut opt, git_config, &arg_matches);

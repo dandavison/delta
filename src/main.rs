@@ -47,7 +47,8 @@ mod errors {
 }
 
 fn main() -> std::io::Result<()> {
-    let opt = cli::Opt::from_args_and_git_config(&mut git_config::GitConfig::try_create());
+    let assets = HighlightingAssets::new();
+    let opt = cli::Opt::from_args_and_git_config(&mut git_config::GitConfig::try_create(), assets);
 
     if opt.list_languages {
         list_languages()?;
