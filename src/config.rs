@@ -9,14 +9,12 @@ use syntect::highlighting::Style as SyntectStyle;
 use syntect::highlighting::Theme as SyntaxTheme;
 use syntect::parsing::SyntaxSet;
 
-use crate::bat::assets::HighlightingAssets;
 use crate::bat::output::PagingMode;
 use crate::cli;
 use crate::color;
 use crate::delta::State;
 use crate::env;
 use crate::style::Style;
-use crate::syntax_theme;
 
 pub enum Width {
     Fixed(usize),
@@ -82,10 +80,6 @@ impl Config {
 
 impl From<cli::Opt> for Config {
     fn from(opt: cli::Opt) -> Self {
-        let assets = HighlightingAssets::new();
-
-        _check_validity(&opt, &assets);
-
         let paging_mode = match opt.paging_mode.as_ref() {
             "always" => PagingMode::Always,
             "never" => PagingMode::Never,
@@ -127,14 +121,6 @@ impl From<cli::Opt> for Config {
                 None => (Width::Fixed(available_terminal_width), true),
             };
 
-        let syntax_theme_name_from_bat_theme = env::get_env_var("BAT_THEME");
-        let (is_light_mode, syntax_theme_name) = syntax_theme::get_is_light_mode_and_theme_name(
-            opt.syntax_theme.as_ref(),
-            syntax_theme_name_from_bat_theme.as_ref(),
-            opt.light,
-            &assets.theme_set,
-        );
-
         let (
             minus_style,
             minus_emph_style,
@@ -158,14 +144,6 @@ impl From<cli::Opt> for Config {
             line_numbers_left_style,
             line_numbers_right_style,
         ) = make_line_number_styles(&opt, true_color);
-
-        let syntax_theme = if syntax_theme::is_no_syntax_highlighting_theme_name(&syntax_theme_name)
-        {
-            None
-        } else {
-            Some(assets.theme_set.themes[&syntax_theme_name].clone())
-        };
-        let syntax_dummy_theme = assets.theme_set.themes.values().next().unwrap().clone();
 
         let max_line_distance_for_naively_paired_lines =
             env::get_env_var("DELTA_EXPERIMENTAL_MAX_LINE_DISTANCE_FOR_NAIVELY_PAIRED_LINES")
@@ -423,36 +401,6 @@ fn make_commit_file_hunk_header_styles(opt: &cli::Opt, true_color: bool) -> (Sty
             false,
         ),
     )
-}
-
-fn _check_validity(opt: &cli::Opt, assets: &HighlightingAssets) {
-    if opt.light && opt.dark {
-        eprintln!("--light and --dark cannot be used together.");
-        process::exit(1);
-    }
-    if let Some(ref syntax_theme) = opt.syntax_theme {
-        if !syntax_theme::is_no_syntax_highlighting_theme_name(&syntax_theme) {
-            if !assets.theme_set.themes.contains_key(syntax_theme.as_str()) {
-                return;
-            }
-            let is_light_syntax_theme = syntax_theme::is_light_theme(&syntax_theme);
-            if is_light_syntax_theme && opt.dark {
-                eprintln!(
-                    "{} is a light syntax theme, but you supplied --dark. \
-                     If you use --syntax-theme, you do not need to supply --light or --dark.",
-                    syntax_theme
-                );
-                process::exit(1);
-            } else if !is_light_syntax_theme && opt.light {
-                eprintln!(
-                    "{} is a dark syntax theme, but you supplied --light. \
-                     If you use --syntax-theme, you do not need to supply --light or --dark.",
-                    syntax_theme
-                );
-                process::exit(1);
-            }
-        }
-    }
 }
 
 /// Did the user supply `option` on the command line?
