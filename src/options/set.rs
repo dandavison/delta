@@ -1,16 +1,19 @@
 use std::collections::{HashSet, VecDeque};
+use std::process;
 
 use structopt::clap;
 
+use crate::bat::assets::HighlightingAssets;
 use crate::cli;
 use crate::config;
 
 use crate::features;
 use crate::git_config;
+use crate::options::preprocess;
 
 macro_rules! set_options {
 	([$( ($option_name:expr, $field_ident:ident) ),* ],
-     $opt:expr, $builtin_features:expr, $git_config:expr, $arg_matches:expr) => {
+     $opt:expr, $builtin_features:expr, $git_config:expr, $arg_matches:expr, $check_names:expr) => {
         let mut option_names = HashSet::new();
         $(
             if !$crate::config::user_supplied_option($option_name, $arg_matches) {
@@ -22,29 +25,34 @@ macro_rules! set_options {
                 ) {
                     $opt.$field_ident = value;
                 }
-            };
-            option_names.insert($option_name);
+            }
+            if $check_names {
+                option_names.insert($option_name);
+            }
         )*
-        option_names.extend(&[
-            "diff-highlight", // Does not exist as a flag on config
-            "diff-so-fancy", // Does not exist as a flag on config
-            "features",
-            "no-gitconfig",
-        ]);
-        let expected_option_names = $crate::cli::Opt::get_option_or_flag_names();
-        if option_names != expected_option_names {
-            $crate::config::delta_unreachable(
-                &format!("Error processing options.\nUnhandled names: {:?}\nInvalid names: {:?}.\n",
-                         &expected_option_names - &option_names,
-                         &option_names - &expected_option_names));
+        if $check_names {
+            option_names.extend(&[
+                "diff-highlight", // Does not exist as a flag on config
+                "diff-so-fancy", // Does not exist as a flag on config
+                "features",
+                "no-gitconfig",
+            ]);
+            let expected_option_names = $crate::cli::Opt::get_option_or_flag_names();
+            if option_names != expected_option_names {
+                $crate::config::delta_unreachable(
+                    &format!("Error processing options.\nUnhandled names: {:?}\nInvalid names: {:?}.\n",
+                             &expected_option_names - &option_names,
+                             &option_names - &expected_option_names));
+            }
         }
-	};
+	}
 }
 
 pub fn set_options(
     opt: &mut cli::Opt,
     git_config: &mut Option<git_config::GitConfig>,
     arg_matches: &clap::ArgMatches,
+    assets: HighlightingAssets,
 ) {
     if let Some(git_config) = git_config {
         if opt.no_gitconfig {
@@ -68,6 +76,35 @@ pub fn set_options(
         }
         .unwrap_or_else(|| "magenta reverse".to_string())
     }
+
+    // Set light, dark and syntax-theme
+    let validate_light_and_dark = |opt: &cli::Opt| {
+        if opt.light && opt.dark {
+            eprintln!("--light and --dark cannot be used together.");
+            process::exit(1);
+        }
+    };
+    validate_light_and_dark(&opt);
+    if !(opt.light || opt.dark) {
+        set_options!(
+            [("dark", dark), ("light", light)],
+            opt,
+            builtin_features,
+            git_config,
+            arg_matches,
+            false
+        );
+    }
+    validate_light_and_dark(&opt);
+    set_options!(
+        [("syntax-theme", syntax_theme)],
+        opt,
+        builtin_features,
+        git_config,
+        arg_matches,
+        false
+    );
+    preprocess::set__is_light_mode__syntax_theme__syntax_set(opt, assets);
 
     set_options!(
         [
@@ -124,7 +161,8 @@ pub fn set_options(
         opt,
         builtin_features,
         git_config,
-        arg_matches
+        arg_matches,
+        true
     );
 }
 

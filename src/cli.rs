@@ -535,12 +535,12 @@ impl Opt {
         assets: HighlightingAssets,
     ) -> Self {
         let mut opt = Opt::from_clap(&arg_matches);
-        options::preprocess::preprocess_options(&mut opt, assets);
-        options::set::set_options(&mut opt, git_config, &arg_matches);
+        options::set::set_options(&mut opt, git_config, &arg_matches, assets);
         options::rewrite::apply_rewrite_rules(&mut opt, &arg_matches);
         opt
     }
 
+    #[allow(dead_code)]
     pub fn get_option_or_flag_names<'a>() -> HashSet<&'a str> {
         let names: HashSet<&str> = itertools::chain(
             Self::clap().p.opts.iter().filter_map(|opt| opt.s.long),

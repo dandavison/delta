@@ -5,7 +5,11 @@ use crate::cli;
 use crate::env;
 use crate::syntax_theme;
 
-pub fn preprocess_options(opt: &mut cli::Opt, assets: HighlightingAssets) {
+#[allow(non_snake_case)]
+pub fn set__is_light_mode__syntax_theme__syntax_set(
+    opt: &mut cli::Opt,
+    assets: HighlightingAssets,
+) {
     _check_validity(&opt, &assets);
     let syntax_theme_name_from_bat_theme = env::get_env_var("BAT_THEME");
     let (is_light_mode, syntax_theme_name) = syntax_theme::get_is_light_mode_and_theme_name(
@@ -26,10 +30,6 @@ pub fn preprocess_options(opt: &mut cli::Opt, assets: HighlightingAssets) {
 }
 
 fn _check_validity(opt: &cli::Opt, assets: &HighlightingAssets) {
-    if opt.light && opt.dark {
-        eprintln!("--light and --dark cannot be used together.");
-        process::exit(1);
-    }
     if let Some(ref syntax_theme) = opt.syntax_theme {
         if !syntax_theme::is_no_syntax_highlighting_theme_name(&syntax_theme) {
             if !assets.theme_set.themes.contains_key(syntax_theme.as_str()) {
