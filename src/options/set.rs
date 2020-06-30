@@ -1,4 +1,4 @@
-use std::collections::{HashSet, VecDeque};
+use std::collections::{HashMap, HashSet, VecDeque};
 use std::process;
 
 use structopt::clap;
@@ -6,10 +6,9 @@ use structopt::clap;
 use crate::bat::assets::HighlightingAssets;
 use crate::cli;
 use crate::config;
-
 use crate::features;
 use crate::git_config;
-use crate::options::preprocess;
+use crate::options::theme;
 
 macro_rules! set_options {
 	([$( ($option_name:expr, $field_ident:ident) ),* ],
@@ -34,8 +33,12 @@ macro_rules! set_options {
             option_names.extend(&[
                 "diff-highlight", // Does not exist as a flag on config
                 "diff-so-fancy", // Does not exist as a flag on config
-                "features",
+                "features",  // Processes differently
+                // Set prior to the rest
                 "no-gitconfig",
+                "dark",
+                "light",
+                "syntax-theme",
             ]);
             let expected_option_names = $crate::cli::Opt::get_option_or_flag_names();
             if option_names != expected_option_names {
@@ -77,34 +80,8 @@ pub fn set_options(
         .unwrap_or_else(|| "magenta reverse".to_string())
     }
 
-    // Set light, dark and syntax-theme
-    let validate_light_and_dark = |opt: &cli::Opt| {
-        if opt.light && opt.dark {
-            eprintln!("--light and --dark cannot be used together.");
-            process::exit(1);
-        }
-    };
-    validate_light_and_dark(&opt);
-    if !(opt.light || opt.dark) {
-        set_options!(
-            [("dark", dark), ("light", light)],
-            opt,
-            builtin_features,
-            git_config,
-            arg_matches,
-            false
-        );
-    }
-    validate_light_and_dark(&opt);
-    set_options!(
-        [("syntax-theme", syntax_theme)],
-        opt,
-        builtin_features,
-        git_config,
-        arg_matches,
-        false
-    );
-    preprocess::set__is_light_mode__syntax_theme__syntax_set(opt, assets);
+    set__light__dark__syntax_theme__options(opt, &builtin_features, git_config, arg_matches);
+    theme::set__is_light_mode__syntax_theme__syntax_set(opt, assets);
 
     set_options!(
         [
@@ -112,7 +89,6 @@ pub fn set_options(
             ("color-only", color_only),
             ("commit-decoration-style", commit_decoration_style),
             ("commit-style", commit_style),
-            ("dark", dark),
             ("file-added-label", file_added_label),
             ("file-decoration-style", file_decoration_style),
             ("file-modified-label", file_modified_label),
@@ -122,7 +98,6 @@ pub fn set_options(
             ("hunk-header-decoration-style", hunk_header_decoration_style),
             ("hunk-header-style", hunk_header_style),
             ("keep-plus-minus-markers", keep_plus_minus_markers),
-            ("light", light),
             ("max-line-distance", max_line_distance),
             // Hack: minus-style must come before minus-*emph-style because the latter default
             // dynamically to the value of the former.
@@ -151,7 +126,6 @@ pub fn set_options(
             ("plus-empty-line-marker-style", plus_empty_line_marker_style),
             ("plus-non-emph-style", plus_non_emph_style),
             ("raw", raw),
-            ("syntax-theme", syntax_theme),
             ("tabs", tab_width),
             ("whitespace-error-style", whitespace_error_style),
             ("width", width),
@@ -163,6 +137,41 @@ pub fn set_options(
         git_config,
         arg_matches,
         true
+    );
+}
+
+#[allow(non_snake_case)]
+fn set__light__dark__syntax_theme__options(
+    opt: &mut cli::Opt,
+    builtin_features: &HashMap<String, features::BuiltinFeature>,
+    git_config: &mut Option<git_config::GitConfig>,
+    arg_matches: &clap::ArgMatches,
+) {
+    let validate_light_and_dark = |opt: &cli::Opt| {
+        if opt.light && opt.dark {
+            eprintln!("--light and --dark cannot be used together.");
+            process::exit(1);
+        }
+    };
+    validate_light_and_dark(&opt);
+    if !(opt.light || opt.dark) {
+        set_options!(
+            [("dark", dark), ("light", light)],
+            opt,
+            builtin_features,
+            git_config,
+            arg_matches,
+            false
+        );
+    }
+    validate_light_and_dark(&opt);
+    set_options!(
+        [("syntax-theme", syntax_theme)],
+        opt,
+        builtin_features,
+        git_config,
+        arg_matches,
+        false
     );
 }
 

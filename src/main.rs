@@ -19,7 +19,6 @@ mod paint;
 mod parse;
 mod parse_style;
 mod style;
-mod syntax_theme;
 mod syntect_color;
 mod tests;
 
@@ -35,6 +34,7 @@ use structopt::StructOpt;
 use crate::bat::assets::{list_languages, HighlightingAssets};
 use crate::bat::output::{OutputType, PagingMode};
 use crate::delta::delta;
+use crate::options::theme::is_light_syntax_theme;
 
 mod errors {
     error_chain! {
@@ -278,7 +278,7 @@ index f38589a..0f1bb83 100644
         .theme_set
         .themes
         .iter()
-        .filter(|(t, _)| syntax_theme::is_light_theme(t) == is_light_mode)
+        .filter(|(t, _)| is_light_syntax_theme(t) == is_light_mode)
         .map(|(t, _)| t)
     {
         writeln!(writer, "\n\nTheme: {}\n", title_style.paint(syntax_theme))?;
@@ -305,13 +305,13 @@ pub fn list_syntax_themes() -> std::io::Result<()> {
 
     writeln!(stdout, "Light themes:")?;
     for (theme, _) in themes.iter() {
-        if syntax_theme::is_light_theme(theme) {
+        if is_light_syntax_theme(theme) {
             writeln!(stdout, "    {}", theme)?;
         }
     }
     writeln!(stdout, "Dark themes:")?;
     for (theme, _) in themes.iter() {
-        if !syntax_theme::is_light_theme(theme) {
+        if !is_light_syntax_theme(theme) {
             writeln!(stdout, "    {}", theme)?;
         }
     }
