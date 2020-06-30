@@ -10,7 +10,6 @@ pub fn set__is_light_mode__syntax_theme__syntax_set(
     opt: &mut cli::Opt,
     assets: HighlightingAssets,
 ) {
-    _check_validity(&opt, &assets);
     let syntax_theme_name_from_bat_theme = env::get_env_var("BAT_THEME");
     let (is_light_mode, syntax_theme_name) = syntax_theme::get_is_light_mode_and_theme_name(
         opt.syntax_theme.as_ref(),
@@ -27,30 +26,4 @@ pub fn set__is_light_mode__syntax_theme__syntax_set(
             Some(assets.theme_set.themes[&syntax_theme_name].clone())
         };
     opt.computed.syntax_set = assets.syntax_set;
-}
-
-fn _check_validity(opt: &cli::Opt, assets: &HighlightingAssets) {
-    if let Some(ref syntax_theme) = opt.syntax_theme {
-        if !syntax_theme::is_no_syntax_highlighting_theme_name(&syntax_theme) {
-            if !assets.theme_set.themes.contains_key(syntax_theme.as_str()) {
-                return;
-            }
-            let is_light_syntax_theme = syntax_theme::is_light_theme(&syntax_theme);
-            if is_light_syntax_theme && opt.dark {
-                eprintln!(
-                    "{} is a light syntax theme, but you supplied --dark. \
-                     If you use --syntax-theme, you do not need to supply --light or --dark.",
-                    syntax_theme
-                );
-                process::exit(1);
-            } else if !is_light_syntax_theme && opt.light {
-                eprintln!(
-                    "{} is a dark syntax theme, but you supplied --light. \
-                     If you use --syntax-theme, you do not need to supply --light or --dark.",
-                    syntax_theme
-                );
-                process::exit(1);
-            }
-        }
-    }
 }
