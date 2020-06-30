@@ -62,7 +62,13 @@ pub fn set_options(
             git_config.enabled = false;
         }
     }
+
+    // Set light, dark, and syntax-theme.
+    set__light__dark__syntax_theme__options(opt, git_config, arg_matches);
+    theme::set__is_light_mode__syntax_theme__syntax_set(opt, assets);
+
     let builtin_features = features::make_builtin_features();
+    // Set features
     opt.features = gather_features(
         opt,
         builtin_features.keys().into_iter().collect(),
@@ -79,9 +85,6 @@ pub fn set_options(
         }
         .unwrap_or_else(|| "magenta reverse".to_string())
     }
-
-    set__light__dark__syntax_theme__options(opt, &builtin_features, git_config, arg_matches);
-    theme::set__is_light_mode__syntax_theme__syntax_set(opt, assets);
 
     set_options!(
         [
@@ -143,7 +146,6 @@ pub fn set_options(
 #[allow(non_snake_case)]
 fn set__light__dark__syntax_theme__options(
     opt: &mut cli::Opt,
-    builtin_features: &HashMap<String, features::BuiltinFeature>,
     git_config: &mut Option<git_config::GitConfig>,
     arg_matches: &clap::ArgMatches,
 ) {
@@ -153,12 +155,13 @@ fn set__light__dark__syntax_theme__options(
             process::exit(1);
         }
     };
+    let empty_builtin_features = HashMap::new();
     validate_light_and_dark(&opt);
     if !(opt.light || opt.dark) {
         set_options!(
             [("dark", dark), ("light", light)],
             opt,
-            builtin_features,
+            &empty_builtin_features,
             git_config,
             arg_matches,
             false
@@ -168,7 +171,7 @@ fn set__light__dark__syntax_theme__options(
     set_options!(
         [("syntax-theme", syntax_theme)],
         opt,
-        builtin_features,
+        &empty_builtin_features,
         git_config,
         arg_matches,
         false
