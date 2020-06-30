@@ -2,6 +2,7 @@ use ansi_term;
 use lazy_static::lazy_static;
 use regex::Regex;
 
+use crate::color;
 use crate::config;
 use crate::features::OptionValueFunction;
 use crate::style::Style;
@@ -17,20 +18,36 @@ pub fn make_feature() -> Vec<(String, OptionValueFunction)> {
         (
             "line-numbers-minus-style",
             String,
-            Some("color.diff.old"),
-            _opt => "red"
+            None,
+            opt => if opt.computed.is_light_mode {
+                "red".to_string()
+            } else {
+                color::color_to_string(
+                    color::get_minus_emph_background_color_default(
+                        opt.computed.is_light_mode,
+                        opt.computed.true_color,
+                    ))
+            }
         ),
         (
             "line-numbers-zero-style",
             String,
             None,
-            _opt => "#bbbbbb"
+            opt => if opt.computed.is_light_mode {"#dddddd"} else {"#444444"}
         ),
         (
             "line-numbers-plus-style",
             String,
-            Some("color.diff.new"),
-            _opt => "green"
+            None,
+            opt => if opt.computed.is_light_mode {
+                "green".to_string()
+            } else {
+                color::color_to_string(
+                    color::get_plus_emph_background_color_default(
+                        opt.computed.is_light_mode,
+                        opt.computed.true_color,
+                    ))
+            }
         )
     ])
 }
