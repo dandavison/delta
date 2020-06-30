@@ -15,7 +15,7 @@ use crate::bat::output::PagingMode;
 use crate::git_config::GitConfig;
 use crate::options;
 
-#[derive(StructOpt, Clone)]
+#[derive(StructOpt, Clone, Default)]
 #[structopt(
     name = "delta",
     about = "A viewer for git and diff output",

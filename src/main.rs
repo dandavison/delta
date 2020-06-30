@@ -228,20 +228,31 @@ where
 fn show_syntax_themes() -> std::io::Result<()> {
     let mut opt = cli::Opt::from_args();
     let assets = HighlightingAssets::new();
+    let mut output_type = OutputType::from_mode(
+        PagingMode::QuitIfOneScreen,
+        None,
+        &config::Config::from(cli::Opt::default()),
+    )
+    .unwrap();
+    let mut writer = output_type.handle().unwrap();
     opt.computed.syntax_set = assets.syntax_set;
 
     if !(opt.dark || opt.light) {
-        _show_syntax_themes(opt.clone(), true)?;
-        _show_syntax_themes(opt, false)?;
+        _show_syntax_themes(opt.clone(), false, &mut writer)?;
+        _show_syntax_themes(opt, true, &mut writer)?;
     } else if opt.light {
-        _show_syntax_themes(opt, true)?;
+        _show_syntax_themes(opt, true, &mut writer)?;
     } else {
-        _show_syntax_themes(opt, false)?
+        _show_syntax_themes(opt, false, &mut writer)?
     };
     Ok(())
 }
 
-fn _show_syntax_themes(mut opt: cli::Opt, is_light_mode: bool) -> std::io::Result<()> {
+fn _show_syntax_themes(
+    mut opt: cli::Opt,
+    is_light_mode: bool,
+    writer: &mut dyn Write,
+) -> std::io::Result<()> {
     use bytelines::ByteLines;
     use std::io::BufReader;
     let input = if !atty::is(atty::Stream::Stdin) {
@@ -269,8 +280,6 @@ index f38589a..0f1bb83 100644
 
     opt.computed.is_light_mode = is_light_mode;
     let mut config = config::Config::from(opt);
-    let mut output_type = OutputType::from_mode(PagingMode::Never, None, &config).unwrap();
-    let mut writer = output_type.handle().unwrap();
     let title_style = ansi_term::Style::new().bold();
     let assets = HighlightingAssets::new();
 
@@ -283,11 +292,7 @@ index f38589a..0f1bb83 100644
     {
         writeln!(writer, "\n\nTheme: {}\n", title_style.paint(syntax_theme))?;
         config.syntax_theme = Some(assets.theme_set.themes[syntax_theme.as_str()].clone());
-        if let Err(error) = delta(
-            ByteLines::new(BufReader::new(&input[0..])),
-            &mut writer,
-            &config,
-        ) {
+        if let Err(error) = delta(ByteLines::new(BufReader::new(&input[0..])), writer, &config) {
             match error.kind() {
                 ErrorKind::BrokenPipe => process::exit(0),
                 _ => eprintln!("{}", error),
