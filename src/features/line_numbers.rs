@@ -16,6 +16,18 @@ pub fn make_feature() -> Vec<(String, OptionValueFunction)> {
             _opt => true
         ),
         (
+            "line-numbers-left-style",
+            String,
+            None,
+            _opt => "blue"
+        ),
+        (
+            "line-numbers-right-style",
+            String,
+            None,
+            _opt => "blue"
+        ),
+        (
             "line-numbers-minus-style",
             String,
             None,
