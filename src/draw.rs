@@ -6,7 +6,7 @@ use box_drawing;
 use console::strip_ansi_codes;
 use unicode_width::UnicodeWidthStr;
 
-use crate::config::Width;
+use crate::cli::Width;
 use crate::style::Style;
 
 pub fn write_no_decoration(

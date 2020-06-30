@@ -11,6 +11,7 @@ use syntect::highlighting::Theme as SyntaxTheme;
 use syntect::parsing::SyntaxSet;
 
 use crate::bat::assets::HighlightingAssets;
+use crate::bat::output::PagingMode;
 use crate::git_config::GitConfig;
 use crate::options;
 
@@ -509,6 +510,28 @@ pub struct ComputedValues {
     pub syntax_set: SyntaxSet,
     pub syntax_theme: Option<SyntaxTheme>,
     pub syntax_dummy_theme: SyntaxTheme,
+    pub true_color: bool,
+    pub decorations_width: Width,
+    pub background_color_extends_to_terminal_width: bool,
+    pub paging_mode: PagingMode,
+}
+
+#[derive(Clone, Debug)]
+pub enum Width {
+    Fixed(usize),
+    Variable,
+}
+
+impl Default for Width {
+    fn default() -> Self {
+        Width::Variable
+    }
+}
+
+impl Default for PagingMode {
+    fn default() -> Self {
+        PagingMode::Never
+    }
 }
 
 impl Opt {

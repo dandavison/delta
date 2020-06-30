@@ -1,11 +1,15 @@
+use std::cmp::min;
 use std::collections::{HashMap, HashSet, VecDeque};
 use std::process;
 
+use console::Term;
 use structopt::clap;
 
 use crate::bat::assets::HighlightingAssets;
+use crate::bat::output::PagingMode;
 use crate::cli;
 use crate::config;
+use crate::env;
 use crate::features;
 use crate::git_config;
 use crate::options::theme;
@@ -63,7 +67,11 @@ pub fn set_options(
         }
     }
 
+    set_paging_mode(opt);
+    set_widths(opt);
+
     // Set light, dark, and syntax-theme.
+    set_true_color(opt);
     set__light__dark__syntax_theme__options(opt, git_config, arg_matches);
     theme::set__is_light_mode__syntax_theme__syntax_set(opt, assets);
 
@@ -331,4 +339,63 @@ fn gather_builtin_features<'a>(
 
 fn split_feature_string(features: &str) -> impl Iterator<Item = &str> {
     features.split_whitespace().rev()
+}
+
+fn set_true_color(opt: &mut cli::Opt) {
+    opt.computed.true_color = match opt.true_color.as_ref() {
+        "always" => true,
+        "never" => false,
+        "auto" => is_truecolor_terminal(),
+        _ => {
+            eprintln!(
+                "Invalid value for --24-bit-color option: {} (valid values are \"always\", \"never\", and \"auto\")",
+                opt.true_color
+            );
+            process::exit(1);
+        }
+    };
+}
+
+fn is_truecolor_terminal() -> bool {
+    env::get_env_var("COLORTERM")
+        .map(|colorterm| colorterm == "truecolor" || colorterm == "24bit")
+        .unwrap_or(false)
+}
+
+fn set_paging_mode(opt: &mut cli::Opt) {
+    opt.computed.paging_mode = match opt.paging_mode.as_ref() {
+        "always" => PagingMode::Always,
+        "never" => PagingMode::Never,
+        "auto" => PagingMode::QuitIfOneScreen,
+        _ => {
+            eprintln!(
+                "Invalid value for --paging option: {} (valid values are \"always\", \"never\", and \"auto\")",
+                opt.paging_mode
+            );
+            process::exit(1);
+        }
+    };
+}
+
+fn set_widths(opt: &mut cli::Opt) {
+    // Allow one character in case e.g. `less --status-column` is in effect. See #41 and #10.
+    let available_terminal_width = (Term::stdout().size().1 - 1) as usize;
+    let (decorations_width, background_color_extends_to_terminal_width) = match opt.width.as_deref()
+    {
+        Some("variable") => (cli::Width::Variable, false),
+        Some(width) => {
+            let width = width.parse().unwrap_or_else(|_| {
+                eprintln!("Could not parse width as a positive integer: {:?}", width);
+                process::exit(1);
+            });
+            (
+                cli::Width::Fixed(min(width, available_terminal_width)),
+                true,
+            )
+        }
+        None => (cli::Width::Fixed(available_terminal_width), true),
+    };
+    opt.computed.decorations_width = decorations_width;
+    opt.computed.background_color_extends_to_terminal_width =
+        background_color_extends_to_terminal_width;
 }
