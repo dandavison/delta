@@ -12,11 +12,9 @@ Code evolves, and studying diffs to understand how some code has changed is a fu
 - Style (foreground color, background color, font attributes) can be configured independently for more than 20 different sections of the diff
 - Stylable box/line decorations to draw attention to commit, file and hunk header sections.
 - Line numbering (`-n`)
-- `diff-highlight` and `diff-so-fancy` emulation modes permitting incremental adoption of delta-specific features (`--diff-highlight`, `--diff-so-fancy`)
+- `--diff-highlight` and `--diff-so-fancy` emulation modes
 - Code can be copied directly from the diff (`-/+` markers are removed by default).
 - `n` and `N` keybindings to move between files in large diffs, and between diffs in `log -p` views (`--navigate`)
-- Named custom collections of key-value pairs ("features") to keep configuration files well-organized. (`--features`)
-- An extensive test suite
 
 The most convenient way to configure delta is with a `[delta]` section in `~/.gitconfig`. Here's a quick example:
 
@@ -52,11 +50,14 @@ Contents
 * [Configuration](#configuration)
 * [Usage](#usage)
    * [Supported languages and themes](#supported-languages-and-themes)
+   * [Line numbers](#line-numbers)
+   * [Features](#features-1)
+   * [diff-highlight and diff-so-fancy emulation](#diff-highlight-and-diff-so-fancy-emulation)
+   * [Navigation keybindings for large diffs](#navigation-keybindings-for-large-diffs)
    * [24 bit color (truecolor)](#24-bit-color-truecolor)
    * [Using Delta on Windows](#using-delta-on-windows)
    * [Mouse scrolling](#mouse-scrolling)
    * [Using Delta with Magit](#using-delta-with-magit)
-   * [Using Delta with Mercurial](#using-delta-with-mercurial)
 * [Comparisons with other tools](#comparisons-with-other-tools)
 * [Build delta from source](#build-delta-from-source)
 * [Credit](#credit)
@@ -196,7 +197,7 @@ Alternatively, delta is available in the following package managers:
 
 ## Configuration
 
-Set delta to be git's pager in your `.gitconfig`. Delta accepts many command line options to alter colors and other details of the output. An example is
+Set delta to be git's pager in your `.gitconfig`. Delta accepts many command line options to alter colors and other details of the output. An example<sup>1</sup> is
 ```
 [core]
     pager = delta
@@ -222,8 +223,9 @@ All git commands that display diff output should now display syntax-highlighted 
 
 Delta also handles unified diff output, and can be used as an alternative way of invoking `diff -u`. The following two commands do the same thing:
 ```
-diff -u a.txt b.txt | delta
 delta a.txt b.txt
+
+diff -u a.txt b.txt | delta
 ```
 
 ## Usage
@@ -242,14 +244,56 @@ The languages and color themes that ship with delta are those that ship with bat
 
 
 ### Line numbers
-Use `--line-numbers` to activate line numbers. See the `LINE NUMBERS` section in [`delta --help`](#full---help-output) for details.
-<table><tr><td><img width=500px src="https://user-images.githubusercontent.com/52205/86267612-f8af1880-bb94-11ea-9c32-b8b2baa5b94d.png" alt="image" /></td></tr></table>
+Use `--line-numbers` to activate line numbers.
+<table><tr><td><img width=400px src="https://user-images.githubusercontent.com/52205/86275526-76792100-bba1-11ea-9e78-6be9baa80b29.png" alt="image" /></td></tr></table>
+
+The numbers are displayed in two columns and there are several configuration options: see the `LINE NUMBERS` section in [`delta --help`](#full---help-output) for details, and see the next section for an example of configuring line numbers.
+
+### Features
+
+All delta options can go under the `[delta]` section in your git config file. However, you can also use named "features" to keep things organized: these are sections in git config like `[delta "my-feature"]`. Here's an example using two custom features:
+
+```gitconfig
+[delta]
+    features = unobtrusive-line-numbers decorations
+    whitespace-error-style = 22 reverse
+
+[delta "unobtrusive-line-numbers"]
+    line-numbers = true
+    line-numbers-minus-style = "#444444"
+    line-numbers-zero-style = "#444444"
+    line-numbers-plus-style = "#444444"
+    line-numbers-left-format = "{nm:>4}┊"
+    line-numbers-right-format = "{np:>4}│"
+    line-numbers-left-style = "blue"
+    line-numbers-right-style = "blue"
+
+[delta "decorations"]
+    commit-decoration-style = bold yellow box ul
+    file-style = bold yellow ul
+    file-decoration-style = none
+    hunk-header-decoration-style = yellow box
+```
+<table><tr><td><img width=400px src="https://user-images.githubusercontent.com/52205/86275048-a96ee500-bba0-11ea-8a19-584f69758aee.png" alt="image" /></td></tr></table>
+
 
 
 ### diff-highlight and diff-so-fancy emulation
-[diff-highlight](https://github.com/git/git/tree/master/contrib/diff-highlight) is a perl script distributed with git that allows within-line edits to be identified and highlighted according to colors specified in git config. [diff-so-fancy](https://github.com/so-fancy/diff-so-fancy) builds on diff-highlight, making various additional improvements to the default git diff output. Both tools provide very helpful ways of viewing diffs, and delta provides emulation modes for both of them: use `--diff-highlight` or `--diff-so-fancy`.
+
+Use `--diff-highlight` or `--diff-so-fancy` to activate the respective emulation mode.
+
+You may want to know exactly what delta configuration the emulation mode has selected, so that you can adjust it. To do that, use e.g. `delta --diff-so-fancy --show-config`:
+
+<table><tr><td><img width=300px src="https://user-images.githubusercontent.com/52205/86271121-5abe4c80-bb9a-11ea-950a-7c79502267d5.png" alt="image" /></td></tr></table>
+
+[diff-highlight](https://github.com/git/git/tree/master/contrib/diff-highlight) is a perl script distributed with git that allows within-line edits to be identified and highlighted according to colors specified in git config. [diff-so-fancy](https://github.com/so-fancy/diff-so-fancy) builds on diff-highlight, making various additional improvements to the default git diff output. Both tools provide very helpful ways of viewing diffs, and so delta provides emulation modes for both of them.
 
 The edit inference algorithm employed by diff-highlight (and therefore by diff-so-fancy) is deliberately simpler than Delta's Levenshtein-type algorithm (see discussion in the [diff-highlight README](https://github.com/git/git/tree/master/contrib/diff-highlight)). The simpler algorithm could be added as an alternative to delta, but that hasn't been done yet.
+
+### Navigation keybindings for large diffs
+
+Use `--navigate` to activate navigation keybindings. In this mode, pressing `n` will jump forward to the next file in the diff, and `N` will jump backwards. If you are viewing multiple commits (e.g. `git log -p` then navigation will also visit commit boundaries.
+
 
 ### 24 bit color (truecolor)
 
@@ -280,12 +324,6 @@ See [issue #58](https://github.com/dandavison/delta/issues/58) and [bat README /
 Delta can be used when displaying diffs in the Magit git client: see [magit-delta](https://github.com/dandavison/magit-delta). Here's a screenshot:
 
 <table><tr><td><img width=500px src="https://user-images.githubusercontent.com/52205/79934267-2acb2e00-8420-11ea-8bc4-546508fd3581.png" alt="image" /></td></tr></table>
-
-
-### Using Delta with Mercurial
-
-Add delta to the `[pager]` section of `.hgrc`, the same way as `~/.gitconfig`.
-
 
 
 ## Comparisons with other tools
@@ -732,3 +770,5 @@ Use '<' for left-align, '^' for center-align, and '>' for right-align.
 If something isn't working correctly, or you have a feature request, please open an issue at
 https://github.com/dandavison/delta/issues.
 ```
+
+<sup>1</sup> For Mercurial, you can add delta, with command line options, to the `[pager]` section of `.hgrc`.
