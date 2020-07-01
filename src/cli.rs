@@ -186,9 +186,9 @@ For example, the default value of --line-numbers-left-format is '{nm:^4}⋮'. Th
 left column should display the minus line number (nm), center-aligned, padded with spaces to a
 width of 4 characters, followed by a unicode dividing-line character (⋮).
 
-Similarly, the default value of --line-numbers-right-format is '{np:^4}│ '. This means that the
+Similarly, the default value of --line-numbers-right-format is '{np:^4}│'. This means that the
 right column should display the plus line number (np), center-aligned, padded with spaces to a
-width of 4 characters, followed by a unicode dividing-line character (│), and a space.
+width of 4 characters, followed by a unicode dividing-line character (│).
 
 Use '<' for left-align, '^' for center-align, and '>' for right-align.
 
@@ -376,7 +376,7 @@ pub struct Opt {
     /// Format string for the right column of line numbers. A typical value would be "{np:^4}│ "
     /// which means to display the line numbers of the plus file (new version), followed by a
     /// dividing character, and a space. See the LINE NUMBERS section.
-    #[structopt(long = "line-numbers-right-format", default_value = "{np:^4}│ ")]
+    #[structopt(long = "line-numbers-right-format", default_value = "{np:^4}│")]
     pub line_numbers_right_format: String,
 
     /// Style (foreground, background, attributes) for the left column of line numbers. See STYLES
