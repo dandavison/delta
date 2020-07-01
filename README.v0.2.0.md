@@ -3,7 +3,7 @@
 
 ## A viewer for git and diff output
 
-Code evolves, and studying diffs to understand how some code has changed is a fundamental mode of work. Delta aims to allow you to study diffs in exactly the way that you want. Delta wants your work to be both efficient and enjoyable: it allows you to make extensive changes to the layout and styling of diffs, as well as allowing you to stay arbitrarily close to the default git/diff output, changing just the aspects that you want to change.
+Code evolves, and studying diffs to understand how some code has changed is a fundamental mode of work. Delta aims to make studying diffs both efficient and enjoyable: it allows you to make extensive changes to the layout and styling of diffs, as well as allowing you to stay arbitrarily close to the default git/diff output, changing just the aspects that you want to change.
 
 #### Delta's main features are:
 
@@ -228,6 +228,7 @@ delta a.txt b.txt
 
 ## Usage
 
+
 ### Supported languages and themes
 To list the supported languages and color themes, use `delta --list-languages` and `delta --list-theme-names`. To see a demo of the color themes, use `delta --show-syntax-themes`:
 
@@ -238,6 +239,12 @@ To add your own custom color theme, or language, please follow the instructions 
 Delta automatically recognizes custom themes and languages added to bat. You will need to install bat in order to run the `bat cache --build` command.
 
 The languages and color themes that ship with delta are those that ship with bat. So, to propose a new language or color theme for inclusion in delta, it would need to be a helpful addition to bat, in which case please open a PR against bat.
+
+
+### Line numbers
+Use `--line-numbers` to activate line numbers. See the `LINE NUMBERS` section in [`delta --help`](#full---help-output) for details.
+<table><tr><td><img width=500px src="https://user-images.githubusercontent.com/52205/86267612-f8af1880-bb94-11ea-9c32-b8b2baa5b94d.png" alt="image" /></td></tr></table>
+
 
 ### 24 bit color (truecolor)
 
