@@ -365,23 +365,18 @@ USAGE:
 
 FLAGS:
         --light                      Use default colors appropriate for a light terminal background. For more control,
-                                     see the style options
+                                     see the style options and --syntax-theme
         --dark                       Use default colors appropriate for a dark terminal background. For more control,
-                                     see the style options
+                                     see the style options and --syntax-theme
+    -n, --line-numbers               Display line numbers next to the diff. See LINE NUMBERS section
         --diff-highlight             Emulate diff-highlight (https://github.com/git/git/tree/master/contrib/diff-
                                      highlight)
         --diff-so-fancy              Emulate diff-so-fancy (https://github.com/so-fancy/diff-so-fancy)
         --navigate                   Activate diff navigation: use n to jump forwards and N to jump backwards. To change
                                      the file labels used see --file-modified-label, --file-removed-label, --file-added-
                                      label, --file-renamed-label
-    -n, --line-numbers               Display line numbers next to the diff. See LINE NUMBERS section
-        --raw                        Do not alter the input in any way. The only exceptions are the coloring of hunk
-                                     lines: minus lines use color.diff.old (with fallback to "red") and plus lines use
-                                     color.diff.new (with fallback to "green")
-        --color-only                 Do not alter the input in any way except for coloring hunk lines
-        --no-gitconfig               Do not take settings from git config files. See GIT CONFIG section
-        --keep-plus-minus-markers    Prefix added/removed lines with a +/- character, respectively, exactly as git does.
-                                     The default behavior is to output a space character in place of these markers
+        --keep-plus-minus-markers    Prefix added/removed lines with a +/- character, exactly as git does. By default,
+                                     delta does not emit any prefix, so code can be copied directly from delta's output
         --show-config                Display the active values for all Delta options. Style options are displayed with
                                      foreground and background colors. This can be used to experiment with colors by
                                      combining this option with other options such as --minus-style, --zero-style,
@@ -391,6 +386,11 @@ FLAGS:
         --show-syntax-themes         Show all available syntax-highlighting themes, each with an example of highlighted
                                      diff output. If diff output is supplied on standard input then this will be used
                                      for the demo. For example: `git show --color=always | delta --show-syntax-themes`
+        --no-gitconfig               Do not take any settings from git config. See GIT CONFIG section
+        --raw                        Do not alter the input in any way. This is mainly intended for testing delta
+        --color-only                 Do not alter the input structurally in any way, but color and highlight hunk lines
+                                     according to your delta configuration. This is mainly intended for other tools that
+                                     use delta
         --highlight-removed          Deprecated: use --minus-style='syntax'
     -h, --help                       Prints help information
     -V, --version                    Prints version information
@@ -426,7 +426,8 @@ OPTIONS:
             Style (foreground, background, attributes) for non-emphasized sections of added lines that have an
             emphasized section. Defaults to --plus-style. See STYLES section [default: auto auto]
         --commit-style <commit-style>
-            Style (foreground, background, attributes) for the commit hash line. See STYLES section [default: raw]
+            Style (foreground, background, attributes) for the commit hash line. See STYLES section [default:
+            raw]
         --commit-decoration-style <commit-decoration-style>
             Style (foreground, background, attributes) for the commit hash decoration. See STYLES section. One of the
             special attributes 'box', 'ul', 'overline', or 'underoverline' must be given [default: ]
@@ -436,24 +437,20 @@ OPTIONS:
         --file-decoration-style <file-decoration-style>
             Style (foreground, background, attributes) for the file decoration. See STYLES section. One of the special
             attributes 'box', 'ul', 'overline', or 'underoverline' must be given [default: blue ul]
-        --file-modified-label <file-modified-label>
-            Text to display in front of a modified file path [default: ]
-
-        --file-removed-label <file-removed-label>
-            Text to display in front of a removed file path [default: removed:]
-
-        --file-added-label <file-added-label>
-            Text to display in front of a added file path [default: added:]
-
-        --file-renamed-label <file-renamed-label>
-            Text to display in front of a renamed file path [default: renamed:]
-
         --hunk-header-style <hunk-header-style>
             Style (foreground, background, attributes) for the hunk-header. See STYLES section [default: syntax]
 
         --hunk-header-decoration-style <hunk-header-decoration-style>
             Style (foreground, background, attributes) for the hunk-header decoration. See STYLES section. One of the
             special attributes 'box', 'ul', 'overline', or 'underoverline' must be given [default: blue box]
+        --word-diff-regex <tokenization-regex>
+            The regular expression used to decide what a word is for the within-line highlight algorithm. For less fine-
+            grained matching than the default try --word-diff-regex="\S+" --max-line-distance=1.0 (this is more
+            similar to `git --word-diff`) [default: \w+]
+        --max-line-distance <max-line-distance>
+            The maximum distance between two lines for them to be inferred to be homologous. Homologous line pairs are
+            highlighted according to the deletion and insertion operations transforming one into the other [default:
+            0.6]
         --line-numbers-minus-style <line-numbers-minus-style>
             Style (foreground, background, attributes) for line numbers in the old (minus) version of the file. See
             STYLES and LINE NUMBERS sections [default: auto]
@@ -477,6 +474,18 @@ OPTIONS:
         --line-numbers-right-style <line-numbers-right-style>
             Style (foreground, background, attributes) for the right column of line numbers. See STYLES and LINE NUMBERS
             sections [default: auto]
+        --file-modified-label <file-modified-label>
+            Text to display in front of a modified file path [default: ]
+
+        --file-removed-label <file-removed-label>
+            Text to display in front of a removed file path [default: removed:]
+
+        --file-added-label <file-added-label>
+            Text to display in front of a added file path [default: added:]
+
+        --file-renamed-label <file-renamed-label>
+            Text to display in front of a renamed file path [default: renamed:]
+
     -w, --width <width>
             The width of underline/overline decorations. Use --width=variable to extend decorations and background
             colors to the end of the text only. Otherwise background colors extend to the full terminal width
@@ -485,14 +494,6 @@ OPTIONS:
             but note that in that case delta will calculate line widths assuming tabs occupy one character's width on
             the screen: if your terminal renders tabs as more than than one character wide then delta's output will look
             incorrect [default: 4]
-        --word-diff-regex <tokenization-regex>
-            The regular expression used to decide what a word is for the within-line highlight algorithm. For less fine-
-            grained matching than the default try --word-diff-regex="\S+" --max-line-distance=1.0 (this is more
-            similar to `git --word-diff`) [default: \w+]
-        --max-line-distance <max-line-distance>
-            The maximum distance between two lines for them to be inferred to be homologous. Homologous line pairs are
-            highlighted according to the deletion and insertion operations transforming one into the other [default:
-            0.6]
         --24-bit-color <true-color>
             Whether to emit 24-bit ("true color") RGB color codes. Options are auto, always, and never. "auto" means
             that delta will emit 24-bit color codes iff the environment variable COLORTERM has the value "truecolor" or
@@ -539,7 +540,8 @@ OPTIONS:
         --theme <deprecated-theme>                                         Deprecated: use --syntax-theme
 
 ARGS:
-    <minus-file>    First file to be compared when delta is being used in diff mode
+    <minus-file>    First file to be compared when delta is being used in diff mode: `delta file_1 file_2` is
+                    equivalent to `diff -u file_1 file_2 | delta`
     <plus-file>     Second file to be compared when delta is being used in diff mode
 
 GIT CONFIG

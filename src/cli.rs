@@ -198,6 +198,75 @@ https://github.com/dandavison/delta/issues.
 "
 )]
 pub struct Opt {
+    /// Use default colors appropriate for a light terminal background. For more control, see the
+    /// style options and --syntax-theme.
+    #[structopt(long = "light")]
+    pub light: bool,
+
+    /// Use default colors appropriate for a dark terminal background. For more control, see the
+    /// style options and --syntax-theme.
+    #[structopt(long = "dark")]
+    pub dark: bool,
+
+    /// Display line numbers next to the diff. See LINE NUMBERS section.
+    #[structopt(short = "n", long = "line-numbers")]
+    pub line_numbers: bool,
+
+    #[structopt(long = "diff-highlight")]
+    /// Emulate diff-highlight (https://github.com/git/git/tree/master/contrib/diff-highlight)
+    pub diff_highlight: bool,
+
+    #[structopt(long = "diff-so-fancy")]
+    /// Emulate diff-so-fancy (https://github.com/so-fancy/diff-so-fancy)
+    pub diff_so_fancy: bool,
+
+    #[structopt(long = "navigate")]
+    /// Activate diff navigation: use n to jump forwards and N to jump backwards. To change the
+    /// file labels used see --file-modified-label, --file-removed-label, --file-added-label,
+    /// --file-renamed-label.
+    pub navigate: bool,
+
+    #[structopt(long = "keep-plus-minus-markers")]
+    /// Prefix added/removed lines with a +/- character, exactly as git does. By default, delta
+    /// does not emit any prefix, so code can be copied directly from delta's output.
+    pub keep_plus_minus_markers: bool,
+
+    /// Display the active values for all Delta options. Style options are displayed with
+    /// foreground and background colors. This can be used to experiment with colors by combining
+    /// this option with other options such as --minus-style, --zero-style, --plus-style, --light,
+    /// --dark, etc.
+    #[structopt(long = "show-config")]
+    pub show_config: bool,
+
+    /// List supported languages and associated file extensions.
+    #[structopt(long = "list-languages")]
+    pub list_languages: bool,
+
+    /// List available syntax-highlighting color themes.
+    #[structopt(long = "list-syntax-themes")]
+    pub list_syntax_themes: bool,
+
+    /// Show all available syntax-highlighting themes, each with an example of highlighted diff output.
+    /// If diff output is supplied on standard input then this will be used for the demo. For
+    /// example: `git show --color=always | delta --show-syntax-themes`.
+    #[structopt(long = "show-syntax-themes")]
+    pub show_syntax_themes: bool,
+
+    #[structopt(long = "no-gitconfig")]
+    /// Do not take any settings from git config. See GIT CONFIG section.
+    pub no_gitconfig: bool,
+
+    #[structopt(long = "raw")]
+    /// Do not alter the input in any way. This is mainly intended for testing delta.
+    pub raw: bool,
+
+    #[structopt(long = "color-only")]
+    /// Do not alter the input structurally in any way, but color and highlight hunk lines
+    /// according to your delta configuration. This is mainly intended for other tools that use
+    /// delta.
+    pub color_only: bool,
+
+    ////////////////////////////////////////////////////////////////////////////////////////////
     #[structopt(long = "features", default_value = "")]
     /// Name of delta features to use (space-separated). A feature is a named collection of delta
     /// options in ~/.gitconfig. See FEATURES section.
@@ -209,24 +278,6 @@ pub struct Opt {
     /// from the BAT_THEME environment variable, if that contains a valid theme name.
     /// --syntax-theme=none disables all syntax highlighting.
     pub syntax_theme: Option<String>,
-
-    /// Use default colors appropriate for a light terminal background. For more control, see the
-    /// style options.
-    #[structopt(long = "light")]
-    pub light: bool,
-
-    /// Use default colors appropriate for a dark terminal background. For more control, see the
-    /// style options.
-    #[structopt(long = "dark")]
-    pub dark: bool,
-
-    #[structopt(long = "diff-highlight")]
-    /// Emulate diff-highlight (https://github.com/git/git/tree/master/contrib/diff-highlight)
-    pub diff_highlight: bool,
-
-    #[structopt(long = "diff-so-fancy")]
-    /// Emulate diff-so-fancy (https://github.com/so-fancy/diff-so-fancy)
-    pub diff_so_fancy: bool,
 
     #[structopt(long = "minus-style", default_value = "normal auto")]
     /// Style (foreground, background, attributes) for removed lines. See STYLES section.
@@ -279,28 +330,6 @@ pub struct Opt {
     /// of the special attributes 'box', 'ul', 'overline', or 'underoverline' must be given.
     pub file_decoration_style: String,
 
-    #[structopt(long = "navigate")]
-    /// Activate diff navigation: use n to jump forwards and N to jump backwards. To change the
-    /// file labels used see --file-modified-label, --file-removed-label, --file-added-label,
-    /// --file-renamed-label.
-    pub navigate: bool,
-
-    #[structopt(long = "file-modified-label", default_value = "")]
-    /// Text to display in front of a modified file path.
-    pub file_modified_label: String,
-
-    #[structopt(long = "file-removed-label", default_value = "removed:")]
-    /// Text to display in front of a removed file path.
-    pub file_removed_label: String,
-
-    #[structopt(long = "file-added-label", default_value = "added:")]
-    /// Text to display in front of a added file path.
-    pub file_added_label: String,
-
-    #[structopt(long = "file-renamed-label", default_value = "renamed:")]
-    /// Text to display in front of a renamed file path.
-    pub file_renamed_label: String,
-
     #[structopt(long = "hunk-header-style", default_value = "syntax")]
     /// Style (foreground, background, attributes) for the hunk-header. See STYLES section.
     pub hunk_header_style: String,
@@ -311,9 +340,17 @@ pub struct Opt {
     /// given.
     pub hunk_header_decoration_style: String,
 
-    /// Display line numbers next to the diff. See LINE NUMBERS section.
-    #[structopt(short = "n", long = "line-numbers")]
-    pub line_numbers: bool,
+    /// The regular expression used to decide what a word is for the within-line highlight
+    /// algorithm. For less fine-grained matching than the default try --word-diff-regex="\S+"
+    /// --max-line-distance=1.0 (this is more similar to `git --word-diff`).
+    #[structopt(long = "word-diff-regex", default_value = r"\w+")]
+    pub tokenization_regex: String,
+
+    /// The maximum distance between two lines for them to be inferred to be homologous. Homologous
+    /// line pairs are highlighted according to the deletion and insertion operations transforming
+    /// one into the other.
+    #[structopt(long = "max-line-distance", default_value = "0.6")]
+    pub max_line_distance: f64,
 
     /// Style (foreground, background, attributes) for line numbers in the old (minus) version of
     /// the file. See STYLES and LINE NUMBERS sections.
@@ -352,24 +389,21 @@ pub struct Opt {
     #[structopt(long = "line-numbers-right-style", default_value = "auto")]
     pub line_numbers_right_style: String,
 
-    #[structopt(long = "raw")]
-    /// Do not alter the input in any way. The only exceptions are the coloring of hunk lines:
-    /// minus lines use color.diff.old (with fallback to "red") and plus lines use color.diff.new
-    /// (with fallback to "green").
-    pub raw: bool,
+    #[structopt(long = "file-modified-label", default_value = "")]
+    /// Text to display in front of a modified file path.
+    pub file_modified_label: String,
 
-    #[structopt(long = "color-only")]
-    /// Do not alter the input in any way except for coloring hunk lines.
-    pub color_only: bool,
+    #[structopt(long = "file-removed-label", default_value = "removed:")]
+    /// Text to display in front of a removed file path.
+    pub file_removed_label: String,
 
-    #[structopt(long = "no-gitconfig")]
-    /// Do not take settings from git config files. See GIT CONFIG section.
-    pub no_gitconfig: bool,
+    #[structopt(long = "file-added-label", default_value = "added:")]
+    /// Text to display in front of a added file path.
+    pub file_added_label: String,
 
-    #[structopt(long = "keep-plus-minus-markers")]
-    /// Prefix added/removed lines with a +/- character, respectively, exactly as git does. The
-    /// default behavior is to output a space character in place of these markers.
-    pub keep_plus_minus_markers: bool,
+    #[structopt(long = "file-renamed-label", default_value = "renamed:")]
+    /// Text to display in front of a renamed file path.
+    pub file_renamed_label: String,
 
     /// The width of underline/overline decorations. Use --width=variable to extend decorations and
     /// background colors to the end of the text only. Otherwise background colors extend to the
@@ -383,39 +417,6 @@ pub struct Opt {
     /// one character wide then delta's output will look incorrect.
     #[structopt(long = "tabs", default_value = "4")]
     pub tab_width: usize,
-
-    /// Display the active values for all Delta options. Style options are displayed with
-    /// foreground and background colors. This can be used to experiment with colors by combining
-    /// this option with other options such as --minus-style, --zero-style, --plus-style, --light,
-    /// --dark, etc.
-    #[structopt(long = "show-config")]
-    pub show_config: bool,
-
-    /// List supported languages and associated file extensions.
-    #[structopt(long = "list-languages")]
-    pub list_languages: bool,
-
-    /// List available syntax-highlighting color themes.
-    #[structopt(long = "list-syntax-themes")]
-    pub list_syntax_themes: bool,
-
-    /// Show all available syntax-highlighting themes, each with an example of highlighted diff output.
-    /// If diff output is supplied on standard input then this will be used for the demo. For
-    /// example: `git show --color=always | delta --show-syntax-themes`.
-    #[structopt(long = "show-syntax-themes")]
-    pub show_syntax_themes: bool,
-
-    /// The regular expression used to decide what a word is for the within-line highlight
-    /// algorithm. For less fine-grained matching than the default try --word-diff-regex="\S+"
-    /// --max-line-distance=1.0 (this is more similar to `git --word-diff`).
-    #[structopt(long = "word-diff-regex", default_value = r"\w+")]
-    pub tokenization_regex: String,
-
-    /// The maximum distance between two lines for them to be inferred to be homologous. Homologous
-    /// line pairs are highlighted according to the deletion and insertion operations transforming
-    /// one into the other.
-    #[structopt(long = "max-line-distance", default_value = "0.6")]
-    pub max_line_distance: f64,
 
     /// Whether to emit 24-bit ("true color") RGB color codes. Options are auto, always, and never.
     /// "auto" means that delta will emit 24-bit color codes iff the environment variable COLORTERM
@@ -431,7 +432,8 @@ pub struct Opt {
     #[structopt(long = "paging", default_value = "auto")]
     pub paging_mode: String,
 
-    /// First file to be compared when delta is being used in diff mode.
+    /// First file to be compared when delta is being used in diff mode: `delta file_1 file_2` is
+    /// equivalent to `diff -u file_1 file_2 | delta`.
     #[structopt(parse(from_os_str))]
     pub minus_file: Option<PathBuf>,
 
