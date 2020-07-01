@@ -34,11 +34,7 @@ pub fn make_feature() -> Vec<(String, OptionValueFunction)> {
             opt => if opt.computed.is_light_mode {
                 "red".to_string()
             } else {
-                color::color_to_string(
-                    color::get_minus_emph_background_color_default(
-                        opt.computed.is_light_mode,
-                        opt.computed.true_color,
-                    ))
+                "88"
             }
         ),
         (
@@ -54,11 +50,7 @@ pub fn make_feature() -> Vec<(String, OptionValueFunction)> {
             opt => if opt.computed.is_light_mode {
                 "green".to_string()
             } else {
-                color::color_to_string(
-                    color::get_plus_emph_background_color_default(
-                        opt.computed.is_light_mode,
-                        opt.computed.true_color,
-                    ))
+                "28"
             }
         )
     ])
