@@ -569,7 +569,7 @@ OPTIONS:
             incorrect [default: 4]
         --24-bit-color <true-color>
             Whether to emit 24-bit ("true color") RGB color codes. Options are auto, always, and never. "auto" means
-            that delta will emit 24-bit color codes iff the environment variable COLORTERM has the value "truecolor" or
+            that delta will emit 24-bit color codes if the environment variable COLORTERM has the value "truecolor" or
             "24bit". If your terminal application (the application you use to enter commands at a shell prompt) supports
             24 bit colors, then it probably already sets this environment variable, in which case you don't need to do
             anything [default: auto]
