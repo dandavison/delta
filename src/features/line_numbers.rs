@@ -2,7 +2,6 @@ use ansi_term;
 use lazy_static::lazy_static;
 use regex::Regex;
 
-use crate::color;
 use crate::config;
 use crate::features::OptionValueFunction;
 use crate::style::Style;
@@ -34,7 +33,7 @@ pub fn make_feature() -> Vec<(String, OptionValueFunction)> {
             opt => if opt.computed.is_light_mode {
                 "red".to_string()
             } else {
-                "88"
+                "88".to_string()
             }
         ),
         (
@@ -50,7 +49,7 @@ pub fn make_feature() -> Vec<(String, OptionValueFunction)> {
             opt => if opt.computed.is_light_mode {
                 "green".to_string()
             } else {
-                "28"
+                "28".to_string()
             }
         )
     ])
