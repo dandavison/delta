@@ -254,7 +254,7 @@ https://git-scm.com/docs/git-config#Documentation/git-config.txt-color
 Here's an example:
 
 ```
---minus-style 'red bold ul #ffeeee'
+--minus-style 'red bold ul "#ffeeee"'
 ```
 
 That means: For removed lines, set the foreground (text) color to 'red', make it bold and underlined, and set the background color to `#ffeeee`.
@@ -656,7 +656,7 @@ https://git-scm.com/docs/git-config#Documentation/git-config.txt-color
 
 Here is an example:
 
---minus-style 'red bold ul #ffeeee'
+--minus-style 'red bold ul "#ffeeee"'
 
 That means: For removed lines, set the foreground (text) color to 'red', make it bold and
             underlined, and set the background color to '#ffeeee'.
