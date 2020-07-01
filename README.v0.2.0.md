@@ -26,13 +26,16 @@ The most convenient way to configure delta is with a `[delta]` section in `~/.gi
 [core]
     pager = delta
 
+[interactive]
+    diffFilter = delta --color-only
+
 [delta]
     features = decorations
     whitespace-error-style = 22 reverse
 
 [delta "decorations"]
-    commit-decoration-style = bold box ul
-    file-style = bold 19 ul
+    commit-decoration-style = bold yellow box ul
+    file-style = bold yellow ul
     file-decoration-style = none
 ```
 
@@ -119,10 +122,10 @@ Here's what `git show` can look like with git configured to use delta:
   </tr>
   <tr>
     <td>
-      <code>delta --list-themes --dark</code>
+      <code>delta --show-syntax-themes --dark</code>
     </td>
     <td>
-      <code>delta --list-themes --light</code>
+      <code>delta --show-syntax-themes --light</code>
     </td>
   </tr>
 </table>
@@ -204,7 +207,7 @@ Set delta to be git's pager in your `.gitconfig`. Delta accepts many command lin
     theme = 'Monokai Extended'
 
 [interactive]
-    diffFilter = delta --raw
+    diffFilter = delta --color-only
 ```
 
 Note that delta argument values in ~/.gitconfig should be in double quotes, like `--minus-color="#340001"`. For a theme name containing a space, use single quotes, like `--theme='Monokai Extended'`.
@@ -226,7 +229,7 @@ delta a.txt b.txt
 ## Usage
 
 ### Supported languages and themes
-To list the supported languages and color themes, use `delta --list-languages` and `delta --list-theme-names`. To see a demo of the color themes, use `delta --list-themes`:
+To list the supported languages and color themes, use `delta --list-languages` and `delta --list-theme-names`. To see a demo of the color themes, use `delta --show-syntax-themes`:
 
 To add your own custom color theme, or language, please follow the instructions in the Customization section of the [bat documentation](https://github.com/sharkdp/bat/#customization):
 - [Adding a custom language](https://github.com/sharkdp/bat/#adding-new-syntaxes--language-definitions)
