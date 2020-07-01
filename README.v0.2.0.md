@@ -246,6 +246,11 @@ Use `--line-numbers` to activate line numbers. See the `LINE NUMBERS` section in
 <table><tr><td><img width=500px src="https://user-images.githubusercontent.com/52205/86267612-f8af1880-bb94-11ea-9c32-b8b2baa5b94d.png" alt="image" /></td></tr></table>
 
 
+### diff-highlight and diff-so-fancy emulation
+[diff-highlight](https://github.com/git/git/tree/master/contrib/diff-highlight) is a perl script distributed with git that allows within-line edits to be identified and highlighted according to colors specified in git config. [diff-so-fancy](https://github.com/so-fancy/diff-so-fancy) builds on diff-highlight, making various additional improvements to the default git diff output. Both tools provide very helpful ways of viewing diffs, and delta provides emulation modes for both of them: use `--diff-highlight` or `--diff-so-fancy`.
+
+The edit inference algorithm employed by diff-highlight (and therefore by diff-so-fancy) is deliberately simpler than Delta's Levenshtein-type algorithm (see discussion in the [diff-highlight README](https://github.com/git/git/tree/master/contrib/diff-highlight)). The simpler algorithm could be added as an alternative to delta, but that hasn't been done yet.
+
 ### 24 bit color (truecolor)
 
 Delta looks best if your terminal application supports 24 bit colors. See https://gist.github.com/XVilka/8346728. For example, on MacOS, iTerm2 supports 24-bit colors but Terminal.app does not.
@@ -261,7 +266,7 @@ and you may then  need to quit tmux completely for it to take effect.
 
 ### Using Delta on Windows
 
-Delta works with Windows. However, the `less.exe` installed with git doesn't work well with `delta`. A patched version of `less.exe` and instructions for installing can be found [here](https://github.com/lzybkr/less/releases/tag/fix_windows_vt).
+Delta works on Windows. However, the `less.exe` installed with git doesn't work well with `delta`. A patched version of `less.exe` and instructions for installing can be found [here](https://github.com/lzybkr/less/releases/tag/fix_windows_vt).
 
 
 ### Mouse scrolling
