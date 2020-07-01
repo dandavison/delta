@@ -29,6 +29,7 @@ use std::process;
 use ansi_term;
 use atty;
 use bytelines::ByteLinesReader;
+use itertools::Itertools;
 use structopt::StructOpt;
 
 use crate::bat::assets::{list_languages, HighlightingAssets};
@@ -303,22 +304,53 @@ index f38589a..0f1bb83 100644
 }
 
 pub fn list_syntax_themes() -> std::io::Result<()> {
+    if atty::is(atty::Stream::Stdout) {
+        return _list_syntax_themes_for_humans();
+    } else {
+        return _list_syntax_themes_for_machines();
+    }
+}
+
+pub fn _list_syntax_themes_for_humans() -> std::io::Result<()> {
     let assets = HighlightingAssets::new();
     let themes = &assets.theme_set.themes;
     let stdout = io::stdout();
     let mut stdout = stdout.lock();
 
     writeln!(stdout, "Light themes:")?;
-    for (theme, _) in themes.iter() {
-        if is_light_syntax_theme(theme) {
-            writeln!(stdout, "    {}", theme)?;
-        }
+    for (theme, _) in themes.iter().filter(|(t, _)| is_light_syntax_theme(*t)) {
+        writeln!(stdout, "    {}", theme)?;
     }
-    writeln!(stdout, "Dark themes:")?;
-    for (theme, _) in themes.iter() {
-        if !is_light_syntax_theme(theme) {
-            writeln!(stdout, "    {}", theme)?;
-        }
+    writeln!(stdout, "\nDark themes:")?;
+    for (theme, _) in themes.iter().filter(|(t, _)| !is_light_syntax_theme(*t)) {
+        writeln!(stdout, "    {}", theme)?;
+    }
+    writeln!(
+        stdout,
+        "\nUse delta --show-syntax-themes to demo the themes."
+    )?;
+    Ok(())
+}
+
+pub fn _list_syntax_themes_for_machines() -> std::io::Result<()> {
+    let assets = HighlightingAssets::new();
+    let themes = &assets.theme_set.themes;
+    let stdout = io::stdout();
+    let mut stdout = stdout.lock();
+    for (theme, _) in themes
+        .iter()
+        .sorted_by_key(|(t, _)| is_light_syntax_theme(*t))
+    {
+        writeln!(
+            stdout,
+            "{:5}\t{}",
+            if is_light_syntax_theme(theme) {
+                "light"
+            } else {
+                "dark"
+            },
+            theme
+        )?;
     }
     Ok(())
 }
