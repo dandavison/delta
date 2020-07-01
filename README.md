@@ -199,7 +199,7 @@ Alternatively, delta is available in the following package managers:
 
 ## Configuration
 
-Set delta to be git's pager in your `.gitconfig`. Delta accepts many command line options to alter colors and other details of the output. An example<sup>1</sup> is
+Set delta to be git's pager in your `.gitconfig`. Delta accepts many command line options to alter colors and other details of the output. An example is
 ```
 [core]
     pager = delta
@@ -222,6 +222,8 @@ All git commands that display diff output should now display syntax-highlighted 
   - `git stash show -p`
   - `git reflog -p`
   - `git add -p`
+
+For Mercurial, you can add delta, with its command line options, to the `[pager]` section of `.hgrc`.
 
 Delta also handles unified diff output, and can be used as an alternative way of invoking `diff -u`. The following two commands do the same thing:
 ```
@@ -788,5 +790,3 @@ Use '<' for left-align, '^' for center-align, and '>' for right-align.
 If something isn't working correctly, or you have a feature request, please open an issue at
 https://github.com/dandavison/delta/issues.
 ```
-
-<sup>1</sup> For Mercurial, you can add delta, with command line options, to the `[pager]` section of `.hgrc`.
