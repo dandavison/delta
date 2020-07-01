@@ -1,3 +1,7 @@
+# TODO:
+# - Update binary assets from bat
+# - Update README prior to release
+
 release: \
 	clean \
 	check_environment \
