@@ -3,7 +3,7 @@
 
 ## A viewer for git and diff output
 
-Code evolves, and studying diffs to understand how some code has changed is a fundamental mode of work. Delta aims to allow you to study diffs in exactly the way that you want. Some people stay fairly close to the default git/diff output, whereas others make extensive changes to layout and visual appearance. Delta wants your work to be both efficient and enjoyable, and it supports all of the above.
+Code evolves, and studying diffs to understand how some code has changed is a fundamental mode of work. Delta aims to allow you to study diffs in exactly the way that you want. Delta wants your work to be both efficient and enjoyable: it allows you to make extensive changes to the layout and styling of diffs, as well as allowing you to stay arbitrarily close to the default git/diff output, changing just the aspects that you want to change.
 
 #### Delta's main features are:
 
@@ -12,7 +12,7 @@ Code evolves, and studying diffs to understand how some code has changed is a fu
 - Style (foreground color, background color, font attributes) can be configured independently for more than 20 different sections of the diff
 - Stylable box/line decorations to draw attention to commit, file and hunk header sections.
 - Line numbering (`-n`)
-- Diff-highlight and diff-so-fancy emulation modes permitting incremental adoption of delta-specific features (`--diff-highlight`, `--diff-so-fancy`)
+- `diff-highlight` and `diff-so-fancy` emulation modes permitting incremental adoption of delta-specific features (`--diff-highlight`, `--diff-so-fancy`)
 - Code can be copied directly from the diff (`-/+` markers are removed by default).
 - `n` and `N` keybindings to move between files in large diffs, and between diffs in `log -p` views (`--navigate`)
 - Named custom collections of key-value pairs ("features") to keep configuration files well-organized. (`--features`)
@@ -39,7 +39,7 @@ The most convenient way to configure delta is with a `[delta]` section in `~/.gi
 </sub>
 
 
-Delta is evolving too. Planned features for the future include a side-by-side diff view and alternative within-line highlighting algorithms.
+Planned features in the future include a side-by-side diff view and alternative within-line highlighting algorithms.
 
 Contents
 ========
@@ -375,23 +375,22 @@ FLAGS:
                                      the file labels used see --file-modified-label, --file-removed-label, --file-added-
                                      label, --file-renamed-label
     -n, --line-numbers               Display line numbers next to the diff. See LINE NUMBERS section
-        --raw                        Do not alter the input in any way other than applying colors. Equivalent to
-                                     `--keep-plus-minus-markers --width variable --tabs 0 --commit-decoration '' --file-
-                                     decoration '' --hunk-decoration ''`
+        --raw                        Do not alter the input in any way. The only exceptions are the coloring of hunk
+                                     lines: minus lines use color.diff.old (with fallback to "red") and plus lines use
+                                     color.diff.new (with fallback to "green")
+        --color-only                 Do not alter the input in any way except for coloring hunk lines
         --no-gitconfig               Do not take settings from git config files. See GIT CONFIG section
         --keep-plus-minus-markers    Prefix added/removed lines with a +/- character, respectively, exactly as git does.
                                      The default behavior is to output a space character in place of these markers
-        --show-background-colors     Show the command-line arguments (RGB hex codes) for the background colors that are
-                                     in effect. The hex codes are displayed with their associated background color. This
-                                     option can be combined with --light and --dark to view the background colors for
-                                     those modes. It can also be used to experiment with different RGB hex codes by
-                                     combining this option with style options such as --minus-style, --zero-style,
-                                     --plus-style, etc
+        --show-config                Display the active values for all Delta options. Style options are displayed with
+                                     foreground and background colors. This can be used to experiment with colors by
+                                     combining this option with other options such as --minus-style, --zero-style,
+                                     --plus-style, --light, --dark, etc
         --list-languages             List supported languages and associated file extensions
         --list-syntax-themes         List available syntax-highlighting color themes
-        --show-syntax-themes         List available syntax-highlighting themes, each with an example of highlighted diff
-                                     output. If diff output is supplied on standard input then this will be used for the
-                                     demo. For example: `git show --color=always | delta --show-syntax-themes`
+        --show-syntax-themes         Show all available syntax-highlighting themes, each with an example of highlighted
+                                     diff output. If diff output is supplied on standard input then this will be used
+                                     for the demo. For example: `git show --color=always | delta --show-syntax-themes`
         --highlight-removed          Deprecated: use --minus-style='syntax'
     -h, --help                       Prints help information
     -V, --version                    Prints version information
@@ -404,7 +403,7 @@ OPTIONS:
             The code syntax-highlighting theme to use. Use --show-syntax-themes to demo available themes. If the syntax-
             highlighting theme is not set using this option, it will be taken from the BAT_THEME environment
             variable, if that contains a valid theme name. --syntax-theme=none disables all syntax highlighting [env:
-            BAT_THEME=base16]
+            BAT_THEME=]
         --minus-style <minus-style>
             Style (foreground, background, attributes) for removed lines. See STYLES section [default: normal
             auto]
@@ -557,22 +556,16 @@ is
     zero-style = dim syntax
 
 FEATURES
--------
-A feature is a named collection of delta options in ~/.gitconfig. An example is:
+--------
+A feature is a named collection of delta options in git config. An example is:
 
-[delta "my-delta-theme-feature"]
+[delta "my-delta-feature"]
     syntax-theme = Dracula
     plus-style = bold syntax "#002800"
-    ...
 
 To activate those options, you would use:
 
 delta --features my-delta-feature
-
-or in ~/.gitconfig
-
-[delta]
-    features = my-delta-feature
 
 A feature name may not contain whitespace. You can activate multiple features:
 
@@ -580,11 +573,6 @@ A feature name may not contain whitespace. You can activate multiple features:
     features = my-highlight-styles-colors-feature my-line-number-styles-feature
 
 If more than one feature sets the same option, the last one wins.
-
-There are two built-in features:
-
---features diff-highlight (https://github.com/git/git/tree/master/contrib/diff-highlight)
---features diff-so-fancy (https://github.com/so-fancy/diff-so-fancy)
 
 STYLES
 ------
