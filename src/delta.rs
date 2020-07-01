@@ -178,9 +178,12 @@ fn should_handle(state: &State, config: &Config) -> bool {
 fn detect_source(line: &str) -> Source {
     if line.starts_with("commit ") || line.starts_with("diff --git ") {
         Source::GitDiff
-    } else if line.starts_with("diff -u ")
+    } else if line.starts_with("diff -u")
+        || line.starts_with("diff -ru")
+        || line.starts_with("diff -r -u")
         || line.starts_with("diff -U")
         || line.starts_with("--- ")
+        || line.starts_with("Only in ")
     {
         Source::DiffUnified
     } else {
