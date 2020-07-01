@@ -50,6 +50,7 @@ Contents
 * [Configuration](#configuration)
 * [Usage](#usage)
    * [Supported languages and themes](#supported-languages-and-themes)
+   * [Choosing colors (styles)](#choosing-colors-styles)
    * [Line numbers](#line-numbers)
    * [Custom features](#custom-features)
    * [diff-highlight and diff-so-fancy emulation](#diff-highlight-and-diff-so-fancy-emulation)
@@ -63,6 +64,7 @@ Contents
 * [Credit](#credit)
 * [Projects using delta](#projects-using-delta)
 * [Full --help output](#full---help-output)
+
 
 Here's what `git show` can look like with git configured to use delta:
 
@@ -243,6 +245,22 @@ Delta automatically recognizes custom themes and languages added to bat. You wil
 The languages and color themes that ship with delta are those that ship with bat. So, to propose a new language or color theme for inclusion in delta, it would need to be a helpful addition to bat, in which case please open a PR against bat.
 
 
+### Choosing colors (styles)
+
+All options that have a name like `--*-style` work in the same way. It is very similar to how
+colors/styles are specified in a gitconfig file:
+https://git-scm.com/docs/git-config#Documentation/git-config.txt-color
+
+Here's an example:
+
+```
+--minus-style 'red bold ul #ffeeee'
+```
+
+That means: For removed lines, set the foreground (text) color to 'red', make it bold and underlined, and set the background color to `#ffeeee`.
+
+For full details, see the `STYLES` section in [`delta --help`](#full---help-output).
+
 ### Line numbers
 Use `--line-numbers` to activate line numbers.
 <table><tr><td><img width=400px src="https://user-images.githubusercontent.com/52205/86275526-76792100-bba1-11ea-9e78-6be9baa80b29.png" alt="image" /></td></tr></table>
@@ -282,7 +300,7 @@ All delta options can go under the `[delta]` section in your git config file. Ho
 
 Use `--diff-highlight` or `--diff-so-fancy` to activate the respective emulation mode.
 
-You may want to know exactly what delta configuration the emulation mode has selected, so that you can adjust it. To do that, use e.g. `delta --diff-so-fancy --show-config`:
+You may want to know which delta configuration values the emulation mode has selected, so that you can adjust them. To do that, use e.g. `delta --diff-so-fancy --show-config`:
 
 <table><tr><td><img width=300px src="https://user-images.githubusercontent.com/52205/86271121-5abe4c80-bb9a-11ea-950a-7c79502267d5.png" alt="image" /></td></tr></table>
 
@@ -292,7 +310,7 @@ The edit inference algorithm employed by diff-highlight (and therefore by diff-s
 
 ### Navigation keybindings for large diffs
 
-Use `--navigate` to activate navigation keybindings. In this mode, pressing `n` will jump forward to the next file in the diff, and `N` will jump backwards. If you are viewing multiple commits (e.g. `git log -p` then navigation will also visit commit boundaries.
+Use `--navigate` to activate navigation keybindings. In this mode, pressing `n` will jump forward to the next file in the diff, and `N` will jump backwards. If you are viewing multiple commits (e.g. via `git log -p`) then navigation will also visit commit boundaries.
 
 
 ### 24 bit color (truecolor)
