@@ -51,7 +51,7 @@ Contents
 * [Usage](#usage)
    * [Supported languages and themes](#supported-languages-and-themes)
    * [Line numbers](#line-numbers)
-   * [Features](#features-1)
+   * [Custom features](#custom-features)
    * [diff-highlight and diff-so-fancy emulation](#diff-highlight-and-diff-so-fancy-emulation)
    * [Navigation keybindings for large diffs](#navigation-keybindings-for-large-diffs)
    * [24 bit color (truecolor)](#24-bit-color-truecolor)
@@ -249,7 +249,7 @@ Use `--line-numbers` to activate line numbers.
 
 The numbers are displayed in two columns and there are several configuration options: see the `LINE NUMBERS` section in [`delta --help`](#full---help-output) for details, and see the next section for an example of configuring line numbers.
 
-### Features
+### Custom features
 
 All delta options can go under the `[delta]` section in your git config file. However, you can also use named "features" to keep things organized: these are sections in git config like `[delta "my-feature"]`. Here's an example using two custom features:
 
