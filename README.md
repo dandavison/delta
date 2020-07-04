@@ -195,6 +195,10 @@ Alternatively, delta is available in the following package managers:
     <td>Windows (<a href="https://chocolatey.org/packages/delta">Chocolatey</a>)</td>
     <td><code>choco install delta</code></td>
   </tr>
+  <tr>
+    <td>Windows (<a href="https://scoop.sh/">Scoop</a>)</td>
+    <td><code>scoop install delta</code></td>
+  </tr>
 </table>
 
 ## Configuration
