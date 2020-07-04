@@ -64,7 +64,7 @@ https://git-scm.com/docs/git-config#Documentation/git-config.txt-color
 
 Here is an example:
 
---minus-style 'red bold ul #ffeeee'
+--minus-style 'red bold ul \"#ffeeee\"'
 
 That means: For removed lines, set the foreground (text) color to 'red', make it bold and
             underlined, and set the background color to '#ffeeee'.
@@ -317,8 +317,8 @@ pub struct Opt {
 
     #[structopt(long = "commit-decoration-style", default_value = "")]
     /// Style (foreground, background, attributes) for the commit hash decoration. See STYLES
-    /// section. One of the special attributes 'box', 'ul', 'overline', or 'underoverline' must be
-    /// given.
+    /// section. The style string should contain one of the special attributes 'box', 'ul'
+    /// (underline), 'ol' (overline), or the combination 'ul ol'.
     pub commit_decoration_style: String,
 
     #[structopt(long = "file-style", default_value = "blue")]
@@ -326,8 +326,9 @@ pub struct Opt {
     pub file_style: String,
 
     #[structopt(long = "file-decoration-style", default_value = "blue ul")]
-    /// Style (foreground, background, attributes) for the file decoration. See STYLES section. One
-    /// of the special attributes 'box', 'ul', 'overline', or 'underoverline' must be given.
+    /// Style (foreground, background, attributes) for the file decoration. See STYLES section. The
+    /// style string should contain one of the special attributes 'box', 'ul' (underline), 'ol'
+    /// (overline), or the combination 'ul ol'.
     pub file_decoration_style: String,
 
     #[structopt(long = "hunk-header-style", default_value = "syntax")]
@@ -336,8 +337,8 @@ pub struct Opt {
 
     #[structopt(long = "hunk-header-decoration-style", default_value = "blue box")]
     /// Style (foreground, background, attributes) for the hunk-header decoration. See STYLES
-    /// section. One of the special attributes 'box', 'ul', 'overline', or 'underoverline' must be
-    /// given.
+    /// section. The style string should contain one of the special attributes 'box', 'ul'
+    /// (underline), 'ol' (overline), or the combination 'ul ol'.
     pub hunk_header_decoration_style: String,
 
     /// The regular expression used to decide what a word is for the within-line highlight

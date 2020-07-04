@@ -502,20 +502,23 @@ OPTIONS:
             Style (foreground, background, attributes) for the commit hash line. See STYLES section [default:
             raw]
         --commit-decoration-style <commit-decoration-style>
-            Style (foreground, background, attributes) for the commit hash decoration. See STYLES section. One of the
-            special attributes 'box', 'ul', 'overline', or 'underoverline' must be given [default: ]
+            Style (foreground, background, attributes) for the commit hash decoration. See STYLES section. The style
+            string should contain one of the special attributes 'box', 'ul' (underline), 'ol' (overline), or the
+            combination 'ul ol' [default: ]
         --file-style <file-style>
             Style (foreground, background, attributes) for the file section. See STYLES section [default: blue]
 
         --file-decoration-style <file-decoration-style>
-            Style (foreground, background, attributes) for the file decoration. See STYLES section. One of the special
-            attributes 'box', 'ul', 'overline', or 'underoverline' must be given [default: blue ul]
+            Style (foreground, background, attributes) for the file decoration. See STYLES section. The style string
+            should contain one of the special attributes 'box', 'ul' (underline), 'ol' (overline), or the combination
+            'ul ol' [default: blue ul]
         --hunk-header-style <hunk-header-style>
             Style (foreground, background, attributes) for the hunk-header. See STYLES section [default: syntax]
 
         --hunk-header-decoration-style <hunk-header-decoration-style>
-            Style (foreground, background, attributes) for the hunk-header decoration. See STYLES section. One of the
-            special attributes 'box', 'ul', 'overline', or 'underoverline' must be given [default: blue box]
+            Style (foreground, background, attributes) for the hunk-header decoration. See STYLES section. The style
+            string should contain one of the special attributes 'box', 'ul' (underline), 'ol' (overline), or the
+            combination 'ul ol' [default: blue box]
         --word-diff-regex <tokenization-regex>
             The regular expression used to decide what a word is for the within-line highlight algorithm. For less fine-
             grained matching than the default try --word-diff-regex="\S+" --max-line-distance=1.0 (this is more
@@ -540,7 +543,7 @@ OPTIONS:
         --line-numbers-right-format <line-numbers-right-format>
             Format string for the right column of line numbers. A typical value would be "{np:^4}│ " which means to
             display the line numbers of the plus file (new version), followed by a dividing character, and a space. See
-            the LINE NUMBERS section [default: {np:^4}│ ]
+            the LINE NUMBERS section [default: {np:^4}│]
         --line-numbers-left-style <line-numbers-left-style>
             Style (foreground, background, attributes) for the left column of line numbers. See STYLES and LINE NUMBERS
             sections [default: auto]
@@ -780,9 +783,9 @@ For example, the default value of --line-numbers-left-format is '{nm:^4}⋮'. Th
 left column should display the minus line number (nm), center-aligned, padded with spaces to a
 width of 4 characters, followed by a unicode dividing-line character (⋮).
 
-Similarly, the default value of --line-numbers-right-format is '{np:^4}│ '. This means that the
+Similarly, the default value of --line-numbers-right-format is '{np:^4}│'. This means that the
 right column should display the plus line number (np), center-aligned, padded with spaces to a
-width of 4 characters, followed by a unicode dividing-line character (│), and a space.
+width of 4 characters, followed by a unicode dividing-line character (│).
 
 Use '<' for left-align, '^' for center-align, and '>' for right-align.
 
