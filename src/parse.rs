@@ -90,15 +90,14 @@ pub fn get_file_change_description_from_file_paths(
 }
 
 lazy_static! {
-    static ref HUNK_METADATA_REGEXP: Regex =
-        Regex::new(r"@+ (?P<lns>[^@]+)@+(?P<cf>.*\s?)").unwrap();
+    static ref HUNK_HEADER_REGEX: Regex = Regex::new(r"@+ ([^@]+)@+(.*\s?)").unwrap();
 }
 
 // Parse unified diff hunk header format. See
 // https://www.gnu.org/software/diffutils/manual/html_node/Detailed-Unified.html
 // https://www.artima.com/weblogs/viewpost.jsp?thread=164293
 lazy_static! {
-    static ref FILE_COORDINATES_REGEXP: Regex = Regex::new(
+    static ref HUNK_HEADER_FILE_COORDINATE_REGEX: Regex = Regex::new(
         r"(?x)
 [-+]
 (\d+)            # 1. Hunk start line number
@@ -113,10 +112,11 @@ lazy_static! {
 /// Given input like
 /// "@@ -74,15 +74,14 @@ pub fn delta("
 /// Return " pub fn delta(" and a vector of (line_number, hunk_length) tuples.
-pub fn parse_hunk_metadata(line: &str) -> (&str, Vec<(usize, usize)>) {
-    let caps = HUNK_METADATA_REGEXP.captures(line).unwrap();
-    let line_numbers_and_hunk_lengths = FILE_COORDINATES_REGEXP
-        .captures_iter(caps.name("lns").unwrap().as_str())
+pub fn parse_hunk_metadata(line: &str) -> (String, Vec<(usize, usize)>) {
+    let caps = HUNK_HEADER_REGEX.captures(line).unwrap();
+    let file_coordinates = &caps[1];
+    let line_numbers_and_hunk_lengths = HUNK_HEADER_FILE_COORDINATE_REGEX
+        .captures_iter(file_coordinates)
         .map(|caps| {
             (
                 caps[1].parse::<usize>().unwrap(),
@@ -129,8 +129,8 @@ pub fn parse_hunk_metadata(line: &str) -> (&str, Vec<(usize, usize)>) {
             )
         })
         .collect();
-    let code_fragment = caps.name("cf").unwrap().as_str();
-    return (code_fragment, line_numbers_and_hunk_lengths);
+    let code_fragment = &caps[2];
+    return (code_fragment.to_string(), line_numbers_and_hunk_lengths);
 }
 
 /// Attempt to parse input as a file path and return extension as a &str.

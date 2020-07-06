@@ -386,7 +386,7 @@ fn handle_hunk_header_line(
             decoration_ansi_term_style,
         )?;
     } else {
-        let line = match prepare(raw_code_fragment, false, config) {
+        let line = match prepare(&raw_code_fragment, false, config) {
             s if s.len() > 0 => format!("{} ", s),
             s => s,
         };
