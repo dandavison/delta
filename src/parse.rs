@@ -285,7 +285,7 @@ mod tests {
         let parsed = parse_hunk_metadata("@@ -74,15 +75,14 @@ pub fn delta(\n");
         let code_fragment = parsed.0;
         let line_numbers_and_hunk_lengths = parsed.1;
-        assert_eq!(code_fragment, " pub fn delta(\n",);
+        assert_eq!(code_fragment, " pub fn delta(\n");
         assert_eq!(line_numbers_and_hunk_lengths[0].0, 74,);
         assert_eq!(line_numbers_and_hunk_lengths[1].0, 75,);
     }
@@ -315,7 +315,7 @@ mod tests {
         let parsed = parse_hunk_metadata("@@@ -293,11 -358,15 +358,16 @@@ dependencies =");
         let code_fragment = parsed.0;
         let line_numbers_and_hunk_lengths = parsed.1;
-        assert_eq!(code_fragment, " dependencies =",);
+        assert_eq!(code_fragment, " dependencies =");
         assert_eq!(line_numbers_and_hunk_lengths[0].0, 293,);
         assert_eq!(line_numbers_and_hunk_lengths[1].0, 358,);
         assert_eq!(line_numbers_and_hunk_lengths[2].0, 358,);
