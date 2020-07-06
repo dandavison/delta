@@ -90,23 +90,8 @@ pub fn get_file_change_description_from_file_paths(
 }
 
 lazy_static! {
-    static ref HUNK_METADATA_REGEXP: Regex = Regex::new(
-        r"(?x)
-@+                             # Start hunk header
-\                              # One space
-(?P<lns>                       # Start file coordinates
-  (                            #   Start file coordinate
-    [-+]                       #     - or +
-    \d+                        #     A digit
-    (?:,\d+)?                  #     Optionally followed by a comma and another digit
-    \                          #     One space
-  ){2,4}                       #
-)                              #
-@+                             # End hunk header
-(?P<cf>.*\s?)                  # Code fragment
-"
-    )
-    .unwrap();
+    static ref HUNK_METADATA_REGEXP: Regex =
+        Regex::new(r"@+ (?P<lns>[^@]+)@+(?P<cf>.*\s?)").unwrap();
 }
 
 lazy_static! {
