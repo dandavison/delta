@@ -112,7 +112,7 @@ lazy_static! {
 /// Given input like
 /// "@@ -74,15 +74,14 @@ pub fn delta("
 /// Return " pub fn delta(" and a vector of (line_number, hunk_length) tuples.
-pub fn parse_hunk_metadata(line: &str) -> (String, Vec<(usize, usize)>) {
+pub fn parse_hunk_header(line: &str) -> (String, Vec<(usize, usize)>) {
     let caps = HUNK_HEADER_REGEX.captures(line).unwrap();
     let file_coordinates = &caps[1];
     let line_numbers_and_hunk_lengths = HUNK_HEADER_FILE_COORDINATE_REGEX
@@ -281,8 +281,8 @@ mod tests {
     }
 
     #[test]
-    fn test_parse_hunk_metadata() {
-        let parsed = parse_hunk_metadata("@@ -74,15 +75,14 @@ pub fn delta(\n");
+    fn test_parse_hunk_header() {
+        let parsed = parse_hunk_header("@@ -74,15 +75,14 @@ pub fn delta(\n");
         let code_fragment = parsed.0;
         let line_numbers_and_hunk_lengths = parsed.1;
         assert_eq!(code_fragment, " pub fn delta(\n");
@@ -291,8 +291,8 @@ mod tests {
     }
 
     #[test]
-    fn test_parse_hunk_metadata_added_file() {
-        let parsed = parse_hunk_metadata("@@ -1,22 +0,0 @@");
+    fn test_parse_hunk_header_added_file() {
+        let parsed = parse_hunk_header("@@ -1,22 +0,0 @@");
         let code_fragment = parsed.0;
         let line_numbers_and_hunk_lengths = parsed.1;
         assert_eq!(code_fragment, "",);
@@ -301,8 +301,8 @@ mod tests {
     }
 
     #[test]
-    fn test_parse_hunk_metadata_deleted_file() {
-        let parsed = parse_hunk_metadata("@@ -0,0 +1,3 @@");
+    fn test_parse_hunk_header_deleted_file() {
+        let parsed = parse_hunk_header("@@ -0,0 +1,3 @@");
         let code_fragment = parsed.0;
         let line_numbers_and_hunk_lengths = parsed.1;
         assert_eq!(code_fragment, "",);
@@ -311,8 +311,8 @@ mod tests {
     }
 
     #[test]
-    fn test_parse_hunk_metadata_merge() {
-        let parsed = parse_hunk_metadata("@@@ -293,11 -358,15 +358,16 @@@ dependencies =");
+    fn test_parse_hunk_header_merge() {
+        let parsed = parse_hunk_header("@@@ -293,11 -358,15 +358,16 @@@ dependencies =");
         let code_fragment = parsed.0;
         let line_numbers_and_hunk_lengths = parsed.1;
         assert_eq!(code_fragment, " dependencies =");
