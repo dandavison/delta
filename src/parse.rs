@@ -286,8 +286,18 @@ mod tests {
         let code_fragment = parsed.0;
         let line_numbers_and_hunk_lengths = parsed.1;
         assert_eq!(code_fragment, " pub fn delta(\n");
-        assert_eq!(line_numbers_and_hunk_lengths[0].0, 74,);
-        assert_eq!(line_numbers_and_hunk_lengths[1].0, 75,);
+        assert_eq!(line_numbers_and_hunk_lengths[0], (74, 15),);
+        assert_eq!(line_numbers_and_hunk_lengths[1], (75, 14),);
+    }
+
+    #[test]
+    fn test_parse_hunk_header_with_omitted_hunk_lengths() {
+        let parsed = parse_hunk_header("@@ -74 +75,2 @@ pub fn delta(\n");
+        let code_fragment = parsed.0;
+        let line_numbers_and_hunk_lengths = parsed.1;
+        assert_eq!(code_fragment, " pub fn delta(\n");
+        assert_eq!(line_numbers_and_hunk_lengths[0], (74, 1),);
+        assert_eq!(line_numbers_and_hunk_lengths[1], (75, 2),);
     }
 
     #[test]
@@ -296,8 +306,8 @@ mod tests {
         let code_fragment = parsed.0;
         let line_numbers_and_hunk_lengths = parsed.1;
         assert_eq!(code_fragment, "",);
-        assert_eq!(line_numbers_and_hunk_lengths[0].0, 1,);
-        assert_eq!(line_numbers_and_hunk_lengths[1].0, 0,);
+        assert_eq!(line_numbers_and_hunk_lengths[0], (1, 22),);
+        assert_eq!(line_numbers_and_hunk_lengths[1], (0, 0),);
     }
 
     #[test]
@@ -306,8 +316,8 @@ mod tests {
         let code_fragment = parsed.0;
         let line_numbers_and_hunk_lengths = parsed.1;
         assert_eq!(code_fragment, "",);
-        assert_eq!(line_numbers_and_hunk_lengths[0].0, 0,);
-        assert_eq!(line_numbers_and_hunk_lengths[1].0, 1,);
+        assert_eq!(line_numbers_and_hunk_lengths[0], (0, 0),);
+        assert_eq!(line_numbers_and_hunk_lengths[1], (1, 3),);
     }
 
     #[test]
@@ -316,8 +326,8 @@ mod tests {
         let code_fragment = parsed.0;
         let line_numbers_and_hunk_lengths = parsed.1;
         assert_eq!(code_fragment, " dependencies =");
-        assert_eq!(line_numbers_and_hunk_lengths[0].0, 293,);
-        assert_eq!(line_numbers_and_hunk_lengths[1].0, 358,);
-        assert_eq!(line_numbers_and_hunk_lengths[2].0, 358,);
+        assert_eq!(line_numbers_and_hunk_lengths[0], (293, 11),);
+        assert_eq!(line_numbers_and_hunk_lengths[1], (358, 15),);
+        assert_eq!(line_numbers_and_hunk_lengths[2], (358, 16),);
     }
 }
