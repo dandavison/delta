@@ -373,8 +373,8 @@ fn handle_hunk_header_line(
         }
     };
     let (raw_code_fragment, line_numbers) = parse::parse_hunk_metadata(&line);
-    painter.minus_line_number = line_numbers[0];
-    painter.plus_line_number = line_numbers[line_numbers.len() - 1];
+    painter.minus_line_number = line_numbers[0].0;
+    painter.plus_line_number = line_numbers[line_numbers.len() - 1].0;
     if config.hunk_header_style.is_raw {
         writeln!(painter.writer)?;
         draw_fn(

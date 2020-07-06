@@ -94,31 +94,43 @@ lazy_static! {
         Regex::new(r"@+ (?P<lns>[^@]+)@+(?P<cf>.*\s?)").unwrap();
 }
 
+// Parse unified diff hunk header format. See
+// https://www.gnu.org/software/diffutils/manual/html_node/Detailed-Unified.html
+// https://www.artima.com/weblogs/viewpost.jsp?thread=164293
 lazy_static! {
-    static ref LINE_NUMBER_REGEXP: Regex = Regex::new(r"[-+]").unwrap();
-}
-
-fn _make_line_number_vec(line: &str) -> Vec<usize> {
-    let mut numbers = Vec::<usize>::new();
-
-    for s in LINE_NUMBER_REGEXP.split(line) {
-        let number = s.split(',').nth(0).unwrap().split_whitespace().nth(0);
-        match number {
-            Some(number) => numbers.push(number.parse::<usize>().unwrap()),
-            None => continue,
-        }
-    }
-    return numbers;
+    static ref FILE_COORDINATES_REGEXP: Regex = Regex::new(
+        r"(?x)
+[-+]
+(\d+)            # 1. Hunk start line number
+(?:              # Start optional hunk length section (non-capturing)
+  ,              #   Literal comma
+  (\d+)          #   2. Optional hunk length (defaults to 1)
+)?"
+    )
+    .unwrap();
 }
 
 /// Given input like
 /// "@@ -74,15 +74,14 @@ pub fn delta("
-/// Return " pub fn delta(" and a vector of line numbers
-pub fn parse_hunk_metadata(line: &str) -> (&str, Vec<usize>) {
+/// Return " pub fn delta(" and a vector of (line_number, hunk_length) tuples.
+pub fn parse_hunk_metadata(line: &str) -> (&str, Vec<(usize, usize)>) {
     let caps = HUNK_METADATA_REGEXP.captures(line).unwrap();
-    let line_numbers = _make_line_number_vec(caps.name("lns").unwrap().as_str());
+    let line_numbers_and_hunk_lengths = FILE_COORDINATES_REGEXP
+        .captures_iter(caps.name("lns").unwrap().as_str())
+        .map(|caps| {
+            (
+                caps[1].parse::<usize>().unwrap(),
+                caps.get(2)
+                    .map(|m| m.as_str())
+                    // Per the specs linked above, if the hunk length is absent then it is 1.
+                    .unwrap_or("1")
+                    .parse::<usize>()
+                    .unwrap(),
+            )
+        })
+        .collect();
     let code_fragment = caps.name("cf").unwrap().as_str();
-    return (code_fragment, line_numbers);
+    return (code_fragment, line_numbers_and_hunk_lengths);
 }
 
 /// Attempt to parse input as a file path and return extension as a &str.
@@ -272,40 +284,40 @@ mod tests {
     fn test_parse_hunk_metadata() {
         let parsed = parse_hunk_metadata("@@ -74,15 +75,14 @@ pub fn delta(\n");
         let code_fragment = parsed.0;
-        let line_numbers = parsed.1;
+        let line_numbers_and_hunk_lengths = parsed.1;
         assert_eq!(code_fragment, " pub fn delta(\n",);
-        assert_eq!(line_numbers[0], 74,);
-        assert_eq!(line_numbers[1], 75,);
+        assert_eq!(line_numbers_and_hunk_lengths[0].0, 74,);
+        assert_eq!(line_numbers_and_hunk_lengths[1].0, 75,);
     }
 
     #[test]
     fn test_parse_hunk_metadata_added_file() {
         let parsed = parse_hunk_metadata("@@ -1,22 +0,0 @@");
         let code_fragment = parsed.0;
-        let line_numbers = parsed.1;
+        let line_numbers_and_hunk_lengths = parsed.1;
         assert_eq!(code_fragment, "",);
-        assert_eq!(line_numbers[0], 1,);
-        assert_eq!(line_numbers[1], 0,);
+        assert_eq!(line_numbers_and_hunk_lengths[0].0, 1,);
+        assert_eq!(line_numbers_and_hunk_lengths[1].0, 0,);
     }
 
     #[test]
     fn test_parse_hunk_metadata_deleted_file() {
         let parsed = parse_hunk_metadata("@@ -0,0 +1,3 @@");
         let code_fragment = parsed.0;
-        let line_numbers = parsed.1;
+        let line_numbers_and_hunk_lengths = parsed.1;
         assert_eq!(code_fragment, "",);
-        assert_eq!(line_numbers[0], 0,);
-        assert_eq!(line_numbers[1], 1,);
+        assert_eq!(line_numbers_and_hunk_lengths[0].0, 0,);
+        assert_eq!(line_numbers_and_hunk_lengths[1].0, 1,);
     }
 
     #[test]
     fn test_parse_hunk_metadata_merge() {
         let parsed = parse_hunk_metadata("@@@ -293,11 -358,15 +358,16 @@@ dependencies =");
         let code_fragment = parsed.0;
-        let line_numbers = parsed.1;
+        let line_numbers_and_hunk_lengths = parsed.1;
         assert_eq!(code_fragment, " dependencies =",);
-        assert_eq!(line_numbers[0], 293,);
-        assert_eq!(line_numbers[1], 358,);
-        assert_eq!(line_numbers[2], 358,);
+        assert_eq!(line_numbers_and_hunk_lengths[0].0, 293,);
+        assert_eq!(line_numbers_and_hunk_lengths[1].0, 358,);
+        assert_eq!(line_numbers_and_hunk_lengths[2].0, 358,);
     }
 }
