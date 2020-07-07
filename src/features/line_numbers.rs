@@ -326,6 +326,28 @@ pub mod tests {
         assert_eq!(lines.next().unwrap(), "         ⋮ 2  │bb = 2");
     }
 
+    #[test]
+    fn test_five_digit_line_number() {
+        let config = make_config(&["--line-numbers"]);
+        let output = run_delta(FIVE_DIGIT_LINE_NUMBER_DIFF, &config);
+        let output = strip_ansi_codes(&output);
+        let mut lines = output.lines().skip(4);
+        assert_eq!(lines.next().unwrap(), "10000⋮10000│a = 1");
+        assert_eq!(lines.next().unwrap(), "10001⋮     │b = 2");
+        assert_eq!(lines.next().unwrap(), "     ⋮10001│bb = 2");
+    }
+
+    #[test]
+    fn test_unequal_digit_line_number() {
+        let config = make_config(&["--line-numbers"]);
+        let output = run_delta(UNEQUAL_DIGIT_DIFF, &config);
+        let output = strip_ansi_codes(&output);
+        let mut lines = output.lines().skip(4);
+        assert_eq!(lines.next().unwrap(), "10000⋮9999 │a = 1");
+        assert_eq!(lines.next().unwrap(), "10001⋮     │b = 2");
+        assert_eq!(lines.next().unwrap(), "     ⋮10000│bb = 2");
+    }
+
     const TWO_MINUS_LINES_DIFF: &str = "\
 diff --git i/a.py w/a.py
 index 223ca50..e69de29 100644
@@ -353,6 +375,28 @@ index 223ca50..367a6f6 100644
 --- i/a.py
 +++ w/a.py
 @@ -1,2 +1,2 @@
+ a = 1
+-b = 2
++bb = 2
+";
+
+    const FIVE_DIGIT_LINE_NUMBER_DIFF: &str = "\
+diff --git i/a.py w/a.py
+index 223ca50..367a6f6 100644
+--- i/a.py
++++ w/a.py
+@@ -10000,2 +10000,2 @@
+ a = 1
+-b = 2
++bb = 2
+";
+
+    const UNEQUAL_DIGIT_DIFF: &str = "\
+diff --git i/a.py w/a.py
+index 223ca50..367a6f6 100644
+--- i/a.py
++++ w/a.py
+@@ -10000,2 +9999,2 @@
  a = 1
 -b = 2
 +bb = 2
