@@ -128,6 +128,7 @@ pub mod ansi_test_utils {
             vec![None],
             &mut output_buffer,
             config,
+            None,
             "",
             config.null_style,
             config.null_style,

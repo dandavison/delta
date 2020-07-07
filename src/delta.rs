@@ -373,8 +373,8 @@ fn handle_hunk_header_line(
         }
     };
     let (raw_code_fragment, line_numbers) = parse::parse_hunk_header(&line);
-    painter.minus_line_number = line_numbers[0].0;
-    painter.plus_line_number = line_numbers[line_numbers.len() - 1].0;
+    painter.line_numbers_data.hunk_minus_line_number = line_numbers[0].0;
+    painter.line_numbers_data.hunk_plus_line_number = line_numbers[line_numbers.len() - 1].0;
     if config.hunk_header_style.is_raw {
         writeln!(painter.writer)?;
         draw_fn(
@@ -405,6 +405,7 @@ fn handle_hunk_header_line(
                 vec![None],
                 &mut painter.output_buffer,
                 config,
+                None,
                 "",
                 config.null_style,
                 config.null_style,
@@ -427,7 +428,7 @@ fn handle_hunk_header_line(
     };
 
     if !config.line_numbers {
-        let line_number = &format!("{}", painter.plus_line_number);
+        let line_number = &format!("{}", painter.line_numbers_data.hunk_plus_line_number);
         match config.hunk_header_style.decoration_ansi_term_style() {
             Some(style) => writeln!(painter.writer, "{}", style.paint(line_number))?,
             None => writeln!(painter.writer, "{}", line_number)?,
@@ -490,19 +491,20 @@ fn handle_hunk_line(
                 syntax_style_sections,
                 vec![diff_style_sections],
                 vec![Some((
-                    Some(painter.minus_line_number),
-                    Some(painter.plus_line_number),
+                    Some(painter.line_numbers_data.hunk_minus_line_number),
+                    Some(painter.line_numbers_data.hunk_plus_line_number),
                 ))],
                 &mut painter.output_buffer,
                 config,
+                Some(&painter.line_numbers_data),
                 prefix,
                 config.zero_style,
                 config.zero_style,
                 None,
                 None,
             );
-            painter.minus_line_number += 1;
-            painter.plus_line_number += 1;
+            painter.line_numbers_data.hunk_minus_line_number += 1;
+            painter.line_numbers_data.hunk_plus_line_number += 1;
             state
         }
         _ => {

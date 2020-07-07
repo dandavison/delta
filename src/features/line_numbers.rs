@@ -58,9 +58,11 @@ pub fn make_feature() -> Vec<(String, OptionValueFunction)> {
 /// Return a vec of `ansi_term::ANSIGenericString`s representing the left and right fields of the
 /// two-column line number display.
 pub fn format_and_paint_line_numbers<'a>(
+    line_numbers_data: Option<&'a LineNumbersData>,
     line_numbers: &'a Option<(Option<usize>, Option<usize>)>,
     config: &'a config::Config,
 ) -> Vec<ansi_term::ANSIGenericString<'a, str>> {
+    let line_numbers_data = line_numbers_data.unwrap();
     let (minus_number, plus_number) = line_numbers.unwrap();
 
     // If both minus and plus numbers are present then the line is a zero line.
@@ -78,7 +80,7 @@ pub fn format_and_paint_line_numbers<'a>(
     let mut formatted_numbers = Vec::new();
 
     formatted_numbers.extend(format_and_paint_line_number_field(
-        &config.line_numbers_left_format,
+        &line_numbers_data.left_format_data,
         &config.line_numbers_left_style,
         minus_number,
         plus_number,
@@ -86,7 +88,7 @@ pub fn format_and_paint_line_numbers<'a>(
         &plus_number_style,
     ));
     formatted_numbers.extend(format_and_paint_line_number_field(
-        &config.line_numbers_right_format,
+        &line_numbers_data.right_format_data,
         &config.line_numbers_right_style,
         minus_number,
         plus_number,
@@ -105,7 +107,7 @@ lazy_static! {
 (?:             # Start optional format spec (non-capturing)
   :             #     Literal colon
   (?:           #     Start optional fill/alignment spec (non-capturing)
-    ([^<^>])?   #         2: Optional fill character
+    ([^<^>])?   #         2: Optional fill character (ignored)
     ([<^>])     #         3: Alignment spec
   )?            #
   (\d+)         #     4: Width
@@ -116,8 +118,61 @@ lazy_static! {
     .unwrap();
 }
 
+#[derive(Default)]
+pub struct LineNumbersData<'a> {
+    pub left_format_data: LineNumberFormatData<'a>,
+    pub right_format_data: LineNumberFormatData<'a>,
+    pub hunk_minus_line_number: usize,
+    pub hunk_plus_line_number: usize,
+}
+
+// Although it's probably unusual, a single format string can contain multiple placeholders. E.g.
+// line-numbers-right-format = "{nm} {np}|"
+pub type LineNumberFormatData<'a> = Vec<LineNumberPlaceholderData<'a>>;
+
+#[derive(Debug, Default, PartialEq)]
+pub struct LineNumberPlaceholderData<'a> {
+    pub prefix: &'a str,
+    pub placeholder: &'a str,
+    pub alignment_spec: Option<&'a str>,
+    pub width: Option<usize>,
+    pub suffix: &'a str,
+}
+
+impl<'a> LineNumbersData<'a> {
+    pub fn from_format_strings(left_format: &'a str, right_format: &'a str) -> LineNumbersData<'a> {
+        Self {
+            left_format_data: parse_line_number_format(left_format),
+            right_format_data: parse_line_number_format(right_format),
+            hunk_minus_line_number: 0,
+            hunk_plus_line_number: 0,
+        }
+    }
+}
+
+fn parse_line_number_format<'a>(format_string: &'a str) -> LineNumberFormatData<'a> {
+    let mut format_data = Vec::new();
+    let mut offset = 0;
+
+    for captures in LINE_NUMBER_FORMAT_REGEX.captures_iter(format_string) {
+        let _match = captures.get(0).unwrap();
+        format_data.push(LineNumberPlaceholderData {
+            prefix: &format_string[offset.._match.start()],
+            placeholder: captures.get(1).map(|m| m.as_str()).unwrap(),
+            alignment_spec: captures.get(3).map(|m| m.as_str()),
+            width: captures.get(4).map(|m| {
+                m.as_str()
+                    .parse()
+                    .unwrap_or_else(|_| panic!("Invalid width in format string: {}", format_string))
+            }),
+            suffix: &format_string[_match.end()..],
+        });
+        offset = _match.end();
+    }
+    format_data
+}
 fn format_and_paint_line_number_field<'a>(
-    format_string: &'a str,
+    format_data: &Vec<LineNumberPlaceholderData<'a>>,
     style: &Style,
     minus_number: Option<usize>,
     plus_number: Option<usize>,
@@ -125,42 +180,41 @@ fn format_and_paint_line_number_field<'a>(
     plus_number_style: &Style,
 ) -> Vec<ansi_term::ANSIGenericString<'a, str>> {
     let mut ansi_strings = Vec::new();
+    let mut suffix = "";
+    for placeholder in format_data {
+        ansi_strings.push(style.paint(placeholder.prefix));
 
-    let mut offset = 0;
-    for caps in LINE_NUMBER_FORMAT_REGEX.captures_iter(&format_string) {
-        let _match = caps.get(0).unwrap();
-        ansi_strings.push(style.paint(&format_string[offset.._match.start()]));
+        let alignment_spec = placeholder.alignment_spec.unwrap_or("^");
+        let width = placeholder.width.unwrap();
 
-        match &caps[1] {
+        match placeholder.placeholder {
             "nm" => ansi_strings.push(minus_number_style.paint(format_line_number(
                 minus_number,
-                &caps[3],
-                &caps[4],
+                alignment_spec,
+                width,
             ))),
             "np" => ansi_strings.push(plus_number_style.paint(format_line_number(
                 plus_number,
-                &caps[3],
-                &caps[4],
+                alignment_spec,
+                width,
             ))),
             _ => unreachable!(),
         }
-        offset = _match.end();
+        suffix = placeholder.suffix;
     }
-    ansi_strings.push(style.paint(&format_string[offset..]));
+    ansi_strings.push(style.paint(suffix));
     ansi_strings
 }
 
 /// Return line number formatted according to `alignment` and `width`.
-fn format_line_number(line_number: Option<usize>, alignment: &str, width: &str) -> String {
+fn format_line_number(line_number: Option<usize>, alignment: &str, width: usize) -> String {
     let n = line_number
         .map(|n| format!("{}", n))
         .unwrap_or_else(|| "".to_string());
-    let default_width = 4; // Used only if \d+ cannot be parsed as usize
-    let w: usize = width.parse().unwrap_or(default_width);
     match alignment {
-        "<" => format!("{0:<1$}", n, w),
-        "^" | "" => format!("{0:^1$}", n, w),
-        ">" => format!("{0:>1$}", n, w),
+        "<" => format!("{0:<1$}", n, width),
+        "^" => format!("{0:^1$}", n, width),
+        ">" => format!("{0:>1$}", n, width),
         _ => unreachable!(),
     }
 }
@@ -172,54 +226,99 @@ pub mod tests {
 
     use crate::tests::integration_test_utils::integration_test_utils::{make_config, run_delta};
 
-    use super::LINE_NUMBER_FORMAT_REGEX;
+    use super::*;
 
     #[test]
     fn test_line_number_format_regex_1() {
-        let caps = LINE_NUMBER_FORMAT_REGEX
-            .captures_iter("{nm}")
-            .collect::<Vec<Captures>>();
-        assert_eq!(caps.len(), 1);
-        assert_eq!(_get_capture(0, 1, &caps), "nm");
-        assert_eq!(_get_capture(0, 2, &caps), "");
-        assert_eq!(_get_capture(0, 3, &caps), "");
-        assert_eq!(_get_capture(0, 4, &caps), "");
+        assert_eq!(
+            parse_line_number_format("{nm}"),
+            vec![LineNumberPlaceholderData {
+                prefix: "",
+                placeholder: "nm",
+                alignment_spec: None,
+                width: None,
+                suffix: "",
+            }]
+        )
     }
 
     #[test]
     fn test_line_number_format_regex_2() {
-        let caps = LINE_NUMBER_FORMAT_REGEX
-            .captures_iter("{np:4}")
-            .collect::<Vec<Captures>>();
-        assert_eq!(caps.len(), 1);
-        assert_eq!(_get_capture(0, 1, &caps), "np");
-        assert_eq!(_get_capture(0, 2, &caps), "");
-        assert_eq!(_get_capture(0, 3, &caps), "");
-        assert_eq!(_get_capture(0, 4, &caps), "4");
+        assert_eq!(
+            parse_line_number_format("{np:4}"),
+            vec![LineNumberPlaceholderData {
+                prefix: "",
+                placeholder: "np",
+                alignment_spec: None,
+                width: Some(4),
+                suffix: "",
+            }]
+        )
     }
 
     #[test]
     fn test_line_number_format_regex_3() {
-        let caps = LINE_NUMBER_FORMAT_REGEX
-            .captures_iter("{np:>4}")
-            .collect::<Vec<Captures>>();
-        assert_eq!(caps.len(), 1);
-        assert_eq!(_get_capture(0, 1, &caps), "np");
-        assert_eq!(_get_capture(0, 2, &caps), "");
-        assert_eq!(_get_capture(0, 3, &caps), ">");
-        assert_eq!(_get_capture(0, 4, &caps), "4");
+        assert_eq!(
+            parse_line_number_format("{np:>4}"),
+            vec![LineNumberPlaceholderData {
+                prefix: "",
+                placeholder: "np",
+                alignment_spec: Some(">"),
+                width: Some(4),
+                suffix: "",
+            }]
+        )
     }
 
     #[test]
     fn test_line_number_format_regex_4() {
-        let caps = LINE_NUMBER_FORMAT_REGEX
-            .captures_iter("{np:_>4}")
-            .collect::<Vec<Captures>>();
-        assert_eq!(caps.len(), 1);
-        assert_eq!(_get_capture(0, 1, &caps), "np");
-        assert_eq!(_get_capture(0, 2, &caps), "_");
-        assert_eq!(_get_capture(0, 3, &caps), ">");
-        assert_eq!(_get_capture(0, 4, &caps), "4");
+        assert_eq!(
+            parse_line_number_format("{np:_>4}"),
+            vec![LineNumberPlaceholderData {
+                prefix: "",
+                placeholder: "np",
+                alignment_spec: Some(">"),
+                width: Some(4),
+                suffix: "",
+            }]
+        )
+    }
+
+    #[test]
+    fn test_line_number_format_regex_5() {
+        assert_eq!(
+            parse_line_number_format("__{np:_>4}@@"),
+            vec![LineNumberPlaceholderData {
+                prefix: "__",
+                placeholder: "np",
+                alignment_spec: Some(">"),
+                width: Some(4),
+                suffix: "@@",
+            }]
+        )
+    }
+
+    #[test]
+    fn test_line_number_format_regex_6() {
+        assert_eq!(
+            parse_line_number_format("__{nm:<3}@@---{np:_>4}**"),
+            vec![
+                LineNumberPlaceholderData {
+                    prefix: "__",
+                    placeholder: "nm",
+                    alignment_spec: Some("<"),
+                    width: Some(3),
+                    suffix: "@@---{np:_>4}**",
+                },
+                LineNumberPlaceholderData {
+                    prefix: "@@---",
+                    placeholder: "np",
+                    alignment_spec: Some(">"),
+                    width: Some(4),
+                    suffix: "**",
+                }
+            ]
+        )
     }
 
     fn _get_capture<'a>(i: usize, j: usize, caps: &'a Vec<Captures>) -> &'a str {

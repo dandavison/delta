@@ -26,8 +26,7 @@ pub struct Painter<'a> {
     pub highlighter: HighlightLines<'a>,
     pub config: &'a config::Config,
     pub output_buffer: String,
-    pub minus_line_number: usize,
-    pub plus_line_number: usize,
+    pub line_numbers_data: line_numbers::LineNumbersData<'a>,
 }
 
 impl<'a> Painter<'a> {
@@ -35,6 +34,15 @@ impl<'a> Painter<'a> {
         let default_syntax = Self::get_syntax(&config.syntax_set, None);
         // TODO: Avoid doing this.
         let dummy_highlighter = HighlightLines::new(default_syntax, &config.syntax_dummy_theme);
+
+        let line_numbers_data = if config.line_numbers {
+            line_numbers::LineNumbersData::from_format_strings(
+                &config.line_numbers_left_format,
+                &config.line_numbers_right_format,
+            )
+        } else {
+            line_numbers::LineNumbersData::default()
+        };
         Self {
             minus_lines: Vec::new(),
             plus_lines: Vec::new(),
@@ -43,8 +51,7 @@ impl<'a> Painter<'a> {
             highlighter: dummy_highlighter,
             writer,
             config,
-            minus_line_number: 0,
-            plus_line_number: 0,
+            line_numbers_data,
         }
     }
 
@@ -90,12 +97,18 @@ impl<'a> Painter<'a> {
         let mut minus_line_numbers = Vec::new();
         let mut plus_line_numbers = Vec::new();
         for _line in &self.minus_lines {
-            minus_line_numbers.push(Some((Some(self.minus_line_number), None)));
-            self.minus_line_number += 1;
+            minus_line_numbers.push(Some((
+                Some(self.line_numbers_data.hunk_minus_line_number),
+                None,
+            )));
+            self.line_numbers_data.hunk_minus_line_number += 1;
         }
         for _line in &self.plus_lines {
-            plus_line_numbers.push(Some((None, Some(self.plus_line_number))));
-            self.plus_line_number += 1;
+            plus_line_numbers.push(Some((
+                None,
+                Some(self.line_numbers_data.hunk_plus_line_number),
+            )));
+            self.line_numbers_data.hunk_plus_line_number += 1;
         }
         // TODO: lines and style sections contain identical line text
         if !self.minus_lines.is_empty() {
@@ -105,6 +118,7 @@ impl<'a> Painter<'a> {
                 minus_line_numbers,
                 &mut self.output_buffer,
                 self.config,
+                Some(&self.line_numbers_data),
                 if self.config.keep_plus_minus_markers {
                     "-"
                 } else {
@@ -123,6 +137,7 @@ impl<'a> Painter<'a> {
                 plus_line_numbers,
                 &mut self.output_buffer,
                 self.config,
+                Some(&self.line_numbers_data),
                 if self.config.keep_plus_minus_markers {
                     "+"
                 } else {
@@ -146,6 +161,7 @@ impl<'a> Painter<'a> {
         line_number_sections: Vec<Option<(Option<usize>, Option<usize>)>>,
         output_buffer: &mut String,
         config: &config::Config,
+        line_numbers_data: Option<&line_numbers::LineNumbersData>,
         prefix: &str,
         style: Style,          // style for right fill if line contains no emph sections
         non_emph_style: Style, // style for right fill if line contains emph sections
@@ -176,6 +192,7 @@ impl<'a> Painter<'a> {
             let mut ansi_strings = Vec::new();
             if config.line_numbers && line_numbers.is_some() {
                 ansi_strings.extend(line_numbers::format_and_paint_line_numbers(
+                    line_numbers_data,
                     line_numbers,
                     config,
                 ))
