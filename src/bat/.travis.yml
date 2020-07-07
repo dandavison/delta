@@ -7,7 +7,7 @@ matrix:
       env: TARGET=x86_64-unknown-linux-gnu
     - os: windows
       rust: stable
-      env: TARGET=x86_64-pc-windows-gnu
+      env: TARGET=x86_64-pc-windows-msvc
     - os: linux
       rust: stable
       env:
