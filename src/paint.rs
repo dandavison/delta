@@ -8,7 +8,7 @@ use syntect::highlighting::Style as SyntectStyle;
 use syntect::parsing::{SyntaxReference, SyntaxSet};
 
 use crate::config::{self, delta_unreachable};
-use crate::delta::State;
+use crate::delta::{self, State};
 use crate::edits;
 use crate::features::line_numbers;
 use crate::paint::superimpose_style_sections::superimpose_style_sections;
@@ -135,6 +135,36 @@ impl<'a> Painter<'a> {
         }
         self.minus_lines.clear();
         self.plus_lines.clear();
+    }
+
+    pub fn paint_zero_line(&mut self, line: &str) {
+        let prefix = if self.config.keep_plus_minus_markers && !line.is_empty() {
+            &line[..1]
+        } else {
+            ""
+        };
+        let lines = vec![delta::prepare(line, true, self.config)];
+        let syntax_style_sections = Painter::get_syntax_style_sections_for_lines(
+            &lines,
+            &State::HunkZero,
+            &mut self.highlighter,
+            &self.config,
+        );
+        let diff_style_sections = vec![(self.config.zero_style, lines[0].as_str())];
+
+        Painter::paint_lines(
+            syntax_style_sections,
+            vec![diff_style_sections],
+            &State::HunkZero,
+            &mut self.output_buffer,
+            self.config,
+            &mut Some(&mut self.line_numbers_data),
+            prefix,
+            self.config.zero_style,
+            self.config.zero_style,
+            None,
+            None,
+        );
     }
 
     /// Superimpose background styles and foreground syntax

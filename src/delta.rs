@@ -476,36 +476,9 @@ fn handle_hunk_line(
             State::HunkPlus
         }
         Some(' ') => {
-            let state = State::HunkZero;
-            let prefix = if config.keep_plus_minus_markers && !line.is_empty() {
-                &line[..1]
-            } else {
-                ""
-            };
             painter.paint_buffered_minus_and_plus_lines();
-            let lines = vec![prepare(&line, true, config)];
-            let syntax_style_sections = Painter::get_syntax_style_sections_for_lines(
-                &lines,
-                &state,
-                &mut painter.highlighter,
-                &painter.config,
-            );
-            let diff_style_sections = vec![(config.zero_style, lines[0].as_str())];
-
-            Painter::paint_lines(
-                syntax_style_sections,
-                vec![diff_style_sections],
-                &state,
-                &mut painter.output_buffer,
-                config,
-                &mut Some(&mut painter.line_numbers_data),
-                prefix,
-                config.zero_style,
-                config.zero_style,
-                None,
-                None,
-            );
-            state
+            painter.paint_zero_line(&line);
+            State::HunkZero
         }
         _ => {
             // The first character here could be e.g. '\' from '\ No newline at end of file'. This
@@ -526,7 +499,7 @@ fn handle_hunk_line(
 // Terminating with newline character is necessary for many of the sublime syntax definitions to
 // highlight correctly.
 // See https://docs.rs/syntect/3.2.0/syntect/parsing/struct.SyntaxSetBuilder.html#method.add_from_folder
-fn prepare(line: &str, append_newline: bool, config: &Config) -> String {
+pub fn prepare(line: &str, append_newline: bool, config: &Config) -> String {
     let terminator = if append_newline { "\n" } else { "" };
     if !line.is_empty() {
         let mut line = line.graphemes(true);
