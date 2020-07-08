@@ -1,3 +1,5 @@
+use std::cmp::max;
+
 use ansi_term;
 use lazy_static::lazy_static;
 use regex::Regex;
@@ -78,12 +80,17 @@ pub fn format_and_paint_line_numbers<'a>(
     };
 
     let mut formatted_numbers = Vec::new();
+    let min_line_number_width = 1
+        + (line_numbers_data.hunk_max_line_number as f64)
+            .log10()
+            .floor() as usize;
 
     formatted_numbers.extend(format_and_paint_line_number_field(
         &line_numbers_data.left_format_data,
         &config.line_numbers_left_style,
         minus_number,
         plus_number,
+        min_line_number_width,
         &minus_number_style,
         &plus_number_style,
     ));
@@ -92,6 +99,7 @@ pub fn format_and_paint_line_numbers<'a>(
         &config.line_numbers_right_style,
         minus_number,
         plus_number,
+        min_line_number_width,
         &minus_number_style,
         &plus_number_style,
     ));
@@ -124,6 +132,7 @@ pub struct LineNumbersData<'a> {
     pub right_format_data: LineNumberFormatData<'a>,
     pub hunk_minus_line_number: usize,
     pub hunk_plus_line_number: usize,
+    pub hunk_max_line_number: usize,
 }
 
 // Although it's probably unusual, a single format string can contain multiple placeholders. E.g.
@@ -146,6 +155,7 @@ impl<'a> LineNumbersData<'a> {
             right_format_data: parse_line_number_format(right_format),
             hunk_minus_line_number: 0,
             hunk_plus_line_number: 0,
+            hunk_max_line_number: 0,
         }
     }
 }
@@ -171,11 +181,13 @@ fn parse_line_number_format<'a>(format_string: &'a str) -> LineNumberFormatData<
     }
     format_data
 }
+
 fn format_and_paint_line_number_field<'a>(
     format_data: &Vec<LineNumberPlaceholderData<'a>>,
     style: &Style,
     minus_number: Option<usize>,
     plus_number: Option<usize>,
+    min_line_number_width: usize,
     minus_number_style: &Style,
     plus_number_style: &Style,
 ) -> Vec<ansi_term::ANSIGenericString<'a, str>> {
@@ -185,7 +197,11 @@ fn format_and_paint_line_number_field<'a>(
         ansi_strings.push(style.paint(placeholder.prefix));
 
         let alignment_spec = placeholder.alignment_spec.unwrap_or("^");
-        let width = placeholder.width.unwrap();
+        let width = if let Some(placeholder_width) = placeholder.width {
+            max(placeholder_width, min_line_number_width)
+        } else {
+            min_line_number_width
+        };
 
         match placeholder.placeholder {
             "nm" => ansi_strings.push(minus_number_style.paint(format_line_number(

@@ -375,6 +375,8 @@ fn handle_hunk_header_line(
     let (raw_code_fragment, line_numbers) = parse::parse_hunk_header(&line);
     painter.line_numbers_data.hunk_minus_line_number = line_numbers[0].0;
     painter.line_numbers_data.hunk_plus_line_number = line_numbers[line_numbers.len() - 1].0;
+    painter.line_numbers_data.hunk_max_line_number =
+        line_numbers.iter().map(|(n, d)| n + d).max().unwrap();
     if config.hunk_header_style.is_raw {
         writeln!(painter.writer)?;
         draw_fn(
