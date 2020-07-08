@@ -212,6 +212,10 @@ pub struct Opt {
     #[structopt(short = "n", long = "line-numbers")]
     pub line_numbers: bool,
 
+    /// Display a side-by-side diff view instead of the traditional view.
+    #[structopt(short = "s", long = "side-by-side")]
+    pub side_by_side: bool,
+
     #[structopt(long = "diff-highlight")]
     /// Emulate diff-highlight (https://github.com/git/git/tree/master/contrib/diff-highlight)
     pub diff_highlight: bool,
@@ -516,6 +520,7 @@ pub struct ComputedValues {
     pub syntax_theme: Option<SyntaxTheme>,
     pub syntax_dummy_theme: SyntaxTheme,
     pub true_color: bool,
+    pub available_terminal_width: usize,
     pub decorations_width: Width,
     pub background_color_extends_to_terminal_width: bool,
     pub paging_mode: PagingMode,

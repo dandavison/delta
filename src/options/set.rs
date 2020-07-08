@@ -81,6 +81,20 @@ pub fn set_options(
     let features = gather_features(opt, &builtin_features, git_config);
     opt.features = features.join(" ");
 
+    // HACK: make minus-line styles have syntax-highlighting iff side-by-side.
+    if features.contains(&"side-by-side".to_string()) {
+        let prefix = "normal ";
+        if !config::user_supplied_option("minus-style", arg_matches) {
+            if opt.minus_style.starts_with(prefix) {
+                opt.minus_style = format!("syntax {}", &opt.minus_style[prefix.len()..]);
+            }
+        }
+        if !config::user_supplied_option("minus-emph-style", arg_matches) {
+            if opt.minus_emph_style.starts_with(prefix) {
+                opt.minus_emph_style = format!("syntax {}", &opt.minus_emph_style[prefix.len()..]);
+            }
+        }
+    }
 
     // Handle options which default to an arbitrary git config value.
     // TODO: incorporate this logic into the set_options macro.
@@ -136,6 +150,7 @@ pub fn set_options(
             ("plus-empty-line-marker-style", plus_empty_line_marker_style),
             ("plus-non-emph-style", plus_non_emph_style),
             ("raw", raw),
+            ("side-by-side", side_by_side),
             ("tabs", tab_width),
             ("whitespace-error-style", whitespace_error_style),
             ("width", width),
@@ -276,6 +291,9 @@ fn gather_features<'a>(
     }
     if opt.navigate {
         gather_builtin_features_recursively("navigate", &mut features, &builtin_features, opt);
+    }
+    if opt.side_by_side {
+        gather_builtin_features_recursively("side-by-side", &mut features, &builtin_features, opt);
     }
 
     if let Some(git_config) = git_config {
@@ -448,7 +466,7 @@ fn set_paging_mode(opt: &mut cli::Opt) {
 
 fn set_widths(opt: &mut cli::Opt) {
     // Allow one character in case e.g. `less --status-column` is in effect. See #41 and #10.
-    let available_terminal_width = (Term::stdout().size().1 - 1) as usize;
+    opt.computed.available_terminal_width = (Term::stdout().size().1 - 1) as usize;
     let (decorations_width, background_color_extends_to_terminal_width) = match opt.width.as_deref()
     {
         Some("variable") => (cli::Width::Variable, false),
@@ -458,11 +476,14 @@ fn set_widths(opt: &mut cli::Opt) {
                 process::exit(1);
             });
             (
-                cli::Width::Fixed(min(width, available_terminal_width)),
+                cli::Width::Fixed(min(width, opt.computed.available_terminal_width)),
                 true,
             )
         }
-        None => (cli::Width::Fixed(available_terminal_width), true),
+        None => (
+            cli::Width::Fixed(opt.computed.available_terminal_width),
+            true,
+        ),
     };
     opt.computed.decorations_width = decorations_width;
     opt.computed.background_color_extends_to_terminal_width =
