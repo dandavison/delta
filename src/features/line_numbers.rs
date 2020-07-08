@@ -60,12 +60,11 @@ pub fn make_feature() -> Vec<(String, OptionValueFunction)> {
 /// Return a vec of `ansi_term::ANSIGenericString`s representing the left and right fields of the
 /// two-column line number display.
 pub fn format_and_paint_line_numbers<'a>(
-    line_numbers_data: Option<&'a LineNumbersData>,
-    line_numbers: &'a Option<(Option<usize>, Option<usize>)>,
+    line_numbers_data: &'a LineNumbersData,
+    line_numbers: (Option<usize>, Option<usize>),
     config: &'a config::Config,
 ) -> Vec<ansi_term::ANSIGenericString<'a, str>> {
-    let line_numbers_data = line_numbers_data.unwrap();
-    let (minus_number, plus_number) = line_numbers.unwrap();
+    let (minus_number, plus_number) = line_numbers;
 
     // If both minus and plus numbers are present then the line is a zero line.
     let (minus_number_style, plus_number_style) = match (minus_number, plus_number) {

@@ -190,12 +190,16 @@ impl<'a> Painter<'a> {
 
             let mut handled_prefix = false;
             let mut ansi_strings = Vec::new();
-            if config.line_numbers && line_numbers.is_some() {
-                ansi_strings.extend(line_numbers::format_and_paint_line_numbers(
-                    line_numbers_data,
-                    line_numbers,
-                    config,
-                ))
+            if config.line_numbers {
+                if let (Some(line_numbers), Some(line_numbers_data)) =
+                    (line_numbers, line_numbers_data)
+                {
+                    ansi_strings.extend(line_numbers::format_and_paint_line_numbers(
+                        line_numbers_data,
+                        *line_numbers,
+                        config,
+                    ))
+                }
             }
             for (section_style, mut text) in superimpose_style_sections(
                 syntax_sections,
