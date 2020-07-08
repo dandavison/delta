@@ -373,7 +373,7 @@ fn handle_hunk_header_line(
         }
     };
     let (raw_code_fragment, line_numbers) = parse::parse_hunk_header(&line);
-    painter.line_numbers_data.initialize_hunk(line_numbers);
+    // Emit the hunk header, with any requested decoration
     if config.hunk_header_style.is_raw {
         writeln!(painter.writer)?;
         draw_fn(
@@ -425,12 +425,18 @@ fn handle_hunk_header_line(
             };
         }
     };
-
-    if !config.line_numbers {
-        let line_number = &format!("{}", painter.line_numbers_data.hunk_plus_line_number);
+    // Emit a single line number, or prepare for full line-numbering
+    if config.line_numbers {
+        painter.line_numbers_data.initialize_hunk(line_numbers);
+    } else {
+        let plus_line_number = line_numbers[line_numbers.len() - 1].0;
         match config.hunk_header_style.decoration_ansi_term_style() {
-            Some(style) => writeln!(painter.writer, "{}", style.paint(line_number))?,
-            None => writeln!(painter.writer, "{}", line_number)?,
+            Some(style) => writeln!(
+                painter.writer,
+                "{}",
+                style.paint(format!("{}", plus_line_number))
+            )?,
+            None => writeln!(painter.writer, "{}", plus_line_number)?,
         }
     }
     Ok(())
