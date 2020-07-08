@@ -6,9 +6,10 @@ use ansi_term;
 use syntect::easy::HighlightLines;
 use syntect::highlighting::Style as SyntectStyle;
 use syntect::parsing::{SyntaxReference, SyntaxSet};
+use unicode_segmentation::UnicodeSegmentation;
 
 use crate::config::{self, delta_unreachable};
-use crate::delta::{self, State};
+use crate::delta::State;
 use crate::edits;
 use crate::features::line_numbers;
 use crate::paint::superimpose_style_sections::superimpose_style_sections;
@@ -78,6 +79,44 @@ impl<'a> Painter<'a> {
         };
     }
 
+    /// Replace initial -/+ character with ' ', expand tabs as spaces, and optionally terminate with
+    /// newline.
+    // Terminating with newline character is necessary for many of the sublime syntax definitions to
+    // highlight correctly.
+    // See https://docs.rs/syntect/3.2.0/syntect/parsing/struct.SyntaxSetBuilder.html#method.add_from_folder
+    pub fn prepare(&self, line: &str, append_newline: bool) -> String {
+        let terminator = if append_newline { "\n" } else { "" };
+        if !line.is_empty() {
+            let mut line = line.graphemes(true);
+
+            // The first column contains a -/+/space character, added by git. We substitute it for a
+            // space now, so that it is not present during syntax highlighting. When emitting the line
+            // in Painter::paint_lines, we drop the space (unless --keep-plus-minus-markers is in
+            // effect in which case we replace it with the appropriate marker).
+            // TODO: Things should, but do not, work if this leading space is omitted at this stage.
+            // See comment in align::Alignment::new.
+            line.next();
+            format!(" {}{}", self.expand_tabs(line), terminator)
+        } else {
+            terminator.to_string()
+        }
+    }
+
+    /// Expand tabs as spaces.
+    /// tab_width = 0 is documented to mean do not replace tabs.
+    pub fn expand_tabs<'b, I>(&self, line: I) -> String
+    where
+        I: Iterator<Item = &'b str>,
+    {
+        if self.config.tab_width > 0 {
+            let tab_replacement = " ".repeat(self.config.tab_width);
+            line.map(|s| if s == "\t" { &tab_replacement } else { s })
+                .collect::<String>()
+        } else {
+            line.collect::<String>()
+        }
+    }
+
     pub fn paint_buffered_minus_and_plus_lines(&mut self) {
         let minus_line_syntax_style_sections = Self::get_syntax_style_sections_for_lines(
             &self.minus_lines,
@@ -143,7 +182,7 @@ impl<'a> Painter<'a> {
         } else {
             ""
         };
-        let lines = vec![delta::prepare(line, true, self.config)];
+        let lines = vec![self.prepare(line, true)];
         let syntax_style_sections = Painter::get_syntax_style_sections_for_lines(
             &lines,
             &State::HunkZero,

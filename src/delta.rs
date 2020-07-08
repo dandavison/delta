@@ -385,7 +385,7 @@ fn handle_hunk_header_line(
             decoration_ansi_term_style,
         )?;
     } else {
-        let line = match prepare(&raw_code_fragment, false, config) {
+        let line = match painter.prepare(&raw_code_fragment, false) {
             s if s.len() > 0 => format!("{} ", s),
             s => s,
         };
@@ -468,11 +468,11 @@ fn handle_hunk_line(
             if state == State::HunkPlus {
                 painter.paint_buffered_minus_and_plus_lines();
             }
-            painter.minus_lines.push(prepare(&line, true, config));
+            painter.minus_lines.push(painter.prepare(&line, true));
             State::HunkMinus
         }
         Some('+') => {
-            painter.plus_lines.push(prepare(&line, true, config));
+            painter.plus_lines.push(painter.prepare(&line, true));
             State::HunkPlus
         }
         Some(' ') => {
@@ -487,47 +487,9 @@ fn handle_hunk_line(
             painter.paint_buffered_minus_and_plus_lines();
             painter
                 .output_buffer
-                .push_str(&expand_tabs(raw_line.graphemes(true), config.tab_width));
+                .push_str(&painter.expand_tabs(raw_line.graphemes(true)));
             painter.output_buffer.push_str("\n");
             State::HunkZero
         }
-    }
-}
-
-/// Replace initial -/+ character with ' ', expand tabs as spaces, and optionally terminate with
-/// newline.
-// Terminating with newline character is necessary for many of the sublime syntax definitions to
-// highlight correctly.
-// See https://docs.rs/syntect/3.2.0/syntect/parsing/struct.SyntaxSetBuilder.html#method.add_from_folder
-pub fn prepare(line: &str, append_newline: bool, config: &Config) -> String {
-    let terminator = if append_newline { "\n" } else { "" };
-    if !line.is_empty() {
-        let mut line = line.graphemes(true);
-
-        // The first column contains a -/+/space character, added by git. We substitute it for a
-        // space now, so that it is not present during syntax highlighting. When emitting the line
-        // in Painter::paint_lines, we drop the space (unless --keep-plus-minus-markers is in
-        // effect in which case we replace it with the appropriate marker).
-        // TODO: Things should, but do not, work if this leading space is omitted at this stage.
-        // See comment in align::Alignment::new.
-        line.next();
-        format!(" {}{}", expand_tabs(line, config.tab_width), terminator)
-    } else {
-        terminator.to_string()
-    }
-}
-
-/// Expand tabs as spaces.
-/// tab_width = 0 is documented to mean do not replace tabs.
-fn expand_tabs<'a, I>(line: I, tab_width: usize) -> String
-where
-    I: Iterator<Item = &'a str>,
-{
-    if tab_width > 0 {
-        let tab_replacement = " ".repeat(tab_width);
-        line.map(|s| if s == "\t" { &tab_replacement } else { s })
-            .collect::<String>()
-    } else {
-        line.collect::<String>()
     }
 }
