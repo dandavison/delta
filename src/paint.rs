@@ -221,8 +221,6 @@ impl<'a> Painter<'a> {
         empty_line_style: Option<Style>, // a style with background color to highlight an empty line
         background_color_extends_to_terminal_width: Option<bool>,
     ) {
-        let output_line_numbers = config.line_numbers && line_numbers_data.is_some();
-
         // There's some unfortunate hackery going on here for two reasons:
         //
         // 1. The prefix needs to be injected into the output stream. We paint
@@ -234,49 +232,25 @@ impl<'a> Painter<'a> {
         for (syntax_sections, diff_sections) in
             syntax_style_sections.iter().zip(diff_style_sections.iter())
         {
+            let mut line = Painter::superimpose_style_sections_and_paint(
+                syntax_sections,
+                diff_sections,
+                state,
+                line_numbers_data,
+                prefix,
+                config,
+            );
             let non_emph_style = if style_sections_contain_more_than_one_style(diff_sections) {
                 non_emph_style // line contains an emph section
             } else {
                 style
             };
-
-            let mut handled_prefix = false;
-            let mut ansi_strings = Vec::new();
-            if output_line_numbers {
-                ansi_strings.extend(line_numbers::format_and_paint_line_numbers(
-                    line_numbers_data.as_mut().unwrap(),
-                    state,
-                    config,
-                ))
-            }
-            for (section_style, mut text) in superimpose_style_sections(
-                syntax_sections,
-                diff_sections,
-                config.true_color,
-                config.null_syntect_style,
-            ) {
-                if !handled_prefix {
-                    if prefix != "" {
-                        ansi_strings.push(section_style.paint(prefix));
-                    }
-                    if text.len() > 0 {
-                        text.remove(0);
-                    }
-                    handled_prefix = true;
-                }
-                if !text.is_empty() {
-                    ansi_strings.push(section_style.paint(text));
-                }
-            }
             let right_fill_background_color = non_emph_style.has_background_color()
                 && background_color_extends_to_terminal_width
                     .unwrap_or(config.background_color_extends_to_terminal_width);
             if right_fill_background_color {
-                ansi_strings.push(non_emph_style.paint(""));
-            }
-            let line = &mut ansi_term::ANSIStrings(&ansi_strings).to_string();
-            if right_fill_background_color {
                 // HACK: How to properly incorporate the ANSI_CSI_CLEAR_TO_EOL into ansi_strings?
+                line.push_str(&ansi_term::ANSIStrings(&[non_emph_style.paint("")]).to_string());
                 if line
                     .to_lowercase()
                     .ends_with(&ANSI_SGR_RESET.to_lowercase())
@@ -300,6 +274,46 @@ impl<'a> Painter<'a> {
             }
             output_buffer.push_str("\n");
         }
+    }
+
+    fn superimpose_style_sections_and_paint(
+        syntax_sections: &Vec<(SyntectStyle, &str)>,
+        diff_sections: &Vec<(Style, &str)>,
+        state: &State,
+        line_numbers_data: &mut Option<&mut line_numbers::LineNumbersData>,
+        prefix: &str,
+        config: &config::Config,
+    ) -> String {
+        let output_line_numbers = config.line_numbers && line_numbers_data.is_some();
+        let mut handled_prefix = false;
+        let mut ansi_strings = Vec::new();
+        if output_line_numbers {
+            ansi_strings.extend(line_numbers::format_and_paint_line_numbers(
+                line_numbers_data.as_mut().unwrap(),
+                state,
+                config,
+            ))
+        }
+        for (section_style, mut text) in superimpose_style_sections(
+            syntax_sections,
+            diff_sections,
+            config.true_color,
+            config.null_syntect_style,
+        ) {
+            if !handled_prefix {
+                if prefix != "" {
+                    ansi_strings.push(section_style.paint(prefix));
+                }
+                if text.len() > 0 {
+                    text.remove(0);
+                }
+                handled_prefix = true;
+            }
+            if !text.is_empty() {
+                ansi_strings.push(section_style.paint(text));
+            }
+        }
+        ansi_term::ANSIStrings(&ansi_strings).to_string()
     }
 
     /// Write output buffer to output stream, and clear the buffer.
