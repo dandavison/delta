@@ -5,6 +5,7 @@ use lazy_static::lazy_static;
 use regex::Regex;
 
 use crate::config;
+use crate::delta::State;
 use crate::features::OptionValueFunction;
 use crate::style::Style;
 
@@ -60,47 +61,56 @@ pub fn make_feature() -> Vec<(String, OptionValueFunction)> {
 /// Return a vec of `ansi_term::ANSIGenericString`s representing the left and right fields of the
 /// two-column line number display.
 pub fn format_and_paint_line_numbers<'a>(
-    line_numbers_data: &'a LineNumbersData,
-    line_numbers: (Option<usize>, Option<usize>),
+    line_numbers_data: &'a mut LineNumbersData,
+    state: &State,
     config: &'a config::Config,
 ) -> Vec<ansi_term::ANSIGenericString<'a, str>> {
-    let (minus_number, plus_number) = line_numbers;
-
-    // If both minus and plus numbers are present then the line is a zero line.
-    let (minus_number_style, plus_number_style) = match (minus_number, plus_number) {
-        (Some(_), Some(_)) => (
-            config.line_numbers_zero_style,
-            config.line_numbers_zero_style,
-        ),
-        _ => (
-            config.line_numbers_minus_style,
-            config.line_numbers_plus_style,
-        ),
+    let m_ref = &mut line_numbers_data.hunk_minus_line_number;
+    let p_ref = &mut line_numbers_data.hunk_plus_line_number;
+    let (minus_style, zero_style, plus_style) = (
+        config.line_numbers_minus_style,
+        config.line_numbers_zero_style,
+        config.line_numbers_plus_style,
+    );
+    let ((minus_number, plus_number), (minus_style, plus_style)) = match state {
+        State::HunkMinus => {
+            let m = *m_ref;
+            *m_ref += 1;
+            ((Some(m), None), (minus_style, plus_style))
+        }
+        State::HunkZero => {
+            let (m, p) = (*m_ref, *p_ref);
+            *m_ref += 1;
+            *p_ref += 1;
+            ((Some(m), Some(p)), (zero_style, zero_style))
+        }
+        State::HunkPlus => {
+            let p = *p_ref;
+            *p_ref += 1;
+            ((None, Some(p)), (minus_style, plus_style))
+        }
+        _ => return Vec::new(),
     };
 
     let mut formatted_numbers = Vec::new();
-    let min_line_number_width = 1
-        + (line_numbers_data.hunk_max_line_number as f64)
-            .log10()
-            .floor() as usize;
 
     formatted_numbers.extend(format_and_paint_line_number_field(
         &line_numbers_data.left_format_data,
         &config.line_numbers_left_style,
         minus_number,
         plus_number,
-        min_line_number_width,
-        &minus_number_style,
-        &plus_number_style,
+        line_numbers_data.hunk_max_line_number_width,
+        &minus_style,
+        &plus_style,
     ));
     formatted_numbers.extend(format_and_paint_line_number_field(
         &line_numbers_data.right_format_data,
         &config.line_numbers_right_style,
         minus_number,
         plus_number,
-        min_line_number_width,
-        &minus_number_style,
-        &plus_number_style,
+        line_numbers_data.hunk_max_line_number_width,
+        &minus_style,
+        &plus_style,
     ));
 
     formatted_numbers
@@ -131,7 +141,7 @@ pub struct LineNumbersData<'a> {
     pub right_format_data: LineNumberFormatData<'a>,
     pub hunk_minus_line_number: usize,
     pub hunk_plus_line_number: usize,
-    pub hunk_max_line_number: usize,
+    pub hunk_max_line_number_width: usize,
 }
 
 // Although it's probably unusual, a single format string can contain multiple placeholders. E.g.
@@ -154,8 +164,19 @@ impl<'a> LineNumbersData<'a> {
             right_format_data: parse_line_number_format(right_format),
             hunk_minus_line_number: 0,
             hunk_plus_line_number: 0,
-            hunk_max_line_number: 0,
+            hunk_max_line_number_width: 0,
         }
+    }
+
+    /// Initialize line number data for a hunk.
+    pub fn initialize_hunk(&mut self, line_numbers: Vec<(usize, usize)>) {
+        // Typically, line_numbers has length 2: an entry for the minus file, and one for the plus
+        // file. In the case of merge commits, it may be longer.
+        self.hunk_minus_line_number = line_numbers[0].0;
+        self.hunk_plus_line_number = line_numbers[line_numbers.len() - 1].0;
+        let hunk_max_line_number = line_numbers.iter().map(|(n, d)| n + d).max().unwrap();
+        self.hunk_max_line_number_width =
+            1 + (hunk_max_line_number as f64).log10().floor() as usize;
     }
 }
 
@@ -186,7 +207,7 @@ fn format_and_paint_line_number_field<'a>(
     style: &Style,
     minus_number: Option<usize>,
     plus_number: Option<usize>,
-    min_line_number_width: usize,
+    min_field_width: usize,
     minus_number_style: &Style,
     plus_number_style: &Style,
 ) -> Vec<ansi_term::ANSIGenericString<'a, str>> {
@@ -197,9 +218,9 @@ fn format_and_paint_line_number_field<'a>(
 
         let alignment_spec = placeholder.alignment_spec.unwrap_or("^");
         let width = if let Some(placeholder_width) = placeholder.width {
-            max(placeholder_width, min_line_number_width)
+            max(placeholder_width, min_field_width)
         } else {
-            min_line_number_width
+            min_field_width
         };
 
         match placeholder.placeholder {

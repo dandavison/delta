@@ -373,10 +373,7 @@ fn handle_hunk_header_line(
         }
     };
     let (raw_code_fragment, line_numbers) = parse::parse_hunk_header(&line);
-    painter.line_numbers_data.hunk_minus_line_number = line_numbers[0].0;
-    painter.line_numbers_data.hunk_plus_line_number = line_numbers[line_numbers.len() - 1].0;
-    painter.line_numbers_data.hunk_max_line_number =
-        line_numbers.iter().map(|(n, d)| n + d).max().unwrap();
+    painter.line_numbers_data.initialize_hunk(line_numbers);
     if config.hunk_header_style.is_raw {
         writeln!(painter.writer)?;
         draw_fn(
@@ -404,10 +401,10 @@ fn handle_hunk_header_line(
             Painter::paint_lines(
                 syntax_style_sections,
                 vec![vec![(config.hunk_header_style, &lines[0])]],
-                vec![None],
+                &State::HunkHeader,
                 &mut painter.output_buffer,
                 config,
-                None,
+                &mut None,
                 "",
                 config.null_style,
                 config.null_style,
@@ -492,21 +489,16 @@ fn handle_hunk_line(
             Painter::paint_lines(
                 syntax_style_sections,
                 vec![diff_style_sections],
-                vec![Some((
-                    Some(painter.line_numbers_data.hunk_minus_line_number),
-                    Some(painter.line_numbers_data.hunk_plus_line_number),
-                ))],
+                &state,
                 &mut painter.output_buffer,
                 config,
-                Some(&painter.line_numbers_data),
+                &mut Some(&mut painter.line_numbers_data),
                 prefix,
                 config.zero_style,
                 config.zero_style,
                 None,
                 None,
             );
-            painter.line_numbers_data.hunk_minus_line_number += 1;
-            painter.line_numbers_data.hunk_plus_line_number += 1;
             state
         }
         _ => {

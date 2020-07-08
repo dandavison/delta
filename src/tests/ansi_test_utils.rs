@@ -4,6 +4,7 @@ pub mod ansi_test_utils {
     use console::strip_ansi_codes;
 
     use crate::config::Config;
+    use crate::delta::State;
     use crate::paint;
     use crate::style::Style;
 
@@ -125,10 +126,10 @@ pub mod ansi_test_utils {
         paint::Painter::paint_lines(
             vec![syntax_style_sections],
             vec![vec![(syntax_highlighted_style, lines[0])]],
-            vec![None],
+            &State::Unknown,
             &mut output_buffer,
             config,
-            None,
+            &mut None,
             "",
             config.null_style,
             config.null_style,
