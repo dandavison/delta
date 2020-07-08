@@ -71,7 +71,7 @@ where
             source = detect_source(&line);
         }
         if line.starts_with("commit ") {
-            painter.paint_buffered_lines();
+            painter.paint_buffered_minus_and_plus_lines();
             state = State::CommitMeta;
             if should_handle(&state, config) {
                 painter.emit()?;
@@ -79,7 +79,7 @@ where
                 continue;
             }
         } else if line.starts_with("diff ") {
-            painter.paint_buffered_lines();
+            painter.paint_buffered_minus_and_plus_lines();
             state = State::FileMeta;
         } else if (state == State::FileMeta || source == Source::DiffUnified)
             && (line.starts_with("--- ") || line.starts_with("rename from "))
@@ -136,7 +136,7 @@ where
             // proposal for more robust parsing logic.
 
             state = State::FileMeta;
-            painter.paint_buffered_lines();
+            painter.paint_buffered_minus_and_plus_lines();
             if should_handle(&State::FileMeta, config) {
                 painter.emit()?;
                 handle_generic_file_meta_header_line(&mut painter, &line, &raw_line, config)?;
@@ -159,7 +159,7 @@ where
         }
     }
 
-    painter.paint_buffered_lines();
+    painter.paint_buffered_minus_and_plus_lines();
     painter.emit()?;
     Ok(())
 }
@@ -461,12 +461,12 @@ fn handle_hunk_line(
     if painter.minus_lines.len() > config.max_buffered_lines
         || painter.plus_lines.len() > config.max_buffered_lines
     {
-        painter.paint_buffered_lines();
+        painter.paint_buffered_minus_and_plus_lines();
     }
     match line.chars().next() {
         Some('-') => {
             if state == State::HunkPlus {
-                painter.paint_buffered_lines();
+                painter.paint_buffered_minus_and_plus_lines();
             }
             painter.minus_lines.push(prepare(&line, true, config));
             State::HunkMinus
@@ -482,7 +482,7 @@ fn handle_hunk_line(
             } else {
                 ""
             };
-            painter.paint_buffered_lines();
+            painter.paint_buffered_minus_and_plus_lines();
             let lines = vec![prepare(&line, true, config)];
             let syntax_style_sections = Painter::get_syntax_style_sections_for_lines(
                 &lines,
@@ -511,7 +511,7 @@ fn handle_hunk_line(
             // The first character here could be e.g. '\' from '\ No newline at end of file'. This
             // is not a hunk line, but the parser does not have a more accurate state corresponding
             // to this.
-            painter.paint_buffered_lines();
+            painter.paint_buffered_minus_and_plus_lines();
             painter
                 .output_buffer
                 .push_str(&expand_tabs(raw_line.graphemes(true), config.tab_width));

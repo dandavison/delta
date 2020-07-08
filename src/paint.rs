@@ -78,7 +78,7 @@ impl<'a> Painter<'a> {
         };
     }
 
-    pub fn paint_buffered_lines(&mut self) {
+    pub fn paint_buffered_minus_and_plus_lines(&mut self) {
         let minus_line_syntax_style_sections = Self::get_syntax_style_sections_for_lines(
             &self.minus_lines,
             &State::HunkMinus,
