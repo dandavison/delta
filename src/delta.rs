@@ -373,8 +373,7 @@ fn handle_hunk_header_line(
         }
     };
     let (raw_code_fragment, line_numbers) = parse::parse_hunk_header(&line);
-    painter.minus_line_number = line_numbers[0].0;
-    painter.plus_line_number = line_numbers[line_numbers.len() - 1].0;
+    painter.line_numbers_data.initialize_hunk(line_numbers);
     if config.hunk_header_style.is_raw {
         writeln!(painter.writer)?;
         draw_fn(
@@ -402,9 +401,10 @@ fn handle_hunk_header_line(
             Painter::paint_lines(
                 syntax_style_sections,
                 vec![vec![(config.hunk_header_style, &lines[0])]],
-                vec![None],
+                &State::HunkHeader,
                 &mut painter.output_buffer,
                 config,
+                &mut None,
                 "",
                 config.null_style,
                 config.null_style,
@@ -427,7 +427,7 @@ fn handle_hunk_header_line(
     };
 
     if !config.line_numbers {
-        let line_number = &format!("{}", painter.plus_line_number);
+        let line_number = &format!("{}", painter.line_numbers_data.hunk_plus_line_number);
         match config.hunk_header_style.decoration_ansi_term_style() {
             Some(style) => writeln!(painter.writer, "{}", style.paint(line_number))?,
             None => writeln!(painter.writer, "{}", line_number)?,
@@ -489,20 +489,16 @@ fn handle_hunk_line(
             Painter::paint_lines(
                 syntax_style_sections,
                 vec![diff_style_sections],
-                vec![Some((
-                    Some(painter.minus_line_number),
-                    Some(painter.plus_line_number),
-                ))],
+                &state,
                 &mut painter.output_buffer,
                 config,
+                &mut Some(&mut painter.line_numbers_data),
                 prefix,
                 config.zero_style,
                 config.zero_style,
                 None,
                 None,
             );
-            painter.minus_line_number += 1;
-            painter.plus_line_number += 1;
             state
         }
         _ => {

@@ -26,8 +26,7 @@ pub struct Painter<'a> {
     pub highlighter: HighlightLines<'a>,
     pub config: &'a config::Config,
     pub output_buffer: String,
-    pub minus_line_number: usize,
-    pub plus_line_number: usize,
+    pub line_numbers_data: line_numbers::LineNumbersData<'a>,
 }
 
 impl<'a> Painter<'a> {
@@ -35,6 +34,15 @@ impl<'a> Painter<'a> {
         let default_syntax = Self::get_syntax(&config.syntax_set, None);
         // TODO: Avoid doing this.
         let dummy_highlighter = HighlightLines::new(default_syntax, &config.syntax_dummy_theme);
+
+        let line_numbers_data = if config.line_numbers {
+            line_numbers::LineNumbersData::from_format_strings(
+                &config.line_numbers_left_format,
+                &config.line_numbers_right_format,
+            )
+        } else {
+            line_numbers::LineNumbersData::default()
+        };
         Self {
             minus_lines: Vec::new(),
             plus_lines: Vec::new(),
@@ -43,8 +51,7 @@ impl<'a> Painter<'a> {
             highlighter: dummy_highlighter,
             writer,
             config,
-            minus_line_number: 0,
-            plus_line_number: 0,
+            line_numbers_data,
         }
     }
 
@@ -87,24 +94,15 @@ impl<'a> Painter<'a> {
         let (minus_line_diff_style_sections, plus_line_diff_style_sections) =
             Self::get_diff_style_sections(&self.minus_lines, &self.plus_lines, self.config);
 
-        let mut minus_line_numbers = Vec::new();
-        let mut plus_line_numbers = Vec::new();
-        for _line in &self.minus_lines {
-            minus_line_numbers.push(Some((Some(self.minus_line_number), None)));
-            self.minus_line_number += 1;
-        }
-        for _line in &self.plus_lines {
-            plus_line_numbers.push(Some((None, Some(self.plus_line_number))));
-            self.plus_line_number += 1;
-        }
         // TODO: lines and style sections contain identical line text
         if !self.minus_lines.is_empty() {
             Painter::paint_lines(
                 minus_line_syntax_style_sections,
                 minus_line_diff_style_sections,
-                minus_line_numbers,
+                &State::HunkMinus,
                 &mut self.output_buffer,
                 self.config,
+                &mut Some(&mut self.line_numbers_data),
                 if self.config.keep_plus_minus_markers {
                     "-"
                 } else {
@@ -120,9 +118,10 @@ impl<'a> Painter<'a> {
             Painter::paint_lines(
                 plus_line_syntax_style_sections,
                 plus_line_diff_style_sections,
-                plus_line_numbers,
+                &State::HunkPlus,
                 &mut self.output_buffer,
                 self.config,
+                &mut Some(&mut self.line_numbers_data),
                 if self.config.keep_plus_minus_markers {
                     "+"
                 } else {
@@ -143,15 +142,18 @@ impl<'a> Painter<'a> {
     pub fn paint_lines(
         syntax_style_sections: Vec<Vec<(SyntectStyle, &str)>>,
         diff_style_sections: Vec<Vec<(Style, &str)>>,
-        line_number_sections: Vec<Option<(Option<usize>, Option<usize>)>>,
+        state: &State,
         output_buffer: &mut String,
         config: &config::Config,
+        line_numbers_data: &mut Option<&mut line_numbers::LineNumbersData>,
         prefix: &str,
         style: Style,          // style for right fill if line contains no emph sections
         non_emph_style: Style, // style for right fill if line contains emph sections
         empty_line_style: Option<Style>, // a style with background color to highlight an empty line
         background_color_extends_to_terminal_width: Option<bool>,
     ) {
+        let output_line_numbers = config.line_numbers && line_numbers_data.is_some();
+
         // There's some unfortunate hackery going on here for two reasons:
         //
         // 1. The prefix needs to be injected into the output stream. We paint
@@ -160,11 +162,8 @@ impl<'a> Painter<'a> {
         // 2. We must ensure that we fill rightwards with the appropriate
         //    non-emph background color. In that case we don't use the last
         //    style of the line, because this might be emph.
-
-        for ((syntax_sections, diff_sections), line_numbers) in syntax_style_sections
-            .iter()
-            .zip(diff_style_sections.iter())
-            .zip(line_number_sections.iter())
+        for (syntax_sections, diff_sections) in
+            syntax_style_sections.iter().zip(diff_style_sections.iter())
         {
             let non_emph_style = if style_sections_contain_more_than_one_style(diff_sections) {
                 non_emph_style // line contains an emph section
@@ -174,9 +173,10 @@ impl<'a> Painter<'a> {
 
             let mut handled_prefix = false;
             let mut ansi_strings = Vec::new();
-            if config.line_numbers && line_numbers.is_some() {
+            if output_line_numbers {
                 ansi_strings.extend(line_numbers::format_and_paint_line_numbers(
-                    line_numbers,
+                    line_numbers_data.as_mut().unwrap(),
+                    state,
                     config,
                 ))
             }

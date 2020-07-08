@@ -180,7 +180,7 @@ of the line number columns. Their values are arbitrary format strings, which are
 the placeholders {nm} for the line number associated with the old version of the file and {np} for
 the line number associated with the new version of the file. The placeholders support a subset of
 the string formatting syntax documented here: https://doc.rust-lang.org/std/fmt/#formatting-parameters.
-Specifically, you can use the alignment, width, and fill syntax.
+Specifically, you can use the alignment and width syntax.
 
 For example, the default value of --line-numbers-left-format is '{nm:^4}⋮'. This means that the
 left column should display the minus line number (nm), center-aligned, padded with spaces to a
