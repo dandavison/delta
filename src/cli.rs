@@ -561,8 +561,8 @@ impl Opt {
         assets: HighlightingAssets,
     ) -> Self {
         let mut opt = Opt::from_clap(&arg_matches);
-        options::set::set_options(&mut opt, git_config, &arg_matches, assets);
         options::rewrite::apply_rewrite_rules(&mut opt, &arg_matches);
+        options::set::set_options(&mut opt, git_config, &arg_matches, assets);
         opt
     }
 
