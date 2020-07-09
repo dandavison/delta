@@ -30,11 +30,11 @@ where
     let mut annotated_minus_lines = Vec::<Vec<(EditOperation, &str)>>::new();
     let mut annotated_plus_lines = Vec::<Vec<(EditOperation, &str)>>::new();
 
-    let mut emitted = 0; // plus lines emitted so far
+    let mut plus_index = 0; // plus lines emitted so far
 
     'minus_lines_loop: for minus_line in minus_lines {
         let mut considered = 0; // plus lines considered so far as match for minus_line
-        for plus_line in &plus_lines[emitted..] {
+        for plus_line in &plus_lines[plus_index..] {
             let alignment = align::Alignment::new(
                 tokenize(minus_line, tokenization_regex),
                 tokenize(plus_line, tokenization_regex),
@@ -55,13 +55,13 @@ where
                 // minus_line and plus_line are inferred to be a homologous pair.
 
                 // Emit as unpaired the plus lines already considered and rejected
-                for plus_line in &plus_lines[emitted..(emitted + considered)] {
+                for plus_line in &plus_lines[plus_index..(plus_index + considered)] {
                     annotated_plus_lines.push(vec![(noop_insertion, plus_line)]);
                 }
-                emitted += considered;
+                plus_index += considered;
                 annotated_minus_lines.push(annotated_minus_line);
                 annotated_plus_lines.push(annotated_plus_line);
-                emitted += 1;
+                plus_index += 1;
 
                 // Greedy: move on to the next minus line.
                 continue 'minus_lines_loop;
@@ -73,7 +73,7 @@ where
         annotated_minus_lines.push(vec![(noop_deletion, minus_line)]);
     }
     // Emit any remaining plus lines
-    for plus_line in &plus_lines[emitted..] {
+    for plus_line in &plus_lines[plus_index..] {
         annotated_plus_lines.push(vec![(noop_insertion, plus_line)]);
     }
 
