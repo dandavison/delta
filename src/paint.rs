@@ -240,39 +240,73 @@ impl<'a> Painter<'a> {
                 prefix,
                 config,
             );
-            let non_emph_style = if style_sections_contain_more_than_one_style(diff_sections) {
-                non_emph_style // line contains an emph section
-            } else {
-                style
-            };
-            let right_fill_background_color = non_emph_style.has_background_color()
-                && background_color_extends_to_terminal_width
-                    .unwrap_or(config.background_color_extends_to_terminal_width);
-            if right_fill_background_color {
-                // HACK: How to properly incorporate the ANSI_CSI_CLEAR_TO_EOL into ansi_strings?
-                line.push_str(&ansi_term::ANSIStrings(&[non_emph_style.paint("")]).to_string());
-                if line
-                    .to_lowercase()
-                    .ends_with(&ANSI_SGR_RESET.to_lowercase())
-                {
-                    line.truncate(line.len() - ANSI_SGR_RESET.len());
-                }
-                output_buffer.push_str(&line);
-                output_buffer.push_str(ANSI_CSI_CLEAR_TO_EOL);
-                output_buffer.push_str(ANSI_SGR_RESET);
+            let (should_right_fill_background_color, fill_style) =
+                Painter::get_should_right_fill_background_color_and_fill_style(
+                    diff_sections,
+                    non_emph_style,
+                    style,
+                    background_color_extends_to_terminal_width,
+                    config,
+                );
+            if should_right_fill_background_color {
+                Painter::right_fill_background_color(&mut line, fill_style, output_buffer);
             } else if line.is_empty() {
-                if let Some(empty_line_style) = empty_line_style {
-                    output_buffer.push_str(
-                        &empty_line_style
-                            .ansi_term_style
-                            .paint(ANSI_CSI_CLEAR_TO_BOL)
-                            .to_string(),
-                    );
-                }
+                Painter::mark_empty_line(empty_line_style, output_buffer);
             } else {
                 output_buffer.push_str(&line);
             }
             output_buffer.push_str("\n");
+        }
+    }
+
+    /// Determine whether the terminal should fill the line rightwards with a background color, and
+    /// the style for doing so.
+    fn get_should_right_fill_background_color_and_fill_style(
+        diff_sections: &Vec<(Style, &str)>,
+        non_emph_style: Style,
+        style: Style,
+        background_color_extends_to_terminal_width: Option<bool>,
+        config: &config::Config,
+    ) -> (bool, Style) {
+        let fill_style = if style_sections_contain_more_than_one_style(diff_sections) {
+            non_emph_style // line contains an emph section
+        } else {
+            style
+        };
+        let should_right_fill_background_color = fill_style.has_background_color()
+            && background_color_extends_to_terminal_width
+                .unwrap_or(config.background_color_extends_to_terminal_width);
+        (should_right_fill_background_color, fill_style)
+    }
+
+    /// Emit line with ANSI sequences that extend the background color to the terminal width.
+    fn right_fill_background_color(
+        line: &mut String,
+        fill_style: Style,
+        output_buffer: &mut String,
+    ) {
+        // HACK: How to properly incorporate the ANSI_CSI_CLEAR_TO_EOL into ansi_strings?
+        line.push_str(&ansi_term::ANSIStrings(&[fill_style.paint("")]).to_string());
+        if line
+            .to_lowercase()
+            .ends_with(&ANSI_SGR_RESET.to_lowercase())
+        {
+            line.truncate(line.len() - ANSI_SGR_RESET.len());
+        }
+        output_buffer.push_str(&line);
+        output_buffer.push_str(ANSI_CSI_CLEAR_TO_EOL);
+        output_buffer.push_str(ANSI_SGR_RESET);
+    }
+
+    /// Use ANSI sequences to visually mark the current line as empty.
+    fn mark_empty_line(empty_line_style: Option<Style>, output_buffer: &mut String) {
+        if let Some(empty_line_style) = empty_line_style {
+            output_buffer.push_str(
+                &empty_line_style
+                    .ansi_term_style
+                    .paint(ANSI_CSI_CLEAR_TO_BOL)
+                    .to_string(),
+            );
         }
     }
 
