@@ -232,7 +232,7 @@ impl<'a> Painter<'a> {
         for (syntax_sections, diff_sections) in
             syntax_style_sections.iter().zip(diff_style_sections.iter())
         {
-            let mut line = Painter::superimpose_style_sections_and_paint(
+            let (mut line, line_is_empty) = Painter::paint_line(
                 syntax_sections,
                 diff_sections,
                 state,
@@ -249,12 +249,11 @@ impl<'a> Painter<'a> {
                     config,
                 );
             if should_right_fill_background_color {
-                Painter::right_fill_background_color(&mut line, fill_style, output_buffer);
-            } else if line.is_empty() {
+                Painter::right_fill_background_color(&mut line, fill_style);
+            } else if line_is_empty {
                 Painter::mark_empty_line(empty_line_style, output_buffer);
-            } else {
-                output_buffer.push_str(&line);
-            }
+            };
+            output_buffer.push_str(&line);
             output_buffer.push_str("\n");
         }
     }
@@ -280,11 +279,7 @@ impl<'a> Painter<'a> {
     }
 
     /// Emit line with ANSI sequences that extend the background color to the terminal width.
-    fn right_fill_background_color(
-        line: &mut String,
-        fill_style: Style,
-        output_buffer: &mut String,
-    ) {
+    fn right_fill_background_color(line: &mut String, fill_style: Style) {
         // HACK: How to properly incorporate the ANSI_CSI_CLEAR_TO_EOL into ansi_strings?
         line.push_str(&ansi_term::ANSIStrings(&[fill_style.paint("")]).to_string());
         if line
@@ -293,9 +288,8 @@ impl<'a> Painter<'a> {
         {
             line.truncate(line.len() - ANSI_SGR_RESET.len());
         }
-        output_buffer.push_str(&line);
-        output_buffer.push_str(ANSI_CSI_CLEAR_TO_EOL);
-        output_buffer.push_str(ANSI_SGR_RESET);
+        line.push_str(ANSI_CSI_CLEAR_TO_EOL);
+        line.push_str(ANSI_SGR_RESET);
     }
 
     /// Use ANSI sequences to visually mark the current line as empty.
@@ -310,14 +304,15 @@ impl<'a> Painter<'a> {
         }
     }
 
-    fn superimpose_style_sections_and_paint(
+    /// Return painted line (maybe prefixed with line numbers field) and an is_empty? boolean.
+    fn paint_line(
         syntax_sections: &Vec<(SyntectStyle, &str)>,
         diff_sections: &Vec<(Style, &str)>,
         state: &State,
         line_numbers_data: &mut Option<&mut line_numbers::LineNumbersData>,
         prefix: &str,
         config: &config::Config,
-    ) -> String {
+    ) -> (String, bool) {
         let output_line_numbers = config.line_numbers && line_numbers_data.is_some();
         let mut handled_prefix = false;
         let mut ansi_strings = Vec::new();
@@ -328,6 +323,7 @@ impl<'a> Painter<'a> {
                 config,
             ))
         }
+        let mut is_empty = true;
         for (section_style, mut text) in superimpose_style_sections(
             syntax_sections,
             diff_sections,
@@ -345,9 +341,10 @@ impl<'a> Painter<'a> {
             }
             if !text.is_empty() {
                 ansi_strings.push(section_style.paint(text));
+                is_empty = false;
             }
         }
-        ansi_term::ANSIStrings(&ansi_strings).to_string()
+        (ansi_term::ANSIStrings(&ansi_strings).to_string(), is_empty)
     }
 
     /// Write output buffer to output stream, and clear the buffer.
