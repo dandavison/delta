@@ -211,7 +211,7 @@ Set delta to be git's pager in your `.gitconfig`. Delta accepts many command lin
 [delta]
     plus-color = "#012800"
     minus-color = "#340001"
-    theme = Monokai Extended
+    syntax-theme = Monokai Extended
 
 [interactive]
     diffFilter = delta --color-only
