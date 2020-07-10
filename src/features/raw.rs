@@ -75,12 +75,6 @@ pub fn make_feature() -> Vec<(String, OptionValueFunction)> {
             _opt => true
         ),
         (
-            "line-numbers",
-            bool,
-            None,
-            _opt => false
-        ),
-        (
             "tabs",
             usize,
             None,
