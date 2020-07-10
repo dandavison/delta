@@ -38,7 +38,7 @@ macro_rules! set_options {
             option_names.extend(&[
                 "diff-highlight", // Does not exist as a flag on config
                 "diff-so-fancy", // Does not exist as a flag on config
-                "features",  // Processes differently
+                "features",  // Processed differently
                 // Set prior to the rest
                 "no-gitconfig",
                 "dark",
