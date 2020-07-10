@@ -251,7 +251,7 @@ impl<'a> Painter<'a> {
             if should_right_fill_background_color {
                 Painter::right_fill_background_color(&mut line, fill_style);
             } else if line_is_empty {
-                Painter::mark_empty_line(empty_line_style, output_buffer);
+                Painter::mark_empty_line(empty_line_style, &mut line);
             };
             output_buffer.push_str(&line);
             output_buffer.push_str("\n");
@@ -293,9 +293,9 @@ impl<'a> Painter<'a> {
     }
 
     /// Use ANSI sequences to visually mark the current line as empty.
-    fn mark_empty_line(empty_line_style: Option<Style>, output_buffer: &mut String) {
+    fn mark_empty_line(empty_line_style: Option<Style>, line: &mut String) {
         if let Some(empty_line_style) = empty_line_style {
-            output_buffer.push_str(
+            line.push_str(
                 &empty_line_style
                     .ansi_term_style
                     .paint(ANSI_CSI_CLEAR_TO_BOL)
