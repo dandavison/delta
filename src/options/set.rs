@@ -77,11 +77,7 @@ pub fn set_options(
 
     let builtin_features = features::make_builtin_features();
     // Set features
-    opt.features = gather_features(
-        opt,
-        builtin_features.keys().into_iter().collect(),
-        git_config,
-    );
+    opt.features = gather_features(opt, &builtin_features, git_config);
 
     // Handle options which default to an arbitrary git config value.
     // TODO: incorporate this logic into the set_options macro.
@@ -237,7 +233,7 @@ fn set__light__dark__syntax_theme__options(
 ///     features = f e
 fn gather_features<'a>(
     opt: &cli::Opt,
-    builtin_feature_names: Vec<&String>,
+    builtin_features: &HashMap<String, features::BuiltinFeature>,
     git_config: &Option<git_config::GitConfig>,
 ) -> String {
     let mut features = VecDeque::new();
@@ -245,7 +241,7 @@ fn gather_features<'a>(
     // Gather features from command line.
     if let Some(git_config) = git_config {
         for feature in split_feature_string(&opt.features.to_lowercase()) {
-            gather_features_recursively(feature, &mut features, &builtin_feature_names, git_config);
+            gather_features_recursively(feature, &mut features, &builtin_features, git_config);
         }
     } else {
         for feature in split_feature_string(&opt.features.to_lowercase()) {
@@ -282,56 +278,61 @@ fn gather_features<'a>(
                     gather_features_recursively(
                         feature,
                         &mut features,
-                        &builtin_feature_names,
+                        &builtin_features,
                         git_config,
                     )
                 }
             }
         }
         // Always gather builtin feature flags from [delta] section.
-        gather_builtin_features("delta", &mut features, &builtin_feature_names, git_config);
+        gather_builtin_features_from_flags_in_gitconfig(
+            "delta",
+            &mut features,
+            &builtin_features,
+            git_config,
+        );
     }
 
     Vec::<String>::from(features).join(" ")
 }
 
+/// Add to feature list `features` all features in the tree rooted at `feature`.
 fn gather_features_recursively<'a>(
     feature: &str,
     features: &mut VecDeque<String>,
-    builtin_feature_names: &Vec<&String>,
+    builtin_features: &HashMap<String, features::BuiltinFeature>,
     git_config: &git_config::GitConfig,
 ) {
     features.push_front(feature.to_string());
     if let Some(child_features) = git_config.get::<String>(&format!("delta.{}.features", feature)) {
         for child_feature in split_feature_string(&child_features) {
             if !features.contains(&child_feature.to_string()) {
-                gather_features_recursively(
-                    child_feature,
-                    features,
-                    builtin_feature_names,
-                    git_config,
-                )
+                gather_features_recursively(child_feature, features, builtin_features, git_config)
             }
         }
     }
-    gather_builtin_features(
+    gather_builtin_features_from_flags_in_gitconfig(
         &format!("delta.{}", feature),
         features,
-        builtin_feature_names,
+        builtin_features,
         git_config,
     );
 }
 
-fn gather_builtin_features<'a>(
+/// Look for builtin features requested via boolean feature flags (as opposed to via a "features"
+/// list) in a custom feature section in git config and add them to the features list.
+fn gather_builtin_features_from_flags_in_gitconfig<'a>(
     git_config_key: &str,
     features: &mut VecDeque<String>,
-    builtin_feature_names: &Vec<&String>,
+    builtin_features: &HashMap<String, features::BuiltinFeature>,
     git_config: &git_config::GitConfig,
 ) {
-    for feature in builtin_feature_names {
-        if let Some(value) = git_config.get::<bool>(&format!("{}.{}", git_config_key, feature)) {
+    for child_feature in builtin_features.keys() {
+        if let Some(value) =
+            git_config.get::<bool>(&format!("{}.{}", git_config_key, child_feature))
+        {
             if value {
-                features.push_front(feature.to_string());
+                features.push_front(child_feature.to_string());
             }
         }
     }
