@@ -117,7 +117,7 @@ pub fn format_and_paint_line_numbers<'a>(
 }
 
 lazy_static! {
-    static ref LINE_NUMBER_FORMAT_REGEX: Regex = Regex::new(
+    static ref LINE_NUMBERS_PLACEHOLDER_REGEX: Regex = Regex::new(
         r"(?x)
 \{
 (nm|np)         # 1: Literal nm or np
@@ -184,7 +184,7 @@ fn parse_line_number_format<'a>(format_string: &'a str) -> LineNumberFormatData<
     let mut format_data = Vec::new();
     let mut offset = 0;
 
-    for captures in LINE_NUMBER_FORMAT_REGEX.captures_iter(format_string) {
+    for captures in LINE_NUMBERS_PLACEHOLDER_REGEX.captures_iter(format_string) {
         let _match = captures.get(0).unwrap();
         format_data.push(LineNumberPlaceholderData {
             prefix: &format_string[offset.._match.start()],
