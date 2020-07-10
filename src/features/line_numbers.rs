@@ -357,6 +357,20 @@ pub mod tests {
         )
     }
 
+    #[test]
+    fn test_line_number_format_regex_7() {
+        assert_eq!(
+            parse_line_number_format("__@@---**"),
+            vec![LineNumberPlaceholderData {
+                prefix: "",
+                placeholder: None,
+                alignment_spec: None,
+                width: None,
+                suffix: "__@@---**",
+            },]
+        )
+    }
+
     fn _get_capture<'a>(i: usize, j: usize, caps: &'a Vec<Captures>) -> &'a str {
         caps[i].get(j).map_or("", |m| m.as_str())
     }
