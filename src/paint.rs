@@ -251,7 +251,13 @@ impl<'a> Painter<'a> {
             if should_right_fill_background_color {
                 Painter::right_fill_background_color(&mut line, fill_style);
             } else if line_is_empty {
-                Painter::mark_empty_line(empty_line_style, &mut line);
+                if let Some(empty_line_style) = empty_line_style {
+                    Painter::mark_empty_line(
+                        &empty_line_style,
+                        &mut line,
+                        if config.line_numbers { Some(" ") } else { None },
+                    );
+                }
             };
             output_buffer.push_str(&line);
             output_buffer.push_str("\n");
@@ -292,16 +298,17 @@ impl<'a> Painter<'a> {
         line.push_str(ANSI_SGR_RESET);
     }
 
-    /// Use ANSI sequences to visually mark the current line as empty.
-    fn mark_empty_line(empty_line_style: Option<Style>, line: &mut String) {
-        if let Some(empty_line_style) = empty_line_style {
-            line.push_str(
-                &empty_line_style
-                    .ansi_term_style
-                    .paint(ANSI_CSI_CLEAR_TO_BOL)
-                    .to_string(),
-            );
-        }
+    /// Use ANSI sequences to visually mark the current line as empty. If `marker` is None then the
+    /// line is marked using terminal emulator colors only, i.e. without appending any marker text
+    /// to the line. This is typically appropriate only when the `line` buffer is empty, since
+    /// otherwise the ANSI_CSI_CLEAR_TO_BOL instruction would overwrite the text to the left of the
+    /// current buffer position.
+    fn mark_empty_line(empty_line_style: &Style, line: &mut String, marker: Option<&str>) {
+        line.push_str(
+            &empty_line_style
+                .paint(marker.unwrap_or(ANSI_CSI_CLEAR_TO_BOL))
+                .to_string(),
+        );
     }
 
     /// Return painted line (maybe prefixed with line numbers field) and an is_empty? boolean.
