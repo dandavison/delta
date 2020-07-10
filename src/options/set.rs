@@ -78,7 +78,9 @@ pub fn set_options(
 
     let builtin_features = features::make_builtin_features();
     // Set features
-    opt.features = gather_features(opt, &builtin_features, git_config);
+    let features = gather_features(opt, &builtin_features, git_config);
+    opt.features = features.join(" ");
+
 
     // Handle options which default to an arbitrary git config value.
     // TODO: incorporate this logic into the set_options macro.
@@ -236,7 +238,7 @@ fn gather_features<'a>(
     opt: &cli::Opt,
     builtin_features: &HashMap<String, features::BuiltinFeature>,
     git_config: &Option<git_config::GitConfig>,
-) -> String {
+) -> Vec<String> {
     let mut features = VecDeque::new();
 
     // Gather features from command line.
@@ -301,7 +303,7 @@ fn gather_features<'a>(
         );
     }
 
-    Vec::<String>::from(features).join(" ")
+    Vec::<String>::from(features)
 }
 
 /// Add to feature list `features` all features in the tree rooted at `feature`.
