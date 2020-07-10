@@ -369,14 +369,16 @@ pub struct Opt {
     pub line_numbers_plus_style: String,
 
     /// Format string for the left column of line numbers. A typical value would be "{nm:^4}⋮"
-    /// which means to display the line numbers of the minus file (old version), followed by a
-    /// dividing character. See the LINE NUMBERS section.
+    /// which means to display the line numbers of the minus file (old version), center-aligned,
+    /// padded to a width of 4 characters, followed by a dividing character. See the LINE NUMBERS
+    /// section.
     #[structopt(long = "line-numbers-left-format", default_value = "{nm:^4}⋮")]
     pub line_numbers_left_format: String,
 
     /// Format string for the right column of line numbers. A typical value would be "{np:^4}│ "
-    /// which means to display the line numbers of the plus file (new version), followed by a
-    /// dividing character, and a space. See the LINE NUMBERS section.
+    /// which means to display the line numbers of the plus file (new version), center-aligned,
+    /// padded to a width of 4 characters, followed by a dividing character, and a space. See the
+    /// LINE NUMBERS section.
     #[structopt(long = "line-numbers-right-format", default_value = "{np:^4}│")]
     pub line_numbers_right_format: String,
 
