@@ -404,7 +404,6 @@ pub mod tests {
             "0 4",
         ]);
         let output = run_delta(TWO_MINUS_LINES_DIFF, &config);
-        println!("{}", &output);
         let mut lines = output.lines().skip(4);
         let (line_1, line_2) = (lines.next().unwrap(), lines.next().unwrap());
         assert_eq!(strip_ansi_codes(line_1), " 1  ⋮    │a = 1");
@@ -478,7 +477,6 @@ pub mod tests {
             "0 4",
         ]);
         let output = run_delta(ONE_MINUS_ONE_PLUS_LINE_DIFF, &config);
-        println!("{}", output);
         let output = strip_ansi_codes(&output);
         let mut lines = output.lines().skip(4);
         assert_eq!(lines.next().unwrap(), " 1    1  ⋮ 1  │a = 1");
