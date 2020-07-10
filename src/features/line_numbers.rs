@@ -151,7 +151,7 @@ pub type LineNumberFormatData<'a> = Vec<LineNumberPlaceholderData<'a>>;
 #[derive(Debug, Default, PartialEq)]
 pub struct LineNumberPlaceholderData<'a> {
     pub prefix: &'a str,
-    pub placeholder: &'a str,
+    pub placeholder: Option<&'a str>,
     pub alignment_spec: Option<&'a str>,
     pub width: Option<usize>,
     pub suffix: &'a str,
@@ -188,7 +188,7 @@ fn parse_line_number_format<'a>(format_string: &'a str) -> LineNumberFormatData<
         let _match = captures.get(0).unwrap();
         format_data.push(LineNumberPlaceholderData {
             prefix: &format_string[offset.._match.start()],
-            placeholder: captures.get(1).map(|m| m.as_str()).unwrap(),
+            placeholder: captures.get(1).map(|m| m.as_str()),
             alignment_spec: captures.get(3).map(|m| m.as_str()),
             width: captures.get(4).map(|m| {
                 m.as_str()
@@ -198,6 +198,16 @@ fn parse_line_number_format<'a>(format_string: &'a str) -> LineNumberFormatData<
             suffix: &format_string[_match.end()..],
         });
         offset = _match.end();
+    }
+    if offset == 0 {
+        // No placeholders
+        format_data.push(LineNumberPlaceholderData {
+            prefix: &format_string[..0],
+            placeholder: None,
+            alignment_spec: None,
+            width: None,
+            suffix: &format_string[0..],
+        })
     }
     format_data
 }
@@ -224,17 +234,18 @@ fn format_and_paint_line_number_field<'a>(
         };
 
         match placeholder.placeholder {
-            "nm" => ansi_strings.push(minus_number_style.paint(format_line_number(
+            Some("nm") => ansi_strings.push(minus_number_style.paint(format_line_number(
                 minus_number,
                 alignment_spec,
                 width,
             ))),
-            "np" => ansi_strings.push(plus_number_style.paint(format_line_number(
+            Some("np") => ansi_strings.push(plus_number_style.paint(format_line_number(
                 plus_number,
                 alignment_spec,
                 width,
             ))),
-            _ => unreachable!(),
+            None => {}
+            Some(_) => unreachable!(),
         }
         suffix = placeholder.suffix;
     }
@@ -270,7 +281,7 @@ pub mod tests {
             parse_line_number_format("{nm}"),
             vec![LineNumberPlaceholderData {
                 prefix: "",
-                placeholder: "nm",
+                placeholder: Some("nm"),
                 alignment_spec: None,
                 width: None,
                 suffix: "",
@@ -284,7 +295,7 @@ pub mod tests {
             parse_line_number_format("{np:4}"),
             vec![LineNumberPlaceholderData {
                 prefix: "",
-                placeholder: "np",
+                placeholder: Some("np"),
                 alignment_spec: None,
                 width: Some(4),
                 suffix: "",
@@ -298,7 +309,7 @@ pub mod tests {
             parse_line_number_format("{np:>4}"),
             vec![LineNumberPlaceholderData {
                 prefix: "",
-                placeholder: "np",
+                placeholder: Some("np"),
                 alignment_spec: Some(">"),
                 width: Some(4),
                 suffix: "",
@@ -312,7 +323,7 @@ pub mod tests {
             parse_line_number_format("{np:_>4}"),
             vec![LineNumberPlaceholderData {
                 prefix: "",
-                placeholder: "np",
+                placeholder: Some("np"),
                 alignment_spec: Some(">"),
                 width: Some(4),
                 suffix: "",
@@ -326,7 +337,7 @@ pub mod tests {
             parse_line_number_format("__{np:_>4}@@"),
             vec![LineNumberPlaceholderData {
                 prefix: "__",
-                placeholder: "np",
+                placeholder: Some("np"),
                 alignment_spec: Some(">"),
                 width: Some(4),
                 suffix: "@@",
@@ -341,14 +352,14 @@ pub mod tests {
             vec![
                 LineNumberPlaceholderData {
                     prefix: "__",
-                    placeholder: "nm",
+                    placeholder: Some("nm"),
                     alignment_spec: Some("<"),
                     width: Some(3),
                     suffix: "@@---{np:_>4}**",
                 },
                 LineNumberPlaceholderData {
                     prefix: "@@---",
-                    placeholder: "np",
+                    placeholder: Some("np"),
                     alignment_spec: Some(">"),
                     width: Some(4),
                     suffix: "**",
