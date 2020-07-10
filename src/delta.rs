@@ -406,8 +406,6 @@ fn handle_hunk_header_line(
                 config,
                 &mut None,
                 "",
-                config.null_style,
-                config.null_style,
                 None,
                 Some(false),
             );

@@ -147,8 +147,6 @@ impl<'a> Painter<'a> {
                 } else {
                     ""
                 },
-                self.config.minus_style,
-                self.config.minus_non_emph_style,
                 Some(self.config.minus_empty_line_marker_style),
                 None,
             );
@@ -166,8 +164,6 @@ impl<'a> Painter<'a> {
                 } else {
                     ""
                 },
-                self.config.plus_style,
-                self.config.plus_non_emph_style,
                 Some(self.config.plus_empty_line_marker_style),
                 None,
             );
@@ -199,8 +195,6 @@ impl<'a> Painter<'a> {
             self.config,
             &mut Some(&mut self.line_numbers_data),
             prefix,
-            self.config.zero_style,
-            self.config.zero_style,
             None,
             None,
         );
@@ -216,8 +210,6 @@ impl<'a> Painter<'a> {
         config: &config::Config,
         line_numbers_data: &mut Option<&mut line_numbers::LineNumbersData>,
         prefix: &str,
-        style: Style,          // style for right fill if line contains no emph sections
-        non_emph_style: Style, // style for right fill if line contains emph sections
         empty_line_style: Option<Style>, // a style with background color to highlight an empty line
         background_color_extends_to_terminal_width: Option<bool>,
     ) {
@@ -243,8 +235,7 @@ impl<'a> Painter<'a> {
             let (should_right_fill_background_color, fill_style) =
                 Painter::get_should_right_fill_background_color_and_fill_style(
                     diff_sections,
-                    non_emph_style,
-                    style,
+                    state,
                     background_color_extends_to_terminal_width,
                     config,
                 );
@@ -268,11 +259,18 @@ impl<'a> Painter<'a> {
     /// the style for doing so.
     fn get_should_right_fill_background_color_and_fill_style(
         diff_sections: &Vec<(Style, &str)>,
-        non_emph_style: Style,
-        style: Style,
+        state: &State,
         background_color_extends_to_terminal_width: Option<bool>,
         config: &config::Config,
     ) -> (bool, Style) {
+        // style:          for right fill if line contains no emph sections
+        // non_emph_style: for right fill if line contains emph sections
+        let (style, non_emph_style) = match state {
+            State::HunkMinus => (config.minus_style, config.minus_non_emph_style),
+            State::HunkZero => (config.zero_style, config.zero_style),
+            State::HunkPlus => (config.plus_style, config.plus_non_emph_style),
+            _ => (config.null_style, config.null_style),
+        };
         let fill_style = if style_sections_contain_more_than_one_style(diff_sections) {
             non_emph_style // line contains an emph section
         } else {

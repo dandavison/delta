@@ -131,8 +131,6 @@ pub mod ansi_test_utils {
             config,
             &mut None,
             "",
-            config.null_style,
-            config.null_style,
             None,
             None,
         );
