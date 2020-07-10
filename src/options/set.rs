@@ -12,6 +12,7 @@ use crate::config;
 use crate::env;
 use crate::features;
 use crate::git_config;
+use crate::options::option_value::{OptionValue, ProvenancedOptionValue};
 use crate::options::theme;
 
 macro_rules! set_options {
@@ -241,7 +242,7 @@ fn gather_features<'a>(
     // Gather features from command line.
     if let Some(git_config) = git_config {
         for feature in split_feature_string(&opt.features.to_lowercase()) {
-            gather_features_recursively(feature, &mut features, &builtin_features, git_config);
+            gather_features_recursively(feature, &mut features, &builtin_features, opt, git_config);
         }
     } else {
         for feature in split_feature_string(&opt.features.to_lowercase()) {
@@ -252,22 +253,27 @@ fn gather_features<'a>(
     // Gather builtin feature flags supplied on command line.
     // TODO: Iterate over programatically-obtained names of builtin features.
     if opt.raw {
-        features.push_front("raw".to_string());
+        gather_builtin_features_recursively("raw", &mut features, &builtin_features, opt);
     }
     if opt.color_only {
-        features.push_front("color-only".to_string());
+        gather_builtin_features_recursively("color-only", &mut features, &builtin_features, opt);
     }
     if opt.diff_highlight {
-        features.push_front("diff-highlight".to_string());
+        gather_builtin_features_recursively(
+            "diff-highlight",
+            &mut features,
+            &builtin_features,
+            opt,
+        );
     }
     if opt.diff_so_fancy {
-        features.push_front("diff-so-fancy".to_string());
+        gather_builtin_features_recursively("diff-so-fancy", &mut features, &builtin_features, opt);
     }
     if opt.line_numbers {
-        features.push_front("line-numbers".to_string());
+        gather_builtin_features_recursively("line-numbers", &mut features, &builtin_features, opt);
     }
     if opt.navigate {
-        features.push_front("navigate".to_string());
+        gather_builtin_features_recursively("navigate", &mut features, &builtin_features, opt);
     }
 
     if let Some(git_config) = git_config {
@@ -279,6 +285,7 @@ fn gather_features<'a>(
                         feature,
                         &mut features,
                         &builtin_features,
+                        opt,
                         git_config,
                     )
                 }
@@ -289,6 +296,7 @@ fn gather_features<'a>(
             "delta",
             &mut features,
             &builtin_features,
+            opt,
             git_config,
         );
     }
@@ -301,13 +309,24 @@ fn gather_features_recursively<'a>(
     feature: &str,
     features: &mut VecDeque<String>,
     builtin_features: &HashMap<String, features::BuiltinFeature>,
+    opt: &cli::Opt,
     git_config: &git_config::GitConfig,
 ) {
-    features.push_front(feature.to_string());
+    if builtin_features.contains_key(feature) {
+        gather_builtin_features_recursively(feature, features, builtin_features, opt);
+    } else {
+        features.push_front(feature.to_string());
+    }
     if let Some(child_features) = git_config.get::<String>(&format!("delta.{}.features", feature)) {
         for child_feature in split_feature_string(&child_features) {
             if !features.contains(&child_feature.to_string()) {
-                gather_features_recursively(child_feature, features, builtin_features, git_config)
+                gather_features_recursively(
+                    child_feature,
+                    features,
+                    builtin_features,
+                    opt,
+                    git_config,
+                )
             }
         }
     }
@@ -315,6 +334,7 @@ fn gather_features_recursively<'a>(
         &format!("delta.{}", feature),
         features,
         builtin_features,
+        opt,
         git_config,
     );
 }
@@ -325,6 +345,7 @@ fn gather_builtin_features_from_flags_in_gitconfig<'a>(
     git_config_key: &str,
     features: &mut VecDeque<String>,
     builtin_features: &HashMap<String, features::BuiltinFeature>,
+    opt: &cli::Opt,
     git_config: &git_config::GitConfig,
 ) {
     for child_feature in builtin_features.keys() {
@@ -332,7 +353,52 @@ fn gather_builtin_features_from_flags_in_gitconfig<'a>(
             git_config.get::<bool>(&format!("{}.{}", git_config_key, child_feature))
         {
             if value {
-                features.push_front(child_feature.to_string());
+                gather_builtin_features_recursively(child_feature, features, builtin_features, opt);
+            }
+        }
+    }
+}
+
+/// Add to feature list `features` all builtin features in the tree rooted at `builtin_feature`. A
+/// builtin feature is a named collection of (option-name, value) pairs. This tree arises because
+/// those option names might include (a) a "features" list, and (b) boolean feature flags. I.e. the
+/// children of a node in the tree are features in (a) and (b). (In both cases the features
+/// referenced will be other builtin features, since a builtin feature is determined at compile
+/// time and therefore cannot know of the existence of a non-builtin custom features in gitconfig).
+fn gather_builtin_features_recursively<'a>(
+    feature: &str,
+    features: &mut VecDeque<String>,
+    builtin_features: &HashMap<String, features::BuiltinFeature>,
+    opt: &cli::Opt,
+) {
+    let feature_string = feature.to_string();
+    if features.contains(&feature_string) {
+        return;
+    }
+    features.push_front(feature_string);
+    let feature_data = builtin_features.get(feature).unwrap();
+    if let Some(child_features_fn) = feature_data.get("features") {
+        if let ProvenancedOptionValue::DefaultValue(OptionValue::String(features_string)) =
+            child_features_fn(opt, &None)
+        {
+            for child_feature in split_feature_string(&features_string) {
+                gather_builtin_features_recursively(child_feature, features, builtin_features, opt);
+            }
+        }
+    }
+    for child_feature in builtin_features.keys() {
+        if let Some(child_features_fn) = feature_data.get(child_feature) {
+            if let ProvenancedOptionValue::DefaultValue(OptionValue::Boolean(value)) =
+                child_features_fn(opt, &None)
+            {
+                if value {
+                    gather_builtin_features_recursively(
+                        child_feature,
+                        features,
+                        builtin_features,
+                        opt,
+                    );
+                }
             }
         }
     }
