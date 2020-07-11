@@ -471,6 +471,7 @@ FLAGS:
         --dark                       Use default colors appropriate for a dark terminal background. For more control,
                                      see the style options and --syntax-theme
     -n, --line-numbers               Display line numbers next to the diff. See LINE NUMBERS section
+    -s, --side-by-side               Display a side-by-side diff view instead of the traditional view
         --diff-highlight             Emulate diff-highlight (https://github.com/git/git/tree/master/contrib/diff-
                                      highlight)
         --diff-so-fancy              Emulate diff-so-fancy (https://github.com/so-fancy/diff-so-fancy)
@@ -567,12 +568,12 @@ OPTIONS:
             STYLES and LINE NUMBERS sections [default: auto]
         --line-numbers-left-format <line-numbers-left-format>
             Format string for the left column of line numbers. A typical value would be "{nm:^4}⋮" which means to
-            display the line numbers of the minus file (old version), followed by a dividing character. See the LINE
-            NUMBERS section [default: {nm:^4}⋮]
+            display the line numbers of the minus file (old version), center-aligned, padded to a width of 4 characters,
+            followed by a dividing character. See the LINE NUMBERS section [default: {nm:^4}⋮]
         --line-numbers-right-format <line-numbers-right-format>
             Format string for the right column of line numbers. A typical value would be "{np:^4}│ " which means to
-            display the line numbers of the plus file (new version), followed by a dividing character, and a space. See
-            the LINE NUMBERS section [default: {np:^4}│]
+            display the line numbers of the plus file (new version), center-aligned, padded to a width of 4 characters,
+            followed by a dividing character, and a space. See the LINE NUMBERS section [default: {np:^4}│]
         --line-numbers-left-style <line-numbers-left-style>
             Style (foreground, background, attributes) for the left column of line numbers. See STYLES and LINE NUMBERS
             sections [default: auto]
@@ -806,7 +807,7 @@ of the line number columns. Their values are arbitrary format strings, which are
 the placeholders {nm} for the line number associated with the old version of the file and {np} for
 the line number associated with the new version of the file. The placeholders support a subset of
 the string formatting syntax documented here: https://doc.rust-lang.org/std/fmt/#formatting-parameters.
-Specifically, you can use the alignment, width, and fill syntax.
+Specifically, you can use the alignment and width syntax.
 
 For example, the default value of --line-numbers-left-format is '{nm:^4}⋮'. This means that the
 left column should display the minus line number (nm), center-aligned, padded with spaces to a
