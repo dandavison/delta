@@ -1,4 +1,3 @@
-use std::cmp::min;
 use std::collections::{HashMap, HashSet, VecDeque};
 use std::process;
 
@@ -475,10 +474,7 @@ fn set_widths(opt: &mut cli::Opt) {
                 eprintln!("Could not parse width as a positive integer: {:?}", width);
                 process::exit(1);
             });
-            (
-                cli::Width::Fixed(min(width, opt.computed.available_terminal_width)),
-                true,
-            )
+            (cli::Width::Fixed(width), true)
         }
         None => (
             cli::Width::Fixed(opt.computed.available_terminal_width),
