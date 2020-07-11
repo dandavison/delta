@@ -32,7 +32,7 @@ $(BUMP_VERSION_SENTINEL):
 	make build
 	make test
 	git add Cargo.toml Cargo.lock
-	git commit -m "Bump version"
+	git commit -m "Bump version" || true
 	touch $(BUMP_VERSION_SENTINEL)
 
 
