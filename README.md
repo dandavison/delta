@@ -11,7 +11,8 @@ Code evolves, and studying diffs to understand how some code has changed is a fu
 - Within-line highlights based on a Levenshtein edit inference algorithm
 - Style (foreground color, background color, font attributes) can be configured independently for more than 20 different sections of the diff
 - Stylable box/line decorations to draw attention to commit, file and hunk header sections.
-- Line numbering (`-n`)
+- Side-by-side view
+- Line numbering
 - `--diff-highlight` and `--diff-so-fancy` emulation modes
 - Code can be copied directly from the diff (`-/+` markers are removed by default).
 - `n` and `N` keybindings to move between files in large diffs, and between diffs in `log -p` views (`--navigate`)
@@ -20,7 +21,7 @@ The most convenient way to configure delta is with a `[delta]` section in `~/.gi
 
 <sub>
 
-```
+```gitconfig
 [core]
     pager = delta
 
@@ -52,6 +53,7 @@ Contents
    * [Supported languages and themes](#supported-languages-and-themes)
    * [Choosing colors (styles)](#choosing-colors-styles)
    * [Line numbers](#line-numbers)
+   * [Side-by-side view](#side-by-side-view)
    * [Custom features](#custom-features)
    * [diff-highlight and diff-so-fancy emulation](#diff-highlight-and-diff-so-fancy-emulation)
    * [Navigation keybindings for large diffs](#navigation-keybindings-for-large-diffs)
@@ -64,6 +66,8 @@ Contents
 * [Credit](#credit)
 * [Projects using delta](#projects-using-delta)
 * [Full --help output](#full---help-output)
+* [Delta configs used in screenshots](#delta-configs-used-in-screenshots)
+   * [Side-by-side view](#side-by-side-view-1)
 
 
 Here's what `git show` can look like with git configured to use delta:
@@ -145,6 +149,7 @@ Here's what `git show` can look like with git configured to use delta:
 | matching of unequal numbers of changed lines   | ✅    | ❌  | ❌                                    | ❌           |
 | independently stylable elements                | ✅    | ✅  | ✅                                    | ❌           |
 | line numbering                                 | ✅    | ❌  | ❌                                    | ✅           |
+| side-by-side view                              | ✅    | ❌  | ❌                                    | ✅           |
 
 In addition, delta handles traditional unified diff output.
 
@@ -204,7 +209,7 @@ Alternatively, delta is available in the following package managers:
 ## Configuration
 
 Set delta to be git's pager in your `.gitconfig`. Delta accepts many command line options to alter colors and other details of the output. An example is
-```
+```gitconfig
 [core]
     pager = delta
 
@@ -259,8 +264,9 @@ https://git-scm.com/docs/git-config#Documentation/git-config.txt-color
 
 Here's an example:
 
-```
---minus-style 'red bold ul "#ffeeee"'
+```gitconfig
+[delta]
+    minus-style = red bold ul "#ffeeee"
 ```
 
 That means: For removed lines, set the foreground (text) color to 'red', make it bold and underlined, and set the background color to `#ffeeee`.
@@ -268,10 +274,29 @@ That means: For removed lines, set the foreground (text) color to 'red', make it
 For full details, see the `STYLES` section in [`delta --help`](#full---help-output).
 
 ### Line numbers
-Use `--line-numbers` to activate line numbers.
+```gitconfig
+[delta]
+    line-numbers = true
+```
 <table><tr><td><img width=400px src="https://user-images.githubusercontent.com/52205/86275526-76792100-bba1-11ea-9e78-6be9baa80b29.png" alt="image" /></td></tr></table>
 
 The numbers are displayed in two columns and there are several configuration options: see the `LINE NUMBERS` section in [`delta --help`](#full---help-output) for details, and see the next section for an example of configuring line numbers.
+
+### Side-by-side view
+```gitconfig
+[delta]
+    side-by-side = true
+```
+By default, side-by-side view has line-numbers activated, and has syntax highlighting in both the left and right panels: [[config](#side-by-side-view-1)]
+<table><tr><td><img width=800px src="https://user-images.githubusercontent.com/52205/87230973-412eb900-c381-11ea-8aec-cc200290bd1b.png" alt="image" /></td></tr></table>
+
+To disable the line numbers in side-by-side view, but keep a vertical delimiter line between the left and right panels, use the line-numbers format options. For example:
+```gitconfig
+[delta]
+    side-by-side = true
+    line-numbers-left-format = ""
+    line-numbers-right-format = "│ "
+```
 
 ### Custom features
 
@@ -796,4 +821,30 @@ Use '<' for left-align, '^' for center-align, and '>' for right-align.
 
 If something isn't working correctly, or you have a feature request, please open an issue at
 https://github.com/dandavison/delta/issues.
+```
+
+## Delta configs used in screenshots
+
+### Side-by-side view
+
+https://github.com/vuejs/vue/commit/7ec4627902020cccd7b3f4fbc63e1b0d6b9798cd
+
+```gitconfig
+[delta]
+    features = side-by-side line-numbers decorations
+    syntax-theme = Dracula
+    plus-style = syntax "#003800"
+    minus-style = syntax "#3f0001"
+
+[delta "decorations"]
+    commit-decoration-style = bold yellow box ul
+    file-style = bold yellow ul
+    file-decoration-style = none
+    hunk-header-decoration-style = cyan box ul
+
+[delta "line-numbers"]
+    line-numbers-left-style = cyan
+    line-numbers-right-style = cyan
+    line-numbers-minus-style = 124
+    line-numbers-plus-style = 28
 ```
