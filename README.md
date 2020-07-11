@@ -153,7 +153,7 @@ In addition, delta handles traditional unified diff output.
 
 ## Installation
 
-You can download an executable for your system: [Linux](https://github.com/dandavison/delta/releases/download/0.2.0/delta-0.2.0-x86_64-unknown-linux-musl.tar.gz) | [MacOS](https://github.com/dandavison/delta/releases/download/0.2.0/delta-0.2.0-x86_64-apple-darwin.tar.gz) | [Windows](https://github.com/dandavison/delta/releases/download/0.2.0/delta-0.2.0-x86_64-pc-windows-gnu.zip) | [All](https://github.com/dandavison/delta/releases)
+You can download an executable for your system: [Linux](https://github.com/dandavison/delta/releases/download/0.3.0/delta-0.3.0-x86_64-unknown-linux-musl.tar.gz) | [MacOS](https://github.com/dandavison/delta/releases/download/0.3.0/delta-0.3.0-x86_64-apple-darwin.tar.gz) | [Windows](https://github.com/dandavison/delta/releases/download/0.3.0/delta-0.3.0-x86_64-pc-windows-gnu.zip) | [All](https://github.com/dandavison/delta/releases)
 
 Alternatively, delta is available in the following package managers:
 
@@ -209,7 +209,7 @@ Set delta to be git's pager in your `.gitconfig`. Delta accepts many command lin
     pager = delta
 
 [delta]
-    plus-color = "#012800"
+    plus-color = "#0.3.00"
     minus-color = "#340001"
     syntax-theme = Monokai Extended
 
@@ -434,7 +434,7 @@ and use the executable found at `./target/release/delta`.
 ## Full --help output
 
 ```
-delta 0.2.0
+delta 0.3.0
 A viewer for git and diff output
 
 USAGE:
@@ -643,7 +643,7 @@ A feature is a named collection of delta options in git config. An example is:
 
 [delta "my-delta-feature"]
     syntax-theme = Dracula
-    plus-style = bold syntax "#002800"
+    plus-style = bold syntax "#0.3.00"
 
 To activate those options, you would use:
 
