@@ -5,10 +5,10 @@ class GitDelta < Formula
 
   if OS.mac?
       url "https://github.com/dandavison/delta/releases/download/#{version}/delta-#{version}-x86_64-apple-darwin.tar.gz"
-      sha256 "be9b3e88182cafcda9eaab4a1a7774fcd61c889ce867edf4479ab978e0335687"
+      sha256 "76779cfcbf5327837432866d58ea68ff37508afdfeed3a00102c82b787897cb4"
   elsif OS.linux?
       url "https://github.com/dandavison/delta/releases/download/#{version}/delta-#{version}-x86_64-unknown-linux-musl.tar.gz"
-      sha256 "8f4e7f6a03d37085b410b5bf60aaa315715794c22e2dc739f7ab578287338d05"
+      sha256 "33d8bd17fb396adef16ed6ede309fcc3f11c6e8d3c9446e7082b3049275103fb"
   end
 
   conflicts_with "delta"
