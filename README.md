@@ -209,7 +209,7 @@ Set delta to be git's pager in your `.gitconfig`. Delta accepts many command lin
     pager = delta
 
 [delta]
-    plus-color = "#0.3.00"
+    plus-color = "#012800"
     minus-color = "#340001"
     syntax-theme = Monokai Extended
 
@@ -643,7 +643,7 @@ A feature is a named collection of delta options in git config. An example is:
 
 [delta "my-delta-feature"]
     syntax-theme = Dracula
-    plus-style = bold syntax "#0.3.00"
+    plus-style = bold syntax "#002800"
 
 To activate those options, you would use:
 

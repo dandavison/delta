@@ -56,7 +56,6 @@ $(BUMP_VERSION_IN_DOCUMENTATION_LINKS_SENTINEL):
 	sed -i -E "s,$$DELTA_OLD_VERSION,$$DELTA_NEW_VERSION,g" README.md
 	git add README.md
 	git commit -m "Bump version in links to executables"
-	git push
 	touch $(BUMP_VERSION_IN_DOCUMENTATION_LINKS_SENTINEL)
 
 
