@@ -8,7 +8,8 @@ use crate::align;
 /// Infer the edit operations responsible for the differences between a collection of old and new
 /// lines. A "line" is a string. An annotated line is a Vec of (op, &str) pairs, where the &str
 /// slices are slices of the line, and their concatenation equals the line. Return the input minus
-/// and plus lines, in annotated form.
+/// and plus lines, in annotated form. Also return a specification of the inferred alignment of
+/// minus and plus lines.
 pub fn infer_edits<'a, EditOperation>(
     minus_lines: &'a [String],
     plus_lines: &'a [String],
@@ -20,8 +21,9 @@ pub fn infer_edits<'a, EditOperation>(
     max_line_distance: f64,
     max_line_distance_for_naively_paired_lines: f64,
 ) -> (
-    Vec<Vec<(EditOperation, &'a str)>>, // annotated minus lines
-    Vec<Vec<(EditOperation, &'a str)>>, // annotated plus lines
+    Vec<Vec<(EditOperation, &'a str)>>,  // annotated minus lines
+    Vec<Vec<(EditOperation, &'a str)>>,  // annotated plus lines
+    Vec<(Option<usize>, Option<usize>)>, // line alignment
 )
 where
     EditOperation: Copy,
@@ -29,10 +31,11 @@ where
 {
     let mut annotated_minus_lines = Vec::<Vec<(EditOperation, &str)>>::new();
     let mut annotated_plus_lines = Vec::<Vec<(EditOperation, &str)>>::new();
+    let mut line_alignment = Vec::<(Option<usize>, Option<usize>)>::new();
 
     let mut plus_index = 0; // plus lines emitted so far
 
-    'minus_lines_loop: for minus_line in minus_lines {
+    'minus_lines_loop: for (minus_index, minus_line) in minus_lines.iter().enumerate() {
         let mut considered = 0; // plus lines considered so far as match for minus_line
         for plus_line in &plus_lines[plus_index..] {
             let alignment = align::Alignment::new(
@@ -57,10 +60,12 @@ where
                 // Emit as unpaired the plus lines already considered and rejected
                 for plus_line in &plus_lines[plus_index..(plus_index + considered)] {
                     annotated_plus_lines.push(vec![(noop_insertion, plus_line)]);
+                    line_alignment.push((None, Some(plus_index)));
+                    plus_index += 1;
                 }
-                plus_index += considered;
                 annotated_minus_lines.push(annotated_minus_line);
                 annotated_plus_lines.push(annotated_plus_line);
+                line_alignment.push((Some(minus_index), Some(plus_index)));
                 plus_index += 1;
 
                 // Greedy: move on to the next minus line.
@@ -71,13 +76,16 @@ where
         }
         // No homolog was found for minus i; emit as unpaired.
         annotated_minus_lines.push(vec![(noop_deletion, minus_line)]);
+        line_alignment.push((Some(minus_index), None));
     }
     // Emit any remaining plus lines
     for plus_line in &plus_lines[plus_index..] {
         annotated_plus_lines.push(vec![(noop_insertion, plus_line)]);
+        line_alignment.push((None, Some(plus_index)));
+        plus_index += 1;
     }
 
-    (annotated_minus_lines, annotated_plus_lines)
+    (annotated_minus_lines, annotated_plus_lines, line_alignment)
 }
 
 /// Split line into tokens for alignment. The alignment algorithm aligns sequences of substrings;
@@ -736,7 +744,8 @@ mod tests {
             0.0,
         );
         // compare_annotated_lines(actual_edits, expected_edits);
-        assert_eq!(actual_edits, expected_edits);
+        // TODO: test line alignment
+        assert_eq!((actual_edits.0, actual_edits.1), expected_edits);
     }
 
     // Assert that no edits are inferred for the supplied minus and plus lines.

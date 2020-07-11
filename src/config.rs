@@ -12,9 +12,11 @@ use crate::cli;
 use crate::color;
 use crate::delta::State;
 use crate::env;
+use crate::features::side_by_side;
 use crate::style::Style;
 
 pub struct Config {
+    pub available_terminal_width: usize,
     pub background_color_extends_to_terminal_width: bool,
     pub commit_style: Style,
     pub decorations_width: cli::Width,
@@ -50,11 +52,14 @@ pub struct Config {
     pub plus_non_emph_style: Style,
     pub plus_style: Style,
     pub line_numbers: bool,
+    pub side_by_side: bool,
+    pub side_by_side_data: side_by_side::SideBySideData,
     pub syntax_dummy_theme: SyntaxTheme,
     pub syntax_set: SyntaxSet,
     pub syntax_theme: Option<SyntaxTheme>,
     pub tab_width: usize,
     pub true_color: bool,
+    pub truncation_symbol: String,
     pub tokenization_regex: Regex,
     pub whitespace_error_style: Style,
     pub zero_style: Style,
@@ -112,7 +117,13 @@ impl From<cli::Opt> for Config {
             process::exit(1);
         });
 
+        let side_by_side_data = side_by_side::SideBySideData::new(
+            &opt.computed.decorations_width,
+            &opt.computed.available_terminal_width,
+        );
+
         Self {
+            available_terminal_width: opt.computed.available_terminal_width,
             background_color_extends_to_terminal_width: opt
                 .computed
                 .background_color_extends_to_terminal_width,
@@ -150,12 +161,15 @@ impl From<cli::Opt> for Config {
             plus_non_emph_style,
             plus_style,
             line_numbers: opt.line_numbers,
+            side_by_side: opt.side_by_side,
+            side_by_side_data,
             syntax_dummy_theme: SyntaxTheme::default(),
             syntax_set: opt.computed.syntax_set,
             syntax_theme: opt.computed.syntax_theme,
             tab_width: opt.tab_width,
             tokenization_regex,
             true_color: opt.computed.true_color,
+            truncation_symbol: "→".to_string(),
             whitespace_error_style,
             zero_style,
         }

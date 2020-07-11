@@ -6,6 +6,7 @@ use regex::Regex;
 
 use crate::config;
 use crate::delta::State;
+use crate::features::side_by_side;
 use crate::features::OptionValueFunction;
 use crate::style::Style;
 
@@ -63,6 +64,7 @@ pub fn make_feature() -> Vec<(String, OptionValueFunction)> {
 pub fn format_and_paint_line_numbers<'a>(
     line_numbers_data: &'a mut LineNumbersData,
     state: &State,
+    side_by_side_panel: Option<side_by_side::PanelSide>,
     config: &'a config::Config,
 ) -> Vec<ansi_term::ANSIGenericString<'a, str>> {
     let m_ref = &mut line_numbers_data.hunk_minus_line_number;
@@ -94,25 +96,36 @@ pub fn format_and_paint_line_numbers<'a>(
 
     let mut formatted_numbers = Vec::new();
 
-    formatted_numbers.extend(format_and_paint_line_number_field(
-        &line_numbers_data.left_format_data,
-        &config.line_numbers_left_style,
-        minus_number,
-        plus_number,
-        line_numbers_data.hunk_max_line_number_width,
-        &minus_style,
-        &plus_style,
-    ));
-    formatted_numbers.extend(format_and_paint_line_number_field(
-        &line_numbers_data.right_format_data,
-        &config.line_numbers_right_style,
-        minus_number,
-        plus_number,
-        line_numbers_data.hunk_max_line_number_width,
-        &minus_style,
-        &plus_style,
-    ));
+    let (emit_left, emit_right) = match (config.side_by_side, side_by_side_panel) {
+        (false, _) => (true, true),
+        (true, Some(side_by_side::PanelSide::Left)) => (true, false),
+        (true, Some(side_by_side::PanelSide::Right)) => (false, true),
+        (true, None) => unreachable!(),
+    };
 
+    if emit_left {
+        formatted_numbers.extend(format_and_paint_line_number_field(
+            &line_numbers_data.left_format_data,
+            &config.line_numbers_left_style,
+            minus_number,
+            plus_number,
+            line_numbers_data.hunk_max_line_number_width,
+            &minus_style,
+            &plus_style,
+        ));
+    }
+
+    if emit_right {
+        formatted_numbers.extend(format_and_paint_line_number_field(
+            &line_numbers_data.right_format_data,
+            &config.line_numbers_right_style,
+            minus_number,
+            plus_number,
+            line_numbers_data.hunk_max_line_number_width,
+            &minus_style,
+            &plus_style,
+        ));
+    }
     formatted_numbers
 }
 
@@ -506,7 +519,7 @@ pub mod tests {
         assert_eq!(lines.next().unwrap(), "     ⋮10000│bb = 2");
     }
 
-    const TWO_MINUS_LINES_DIFF: &str = "\
+    pub const TWO_MINUS_LINES_DIFF: &str = "\
 diff --git i/a.py w/a.py
 index 223ca50..e69de29 100644
 --- i/a.py
@@ -516,7 +529,7 @@ index 223ca50..e69de29 100644
 -b = 2
 ";
 
-    const TWO_PLUS_LINES_DIFF: &str = "\
+    pub const TWO_PLUS_LINES_DIFF: &str = "\
 diff --git c/a.py i/a.py
 new file mode 100644
 index 0000000..223ca50
@@ -527,7 +540,7 @@ index 0000000..223ca50
 +b = 2
 ";
 
-    const ONE_MINUS_ONE_PLUS_LINE_DIFF: &str = "\
+    pub const ONE_MINUS_ONE_PLUS_LINE_DIFF: &str = "\
 diff --git i/a.py w/a.py
 index 223ca50..367a6f6 100644
 --- i/a.py
