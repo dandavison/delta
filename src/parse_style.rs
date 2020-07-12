@@ -245,8 +245,7 @@ fn parse_ansi_term_style(
                 style.foreground = default.and_then(|s| s.ansi_term_style.foreground);
                 is_syntax_highlighted = default.map(|s| s.is_syntax_highlighted).unwrap_or(false);
             } else {
-                style.foreground =
-                    color::color_from_rgb_or_ansi_code_with_default(word, true_color);
+                style.foreground = color::parse_color(word, true_color);
             }
             seen_foreground = true;
         } else if !seen_background {
@@ -261,8 +260,7 @@ fn parse_ansi_term_style(
                 background_is_auto = true;
                 style.background = default.and_then(|s| s.ansi_term_style.background);
             } else {
-                style.background =
-                    color::color_from_rgb_or_ansi_code_with_default(word, true_color);
+                style.background = color::parse_color(word, true_color);
             }
             seen_background = true;
         } else {

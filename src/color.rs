@@ -9,7 +9,10 @@ use syntect::highlighting::Color as SyntectColor;
 use crate::bat::terminal::to_ansi_color;
 use crate::syntect_color;
 
-pub fn color_from_rgb_or_ansi_code(s: &str, true_color: bool) -> Color {
+pub fn parse_color(s: &str, true_color: bool) -> Option<Color> {
+    if s == "normal" {
+        return None;
+    }
     let die = || {
         eprintln!("Invalid color or style attribute: {}", s);
         process::exit(1);
@@ -23,14 +26,7 @@ pub fn color_from_rgb_or_ansi_code(s: &str, true_color: bool) -> Color {
             .or_else(|| syntect_color::syntect_color_from_ansi_name(s))
             .unwrap_or_else(die)
     };
-    to_ansi_color(syntect_color, true_color)
-}
-
-pub fn color_from_rgb_or_ansi_code_with_default(arg: &str, true_color: bool) -> Option<Color> {
-    match arg {
-        "normal" => None,
-        s => Some(color_from_rgb_or_ansi_code(s, true_color)),
-    }
+    Some(to_ansi_color(syntect_color, true_color))
 }
 
 pub fn color_to_string(color: Color) -> String {
