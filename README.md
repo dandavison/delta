@@ -361,7 +361,7 @@ The recommended way to use `navigate` is to activate it only when needed, for ex
 git config delta.navigate true
 ```
 
-Th reason is the following: Delta uses `less` as its pager, and the `navigate` feature works by doing `less --pattern <regex-matching-file-and-commit-lines>`. When the git output does not contain file/commit diff lines, `less --pattern` behaves unhelpfully (see #234, #237).
+Th reason is the following: Delta uses `less` as its pager, and the `navigate` feature works by doing `less --pattern <regex-matching-file-and-commit-lines>`. When the git output does not contain file/commit diff lines, `less --pattern` behaves unhelpfully (see [#234](https://github.com/dandavison/delta/issues/234), [#237](https://github.com/dandavison/delta/issues/237)).
 
 
 ### 24 bit color (truecolor)
