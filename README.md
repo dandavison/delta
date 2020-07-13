@@ -353,7 +353,15 @@ The within-line highlighting rules employed by diff-highlight (and therefore by 
 
 ### Navigation keybindings for large diffs
 
-Use `--navigate` to activate navigation keybindings. In this mode, pressing `n` will jump forward to the next file in the diff, and `N` will jump backwards. If you are viewing multiple commits (e.g. via `git log -p`) then navigation will also visit commit boundaries.
+Use the `navigate` feature to activate navigation keybindings. In this mode, pressing `n` will jump forward to the next file in the diff, and `N` will jump backwards. If you are viewing multiple commits (e.g. via `git log -p`) then navigation will also visit commit boundaries.
+
+The recommended way to use `navigate` is to activate it only when needed, for example by doing
+
+```bash
+git config delta.navigate true
+```
+
+Th reason is the following: Delta uses `less` as its pager, and the `navigate` feature works by doing `less --pattern <regex-matching-file-and-commit-lines>`. When the git output does not contain file/commit diff lines, `less --pattern` behaves unhelpfully (see #234, #237).
 
 
 ### 24 bit color (truecolor)
