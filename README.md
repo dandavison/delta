@@ -467,16 +467,24 @@ and use the executable found at `./target/release/delta`.
 ## Credit
 - [ogham/rust-ansi-term](https://github.com/ogham/rust-ansi-term)
 - [sharkdp/bat](https://github.com/sharkdp/bat)
-- [so-fancy/diff-so-fancy](https://github.com/so-fancy/diff-so-fancy)
 - [trishume/syntect](https://github.com/trishume/syntect)
 
 
 ## Projects using delta
-- [wfxr/forgit](https://github.com/wfxr/forgit)
 - [bigH/git-fuzzy](https://github.com/bigH/git-fuzzy)
 - [dandavison/magit-delta](https://github.com/dandavison/magit-delta)
 - [jesseduffield/lazygit](https://github.com/jesseduffield/lazygit/)
 - [ms-jpq/sad](https://github.com/ms-jpq/sad)
+- [wfxr/forgit](https://github.com/wfxr/forgit)
+
+
+## Similar projects
+- [da-x/fancydiff](https://github.com/da-x/fancydiff)
+- [git/diff-highlight](https://github.com/git/git/tree/master/contrib/diff-highlight)
+- [jeffkaufman/icdiff](https://github.com/jeffkaufman/icdiff)
+- [kovidgoyal/kitty-diff](https://sw.kovidgoyal.net/kitty/kittens/diff.html)
+- [mookid/diffr](https://github.com/mookid/diffr)
+- [so-fancy/diff-so-fancy](https://github.com/so-fancy/diff-so-fancy)
 
 
 ## Full --help output
