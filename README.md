@@ -40,8 +40,11 @@ The most convenient way to configure delta is with a `[delta]` section in `~/.gi
 
 </sub>
 
+To quickly change delta configuration on-the-fly, use the `git config --global` command. For example
 
-Planned features in the future include a side-by-side diff view and alternative within-line highlighting algorithms.
+```bash
+git config --global delta.side-by-side true
+```
 
 Contents
 ========
