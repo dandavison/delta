@@ -64,11 +64,11 @@ impl Style {
         self.ansi_term_style.paint(input)
     }
 
-    pub fn has_background_color(&self) -> bool {
+    pub fn get_background_color(&self) -> Option<ansi_term::Color> {
         if self.ansi_term_style.is_reverse {
-            self.ansi_term_style.foreground.is_some()
+            self.ansi_term_style.foreground
         } else {
-            self.ansi_term_style.background.is_some()
+            self.ansi_term_style.background
         }
     }
 

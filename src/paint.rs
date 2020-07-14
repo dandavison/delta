@@ -306,7 +306,7 @@ impl<'a> Painter<'a> {
         } else {
             style
         };
-        let should_right_fill_background_color = fill_style.has_background_color()
+        let should_right_fill_background_color = fill_style.get_background_color().is_some()
             && background_color_extends_to_terminal_width
                 .unwrap_or(config.background_color_extends_to_terminal_width);
         (should_right_fill_background_color, fill_style)
