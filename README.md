@@ -463,22 +463,22 @@ cargo build --release
 
 and use the executable found at `./target/release/delta`.
 
+## Related projects
 
-## Credit
+### Used by delta
+- [mitsuhiko/console](https://github.com/mitsuhiko/console)
 - [ogham/rust-ansi-term](https://github.com/ogham/rust-ansi-term)
 - [sharkdp/bat](https://github.com/sharkdp/bat)
 - [trishume/syntect](https://github.com/trishume/syntect)
 
-
-## Projects using delta
+### Using delta
 - [bigH/git-fuzzy](https://github.com/bigH/git-fuzzy)
 - [dandavison/magit-delta](https://github.com/dandavison/magit-delta)
 - [jesseduffield/lazygit](https://github.com/jesseduffield/lazygit/)
 - [ms-jpq/sad](https://github.com/ms-jpq/sad)
 - [wfxr/forgit](https://github.com/wfxr/forgit)
 
-
-## Similar projects
+### Similar projects
 - [da-x/fancydiff](https://github.com/da-x/fancydiff)
 - [git/diff-highlight](https://github.com/git/git/tree/master/contrib/diff-highlight)
 - [jeffkaufman/icdiff](https://github.com/jeffkaufman/icdiff)
