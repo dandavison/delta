@@ -334,7 +334,7 @@ fn handle_hunk_header_line(
     raw_line: &str,
     config: &Config,
 ) -> std::io::Result<()> {
-    if config.hunk_header_style.is_omitted {
+    if config.hunk_header_style.is_omitted || config.hunk_header_hide {
         return Ok(());
     }
     let decoration_ansi_term_style;
