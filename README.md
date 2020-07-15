@@ -382,7 +382,7 @@ and you may then  need to quit tmux completely for it to take effect.
 
 ### Using Delta on Windows
 
-Delta works on Windows. However, the `less.exe` installed with git doesn't work well with `delta`. A patched version of `less.exe` and instructions for installing can be found [here](https://github.com/lzybkr/less/releases/tag/fix_windows_vt).
+Delta works on Windows. However, the `less.exe` installed with git doesn't work with `delta`: you will see incorrect colors and other bugs. A patched version of `less.exe` and instructions for installing can be found [here](https://github.com/lzybkr/less/releases/tag/fix_windows_vt).
 
 
 ### Mouse scrolling
