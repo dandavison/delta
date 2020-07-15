@@ -339,6 +339,10 @@ pub struct Opt {
     /// Style (foreground, background, attributes) for the hunk-header. See STYLES section.
     pub hunk_header_style: String,
 
+    #[structopt(long = "hunk-header-hide")]
+    /// Hide hunk headers in diff output.
+    pub hunk_header_hide: bool,
+
     #[structopt(long = "hunk-header-decoration-style", default_value = "blue box")]
     /// Style (foreground, background, attributes) for the hunk-header decoration. See STYLES
     /// section. The style string should contain one of the special attributes 'box', 'ul'
