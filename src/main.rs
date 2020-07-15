@@ -128,6 +128,7 @@ fn show_config(config: &config::Config) {
         "    commit-style                  = {commit_style}
     file-style                    = {file_style}
     hunk-header-style             = {hunk_header_style}
+    hunk-header-hide              = {hunk_header_hide}
     minus-style                   = {minus_style}
     minus-non-emph-style          = {minus_non_emph_style}
     minus-emph-style              = {minus_emph_style}
@@ -149,6 +150,7 @@ fn show_config(config: &config::Config) {
         commit_style = config.commit_style.to_painted_string(),
         file_style = config.file_style.to_painted_string(),
         hunk_header_style = config.hunk_header_style.to_painted_string(),
+        hunk_header_hide = config.hunk_header_hide,
         minus_empty_line_marker_style = config.minus_empty_line_marker_style.to_painted_string(),
         plus_empty_line_marker_style = config.plus_empty_line_marker_style.to_painted_string(),
         whitespace_error_style = config.whitespace_error_style.to_painted_string(),
