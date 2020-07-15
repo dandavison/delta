@@ -64,13 +64,18 @@ pub fn set_options(
     arg_matches: &clap::ArgMatches,
     assets: HighlightingAssets,
 ) {
-    let option_names = cli::Opt::get_option_names();
-
     if let Some(git_config) = git_config {
         if opt.no_gitconfig {
             git_config.enabled = false;
         }
     }
+
+    let option_names = cli::Opt::get_option_names();
+
+    // Set features
+    let builtin_features = features::make_builtin_features();
+    let features = gather_features(opt, &builtin_features, git_config);
+    opt.features = features.join(" ");
 
     set_widths(opt);
 
@@ -78,11 +83,6 @@ pub fn set_options(
     set_true_color(opt);
     set__light__dark__syntax_theme__options(opt, git_config, arg_matches, &option_names);
     theme::set__is_light_mode__syntax_theme__syntax_set(opt, assets);
-
-    let builtin_features = features::make_builtin_features();
-    // Set features
-    let features = gather_features(opt, &builtin_features, git_config);
-    opt.features = features.join(" ");
 
     // HACK: make minus-line styles have syntax-highlighting iff side-by-side.
     if features.contains(&"side-by-side".to_string()) {
