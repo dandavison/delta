@@ -54,11 +54,15 @@ pub fn make_feature() -> Vec<(String, OptionValueFunction)> {
 pub mod tests {
     use std::fs::remove_file;
 
-    use crate::features;
+    use crate::tests::integration_test_utils::integration_test_utils;
 
     #[test]
     fn test_diff_so_fancy_defaults() {
-        let opt = features::tests::make_options(&["--features", "diff-so-fancy"], None, None);
+        let opt = integration_test_utils::make_options_from_args_and_git_config(
+            &["--features", "diff-so-fancy"],
+            None,
+            None,
+        );
 
         assert_eq!(opt.commit_style, "bold yellow");
         assert_eq!(opt.commit_decoration_style, "none");
@@ -83,7 +87,7 @@ pub mod tests {
 ";
         let git_config_path = "delta__test_diff_so_fancy.gitconfig";
 
-        let opt = features::tests::make_options(
+        let opt = integration_test_utils::make_options_from_args_and_git_config(
             &["--features", "diff-so-fancy some-other-feature"],
             Some(git_config_contents),
             Some(git_config_path),
@@ -117,7 +121,7 @@ pub mod tests {
 ";
         let git_config_path = "delta__test_diff_so_fancy_obeys_feature_precedence_rules.gitconfig";
 
-        let opt = features::tests::make_options(
+        let opt = integration_test_utils::make_options_from_args_and_git_config(
             &["--features", "decorations diff-so-fancy"],
             Some(git_config_contents),
             Some(git_config_path),
@@ -127,7 +131,7 @@ pub mod tests {
 
         assert_eq!(opt.file_decoration_style, "bold yellow ul ol");
 
-        let opt = features::tests::make_options(
+        let opt = integration_test_utils::make_options_from_args_and_git_config(
             &["--features", "diff-so-fancy decorations"],
             Some(git_config_contents),
             Some(git_config_path),

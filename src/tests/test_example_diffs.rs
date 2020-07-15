@@ -9,7 +9,7 @@ mod tests {
 
     #[test]
     fn test_added_file() {
-        let config = integration_test_utils::make_config(&[]);
+        let config = integration_test_utils::make_config_from_args(&[]);
         let output = integration_test_utils::run_delta(ADDED_FILE_INPUT, &config);
         let output = strip_ansi_codes(&output);
         assert!(output.contains("\nadded: a.py\n"));
@@ -18,7 +18,7 @@ mod tests {
     #[test]
     #[ignore] // #128
     fn test_added_empty_file() {
-        let config = integration_test_utils::make_config(&[]);
+        let config = integration_test_utils::make_config_from_args(&[]);
         let output = integration_test_utils::run_delta(ADDED_EMPTY_FILE, &config);
         let output = strip_ansi_codes(&output);
         assert!(output.contains("\nadded: file\n"));
@@ -26,7 +26,7 @@ mod tests {
 
     #[test]
     fn test_added_file_directory_path_containing_space() {
-        let config = integration_test_utils::make_config(&[]);
+        let config = integration_test_utils::make_config_from_args(&[]);
         let output =
             integration_test_utils::run_delta(ADDED_FILES_DIRECTORY_PATH_CONTAINING_SPACE, &config);
         let output = strip_ansi_codes(&output);
@@ -36,7 +36,7 @@ mod tests {
 
     #[test]
     fn test_renamed_file() {
-        let config = integration_test_utils::make_config(&[]);
+        let config = integration_test_utils::make_config_from_args(&[]);
         let output = integration_test_utils::run_delta(RENAMED_FILE_INPUT, &config);
         let output = strip_ansi_codes(&output);
         assert!(output.contains("\nrenamed: a.py ⟶   b.py\n"));
@@ -45,7 +45,7 @@ mod tests {
     #[test]
     fn test_recognized_file_type() {
         // In addition to the background color, the code has language syntax highlighting.
-        let config = integration_test_utils::make_config(&[]);
+        let config = integration_test_utils::make_config_from_args(&[]);
         let output = integration_test_utils::get_line_of_code_from_delta(
             &ADDED_FILE_INPUT,
             12,
@@ -59,7 +59,7 @@ mod tests {
     fn test_unrecognized_file_type_with_syntax_theme() {
         // In addition to the background color, the code has the foreground color using the default
         // .txt syntax under the theme.
-        let config = integration_test_utils::make_config(&[]);
+        let config = integration_test_utils::make_config_from_args(&[]);
         let input = ADDED_FILE_INPUT.replace("a.py", "a");
         let output =
             integration_test_utils::get_line_of_code_from_delta(&input, 12, "class X:", &config);
@@ -70,8 +70,12 @@ mod tests {
     fn test_unrecognized_file_type_no_syntax_theme() {
         // The code has the background color only. (Since there is no theme, the code has no
         // foreground ansi color codes.)
-        let config =
-            integration_test_utils::make_config(&["--syntax-theme", "none", "--width", "variable"]);
+        let config = integration_test_utils::make_config_from_args(&[
+            "--syntax-theme",
+            "none",
+            "--width",
+            "variable",
+        ]);
         let input = ADDED_FILE_INPUT.replace("a.py", "a");
         let output =
             integration_test_utils::get_line_of_code_from_delta(&input, 12, "class X:", &config);
@@ -80,7 +84,7 @@ mod tests {
 
     #[test]
     fn test_diff_unified_two_files() {
-        let config = integration_test_utils::make_config(&[]);
+        let config = integration_test_utils::make_config_from_args(&[]);
         let output = integration_test_utils::run_delta(DIFF_UNIFIED_TWO_FILES, &config);
         let output = strip_ansi_codes(&output);
         let mut lines = output.split('\n');
@@ -99,7 +103,7 @@ mod tests {
 
     #[test]
     fn test_diff_unified_two_directories() {
-        let config = integration_test_utils::make_config(&[]);
+        let config = integration_test_utils::make_config_from_args(&[]);
         let output = integration_test_utils::run_delta(DIFF_UNIFIED_TWO_DIRECTORIES, &config);
         let output = strip_ansi_codes(&output);
         let mut lines = output.split('\n');
@@ -127,7 +131,7 @@ mod tests {
     #[test]
     #[ignore] // Ideally, delta would make this test pass. See #121.
     fn test_delta_ignores_non_diff_input() {
-        let config = integration_test_utils::make_config(&[]);
+        let config = integration_test_utils::make_config_from_args(&[]);
         let output = integration_test_utils::run_delta(NOT_A_DIFF_OUTPUT, &config);
         let output = strip_ansi_codes(&output);
         assert_eq!(output, NOT_A_DIFF_OUTPUT.to_owned() + "\n");
@@ -140,7 +144,7 @@ mod tests {
             DIFF_EXHIBITING_STATE_MACHINE_PARSER_BUG,
             DIFF_EXHIBITING_TRUNCATION_BUG,
         ] {
-            let config = integration_test_utils::make_config(&["--raw"]);
+            let config = integration_test_utils::make_config_from_args(&["--raw"]);
             let output = integration_test_utils::run_delta(input, &config);
             assert_eq!(strip_ansi_codes(&output), input);
             assert_ne!(output, input);
@@ -153,7 +157,7 @@ mod tests {
             DIFF_WITH_UNRECOGNIZED_PRECEDING_MATERIAL_1,
             DIFF_WITH_UNRECOGNIZED_PRECEDING_MATERIAL_2,
         ] {
-            let config = integration_test_utils::make_config(&["--raw"]);
+            let config = integration_test_utils::make_config_from_args(&["--raw"]);
             let output = integration_test_utils::run_delta(input, &config);
             assert_eq!(strip_ansi_codes(&output), input);
             assert_ne!(output, input);
@@ -162,7 +166,7 @@ mod tests {
 
     #[test]
     fn test_diff_with_merge_conflict_is_not_truncated() {
-        let config = integration_test_utils::make_config(&[]);
+        let config = integration_test_utils::make_config_from_args(&[]);
         let output = integration_test_utils::run_delta(DIFF_WITH_MERGE_CONFLICT, &config);
         // TODO: The + in the first column is being removed.
         assert!(strip_ansi_codes(&output).contains("+>>>>>>> Stashed changes"));
@@ -171,14 +175,14 @@ mod tests {
 
     #[test]
     fn test_diff_with_merge_conflict_is_passed_on_unchanged_under_raw() {
-        let config = integration_test_utils::make_config(&["--raw"]);
+        let config = integration_test_utils::make_config_from_args(&["--raw"]);
         let output = integration_test_utils::run_delta(DIFF_WITH_MERGE_CONFLICT, &config);
         assert_eq!(strip_ansi_codes(&output), DIFF_WITH_MERGE_CONFLICT);
     }
 
     #[test]
     fn test_submodule_contains_untracked_content() {
-        let config = integration_test_utils::make_config(&[]);
+        let config = integration_test_utils::make_config_from_args(&[]);
         let output =
             integration_test_utils::run_delta(SUBMODULE_CONTAINS_UNTRACKED_CONTENT_INPUT, &config);
         let output = strip_ansi_codes(&output);
@@ -187,7 +191,7 @@ mod tests {
 
     #[test]
     fn test_triple_dash_at_beginning_of_line_in_code() {
-        let config = integration_test_utils::make_config(&[]);
+        let config = integration_test_utils::make_config_from_args(&[]);
         let output =
             integration_test_utils::run_delta(TRIPLE_DASH_AT_BEGINNING_OF_LINE_IN_CODE, &config);
         let output = strip_ansi_codes(&output);
@@ -196,7 +200,7 @@ mod tests {
 
     #[test]
     fn test_binary_files_differ() {
-        let config = integration_test_utils::make_config(&[]);
+        let config = integration_test_utils::make_config_from_args(&[]);
         let output = integration_test_utils::run_delta(BINARY_FILES_DIFFER, &config);
         let output = strip_ansi_codes(&output);
         assert!(output.contains("Binary files /dev/null and b/foo differ\n"));
@@ -204,7 +208,7 @@ mod tests {
 
     #[test]
     fn test_diff_in_diff() {
-        let config = integration_test_utils::make_config(&[]);
+        let config = integration_test_utils::make_config_from_args(&[]);
         let output = integration_test_utils::run_delta(DIFF_IN_DIFF, &config);
         let output = strip_ansi_codes(&output);
         assert!(output.contains("\n---\n"));
@@ -213,7 +217,7 @@ mod tests {
 
     #[test]
     fn test_commit_style_raw_no_decoration() {
-        let config = integration_test_utils::make_config(&[
+        let config = integration_test_utils::make_config_from_args(&[
             "--commit-style",
             "raw",
             "--commit-decoration-style",
@@ -234,7 +238,7 @@ commit 94907c0f136f46dc46ffae2dc92dca9af7eb7c2e
 
     #[test]
     fn test_commit_style_colored_input_color_is_stripped_under_normal() {
-        let config = integration_test_utils::make_config(&[
+        let config = integration_test_utils::make_config_from_args(&[
             "--commit-style",
             "normal",
             "--commit-decoration-style",
@@ -253,7 +257,7 @@ commit 94907c0f136f46dc46ffae2dc92dca9af7eb7c2e
 
     #[test]
     fn test_commit_style_colored_input_color_is_preserved_under_raw() {
-        let config = integration_test_utils::make_config(&[
+        let config = integration_test_utils::make_config_from_args(&[
             "--commit-style",
             "raw",
             "--commit-decoration-style",
@@ -293,7 +297,7 @@ commit 94907c0f136f46dc46ffae2dc92dca9af7eb7c2e
     }
 
     fn _do_test_commit_style_no_decoration(args: &[&str]) {
-        let config = integration_test_utils::make_config(args);
+        let config = integration_test_utils::make_config_from_args(args);
         let output = integration_test_utils::run_delta(GIT_DIFF_SINGLE_HUNK, &config);
         if false {
             // `--commit-style xxx` is not honored yet: always behaves like xxx=raw
@@ -317,7 +321,7 @@ commit 94907c0f136f46dc46ffae2dc92dca9af7eb7c2e
 
     #[test]
     fn test_commit_style_omit() {
-        let config = integration_test_utils::make_config(&["--commit-style", "omit"]);
+        let config = integration_test_utils::make_config_from_args(&["--commit-style", "omit"]);
         let output = integration_test_utils::run_delta(GIT_DIFF_SINGLE_HUNK, &config);
         let output = strip_ansi_codes(&output);
         assert!(!output.contains(
@@ -364,7 +368,7 @@ commit 94907c0f136f46dc46ffae2dc92dca9af7eb7c2e
     }
 
     fn _do_test_commit_style_box(args: &[&str]) {
-        let config = integration_test_utils::make_config(args);
+        let config = integration_test_utils::make_config_from_args(args);
         let output = integration_test_utils::run_delta(GIT_DIFF_SINGLE_HUNK, &config);
         ansi_test_utils::assert_line_has_style(
             &output,
@@ -398,7 +402,7 @@ commit 94907c0f136f46dc46ffae2dc92dca9af7eb7c2e │
     }
 
     fn _do_test_commit_style_box_ul(args: &[&str]) {
-        let config = integration_test_utils::make_config(args);
+        let config = integration_test_utils::make_config_from_args(args);
         let output = integration_test_utils::run_delta(GIT_DIFF_SINGLE_HUNK, &config);
         ansi_test_utils::assert_line_has_style(
             &output,
@@ -431,7 +435,7 @@ commit 94907c0f136f46dc46ffae2dc92dca9af7eb7c2e │
     }
 
     fn _do_test_commit_style_box_ol(args: &[&str]) {
-        let config = integration_test_utils::make_config(args);
+        let config = integration_test_utils::make_config_from_args(args);
         let output = integration_test_utils::run_delta(GIT_DIFF_SINGLE_HUNK, &config);
         ansi_test_utils::assert_line_has_style(
             &output,
@@ -466,7 +470,7 @@ commit 94907c0f136f46dc46ffae2dc92dca9af7eb7c2e │
 
     #[test]
     fn test_commit_style_box_raw() {
-        let config = integration_test_utils::make_config(&[
+        let config = integration_test_utils::make_config_from_args(&[
             "--commit-style",
             "raw",
             "--commit-decoration-style",
@@ -509,7 +513,7 @@ commit 94907c0f136f46dc46ffae2dc92dca9af7eb7c2e │
     }
 
     fn _do_test_commit_style_underline(args: &[&str]) {
-        let config = integration_test_utils::make_config(args);
+        let config = integration_test_utils::make_config_from_args(args);
         let output = integration_test_utils::run_delta(GIT_DIFF_SINGLE_HUNK, &config);
         ansi_test_utils::assert_line_has_style(
             &output,
@@ -535,7 +539,7 @@ commit 94907c0f136f46dc46ffae2dc92dca9af7eb7c2e
 
     #[test]
     fn test_file_style_raw_no_decoration() {
-        let config = integration_test_utils::make_config(&[
+        let config = integration_test_utils::make_config_from_args(&[
             "--file-style",
             "raw",
             "--file-decoration-style",
@@ -565,7 +569,7 @@ index 8e37a9e..6ce4863 100644
 
     #[test]
     fn test_file_style_colored_input_color_is_stripped_under_normal() {
-        let config = integration_test_utils::make_config(&[
+        let config = integration_test_utils::make_config_from_args(&[
             "--file-style",
             "normal",
             "--file-decoration-style",
@@ -580,7 +584,7 @@ index 8e37a9e..6ce4863 100644
 
     #[test]
     fn test_file_style_colored_input_color_is_preserved_under_raw() {
-        let config = integration_test_utils::make_config(&[
+        let config = integration_test_utils::make_config_from_args(&[
             "--file-style",
             "raw",
             "--file-decoration-style",
@@ -624,7 +628,7 @@ index 8e37a9e..6ce4863 100644
     }
 
     fn _do_test_file_style_no_decoration(args: &[&str]) {
-        let config = integration_test_utils::make_config(args);
+        let config = integration_test_utils::make_config_from_args(args);
         let output = integration_test_utils::run_delta(GIT_DIFF_SINGLE_HUNK, &config);
         ansi_test_utils::assert_line_has_style(&output, 7, "src/align.rs", "green", &config);
         let output = strip_ansi_codes(&output);
@@ -639,7 +643,7 @@ src/align.rs
 
     #[test]
     fn test_file_style_omit() {
-        let config = integration_test_utils::make_config(&["--file-style", "omit"]);
+        let config = integration_test_utils::make_config_from_args(&["--file-style", "omit"]);
         let output = integration_test_utils::run_delta(GIT_DIFF_SINGLE_HUNK, &config);
         assert!(!output.contains("src/align.rs"));
     }
@@ -681,7 +685,7 @@ src/align.rs
     }
 
     fn _do_test_file_style_box(args: &[&str]) {
-        let config = integration_test_utils::make_config(args);
+        let config = integration_test_utils::make_config_from_args(args);
         let output = integration_test_utils::run_delta(GIT_DIFF_SINGLE_HUNK, &config);
         ansi_test_utils::assert_line_has_style(&output, 7, "─────────────┐", "green", &config);
         ansi_test_utils::assert_line_has_style(&output, 8, "src/align.rs │", "green", &config);
@@ -697,7 +701,7 @@ src/align.rs │
     }
 
     fn _do_test_file_style_box_ul(args: &[&str]) {
-        let config = integration_test_utils::make_config(args);
+        let config = integration_test_utils::make_config_from_args(args);
         let output = integration_test_utils::run_delta(GIT_DIFF_SINGLE_HUNK, &config);
         ansi_test_utils::assert_line_has_style(&output, 7, "─────────────┐", "green", &config);
         ansi_test_utils::assert_line_has_style(&output, 8, "src/align.rs │", "green", &config);
@@ -712,7 +716,7 @@ src/align.rs │
     }
 
     fn _do_test_file_style_box_ol(args: &[&str]) {
-        let config = integration_test_utils::make_config(args);
+        let config = integration_test_utils::make_config_from_args(args);
         let output = integration_test_utils::run_delta(GIT_DIFF_SINGLE_HUNK, &config);
         ansi_test_utils::assert_line_has_style(&output, 7, "─────────────┬─", "green", &config);
         ansi_test_utils::assert_line_has_style(&output, 8, "src/align.rs │", "green", &config);
@@ -729,7 +733,7 @@ src/align.rs │
 
     #[test]
     fn test_file_style_box_raw() {
-        let config = integration_test_utils::make_config(&[
+        let config = integration_test_utils::make_config_from_args(&[
             "--file-style",
             "raw",
             "--file-decoration-style",
@@ -761,7 +765,7 @@ src/align.rs │
     }
 
     fn _do_test_file_style_underline(args: &[&str]) {
-        let config = integration_test_utils::make_config(args);
+        let config = integration_test_utils::make_config_from_args(args);
         let output = integration_test_utils::run_delta(GIT_DIFF_SINGLE_HUNK, &config);
         ansi_test_utils::assert_line_has_style(&output, 7, "src/align.rs", "magenta", &config);
         ansi_test_utils::assert_line_has_style(&output, 8, "────────────", "magenta", &config);
@@ -775,7 +779,7 @@ src/align.rs
 
     #[test]
     fn test_hunk_header_style_raw_no_decoration() {
-        let config = integration_test_utils::make_config(&[
+        let config = integration_test_utils::make_config_from_args(&[
             "--hunk-header-style",
             "raw",
             "--hunk-header-decoration-style",
@@ -792,7 +796,7 @@ src/align.rs
 
     #[test]
     fn test_hunk_header_style_colored_input_color_is_stripped_under_normal() {
-        let config = integration_test_utils::make_config(&[
+        let config = integration_test_utils::make_config_from_args(&[
             "--hunk-header-style",
             "normal",
             "--hunk-header-decoration-style",
@@ -809,7 +813,7 @@ src/align.rs
 
     #[test]
     fn test_hunk_header_style_colored_input_color_is_preserved_under_raw() {
-        let config = integration_test_utils::make_config(&[
+        let config = integration_test_utils::make_config_from_args(&[
             "--hunk-header-style",
             "raw",
             "--hunk-header-decoration-style",
@@ -844,7 +848,7 @@ src/align.rs
     }
 
     fn _do_test_hunk_header_style_no_decoration(args: &[&str]) {
-        let config = integration_test_utils::make_config(args);
+        let config = integration_test_utils::make_config_from_args(args);
         let output = integration_test_utils::run_delta(GIT_DIFF_SINGLE_HUNK, &config);
         let output = strip_ansi_codes(&output);
         assert!(output.contains("impl<'a> Alignment<'a> {"));
@@ -858,7 +862,8 @@ impl<'a> Alignment<'a> {
 
     #[test]
     fn test_hunk_header_style_omit() {
-        let config = integration_test_utils::make_config(&["--hunk-header-style", "omit"]);
+        let config =
+            integration_test_utils::make_config_from_args(&["--hunk-header-style", "omit"]);
         let output = integration_test_utils::run_delta(GIT_DIFF_SINGLE_HUNK, &config);
         let output = strip_ansi_codes(&output);
         assert!(!output.contains("impl<'a> Alignment<'a> {"));
@@ -875,7 +880,7 @@ impl<'a> Alignment<'a> {
     }
 
     fn _do_test_hunk_header_empty_style(args: &[&str]) {
-        let config = integration_test_utils::make_config(args);
+        let config = integration_test_utils::make_config_from_args(args);
         let output = integration_test_utils::run_delta(GIT_DIFF_SINGLE_HUNK, &config);
         assert!(output.contains("impl<'a> Alignment<'a> {"));
         assert!(!output.contains("@@"));
@@ -892,7 +897,7 @@ impl<'a> Alignment<'a> {
     }
 
     fn _do_test_hunk_header_style_box(args: &[&str]) {
-        let config = integration_test_utils::make_config(args);
+        let config = integration_test_utils::make_config_from_args(args);
         let output = integration_test_utils::run_delta(GIT_DIFF_SINGLE_HUNK, &config);
         ansi_test_utils::assert_line_has_style(
             &output,
@@ -920,7 +925,7 @@ impl<'a> Alignment<'a> { │
 
     #[test]
     fn test_hunk_header_style_box_raw() {
-        let config = integration_test_utils::make_config(&[
+        let config = integration_test_utils::make_config_from_args(&[
             "--hunk-header-style",
             "raw",
             "--hunk-header-decoration-style",
@@ -960,7 +965,7 @@ impl<'a> Alignment<'a> { │
     }
 
     fn _do_test_hunk_header_style_underline(args: &[&str]) {
-        let config = integration_test_utils::make_config(args);
+        let config = integration_test_utils::make_config_from_args(args);
         let output = integration_test_utils::run_delta(GIT_DIFF_SINGLE_HUNK, &config);
         ansi_test_utils::assert_line_has_style(
             &output,
@@ -981,7 +986,7 @@ impl<'a> Alignment<'a> {
     fn test_hunk_header_style_box_with_syntax_highlighting() {
         // For this test we are currently forced to disable styling of the decoration, since
         // otherwise it will confuse assert_line_is_syntax_highlighted.
-        let config = integration_test_utils::make_config(&[
+        let config = integration_test_utils::make_config_from_args(&[
             "--hunk-header-style",
             "syntax",
             "--hunk-header-decoration-style",
@@ -1071,7 +1076,7 @@ impl<'a> Alignment<'a> { │
         base_style_has_background_color: bool,
         example_diff: &str,
     ) {
-        let config = integration_test_utils::make_config(&[
+        let config = integration_test_utils::make_config_from_args(&[
             base_style_name,
             base_style,
             empty_line_marker_style_name,
@@ -1103,7 +1108,7 @@ impl<'a> Alignment<'a> { │
     #[test]
     fn test_whitespace_error() {
         let whitespace_error_style = "bold yellow magenta ul";
-        let config = integration_test_utils::make_config(&[
+        let config = integration_test_utils::make_config_from_args(&[
             "--whitespace-error-style",
             whitespace_error_style,
         ]);
@@ -1121,7 +1126,7 @@ impl<'a> Alignment<'a> { │
 
     #[test]
     fn test_color_only() {
-        let config = integration_test_utils::make_config(&["--color-only"]);
+        let config = integration_test_utils::make_config_from_args(&["--color-only"]);
         let output = integration_test_utils::run_delta(GIT_DIFF_SINGLE_HUNK, &config);
         ansi_test_utils::assert_line_is_syntax_highlighted(
             &output,

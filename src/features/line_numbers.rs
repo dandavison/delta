@@ -284,7 +284,9 @@ pub mod tests {
     use console::strip_ansi_codes;
     use regex::Captures;
 
-    use crate::tests::integration_test_utils::integration_test_utils::{make_config, run_delta};
+    use crate::tests::integration_test_utils::integration_test_utils::{
+        make_config_from_args, run_delta,
+    };
 
     use super::*;
 
@@ -401,7 +403,7 @@ pub mod tests {
 
     #[test]
     fn test_two_minus_lines() {
-        let config = make_config(&[
+        let config = make_config_from_args(&[
             "--line-numbers",
             "--line-numbers-left-format",
             "{nm:^4}⋮",
@@ -425,7 +427,7 @@ pub mod tests {
 
     #[test]
     fn test_two_plus_lines() {
-        let config = make_config(&[
+        let config = make_config_from_args(&[
             "--line-numbers",
             "--line-numbers-left-format",
             "{nm:^4}⋮",
@@ -449,7 +451,7 @@ pub mod tests {
 
     #[test]
     fn test_one_minus_one_plus_line() {
-        let config = make_config(&[
+        let config = make_config_from_args(&[
             "--line-numbers",
             "--line-numbers-left-format",
             "{nm:^4}⋮",
@@ -474,7 +476,7 @@ pub mod tests {
 
     #[test]
     fn test_repeated_placeholder() {
-        let config = make_config(&[
+        let config = make_config_from_args(&[
             "--line-numbers",
             "--line-numbers-left-format",
             "{nm:^4} {nm:^4}⋮",
@@ -499,7 +501,7 @@ pub mod tests {
 
     #[test]
     fn test_five_digit_line_number() {
-        let config = make_config(&["--line-numbers"]);
+        let config = make_config_from_args(&["--line-numbers"]);
         let output = run_delta(FIVE_DIGIT_LINE_NUMBER_DIFF, &config);
         let output = strip_ansi_codes(&output);
         let mut lines = output.lines().skip(4);
@@ -510,7 +512,7 @@ pub mod tests {
 
     #[test]
     fn test_unequal_digit_line_number() {
-        let config = make_config(&["--line-numbers"]);
+        let config = make_config_from_args(&["--line-numbers"]);
         let output = run_delta(UNEQUAL_DIGIT_DIFF, &config);
         let output = strip_ansi_codes(&output);
         let mut lines = output.lines().skip(4);

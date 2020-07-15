@@ -201,7 +201,7 @@ mod tests {
                 }
                 None => {}
             }
-            let config = integration_test_utils::make_config(&args);
+            let config = integration_test_utils::make_config_from_args(&args);
             assert_eq!(
                 &config
                     .syntax_theme
