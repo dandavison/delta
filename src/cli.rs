@@ -82,6 +82,9 @@ That means: For removed lines, syntax-highlight the text, and make it bold, and 
 The available attributes are: 'blink', 'bold', 'dim', 'hidden', 'italic', 'reverse', 'strike',
 and 'ul' (or 'underline').
 
+The attribute 'omit' is supported by commit-style, file-style, and hunk-header-style, meaning to
+remove the element entirely from the output.
+
 A complete description of the style string syntax follows:
 
 - If the input that delta is receiving already has colors, and you want delta to output those
@@ -317,6 +320,7 @@ pub struct Opt {
 
     #[structopt(long = "commit-style", default_value = "raw")]
     /// Style (foreground, background, attributes) for the commit hash line. See STYLES section.
+    /// The style 'omit' can be used to remove the commit hash line from the output.
     pub commit_style: String,
 
     #[structopt(long = "commit-decoration-style", default_value = "")]
@@ -326,7 +330,8 @@ pub struct Opt {
     pub commit_decoration_style: String,
 
     #[structopt(long = "file-style", default_value = "blue")]
-    /// Style (foreground, background, attributes) for the file section. See STYLES section.
+    /// Style (foreground, background, attributes) for the file section. See STYLES section. The
+    /// style 'omit' can be used to remove the file section from the output.
     pub file_style: String,
 
     #[structopt(long = "file-decoration-style", default_value = "blue ul")]
@@ -336,7 +341,8 @@ pub struct Opt {
     pub file_decoration_style: String,
 
     #[structopt(long = "hunk-header-style", default_value = "syntax")]
-    /// Style (foreground, background, attributes) for the hunk-header. See STYLES section.
+    /// Style (foreground, background, attributes) for the hunk-header. See STYLES section. The
+    /// style 'omit' can be used to remove the hunk header section from the output.
     pub hunk_header_style: String,
 
     #[structopt(long = "hunk-header-decoration-style", default_value = "blue box")]

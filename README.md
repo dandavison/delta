@@ -560,22 +560,22 @@ OPTIONS:
             Style (foreground, background, attributes) for non-emphasized sections of added lines that have an
             emphasized section. Defaults to --plus-style. See STYLES section [default: auto auto]
         --commit-style <commit-style>
-            Style (foreground, background, attributes) for the commit hash line. See STYLES section [default:
-            raw]
+            Style (foreground, background, attributes) for the commit hash line. See STYLES section. The style 'omit'
+            can be used to remove the commit hash line from the output [default: raw]
         --commit-decoration-style <commit-decoration-style>
             Style (foreground, background, attributes) for the commit hash decoration. See STYLES section. The style
             string should contain one of the special attributes 'box', 'ul' (underline), 'ol' (overline), or the
             combination 'ul ol' [default: ]
         --file-style <file-style>
-            Style (foreground, background, attributes) for the file section. See STYLES section [default: blue]
-
+            Style (foreground, background, attributes) for the file section. See STYLES section. The style 'omit' can be
+            used to remove the file section from the output [default: blue]
         --file-decoration-style <file-decoration-style>
             Style (foreground, background, attributes) for the file decoration. See STYLES section. The style string
             should contain one of the special attributes 'box', 'ul' (underline), 'ol' (overline), or the combination
             'ul ol' [default: blue ul]
         --hunk-header-style <hunk-header-style>
-            Style (foreground, background, attributes) for the hunk-header. See STYLES section [default: syntax]
-
+            Style (foreground, background, attributes) for the hunk-header. See STYLES section. The style 'omit' can be
+            used to remove the hunk header section from the output [default: syntax]
         --hunk-header-decoration-style <hunk-header-decoration-style>
             Style (foreground, background, attributes) for the hunk-header decoration. See STYLES section. The style
             string should contain one of the special attributes 'box', 'ul' (underline), 'ol' (overline), or the
@@ -739,6 +739,9 @@ That means: For removed lines, syntax-highlight the text, and make it bold, and 
 
 The available attributes are: 'blink', 'bold', 'dim', 'hidden', 'italic', 'reverse', 'strike',
 and 'ul' (or 'underline').
+
+The attribute 'omit' is supported by commit-style, file-style, and hunk-header-style, meaning to
+remove the element entirely from the output.
 
 A complete description of the style string syntax follows:
 
