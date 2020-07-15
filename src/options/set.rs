@@ -491,6 +491,7 @@ fn set_widths(opt: &mut cli::Opt) {
 pub mod tests {
     use std::fs::remove_file;
 
+    use crate::bat::output::PagingMode;
     use crate::tests::integration_test_utils::integration_test_utils;
 
     #[test]
@@ -598,6 +599,8 @@ pub mod tests {
         assert_eq!(opt.width, Some("77".to_string()));
         assert_eq!(opt.tokenization_regex, "xxxyyyzzz");
         assert_eq!(opt.zero_style, "black black");
+
+        assert_eq!(opt.computed.paging_mode, PagingMode::Never);
 
         remove_file(git_config_path).unwrap();
     }
