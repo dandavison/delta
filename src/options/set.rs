@@ -67,7 +67,6 @@ pub fn set_options(
         }
     }
 
-    set_paging_mode(opt);
     set_widths(opt);
 
     // Set light, dark, and syntax-theme.
@@ -162,6 +161,8 @@ pub fn set_options(
         arg_matches,
         true
     );
+
+    opt.computed.paging_mode = parse_paging_mode(&opt.paging_mode);
 }
 
 #[allow(non_snake_case)]
@@ -448,19 +449,19 @@ fn is_truecolor_terminal() -> bool {
         .unwrap_or(false)
 }
 
-fn set_paging_mode(opt: &mut cli::Opt) {
-    opt.computed.paging_mode = match opt.paging_mode.as_ref() {
+fn parse_paging_mode(paging_mode_string: &str) -> PagingMode {
+    match paging_mode_string {
         "always" => PagingMode::Always,
         "never" => PagingMode::Never,
         "auto" => PagingMode::QuitIfOneScreen,
         _ => {
             eprintln!(
                 "Invalid value for --paging option: {} (valid values are \"always\", \"never\", and \"auto\")",
-                opt.paging_mode
+                paging_mode_string
             );
             process::exit(1);
         }
-    };
+    }
 }
 
 fn set_widths(opt: &mut cli::Opt) {
