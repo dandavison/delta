@@ -120,6 +120,7 @@ pub fn set_options(
             ("file-style", file_style),
             ("hunk-header-decoration-style", hunk_header_decoration_style),
             ("hunk-header-style", hunk_header_style),
+            ("hunk-header-hide", hunk_header_hide),
             ("keep-plus-minus-markers", keep_plus_minus_markers),
             ("max-line-distance", max_line_distance),
             // Hack: minus-style must come before minus-*emph-style because the latter default
