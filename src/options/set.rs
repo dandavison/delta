@@ -485,3 +485,119 @@ fn set_widths(opt: &mut cli::Opt) {
     opt.computed.background_color_extends_to_terminal_width =
         background_color_extends_to_terminal_width;
 }
+
+#[cfg(test)]
+pub mod tests {
+    use std::fs::remove_file;
+
+    use crate::tests::integration_test_utils::integration_test_utils;
+
+    #[test]
+    fn test_options_can_be_set_in_git_config() {
+        let git_config_contents = b"
+[delta]
+    24-bit-color = never
+    color-only = true
+    commit-decoration-style = black black
+    commit-style = black black
+    dark = false
+    diff-highlight = true
+    diff-so-fancy = true
+    features = xxxyyyzzz
+    file-added-label = xxxyyyzzz
+    file-decoration-style = black black
+    file-modified-label = xxxyyyzzz
+    file-removed-label = xxxyyyzzz
+    file-renamed-label = xxxyyyzzz
+    file-style = black black
+    hunk-header-decoration-style = black black
+    hunk-header-style = black black
+    keep-plus-minus-markers = true
+    light = true
+    line-numbers = true
+    line-numbers-left-format = xxxyyyzzz
+    line-numbers-left-style = black black
+    line-numbers-minus-style = black black
+    line-numbers-plus-style = black black
+    line-numbers-right-format = xxxyyyzzz
+    line-numbers-right-style = black black
+    line-numbers-zero-style = black black
+    max-line-distance = 77
+    minus-emph-style = black black
+    minus-empty-line-marker-style = black black
+    minus-non-emph-style = black black
+    minus-style = black black
+    navigate = true
+    paging = never
+    plus-emph-style = black black
+    plus-empty-line-marker-style = black black
+    plus-non-emph-style = black black
+    plus-style = black black
+    raw = true
+    side-by-side = true
+    syntax-theme = xxxyyyzzz
+    tabs = 77
+    whitespace-error-style = black black
+    width = 77
+    word-diff-regex = xxxyyyzzz
+    zero-style = black black
+    # no-gitconfig
+";
+        let git_config_path = "delta__test_options_can_be_set_in_git_config.gitconfig";
+
+        let opt = integration_test_utils::make_options_from_args_and_git_config(
+            &[],
+            Some(git_config_contents),
+            Some(git_config_path),
+        );
+
+        assert_eq!(opt.true_color, "never");
+        assert_eq!(opt.color_only, true);
+        assert_eq!(opt.commit_decoration_style, "black black");
+        assert_eq!(opt.commit_style, "black black");
+        assert_eq!(opt.dark, false);
+        // TODO: should set_options not be called on any feature flags?
+        // assert_eq!(opt.diff_highlight, true);
+        // assert_eq!(opt.diff_so_fancy, true);
+        assert!(opt.features.split_whitespace().any(|s| s == "xxxyyyzzz"));
+        assert_eq!(opt.file_added_label, "xxxyyyzzz");
+        assert_eq!(opt.file_decoration_style, "black black");
+        assert_eq!(opt.file_modified_label, "xxxyyyzzz");
+        assert_eq!(opt.file_removed_label, "xxxyyyzzz");
+        assert_eq!(opt.file_renamed_label, "xxxyyyzzz");
+        assert_eq!(opt.file_style, "black black");
+        assert_eq!(opt.hunk_header_decoration_style, "black black");
+        assert_eq!(opt.hunk_header_style, "black black");
+        assert_eq!(opt.keep_plus_minus_markers, true);
+        assert_eq!(opt.light, true);
+        assert_eq!(opt.line_numbers, true);
+        assert_eq!(opt.line_numbers_left_format, "xxxyyyzzz");
+        assert_eq!(opt.line_numbers_left_style, "black black");
+        assert_eq!(opt.line_numbers_minus_style, "black black");
+        assert_eq!(opt.line_numbers_plus_style, "black black");
+        assert_eq!(opt.line_numbers_right_format, "xxxyyyzzz");
+        assert_eq!(opt.line_numbers_right_style, "black black");
+        assert_eq!(opt.line_numbers_zero_style, "black black");
+        assert_eq!(opt.max_line_distance, 77 as f64);
+        assert_eq!(opt.minus_emph_style, "black black");
+        assert_eq!(opt.minus_empty_line_marker_style, "black black");
+        assert_eq!(opt.minus_non_emph_style, "black black");
+        assert_eq!(opt.minus_style, "black black");
+        assert_eq!(opt.navigate, true);
+        assert_eq!(opt.paging_mode, "never");
+        assert_eq!(opt.plus_emph_style, "black black");
+        assert_eq!(opt.plus_empty_line_marker_style, "black black");
+        assert_eq!(opt.plus_non_emph_style, "black black");
+        assert_eq!(opt.plus_style, "black black");
+        assert_eq!(opt.raw, true);
+        assert_eq!(opt.side_by_side, true);
+        assert_eq!(opt.syntax_theme, Some("xxxyyyzzz".to_string()));
+        assert_eq!(opt.tab_width, 77);
+        assert_eq!(opt.whitespace_error_style, "black black");
+        assert_eq!(opt.width, Some("77".to_string()));
+        assert_eq!(opt.tokenization_regex, "xxxyyyzzz");
+        assert_eq!(opt.zero_style, "black black");
+
+        remove_file(git_config_path).unwrap();
+    }
+}
