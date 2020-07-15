@@ -1,4 +1,4 @@
-use std::collections::HashSet;
+use std::collections::{HashMap, HashSet};
 #[cfg(test)]
 use std::ffi::OsString;
 use std::path::PathBuf;
@@ -580,13 +580,21 @@ impl Opt {
     }
 
     #[allow(dead_code)]
-    pub fn get_option_or_flag_names<'a>() -> HashSet<&'a str> {
-        let names: HashSet<&str> = itertools::chain(
-            Self::clap().p.opts.iter().filter_map(|opt| opt.s.long),
-            Self::clap().p.flags.iter().filter_map(|opt| opt.s.long),
+    pub fn get_option_names<'a>() -> HashMap<&'a str, &'a str> {
+        itertools::chain(
+            Self::clap()
+                .p
+                .opts
+                .iter()
+                .map(|opt| (opt.b.name, opt.s.long.unwrap())),
+            Self::clap()
+                .p
+                .flags
+                .iter()
+                .map(|opt| (opt.b.name, opt.s.long.unwrap())),
         )
-        .collect();
-        &names - &*IGNORED_OPTION_OR_FLAG_NAMES
+        .filter(|(name, _)| !IGNORED_OPTION_NAMES.contains(name))
+        .collect()
     }
 }
 
@@ -594,21 +602,21 @@ impl Opt {
 // (1) Deprecated options
 // (2) Pseudo-flag commands such as --list-languages
 lazy_static! {
-    static ref IGNORED_OPTION_OR_FLAG_NAMES: HashSet<&'static str> = vec![
-        "commit-color",
-        "file-color",
-        "highlight-removed",
-        "hunk-color",
-        "hunk-style",
+    static ref IGNORED_OPTION_NAMES: HashSet<&'static str> = vec![
+        "deprecated-file-color",
+        "deprecated-hunk-style",
+        "deprecated-minus-background-color",
+        "deprecated-minus-emph-background-color",
+        "deprecated-hunk-color",
+        "deprecated-plus-emph-background-color",
+        "deprecated-plus-background-color",
+        "deprecated-highlight-minus-lines",
+        "deprecated-theme",
+        "deprecated-commit-color",
         "list-languages",
         "list-syntax-themes",
-        "minus-color",
-        "minus-emph-color",
-        "plus-color",
-        "plus-emph-color",
         "show-config",
         "show-syntax-themes",
-        "theme",
     ]
     .into_iter()
     .collect();

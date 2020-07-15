@@ -15,13 +15,15 @@ use crate::options::option_value::{OptionValue, ProvenancedOptionValue};
 use crate::options::theme;
 
 macro_rules! set_options {
-	([$( ($option_name:expr, $field_ident:ident) ),* ],
-     $opt:expr, $builtin_features:expr, $git_config:expr, $arg_matches:expr, $check_names:expr) => {
+	([$( $field_ident:ident ),* ],
+     $opt:expr, $builtin_features:expr, $git_config:expr, $arg_matches:expr, $expected_option_name_map:expr, $check_names:expr) => {
         let mut option_names = HashSet::new();
         $(
-            if !$crate::config::user_supplied_option($option_name, $arg_matches) {
+            let kebab_case_field_name = stringify!($field_ident).replace("_", "-");
+            let option_name = $expected_option_name_map[kebab_case_field_name.as_str()];
+            if !$crate::config::user_supplied_option(&option_name, $arg_matches) {
                 if let Some(value) = $crate::options::get::get_option_value(
-                    $option_name,
+                    option_name,
                     &$builtin_features,
                     $opt,
                     $git_config
@@ -30,7 +32,7 @@ macro_rules! set_options {
                 }
             }
             if $check_names {
-                option_names.insert($option_name);
+                option_names.insert(option_name);
             }
         )*
         if $check_names {
@@ -44,7 +46,8 @@ macro_rules! set_options {
                 "light",
                 "syntax-theme",
             ]);
-            let expected_option_names = $crate::cli::Opt::get_option_or_flag_names();
+            let expected_option_names: HashSet<_> = $expected_option_name_map.values().cloned().collect();
+
             if option_names != expected_option_names {
                 $crate::config::delta_unreachable(
                     &format!("Error processing options.\nUnhandled names: {:?}\nInvalid names: {:?}.\n",
@@ -61,6 +64,8 @@ pub fn set_options(
     arg_matches: &clap::ArgMatches,
     assets: HighlightingAssets,
 ) {
+    let option_names = cli::Opt::get_option_names();
+
     if let Some(git_config) = git_config {
         if opt.no_gitconfig {
             git_config.enabled = false;
@@ -71,7 +76,7 @@ pub fn set_options(
 
     // Set light, dark, and syntax-theme.
     set_true_color(opt);
-    set__light__dark__syntax_theme__options(opt, git_config, arg_matches);
+    set__light__dark__syntax_theme__options(opt, git_config, arg_matches, &option_names);
     theme::set__is_light_mode__syntax_theme__syntax_set(opt, assets);
 
     let builtin_features = features::make_builtin_features();
@@ -107,58 +112,56 @@ pub fn set_options(
 
     set_options!(
         [
-            ("24-bit-color", true_color),
-            ("color-only", color_only),
-            ("commit-decoration-style", commit_decoration_style),
-            ("commit-style", commit_style),
-            ("file-added-label", file_added_label),
-            ("file-decoration-style", file_decoration_style),
-            ("file-modified-label", file_modified_label),
-            ("file-removed-label", file_removed_label),
-            ("file-renamed-label", file_renamed_label),
-            ("file-style", file_style),
-            ("hunk-header-decoration-style", hunk_header_decoration_style),
-            ("hunk-header-style", hunk_header_style),
-            ("keep-plus-minus-markers", keep_plus_minus_markers),
-            ("max-line-distance", max_line_distance),
+            color_only,
+            commit_decoration_style,
+            commit_style,
+            file_added_label,
+            file_decoration_style,
+            file_modified_label,
+            file_removed_label,
+            file_renamed_label,
+            file_style,
+            hunk_header_decoration_style,
+            hunk_header_style,
+            keep_plus_minus_markers,
+            max_line_distance,
             // Hack: minus-style must come before minus-*emph-style because the latter default
             // dynamically to the value of the former.
-            ("minus-style", minus_style),
-            ("minus-emph-style", minus_emph_style),
-            (
-                "minus-empty-line-marker-style",
-                minus_empty_line_marker_style
-            ),
-            ("minus-non-emph-style", minus_non_emph_style),
-            ("minus-non-emph-style", minus_non_emph_style),
-            ("navigate", navigate),
-            ("line-numbers", line_numbers),
-            ("line-numbers-left-format", line_numbers_left_format),
-            ("line-numbers-left-style", line_numbers_left_style),
-            ("line-numbers-minus-style", line_numbers_minus_style),
-            ("line-numbers-plus-style", line_numbers_plus_style),
-            ("line-numbers-right-format", line_numbers_right_format),
-            ("line-numbers-right-style", line_numbers_right_style),
-            ("line-numbers-zero-style", line_numbers_zero_style),
-            ("paging", paging_mode),
+            minus_style,
+            minus_emph_style,
+            minus_empty_line_marker_style,
+            minus_non_emph_style,
+            minus_non_emph_style,
+            navigate,
+            line_numbers,
+            line_numbers_left_format,
+            line_numbers_left_style,
+            line_numbers_minus_style,
+            line_numbers_plus_style,
+            line_numbers_right_format,
+            line_numbers_right_style,
+            line_numbers_zero_style,
+            paging_mode,
             // Hack: plus-style must come before plus-*emph-style because the latter default
             // dynamically to the value of the former.
-            ("plus-style", plus_style),
-            ("plus-emph-style", plus_emph_style),
-            ("plus-empty-line-marker-style", plus_empty_line_marker_style),
-            ("plus-non-emph-style", plus_non_emph_style),
-            ("raw", raw),
-            ("side-by-side", side_by_side),
-            ("tabs", tab_width),
-            ("whitespace-error-style", whitespace_error_style),
-            ("width", width),
-            ("word-diff-regex", tokenization_regex),
-            ("zero-style", zero_style)
+            plus_style,
+            plus_emph_style,
+            plus_empty_line_marker_style,
+            plus_non_emph_style,
+            raw,
+            side_by_side,
+            tab_width,
+            tokenization_regex,
+            true_color,
+            whitespace_error_style,
+            width,
+            zero_style
         ],
         opt,
         builtin_features,
         git_config,
         arg_matches,
+        &option_names,
         true
     );
 
@@ -170,6 +173,7 @@ fn set__light__dark__syntax_theme__options(
     opt: &mut cli::Opt,
     git_config: &mut Option<git_config::GitConfig>,
     arg_matches: &clap::ArgMatches,
+    option_names: &HashMap<&str, &str>,
 ) {
     let validate_light_and_dark = |opt: &cli::Opt| {
         if opt.light && opt.dark {
@@ -181,21 +185,23 @@ fn set__light__dark__syntax_theme__options(
     validate_light_and_dark(&opt);
     if !(opt.light || opt.dark) {
         set_options!(
-            [("dark", dark), ("light", light)],
+            [dark, light],
             opt,
             &empty_builtin_features,
             git_config,
             arg_matches,
+            option_names,
             false
         );
     }
     validate_light_and_dark(&opt);
     set_options!(
-        [("syntax-theme", syntax_theme)],
+        [syntax_theme],
         opt,
         &empty_builtin_features,
         git_config,
         arg_matches,
+        option_names,
         false
     );
 }
