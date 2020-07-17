@@ -13,6 +13,7 @@ use syntect::parsing::SyntaxSet;
 use crate::bat::assets::HighlightingAssets;
 use crate::bat::output::PagingMode;
 use crate::git_config::GitConfig;
+use crate::git_config_entry::GitConfigEntry;
 use crate::options;
 
 #[derive(StructOpt, Clone, Default)]
@@ -517,6 +518,9 @@ pub struct Opt {
 
     #[structopt(skip)]
     pub computed: ComputedValues,
+
+    #[structopt(skip)]
+    pub git_config_entries: HashMap<String, GitConfigEntry>,
 }
 
 #[derive(Default, Clone, Debug)]
