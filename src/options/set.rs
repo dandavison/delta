@@ -15,7 +15,6 @@ use crate::git_config;
 use crate::git_config_entry::{self, GitConfigEntry};
 use crate::options::option_value::{OptionValue, ProvenancedOptionValue};
 use crate::options::theme;
-use crate::style::Style;
 
 macro_rules! set_options {
 	([$( $field_ident:ident ),* ],
@@ -116,6 +115,9 @@ pub fn set_options(
 
     set_options!(
         [
+            color_moved,
+            color_moved_minus_style,
+            color_moved_plus_style,
             color_only,
             commit_decoration_style,
             commit_style,
@@ -523,18 +525,15 @@ fn set_widths(
 
 fn set_git_config_entries(opt: &mut cli::Opt, git_config: &mut git_config::GitConfig) {
     // Styles
-    for key in &["color.diff.old", "color.diff.new"] {
+    for key in &[
+        "color.diff.old",
+        "color.diff.new",
+        "color.diff.oldMoved",
+        "color.diff.newMoved",
+    ] {
         if let Some(style_string) = git_config.get::<String>(key) {
-            opt.git_config_entries.insert(
-                key.to_string(),
-                GitConfigEntry::Style(Style::from_str(
-                    &style_string,
-                    None,
-                    None,
-                    opt.computed.true_color,
-                    false,
-                )),
-            );
+            opt.git_config_entries
+                .insert(key.to_string(), GitConfigEntry::Style(style_string));
         }
     }
 

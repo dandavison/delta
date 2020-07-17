@@ -6,11 +6,10 @@ use lazy_static::lazy_static;
 use regex::Regex;
 
 use crate::errors::*;
-use crate::style::Style;
 
 #[derive(Clone, Debug)]
 pub enum GitConfigEntry {
-    Style(Style),
+    Style(String),
     GitRemote(GitRemoteRepo),
     Path(PathBuf),
 }

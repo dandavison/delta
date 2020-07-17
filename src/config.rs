@@ -46,6 +46,7 @@ pub struct Config {
     pub minus_emph_style: Style,
     pub minus_empty_line_marker_style: Style,
     pub minus_file: Option<PathBuf>,
+    pub minus_moved_style: Style,
     pub minus_non_emph_style: Style,
     pub minus_style: Style,
     pub navigate: bool,
@@ -55,8 +56,11 @@ pub struct Config {
     pub plus_emph_style: Style,
     pub plus_empty_line_marker_style: Style,
     pub plus_file: Option<PathBuf>,
+    pub plus_moved_style: Style,
     pub plus_non_emph_style: Style,
     pub plus_style: Style,
+    pub raw_expected_minus_style: Style,
+    pub raw_expected_plus_style: Style,
     pub side_by_side: bool,
     pub side_by_side_data: side_by_side::SideBySideData,
     pub syntax_dummy_theme: SyntaxTheme,
@@ -73,6 +77,10 @@ pub struct Config {
 impl Config {
     pub fn get_style(&self, state: &State) -> &Style {
         match state {
+            State::HunkMinus(false) => &self.minus_style,
+            State::HunkMinus(true) => &self.minus_moved_style,
+            State::HunkPlus(false) => &self.plus_style,
+            State::HunkPlus(true) => &self.plus_moved_style,
             State::CommitMeta => &self.commit_style,
             State::FileMeta => &self.file_style,
             State::HunkHeader => &self.hunk_header_style,
@@ -87,11 +95,13 @@ impl From<cli::Opt> for Config {
             minus_style,
             minus_emph_style,
             minus_non_emph_style,
+            minus_moved_style,
             minus_empty_line_marker_style,
             zero_style,
             plus_style,
             plus_emph_style,
             plus_non_emph_style,
+            plus_moved_style,
             plus_empty_line_marker_style,
             whitespace_error_style,
         ) = make_hunk_styles(&opt);
@@ -127,6 +137,27 @@ impl From<cli::Opt> for Config {
             &opt.computed.available_terminal_width,
         );
 
+        let raw_expected_minus_style = Style::from_str(
+            match opt.git_config_entries.get("color.diff.old") {
+                Some(GitConfigEntry::Style(s)) => s,
+                _ => "red",
+            },
+            None,
+            None,
+            opt.computed.true_color,
+            false,
+        );
+        let raw_expected_plus_style = Style::from_str(
+            match opt.git_config_entries.get("color.diff.new") {
+                Some(GitConfigEntry::Style(s)) => s,
+                _ => "green",
+            },
+            None,
+            None,
+            opt.computed.true_color,
+            false,
+        );
+
         Self {
             available_terminal_width: opt.computed.available_terminal_width,
             background_color_extends_to_terminal_width: opt
@@ -158,6 +189,7 @@ impl From<cli::Opt> for Config {
             minus_emph_style,
             minus_empty_line_marker_style,
             minus_file: opt.minus_file.map(|s| s.clone()),
+            minus_moved_style,
             minus_non_emph_style,
             minus_style,
             navigate: opt.navigate,
@@ -167,8 +199,11 @@ impl From<cli::Opt> for Config {
             plus_emph_style,
             plus_empty_line_marker_style,
             plus_file: opt.plus_file.map(|s| s.clone()),
+            plus_moved_style,
             plus_non_emph_style,
             plus_style,
+            raw_expected_minus_style,
+            raw_expected_plus_style,
             side_by_side: opt.side_by_side,
             side_by_side_data,
             syntax_dummy_theme: SyntaxTheme::default(),
@@ -187,6 +222,8 @@ impl From<cli::Opt> for Config {
 fn make_hunk_styles<'a>(
     opt: &'a cli::Opt,
 ) -> (
+    Style,
+    Style,
     Style,
     Style,
     Style,
@@ -230,6 +267,14 @@ fn make_hunk_styles<'a>(
 
     let minus_non_emph_style = Style::from_str(
         &opt.minus_non_emph_style,
+        Some(minus_style),
+        None,
+        true_color,
+        false,
+    );
+
+    let minus_moved_style = Style::from_str(
+        &opt.color_moved_minus_style,
         Some(minus_style),
         None,
         true_color,
@@ -290,6 +335,14 @@ fn make_hunk_styles<'a>(
         false,
     );
 
+    let plus_moved_style = Style::from_str(
+        &opt.color_moved_plus_style,
+        Some(plus_style),
+        None,
+        true_color,
+        false,
+    );
+
     // The style used to highlight an added empty line when otherwise it would be invisible due to
     // lack of background color in plus-style.
     let plus_empty_line_marker_style = Style::from_str(
@@ -313,11 +366,13 @@ fn make_hunk_styles<'a>(
         minus_style,
         minus_emph_style,
         minus_non_emph_style,
+        minus_moved_style,
         minus_empty_line_marker_style,
         zero_style,
         plus_style,
         plus_emph_style,
         plus_non_emph_style,
+        plus_moved_style,
         plus_empty_line_marker_style,
         whitespace_error_style,
     )

@@ -19,8 +19,8 @@ use crate::paint::superimpose_style_sections::superimpose_style_sections;
 use crate::style::Style;
 
 pub struct Painter<'a> {
-    pub minus_lines: Vec<String>,
-    pub plus_lines: Vec<String>,
+    pub minus_lines: Vec<(String, State)>,
+    pub plus_lines: Vec<(String, State)>,
     pub writer: &'a mut dyn Write,
     pub syntax: &'a SyntaxReference,
     pub highlighter: HighlightLines<'a>,
@@ -117,15 +117,16 @@ impl<'a> Painter<'a> {
     }
 
     pub fn paint_buffered_minus_and_plus_lines(&mut self) {
+        let __ = false;
         let minus_line_syntax_style_sections = Self::get_syntax_style_sections_for_lines(
             &self.minus_lines,
-            &State::HunkMinus,
+            &State::HunkMinus(__),
             &mut self.highlighter,
             self.config,
         );
         let plus_line_syntax_style_sections = Self::get_syntax_style_sections_for_lines(
             &self.plus_lines,
-            &State::HunkPlus,
+            &State::HunkPlus(__),
             &mut self.highlighter,
             self.config,
         );
@@ -149,7 +150,7 @@ impl<'a> Painter<'a> {
                 Painter::paint_lines(
                     minus_line_syntax_style_sections,
                     minus_line_diff_style_sections,
-                    &State::HunkMinus,
+                    self.minus_lines.iter().map(|(_, state)| state),
                     &mut self.output_buffer,
                     self.config,
                     &mut Some(&mut self.line_numbers_data),
@@ -166,7 +167,7 @@ impl<'a> Painter<'a> {
                 Painter::paint_lines(
                     plus_line_syntax_style_sections,
                     plus_line_diff_style_sections,
-                    &State::HunkPlus,
+                    self.plus_lines.iter().map(|(_, state)| state),
                     &mut self.output_buffer,
                     self.config,
                     &mut Some(&mut self.line_numbers_data),
@@ -185,19 +186,20 @@ impl<'a> Painter<'a> {
     }
 
     pub fn paint_zero_line(&mut self, line: &str) {
+        let state = State::HunkZero;
         let prefix = if self.config.keep_plus_minus_markers && !line.is_empty() {
             &line[..1]
         } else {
             ""
         };
-        let lines = vec![self.prepare(line, true)];
+        let lines = vec![(self.prepare(line, true), state.clone())];
         let syntax_style_sections = Painter::get_syntax_style_sections_for_lines(
             &lines,
-            &State::HunkZero,
+            &state,
             &mut self.highlighter,
             &self.config,
         );
-        let diff_style_sections = vec![(self.config.zero_style, lines[0].as_str())];
+        let diff_style_sections = vec![(self.config.zero_style, lines[0].0.as_str())]; // TODO: compute style from state
 
         if self.config.side_by_side {
             side_by_side::paint_zero_lines_side_by_side(
@@ -214,7 +216,7 @@ impl<'a> Painter<'a> {
             Painter::paint_lines(
                 syntax_style_sections,
                 vec![diff_style_sections],
-                &State::HunkZero,
+                [state].iter(),
                 &mut self.output_buffer,
                 self.config,
                 &mut Some(&mut self.line_numbers_data),
@@ -230,7 +232,7 @@ impl<'a> Painter<'a> {
     pub fn paint_lines(
         syntax_style_sections: Vec<Vec<(SyntectStyle, &str)>>,
         diff_style_sections: Vec<Vec<(Style, &str)>>,
-        state: &State,
+        states: impl Iterator<Item = &'a State>,
         output_buffer: &mut String,
         config: &config::Config,
         line_numbers_data: &mut Option<&mut line_numbers::LineNumbersData>,
@@ -246,10 +248,11 @@ impl<'a> Painter<'a> {
         // 2. We must ensure that we fill rightwards with the appropriate
         //    non-emph background color. In that case we don't use the last
         //    style of the line, because this might be emph.
-        for (syntax_sections, diff_sections) in syntax_style_sections
-            .iter()
-            .zip_eq(diff_style_sections.iter())
-        {
+        for (state, (syntax_sections, diff_sections)) in states.zip_eq(
+            syntax_style_sections
+                .iter()
+                .zip_eq(diff_style_sections.iter()),
+        ) {
             let (mut line, line_is_empty) = Painter::paint_line(
                 syntax_sections,
                 diff_sections,
@@ -293,9 +296,11 @@ impl<'a> Painter<'a> {
         // style:          for right fill if line contains no emph sections
         // non_emph_style: for right fill if line contains emph sections
         let (style, non_emph_style) = match state {
-            State::HunkMinus => (config.minus_style, config.minus_non_emph_style),
+            State::HunkMinus(false) => (config.minus_style, config.minus_non_emph_style),
             State::HunkZero => (config.zero_style, config.zero_style),
-            State::HunkPlus => (config.plus_style, config.plus_non_emph_style),
+            State::HunkPlus(false) => (config.plus_style, config.plus_non_emph_style),
+            State::HunkMinus(true) => (config.minus_moved_style, config.minus_moved_style),
+            State::HunkPlus(true) => (config.plus_moved_style, config.plus_moved_style),
             _ => (config.null_style, config.null_style),
         };
         let fill_style = if style_sections_contain_more_than_one_style(diff_sections) {
@@ -393,12 +398,12 @@ impl<'a> Painter<'a> {
             return false;
         }
         match state {
-            State::HunkMinus => {
+            State::HunkMinus(_) => {
                 config.minus_style.is_syntax_highlighted
                     || config.minus_emph_style.is_syntax_highlighted
             }
             State::HunkZero => config.zero_style.is_syntax_highlighted,
-            State::HunkPlus => {
+            State::HunkPlus(_) => {
                 config.plus_style.is_syntax_highlighted
                     || config.plus_emph_style.is_syntax_highlighted
             }
@@ -411,14 +416,14 @@ impl<'a> Painter<'a> {
     }
 
     pub fn get_syntax_style_sections_for_lines<'s>(
-        lines: &'s Vec<String>,
+        lines: &'s Vec<(String, State)>,
         state: &State,
         highlighter: &mut HighlightLines,
         config: &config::Config,
     ) -> Vec<Vec<(SyntectStyle, &'s str)>> {
         let fake = !Painter::should_compute_syntax_highlighting(state, config);
         let mut line_sections = Vec::new();
-        for line in lines.iter() {
+        for (line, _) in lines.iter() {
             if fake {
                 line_sections.push(vec![(config.null_syntect_style, line.as_str())])
             } else {
@@ -430,21 +435,29 @@ impl<'a> Painter<'a> {
 
     /// Set background styles to represent diff for minus and plus lines in buffer.
     fn get_diff_style_sections<'b>(
-        minus_lines: &'b Vec<String>,
-        plus_lines: &'b Vec<String>,
+        minus_lines: &'b Vec<(String, State)>,
+        plus_lines: &'b Vec<(String, State)>,
         config: &config::Config,
     ) -> (
         Vec<Vec<(Style, &'b str)>>,
         Vec<Vec<(Style, &'b str)>>,
         Vec<(Option<usize>, Option<usize>)>,
     ) {
+        let (minus_lines, minus_styles): (Vec<&str>, Vec<Style>) = minus_lines
+            .iter()
+            .map(|(s, t)| (s.as_str(), *config.get_style(&t)))
+            .unzip();
+        let (plus_lines, plus_styles): (Vec<&str>, Vec<Style>) = plus_lines
+            .iter()
+            .map(|(s, t)| (s.as_str(), *config.get_style(&t)))
+            .unzip();
         let mut diff_sections = edits::infer_edits(
             minus_lines,
             plus_lines,
-            config.minus_style,
-            config.minus_emph_style,
-            config.plus_style,
-            config.plus_emph_style,
+            minus_styles,
+            config.minus_emph_style, // FIXME
+            plus_styles,
+            config.plus_emph_style, // FIXME
             &config.tokenization_regex,
             config.max_line_distance,
             config.max_line_distance_for_naively_paired_lines,

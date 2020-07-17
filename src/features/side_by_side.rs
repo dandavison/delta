@@ -179,7 +179,7 @@ fn paint_left_panel_minus_line(
         line_index,
         &syntax_style_sections,
         &diff_style_sections,
-        &State::HunkMinus,
+        &State::HunkMinus(false),
         line_numbers_data,
         PanelSide::Left,
         prefix,
@@ -190,7 +190,7 @@ fn paint_left_panel_minus_line(
         panel_line_is_empty,
         line_index,
         diff_style_sections,
-        &State::HunkMinus,
+        &State::HunkMinus(false),
         background_color_extends_to_terminal_width,
         config,
     );
@@ -211,7 +211,7 @@ fn paint_right_panel_plus_line(
         line_index,
         &syntax_style_sections,
         &diff_style_sections,
-        &State::HunkPlus,
+        &State::HunkPlus(false),
         line_numbers_data,
         PanelSide::Right,
         prefix,
@@ -222,7 +222,7 @@ fn paint_right_panel_plus_line(
         panel_line_is_empty,
         line_index,
         diff_style_sections,
-        &State::HunkPlus,
+        &State::HunkPlus(false),
         background_color_extends_to_terminal_width,
         config,
     );
@@ -295,12 +295,12 @@ fn paint_minus_or_plus_panel_line(
             (
                 &syntax_style_sections[index],
                 &diff_style_sections[index],
-                state,
+                state.clone(),
             )
         } else {
             let opposite_state = match *state {
-                State::HunkMinus => &State::HunkPlus,
-                State::HunkPlus => &State::HunkMinus,
+                State::HunkMinus(x) => State::HunkPlus(x),
+                State::HunkPlus(x) => State::HunkMinus(x),
                 _ => unreachable!(),
             };
             (
@@ -321,14 +321,14 @@ fn paint_minus_or_plus_panel_line(
     );
 
     // Knock back down spuriously incremented line numbers. See comment above.
-    match (state, state_for_line_numbers_field) {
+    match (state, &state_for_line_numbers_field) {
         (s, t) if s == t => {}
-        (State::HunkPlus, State::HunkMinus) => {
+        (State::HunkPlus(_), State::HunkMinus(_)) => {
             line_numbers_data
                 .as_mut()
                 .map(|d| d.hunk_minus_line_number -= 1);
         }
-        (State::HunkMinus, State::HunkPlus) => {
+        (State::HunkMinus(_), State::HunkPlus(_)) => {
             line_numbers_data
                 .as_mut()
                 .map(|d| d.hunk_plus_line_number -= 1);
@@ -357,7 +357,7 @@ fn right_pad_left_panel_line(
     // to form the other half of the line, then don't emit the empty line marker.
     if panel_line_is_empty && line_index.is_some() {
         match state {
-            State::HunkMinus => Painter::mark_empty_line(
+            State::HunkMinus(_) => Painter::mark_empty_line(
                 &config.minus_empty_line_marker_style,
                 panel_line,
                 Some(" "),
@@ -428,7 +428,7 @@ fn right_fill_right_panel_line(
         // Emit empty line marker when the panel line is empty but not empty-by-construction. See
         // parallel comment in `paint_left_panel_minus_line`.
         match state {
-            State::HunkPlus => Painter::mark_empty_line(
+            State::HunkPlus(_) => Painter::mark_empty_line(
                 &config.plus_empty_line_marker_style,
                 panel_line,
                 Some(" "),

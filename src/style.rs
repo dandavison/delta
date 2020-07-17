@@ -85,6 +85,10 @@ impl Style {
         }
     }
 
+    pub fn is_applied_to(&self, s: &str) -> bool {
+        s.starts_with(&self.ansi_term_style.prefix().to_string())
+    }
+
     pub fn to_painted_string(&self) -> ansi_term::ANSIGenericString<str> {
         self.paint(self.to_string())
     }

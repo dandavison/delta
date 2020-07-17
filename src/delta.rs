@@ -16,12 +16,12 @@ use crate::style::DecorationStyle;
 
 #[derive(Clone, Debug, PartialEq)]
 pub enum State {
-    CommitMeta, // In commit metadata section
-    FileMeta,   // In diff metadata section, between (possible) commit metadata and first hunk
-    HunkHeader, // In hunk metadata line
-    HunkZero,   // In hunk; unchanged line
-    HunkMinus,  // In hunk; removed line
-    HunkPlus,   // In hunk; added line
+    CommitMeta,      // In commit metadata section
+    FileMeta,        // In diff metadata section, between (possible) commit metadata and first hunk
+    HunkHeader,      // In hunk metadata line
+    HunkZero,        // In hunk; unchanged line
+    HunkMinus(bool), // In hunk; removed line (is_moved)
+    HunkPlus(bool),  // In hunk; added line (is_moved)
     Unknown,
 }
 
@@ -35,7 +35,7 @@ pub enum Source {
 impl State {
     fn is_in_hunk(&self) -> bool {
         match *self {
-            State::HunkHeader | State::HunkZero | State::HunkMinus | State::HunkPlus => true,
+            State::HunkHeader | State::HunkZero | State::HunkMinus(_) | State::HunkPlus(_) => true,
             _ => false,
         }
     }
@@ -415,7 +415,7 @@ fn handle_hunk_header_line(
         };
         writeln!(painter.writer)?;
         if !line.is_empty() {
-            let lines = vec![line];
+            let lines = vec![(line, State::HunkHeader)];
             let syntax_style_sections = Painter::get_syntax_style_sections_for_lines(
                 &lines,
                 &State::HunkHeader,
@@ -424,8 +424,8 @@ fn handle_hunk_header_line(
             );
             Painter::paint_lines(
                 syntax_style_sections,
-                vec![vec![(config.hunk_header_style, &lines[0])]],
-                &State::HunkHeader,
+                vec![vec![(config.hunk_header_style, &lines[0].0)]], // TODO: compute style from state
+                [State::HunkHeader].iter(),
                 &mut painter.output_buffer,
                 config,
                 &mut None,
@@ -499,15 +499,23 @@ fn handle_hunk_line(
     }
     match line.chars().next() {
         Some('-') => {
-            if state == State::HunkPlus {
+            if let State::HunkPlus(_) = state {
                 painter.paint_buffered_minus_and_plus_lines();
             }
-            painter.minus_lines.push(painter.prepare(&line, true));
-            State::HunkMinus
+            let is_moved = !config.raw_expected_minus_style.is_applied_to(raw_line);
+            let state = State::HunkMinus(is_moved);
+            painter
+                .minus_lines
+                .push((painter.prepare(&line, true), state.clone()));
+            state
         }
         Some('+') => {
-            painter.plus_lines.push(painter.prepare(&line, true));
-            State::HunkPlus
+            let is_moved = !config.raw_expected_plus_style.is_applied_to(raw_line);
+            let state = State::HunkPlus(is_moved);
+            painter
+                .plus_lines
+                .push((painter.prepare(&line, true), state.clone()));
+            state
         }
         Some(' ') => {
             painter.paint_buffered_minus_and_plus_lines();
