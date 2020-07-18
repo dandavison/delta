@@ -341,6 +341,31 @@ pub struct Opt {
     /// (overline), or the combination 'ul ol'.
     pub file_decoration_style: String,
 
+    #[structopt(long = "hyperlinks")]
+    /// Render commit hashes, file names, and line numbers as hyperlinks, according to the
+    /// hyperlink spec for terminal emulators:
+    /// https://gist.github.com/egmontkob/eb114294efbcd5adb1944c9f3cb5feda. By default, file names
+    /// and line numbers link to the local file using a file URL, whereas commit hashes link to the
+    /// commit in GitHub, if the remote repository is hosted by GitHub. See
+    /// --hyperlinks-file-link-format for full control over the file URLs emitted. Hyperlinks are
+    /// supported by several common terminal emulators. However, they are not yet supported by
+    /// less, so they will not work in delta unless you install a patched fork of less (see
+    /// https://github.com/dandavison/less). If you use tmux, then you will also need a patched
+    /// fork of tmux (see https://github.com/dandavison/tmux).
+    pub hyperlinks: bool,
+
+    /// Format string for file hyperlinks. The placeholders "{path}" and "{line}" will be replaced
+    /// by the absolute file path and the line number, respectively. The default value of this
+    /// option creates hyperlinks using standard file URLs; your operating system should open these
+    /// in the application registered for that file type. However, these do not make use of the
+    /// line number. In order for the link to open the file at the correct line number, you could
+    /// use a custom URL format such as "file-line://{path}:{line_number}" and register an
+    /// application to handle the custom "file-line" URL scheme by opening the file in your
+    /// editor/IDE at the indicated line number. See https://github.com/dandavison/open-in-editor
+    /// for an example.
+    #[structopt(long = "hyperlinks-file-link-format", default_value = "file://{path}")]
+    pub hyperlinks_file_link_format: String,
+
     #[structopt(long = "hunk-header-style", default_value = "syntax")]
     /// Style (foreground, background, attributes) for the hunk-header. See STYLES section. The
     /// style 'omit' can be used to remove the hunk header section from the output.

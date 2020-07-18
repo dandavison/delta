@@ -127,6 +127,8 @@ pub fn set_options(
             file_style,
             hunk_header_decoration_style,
             hunk_header_style,
+            hyperlinks,
+            hyperlinks_file_link_format,
             keep_plus_minus_markers,
             max_line_distance,
             // Hack: minus-style must come before minus-*emph-style because the latter default
@@ -295,6 +297,9 @@ fn gather_features<'a>(
     }
     if opt.diff_so_fancy {
         gather_builtin_features_recursively("diff-so-fancy", &mut features, &builtin_features, opt);
+    }
+    if opt.hyperlinks {
+        gather_builtin_features_recursively("hyperlinks", &mut features, &builtin_features, opt);
     }
     if opt.line_numbers {
         gather_builtin_features_recursively("line-numbers", &mut features, &builtin_features, opt);
@@ -521,6 +526,15 @@ fn set_git_config_entries(opt: &mut cli::Opt, git_config: &mut git_config::GitCo
                 opt.git_config_entries
                     .insert(key.to_string(), GitConfigEntry::GitRemote(repo));
             }
+        }
+    }
+
+    if let Some(repo) = &git_config.repo {
+        if let Some(workdir) = repo.workdir() {
+            opt.git_config_entries.insert(
+                "delta.__workdir__".to_string(),
+                GitConfigEntry::Path(workdir.to_path_buf()),
+            );
         }
     }
 }

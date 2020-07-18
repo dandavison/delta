@@ -13,6 +13,7 @@ mod draw;
 mod edits;
 mod env;
 mod features;
+mod format;
 mod git_config;
 mod git_config_entry;
 mod options;
