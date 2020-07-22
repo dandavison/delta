@@ -7,6 +7,7 @@ use git2;
 pub struct GitConfig {
     config: git2::Config,
     pub enabled: bool,
+    pub repo: Option<git2::Repository>,
 }
 
 impl GitConfig {
@@ -15,7 +16,7 @@ impl GitConfig {
             Ok(dir) => git2::Repository::discover(dir).ok(),
             _ => None,
         };
-        let config = match repo {
+        let config = match &repo {
             Some(repo) => repo.config().ok(),
             None => git2::Config::open_default().ok(),
         };
@@ -27,6 +28,7 @@ impl GitConfig {
                 });
                 Some(Self {
                     config,
+                    repo,
                     enabled: true,
                 })
             }
@@ -38,6 +40,7 @@ impl GitConfig {
     pub fn from_path(path: &Path) -> Self {
         Self {
             config: git2::Config::open(path).unwrap(),
+            repo: None,
             enabled: true,
         }
     }

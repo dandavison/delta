@@ -1,8 +1,10 @@
 use lazy_static::lazy_static;
 use regex::Regex;
+use std::borrow::Cow;
 use std::path::Path;
 
 use crate::config::Config;
+use crate::features;
 
 // https://git-scm.com/docs/git-config#Documentation/git-config.txt-diffmnemonicPrefix
 const DIFF_PREFIXES: [&str; 6] = ["a/", "b/", "c/", "i/", "o/", "w/"];
@@ -67,23 +69,34 @@ pub fn get_file_change_description_from_file_paths(
                 "".to_string()
             }
         };
+        let format_file = |file| {
+            if config.hyperlinks {
+                features::hyperlinks::format_osc8_file_hyperlink(file, None, file, config)
+            } else {
+                Cow::from(file)
+            }
+        };
         match (minus_file, plus_file) {
             (minus_file, plus_file) if minus_file == plus_file => format!(
                 "{}{}",
                 format_label(&config.file_modified_label),
-                minus_file
+                format_file(minus_file)
             ),
-            (minus_file, "/dev/null") => {
-                format!("{}{}", format_label(&config.file_removed_label), minus_file)
-            }
-            ("/dev/null", plus_file) => {
-                format!("{}{}", format_label(&config.file_added_label), plus_file)
-            }
+            (minus_file, "/dev/null") => format!(
+                "{}{}",
+                format_label(&config.file_removed_label),
+                format_file(minus_file)
+            ),
+            ("/dev/null", plus_file) => format!(
+                "{}{}",
+                format_label(&config.file_added_label),
+                format_file(plus_file)
+            ),
             (minus_file, plus_file) => format!(
                 "{}{} ⟶   {}",
                 format_label(&config.file_renamed_label),
-                minus_file,
-                plus_file
+                format_file(minus_file),
+                format_file(plus_file)
             ),
         }
     }

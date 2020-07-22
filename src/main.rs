@@ -13,7 +13,9 @@ mod draw;
 mod edits;
 mod env;
 mod features;
+mod format;
 mod git_config;
+mod git_config_entry;
 mod options;
 mod paint;
 mod parse;
@@ -37,7 +39,7 @@ use crate::bat::output::{OutputType, PagingMode};
 use crate::delta::delta;
 use crate::options::theme::is_light_syntax_theme;
 
-mod errors {
+pub mod errors {
     error_chain! {
         foreign_links {
             Io(::std::io::Error);

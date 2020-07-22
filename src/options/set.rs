@@ -1,5 +1,6 @@
 use std::collections::{HashMap, HashSet, VecDeque};
 use std::process;
+use std::str::FromStr;
 
 use console::Term;
 use structopt::clap;
@@ -11,8 +12,10 @@ use crate::config;
 use crate::env;
 use crate::features;
 use crate::git_config;
+use crate::git_config_entry::{self, GitConfigEntry};
 use crate::options::option_value::{OptionValue, ProvenancedOptionValue};
 use crate::options::theme;
+use crate::style::Style;
 
 macro_rules! set_options {
 	([$( $field_ident:ident ),* ],
@@ -68,6 +71,7 @@ pub fn set_options(
         if opt.no_gitconfig {
             git_config.enabled = false;
         }
+        set_git_config_entries(opt, git_config);
     }
 
     let option_names = cli::Opt::get_option_names();
@@ -123,6 +127,8 @@ pub fn set_options(
             file_style,
             hunk_header_decoration_style,
             hunk_header_style,
+            hyperlinks,
+            hyperlinks_file_link_format,
             keep_plus_minus_markers,
             max_line_distance,
             // Hack: minus-style must come before minus-*emph-style because the latter default
@@ -291,6 +297,9 @@ fn gather_features<'a>(
     }
     if opt.diff_so_fancy {
         gather_builtin_features_recursively("diff-so-fancy", &mut features, &builtin_features, opt);
+    }
+    if opt.hyperlinks {
+        gather_builtin_features_recursively("hyperlinks", &mut features, &builtin_features, opt);
     }
     if opt.line_numbers {
         gather_builtin_features_recursively("line-numbers", &mut features, &builtin_features, opt);
@@ -491,6 +500,43 @@ fn set_widths(opt: &mut cli::Opt) {
     opt.computed.decorations_width = decorations_width;
     opt.computed.background_color_extends_to_terminal_width =
         background_color_extends_to_terminal_width;
+}
+
+fn set_git_config_entries(opt: &mut cli::Opt, git_config: &mut git_config::GitConfig) {
+    // Styles
+    for key in &["color.diff.old", "color.diff.new"] {
+        if let Some(style_string) = git_config.get::<String>(key) {
+            opt.git_config_entries.insert(
+                key.to_string(),
+                GitConfigEntry::Style(Style::from_str(
+                    &style_string,
+                    None,
+                    None,
+                    opt.computed.true_color,
+                    false,
+                )),
+            );
+        }
+    }
+
+    // Strings
+    for key in &["remote.origin.url"] {
+        if let Some(string) = git_config.get::<String>(key) {
+            if let Ok(repo) = git_config_entry::GitRemoteRepo::from_str(&string) {
+                opt.git_config_entries
+                    .insert(key.to_string(), GitConfigEntry::GitRemote(repo));
+            }
+        }
+    }
+
+    if let Some(repo) = &git_config.repo {
+        if let Some(workdir) = repo.workdir() {
+            opt.git_config_entries.insert(
+                "delta.__workdir__".to_string(),
+                GitConfigEntry::Path(workdir.to_path_buf()),
+            );
+        }
+    }
 }
 
 #[cfg(test)]
