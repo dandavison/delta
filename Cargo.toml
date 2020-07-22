@@ -33,7 +33,7 @@ unicode-segmentation = "1.6.0"
 unicode-width = "0.1.8"
 
 [dependencies.git2]
-version = "0.13.6"
+version = "0.13.8"
 default-features = false
 features = []
 
