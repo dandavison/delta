@@ -359,10 +359,9 @@ pub struct Opt {
     /// option creates hyperlinks using standard file URLs; your operating system should open these
     /// in the application registered for that file type. However, these do not make use of the
     /// line number. In order for the link to open the file at the correct line number, you could
-    /// use a custom URL format such as "file-line://{path}:{line_number}" and register an
-    /// application to handle the custom "file-line" URL scheme by opening the file in your
-    /// editor/IDE at the indicated line number. See https://github.com/dandavison/open-in-editor
-    /// for an example.
+    /// use a custom URL format such as "file-line://{path}:{line}" and register an application to
+    /// handle the custom "file-line" URL scheme by opening the file in your editor/IDE at the
+    /// indicated line number. See https://github.com/dandavison/open-in-editor for an example.
     #[structopt(long = "hyperlinks-file-link-format", default_value = "file://{path}")]
     pub hyperlinks_file_link_format: String,
 
