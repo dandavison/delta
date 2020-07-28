@@ -138,8 +138,8 @@ where
             // See https://github.com/dandavison/delta/issues/60#issuecomment-557485242 for a
             // proposal for more robust parsing logic.
 
-            state = State::FileMeta;
             painter.paint_buffered_minus_and_plus_lines();
+            state = State::FileMeta;
             if should_handle(&State::FileMeta, config) {
                 painter.emit()?;
                 handle_generic_file_meta_header_line(&mut painter, &line, &raw_line, config)?;
