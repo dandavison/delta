@@ -1,28 +1,62 @@
 #[cfg(test)]
 pub mod integration_test_utils {
-    use std::io::BufReader;
+    use std::fs::File;
+    use std::io::{BufReader, Write};
+    use std::path::Path;
 
     use bytelines::ByteLines;
     use console::strip_ansi_codes;
+    use itertools;
 
     use crate::cli;
     use crate::config;
     use crate::delta::delta;
+    use crate::git_config::GitConfig;
 
-    fn make_options(args: &[&str]) -> cli::Opt {
-        // FIXME: should not be necessary
-        let (dummy_minus_file, dummy_plus_file) = ("/dev/null", "/dev/null");
-        let mut augmented_args = vec![dummy_minus_file, dummy_plus_file];
-
-        for arg in args {
-            augmented_args.push(arg);
-        }
-        augmented_args.push("--no-gitconfig");
-        cli::Opt::from_iter_and_git_config(augmented_args, &mut None)
+    pub fn make_options_from_args_and_git_config(
+        args: &[&str],
+        git_config_contents: Option<&[u8]>,
+        git_config_path: Option<&str>,
+    ) -> cli::Opt {
+        let mut args: Vec<&str> = itertools::chain(&["/dev/null", "/dev/null"], args)
+            .map(|s| *s)
+            .collect();
+        let mut git_config = match (git_config_contents, git_config_path) {
+            (Some(contents), Some(path)) => Some(make_git_config(contents, path)),
+            _ => {
+                args.push("--no-gitconfig");
+                None
+            }
+        };
+        cli::Opt::from_iter_and_git_config(args, &mut git_config)
     }
 
-    pub fn make_config(args: &[&str]) -> config::Config {
-        config::Config::from(make_options(args))
+    pub fn make_options_from_args(args: &[&str]) -> cli::Opt {
+        make_options_from_args_and_git_config(args, None, None)
+    }
+
+    #[allow(dead_code)]
+    pub fn make_config_from_args_and_git_config(
+        args: &[&str],
+        git_config_contents: Option<&[u8]>,
+        git_config_path: Option<&str>,
+    ) -> config::Config {
+        config::Config::from(make_options_from_args_and_git_config(
+            args,
+            git_config_contents,
+            git_config_path,
+        ))
+    }
+
+    pub fn make_config_from_args(args: &[&str]) -> config::Config {
+        config::Config::from(make_options_from_args(args))
+    }
+
+    fn make_git_config(contents: &[u8], path: &str) -> GitConfig {
+        let path = Path::new(path);
+        let mut file = File::create(path).unwrap();
+        file.write_all(contents).unwrap();
+        GitConfig::from_path(&path)
     }
 
     pub fn get_line_of_code_from_delta(

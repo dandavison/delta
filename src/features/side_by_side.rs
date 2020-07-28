@@ -444,11 +444,13 @@ pub mod tests {
     use console::strip_ansi_codes;
 
     use crate::features::line_numbers::tests::*;
-    use crate::tests::integration_test_utils::integration_test_utils::{make_config, run_delta};
+    use crate::tests::integration_test_utils::integration_test_utils::{
+        make_config_from_args, run_delta,
+    };
 
     #[test]
     fn test_two_minus_lines() {
-        let config = make_config(&["--side-by-side", "--width", "40"]);
+        let config = make_config_from_args(&["--side-by-side", "--width", "40"]);
         let output = run_delta(TWO_MINUS_LINES_DIFF, &config);
         let mut lines = output.lines().skip(4);
         let (line_1, line_2) = (lines.next().unwrap(), lines.next().unwrap());
@@ -458,7 +460,7 @@ pub mod tests {
 
     #[test]
     fn test_two_plus_lines() {
-        let config = make_config(&["--side-by-side", "--width", "40"]);
+        let config = make_config_from_args(&["--side-by-side", "--width", "40"]);
         let output = run_delta(TWO_PLUS_LINES_DIFF, &config);
         let mut lines = output.lines().skip(4);
         let (line_1, line_2) = (lines.next().unwrap(), lines.next().unwrap());
@@ -468,7 +470,7 @@ pub mod tests {
 
     #[test]
     fn test_one_minus_one_plus_line() {
-        let config = make_config(&["--side-by-side", "--width", "40"]);
+        let config = make_config_from_args(&["--side-by-side", "--width", "40"]);
         let output = run_delta(ONE_MINUS_ONE_PLUS_LINE_DIFF, &config);
         let output = strip_ansi_codes(&output);
         let mut lines = output.lines().skip(4);

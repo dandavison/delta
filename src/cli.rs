@@ -1,4 +1,4 @@
-use std::collections::HashSet;
+use std::collections::{HashMap, HashSet};
 #[cfg(test)]
 use std::ffi::OsString;
 use std::path::PathBuf;
@@ -13,6 +13,7 @@ use syntect::parsing::SyntaxSet;
 use crate::bat::assets::HighlightingAssets;
 use crate::bat::output::PagingMode;
 use crate::git_config::GitConfig;
+use crate::git_config_entry::GitConfigEntry;
 use crate::options;
 
 #[derive(StructOpt, Clone, Default)]
@@ -81,6 +82,9 @@ That means: For removed lines, syntax-highlight the text, and make it bold, and 
 
 The available attributes are: 'blink', 'bold', 'dim', 'hidden', 'italic', 'reverse', 'strike',
 and 'ul' (or 'underline').
+
+The attribute 'omit' is supported by commit-style, file-style, and hunk-header-style, meaning to
+remove the element entirely from the output.
 
 A complete description of the style string syntax follows:
 
@@ -317,6 +321,7 @@ pub struct Opt {
 
     #[structopt(long = "commit-style", default_value = "raw")]
     /// Style (foreground, background, attributes) for the commit hash line. See STYLES section.
+    /// The style 'omit' can be used to remove the commit hash line from the output.
     pub commit_style: String,
 
     #[structopt(long = "commit-decoration-style", default_value = "")]
@@ -326,7 +331,8 @@ pub struct Opt {
     pub commit_decoration_style: String,
 
     #[structopt(long = "file-style", default_value = "blue")]
-    /// Style (foreground, background, attributes) for the file section. See STYLES section.
+    /// Style (foreground, background, attributes) for the file section. See STYLES section. The
+    /// style 'omit' can be used to remove the file section from the output.
     pub file_style: String,
 
     #[structopt(long = "file-decoration-style", default_value = "blue ul")]
@@ -335,8 +341,33 @@ pub struct Opt {
     /// (overline), or the combination 'ul ol'.
     pub file_decoration_style: String,
 
+    #[structopt(long = "hyperlinks")]
+    /// Render commit hashes, file names, and line numbers as hyperlinks, according to the
+    /// hyperlink spec for terminal emulators:
+    /// https://gist.github.com/egmontkob/eb114294efbcd5adb1944c9f3cb5feda. By default, file names
+    /// and line numbers link to the local file using a file URL, whereas commit hashes link to the
+    /// commit in GitHub, if the remote repository is hosted by GitHub. See
+    /// --hyperlinks-file-link-format for full control over the file URLs emitted. Hyperlinks are
+    /// supported by several common terminal emulators. However, they are not yet supported by
+    /// less, so they will not work in delta unless you install a patched fork of less (see
+    /// https://github.com/dandavison/less). If you use tmux, then you will also need a patched
+    /// fork of tmux (see https://github.com/dandavison/tmux).
+    pub hyperlinks: bool,
+
+    /// Format string for file hyperlinks. The placeholders "{path}" and "{line}" will be replaced
+    /// by the absolute file path and the line number, respectively. The default value of this
+    /// option creates hyperlinks using standard file URLs; your operating system should open these
+    /// in the application registered for that file type. However, these do not make use of the
+    /// line number. In order for the link to open the file at the correct line number, you could
+    /// use a custom URL format such as "file-line://{path}:{line}" and register an application to
+    /// handle the custom "file-line" URL scheme by opening the file in your editor/IDE at the
+    /// indicated line number. See https://github.com/dandavison/open-in-editor for an example.
+    #[structopt(long = "hyperlinks-file-link-format", default_value = "file://{path}")]
+    pub hyperlinks_file_link_format: String,
+
     #[structopt(long = "hunk-header-style", default_value = "syntax")]
-    /// Style (foreground, background, attributes) for the hunk-header. See STYLES section.
+    /// Style (foreground, background, attributes) for the hunk-header. See STYLES section. The
+    /// style 'omit' can be used to remove the hunk header section from the output.
     pub hunk_header_style: String,
 
     #[structopt(long = "hunk-header-decoration-style", default_value = "blue box")]
@@ -511,6 +542,9 @@ pub struct Opt {
 
     #[structopt(skip)]
     pub computed: ComputedValues,
+
+    #[structopt(skip)]
+    pub git_config_entries: HashMap<String, GitConfigEntry>,
 }
 
 #[derive(Default, Clone, Debug)]
@@ -574,13 +608,21 @@ impl Opt {
     }
 
     #[allow(dead_code)]
-    pub fn get_option_or_flag_names<'a>() -> HashSet<&'a str> {
-        let names: HashSet<&str> = itertools::chain(
-            Self::clap().p.opts.iter().filter_map(|opt| opt.s.long),
-            Self::clap().p.flags.iter().filter_map(|opt| opt.s.long),
+    pub fn get_option_names<'a>() -> HashMap<&'a str, &'a str> {
+        itertools::chain(
+            Self::clap()
+                .p
+                .opts
+                .iter()
+                .map(|opt| (opt.b.name, opt.s.long.unwrap())),
+            Self::clap()
+                .p
+                .flags
+                .iter()
+                .map(|opt| (opt.b.name, opt.s.long.unwrap())),
         )
-        .collect();
-        &names - &*IGNORED_OPTION_OR_FLAG_NAMES
+        .filter(|(name, _)| !IGNORED_OPTION_NAMES.contains(name))
+        .collect()
     }
 }
 
@@ -588,21 +630,21 @@ impl Opt {
 // (1) Deprecated options
 // (2) Pseudo-flag commands such as --list-languages
 lazy_static! {
-    static ref IGNORED_OPTION_OR_FLAG_NAMES: HashSet<&'static str> = vec![
-        "commit-color",
-        "file-color",
-        "highlight-removed",
-        "hunk-color",
-        "hunk-style",
+    static ref IGNORED_OPTION_NAMES: HashSet<&'static str> = vec![
+        "deprecated-file-color",
+        "deprecated-hunk-style",
+        "deprecated-minus-background-color",
+        "deprecated-minus-emph-background-color",
+        "deprecated-hunk-color",
+        "deprecated-plus-emph-background-color",
+        "deprecated-plus-background-color",
+        "deprecated-highlight-minus-lines",
+        "deprecated-theme",
+        "deprecated-commit-color",
         "list-languages",
         "list-syntax-themes",
-        "minus-color",
-        "minus-emph-color",
-        "plus-color",
-        "plus-emph-color",
         "show-config",
         "show-syntax-themes",
-        "theme",
     ]
     .into_iter()
     .collect();

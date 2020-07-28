@@ -1,3 +1,4 @@
+use std::collections::HashMap;
 use std::path::PathBuf;
 use std::process;
 
@@ -13,6 +14,7 @@ use crate::color;
 use crate::delta::State;
 use crate::env;
 use crate::features::side_by_side;
+use crate::git_config_entry::GitConfigEntry;
 use crate::style::Style;
 
 pub struct Config {
@@ -25,8 +27,11 @@ pub struct Config {
     pub file_removed_label: String,
     pub file_renamed_label: String,
     pub file_style: Style,
+    pub git_config_entries: HashMap<String, GitConfigEntry>,
     pub keep_plus_minus_markers: bool,
     pub hunk_header_style: Style,
+    pub hyperlinks: bool,
+    pub hyperlinks_file_link_format: String,
     pub max_buffered_lines: usize,
     pub max_line_distance: f64,
     pub max_line_distance_for_naively_paired_lines: f64,
@@ -134,8 +139,11 @@ impl From<cli::Opt> for Config {
             file_removed_label: opt.file_removed_label,
             file_renamed_label: opt.file_renamed_label,
             file_style,
+            git_config_entries: opt.git_config_entries,
             keep_plus_minus_markers: opt.keep_plus_minus_markers,
             hunk_header_style,
+            hyperlinks: opt.hyperlinks,
+            hyperlinks_file_link_format: opt.hyperlinks_file_link_format,
             max_buffered_lines: 32,
             max_line_distance: opt.max_line_distance,
             max_line_distance_for_naively_paired_lines,

@@ -58,11 +58,15 @@ pub fn _make_feature(bold: bool) -> Vec<(String, OptionValueFunction)> {
 mod test_utils {
     use std::fs::remove_file;
 
-    use crate::features;
+    use crate::tests::integration_test_utils::integration_test_utils;
 
     #[test]
     fn test_diff_highlight_defaults() {
-        let opt = features::tests::make_options(&["--features", "diff-highlight"], None, None);
+        let opt = integration_test_utils::make_options_from_args_and_git_config(
+            &["--features", "diff-highlight"],
+            None,
+            None,
+        );
         assert_eq!(opt.minus_style, "red");
         assert_eq!(opt.minus_non_emph_style, "red");
         assert_eq!(opt.minus_emph_style, "red reverse");
@@ -87,7 +91,7 @@ mod test_utils {
 ";
         let git_config_path = "delta__test_diff_highlight.gitconfig";
 
-        let opt = features::tests::make_options(
+        let opt = integration_test_utils::make_options_from_args_and_git_config(
             &["--features", "diff-highlight"],
             Some(git_config_contents),
             Some(git_config_path),

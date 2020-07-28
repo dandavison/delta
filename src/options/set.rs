@@ -1,5 +1,6 @@
 use std::collections::{HashMap, HashSet, VecDeque};
 use std::process;
+use std::str::FromStr;
 
 use console::Term;
 use structopt::clap;
@@ -11,17 +12,21 @@ use crate::config;
 use crate::env;
 use crate::features;
 use crate::git_config;
+use crate::git_config_entry::{self, GitConfigEntry};
 use crate::options::option_value::{OptionValue, ProvenancedOptionValue};
 use crate::options::theme;
+use crate::style::Style;
 
 macro_rules! set_options {
-	([$( ($option_name:expr, $field_ident:ident) ),* ],
-     $opt:expr, $builtin_features:expr, $git_config:expr, $arg_matches:expr, $check_names:expr) => {
+	([$( $field_ident:ident ),* ],
+     $opt:expr, $builtin_features:expr, $git_config:expr, $arg_matches:expr, $expected_option_name_map:expr, $check_names:expr) => {
         let mut option_names = HashSet::new();
         $(
-            if !$crate::config::user_supplied_option($option_name, $arg_matches) {
+            let kebab_case_field_name = stringify!($field_ident).replace("_", "-");
+            let option_name = $expected_option_name_map[kebab_case_field_name.as_str()];
+            if !$crate::config::user_supplied_option(&option_name, $arg_matches) {
                 if let Some(value) = $crate::options::get::get_option_value(
-                    $option_name,
+                    option_name,
                     &$builtin_features,
                     $opt,
                     $git_config
@@ -30,7 +35,7 @@ macro_rules! set_options {
                 }
             }
             if $check_names {
-                option_names.insert($option_name);
+                option_names.insert(option_name);
             }
         )*
         if $check_names {
@@ -44,7 +49,8 @@ macro_rules! set_options {
                 "light",
                 "syntax-theme",
             ]);
-            let expected_option_names = $crate::cli::Opt::get_option_or_flag_names();
+            let expected_option_names: HashSet<_> = $expected_option_name_map.values().cloned().collect();
+
             if option_names != expected_option_names {
                 $crate::config::delta_unreachable(
                     &format!("Error processing options.\nUnhandled names: {:?}\nInvalid names: {:?}.\n",
@@ -65,20 +71,22 @@ pub fn set_options(
         if opt.no_gitconfig {
             git_config.enabled = false;
         }
+        set_git_config_entries(opt, git_config);
     }
 
-    set_paging_mode(opt);
+    let option_names = cli::Opt::get_option_names();
+
+    // Set features
+    let builtin_features = features::make_builtin_features();
+    let features = gather_features(opt, &builtin_features, git_config);
+    opt.features = features.join(" ");
+
     set_widths(opt);
 
     // Set light, dark, and syntax-theme.
     set_true_color(opt);
-    set__light__dark__syntax_theme__options(opt, git_config, arg_matches);
+    set__light__dark__syntax_theme__options(opt, git_config, arg_matches, &option_names);
     theme::set__is_light_mode__syntax_theme__syntax_set(opt, assets);
-
-    let builtin_features = features::make_builtin_features();
-    // Set features
-    let features = gather_features(opt, &builtin_features, git_config);
-    opt.features = features.join(" ");
 
     // HACK: make minus-line styles have syntax-highlighting iff side-by-side.
     if features.contains(&"side-by-side".to_string()) {
@@ -108,60 +116,62 @@ pub fn set_options(
 
     set_options!(
         [
-            ("24-bit-color", true_color),
-            ("color-only", color_only),
-            ("commit-decoration-style", commit_decoration_style),
-            ("commit-style", commit_style),
-            ("file-added-label", file_added_label),
-            ("file-decoration-style", file_decoration_style),
-            ("file-modified-label", file_modified_label),
-            ("file-removed-label", file_removed_label),
-            ("file-renamed-label", file_renamed_label),
-            ("file-style", file_style),
-            ("hunk-header-decoration-style", hunk_header_decoration_style),
-            ("hunk-header-style", hunk_header_style),
-            ("keep-plus-minus-markers", keep_plus_minus_markers),
-            ("max-line-distance", max_line_distance),
+            color_only,
+            commit_decoration_style,
+            commit_style,
+            file_added_label,
+            file_decoration_style,
+            file_modified_label,
+            file_removed_label,
+            file_renamed_label,
+            file_style,
+            hunk_header_decoration_style,
+            hunk_header_style,
+            hyperlinks,
+            hyperlinks_file_link_format,
+            keep_plus_minus_markers,
+            max_line_distance,
             // Hack: minus-style must come before minus-*emph-style because the latter default
             // dynamically to the value of the former.
-            ("minus-style", minus_style),
-            ("minus-emph-style", minus_emph_style),
-            (
-                "minus-empty-line-marker-style",
-                minus_empty_line_marker_style
-            ),
-            ("minus-non-emph-style", minus_non_emph_style),
-            ("minus-non-emph-style", minus_non_emph_style),
-            ("navigate", navigate),
-            ("line-numbers", line_numbers),
-            ("line-numbers-left-format", line_numbers_left_format),
-            ("line-numbers-left-style", line_numbers_left_style),
-            ("line-numbers-minus-style", line_numbers_minus_style),
-            ("line-numbers-plus-style", line_numbers_plus_style),
-            ("line-numbers-right-format", line_numbers_right_format),
-            ("line-numbers-right-style", line_numbers_right_style),
-            ("line-numbers-zero-style", line_numbers_zero_style),
-            ("paging", paging_mode),
+            minus_style,
+            minus_emph_style,
+            minus_empty_line_marker_style,
+            minus_non_emph_style,
+            minus_non_emph_style,
+            navigate,
+            line_numbers,
+            line_numbers_left_format,
+            line_numbers_left_style,
+            line_numbers_minus_style,
+            line_numbers_plus_style,
+            line_numbers_right_format,
+            line_numbers_right_style,
+            line_numbers_zero_style,
+            paging_mode,
             // Hack: plus-style must come before plus-*emph-style because the latter default
             // dynamically to the value of the former.
-            ("plus-style", plus_style),
-            ("plus-emph-style", plus_emph_style),
-            ("plus-empty-line-marker-style", plus_empty_line_marker_style),
-            ("plus-non-emph-style", plus_non_emph_style),
-            ("raw", raw),
-            ("side-by-side", side_by_side),
-            ("tabs", tab_width),
-            ("whitespace-error-style", whitespace_error_style),
-            ("width", width),
-            ("word-diff-regex", tokenization_regex),
-            ("zero-style", zero_style)
+            plus_style,
+            plus_emph_style,
+            plus_empty_line_marker_style,
+            plus_non_emph_style,
+            raw,
+            side_by_side,
+            tab_width,
+            tokenization_regex,
+            true_color,
+            whitespace_error_style,
+            width,
+            zero_style
         ],
         opt,
         builtin_features,
         git_config,
         arg_matches,
+        &option_names,
         true
     );
+
+    opt.computed.paging_mode = parse_paging_mode(&opt.paging_mode);
 }
 
 #[allow(non_snake_case)]
@@ -169,6 +179,7 @@ fn set__light__dark__syntax_theme__options(
     opt: &mut cli::Opt,
     git_config: &mut Option<git_config::GitConfig>,
     arg_matches: &clap::ArgMatches,
+    option_names: &HashMap<&str, &str>,
 ) {
     let validate_light_and_dark = |opt: &cli::Opt| {
         if opt.light && opt.dark {
@@ -180,21 +191,23 @@ fn set__light__dark__syntax_theme__options(
     validate_light_and_dark(&opt);
     if !(opt.light || opt.dark) {
         set_options!(
-            [("dark", dark), ("light", light)],
+            [dark, light],
             opt,
             &empty_builtin_features,
             git_config,
             arg_matches,
+            option_names,
             false
         );
     }
     validate_light_and_dark(&opt);
     set_options!(
-        [("syntax-theme", syntax_theme)],
+        [syntax_theme],
         opt,
         &empty_builtin_features,
         git_config,
         arg_matches,
+        option_names,
         false
     );
 }
@@ -284,6 +297,9 @@ fn gather_features<'a>(
     }
     if opt.diff_so_fancy {
         gather_builtin_features_recursively("diff-so-fancy", &mut features, &builtin_features, opt);
+    }
+    if opt.hyperlinks {
+        gather_builtin_features_recursively("hyperlinks", &mut features, &builtin_features, opt);
     }
     if opt.line_numbers {
         gather_builtin_features_recursively("line-numbers", &mut features, &builtin_features, opt);
@@ -448,19 +464,19 @@ fn is_truecolor_terminal() -> bool {
         .unwrap_or(false)
 }
 
-fn set_paging_mode(opt: &mut cli::Opt) {
-    opt.computed.paging_mode = match opt.paging_mode.as_ref() {
+fn parse_paging_mode(paging_mode_string: &str) -> PagingMode {
+    match paging_mode_string {
         "always" => PagingMode::Always,
         "never" => PagingMode::Never,
         "auto" => PagingMode::QuitIfOneScreen,
         _ => {
             eprintln!(
                 "Invalid value for --paging option: {} (valid values are \"always\", \"never\", and \"auto\")",
-                opt.paging_mode
+                paging_mode_string
             );
             process::exit(1);
         }
-    };
+    }
 }
 
 fn set_widths(opt: &mut cli::Opt) {
@@ -484,4 +500,160 @@ fn set_widths(opt: &mut cli::Opt) {
     opt.computed.decorations_width = decorations_width;
     opt.computed.background_color_extends_to_terminal_width =
         background_color_extends_to_terminal_width;
+}
+
+fn set_git_config_entries(opt: &mut cli::Opt, git_config: &mut git_config::GitConfig) {
+    // Styles
+    for key in &["color.diff.old", "color.diff.new"] {
+        if let Some(style_string) = git_config.get::<String>(key) {
+            opt.git_config_entries.insert(
+                key.to_string(),
+                GitConfigEntry::Style(Style::from_str(
+                    &style_string,
+                    None,
+                    None,
+                    opt.computed.true_color,
+                    false,
+                )),
+            );
+        }
+    }
+
+    // Strings
+    for key in &["remote.origin.url"] {
+        if let Some(string) = git_config.get::<String>(key) {
+            if let Ok(repo) = git_config_entry::GitRemoteRepo::from_str(&string) {
+                opt.git_config_entries
+                    .insert(key.to_string(), GitConfigEntry::GitRemote(repo));
+            }
+        }
+    }
+
+    if let Some(repo) = &git_config.repo {
+        if let Some(workdir) = repo.workdir() {
+            opt.git_config_entries.insert(
+                "delta.__workdir__".to_string(),
+                GitConfigEntry::Path(workdir.to_path_buf()),
+            );
+        }
+    }
+}
+
+#[cfg(test)]
+pub mod tests {
+    use std::fs::remove_file;
+
+    use crate::bat::output::PagingMode;
+    use crate::tests::integration_test_utils::integration_test_utils;
+
+    #[test]
+    fn test_options_can_be_set_in_git_config() {
+        let git_config_contents = b"
+[delta]
+    24-bit-color = never
+    color-only = true
+    commit-decoration-style = black black
+    commit-style = black black
+    dark = false
+    diff-highlight = true
+    diff-so-fancy = true
+    features = xxxyyyzzz
+    file-added-label = xxxyyyzzz
+    file-decoration-style = black black
+    file-modified-label = xxxyyyzzz
+    file-removed-label = xxxyyyzzz
+    file-renamed-label = xxxyyyzzz
+    file-style = black black
+    hunk-header-decoration-style = black black
+    hunk-header-style = black black
+    keep-plus-minus-markers = true
+    light = true
+    line-numbers = true
+    line-numbers-left-format = xxxyyyzzz
+    line-numbers-left-style = black black
+    line-numbers-minus-style = black black
+    line-numbers-plus-style = black black
+    line-numbers-right-format = xxxyyyzzz
+    line-numbers-right-style = black black
+    line-numbers-zero-style = black black
+    max-line-distance = 77
+    minus-emph-style = black black
+    minus-empty-line-marker-style = black black
+    minus-non-emph-style = black black
+    minus-style = black black
+    navigate = true
+    paging = never
+    plus-emph-style = black black
+    plus-empty-line-marker-style = black black
+    plus-non-emph-style = black black
+    plus-style = black black
+    raw = true
+    side-by-side = true
+    syntax-theme = xxxyyyzzz
+    tabs = 77
+    whitespace-error-style = black black
+    width = 77
+    word-diff-regex = xxxyyyzzz
+    zero-style = black black
+    # no-gitconfig
+";
+        let git_config_path = "delta__test_options_can_be_set_in_git_config.gitconfig";
+
+        let opt = integration_test_utils::make_options_from_args_and_git_config(
+            &[],
+            Some(git_config_contents),
+            Some(git_config_path),
+        );
+
+        assert_eq!(opt.true_color, "never");
+        assert_eq!(opt.color_only, true);
+        assert_eq!(opt.commit_decoration_style, "black black");
+        assert_eq!(opt.commit_style, "black black");
+        assert_eq!(opt.dark, false);
+        // TODO: should set_options not be called on any feature flags?
+        // assert_eq!(opt.diff_highlight, true);
+        // assert_eq!(opt.diff_so_fancy, true);
+        assert!(opt.features.split_whitespace().any(|s| s == "xxxyyyzzz"));
+        assert_eq!(opt.file_added_label, "xxxyyyzzz");
+        assert_eq!(opt.file_decoration_style, "black black");
+        assert_eq!(opt.file_modified_label, "xxxyyyzzz");
+        assert_eq!(opt.file_removed_label, "xxxyyyzzz");
+        assert_eq!(opt.file_renamed_label, "xxxyyyzzz");
+        assert_eq!(opt.file_style, "black black");
+        assert_eq!(opt.hunk_header_decoration_style, "black black");
+        assert_eq!(opt.hunk_header_style, "black black");
+        assert_eq!(opt.keep_plus_minus_markers, true);
+        assert_eq!(opt.light, true);
+        assert_eq!(opt.line_numbers, true);
+        assert_eq!(opt.line_numbers_left_format, "xxxyyyzzz");
+        assert_eq!(opt.line_numbers_left_style, "black black");
+        assert_eq!(opt.line_numbers_minus_style, "black black");
+        assert_eq!(opt.line_numbers_plus_style, "black black");
+        assert_eq!(opt.line_numbers_right_format, "xxxyyyzzz");
+        assert_eq!(opt.line_numbers_right_style, "black black");
+        assert_eq!(opt.line_numbers_zero_style, "black black");
+        assert_eq!(opt.max_line_distance, 77 as f64);
+        assert_eq!(opt.minus_emph_style, "black black");
+        assert_eq!(opt.minus_empty_line_marker_style, "black black");
+        assert_eq!(opt.minus_non_emph_style, "black black");
+        assert_eq!(opt.minus_style, "black black");
+        assert_eq!(opt.navigate, true);
+        assert_eq!(opt.paging_mode, "never");
+        assert_eq!(opt.plus_emph_style, "black black");
+        assert_eq!(opt.plus_empty_line_marker_style, "black black");
+        assert_eq!(opt.plus_non_emph_style, "black black");
+        assert_eq!(opt.plus_style, "black black");
+        assert_eq!(opt.raw, true);
+        assert_eq!(opt.side_by_side, true);
+        assert_eq!(opt.syntax_theme, Some("xxxyyyzzz".to_string()));
+        assert_eq!(opt.tab_width, 77);
+        assert_eq!(opt.whitespace_error_style, "black black");
+        assert_eq!(opt.width, Some("77".to_string()));
+        assert_eq!(opt.tokenization_regex, "xxxyyyzzz");
+        assert_eq!(opt.zero_style, "black black");
+
+        assert_eq!(opt.computed.paging_mode, PagingMode::Never);
+
+        remove_file(git_config_path).unwrap();
+    }
 }

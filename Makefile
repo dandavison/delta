@@ -32,7 +32,7 @@ BENCHMARK_INPUT_FILE = /tmp/delta-benchmark-input.gitdiff
 BENCHMARK_COMMAND = git log -p 23c292d3f25c67082a2ba315a187268be1a9b0ab
 benchmark: build
 	$(BENCHMARK_COMMAND) > $(BENCHMARK_INPUT_FILE)
-	hyperfine 'target/release/delta < $(BENCHMARK_INPUT_FILE) > /dev/null'
+	hyperfine 'target/release/delta --no-gitconfig < $(BENCHMARK_INPUT_FILE) > /dev/null'
 
 # https://github.com/brendangregg/FlameGraph
 flamegraph: build

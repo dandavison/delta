@@ -6,6 +6,7 @@ use regex::Regex;
 
 use crate::config;
 use crate::delta::State;
+use crate::features::hyperlinks;
 use crate::features::side_by_side;
 use crate::features::OptionValueFunction;
 use crate::style::Style;
@@ -112,6 +113,8 @@ pub fn format_and_paint_line_numbers<'a>(
             line_numbers_data.hunk_max_line_number_width,
             &minus_style,
             &plus_style,
+            &line_numbers_data.plus_file,
+            config,
         ));
     }
 
@@ -124,6 +127,8 @@ pub fn format_and_paint_line_numbers<'a>(
             line_numbers_data.hunk_max_line_number_width,
             &minus_style,
             &plus_style,
+            &line_numbers_data.plus_file,
+            config,
         ));
     }
     formatted_numbers
@@ -155,6 +160,7 @@ pub struct LineNumbersData<'a> {
     pub hunk_minus_line_number: usize,
     pub hunk_plus_line_number: usize,
     pub hunk_max_line_number_width: usize,
+    pub plus_file: String,
 }
 
 // Although it's probably unusual, a single format string can contain multiple placeholders. E.g.
@@ -178,11 +184,12 @@ impl<'a> LineNumbersData<'a> {
             hunk_minus_line_number: 0,
             hunk_plus_line_number: 0,
             hunk_max_line_number_width: 0,
+            plus_file: "".to_string(),
         }
     }
 
     /// Initialize line number data for a hunk.
-    pub fn initialize_hunk(&mut self, line_numbers: Vec<(usize, usize)>) {
+    pub fn initialize_hunk(&mut self, line_numbers: Vec<(usize, usize)>, plus_file: String) {
         // Typically, line_numbers has length 2: an entry for the minus file, and one for the plus
         // file. In the case of merge commits, it may be longer.
         self.hunk_minus_line_number = line_numbers[0].0;
@@ -190,6 +197,7 @@ impl<'a> LineNumbersData<'a> {
         let hunk_max_line_number = line_numbers.iter().map(|(n, d)| n + d).max().unwrap();
         self.hunk_max_line_number_width =
             1 + (hunk_max_line_number as f64).log10().floor() as usize;
+        self.plus_file = plus_file;
     }
 }
 
@@ -233,6 +241,8 @@ fn format_and_paint_line_number_field<'a>(
     min_field_width: usize,
     minus_number_style: &Style,
     plus_number_style: &Style,
+    plus_file: &str,
+    config: &config::Config,
 ) -> Vec<ansi_term::ANSIGenericString<'a, str>> {
     let mut ansi_strings = Vec::new();
     let mut suffix = "";
@@ -251,11 +261,15 @@ fn format_and_paint_line_number_field<'a>(
                 minus_number,
                 alignment_spec,
                 width,
+                None,
+                config,
             ))),
             Some("np") => ansi_strings.push(plus_number_style.paint(format_line_number(
                 plus_number,
                 alignment_spec,
                 width,
+                Some(plus_file),
+                config,
             ))),
             None => {}
             Some(_) => unreachable!(),
@@ -267,15 +281,29 @@ fn format_and_paint_line_number_field<'a>(
 }
 
 /// Return line number formatted according to `alignment` and `width`.
-fn format_line_number(line_number: Option<usize>, alignment: &str, width: usize) -> String {
-    let n = line_number
-        .map(|n| format!("{}", n))
-        .unwrap_or_else(|| "".to_string());
-    match alignment {
+fn format_line_number(
+    line_number: Option<usize>,
+    alignment: &str,
+    width: usize,
+    plus_file: Option<&str>,
+    config: &config::Config,
+) -> String {
+    let format_n = |n| match alignment {
         "<" => format!("{0:<1$}", n, width),
         "^" => format!("{0:^1$}", n, width),
         ">" => format!("{0:>1$}", n, width),
         _ => unreachable!(),
+    };
+    match (line_number, config.hyperlinks, plus_file) {
+        (None, _, _) => format_n(""),
+        (Some(n), true, Some(file)) => hyperlinks::format_osc8_file_hyperlink(
+            file,
+            line_number,
+            &format_n(&n.to_string()),
+            config,
+        )
+        .to_string(),
+        (Some(n), _, _) => format_n(&n.to_string()),
     }
 }
 
@@ -284,7 +312,9 @@ pub mod tests {
     use console::strip_ansi_codes;
     use regex::Captures;
 
-    use crate::tests::integration_test_utils::integration_test_utils::{make_config, run_delta};
+    use crate::tests::integration_test_utils::integration_test_utils::{
+        make_config_from_args, run_delta,
+    };
 
     use super::*;
 
@@ -401,7 +431,7 @@ pub mod tests {
 
     #[test]
     fn test_two_minus_lines() {
-        let config = make_config(&[
+        let config = make_config_from_args(&[
             "--line-numbers",
             "--line-numbers-left-format",
             "{nm:^4}⋮",
@@ -425,7 +455,7 @@ pub mod tests {
 
     #[test]
     fn test_two_plus_lines() {
-        let config = make_config(&[
+        let config = make_config_from_args(&[
             "--line-numbers",
             "--line-numbers-left-format",
             "{nm:^4}⋮",
@@ -449,7 +479,7 @@ pub mod tests {
 
     #[test]
     fn test_one_minus_one_plus_line() {
-        let config = make_config(&[
+        let config = make_config_from_args(&[
             "--line-numbers",
             "--line-numbers-left-format",
             "{nm:^4}⋮",
@@ -474,7 +504,7 @@ pub mod tests {
 
     #[test]
     fn test_repeated_placeholder() {
-        let config = make_config(&[
+        let config = make_config_from_args(&[
             "--line-numbers",
             "--line-numbers-left-format",
             "{nm:^4} {nm:^4}⋮",
@@ -499,7 +529,7 @@ pub mod tests {
 
     #[test]
     fn test_five_digit_line_number() {
-        let config = make_config(&["--line-numbers"]);
+        let config = make_config_from_args(&["--line-numbers"]);
         let output = run_delta(FIVE_DIGIT_LINE_NUMBER_DIFF, &config);
         let output = strip_ansi_codes(&output);
         let mut lines = output.lines().skip(4);
@@ -510,7 +540,7 @@ pub mod tests {
 
     #[test]
     fn test_unequal_digit_line_number() {
-        let config = make_config(&["--line-numbers"]);
+        let config = make_config_from_args(&["--line-numbers"]);
         let output = run_delta(UNEQUAL_DIGIT_DIFF, &config);
         let output = strip_ansi_codes(&output);
         let mut lines = output.lines().skip(4);
