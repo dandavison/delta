@@ -114,6 +114,7 @@ where
                 )?;
             }
         } else if line.starts_with("@@") {
+            painter.paint_buffered_minus_and_plus_lines();
             state = State::HunkHeader;
             painter.set_highlighter();
             if should_handle(&state, config) {
