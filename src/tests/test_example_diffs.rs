@@ -1137,6 +1137,25 @@ impl<'a> Alignment<'a> { │
         );
     }
 
+    #[test]
+    fn test_git_diff_is_unchanged_under_color_only() {
+        let config = integration_test_utils::make_config_from_args(&["--color-only"]);
+        let input = DIFF_WITH_TWO_ADDED_LINES;
+        let output = integration_test_utils::run_delta(input, &config);
+        let output = strip_ansi_codes(&output);
+        assert_eq!(output, input);
+    }
+
+    #[test]
+    #[allow(non_snake_case)]
+    fn test_git_diff_U0_is_unchanged_under_color_only() {
+        let config = integration_test_utils::make_config_from_args(&["--color-only"]);
+        let input = DIFF_WITH_TWO_ADDED_LINES_CREATED_BY_GIT_DIFF_U0;
+        let output = integration_test_utils::run_delta(input, &config);
+        let output = strip_ansi_codes(&output);
+        assert_eq!(output, input);
+    }
+
     const GIT_DIFF_SINGLE_HUNK: &str = "\
 commit 94907c0f136f46dc46ffae2dc92dca9af7eb7c2e
 Author: Dan Davison <dandavison7@gmail.com>
@@ -1617,4 +1636,31 @@ index 8d1c8b6..8b13789 100644
 - 
 +
 ";
+
+    const DIFF_WITH_TWO_ADDED_LINES: &str = r#"
+diff --git a/example.c b/example.c
+index 386f291a..22666f79 100644
+--- a/example.c
++++ b/example.c
+@@ -1,6 +1,8 @@
+ int other_routine() {
++    return 0;
+ }
+ 
+ int main() {
+     puts("Hello, world!");
++    return 0;
+ }
+"#;
+
+    const DIFF_WITH_TWO_ADDED_LINES_CREATED_BY_GIT_DIFF_U0: &str = r#"
+diff --git a/example.c b/example.c
+index 386f291a..22666f79 100644
+--- a/example.c
++++ b/example.c
+@@ -1,0 +2 @@ int other_routine() {
++    return 0;
+@@ -5,0 +7 @@ int main() {
++    return 0;
+"#;
 }
