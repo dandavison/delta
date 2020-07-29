@@ -234,6 +234,19 @@ pub struct Opt {
     /// --file-renamed-label.
     pub navigate: bool,
 
+    #[structopt(long = "hyperlinks")]
+    /// Render commit hashes, file names, and line numbers as hyperlinks, according to the
+    /// hyperlink spec for terminal emulators:
+    /// https://gist.github.com/egmontkob/eb114294efbcd5adb1944c9f3cb5feda. By default, file names
+    /// and line numbers link to the local file using a file URL, whereas commit hashes link to the
+    /// commit in GitHub, if the remote repository is hosted by GitHub. See
+    /// --hyperlinks-file-link-format for full control over the file URLs emitted. Hyperlinks are
+    /// supported by several common terminal emulators. However, they are not yet supported by
+    /// less, so they will not work in delta unless you install a patched fork of less (see
+    /// https://github.com/dandavison/less). If you use tmux, then you will also need a patched
+    /// fork of tmux (see https://github.com/dandavison/tmux).
+    pub hyperlinks: bool,
+
     #[structopt(long = "keep-plus-minus-markers")]
     /// Prefix added/removed lines with a +/- character, exactly as git does. By default, delta
     /// does not emit any prefix, so code can be copied directly from delta's output.
@@ -340,19 +353,6 @@ pub struct Opt {
     /// style string should contain one of the special attributes 'box', 'ul' (underline), 'ol'
     /// (overline), or the combination 'ul ol'.
     pub file_decoration_style: String,
-
-    #[structopt(long = "hyperlinks")]
-    /// Render commit hashes, file names, and line numbers as hyperlinks, according to the
-    /// hyperlink spec for terminal emulators:
-    /// https://gist.github.com/egmontkob/eb114294efbcd5adb1944c9f3cb5feda. By default, file names
-    /// and line numbers link to the local file using a file URL, whereas commit hashes link to the
-    /// commit in GitHub, if the remote repository is hosted by GitHub. See
-    /// --hyperlinks-file-link-format for full control over the file URLs emitted. Hyperlinks are
-    /// supported by several common terminal emulators. However, they are not yet supported by
-    /// less, so they will not work in delta unless you install a patched fork of less (see
-    /// https://github.com/dandavison/less). If you use tmux, then you will also need a patched
-    /// fork of tmux (see https://github.com/dandavison/tmux).
-    pub hyperlinks: bool,
 
     /// Format string for file hyperlinks. The placeholders "{path}" and "{line}" will be replaced
     /// by the absolute file path and the line number, respectively. The default value of this
