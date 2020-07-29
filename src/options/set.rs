@@ -81,7 +81,7 @@ pub fn set_options(
     let features = gather_features(opt, &builtin_features, git_config);
     opt.features = features.join(" ");
 
-    set_widths(opt);
+    set_widths(opt, git_config);
 
     // Set light, dark, and syntax-theme.
     set_true_color(opt);
@@ -479,7 +479,7 @@ fn parse_paging_mode(paging_mode_string: &str) -> PagingMode {
     }
 }
 
-fn set_widths(opt: &mut cli::Opt) {
+fn set_widths(opt: &mut cli::Opt, git_config: &mut Option<git_config::GitConfig>) {
     // Allow one character in case e.g. `less --status-column` is in effect. See #41 and #10.
     opt.computed.available_terminal_width = (Term::stdout().size().1 - 1) as usize;
     let (decorations_width, background_color_extends_to_terminal_width) = match opt.width.as_deref()
@@ -492,10 +492,13 @@ fn set_widths(opt: &mut cli::Opt) {
             });
             (cli::Width::Fixed(width), true)
         }
-        None => (
-            cli::Width::Fixed(opt.computed.available_terminal_width),
-            true,
-        ),
+        None => {
+            match git_config.as_ref().unwrap().get::<usize>("delta.width")
+            {
+                Some(width) => (cli::Width::Fixed(width), false),
+                None => (cli::Width::Fixed(opt.computed.available_terminal_width), true)
+            }
+        }
     };
     opt.computed.decorations_width = decorations_width;
     opt.computed.background_color_extends_to_terminal_width =
