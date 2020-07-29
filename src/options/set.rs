@@ -548,6 +548,7 @@ pub mod tests {
 
     use crate::bat::output::PagingMode;
     use crate::tests::integration_test_utils::integration_test_utils;
+    use crate::cli;
 
     #[test]
     fn test_options_can_be_set_in_git_config() {
@@ -656,6 +657,25 @@ pub mod tests {
         assert_eq!(opt.zero_style, "black black");
 
         assert_eq!(opt.computed.paging_mode, PagingMode::Never);
+
+        remove_file(git_config_path).unwrap();
+    }
+
+    #[test]
+    fn test_width_in_git_config_is_honored() {
+        let git_config_contents = b"
+[delta]
+    width = 7
+";
+        let git_config_path = "delta__test_width_in_git_config_is_honored.gitconfig";
+
+        let opt = integration_test_utils::make_options_from_args_and_git_config(
+            &[],
+            Some(git_config_contents),
+            Some(git_config_path),
+        );
+
+        assert_eq!(opt.computed.decorations_width, cli::Width::Fixed(7));
 
         remove_file(git_config_path).unwrap();
     }
