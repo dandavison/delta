@@ -81,7 +81,7 @@ pub fn set_options(
     let features = gather_features(opt, &builtin_features, git_config);
     opt.features = features.join(" ");
 
-    set_widths(opt);
+    set_widths(opt, git_config, arg_matches, &option_names);
 
     // Set light, dark, and syntax-theme.
     set_true_color(opt);
@@ -479,9 +479,28 @@ fn parse_paging_mode(paging_mode_string: &str) -> PagingMode {
     }
 }
 
-fn set_widths(opt: &mut cli::Opt) {
+fn set_widths(
+    opt: &mut cli::Opt,
+    git_config: &mut Option<git_config::GitConfig>,
+    arg_matches: &clap::ArgMatches,
+    option_names: &HashMap<&str, &str>,
+) {
     // Allow one character in case e.g. `less --status-column` is in effect. See #41 and #10.
     opt.computed.available_terminal_width = (Term::stdout().size().1 - 1) as usize;
+
+    let empty_builtin_features = HashMap::new();
+    if opt.width.is_none() {
+        set_options!(
+            [width],
+            opt,
+            &empty_builtin_features,
+            git_config,
+            arg_matches,
+            option_names,
+            false
+        );
+    }
+
     let (decorations_width, background_color_extends_to_terminal_width) = match opt.width.as_deref()
     {
         Some("variable") => (cli::Width::Variable, false),
@@ -545,6 +564,7 @@ pub mod tests {
 
     use crate::bat::output::PagingMode;
     use crate::tests::integration_test_utils::integration_test_utils;
+    use crate::cli;
 
     #[test]
     fn test_options_can_be_set_in_git_config() {
@@ -653,6 +673,28 @@ pub mod tests {
         assert_eq!(opt.zero_style, "black black");
 
         assert_eq!(opt.computed.paging_mode, PagingMode::Never);
+
+        remove_file(git_config_path).unwrap();
+    }
+
+    #[test]
+    fn test_width_in_git_config_is_honored() {
+        let git_config_contents = b"
+[delta]
+    features = my-width-feature
+
+[delta \"my-width-feature\"]
+    width = variable
+";
+        let git_config_path = "delta__test_width_in_git_config_is_honored.gitconfig";
+
+        let opt = integration_test_utils::make_options_from_args_and_git_config(
+            &[],
+            Some(git_config_contents),
+            Some(git_config_path),
+        );
+
+        assert_eq!(opt.computed.decorations_width, cli::Width::Variable);
 
         remove_file(git_config_path).unwrap();
     }

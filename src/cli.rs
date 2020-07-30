@@ -560,7 +560,7 @@ pub struct ComputedValues {
     pub paging_mode: PagingMode,
 }
 
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, PartialEq)]
 pub enum Width {
     Fixed(usize),
     Variable,

@@ -185,6 +185,7 @@ fn show_config(config: &config::Config) {
     navigate                      = {navigate}
     paging                        = {paging_mode}
     syntax-theme                  = {syntax_theme}
+    width                         = {width}
     tabs                          = {tab_width}
     word-diff-regex               = {tokenization_regex}",
         true_color = config.true_color,
@@ -205,6 +206,10 @@ fn show_config(config: &config::Config) {
             .clone()
             .map(|t| t.name.unwrap_or("none".to_string()))
             .unwrap_or("none".to_string()),
+        width = match config.decorations_width {
+            cli::Width::Fixed(width) => width.to_string(),
+            cli::Width::Variable => "variable".to_string()
+        },
         tab_width = config.tab_width,
         tokenization_regex = format_option_value(&config.tokenization_regex.to_string()),
     );
