@@ -81,7 +81,7 @@ pub fn set_options(
     let features = gather_features(opt, &builtin_features, git_config);
     opt.features = features.join(" ");
 
-    set_widths(opt, git_config);
+    set_widths(opt, git_config, arg_matches, &option_names);
 
     // Set light, dark, and syntax-theme.
     set_true_color(opt);
@@ -479,9 +479,28 @@ fn parse_paging_mode(paging_mode_string: &str) -> PagingMode {
     }
 }
 
-fn set_widths(opt: &mut cli::Opt, git_config: &mut Option<git_config::GitConfig>) {
+fn set_widths(
+    opt: &mut cli::Opt,
+    git_config: &mut Option<git_config::GitConfig>,
+    arg_matches: &clap::ArgMatches,
+    option_names: &HashMap<&str, &str>,
+) {
     // Allow one character in case e.g. `less --status-column` is in effect. See #41 and #10.
     opt.computed.available_terminal_width = (Term::stdout().size().1 - 1) as usize;
+
+    let empty_builtin_features = HashMap::new();
+    if opt.width.as_deref() == None {
+        set_options!(
+            [width],
+            opt,
+            &empty_builtin_features,
+            git_config,
+            arg_matches,
+            option_names,
+            false
+        );
+    }
+
     let (decorations_width, background_color_extends_to_terminal_width) = match opt.width.as_deref()
     {
         Some("variable") => (cli::Width::Variable, false),
@@ -492,13 +511,10 @@ fn set_widths(opt: &mut cli::Opt, git_config: &mut Option<git_config::GitConfig>
             });
             (cli::Width::Fixed(width), true)
         }
-        None => {
-            match git_config.as_ref().unwrap().get::<usize>("delta.width")
-            {
-                Some(width) => (cli::Width::Fixed(width), false),
-                None => (cli::Width::Fixed(opt.computed.available_terminal_width), true)
-            }
-        }
+        None => (
+            cli::Width::Fixed(opt.computed.available_terminal_width),
+            true,
+        ),
     };
     opt.computed.decorations_width = decorations_width;
     opt.computed.background_color_extends_to_terminal_width =
