@@ -9,6 +9,7 @@ use syntect::highlighting::Style as SyntectStyle;
 use syntect::parsing::{SyntaxReference, SyntaxSet};
 use unicode_segmentation::UnicodeSegmentation;
 
+use crate::ansi;
 use crate::config::{self, delta_unreachable};
 use crate::delta::State;
 use crate::edits;
@@ -16,10 +17,6 @@ use crate::features::line_numbers;
 use crate::features::side_by_side;
 use crate::paint::superimpose_style_sections::superimpose_style_sections;
 use crate::style::Style;
-
-pub const ANSI_CSI_CLEAR_TO_EOL: &str = "\x1b[0K";
-pub const ANSI_CSI_CLEAR_TO_BOL: &str = "\x1b[1K";
-pub const ANSI_SGR_RESET: &str = "\x1b[0m";
 
 pub struct Painter<'a> {
     pub minus_lines: Vec<String>,
@@ -318,12 +315,12 @@ impl<'a> Painter<'a> {
         line.push_str(&ansi_term::ANSIStrings(&[fill_style.paint("")]).to_string());
         if line
             .to_lowercase()
-            .ends_with(&ANSI_SGR_RESET.to_lowercase())
+            .ends_with(&ansi::ANSI_SGR_RESET.to_lowercase())
         {
-            line.truncate(line.len() - ANSI_SGR_RESET.len());
+            line.truncate(line.len() - ansi::ANSI_SGR_RESET.len());
         }
-        line.push_str(ANSI_CSI_CLEAR_TO_EOL);
-        line.push_str(ANSI_SGR_RESET);
+        line.push_str(ansi::ANSI_CSI_CLEAR_TO_EOL);
+        line.push_str(ansi::ANSI_SGR_RESET);
     }
 
     /// Use ANSI sequences to visually mark the current line as empty. If `marker` is None then the
@@ -334,7 +331,7 @@ impl<'a> Painter<'a> {
     pub fn mark_empty_line(empty_line_style: &Style, line: &mut String, marker: Option<&str>) {
         line.push_str(
             &empty_line_style
-                .paint(marker.unwrap_or(ANSI_CSI_CLEAR_TO_BOL))
+                .paint(marker.unwrap_or(ansi::ANSI_CSI_CLEAR_TO_BOL))
                 .to_string(),
         );
     }

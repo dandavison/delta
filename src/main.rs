@@ -4,6 +4,7 @@ extern crate bitflags;
 extern crate error_chain;
 
 mod align;
+mod ansi;
 mod bat;
 mod cli;
 mod color;

@@ -2,7 +2,7 @@
 mod tests {
     use console::strip_ansi_codes;
 
-    use crate::paint;
+    use crate::ansi;
     use crate::style;
     use crate::tests::ansi_test_utils::ansi_test_utils;
     use crate::tests::integration_test_utils::integration_test_utils;
@@ -1090,7 +1090,7 @@ impl<'a> Alignment<'a> { │
                 line,
                 &style
                     .ansi_term_style
-                    .paint(paint::ANSI_CSI_CLEAR_TO_EOL)
+                    .paint(ansi::ANSI_CSI_CLEAR_TO_EOL)
                     .to_string()
             );
         } else {
@@ -1099,7 +1099,7 @@ impl<'a> Alignment<'a> { │
                 line,
                 &style
                     .ansi_term_style
-                    .paint(paint::ANSI_CSI_CLEAR_TO_BOL)
+                    .paint(ansi::ANSI_CSI_CLEAR_TO_BOL)
                     .to_string()
             );
         }
