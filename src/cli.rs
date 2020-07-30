@@ -234,14 +234,6 @@ pub struct Opt {
     /// --file-renamed-label.
     pub navigate: bool,
 
-    #[structopt(long = "color-moved")]
-    /// Detect moved code lines and apply the styles color-moved-minus-style and
-    /// color-moved-plus-style. This option requires the git config setting `diff.colorMoved =
-    /// true` (or that you pass --color-moved to git on the command line). It can only work if
-    /// delta receives colored input from git. So it works with `core.pager = delta` in git config,
-    /// but if you pipe git's output to delta, you must pass --color=always to git.
-    pub color_moved: bool,
-
     #[structopt(long = "hyperlinks")]
     /// Render commit hashes, file names, and line numbers as hyperlinks, according to the
     /// hyperlink spec for terminal emulators:
@@ -434,16 +426,6 @@ pub struct Opt {
     /// and LINE NUMBERS sections.
     #[structopt(long = "line-numbers-right-style", default_value = "auto")]
     pub line_numbers_right_style: String,
-
-    #[structopt(long = "color-moved-minus-style", default_value = "auto")]
-    /// Style (foreground, background, attributes) for moved lines in their old location. See
-    /// STYLES section.
-    pub color_moved_minus_style: String,
-
-    #[structopt(long = "color-moved-plus-style", default_value = "auto")]
-    /// Style (foreground, background, attributes) for moved lines in their new location. See
-    /// STYLES section.
-    pub color_moved_plus_style: String,
 
     #[structopt(long = "file-modified-label", default_value = "")]
     /// Text to display in front of a modified file path.

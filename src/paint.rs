@@ -101,6 +101,12 @@ impl<'a> Painter<'a> {
         }
     }
 
+    /// Remove the initial +/- character of a line that will be emitted unchanged, including any
+    /// ANSI escape sequences.
+    pub fn prepare_raw_line(&self, line: &str) -> String {
+        ansi::ansi_preserving_slice(line, 1)
+    }
+
     /// Expand tabs as spaces.
     /// tab_width = 0 is documented to mean do not replace tabs.
     pub fn expand_tabs<'b, I>(&self, line: I) -> String
@@ -117,16 +123,15 @@ impl<'a> Painter<'a> {
     }
 
     pub fn paint_buffered_minus_and_plus_lines(&mut self) {
-        let __ = false;
         let minus_line_syntax_style_sections = Self::get_syntax_style_sections_for_lines(
             &self.minus_lines,
-            &State::HunkMinus(__),
+            &State::HunkMinus(None),
             &mut self.highlighter,
             self.config,
         );
         let plus_line_syntax_style_sections = Self::get_syntax_style_sections_for_lines(
             &self.plus_lines,
-            &State::HunkPlus(__),
+            &State::HunkPlus(None),
             &mut self.highlighter,
             self.config,
         );
@@ -137,8 +142,10 @@ impl<'a> Painter<'a> {
             side_by_side::paint_minus_and_plus_lines_side_by_side(
                 minus_line_syntax_style_sections,
                 minus_line_diff_style_sections,
+                self.minus_lines.iter().map(|(_, state)| state).collect(),
                 plus_line_syntax_style_sections,
                 plus_line_diff_style_sections,
+                self.plus_lines.iter().map(|(_, state)| state).collect(),
                 line_alignment,
                 &mut self.output_buffer,
                 self.config,
@@ -296,11 +303,9 @@ impl<'a> Painter<'a> {
         // style:          for right fill if line contains no emph sections
         // non_emph_style: for right fill if line contains emph sections
         let (style, non_emph_style) = match state {
-            State::HunkMinus(false) => (config.minus_style, config.minus_non_emph_style),
+            State::HunkMinus(None) => (config.minus_style, config.minus_non_emph_style),
             State::HunkZero => (config.zero_style, config.zero_style),
-            State::HunkPlus(false) => (config.plus_style, config.plus_non_emph_style),
-            State::HunkMinus(true) => (config.minus_moved_style, config.minus_moved_style),
-            State::HunkPlus(true) => (config.plus_moved_style, config.plus_moved_style),
+            State::HunkPlus(None) => (config.plus_style, config.plus_non_emph_style),
             _ => (config.null_style, config.null_style),
         };
         let fill_style = if style_sections_contain_more_than_one_style(diff_sections) {
@@ -362,6 +367,21 @@ impl<'a> Painter<'a> {
                 config,
             ))
         }
+        match state {
+            State::HunkMinus(Some(raw_line)) | State::HunkPlus(Some(raw_line)) => {
+                // This line has been identified as one which should be emitted unchanged,
+                // including any ANSI escape sequences that it has.
+                return (
+                    format!(
+                        "{}{}",
+                        ansi_term::ANSIStrings(&ansi_strings).to_string(),
+                        raw_line
+                    ),
+                    false,
+                );
+            }
+            _ => {}
+        }
         let mut is_empty = true;
         for (section_style, mut text) in superimpose_style_sections(
             syntax_sections,
@@ -398,16 +418,17 @@ impl<'a> Painter<'a> {
             return false;
         }
         match state {
-            State::HunkMinus(_) => {
+            State::HunkMinus(None) => {
                 config.minus_style.is_syntax_highlighted
                     || config.minus_emph_style.is_syntax_highlighted
             }
             State::HunkZero => config.zero_style.is_syntax_highlighted,
-            State::HunkPlus(_) => {
+            State::HunkPlus(None) => {
                 config.plus_style.is_syntax_highlighted
                     || config.plus_emph_style.is_syntax_highlighted
             }
             State::HunkHeader => true,
+            State::HunkMinus(Some(_)) | State::HunkPlus(Some(_)) => false,
             _ => panic!(
                 "should_compute_syntax_highlighting is undefined for state {:?}",
                 state

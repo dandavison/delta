@@ -12,16 +12,16 @@ use crate::features;
 use crate::format;
 use crate::paint::Painter;
 use crate::parse;
-use crate::style::DecorationStyle;
+use crate::style::{self, DecorationStyle};
 
 #[derive(Clone, Debug, PartialEq)]
 pub enum State {
-    CommitMeta,      // In commit metadata section
-    FileMeta,        // In diff metadata section, between (possible) commit metadata and first hunk
-    HunkHeader,      // In hunk metadata line
-    HunkZero,        // In hunk; unchanged line
-    HunkMinus(bool), // In hunk; removed line (is_moved)
-    HunkPlus(bool),  // In hunk; added line (is_moved)
+    CommitMeta,                // In commit metadata section
+    FileMeta, // In diff metadata section, between (possible) commit metadata and first hunk
+    HunkHeader, // In hunk metadata line
+    HunkZero, // In hunk; unchanged line
+    HunkMinus(Option<String>), // In hunk; removed line (raw_line)
+    HunkPlus(Option<String>), // In hunk; added line (raw_line)
     Unknown,
 }
 
@@ -502,16 +502,28 @@ fn handle_hunk_line(
             if let State::HunkPlus(_) = state {
                 painter.paint_buffered_minus_and_plus_lines();
             }
-            let is_moved = !config.raw_expected_minus_style.is_applied_to(raw_line);
-            let state = State::HunkMinus(is_moved);
+            let state = if style::line_has_style_other_than(
+                raw_line,
+                [*style::GIT_DEFAULT_MINUS_STYLE, config.git_minus_style].iter(),
+            ) {
+                State::HunkMinus(Some(painter.prepare_raw_line(raw_line)))
+            } else {
+                State::HunkMinus(None)
+            };
             painter
                 .minus_lines
                 .push((painter.prepare(&line, true), state.clone()));
             state
         }
         Some('+') => {
-            let is_moved = !config.raw_expected_plus_style.is_applied_to(raw_line);
-            let state = State::HunkPlus(is_moved);
+            let state = if style::line_has_style_other_than(
+                raw_line,
+                [*style::GIT_DEFAULT_PLUS_STYLE, config.git_plus_style].iter(),
+            ) {
+                State::HunkPlus(Some(painter.prepare_raw_line(raw_line)))
+            } else {
+                State::HunkPlus(None)
+            };
             painter
                 .plus_lines
                 .push((painter.prepare(&line, true), state.clone()));

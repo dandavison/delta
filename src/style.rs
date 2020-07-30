@@ -2,7 +2,9 @@ use std::borrow::Cow;
 use std::fmt;
 
 use ansi_term;
+use lazy_static::lazy_static;
 
+use crate::ansi;
 use crate::color;
 
 #[derive(Clone, Copy, Debug, PartialEq)]
@@ -135,5 +137,93 @@ impl Style {
             None => {}
         }
         words.join(" ")
+    }
+}
+
+lazy_static! {
+    pub static ref GIT_DEFAULT_MINUS_STYLE: Style = Style {
+        ansi_term_style: ansi_term::Color::Red.normal(),
+        ..Style::new()
+    };
+    pub static ref GIT_DEFAULT_PLUS_STYLE: Style = Style {
+        ansi_term_style: ansi_term::Color::Green.normal(),
+        ..Style::new()
+    };
+}
+
+pub fn line_has_style_other_than<'a>(line: &str, styles: impl Iterator<Item = &'a Style>) -> bool {
+    if !ansi::string_starts_with_ansi_escape_sequence(line) {
+        return false;
+    }
+    for style in styles {
+        if style.is_applied_to(line) {
+            return false;
+        }
+    }
+    return true;
+}
+
+#[cfg(test)]
+mod tests {
+
+    use super::*;
+
+    #[test]
+    fn test_is_applied_to() {
+        assert!(Style::from_git_str(r##"black "#ddeeff""##)
+                .is_applied_to(
+                    "\x1b[30;48;2;221;238;255m+\x1b[m\x1b[30;48;2;221;238;255m        .map(|(_, is_ansi)| is_ansi)\x1b[m\n"))
+    }
+
+    #[test]
+    fn test_git_default_styles() {
+        let minus_line_from_unconfigured_git = "\x1b[31m-____\x1b[m\n";
+        let plus_line_from_unconfigured_git = "\x1b[32m+\x1b[m\x1b[32m____\x1b[m\n";
+        assert!(GIT_DEFAULT_MINUS_STYLE.is_applied_to(minus_line_from_unconfigured_git));
+        assert!(!GIT_DEFAULT_MINUS_STYLE.is_applied_to(plus_line_from_unconfigured_git));
+
+        assert!(GIT_DEFAULT_PLUS_STYLE.is_applied_to(plus_line_from_unconfigured_git));
+        assert!(!GIT_DEFAULT_PLUS_STYLE.is_applied_to(minus_line_from_unconfigured_git));
+    }
+
+    #[test]
+    fn test_line_has_style_other_than() {
+        let minus_line_from_unconfigured_git = "\x1b[31m-____\x1b[m\n";
+        let plus_line_from_unconfigured_git = "\x1b[32m+\x1b[m\x1b[32m____\x1b[m\n";
+
+        // Unstyled lines should test negative, regardless of supplied styles.
+        assert!(!line_has_style_other_than("", [].iter()));
+        assert!(!line_has_style_other_than(
+            "",
+            [*GIT_DEFAULT_MINUS_STYLE].iter()
+        ));
+
+        // Lines from git should test negative when corresponding default is supplied
+        assert!(!line_has_style_other_than(
+            minus_line_from_unconfigured_git,
+            [*GIT_DEFAULT_MINUS_STYLE].iter()
+        ));
+        assert!(!line_has_style_other_than(
+            plus_line_from_unconfigured_git,
+            [*GIT_DEFAULT_PLUS_STYLE].iter()
+        ));
+
+        // Styled lines should test positive when unless their style is supplied.
+        assert!(line_has_style_other_than(
+            minus_line_from_unconfigured_git,
+            [*GIT_DEFAULT_PLUS_STYLE].iter()
+        ));
+        assert!(line_has_style_other_than(
+            minus_line_from_unconfigured_git,
+            [].iter()
+        ));
+        assert!(line_has_style_other_than(
+            plus_line_from_unconfigured_git,
+            [*GIT_DEFAULT_MINUS_STYLE].iter()
+        ));
+        assert!(line_has_style_other_than(
+            plus_line_from_unconfigured_git,
+            [].iter()
+        ));
     }
 }

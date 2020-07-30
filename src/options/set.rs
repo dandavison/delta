@@ -115,9 +115,6 @@ pub fn set_options(
 
     set_options!(
         [
-            color_moved,
-            color_moved_minus_style,
-            color_moved_plus_style,
             color_only,
             commit_decoration_style,
             commit_style,
@@ -525,12 +522,7 @@ fn set_widths(
 
 fn set_git_config_entries(opt: &mut cli::Opt, git_config: &mut git_config::GitConfig) {
     // Styles
-    for key in &[
-        "color.diff.old",
-        "color.diff.new",
-        "color.diff.oldMoved",
-        "color.diff.newMoved",
-    ] {
+    for key in &["color.diff.old", "color.diff.new"] {
         if let Some(style_string) = git_config.get::<String>(key) {
             opt.git_config_entries
                 .insert(key.to_string(), GitConfigEntry::Style(style_string));
