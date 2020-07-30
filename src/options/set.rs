@@ -665,7 +665,10 @@ pub mod tests {
     fn test_width_in_git_config_is_honored() {
         let git_config_contents = b"
 [delta]
-    width = 7
+    features = my-width-feature
+
+[delta \"my-width-feature\"]
+    width = variable
 ";
         let git_config_path = "delta__test_width_in_git_config_is_honored.gitconfig";
 
@@ -675,7 +678,7 @@ pub mod tests {
             Some(git_config_path),
         );
 
-        assert_eq!(opt.computed.decorations_width, cli::Width::Fixed(7));
+        assert_eq!(opt.computed.decorations_width, cli::Width::Variable);
 
         remove_file(git_config_path).unwrap();
     }
