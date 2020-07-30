@@ -489,7 +489,7 @@ fn set_widths(
     opt.computed.available_terminal_width = (Term::stdout().size().1 - 1) as usize;
 
     let empty_builtin_features = HashMap::new();
-    if opt.width.as_deref() == None {
+    if opt.width.is_none() {
         set_options!(
             [width],
             opt,
