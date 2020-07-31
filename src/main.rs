@@ -5,6 +5,7 @@ extern crate error_chain;
 
 mod align;
 mod ansi;
+mod ansi_parser;
 mod bat;
 mod cli;
 mod color;
