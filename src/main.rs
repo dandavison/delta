@@ -5,7 +5,6 @@ extern crate error_chain;
 
 mod align;
 mod ansi;
-mod ansi_parser;
 mod bat;
 mod cli;
 mod color;
@@ -210,7 +209,7 @@ fn show_config(config: &config::Config) {
             .unwrap_or("none".to_string()),
         width = match config.decorations_width {
             cli::Width::Fixed(width) => width.to_string(),
-            cli::Width::Variable => "variable".to_string()
+            cli::Width::Variable => "variable".to_string(),
         },
         tab_width = config.tab_width,
         tokenization_regex = format_option_value(&config.tokenization_regex.to_string()),

@@ -1,3 +1,5 @@
+pub mod parse;
+
 use std::cmp::min;
 
 use console;
