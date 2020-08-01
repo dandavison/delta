@@ -563,8 +563,8 @@ pub mod tests {
     use std::fs::remove_file;
 
     use crate::bat::output::PagingMode;
-    use crate::tests::integration_test_utils::integration_test_utils;
     use crate::cli;
+    use crate::tests::integration_test_utils::integration_test_utils;
 
     #[test]
     fn test_options_can_be_set_in_git_config() {
