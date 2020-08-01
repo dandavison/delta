@@ -3,17 +3,17 @@
 
 ## A viewer for git and diff output
 
-Code evolves, and studying diffs to understand how some code has changed is a fundamental mode of work. Delta aims to make studying diffs both efficient and enjoyable: it allows you to make extensive changes to the layout and styling of diffs, as well as allowing you to stay arbitrarily close to the default git/diff output, changing just the aspects that you want to change.
+Code evolves, and studying diffs is a fundamental mode of work. Delta aims to make this both efficient and enjoyable: it allows you to make extensive changes to the layout and styling of diffs, as well as allowing you to stay arbitrarily close to the default git/diff output.
 
 #### Delta's main features are:
 
 - Language syntax highlighting with color themes
 - Within-line highlights based on a Levenshtein edit inference algorithm
-- Style (foreground color, background color, font attributes) can be configured independently for more than 20 different sections of the diff
-- Stylable box/line decorations to draw attention to commit, file and hunk header sections.
+- Git style strings (foreground color, background color, font attributes) are supported for >20 stylable elements
 - Side-by-side view
 - Line numbering
-- `--diff-highlight` and `--diff-so-fancy` emulation modes
+- `diff-highlight` and `diff-so-fancy` emulation modes
+- Stylable box/line decorations to draw attention to commit, file and hunk header sections.
 - Code can be copied directly from the diff (`-/+` markers are removed by default).
 - `n` and `N` keybindings to move between files in large diffs, and between diffs in `log -p` views (`--navigate`)
 
@@ -66,12 +66,14 @@ Contents
    * [Using Delta with Magit](#using-delta-with-magit)
 * [Comparisons with other tools](#comparisons-with-other-tools)
 * [Build delta from source](#build-delta-from-source)
-* [Credit](#credit)
-* [Projects using delta](#projects-using-delta)
+* [Related projects](#related-projects)
+   * [Used by delta](#used-by-delta)
+   * [Using delta](#using-delta)
+   * [Similar projects](#similar-projects)
 * [Full --help output](#full---help-output)
 * [Delta configs used in screenshots](#delta-configs-used-in-screenshots)
    * [Side-by-side view](#side-by-side-view-1)
-
+         
 
 Here's what `git show` can look like with git configured to use delta:
 
