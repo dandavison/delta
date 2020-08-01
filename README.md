@@ -14,6 +14,7 @@ Code evolves, and studying diffs is a fundamental mode of work. Delta aims to ma
 - Line numbering
 - `diff-highlight` and `diff-so-fancy` emulation modes
 - Stylable box/line decorations to draw attention to commit, file and hunk header sections.
+- Support for Git's `--color-moved` feature.
 - Code can be copied directly from the diff (`-/+` markers are removed by default).
 - `n` and `N` keybindings to move between files in large diffs, and between diffs in `log -p` views (`--navigate`)
 
@@ -59,6 +60,7 @@ Contents
    * [Side-by-side view](#side-by-side-view)
    * [Custom features](#custom-features)
    * [diff-highlight and diff-so-fancy emulation](#diff-highlight-and-diff-so-fancy-emulation)
+   * [--color-moved support](#--color-moved-support)
    * [Navigation keybindings for large diffs](#navigation-keybindings-for-large-diffs)
    * [24 bit color (truecolor)](#24-bit-color-truecolor)
    * [Using Delta on Windows](#using-delta-on-windows)
@@ -355,6 +357,28 @@ You may want to know which delta configuration values the emulation mode has sel
 [diff-highlight](https://github.com/git/git/tree/master/contrib/diff-highlight) is a perl script distributed with git that allows within-line edits to be identified and highlighted according to colors specified in git config. [diff-so-fancy](https://github.com/so-fancy/diff-so-fancy) builds on diff-highlight, making various additional improvements to the default git diff output. Both tools provide very helpful ways of viewing diffs, and so delta provides emulation modes for both of them.
 
 The within-line highlighting rules employed by diff-highlight (and therefore by diff-so-fancy) are deliberately simpler than Delta's Levenshtein-type edit inference algorithm (see discussion in the [diff-highlight README](https://github.com/git/git/tree/master/contrib/diff-highlight)). diff-highlight's rules could be added to delta as an alternative highlighting algorithm, but that hasn't been done yet.
+
+### `--color-moved` support
+
+[_**Unreleased feature**: available now if you build Delta from source, and will be included in the next Delta release. See [#72](https://github.com/dandavison/delta/issues/2)._]
+
+Recent versions of Git are able to detect moved blocks of code and style them differently from the usual removed/added lines. If you have activated this feature in Git, then Delta will automatically detect such differently-styled lines, and display them unchanged, i.e. with the raw colors it receives from Git.
+
+To activate the Git feature, use
+
+```gitconfig
+[diff]
+    colorMoved = default
+```
+
+and see the [Git documentation](https://git-scm.com/docs/git-diff#Documentation/git-diff.txt---color-movedltmodegt) for the other possible values and associated color configuration.
+
+In order to support this feature, Delta has to look at the raw colors it receives in a line from Git, and use them to judge whether it is a typical removed/added line, or a specially-colored moved line. This should just work. However, if it causes problems, the behavior can be disabled using
+
+```gitconfig
+[delta]
+    inspect-raw-lines = false
+```
 
 ### Navigation keybindings for large diffs
 

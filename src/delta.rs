@@ -6,6 +6,7 @@ use bytelines::ByteLines;
 use console::strip_ansi_codes;
 use unicode_segmentation::UnicodeSegmentation;
 
+use crate::cli;
 use crate::config::Config;
 use crate::draw;
 use crate::features;
@@ -502,13 +503,16 @@ fn handle_hunk_line(
             if let State::HunkPlus(_) = state {
                 painter.paint_buffered_minus_and_plus_lines();
             }
-            let state = if style::line_has_style_other_than(
-                raw_line,
-                [*style::GIT_DEFAULT_MINUS_STYLE, config.git_minus_style].iter(),
-            ) {
-                State::HunkMinus(Some(painter.prepare_raw_line(raw_line)))
-            } else {
-                State::HunkMinus(None)
+            let state = match config.inspect_raw_lines {
+                cli::InspectRawLines::True
+                    if style::line_has_style_other_than(
+                        raw_line,
+                        [*style::GIT_DEFAULT_MINUS_STYLE, config.git_minus_style].iter(),
+                    ) =>
+                {
+                    State::HunkMinus(Some(painter.prepare_raw_line(raw_line)))
+                }
+                _ => State::HunkMinus(None),
             };
             painter
                 .minus_lines
@@ -516,13 +520,16 @@ fn handle_hunk_line(
             state
         }
         Some('+') => {
-            let state = if style::line_has_style_other_than(
-                raw_line,
-                [*style::GIT_DEFAULT_PLUS_STYLE, config.git_plus_style].iter(),
-            ) {
-                State::HunkPlus(Some(painter.prepare_raw_line(raw_line)))
-            } else {
-                State::HunkPlus(None)
+            let state = match config.inspect_raw_lines {
+                cli::InspectRawLines::True
+                    if style::line_has_style_other_than(
+                        raw_line,
+                        [*style::GIT_DEFAULT_PLUS_STYLE, config.git_plus_style].iter(),
+                    ) =>
+                {
+                    State::HunkPlus(Some(painter.prepare_raw_line(raw_line)))
+                }
+                _ => State::HunkPlus(None),
             };
             painter
                 .plus_lines

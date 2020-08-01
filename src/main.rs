@@ -181,6 +181,7 @@ fn show_config(config: &config::Config) {
     file-modified-label           = {file_modified_label}
     file-removed-label            = {file_removed_label}
     file-renamed-label            = {file_renamed_label}
+    inspect-raw-lines             = {inspect_raw_lines}
     keep-plus-minus-markers       = {keep_plus_minus_markers}
     max-line-distance             = {max_line_distance}
     navigate                      = {navigate}
@@ -194,6 +195,10 @@ fn show_config(config: &config::Config) {
         file_modified_label = format_option_value(&config.file_modified_label),
         file_removed_label = format_option_value(&config.file_removed_label),
         file_renamed_label = format_option_value(&config.file_renamed_label),
+        inspect_raw_lines = match config.inspect_raw_lines {
+            cli::InspectRawLines::True => "true",
+            cli::InspectRawLines::False => "false",
+        },
         keep_plus_minus_markers = config.keep_plus_minus_markers,
         max_line_distance = config.max_line_distance,
         navigate = config.navigate,
