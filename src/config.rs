@@ -15,7 +15,7 @@ use crate::delta::State;
 use crate::env;
 use crate::features::side_by_side;
 use crate::git_config_entry::GitConfigEntry;
-use crate::style::Style;
+use crate::style::{self, Style};
 
 pub struct Config {
     pub available_terminal_width: usize,
@@ -31,6 +31,7 @@ pub struct Config {
     pub hunk_header_style: Style,
     pub hyperlinks: bool,
     pub hyperlinks_file_link_format: String,
+    pub inspect_raw_lines: cli::InspectRawLines,
     pub keep_plus_minus_markers: bool,
     pub line_numbers: bool,
     pub line_numbers_left_format: String,
@@ -57,6 +58,8 @@ pub struct Config {
     pub plus_file: Option<PathBuf>,
     pub plus_non_emph_style: Style,
     pub plus_style: Style,
+    pub git_minus_style: Style,
+    pub git_plus_style: Style,
     pub side_by_side: bool,
     pub side_by_side_data: side_by_side::SideBySideData,
     pub syntax_dummy_theme: SyntaxTheme,
@@ -73,6 +76,8 @@ pub struct Config {
 impl Config {
     pub fn get_style(&self, state: &State) -> &Style {
         match state {
+            State::HunkMinus(_) => &self.minus_style,
+            State::HunkPlus(_) => &self.plus_style,
             State::CommitMeta => &self.commit_style,
             State::FileMeta => &self.file_style,
             State::HunkHeader => &self.hunk_header_style,
@@ -127,6 +132,15 @@ impl From<cli::Opt> for Config {
             &opt.computed.available_terminal_width,
         );
 
+        let git_minus_style = match opt.git_config_entries.get("color.diff.old") {
+            Some(GitConfigEntry::Style(s)) => Style::from_git_str(s),
+            _ => *style::GIT_DEFAULT_MINUS_STYLE,
+        };
+        let git_plus_style = match opt.git_config_entries.get("color.diff.new") {
+            Some(GitConfigEntry::Style(s)) => Style::from_git_str(s),
+            _ => *style::GIT_DEFAULT_PLUS_STYLE,
+        };
+
         Self {
             available_terminal_width: opt.computed.available_terminal_width,
             background_color_extends_to_terminal_width: opt
@@ -143,6 +157,7 @@ impl From<cli::Opt> for Config {
             hunk_header_style,
             hyperlinks: opt.hyperlinks,
             hyperlinks_file_link_format: opt.hyperlinks_file_link_format,
+            inspect_raw_lines: opt.computed.inspect_raw_lines,
             keep_plus_minus_markers: opt.keep_plus_minus_markers,
             line_numbers: opt.line_numbers,
             line_numbers_left_format: opt.line_numbers_left_format,
@@ -169,6 +184,8 @@ impl From<cli::Opt> for Config {
             plus_file: opt.plus_file.map(|s| s.clone()),
             plus_non_emph_style,
             plus_style,
+            git_minus_style,
+            git_plus_style,
             side_by_side: opt.side_by_side,
             side_by_side_data,
             syntax_dummy_theme: SyntaxTheme::default(),

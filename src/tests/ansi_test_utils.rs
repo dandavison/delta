@@ -126,7 +126,7 @@ pub mod ansi_test_utils {
         paint::Painter::paint_lines(
             vec![syntax_style_sections],
             vec![vec![(syntax_highlighted_style, lines[0])]],
-            &State::Unknown,
+            [State::Unknown].iter(),
             &mut output_buffer,
             config,
             &mut None,
@@ -154,7 +154,7 @@ pub mod ansi_test_utils {
                 .foreground
                 .map(ansi_term_fixed_foreground_to_4_bit_color);
         }
-        line.starts_with(&style.ansi_term_style.prefix().to_string())
+        style.is_applied_to(line)
     }
 
     fn ansi_term_fixed_foreground_to_4_bit_color(color: ansi_term::Color) -> ansi_term::Color {

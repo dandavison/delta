@@ -1,5 +1,6 @@
 use std::collections::{HashMap, HashSet, VecDeque};
 use std::process;
+use std::result::Result;
 use std::str::FromStr;
 
 use console::Term;
@@ -10,12 +11,12 @@ use crate::bat::output::PagingMode;
 use crate::cli;
 use crate::config;
 use crate::env;
+use crate::errors::*;
 use crate::features;
 use crate::git_config;
 use crate::git_config_entry::{self, GitConfigEntry};
 use crate::options::option_value::{OptionValue, ProvenancedOptionValue};
 use crate::options::theme;
-use crate::style::Style;
 
 macro_rules! set_options {
 	([$( $field_ident:ident ),* ],
@@ -129,6 +130,7 @@ pub fn set_options(
             hunk_header_style,
             hyperlinks,
             hyperlinks_file_link_format,
+            inspect_raw_lines,
             keep_plus_minus_markers,
             max_line_distance,
             // Hack: minus-style must come before minus-*emph-style because the latter default
@@ -171,6 +173,8 @@ pub fn set_options(
         true
     );
 
+    opt.computed.inspect_raw_lines =
+        cli::InspectRawLines::from_str(&opt.inspect_raw_lines).unwrap();
     opt.computed.paging_mode = parse_paging_mode(&opt.paging_mode);
 }
 
@@ -464,6 +468,23 @@ fn is_truecolor_terminal() -> bool {
         .unwrap_or(false)
 }
 
+impl FromStr for cli::InspectRawLines {
+    type Err = Error;
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        match s.to_lowercase().as_str() {
+            "true" => Ok(Self::True),
+            "false" => Ok(Self::False),
+            _ => {
+                eprintln!(
+                    r#"Invalid value for inspect-raw-lines option: {}. Valid values are "true", and "false"."#,
+                    s
+                );
+                process::exit(1);
+            }
+        }
+    }
+}
+
 fn parse_paging_mode(paging_mode_string: &str) -> PagingMode {
     match paging_mode_string.to_lowercase().as_str() {
         "always" => PagingMode::Always,
@@ -525,16 +546,8 @@ fn set_git_config_entries(opt: &mut cli::Opt, git_config: &mut git_config::GitCo
     // Styles
     for key in &["color.diff.old", "color.diff.new"] {
         if let Some(style_string) = git_config.get::<String>(key) {
-            opt.git_config_entries.insert(
-                key.to_string(),
-                GitConfigEntry::Style(Style::from_str(
-                    &style_string,
-                    None,
-                    None,
-                    opt.computed.true_color,
-                    false,
-                )),
-            );
+            opt.git_config_entries
+                .insert(key.to_string(), GitConfigEntry::Style(style_string));
         }
     }
 

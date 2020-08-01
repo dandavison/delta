@@ -60,11 +60,13 @@ impl SideBySideData {
 }
 
 /// Emit a sequence of minus and plus lines in side-by-side mode.
-pub fn paint_minus_and_plus_lines_side_by_side(
+pub fn paint_minus_and_plus_lines_side_by_side<'a>(
     minus_syntax_style_sections: Vec<Vec<(SyntectStyle, &str)>>,
     minus_diff_style_sections: Vec<Vec<(Style, &str)>>,
+    minus_states: Vec<&'a State>,
     plus_syntax_style_sections: Vec<Vec<(SyntectStyle, &str)>>,
     plus_diff_style_sections: Vec<Vec<(Style, &str)>>,
+    plus_states: Vec<&'a State>,
     line_alignment: Vec<(Option<usize>, Option<usize>)>,
     output_buffer: &mut String,
     config: &Config,
@@ -76,6 +78,10 @@ pub fn paint_minus_and_plus_lines_side_by_side(
             minus_line_index,
             &minus_syntax_style_sections,
             &minus_diff_style_sections,
+            match minus_line_index {
+                Some(i) => minus_states[i],
+                None => &State::HunkMinus(None),
+            },
             line_numbers_data,
             if config.keep_plus_minus_markers {
                 "-"
@@ -89,6 +95,10 @@ pub fn paint_minus_and_plus_lines_side_by_side(
             plus_line_index,
             &plus_syntax_style_sections,
             &plus_diff_style_sections,
+            match plus_line_index {
+                Some(i) => plus_states[i],
+                None => &State::HunkPlus(None),
+            },
             line_numbers_data,
             if config.keep_plus_minus_markers {
                 "+"
@@ -166,10 +176,11 @@ pub fn paint_zero_lines_side_by_side(
     }
 }
 
-fn paint_left_panel_minus_line(
+fn paint_left_panel_minus_line<'a>(
     line_index: Option<usize>,
     syntax_style_sections: &Vec<Vec<(SyntectStyle, &str)>>,
     diff_style_sections: &Vec<Vec<(Style, &str)>>,
+    state: &'a State,
     line_numbers_data: &mut Option<&mut line_numbers::LineNumbersData>,
     prefix: &str,
     background_color_extends_to_terminal_width: Option<bool>,
@@ -179,7 +190,7 @@ fn paint_left_panel_minus_line(
         line_index,
         &syntax_style_sections,
         &diff_style_sections,
-        &State::HunkMinus,
+        state,
         line_numbers_data,
         PanelSide::Left,
         prefix,
@@ -190,7 +201,7 @@ fn paint_left_panel_minus_line(
         panel_line_is_empty,
         line_index,
         diff_style_sections,
-        &State::HunkMinus,
+        state,
         background_color_extends_to_terminal_width,
         config,
     );
@@ -198,10 +209,11 @@ fn paint_left_panel_minus_line(
     panel_line
 }
 
-fn paint_right_panel_plus_line(
+fn paint_right_panel_plus_line<'a>(
     line_index: Option<usize>,
     syntax_style_sections: &Vec<Vec<(SyntectStyle, &str)>>,
     diff_style_sections: &Vec<Vec<(Style, &str)>>,
+    state: &'a State,
     line_numbers_data: &mut Option<&mut line_numbers::LineNumbersData>,
     prefix: &str,
     background_color_extends_to_terminal_width: Option<bool>,
@@ -211,7 +223,7 @@ fn paint_right_panel_plus_line(
         line_index,
         &syntax_style_sections,
         &diff_style_sections,
-        &State::HunkPlus,
+        state,
         line_numbers_data,
         PanelSide::Right,
         prefix,
@@ -222,7 +234,7 @@ fn paint_right_panel_plus_line(
         panel_line_is_empty,
         line_index,
         diff_style_sections,
-        &State::HunkPlus,
+        state,
         background_color_extends_to_terminal_width,
         config,
     );
@@ -278,7 +290,7 @@ fn get_right_fill_style_for_left_panel(
 // what this will do is set the line number pair in that function to `(Some(minus_number), None)`,
 // and then only emit the right field (which has a None number, i.e. blank). However, it will also
 // increment the minus line number, so we need to knock that back down.
-fn paint_minus_or_plus_panel_line(
+fn paint_minus_or_plus_panel_line<'a>(
     line_index: Option<usize>,
     syntax_style_sections: &Vec<Vec<(SyntectStyle, &str)>>,
     diff_style_sections: &Vec<Vec<(Style, &str)>>,
@@ -295,12 +307,12 @@ fn paint_minus_or_plus_panel_line(
             (
                 &syntax_style_sections[index],
                 &diff_style_sections[index],
-                state,
+                state.clone(),
             )
         } else {
-            let opposite_state = match *state {
-                State::HunkMinus => &State::HunkPlus,
-                State::HunkPlus => &State::HunkMinus,
+            let opposite_state = match state {
+                State::HunkMinus(x) => State::HunkPlus(x.clone()),
+                State::HunkPlus(x) => State::HunkMinus(x.clone()),
                 _ => unreachable!(),
             };
             (
@@ -321,14 +333,14 @@ fn paint_minus_or_plus_panel_line(
     );
 
     // Knock back down spuriously incremented line numbers. See comment above.
-    match (state, state_for_line_numbers_field) {
+    match (state, &state_for_line_numbers_field) {
         (s, t) if s == t => {}
-        (State::HunkPlus, State::HunkMinus) => {
+        (State::HunkPlus(_), State::HunkMinus(_)) => {
             line_numbers_data
                 .as_mut()
                 .map(|d| d.hunk_minus_line_number -= 1);
         }
-        (State::HunkMinus, State::HunkPlus) => {
+        (State::HunkMinus(_), State::HunkPlus(_)) => {
             line_numbers_data
                 .as_mut()
                 .map(|d| d.hunk_plus_line_number -= 1);
@@ -357,7 +369,7 @@ fn right_pad_left_panel_line(
     // to form the other half of the line, then don't emit the empty line marker.
     if panel_line_is_empty && line_index.is_some() {
         match state {
-            State::HunkMinus => Painter::mark_empty_line(
+            State::HunkMinus(_) => Painter::mark_empty_line(
                 &config.minus_empty_line_marker_style,
                 panel_line,
                 Some(" "),
@@ -428,7 +440,7 @@ fn right_fill_right_panel_line(
         // Emit empty line marker when the panel line is empty but not empty-by-construction. See
         // parallel comment in `paint_left_panel_minus_line`.
         match state {
-            State::HunkPlus => Painter::mark_empty_line(
+            State::HunkPlus(_) => Painter::mark_empty_line(
                 &config.plus_empty_line_marker_style,
                 panel_line,
                 Some(" "),

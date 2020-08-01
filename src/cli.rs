@@ -464,6 +464,12 @@ pub struct Opt {
     #[structopt(long = "24-bit-color", default_value = "auto")]
     pub true_color: String,
 
+    /// Whether to examine ANSI color escape sequences in raw lines received from Git and handle
+    /// lines colored in certain ways specially. This is on by default: it is how Delta supports
+    /// Git's --color-moved feature. Set this to "false" to disable this behavior.
+    #[structopt(long = "inspect-raw-lines", default_value = "true")]
+    pub inspect_raw_lines: String,
+
     /// Whether to use a pager when displaying output. Options are: auto, always, and never. The
     /// default pager is `less`: this can be altered by setting the environment variables BAT_PAGER
     /// or PAGER (BAT_PAGER has priority).
@@ -549,6 +555,7 @@ pub struct Opt {
 
 #[derive(Default, Clone, Debug)]
 pub struct ComputedValues {
+    pub inspect_raw_lines: InspectRawLines,
     pub is_light_mode: bool,
     pub syntax_set: SyntaxSet,
     pub syntax_theme: Option<SyntaxTheme>,
@@ -569,6 +576,18 @@ pub enum Width {
 impl Default for Width {
     fn default() -> Self {
         Width::Variable
+    }
+}
+
+#[derive(Clone, Debug)]
+pub enum InspectRawLines {
+    True,
+    False,
+}
+
+impl Default for InspectRawLines {
+    fn default() -> Self {
+        InspectRawLines::False
     }
 }
 

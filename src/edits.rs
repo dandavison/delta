@@ -9,13 +9,15 @@ use crate::align;
 /// lines. A "line" is a string. An annotated line is a Vec of (op, &str) pairs, where the &str
 /// slices are slices of the line, and their concatenation equals the line. Return the input minus
 /// and plus lines, in annotated form. Also return a specification of the inferred alignment of
-/// minus and plus lines.
+/// minus and plus lines. `noop_deletions[i]` is the appropriate deletion operation tag to be used
+/// for `minus_lines[i]`; `noop_deletions` is guaranteed to be the same length as `minus_lines`.
+/// The equivalent statements hold for `plus_insertions` and `plus_lines`.
 pub fn infer_edits<'a, EditOperation>(
-    minus_lines: &'a [String],
-    plus_lines: &'a [String],
-    noop_deletion: EditOperation,
+    minus_lines: Vec<&'a str>,
+    plus_lines: Vec<&'a str>,
+    noop_deletions: Vec<EditOperation>,
     deletion: EditOperation,
-    noop_insertion: EditOperation,
+    noop_insertions: Vec<EditOperation>,
     insertion: EditOperation,
     tokenization_regex: &Regex,
     max_line_distance: f64,
@@ -44,9 +46,9 @@ where
             );
             let (annotated_minus_line, annotated_plus_line, distance) = annotate(
                 alignment,
-                noop_deletion,
+                noop_deletions[minus_index],
                 deletion,
-                noop_insertion,
+                noop_insertions[plus_index],
                 insertion,
                 minus_line,
                 plus_line,
@@ -59,7 +61,7 @@ where
 
                 // Emit as unpaired the plus lines already considered and rejected
                 for plus_line in &plus_lines[plus_index..(plus_index + considered)] {
-                    annotated_plus_lines.push(vec![(noop_insertion, plus_line)]);
+                    annotated_plus_lines.push(vec![(noop_insertions[plus_index], plus_line)]);
                     line_alignment.push((None, Some(plus_index)));
                     plus_index += 1;
                 }
@@ -75,12 +77,12 @@ where
             }
         }
         // No homolog was found for minus i; emit as unpaired.
-        annotated_minus_lines.push(vec![(noop_deletion, minus_line)]);
+        annotated_minus_lines.push(vec![(noop_deletions[minus_index], minus_line)]);
         line_alignment.push((Some(minus_index), None));
     }
     // Emit any remaining plus lines
     for plus_line in &plus_lines[plus_index..] {
-        annotated_plus_lines.push(vec![(noop_insertion, plus_line)]);
+        annotated_plus_lines.push(vec![(noop_insertions[plus_index], plus_line)]);
         line_alignment.push((None, Some(plus_index)));
         plus_index += 1;
     }
@@ -724,20 +726,16 @@ mod tests {
         expected_edits: Edits,
         max_line_distance: f64,
     ) {
-        let minus_lines = minus_lines
-            .into_iter()
-            .map(|s| s.to_string())
-            .collect::<Vec<String>>();
-        let plus_lines = plus_lines
-            .into_iter()
-            .map(|s| s.to_string())
-            .collect::<Vec<String>>();
+        let (minus_lines, noop_deletions): (Vec<&str>, Vec<EditOperation>) =
+            minus_lines.into_iter().map(|s| (s, MinusNoop)).unzip();
+        let (plus_lines, noop_insertions): (Vec<&str>, Vec<EditOperation>) =
+            plus_lines.into_iter().map(|s| (s, PlusNoop)).unzip();
         let actual_edits = infer_edits(
-            &minus_lines,
-            &plus_lines,
-            MinusNoop,
+            minus_lines,
+            plus_lines,
+            noop_deletions,
             Deletion,
-            PlusNoop,
+            noop_insertions,
             Insertion,
             &*DEFAULT_TOKENIZATION_REGEXP,
             max_line_distance,

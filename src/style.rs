@@ -2,7 +2,9 @@ use std::borrow::Cow;
 use std::fmt;
 
 use ansi_term;
+use lazy_static::lazy_static;
 
+use crate::ansi;
 use crate::color;
 
 #[derive(Clone, Copy, Debug, PartialEq)]
@@ -85,6 +87,13 @@ impl Style {
         }
     }
 
+    pub fn is_applied_to(&self, s: &str) -> bool {
+        match ansi::parse::parse_first_style(s.bytes()) {
+            Some(parsed_style) => ansi_term_style_equality(parsed_style, self.ansi_term_style),
+            None => false,
+        }
+    }
+
     pub fn to_painted_string(&self) -> ansi_term::ANSIGenericString<str> {
         self.paint(self.to_string())
     }
@@ -131,5 +140,183 @@ impl Style {
             None => {}
         }
         words.join(" ")
+    }
+}
+
+fn ansi_term_style_equality(a: ansi_term::Style, b: ansi_term::Style) -> bool {
+    let a_attrs = ansi_term::Style {
+        foreground: None,
+        background: None,
+        ..a
+    };
+    let b_attrs = ansi_term::Style {
+        foreground: None,
+        background: None,
+        ..b
+    };
+    if a_attrs != b_attrs {
+        return false;
+    } else {
+        return ansi_term_color_equality(a.foreground, b.foreground)
+            & ansi_term_color_equality(a.background, b.background);
+    }
+}
+
+fn ansi_term_color_equality(a: Option<ansi_term::Color>, b: Option<ansi_term::Color>) -> bool {
+    match (a, b) {
+        (None, None) => true,
+        (None, Some(_)) => false,
+        (Some(_), None) => false,
+        (Some(a), Some(b)) => {
+            if a == b {
+                true
+            } else {
+                ansi_term_16_color_equality(a, b) || ansi_term_16_color_equality(b, a)
+            }
+        }
+    }
+}
+
+fn ansi_term_16_color_equality(a: ansi_term::Color, b: ansi_term::Color) -> bool {
+    match (a, b) {
+        (ansi_term::Color::Fixed(0), ansi_term::Color::Black) => true,
+        (ansi_term::Color::Fixed(1), ansi_term::Color::Red) => true,
+        (ansi_term::Color::Fixed(2), ansi_term::Color::Green) => true,
+        (ansi_term::Color::Fixed(3), ansi_term::Color::Yellow) => true,
+        (ansi_term::Color::Fixed(4), ansi_term::Color::Blue) => true,
+        (ansi_term::Color::Fixed(5), ansi_term::Color::Purple) => true,
+        (ansi_term::Color::Fixed(6), ansi_term::Color::Cyan) => true,
+        (ansi_term::Color::Fixed(7), ansi_term::Color::White) => true,
+        _ => false,
+    }
+}
+
+lazy_static! {
+    pub static ref GIT_DEFAULT_MINUS_STYLE: Style = Style {
+        ansi_term_style: ansi_term::Color::Red.normal(),
+        ..Style::new()
+    };
+    pub static ref GIT_DEFAULT_PLUS_STYLE: Style = Style {
+        ansi_term_style: ansi_term::Color::Green.normal(),
+        ..Style::new()
+    };
+}
+
+pub fn line_has_style_other_than<'a>(line: &str, styles: impl Iterator<Item = &'a Style>) -> bool {
+    if !ansi::string_starts_with_ansi_escape_sequence(line) {
+        return false;
+    }
+    for style in styles {
+        if style.is_applied_to(line) {
+            return false;
+        }
+    }
+    return true;
+}
+
+#[cfg(test)]
+mod tests {
+
+    use super::*;
+
+    // To add to these tests:
+    // 1. Stage a file with a single line containing the string "text"
+    // 2. git -c 'color.diff.new = $STYLE_STRING' diff --cached  --color=always  | cat -A
+
+    #[test]
+    fn test_parsed_git_style_string_is_applied_to_git_output() {
+        for (git_style_string, git_output) in &[
+            // <git-default>                    "\x1b[32m+\x1b[m\x1b[32mtext\x1b[m\n"
+            ("0",                               "\x1b[30m+\x1b[m\x1b[30mtext\x1b[m\n"),
+            ("black",                           "\x1b[30m+\x1b[m\x1b[30mtext\x1b[m\n"),
+            ("1",                               "\x1b[31m+\x1b[m\x1b[31mtext\x1b[m\n"),
+            ("red",                             "\x1b[31m+\x1b[m\x1b[31mtext\x1b[m\n"),
+            ("0 1",                             "\x1b[30;41m+\x1b[m\x1b[30;41mtext\x1b[m\n"),
+            ("black red",                       "\x1b[30;41m+\x1b[m\x1b[30;41mtext\x1b[m\n"),
+            ("19",                              "\x1b[38;5;19m+\x1b[m\x1b[38;5;19mtext\x1b[m\n"),
+            ("black 19",                        "\x1b[30;48;5;19m+\x1b[m\x1b[30;48;5;19mtext\x1b[m\n"),
+            ("19 black",                        "\x1b[38;5;19;40m+\x1b[m\x1b[38;5;19;40mtext\x1b[m\n"),
+            ("19 20",                           "\x1b[38;5;19;48;5;20m+\x1b[m\x1b[38;5;19;48;5;20mtext\x1b[m\n"),
+            ("#aabbcc",                         "\x1b[38;2;170;187;204m+\x1b[m\x1b[38;2;170;187;204mtext\x1b[m\n"),
+            ("0 #aabbcc",                       "\x1b[30;48;2;170;187;204m+\x1b[m\x1b[30;48;2;170;187;204mtext\x1b[m\n"),
+            ("#aabbcc 0",                       "\x1b[38;2;170;187;204;40m+\x1b[m\x1b[38;2;170;187;204;40mtext\x1b[m\n"),
+            ("19 #aabbcc",                      "\x1b[38;5;19;48;2;170;187;204m+\x1b[m\x1b[38;5;19;48;2;170;187;204mtext\x1b[m\n"),
+            ("#aabbcc 19",                      "\x1b[38;2;170;187;204;48;5;19m+\x1b[m\x1b[38;2;170;187;204;48;5;19mtext\x1b[m\n"),
+            ("#aabbcc #ddeeff" ,                "\x1b[38;2;170;187;204;48;2;221;238;255m+\x1b[m\x1b[38;2;170;187;204;48;2;221;238;255mtext\x1b[m\n"),
+            ("bold #aabbcc #ddeeff" ,           "\x1b[1;38;2;170;187;204;48;2;221;238;255m+\x1b[m\x1b[1;38;2;170;187;204;48;2;221;238;255mtext\x1b[m\n"),
+            ("bold #aabbcc ul #ddeeff" ,        "\x1b[1;4;38;2;170;187;204;48;2;221;238;255m+\x1b[m\x1b[1;4;38;2;170;187;204;48;2;221;238;255mtext\x1b[m\n"),
+            ("bold #aabbcc ul #ddeeff strike" , "\x1b[1;4;9;38;2;170;187;204;48;2;221;238;255m+\x1b[m\x1b[1;4;9;38;2;170;187;204;48;2;221;238;255mtext\x1b[m\n"),
+            ("bold 0 ul 1 strike",              "\x1b[1;4;9;30;41m+\x1b[m\x1b[1;4;9;30;41mtext\x1b[m\n"),
+            ("bold 0 ul 19 strike",             "\x1b[1;4;9;30;48;5;19m+\x1b[m\x1b[1;4;9;30;48;5;19mtext\x1b[m\n"),
+            ("bold 19 ul 0 strike",             "\x1b[1;4;9;38;5;19;40m+\x1b[m\x1b[1;4;9;38;5;19;40mtext\x1b[m\n"),
+            ("bold #aabbcc ul 0 strike",        "\x1b[1;4;9;38;2;170;187;204;40m+\x1b[m\x1b[1;4;9;38;2;170;187;204;40mtext\x1b[m\n"),
+            ("bold #aabbcc ul 19 strike" ,      "\x1b[1;4;9;38;2;170;187;204;48;5;19m+\x1b[m\x1b[1;4;9;38;2;170;187;204;48;5;19mtext\x1b[m\n"),
+            ("bold 19 ul #aabbcc strike" ,      "\x1b[1;4;9;38;5;19;48;2;170;187;204m+\x1b[m\x1b[1;4;9;38;5;19;48;2;170;187;204mtext\x1b[m\n"),
+            ("bold 0 ul #aabbcc strike",        "\x1b[1;4;9;30;48;2;170;187;204m+\x1b[m\x1b[1;4;9;30;48;2;170;187;204mtext\x1b[m\n"),
+            (r##"black "#ddeeff""##,            "\x1b[30;48;2;221;238;255m+\x1b[m\x1b[30;48;2;221;238;255m        .map(|(_, is_ansi)| is_ansi)\x1b[m\n"),
+            ("brightred",                       "\x1b[91m+\x1b[m\x1b[91mtext\x1b[m\n"),
+            ("normal",                          "+\x1b[mtext\x1b[m\n")
+        ] {
+            assert!(Style::from_git_str(git_style_string).is_applied_to(git_output));
+        }
+    }
+
+    #[test]
+    fn test_is_applied_to_negative_assertion() {
+        let style_string_from_24 = "bold #aabbcc ul 19 strike";
+        let git_output_from_25 = "\x1b[1;4;9;38;5;19;48;2;170;187;204m+\x1b[m\x1b[1;4;9;38;5;19;48;2;170;187;204mtext\x1b[m\n";
+        assert!(!Style::from_git_str(style_string_from_24).is_applied_to(git_output_from_25));
+    }
+
+    #[test]
+    fn test_git_default_styles() {
+        let minus_line_from_unconfigured_git = "\x1b[31m-____\x1b[m\n";
+        let plus_line_from_unconfigured_git = "\x1b[32m+\x1b[m\x1b[32m____\x1b[m\n";
+        assert!(GIT_DEFAULT_MINUS_STYLE.is_applied_to(minus_line_from_unconfigured_git));
+        assert!(!GIT_DEFAULT_MINUS_STYLE.is_applied_to(plus_line_from_unconfigured_git));
+
+        assert!(GIT_DEFAULT_PLUS_STYLE.is_applied_to(plus_line_from_unconfigured_git));
+        assert!(!GIT_DEFAULT_PLUS_STYLE.is_applied_to(minus_line_from_unconfigured_git));
+    }
+
+    #[test]
+    fn test_line_has_style_other_than() {
+        let minus_line_from_unconfigured_git = "\x1b[31m-____\x1b[m\n";
+        let plus_line_from_unconfigured_git = "\x1b[32m+\x1b[m\x1b[32m____\x1b[m\n";
+
+        // Unstyled lines should test negative, regardless of supplied styles.
+        assert!(!line_has_style_other_than("", [].iter()));
+        assert!(!line_has_style_other_than(
+            "",
+            [*GIT_DEFAULT_MINUS_STYLE].iter()
+        ));
+
+        // Lines from git should test negative when corresponding default is supplied
+        assert!(!line_has_style_other_than(
+            minus_line_from_unconfigured_git,
+            [*GIT_DEFAULT_MINUS_STYLE].iter()
+        ));
+        assert!(!line_has_style_other_than(
+            plus_line_from_unconfigured_git,
+            [*GIT_DEFAULT_PLUS_STYLE].iter()
+        ));
+
+        // Styled lines should test positive when unless their style is supplied.
+        assert!(line_has_style_other_than(
+            minus_line_from_unconfigured_git,
+            [*GIT_DEFAULT_PLUS_STYLE].iter()
+        ));
+        assert!(line_has_style_other_than(
+            minus_line_from_unconfigured_git,
+            [].iter()
+        ));
+        assert!(line_has_style_other_than(
+            plus_line_from_unconfigured_git,
+            [*GIT_DEFAULT_MINUS_STYLE].iter()
+        ));
+        assert!(line_has_style_other_than(
+            plus_line_from_unconfigured_git,
+            [].iter()
+        ));
     }
 }

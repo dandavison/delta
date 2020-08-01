@@ -76,7 +76,7 @@ pub fn format_and_paint_line_numbers<'a>(
         config.line_numbers_plus_style,
     );
     let ((minus_number, plus_number), (minus_style, plus_style)) = match state {
-        State::HunkMinus => {
+        State::HunkMinus(_) => {
             let m = *m_ref;
             *m_ref += 1;
             ((Some(m), None), (minus_style, plus_style))
@@ -87,7 +87,7 @@ pub fn format_and_paint_line_numbers<'a>(
             *p_ref += 1;
             ((Some(m), Some(p)), (zero_style, zero_style))
         }
-        State::HunkPlus => {
+        State::HunkPlus(_) => {
             let p = *p_ref;
             *p_ref += 1;
             ((None, Some(p)), (minus_style, plus_style))
