@@ -465,7 +465,7 @@ fn is_truecolor_terminal() -> bool {
 }
 
 fn parse_paging_mode(paging_mode_string: &str) -> PagingMode {
-    match paging_mode_string {
+    match paging_mode_string.to_lowercase().as_str() {
         "always" => PagingMode::Always,
         "never" => PagingMode::Never,
         "auto" => PagingMode::QuitIfOneScreen,
