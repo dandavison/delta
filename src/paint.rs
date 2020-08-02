@@ -304,8 +304,32 @@ impl<'a> Painter<'a> {
         // non_emph_style: for right fill if line contains emph sections
         let (style, non_emph_style) = match state {
             State::HunkMinus(None) => (config.minus_style, config.minus_non_emph_style),
+            State::HunkMinus(Some(raw_line)) => {
+                // TODO: This is the second time we are parsing the ANSI sequences
+                if let Some(ansi_term_style) = ansi::parse::parse_first_style(raw_line.bytes()) {
+                    let style = Style {
+                        ansi_term_style,
+                        ..Style::new()
+                    };
+                    (style, style)
+                } else {
+                    (config.minus_style, config.minus_non_emph_style)
+                }
+            }
             State::HunkZero => (config.zero_style, config.zero_style),
             State::HunkPlus(None) => (config.plus_style, config.plus_non_emph_style),
+            State::HunkPlus(Some(raw_line)) => {
+                // TODO: This is the second time we are parsing the ANSI sequences
+                if let Some(ansi_term_style) = ansi::parse::parse_first_style(raw_line.bytes()) {
+                    let style = Style {
+                        ansi_term_style,
+                        ..Style::new()
+                    };
+                    (style, style)
+                } else {
+                    (config.plus_style, config.plus_non_emph_style)
+                }
+            }
             _ => (config.null_style, config.null_style),
         };
         let fill_style = if style_sections_contain_more_than_one_style(diff_sections) {
