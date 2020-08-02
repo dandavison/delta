@@ -6,6 +6,7 @@ mod tests {
     use crate::style;
     use crate::tests::ansi_test_utils::ansi_test_utils;
     use crate::tests::integration_test_utils::integration_test_utils;
+    use crate::tests::test_utils::test_utils;
 
     #[test]
     fn test_added_file() {
@@ -39,7 +40,22 @@ mod tests {
         let config = integration_test_utils::make_config_from_args(&[]);
         let output = integration_test_utils::run_delta(RENAMED_FILE_INPUT, &config);
         let output = strip_ansi_codes(&output);
-        assert!(output.contains("\nrenamed: a.py ⟶   b.py\n"));
+        println!("{}", output);
+        assert!(test_utils::contains_once(
+            &output,
+            "\nrenamed: a.py ⟶   b.py\n"
+        ));
+    }
+
+    #[test]
+    fn test_renamed_file_with_changes() {
+        let config = integration_test_utils::make_config_from_args(&[]);
+        let output = integration_test_utils::run_delta(RENAMED_FILE_WITH_CHANGES_INPUT, &config);
+        let output = strip_ansi_codes(&output);
+        println!("{}", output);
+        assert!(test_utils::contains_once(
+            &output,
+            "\nrenamed: Casks/font-dejavusansmono-nerd-font.rb ⟶   Casks/font-dejavu-sans-mono-nerd-font.rb\n"));
     }
 
     #[test]
@@ -1337,6 +1353,30 @@ diff --git a/a.py b/b.py
 similarity index 100%
 rename from a.py
 rename to b.py
+";
+
+    const RENAMED_FILE_WITH_CHANGES_INPUT: &str = "\
+commit 5a6dd572797813525199c32e26471e88732cae1f
+Author: Waldir Pimenta <waldyrious@gmail.com>
+Date:   Sat Jul 11 19:14:43 2020 +0100
+
+    Rename font-dejavusansmono-nerd-font→font-dejavu-sans-mono-nerd-font
+    
+    This makes the filename more readable, and is consistent with `font-dejavu-sans-mono-for-powerline`.
+
+diff --git a/Casks/font-dejavusansmono-nerd-font.rb b/Casks/font-dejavu-sans-mono-nerd-font.rb
+similarity index 95%
+rename from Casks/font-dejavusansmono-nerd-font.rb
+rename to Casks/font-dejavu-sans-mono-nerd-font.rb
+index 2c8b440f..d1c1b0f3 100644
+--- a/Casks/font-dejavusansmono-nerd-font.rb
++++ b/Casks/font-dejavu-sans-mono-nerd-font.rb
+@@ -1,4 +1,4 @@
+-cask 'font-dejavusansmono-nerd-font' do
++cask 'font-dejavu-sans-mono-nerd-font' do
+   version '2.1.0'
+   sha256 '3fbcc4904c88f68d24c8b479784a1aba37f2d78b1162d21f6fc85a58ffcc0e0f'
+ 
 ";
 
     const DIFF_UNIFIED_TWO_FILES: &str = "\
