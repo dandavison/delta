@@ -68,6 +68,14 @@ where
     let mut state = State::Unknown;
     let mut source = Source::Unknown;
 
+    // When a file is modified, we use lines starting with '---' or '+++' to obtain the file name.
+    // When a file is renamed without changes, we use lines starting with 'rename' to obtain the
+    // file name (there is no diff hunk and hence no lines starting with '---' or '+++'). But when
+    // a file is renamed with changes, both are present, and we rely on the following variables to
+    // avoid emitting the file meta header line twice (#245).
+    let mut current_file_pair;
+    let mut handled_file_meta_header_line_file_pair = None;
+
     while let Some(Ok(raw_line_bytes)) = lines.next() {
         let raw_line = String::from_utf8_lossy(&raw_line_bytes);
         let line = strip_ansi_codes(&raw_line).to_string();
@@ -85,6 +93,7 @@ where
         } else if line.starts_with("diff ") {
             painter.paint_buffered_minus_and_plus_lines();
             state = State::FileMeta;
+            handled_file_meta_header_line_file_pair = None;
         } else if (state == State::FileMeta || source == Source::DiffUnified)
             && (line.starts_with("--- ") || line.starts_with("rename from "))
         {
@@ -104,7 +113,10 @@ where
             painter.set_syntax(parse::get_file_extension_from_file_meta_line_file_path(
                 &plus_file,
             ));
-            if should_handle(&State::FileMeta, config) {
+            current_file_pair = Some((minus_file.clone(), plus_file.clone()));
+            if should_handle(&State::FileMeta, config)
+                && handled_file_meta_header_line_file_pair != current_file_pair
+            {
                 painter.emit()?;
                 handle_file_meta_header_line(
                     &mut painter,
@@ -113,6 +125,7 @@ where
                     config,
                     source == Source::DiffUnified,
                 )?;
+                handled_file_meta_header_line_file_pair = current_file_pair
             }
         } else if line.starts_with("@@") {
             painter.paint_buffered_minus_and_plus_lines();
