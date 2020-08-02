@@ -1,10 +1,10 @@
 use ansi_term;
 use vte;
 
-pub fn parse_first_style(bytes: impl Iterator<Item = u8>) -> Option<ansi_term::Style> {
+pub fn parse_first_style(s: &str) -> Option<ansi_term::Style> {
     let mut machine = vte::Parser::new();
     let mut performer = Performer { style: None };
-    for b in bytes {
+    for b in s.bytes() {
         if performer.style.is_some() {
             return performer.style;
         }
@@ -195,7 +195,7 @@ mod tests {
     #[test]
     fn test_parse_first_style() {
         let minus_line_from_unconfigured_git = "\x1b[31m-____\x1b[m\n";
-        let style = parse_first_style(minus_line_from_unconfigured_git.bytes());
+        let style = parse_first_style(minus_line_from_unconfigured_git);
         let expected_style = ansi_term::Style {
             foreground: Some(ansi_term::Color::Red),
             ..ansi_term::Style::default()

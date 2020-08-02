@@ -306,7 +306,7 @@ impl<'a> Painter<'a> {
             State::HunkMinus(None) => (config.minus_style, config.minus_non_emph_style),
             State::HunkMinus(Some(raw_line)) => {
                 // TODO: This is the second time we are parsing the ANSI sequences
-                if let Some(ansi_term_style) = ansi::parse::parse_first_style(raw_line.bytes()) {
+                if let Some(ansi_term_style) = ansi::parse::parse_first_style(raw_line) {
                     let style = Style {
                         ansi_term_style,
                         ..Style::new()
@@ -320,7 +320,7 @@ impl<'a> Painter<'a> {
             State::HunkPlus(None) => (config.plus_style, config.plus_non_emph_style),
             State::HunkPlus(Some(raw_line)) => {
                 // TODO: This is the second time we are parsing the ANSI sequences
-                if let Some(ansi_term_style) = ansi::parse::parse_first_style(raw_line.bytes()) {
+                if let Some(ansi_term_style) = ansi::parse::parse_first_style(raw_line) {
                     let style = Style {
                         ansi_term_style,
                         ..Style::new()
