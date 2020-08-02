@@ -256,6 +256,7 @@ mod tests {
             (r##"black "#ddeeff""##,            "\x1b[30;48;2;221;238;255m+\x1b[m\x1b[30;48;2;221;238;255m        .map(|(_, is_ansi)| is_ansi)\x1b[m\n"),
             ("brightred",                       "\x1b[91m+\x1b[m\x1b[91mtext\x1b[m\n"),
             ("normal",                          "+\x1b[mtext\x1b[m\n"),
+            ("blink",                           "\x1b[5m+\x1b[m\x1b[5mtext\x1b[m\n"),
         ] {
             assert!(Style::from_git_str(git_style_string).is_applied_to(git_output));
         }
