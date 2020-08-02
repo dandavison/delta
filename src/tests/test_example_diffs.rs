@@ -119,7 +119,7 @@ mod tests {
 
     #[test]
     fn test_diff_unified_two_directories() {
-        let config = integration_test_utils::make_config_from_args(&[]);
+        let config = integration_test_utils::make_config_from_args(&["--width", "80"]);
         let output = integration_test_utils::run_delta(DIFF_UNIFIED_TWO_DIRECTORIES, &config);
         let output = strip_ansi_codes(&output);
         let mut lines = output.split('\n');
