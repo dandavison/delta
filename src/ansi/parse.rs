@@ -66,8 +66,8 @@ fn ansi_term_style_from_sgr_parameters(parameters: &[i64]) -> ansi_term::Style {
             2 => style.is_dimmed = true,
             3 => style.is_italic = true,
             4 => style.is_underline = true,
-            // 5 => Some(Attr::BlinkSlow),
-            // 6 => Some(Attr::BlinkFast),
+            5 => style.is_blink = true, // blink slow
+            6 => style.is_blink = true, // blink fast
             7 => style.is_reverse = true,
             8 => style.is_hidden = true,
             9 => style.is_strikethrough = true,
