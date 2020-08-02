@@ -7,6 +7,13 @@ pub mod test_utils {
             _ => false,
         }
     }
+
+    #[allow(dead_code)]
+    pub fn print_with_line_numbers(s: &str) {
+        for (i, t) in s.split("\n").enumerate() {
+            println!("{:>2}│ {}", i + 1, t);
+        }
+    }
 }
 
 #[cfg(test)]
