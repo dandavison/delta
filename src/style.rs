@@ -88,7 +88,7 @@ impl Style {
     }
 
     pub fn is_applied_to(&self, s: &str) -> bool {
-        match ansi::parse::parse_first_style(s) {
+        match ansi::parse_first_style(s) {
             Some(parsed_style) => ansi_term_style_equality(parsed_style, self.ansi_term_style),
             None => false,
         }
@@ -143,7 +143,7 @@ impl Style {
     }
 }
 
-fn ansi_term_style_equality(a: ansi_term::Style, b: ansi_term::Style) -> bool {
+pub fn ansi_term_style_equality(a: ansi_term::Style, b: ansi_term::Style) -> bool {
     let a_attrs = ansi_term::Style {
         foreground: None,
         background: None,
@@ -203,7 +203,7 @@ lazy_static! {
 }
 
 pub fn line_has_style_other_than<'a>(line: &str, styles: impl Iterator<Item = &'a Style>) -> bool {
-    if !ansi::string_starts_with_ansi_escape_sequence(line) {
+    if !ansi::string_starts_with_ansi_style_sequence(line) {
         return false;
     }
     for style in styles {
@@ -215,7 +215,7 @@ pub fn line_has_style_other_than<'a>(line: &str, styles: impl Iterator<Item = &'
 }
 
 #[cfg(test)]
-mod tests {
+pub mod tests {
 
     use super::*;
 
@@ -223,9 +223,8 @@ mod tests {
     // 1. Stage a file with a single line containing the string "text"
     // 2. git -c 'color.diff.new = $STYLE_STRING' diff --cached  --color=always  | cat -A
 
-    #[test]
-    fn test_parsed_git_style_string_is_applied_to_git_output() {
-        for (git_style_string, git_output) in &[
+    lazy_static! {
+        pub static ref GIT_STYLE_STRING_EXAMPLES: Vec<(&'static str, &'static str)> = vec![
             // <git-default>                    "\x1b[32m+\x1b[m\x1b[32mtext\x1b[m\n"
             ("0",                               "\x1b[30m+\x1b[m\x1b[30mtext\x1b[m\n"),
             ("black",                           "\x1b[30m+\x1b[m\x1b[30mtext\x1b[m\n"),
@@ -253,11 +252,16 @@ mod tests {
             ("bold #aabbcc ul 19 strike" ,      "\x1b[1;4;9;38;2;170;187;204;48;5;19m+\x1b[m\x1b[1;4;9;38;2;170;187;204;48;5;19mtext\x1b[m\n"),
             ("bold 19 ul #aabbcc strike" ,      "\x1b[1;4;9;38;5;19;48;2;170;187;204m+\x1b[m\x1b[1;4;9;38;5;19;48;2;170;187;204mtext\x1b[m\n"),
             ("bold 0 ul #aabbcc strike",        "\x1b[1;4;9;30;48;2;170;187;204m+\x1b[m\x1b[1;4;9;30;48;2;170;187;204mtext\x1b[m\n"),
-            (r##"black "#ddeeff""##,            "\x1b[30;48;2;221;238;255m+\x1b[m\x1b[30;48;2;221;238;255m        .map(|(_, is_ansi)| is_ansi)\x1b[m\n"),
+            (r##"black "#ddeeff""##,            "\x1b[30;48;2;221;238;255m+\x1b[m\x1b[30;48;2;221;238;255mtext\x1b[m\n"),
             ("brightred",                       "\x1b[91m+\x1b[m\x1b[91mtext\x1b[m\n"),
-            ("normal",                          "+\x1b[mtext\x1b[m\n"),
+            ("normal",                          "\x1b[mtext\x1b[m\n"),
             ("blink",                           "\x1b[5m+\x1b[m\x1b[5mtext\x1b[m\n"),
-        ] {
+        ];
+    }
+
+    #[test]
+    fn test_parse_git_style_string_and_ansi_code_iterator() {
+        for (git_style_string, git_output) in &*GIT_STYLE_STRING_EXAMPLES {
             assert!(Style::from_git_str(git_style_string).is_applied_to(git_output));
         }
     }
