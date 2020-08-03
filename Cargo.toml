@@ -44,6 +44,6 @@ default-features = false
 features = ["parsing", "assets", "yaml-load", "dump-load", "regex-onig"]
 
 [dependencies.error-chain]
-version = "0.12.4"
+version = "0.12.2"
 default-features = false
 features = []
