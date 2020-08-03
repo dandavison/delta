@@ -360,8 +360,6 @@ The within-line highlighting rules employed by diff-highlight (and therefore by 
 
 ### `--color-moved` support
 
-[_**Unreleased feature**: available now if you build Delta from source, and will be included in the next Delta release. See [#72](https://github.com/dandavison/delta/issues/72)._]
-
 Recent versions of Git (≥ v2.17, April 2018) are able to detect moved blocks of code and style them differently from the usual removed/added lines. If you have activated this feature in Git, then Delta will automatically detect such differently-styled lines, and display them unchanged, i.e. with the raw colors it receives from Git.
 
 To activate the Git feature, use
