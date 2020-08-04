@@ -527,12 +527,22 @@ FLAGS:
                                      see the style options and --syntax-theme
     -n, --line-numbers               Display line numbers next to the diff. See LINE NUMBERS section
     -s, --side-by-side               Display a side-by-side diff view instead of the traditional view
-        --diff-highlight             Emulate diff-highlight (https://github.com/git/git/tree/master/contrib/diff-
-                                     highlight)
+        --diff-highlight             Emulate diff-highlight (https://github.com/git/git/tree/master/contrib/diff-highlight)
         --diff-so-fancy              Emulate diff-so-fancy (https://github.com/so-fancy/diff-so-fancy)
         --navigate                   Activate diff navigation: use n to jump forwards and N to jump backwards. To change
                                      the file labels used see --file-modified-label, --file-removed-label, --file-added-
                                      label, --file-renamed-label
+        --hyperlinks                 Render commit hashes, file names, and line numbers as hyperlinks, according to the
+                                     hyperlink spec for terminal emulators:
+                                     https://gist.github.com/egmontkob/eb114294efbcd5adb1944c9f3cb5feda. By default,
+                                     file names and line numbers link to the local file using a file URL, whereas commit
+                                     hashes link to the commit in GitHub, if the remote repository is hosted by GitHub.
+                                     See --hyperlinks-file-link-format for full control over the file URLs emitted.
+                                     Hyperlinks are supported by several common terminal emulators. However, they are
+                                     not yet supported by less, so they will not work in delta unless you install a
+                                     patched fork of less (see https://github.com/dandavison/less). If you use tmux,
+                                     then you will also need a patched fork of tmux (see
+                                     https://github.com/dandavison/tmux)
         --keep-plus-minus-markers    Prefix added/removed lines with a +/- character, exactly as git does. By default,
                                      delta does not emit any prefix, so code can be copied directly from delta's output
         --show-config                Display the active values for all Delta options. Style options are displayed with
@@ -563,14 +573,11 @@ OPTIONS:
             variable, if that contains a valid theme name. --syntax-theme=none disables all syntax highlighting [env:
             BAT_THEME=]
         --minus-style <minus-style>
-            Style (foreground, background, attributes) for removed lines. See STYLES section [default: normal
-            auto]
+            Style (foreground, background, attributes) for removed lines. See STYLES section [default: normal auto]
         --zero-style <zero-style>
-            Style (foreground, background, attributes) for unchanged lines. See STYLES section [default: syntax
-            normal]
+            Style (foreground, background, attributes) for unchanged lines. See STYLES section [default: syntax normal]
         --plus-style <plus-style>
             Style (foreground, background, attributes) for added lines. See STYLES section [default: syntax auto]
-
         --minus-emph-style <minus-emph-style>
             Style (foreground, background, attributes) for emphasized sections of removed lines. See STYLES section
             [default: normal auto]
@@ -597,6 +604,14 @@ OPTIONS:
             Style (foreground, background, attributes) for the file decoration. See STYLES section. The style string
             should contain one of the special attributes 'box', 'ul' (underline), 'ol' (overline), or the combination
             'ul ol' [default: blue ul]
+        --hyperlinks-file-link-format <hyperlinks-file-link-format>
+            Format string for file hyperlinks. The placeholders "{path}" and "{line}" will be replaced by the absolute
+            file path and the line number, respectively. The default value of this option creates hyperlinks using
+            standard file URLs; your operating system should open these in the application registered for that file
+            type. However, these do not make use of the line number. In order for the link to open the file at the
+            correct line number, you could use a custom URL format such as "file-line://{path}:{line}" and register an
+            application to handle the custom "file-line" URL scheme by opening the file in your editor/IDE at the
+            indicated line number. See https://github.com/dandavison/open-in-editor for an example [default: file://{path}]
         --hunk-header-style <hunk-header-style>
             Style (foreground, background, attributes) for the hunk-header. See STYLES section. The style 'omit' can be
             used to remove the hunk header section from the output [default: syntax]
@@ -610,8 +625,7 @@ OPTIONS:
             similar to `git --word-diff`) [default: \w+]
         --max-line-distance <max-line-distance>
             The maximum distance between two lines for them to be inferred to be homologous. Homologous line pairs are
-            highlighted according to the deletion and insertion operations transforming one into the other [default:
-            0.6]
+            highlighted according to the deletion and insertion operations transforming one into the other [default: 0.6]
         --line-numbers-minus-style <line-numbers-minus-style>
             Style (foreground, background, attributes) for line numbers in the old (minus) version of the file. See
             STYLES and LINE NUMBERS sections [default: auto]
@@ -661,16 +675,18 @@ OPTIONS:
             "24bit". If your terminal application (the application you use to enter commands at a shell prompt) supports
             24 bit colors, then it probably already sets this environment variable, in which case you don't need to do
             anything [default: auto]
+        --inspect-raw-lines <inspect-raw-lines>
+            Whether to examine ANSI color escape sequences in raw lines received from Git and handle lines colored in
+            certain ways specially. This is on by default: it is how Delta supports Git's --color-moved feature. Set
+            this to "false" to disable this behavior [default: true]
         --paging <paging-mode>
             Whether to use a pager when displaying output. Options are: auto, always, and never. The default pager is
             `less`: this can be altered by setting the environment variables BAT_PAGER or PAGER (BAT_PAGER has priority)
             [default: auto]
         --minus-empty-line-marker-style <minus-empty-line-marker-style>
-            Style for removed empty line marker (used only if --minus-style has no background color) [default:
-            normal auto]
+            Style for removed empty line marker (used only if --minus-style has no background color) [default: normal auto]
         --plus-empty-line-marker-style <plus-empty-line-marker-style>
-            Style for added empty line marker (used only if --plus-style has no background color) [default: normal
-            auto]
+            Style for added empty line marker (used only if --plus-style has no background color) [default: normal auto]
         --whitespace-error-style <whitespace-error-style>
             Style for whitespace errors. Defaults to color.diff.whitespace if that is set in git config, or else
             'magenta reverse' [default: auto auto]
