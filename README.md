@@ -5,6 +5,16 @@
 
 Code evolves, and studying diffs is a fundamental mode of work. Delta aims to make this both efficient and enjoyable: it allows you to make extensive changes to the layout and styling of diffs, as well as allowing you to stay arbitrarily close to the default git/diff output.
 
+<table>
+  <tr>
+    <td>
+      <img width=800px src="https://user-images.githubusercontent.com/52205/87230973-412eb900-c381-11ea-8aec-cc200290bd1b.png" alt="image" />
+      <br>
+      <sub>delta with <code>side-by-side</code> and <code>line-numbers</code> activated</sub>
+    </td>
+  </tr>
+</table>
+
 #### Delta's main features are:
 
 - Language syntax highlighting with color themes
@@ -50,7 +60,6 @@ git config --global delta.side-by-side true
 Contents
 ========
 
-* [Features](#features)
 * [Installation](#installation)
 * [Configuration](#configuration)
 * [Usage](#usage)
@@ -147,7 +156,6 @@ Here's what `git show` can look like with git configured to use delta:
 
 <br>
 
-## Features
 |                                                | delta | git | [diff-so-fancy] /<br>[diff-highlight] | github/gitlab |
 |------------------------------------------------|-------|-----|---------------------------------------|---------------|
 | language syntax highlighting                   | ✅    | ❌  | ❌                                    | ✅           |
