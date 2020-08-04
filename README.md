@@ -508,6 +508,7 @@ and use the executable found at `./target/release/delta`.
 ## Related projects
 
 ### Used by delta
+- [alacritty/vte](https://github.com/alacritty/vte)
 - [mitsuhiko/console](https://github.com/mitsuhiko/console)
 - [ogham/rust-ansi-term](https://github.com/ogham/rust-ansi-term)
 - [sharkdp/bat](https://github.com/sharkdp/bat)
