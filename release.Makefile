@@ -1,6 +1,7 @@
 # TODO:
 # - Update binary assets from bat
 # - Update README prior to release
+# - Update help text in README, with BAT_THEME unset
 
 release: \
 	clean \
