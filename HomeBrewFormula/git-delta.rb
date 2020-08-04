@@ -1,5 +1,5 @@
 class GitDelta < Formula
-  version "0.3.0"
+  version "0.4.0"
   desc "A viewer for git and diff output"
   homepage "https://github.com/dandavison/delta"
 
