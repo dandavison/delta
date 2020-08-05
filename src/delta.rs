@@ -131,7 +131,7 @@ where
             painter.paint_buffered_minus_and_plus_lines();
             state = State::HunkHeader;
             painter.set_highlighter();
-            if config.line_numbers || should_handle(&state, config) {
+            if should_handle(&state, config) {
                 painter.emit()?;
                 handle_hunk_header_line(&mut painter, &line, &raw_line, &plus_file, config)?;
                 continue;
@@ -188,6 +188,9 @@ where
 
 /// Should a handle_* function be called on this element?
 fn should_handle(state: &State, config: &Config) -> bool {
+    if *state == State::HunkHeader && config.line_numbers {
+        return true;
+    }
     let style = config.get_style(state);
     !(style.is_raw && style.decoration_style == DecorationStyle::NoDecoration)
 }
