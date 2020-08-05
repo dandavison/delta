@@ -811,6 +811,28 @@ src/align.rs
     }
 
     #[test]
+    fn test_hunk_header_style_raw_no_decoration_with_line_numbers() {
+        let config = integration_test_utils::make_config_from_args(&[
+            "--hunk-header-style",
+            "raw",
+            "--hunk-header-decoration-style",
+            "omit",
+            "--line-numbers",
+        ]);
+        let output = integration_test_utils::run_delta(GIT_DIFF_SINGLE_HUNK, &config);
+        assert!(output.contains("
+@@ -71,11 +71,8 @@ impl<'a> Alignment<'a> {"));
+        assert!(!output.contains("
+
+@@ -71,11 +71,8 @@ impl<'a> Alignment<'a> {"));
+        ansi_test_utils::assert_line_has_no_color(
+            &output,
+            9,
+            "@@ -71,11 +71,8 @@ impl<'a> Alignment<'a> {",
+        );
+    }
+
+    #[test]
     fn test_hunk_header_style_colored_input_color_is_stripped_under_normal() {
         let config = integration_test_utils::make_config_from_args(&[
             "--hunk-header-style",

@@ -131,7 +131,7 @@ where
             painter.paint_buffered_minus_and_plus_lines();
             state = State::HunkHeader;
             painter.set_highlighter();
-            if should_handle(&state, config) {
+            if config.line_numbers || should_handle(&state, config) {
                 painter.emit()?;
                 handle_hunk_header_line(&mut painter, &line, &raw_line, &plus_file, config)?;
                 continue;
@@ -413,7 +413,9 @@ fn handle_hunk_header_line(
     let (raw_code_fragment, line_numbers) = parse::parse_hunk_header(&line);
     // Emit the hunk header, with any requested decoration
     if config.hunk_header_style.is_raw {
-        writeln!(painter.writer)?;
+        if config.hunk_header_style.decoration_style != DecorationStyle::NoDecoration {
+            writeln!(painter.writer)?;
+        }
         draw_fn(
             painter.writer,
             &format!("{} ", line),
