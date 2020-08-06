@@ -192,6 +192,10 @@ mod tests {
             None
         );
         assert_eq!(
+            get_file_extension_from_file_meta_line_file_path("Dockerfile"),
+            Some("Dockerfile")
+        );
+        assert_eq!(
             get_file_extension_from_file_meta_line_file_path("Makefile"),
             Some("Makefile")
         );
