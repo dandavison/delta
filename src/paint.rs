@@ -88,10 +88,10 @@ impl<'a> Painter<'a> {
         if !line.is_empty() {
             let mut line = line.graphemes(true);
 
-            // The first column contains a -/+/space character, added by git. We substitute it for a
-            // space now, so that it is not present during syntax highlighting. When emitting the line
-            // in Painter::paint_lines, we drop the space (unless --keep-plus-minus-markers is in
-            // effect in which case we replace it with the appropriate marker).
+            // The first column contains a -/+/space character, added by git. We substitute it for
+            // a space now, so that it is not present during syntax highlighting. When emitting the
+            // line in Painter::paint_line, we drop the space (unless --keep-plus-minus-markers is
+            // in effect in which case we replace it with the appropriate marker).
             // TODO: Things should, but do not, work if this leading space is omitted at this stage.
             // See comment in align::Alignment::new.
             line.next();
