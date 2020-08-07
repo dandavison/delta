@@ -3,6 +3,7 @@ mod tests {
     use console::strip_ansi_codes;
 
     use crate::ansi;
+    use crate::delta::State;
     use crate::style;
     use crate::tests::ansi_test_utils::ansi_test_utils;
     use crate::tests::integration_test_utils::integration_test_utils;
@@ -1015,6 +1016,7 @@ impl<'a> Alignment<'a> {
             11,
             "impl<'a> Alignment<'a> { ",
             "rs",
+            State::HunkHeader,
             &config,
         );
         ansi_test_utils::assert_line_has_no_color(&output, 12, "─────────────────────────┘");
@@ -1147,8 +1149,9 @@ impl<'a> Alignment<'a> { │
         ansi_test_utils::assert_line_is_syntax_highlighted(
             &output,
             12,
-            "         for (i, x_i) in self.x.iter().enumerate() {",
+            "        for (i, x_i) in self.x.iter().enumerate() {",
             "rs",
+            State::HunkZero,
             &config,
         );
     }
