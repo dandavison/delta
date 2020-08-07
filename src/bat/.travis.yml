@@ -29,8 +29,8 @@ matrix:
       rust: stable
       env:
         - TARGET=aarch64-unknown-linux-gnu
-        - CC_arm_unknown_linux_gnueabihf=/usr/bin/aarch64-linux-gnu-gcc-4.8
-        - CARGO_TARGET_ARM_UNKNOWN_LINUX_GNUEABIHF_LINKER=aarch64-linux-gnu-gcc-4.8
+        - CC_aarch64_unknown_linux_gnu=/usr/bin/aarch64-linux-gnu-gcc-4.8
+        - CARGO_TARGET_AARCH64_UNKNOWN_LINUX_GNU_LINKER=aarch64-linux-gnu-gcc-4.8
 
 sudo: required
 
