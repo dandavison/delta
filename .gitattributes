@@ -1,1 +1,2 @@
 *.Makefile linguist-language=Makefile
+etc/performance/* linguist-vendored
