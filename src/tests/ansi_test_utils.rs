@@ -74,12 +74,11 @@ pub mod ansi_test_utils {
         line_number: usize,
         expected_prefix: &str,
         language_extension: &str,
+        state: State,
         config: &Config,
     ) {
         let line = output.lines().nth(line_number).unwrap();
-        let stripped_line = &strip_ansi_codes(line);
-        assert!(stripped_line.starts_with(expected_prefix));
-        let painted_line = paint_line(expected_prefix, language_extension, config);
+        let painted_line = paint_line(expected_prefix, language_extension, state, config);
         // remove trailing newline appended by paint::paint_lines.
         assert!(line.starts_with(painted_line.trim_end()));
     }
@@ -110,7 +109,12 @@ pub mod ansi_test_utils {
         )
     }
 
-    pub fn paint_line(line: &str, language_extension: &str, config: &Config) -> String {
+    pub fn paint_line(
+        line: &str,
+        language_extension: &str,
+        state: State,
+        config: &Config,
+    ) -> String {
         let mut output_buffer = String::new();
         let mut unused_writer = Vec::<u8>::new();
         let mut painter = paint::Painter::new(&mut unused_writer, config);
@@ -120,17 +124,28 @@ pub mod ansi_test_utils {
         };
         painter.set_syntax(Some(language_extension));
         painter.set_highlighter();
-        let line = format!(" {}", line); // TODO: a leading space must be added, as delta::prepare() does
-        let lines = vec![&line];
-        let syntax_style_sections = painter.highlighter.highlight(&line, &config.syntax_set);
+        let lines = vec![(format!(" {}", line), state.clone())];
+        let syntax_style_sections = paint::Painter::get_syntax_style_sections_for_lines(
+            &lines,
+            &state,
+            &mut painter.highlighter,
+            config,
+        );
+        let diff_style_sections = vec![vec![(syntax_highlighted_style, lines[0].0.as_str())]];
+        let prefix = match (&state, config.keep_plus_minus_markers) {
+            (State::HunkMinus(_), true) => "-",
+            (State::HunkZero, true) => " ",
+            (State::HunkPlus(_), true) => "+",
+            _ => "",
+        };
         paint::Painter::paint_lines(
-            vec![syntax_style_sections],
-            vec![vec![(syntax_highlighted_style, lines[0])]],
-            [State::Unknown].iter(),
+            syntax_style_sections,
+            diff_style_sections,
+            [state].iter(),
             &mut output_buffer,
             config,
             &mut None,
-            "",
+            prefix,
             None,
             None,
         );

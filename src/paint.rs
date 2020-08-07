@@ -472,7 +472,11 @@ impl<'a> Painter<'a> {
             if fake {
                 line_sections.push(vec![(config.null_syntect_style, line.as_str())])
             } else {
-                line_sections.push(highlighter.highlight(line, &config.syntax_set))
+                // The first character is a space injected by delta. See comment in
+                // Painter:::prepare.
+                let mut this_line_sections = highlighter.highlight(&line[1..], &config.syntax_set);
+                this_line_sections.insert(0, (config.null_syntect_style, &line[..1]));
+                line_sections.push(this_line_sections);
             }
         }
         line_sections
