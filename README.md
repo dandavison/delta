@@ -94,7 +94,7 @@ Contents
 * [Full --help output](#full---help-output)
 * [Delta configs used in screenshots](#delta-configs-used-in-screenshots)
    * [Side-by-side view](#side-by-side-view-1)
-         
+
 
 Here's what `git show` can look like with git configured to use delta:
 
@@ -533,7 +533,7 @@ and use the executable found at `./target/release/delta`.
 ## Full --help output
 
 ```
-delta 0.4.0
+delta 0.4.1
 A viewer for git and diff output
 
 USAGE:
