@@ -1,0 +1,4 @@
+#!/bin/bash
+DIR=$(dirname ${BASH_SOURCE[0]})
+
+delta <($DIR/list-options) <(delta --show-config | awk '{print $1}' | sort)
