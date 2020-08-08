@@ -5,7 +5,7 @@
 
 release: \
 	clean \
-	check_environment \
+	check-environment \
 	bump-version \
 	create-github-release \
 	bump-version-in-documentation-links \
@@ -18,7 +18,7 @@ clean:
 	rm -fr .make-sentinels
 
 
-check_environment:
+check-environment:
 	[ -n  "$$DELTA_OLD_VERSION" ]
 	[ -n  "$$DELTA_NEW_VERSION" ]
 	mkdir -p .make-sentinels
