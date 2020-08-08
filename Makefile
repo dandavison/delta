@@ -42,4 +42,4 @@ flamegraph: build
 chronologer:
 	chronologer etc/performance/chronologer.yaml
 
-.PHONY: build format lint test unit-test end-to-end-test release version hash benchmark chronologer
+.PHONY: build format lint test unit-test end-to-end-test release version hash benchmark flamegraph chronologer
