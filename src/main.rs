@@ -187,6 +187,7 @@ fn show_config(config: &config::Config) {
     max-line-distance             = {max_line_distance}
     navigate                      = {navigate}
     paging                        = {paging_mode}
+    side-by-side                  = {side_by_side}
     syntax-theme                  = {syntax_theme}
     width                         = {width}
     tabs                          = {tab_width}
@@ -209,6 +210,7 @@ fn show_config(config: &config::Config) {
             PagingMode::Never => "never",
             PagingMode::QuitIfOneScreen => "auto",
         },
+        side_by_side = config.side_by_side,
         syntax_theme = config
             .syntax_theme
             .clone()
