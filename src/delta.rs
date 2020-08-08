@@ -188,6 +188,9 @@ where
 
 /// Should a handle_* function be called on this element?
 fn should_handle(state: &State, config: &Config) -> bool {
+    if *state == State::HunkHeader && config.line_numbers {
+        return true;
+    }
     let style = config.get_style(state);
     !(style.is_raw && style.decoration_style == DecorationStyle::NoDecoration)
 }
@@ -413,7 +416,9 @@ fn handle_hunk_header_line(
     let (raw_code_fragment, line_numbers) = parse::parse_hunk_header(&line);
     // Emit the hunk header, with any requested decoration
     if config.hunk_header_style.is_raw {
-        writeln!(painter.writer)?;
+        if config.hunk_header_style.decoration_style != DecorationStyle::NoDecoration {
+            writeln!(painter.writer)?;
+        }
         draw_fn(
             painter.writer,
             &format!("{} ", line),
