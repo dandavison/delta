@@ -74,7 +74,7 @@ $(BUMP_PRIVATE_HOMEBREW_FORMULA_SENTINEL):
 BUMP_PUBLIC_HOMEBREW_FORMULA_SENTINEL=.make-sentinels/bump-public-homebrew-formula
 bump-public-homebrew-formula: $(BUMP_PUBLIC_HOMEBREW_FORMULA_SENTINEL)
 $(BUMP_PUBLIC_HOMEBREW_FORMULA_SENTINEL):
-	make -f release.Makefile test-public-homebrew-formula
+	make -f etc/release.Makefile test-public-homebrew-formula
 	cd "$$(brew --repo homebrew/core)" && brew bump-formula-pr --url "https://github.com/dandavison/delta/archive/$$DELTA_NEW_VERSION.tar.gz" git-delta
 	touch $(BUMP_PUBLIC_HOMEBREW_FORMULA_SENTINEL)
 
