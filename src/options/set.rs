@@ -428,28 +428,34 @@ fn gather_builtin_features_recursively<'a>(
         return;
     }
     features.push_front(feature_string);
-    let feature_data = builtin_features.get(feature).unwrap();
-    if let Some(child_features_fn) = feature_data.get("features") {
-        if let ProvenancedOptionValue::DefaultValue(OptionValue::String(features_string)) =
-            child_features_fn(opt, &None)
-        {
-            for child_feature in split_feature_string(&features_string) {
-                gather_builtin_features_recursively(child_feature, features, builtin_features, opt);
-            }
-        }
-    }
-    for child_feature in builtin_features.keys() {
-        if let Some(child_features_fn) = feature_data.get(child_feature) {
-            if let ProvenancedOptionValue::DefaultValue(OptionValue::Boolean(value)) =
+    if let Some(feature_data) = builtin_features.get(feature) {
+        if let Some(child_features_fn) = feature_data.get("features") {
+            if let ProvenancedOptionValue::DefaultValue(OptionValue::String(features_string)) =
                 child_features_fn(opt, &None)
             {
-                if value {
+                for child_feature in split_feature_string(&features_string) {
                     gather_builtin_features_recursively(
                         child_feature,
                         features,
                         builtin_features,
                         opt,
                     );
+                }
+            }
+        }
+        for child_feature in builtin_features.keys() {
+            if let Some(child_features_fn) = feature_data.get(child_feature) {
+                if let ProvenancedOptionValue::DefaultValue(OptionValue::Boolean(value)) =
+                    child_features_fn(opt, &None)
+                {
+                    if value {
+                        gather_builtin_features_recursively(
+                            child_feature,
+                            features,
+                            builtin_features,
+                            opt,
+                        );
+                    }
                 }
             }
         }
