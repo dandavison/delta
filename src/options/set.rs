@@ -78,7 +78,14 @@ pub fn set_options(
     let option_names = cli::Opt::get_option_names();
 
     // Set features
-    let builtin_features = features::make_builtin_features();
+    let mut builtin_features = features::make_builtin_features();
+
+    // --color-only is used for interactive.diffFilter (git add -p) and side-by-side cannot be used
+    // there (does not emit lines in 1-1 correspondence with raw git output). See #274.
+    if config::user_supplied_option("color-only", arg_matches) {
+        builtin_features.remove("side-by-side");
+    }
+
     let features = gather_features(opt, &builtin_features, git_config);
     opt.features = features.join(" ");
 
@@ -176,6 +183,12 @@ pub fn set_options(
     opt.computed.inspect_raw_lines =
         cli::InspectRawLines::from_str(&opt.inspect_raw_lines).unwrap();
     opt.computed.paging_mode = parse_paging_mode(&opt.paging_mode);
+
+    // --color-only is used for interactive.diffFilter (git add -p) and side-by-side cannot be used
+    // there (does not emit lines in 1-1 correspondence with raw git output). See #274.
+    if opt.color_only {
+        opt.side_by_side = false;
+    }
 }
 
 #[allow(non_snake_case)]
@@ -581,10 +594,12 @@ pub mod tests {
 
     #[test]
     fn test_options_can_be_set_in_git_config() {
+        // In general the values here are not the default values. However there are some exceptions
+        // since e.g. color-only = true (non-default) forces side-by-side = false (default).
         let git_config_contents = b"
 [delta]
     24-bit-color = never
-    color-only = true
+    color-only = false
     commit-decoration-style = black black
     commit-style = black black
     dark = false
@@ -639,7 +654,7 @@ pub mod tests {
         );
 
         assert_eq!(opt.true_color, "never");
-        assert_eq!(opt.color_only, true);
+        assert_eq!(opt.color_only, false);
         assert_eq!(opt.commit_decoration_style, "black black");
         assert_eq!(opt.commit_style, "black black");
         assert_eq!(opt.dark, false);
