@@ -104,7 +104,7 @@ impl<'a> Painter<'a> {
     /// Remove the initial +/- character of a line that will be emitted unchanged, including any
     /// ANSI escape sequences.
     pub fn prepare_raw_line(&self, line: &str) -> String {
-        ansi::ansi_preserving_slice(line, 1)
+        ansi::ansi_preserving_slice(&self.expand_tabs(line.graphemes(true)), 1)
     }
 
     /// Expand tabs as spaces.
