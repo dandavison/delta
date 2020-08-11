@@ -232,6 +232,10 @@ Alternatively, delta is available in the following package managers:
     <td><code>nix-env -iA nixpkgs.gitAndTools.delta</code>
   </tr>
   <tr>
+    <td>Ubuntu</td>
+    <td><code>sudo apt install delta</code>
+  </tr>
+  <tr>
     <td>Windows (<a href="https://chocolatey.org/packages/delta">Chocolatey</a>)</td>
     <td><code>choco install delta</code></td>
   </tr>
