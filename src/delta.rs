@@ -3,9 +3,9 @@ use std::io::BufRead;
 use std::io::Write;
 
 use bytelines::ByteLines;
-use console::strip_ansi_codes;
 use unicode_segmentation::UnicodeSegmentation;
 
+use crate::ansi;
 use crate::cli;
 use crate::config::Config;
 use crate::draw;
@@ -78,7 +78,7 @@ where
 
     while let Some(Ok(raw_line_bytes)) = lines.next() {
         let raw_line = String::from_utf8_lossy(&raw_line_bytes);
-        let line = strip_ansi_codes(&raw_line).to_string();
+        let line = ansi::strip_ansi_codes(&raw_line).to_string();
         if source == Source::Unknown {
             source = detect_source(&line);
         }

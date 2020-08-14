@@ -5,9 +5,9 @@ pub mod integration_test_utils {
     use std::path::Path;
 
     use bytelines::ByteLines;
-    use console::strip_ansi_codes;
     use itertools;
 
+    use crate::ansi;
     use crate::cli;
     use crate::config;
     use crate::delta::delta;
@@ -67,7 +67,7 @@ pub mod integration_test_utils {
     ) -> String {
         let output = run_delta(&input, config);
         let line_of_code = output.lines().nth(line_number).unwrap();
-        assert!(strip_ansi_codes(line_of_code) == expected_text);
+        assert!(ansi::strip_ansi_codes(line_of_code) == expected_text);
         line_of_code.to_string()
     }
 

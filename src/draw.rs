@@ -3,9 +3,8 @@ use std::io::Write;
 
 use ansi_term;
 use box_drawing;
-use console::strip_ansi_codes;
-use unicode_width::UnicodeWidthStr;
 
+use crate::ansi;
 use crate::cli::Width;
 use crate::style::Style;
 
@@ -40,7 +39,7 @@ pub fn write_boxed(
     } else {
         box_drawing::light::UP_LEFT
     };
-    let box_width = UnicodeWidthStr::width(strip_ansi_codes(text).as_ref());
+    let box_width = ansi::measure_text_width(text);
     write_boxed_partial(
         writer,
         text,
@@ -63,7 +62,7 @@ pub fn write_boxed_with_underline(
     text_style: Style,
     decoration_style: ansi_term::Style,
 ) -> std::io::Result<()> {
-    let box_width = UnicodeWidthStr::width(strip_ansi_codes(text).as_ref());
+    let box_width = ansi::measure_text_width(text);
     write_boxed_with_horizontal_whisker(
         writer,
         text,
@@ -162,7 +161,7 @@ fn _write_under_or_over_lined(
     text_style: Style,
     decoration_style: ansi_term::Style,
 ) -> std::io::Result<()> {
-    let text_width = UnicodeWidthStr::width(strip_ansi_codes(text).as_ref());
+    let text_width = ansi::measure_text_width(text);
     let line_width = match *line_width {
         Width::Fixed(n) => max(n, text_width),
         Width::Variable => text_width,

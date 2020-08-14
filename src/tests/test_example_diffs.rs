@@ -1,8 +1,6 @@
 #[cfg(test)]
 mod tests {
-    use console::strip_ansi_codes;
-
-    use crate::ansi;
+    use crate::ansi::{self, strip_ansi_codes};
     use crate::delta::State;
     use crate::style;
     use crate::tests::ansi_test_utils::ansi_test_utils;

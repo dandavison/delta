@@ -1,8 +1,7 @@
-use console;
-
 use itertools::Itertools;
 use syntect::highlighting::Style as SyntectStyle;
 
+use crate::ansi;
 use crate::cli;
 use crate::config::Config;
 use crate::delta::State;
@@ -379,7 +378,7 @@ fn right_pad_left_panel_line(
         };
     };
     // Pad with (maybe painted) spaces to the panel width.
-    let text_width = console::measure_text_width(&panel_line);
+    let text_width = ansi::measure_text_width(&panel_line);
     let panel_width = config.side_by_side_data.left_panel.width;
     if text_width < panel_width {
         let fill_style = get_right_fill_style_for_left_panel(
@@ -397,7 +396,7 @@ fn right_pad_left_panel_line(
         );
     } else if text_width > panel_width {
         *panel_line =
-            console::truncate_str(panel_line, panel_width, &config.truncation_symbol).to_string();
+            ansi::truncate_str(panel_line, panel_width, &config.truncation_symbol).to_string();
     };
 }
 
@@ -414,7 +413,7 @@ fn right_fill_right_panel_line(
     background_color_extends_to_terminal_width: Option<bool>,
     config: &Config,
 ) {
-    *panel_line = console::truncate_str(
+    *panel_line = ansi::truncate_str(
         &panel_line,
         config.side_by_side_data.right_panel.width,
         &config.truncation_symbol,
@@ -453,8 +452,7 @@ fn right_fill_right_panel_line(
 
 #[cfg(test)]
 pub mod tests {
-    use console::strip_ansi_codes;
-
+    use crate::ansi::strip_ansi_codes;
     use crate::features::line_numbers::tests::*;
     use crate::tests::integration_test_utils::integration_test_utils::{
         make_config_from_args, run_delta,
