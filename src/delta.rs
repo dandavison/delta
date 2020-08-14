@@ -78,6 +78,11 @@ where
 
     while let Some(Ok(raw_line_bytes)) = lines.next() {
         let raw_line = String::from_utf8_lossy(&raw_line_bytes);
+        let raw_line = if config.max_line_length > 0 && raw_line.len() > config.max_line_length {
+            ansi::truncate_str(&raw_line, config.max_line_length, &config.truncation_symbol)
+        } else {
+            raw_line
+        };
         let line = ansi::strip_ansi_codes(&raw_line).to_string();
         if source == Source::Unknown {
             source = detect_source(&line);
