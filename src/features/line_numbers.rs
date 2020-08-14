@@ -309,9 +309,9 @@ fn format_line_number(
 
 #[cfg(test)]
 pub mod tests {
-    use console::strip_ansi_codes;
     use regex::Captures;
 
+    use crate::ansi::strip_ansi_codes;
     use crate::tests::integration_test_utils::integration_test_utils::{
         make_config_from_args, run_delta,
     };

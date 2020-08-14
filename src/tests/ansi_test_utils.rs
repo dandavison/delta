@@ -1,8 +1,8 @@
 #[cfg(test)]
 pub mod ansi_test_utils {
     use ansi_term;
-    use console::strip_ansi_codes;
 
+    use crate::ansi;
     use crate::config::Config;
     use crate::delta::State;
     use crate::paint;
@@ -61,7 +61,7 @@ pub mod ansi_test_utils {
 
     pub fn assert_line_has_no_color(output: &str, line_number: usize, expected_prefix: &str) {
         let line = output.lines().nth(line_number).unwrap();
-        let stripped_line = strip_ansi_codes(line);
+        let stripped_line = ansi::strip_ansi_codes(line);
         assert!(stripped_line.starts_with(expected_prefix));
         assert_eq!(line, stripped_line);
     }
@@ -98,7 +98,7 @@ pub mod ansi_test_utils {
     }
 
     pub fn get_color_variants(string: &str, config: &Config) -> (String, String) {
-        let string_without_any_color = strip_ansi_codes(string).to_string();
+        let string_without_any_color = ansi::strip_ansi_codes(string).to_string();
         let string_with_plus_color_only = config
             .plus_style
             .ansi_term_style
@@ -161,7 +161,7 @@ pub mod ansi_test_utils {
         _4_bit_color: bool,
     ) -> bool {
         let line = output.lines().nth(line_number).unwrap();
-        assert!(strip_ansi_codes(line).starts_with(expected_prefix));
+        assert!(ansi::strip_ansi_codes(line).starts_with(expected_prefix));
         let mut style = Style::from_str(expected_style, None, None, config.true_color, false);
         if _4_bit_color {
             style.ansi_term_style.foreground = style
