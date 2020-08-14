@@ -212,6 +212,7 @@ fn show_config(config: &config::Config) {
     }
     println!(
         "    max-line-distance             = {max_line_distance}
+    max-line-length               = {max_line_length}
     navigate                      = {navigate}
     paging                        = {paging_mode}
     side-by-side                  = {side_by_side}
@@ -220,6 +221,7 @@ fn show_config(config: &config::Config) {
     tabs                          = {tab_width}
     word-diff-regex               = {tokenization_regex}",
         max_line_distance = config.max_line_distance,
+        max_line_length = config.max_line_length,
         navigate = config.navigate,
         paging_mode = match config.paging_mode {
             PagingMode::Always => "always",
