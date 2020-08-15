@@ -467,27 +467,6 @@ fn split_feature_string(features: &str) -> impl Iterator<Item = &str> {
     features.split_whitespace().rev()
 }
 
-fn set_true_color(opt: &mut cli::Opt) {
-    opt.computed.true_color = match opt.true_color.as_ref() {
-        "always" => true,
-        "never" => false,
-        "auto" => is_truecolor_terminal(),
-        _ => {
-            eprintln!(
-                "Invalid value for --24-bit-color option: {} (valid values are \"always\", \"never\", and \"auto\")",
-                opt.true_color
-            );
-            process::exit(1);
-        }
-    };
-}
-
-fn is_truecolor_terminal() -> bool {
-    env::get_env_var("COLORTERM")
-        .map(|colorterm| colorterm == "truecolor" || colorterm == "24bit")
-        .unwrap_or(false)
-}
-
 impl FromStr for cli::InspectRawLines {
     type Err = Error;
     fn from_str(s: &str) -> Result<Self, Self::Err> {
@@ -560,6 +539,27 @@ fn set_widths(
     opt.computed.decorations_width = decorations_width;
     opt.computed.background_color_extends_to_terminal_width =
         background_color_extends_to_terminal_width;
+}
+
+fn set_true_color(opt: &mut cli::Opt) {
+    opt.computed.true_color = match opt.true_color.as_ref() {
+        "always" => true,
+        "never" => false,
+        "auto" => is_truecolor_terminal(),
+        _ => {
+            eprintln!(
+                "Invalid value for --24-bit-color option: {} (valid values are \"always\", \"never\", and \"auto\")",
+                opt.true_color
+            );
+            process::exit(1);
+        }
+    };
+}
+
+fn is_truecolor_terminal() -> bool {
+    env::get_env_var("COLORTERM")
+        .map(|colorterm| colorterm == "truecolor" || colorterm == "24bit")
+        .unwrap_or(false)
 }
 
 fn set_git_config_entries(opt: &mut cli::Opt, git_config: &mut git_config::GitConfig) {
