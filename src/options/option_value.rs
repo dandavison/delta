@@ -55,6 +55,13 @@ impl From<OptionValue> for Option<String> {
     fn from(value: OptionValue) -> Self {
         match value {
             OptionValue::OptionString(value) => value,
+            // HACK: See the comment in options::set::compute_line_numbers_mode(). That function
+            // deliberately reads what is normally a boolean value ('line-numbers') as a string.
+            // However options::get::get_option_value() can fall through to obtaining the value
+            // from builtin_features, in which case an OptionValue::Boolean will be encountered.
+            // See the comment in options::set::compute_line_numbers_mode() and docstring of
+            // options::get::get_option_value().
+            OptionValue::Boolean(_) => None,
             _ => delta_unreachable("Error converting OptionValue to Option<String>."),
         }
     }

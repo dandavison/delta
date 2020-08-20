@@ -16,7 +16,7 @@ use crate::features;
 use crate::git_config;
 use crate::git_config_entry::{self, GitConfigEntry};
 use crate::options::option_value::{OptionValue, ProvenancedOptionValue};
-use crate::options::theme;
+use crate::options::{self, theme};
 
 macro_rules! set_options {
 	([$( $field_ident:ident ),* ],
@@ -183,12 +183,39 @@ pub fn set_options(
 
     opt.computed.inspect_raw_lines =
         cli::InspectRawLines::from_str(&opt.inspect_raw_lines).unwrap();
+    opt.computed.line_numbers_mode =
+        compute_line_numbers_mode(opt, &builtin_features, git_config, &option_names);
     opt.computed.paging_mode = parse_paging_mode(&opt.paging_mode);
 
     // --color-only is used for interactive.diffFilter (git add -p) and side-by-side cannot be used
     // there (does not emit lines in 1-1 correspondence with raw git output). See #274.
     if opt.color_only {
         opt.side_by_side = false;
+    }
+}
+
+fn compute_line_numbers_mode(
+    opt: &cli::Opt,
+    builtin_features: &HashMap<String, features::BuiltinFeature>,
+    git_config: &mut Option<git_config::GitConfig>,
+    option_names: &HashMap<&str, &str>,
+) -> cli::LineNumbersMode {
+    // line-numbers is in general treated as a boolean value. We read it as a string here in order
+    // to interpret an explicit "false" (as opposed to merely absence) as meaning "Do not show any
+    // line numbers; not even the first line number of the hunk".
+    let line_numbers_string_value: Option<Option<String>> = options::get::get_option_value(
+        option_names["line-numbers"],
+        builtin_features,
+        opt,
+        git_config,
+    );
+    match (
+        line_numbers_string_value.as_ref().map(|val| val.as_deref()),
+        opt.line_numbers,
+    ) {
+        (Some(Some("false")), _) => cli::LineNumbersMode::None,
+        (_, true) => cli::LineNumbersMode::Full,
+        (_, false) => cli::LineNumbersMode::First,
     }
 }
 
