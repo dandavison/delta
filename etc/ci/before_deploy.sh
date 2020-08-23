@@ -111,8 +111,8 @@ make_deb() {
     rm -rf "./debian"
 
     # readme and license
-    install -Dm644 README.md "$tempdir/usr/share/doc/$PROJECT_NAME/README.md"
-    cat > "$tempdir/usr/share/doc/$PROJECT_NAME/copyright" <<EOF
+    install -Dm644 README.md "$tempdir/usr/share/doc/$dpkgname/README.md"
+    cat > "$tempdir/usr/share/doc/$dpkgname/copyright" <<EOF
 Format: http://www.debian.org/doc/packaging-manuals/copyright-format/1.0/
 Upstream-Name: $PROJECT_NAME
 Source: $homepage
@@ -146,7 +146,7 @@ License: MIT
  IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
  DEALINGS IN THE SOFTWARE.
 EOF
-    chmod 644 "$tempdir/usr/share/doc/$PROJECT_NAME/copyright"
+    chmod 644 "$tempdir/usr/share/doc/$dpkgname/copyright"
 
     # Control file
     mkdir "$tempdir/DEBIAN"
