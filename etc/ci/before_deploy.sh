@@ -136,6 +136,7 @@ License: MIT
  IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
  DEALINGS IN THE SOFTWARE.
 EOF
+    chmod 644 "$tempdir/usr/share/doc/$PROJECT_NAME/copyright"
 
     # Control file
     mkdir "$tempdir/DEBIAN"
