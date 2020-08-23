@@ -148,7 +148,7 @@ Maintainer: Dan Davison <dandavison7@gmail.com>
 Architecture: $architecture
 Provides: $PROJECT_NAME
 Conflicts: $conflictname
-Description: A syntax highlighter for git.
+Description: Syntax highlighter for git.
 EOF
 
     fakeroot dpkg-deb --build "$tempdir" "${dpkgname}_${version}_${architecture}.deb"
