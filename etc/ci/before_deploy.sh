@@ -112,7 +112,6 @@ make_deb() {
 
     # readme and license
     install -Dm644 README.md "$tempdir/usr/share/doc/$PROJECT_NAME/README.md"
-    install -Dm644 LICENSE "$tempdir/usr/share/doc/$PROJECT_NAME/LICENSE"
     cat > "$tempdir/usr/share/doc/$PROJECT_NAME/copyright" <<EOF
 Format: http://www.debian.org/doc/packaging-manuals/copyright-format/1.0/
 Upstream-Name: $PROJECT_NAME
