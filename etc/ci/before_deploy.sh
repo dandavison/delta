@@ -162,6 +162,8 @@ Depends: $depends
 Provides: $PROJECT_NAME
 Conflicts: $conflictname
 Description: Syntax highlighter for git.
+ Delta provides language syntax-highlighting, within-line insertion/deletion
+ detection, and restructured diff output for git on the command line.
 EOF
 
     fakeroot dpkg-deb --build "$tempdir" "${dpkgname}_${version}_${architecture}.deb"
