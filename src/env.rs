@@ -9,11 +9,7 @@ pub fn get_env_var(name: &str) -> Option<String> {
     }
 }
 
+/// If `name` is set to any value at all (including "") then return true; else false.
 pub fn get_boolean_env_var(name: &str) -> bool {
-    let val = get_env_var(name).map(|s| s.to_lowercase());
-    match val.as_deref() {
-        None => false,
-        Some("false") => false,
-        Some(_) => true,
-    }
+    env::var(name).ok().is_some()
 }
