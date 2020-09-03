@@ -228,7 +228,7 @@ pub struct Opt {
     /// Emulate diff-so-fancy (https://github.com/so-fancy/diff-so-fancy)
     pub diff_so_fancy: bool,
 
-    #[structopt(long = "navigate")]
+    #[structopt(long = "navigate", env = "DELTA_NAVIGATE")]
     /// Activate diff navigation: use n to jump forwards and N to jump backwards. To change the
     /// file labels used see --file-modified-label, --file-removed-label, --file-added-label,
     /// --file-renamed-label.
