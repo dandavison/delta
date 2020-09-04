@@ -1,14 +1,14 @@
 class GitDelta < Formula
-  version "0.4.1"
+  version "0.4.3"
   desc "A viewer for git and diff output"
   homepage "https://github.com/dandavison/delta"
 
   if OS.mac?
       url "https://github.com/dandavison/delta/releases/download/#{version}/delta-#{version}-x86_64-apple-darwin.tar.gz"
-      sha256 "6011d1c838e691718f70494be0959b049077aa87d6344efb7e87599d37611f52"
+      sha256 "c6441563648fcc74085a5b079038fca3a1c9c91b8341d8accc07d345da8fc2c6"
   elsif OS.linux?
       url "https://github.com/dandavison/delta/releases/download/#{version}/delta-#{version}-x86_64-unknown-linux-musl.tar.gz"
-      sha256 "ebfb8877c0892d7cf3c11d6fdbc780697ed971436d56858c40b3225dbd469751"
+      sha256 "d596927a95b0dc5b6e4bc40970ad14ff38bac4c23182bae5a303b6bb51f06baa"
   end
 
   conflicts_with "delta"
