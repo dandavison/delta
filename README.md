@@ -394,7 +394,7 @@ The recommended way to use `navigate` is to activate it only when needed, for ex
 DELTA_NAVIGATE=1 git diff
 ```
 
-Please note that if the environment variable is set to _anything at all_ (even `"false"` or `"0"` or `""`) then that is interpreted as true: to deactivate it you must unset the environment variable (e.g. using `unset DELTA_NAVIGATE`).
+Please note that if the environment variable is set to _anything at all_ (even `"false"` or `"0"` or `""`) then that is interpreted as true. The above command sets the environment variable in the child process only, so it has no permanent effect on your shell session. But if, for whatever reason, you do have it set in your shell environment then to deactivate it you must _unset_ the environment variable (e.g. using `unset DELTA_NAVIGATE`). You cannot deactivate it by assigning a value to it.
 
 An alternative is to mutate your git config file from the command line:
 
