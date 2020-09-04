@@ -533,7 +533,7 @@ and use the executable found at `./target/release/delta`.
 ## Full --help output
 
 ```
-delta 0.4.1
+delta 0.4.3
 A viewer for git and diff output
 
 USAGE:
@@ -680,6 +680,9 @@ OPTIONS:
         --file-renamed-label <file-renamed-label>
             Text to display in front of a renamed file path [default: renamed:]
 
+        --max-line-length <max-line-length>
+            Truncate lines longer than this. To prevent any truncation, set to zero. Note that syntax-highlighting very
+            long lines (e.g. minified .js) will be very slow if they are not truncated [default: 512]
     -w, --width <width>
             The width of underline/overline decorations. Use --width=variable to extend decorations and background
             colors to the end of the text only. Otherwise background colors extend to the full terminal width
