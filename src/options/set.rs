@@ -74,6 +74,7 @@ pub fn set_options(
         }
         set_git_config_entries(opt, git_config);
     }
+    opt.navigate = opt.navigate || env::get_boolean_env_var("DELTA_NAVIGATE");
 
     let option_names = cli::Opt::get_option_names();
 
