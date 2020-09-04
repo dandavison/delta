@@ -388,13 +388,21 @@ In order to support this feature, Delta has to look at the raw colors it receive
 
 Use the `navigate` feature to activate navigation keybindings. In this mode, pressing `n` will jump forward to the next file in the diff, and `N` will jump backwards. If you are viewing multiple commits (e.g. via `git log -p`) then navigation will also visit commit boundaries.
 
-The recommended way to use `navigate` is to activate it only when needed, for example by doing
+The recommended way to use `navigate` is to activate it only when needed, for example by using the environment variable `DELTA_NAVIGATE`:
+
+```bash
+DELTA_NAVIGATE=1 git diff
+```
+
+Please note that if the environment variable is set to _anything at all_ (even `"false"` or `"0"` or `""`) then it is considered "true": to deactivate it you must unset the environment variable (e.g. using `unset DELTA_NAVIGATE`).
+
+An alternative is to mutate your git config file from the command line:
 
 ```bash
 git config --global delta.navigate true
 ```
 
-The reason is the following: Delta uses `less` as its pager, and the `navigate` feature works by doing `less --pattern <regex-matching-file-and-commit-lines>`. When the git output does not contain file/commit diff lines, `less --pattern` behaves unhelpfully (see [#234](https://github.com/dandavison/delta/issues/234), [#237](https://github.com/dandavison/delta/issues/2)).
+The reason that `navigate` should not be used all the time is that Delta uses `less` as its pager, and the `navigate` feature works by doing `less --pattern <regex-matching-file-and-commit-lines>`. When the git output does not contain file/commit diff lines, `less --pattern` behaves unhelpfully (see [#234](https://github.com/dandavison/delta/issues/234), [#237](https://github.com/dandavison/delta/issues/2)).
 
 
 ### 24 bit color (truecolor)
