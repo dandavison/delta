@@ -81,10 +81,13 @@ pub fn set_options(
     // Set features
     let mut builtin_features = features::make_builtin_features();
 
-    // --color-only is used for interactive.diffFilter (git add -p) and side-by-side cannot be used
+    // --color-only is used for interactive.diffFilter (git add -p) and
+    // side-by-side, file_style, and hunk_header_style cannot be used
     // there (does not emit lines in 1-1 correspondence with raw git output). See #274.
     if config::user_supplied_option("color-only", arg_matches) {
         builtin_features.remove("side-by-side");
+        builtin_features.remove("file-style");
+        builtin_features.remove("hunk-header-style");
     }
 
     let features = gather_features(opt, &builtin_features, git_config);
@@ -188,10 +191,13 @@ pub fn set_options(
         compute_line_numbers_mode(opt, &builtin_features, git_config, &option_names);
     opt.computed.paging_mode = parse_paging_mode(&opt.paging_mode);
 
-    // --color-only is used for interactive.diffFilter (git add -p) and side-by-side cannot be used
+    // --color-only is used for interactive.diffFilter (git add -p) and
+    // side-by-side, file_style, and hunk_header_style cannot be used
     // there (does not emit lines in 1-1 correspondence with raw git output). See #274.
     if opt.color_only {
         opt.side_by_side = false;
+        opt.file_style = "raw".to_string();
+        opt.hunk_header_style = "raw".to_string();
     }
 }
 
