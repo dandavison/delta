@@ -769,4 +769,29 @@ pub mod tests {
 
         remove_file(git_config_path).unwrap();
     }
+
+    #[test]
+    fn test_switch_config_when_interactive_filter() {
+        let git_config_contents = b"
+[delta]
+    color-only = true
+    side-by-side = true
+    file-style = blue
+    hunk-header-style = black black
+";
+        let git_config_path = "delta__test_switch_config_when_interactive_filter.gitconfig";
+
+        let opt = integration_test_utils::make_options_from_args_and_git_config(
+            &[],
+            Some(git_config_contents),
+            Some(git_config_path),
+        );
+
+        assert_eq!(opt.color_only, true);
+        assert_eq!(opt.side_by_side, false);
+        assert_eq!(opt.file_style, "raw");
+        assert_eq!(opt.hunk_header_style, "raw");
+
+        remove_file(git_config_path).unwrap();
+    }
 }
