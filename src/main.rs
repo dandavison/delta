@@ -4,6 +4,7 @@ extern crate bitflags;
 extern crate error_chain;
 
 mod align;
+mod ansi;
 mod bat;
 mod cli;
 mod color;
@@ -126,6 +127,7 @@ fn diff(
 }
 
 fn show_config(config: &config::Config) {
+    // styles first
     println!(
         "    commit-style                  = {commit_style}
     file-style                    = {file_style}
@@ -139,22 +141,56 @@ fn show_config(config: &config::Config) {
     plus-non-emph-style           = {plus_non_emph_style}
     plus-emph-style               = {plus_emph_style}
     plus-empty-line-marker-style  = {plus_empty_line_marker_style}
-    whitespace-error-style        = {whitespace_error_style}
-    line-numbers                  = {line_numbers}",
-        minus_style = config.minus_style.to_painted_string(),
-        zero_style = config.zero_style.to_painted_string(),
-        plus_style = config.plus_style.to_painted_string(),
-        minus_emph_style = config.minus_emph_style.to_painted_string(),
-        minus_non_emph_style = config.minus_non_emph_style.to_painted_string(),
-        plus_emph_style = config.plus_emph_style.to_painted_string(),
-        plus_non_emph_style = config.plus_non_emph_style.to_painted_string(),
+    whitespace-error-style        = {whitespace_error_style}",
         commit_style = config.commit_style.to_painted_string(),
         file_style = config.file_style.to_painted_string(),
         hunk_header_style = config.hunk_header_style.to_painted_string(),
+        minus_emph_style = config.minus_emph_style.to_painted_string(),
         minus_empty_line_marker_style = config.minus_empty_line_marker_style.to_painted_string(),
+        minus_non_emph_style = config.minus_non_emph_style.to_painted_string(),
+        minus_style = config.minus_style.to_painted_string(),
+        plus_emph_style = config.plus_emph_style.to_painted_string(),
         plus_empty_line_marker_style = config.plus_empty_line_marker_style.to_painted_string(),
+        plus_non_emph_style = config.plus_non_emph_style.to_painted_string(),
+        plus_style = config.plus_style.to_painted_string(),
         whitespace_error_style = config.whitespace_error_style.to_painted_string(),
-        line_numbers = config.line_numbers,
+        zero_style = config.zero_style.to_painted_string(),
+    );
+    // Everything else
+    println!(
+        "    24-bit-color                  = {true_color}
+    file-added-label              = {file_added_label}
+    file-modified-label           = {file_modified_label}
+    file-removed-label            = {file_removed_label}
+    file-renamed-label            = {file_renamed_label}",
+        true_color = config.true_color,
+        file_added_label = format_option_value(&config.file_added_label),
+        file_modified_label = format_option_value(&config.file_modified_label),
+        file_removed_label = format_option_value(&config.file_removed_label),
+        file_renamed_label = format_option_value(&config.file_renamed_label),
+    );
+    println!(
+        "    hyperlinks                    = {hyperlinks}",
+        hyperlinks = config.hyperlinks
+    );
+    if config.hyperlinks {
+        println!(
+            "    hyperlinks-file-link-format   = {hyperlinks_file_link_format}",
+            hyperlinks_file_link_format = format_option_value(&config.hyperlinks_file_link_format),
+        )
+    }
+    println!(
+        "    inspect-raw-lines             = {inspect_raw_lines}
+    keep-plus-minus-markers       = {keep_plus_minus_markers}",
+        inspect_raw_lines = match config.inspect_raw_lines {
+            cli::InspectRawLines::True => "true",
+            cli::InspectRawLines::False => "false",
+        },
+        keep_plus_minus_markers = config.keep_plus_minus_markers,
+    );
+    println!(
+        "    line-numbers                  = {line_numbers}",
+        line_numbers = config.line_numbers
     );
     if config.line_numbers {
         println!(
@@ -175,36 +211,33 @@ fn show_config(config: &config::Config) {
         )
     }
     println!(
-        "    24-bit-color                  = {true_color}
-    file-added-label              = {file_added_label}
-    file-modified-label           = {file_modified_label}
-    file-removed-label            = {file_removed_label}
-    file-renamed-label            = {file_renamed_label}
-    keep-plus-minus-markers       = {keep_plus_minus_markers}
-    max-line-distance             = {max_line_distance}
+        "    max-line-distance             = {max_line_distance}
+    max-line-length               = {max_line_length}
     navigate                      = {navigate}
     paging                        = {paging_mode}
+    side-by-side                  = {side_by_side}
     syntax-theme                  = {syntax_theme}
+    width                         = {width}
     tabs                          = {tab_width}
     word-diff-regex               = {tokenization_regex}",
-        true_color = config.true_color,
-        file_added_label = format_option_value(&config.file_added_label),
-        file_modified_label = format_option_value(&config.file_modified_label),
-        file_removed_label = format_option_value(&config.file_removed_label),
-        file_renamed_label = format_option_value(&config.file_renamed_label),
-        keep_plus_minus_markers = config.keep_plus_minus_markers,
         max_line_distance = config.max_line_distance,
+        max_line_length = config.max_line_length,
         navigate = config.navigate,
         paging_mode = match config.paging_mode {
             PagingMode::Always => "always",
             PagingMode::Never => "never",
             PagingMode::QuitIfOneScreen => "auto",
         },
+        side_by_side = config.side_by_side,
         syntax_theme = config
             .syntax_theme
             .clone()
             .map(|t| t.name.unwrap_or("none".to_string()))
             .unwrap_or("none".to_string()),
+        width = match config.decorations_width {
+            cli::Width::Fixed(width) => width.to_string(),
+            cli::Width::Variable => "variable".to_string(),
+        },
         tab_width = config.tab_width,
         tokenization_regex = format_option_value(&config.tokenization_regex.to_string()),
     );

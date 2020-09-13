@@ -1,4 +1,5 @@
 #!/bin/bash
-DELTA="./target/release/delta --no-gitconfig --raw"
+DELTA="./target/release/delta --no-gitconfig --raw --max-line-length 0"
+ANSIFILTER="./etc/bin/ansifilter"
 GIT_ARGS="log --patch --stat --numstat"
-diff -u <(git $GIT_ARGS | perl -pe 's/\e\[[0-9;]*[mK]//g') <(git $GIT_ARGS | $DELTA | perl -pe 's/\e\[[0-9;]*[mK]//g')
+diff -u <(git $GIT_ARGS | $ANSIFILTER) <(git $GIT_ARGS | $DELTA | $ANSIFILTER)

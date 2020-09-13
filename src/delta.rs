@@ -3,25 +3,26 @@ use std::io::BufRead;
 use std::io::Write;
 
 use bytelines::ByteLines;
-use console::strip_ansi_codes;
 use unicode_segmentation::UnicodeSegmentation;
 
+use crate::ansi;
+use crate::cli;
 use crate::config::Config;
 use crate::draw;
 use crate::features;
 use crate::format;
 use crate::paint::Painter;
 use crate::parse;
-use crate::style::DecorationStyle;
+use crate::style::{self, DecorationStyle};
 
 #[derive(Clone, Debug, PartialEq)]
 pub enum State {
-    CommitMeta, // In commit metadata section
-    FileMeta,   // In diff metadata section, between (possible) commit metadata and first hunk
+    CommitMeta,                // In commit metadata section
+    FileMeta, // In diff metadata section, between (possible) commit metadata and first hunk
     HunkHeader, // In hunk metadata line
-    HunkZero,   // In hunk; unchanged line
-    HunkMinus,  // In hunk; removed line
-    HunkPlus,   // In hunk; added line
+    HunkZero, // In hunk; unchanged line
+    HunkMinus(Option<String>), // In hunk; removed line (raw_line)
+    HunkPlus(Option<String>), // In hunk; added line (raw_line)
     Unknown,
 }
 
@@ -35,7 +36,7 @@ pub enum Source {
 impl State {
     fn is_in_hunk(&self) -> bool {
         match *self {
-            State::HunkHeader | State::HunkZero | State::HunkMinus | State::HunkPlus => true,
+            State::HunkHeader | State::HunkZero | State::HunkMinus(_) | State::HunkPlus(_) => true,
             _ => false,
         }
     }
@@ -67,9 +68,22 @@ where
     let mut state = State::Unknown;
     let mut source = Source::Unknown;
 
+    // When a file is modified, we use lines starting with '---' or '+++' to obtain the file name.
+    // When a file is renamed without changes, we use lines starting with 'rename' to obtain the
+    // file name (there is no diff hunk and hence no lines starting with '---' or '+++'). But when
+    // a file is renamed with changes, both are present, and we rely on the following variables to
+    // avoid emitting the file meta header line twice (#245).
+    let mut current_file_pair;
+    let mut handled_file_meta_header_line_file_pair = None;
+
     while let Some(Ok(raw_line_bytes)) = lines.next() {
         let raw_line = String::from_utf8_lossy(&raw_line_bytes);
-        let line = strip_ansi_codes(&raw_line).to_string();
+        let raw_line = if config.max_line_length > 0 && raw_line.len() > config.max_line_length {
+            ansi::truncate_str(&raw_line, config.max_line_length, &config.truncation_symbol)
+        } else {
+            raw_line
+        };
+        let line = ansi::strip_ansi_codes(&raw_line).to_string();
         if source == Source::Unknown {
             source = detect_source(&line);
         }
@@ -84,6 +98,7 @@ where
         } else if line.starts_with("diff ") {
             painter.paint_buffered_minus_and_plus_lines();
             state = State::FileMeta;
+            handled_file_meta_header_line_file_pair = None;
         } else if (state == State::FileMeta || source == Source::DiffUnified)
             && (line.starts_with("--- ") || line.starts_with("rename from "))
         {
@@ -103,7 +118,10 @@ where
             painter.set_syntax(parse::get_file_extension_from_file_meta_line_file_path(
                 &plus_file,
             ));
-            if should_handle(&State::FileMeta, config) {
+            current_file_pair = Some((minus_file.clone(), plus_file.clone()));
+            if should_handle(&State::FileMeta, config)
+                && handled_file_meta_header_line_file_pair != current_file_pair
+            {
                 painter.emit()?;
                 handle_file_meta_header_line(
                     &mut painter,
@@ -112,6 +130,7 @@ where
                     config,
                     source == Source::DiffUnified,
                 )?;
+                handled_file_meta_header_line_file_pair = current_file_pair
             }
         } else if line.starts_with("@@") {
             painter.paint_buffered_minus_and_plus_lines();
@@ -174,6 +193,9 @@ where
 
 /// Should a handle_* function be called on this element?
 fn should_handle(state: &State, config: &Config) -> bool {
+    if *state == State::HunkHeader && config.line_numbers {
+        return true;
+    }
     let style = config.get_style(state);
     !(style.is_raw && style.decoration_style == DecorationStyle::NoDecoration)
 }
@@ -399,7 +421,9 @@ fn handle_hunk_header_line(
     let (raw_code_fragment, line_numbers) = parse::parse_hunk_header(&line);
     // Emit the hunk header, with any requested decoration
     if config.hunk_header_style.is_raw {
-        writeln!(painter.writer)?;
+        if config.hunk_header_style.decoration_style != DecorationStyle::NoDecoration {
+            writeln!(painter.writer)?;
+        }
         draw_fn(
             painter.writer,
             &format!("{} ", line),
@@ -415,7 +439,7 @@ fn handle_hunk_header_line(
         };
         writeln!(painter.writer)?;
         if !line.is_empty() {
-            let lines = vec![line];
+            let lines = vec![(line, State::HunkHeader)];
             let syntax_style_sections = Painter::get_syntax_style_sections_for_lines(
                 &lines,
                 &State::HunkHeader,
@@ -424,8 +448,8 @@ fn handle_hunk_header_line(
             );
             Painter::paint_lines(
                 syntax_style_sections,
-                vec![vec![(config.hunk_header_style, &lines[0])]],
-                &State::HunkHeader,
+                vec![vec![(config.hunk_header_style, &lines[0].0)]], // TODO: compute style from state
+                [State::HunkHeader].iter(),
                 &mut painter.output_buffer,
                 config,
                 &mut None,
@@ -452,7 +476,7 @@ fn handle_hunk_header_line(
         painter
             .line_numbers_data
             .initialize_hunk(line_numbers, plus_file.to_string());
-    } else {
+    } else if config.line_numbers_show_first_line_number && !config.hunk_header_style.is_raw {
         let plus_line_number = line_numbers[line_numbers.len() - 1].0;
         let formatted_plus_line_number = if config.hyperlinks {
             features::hyperlinks::format_osc8_file_hyperlink(
@@ -499,15 +523,41 @@ fn handle_hunk_line(
     }
     match line.chars().next() {
         Some('-') => {
-            if state == State::HunkPlus {
+            if let State::HunkPlus(_) = state {
                 painter.paint_buffered_minus_and_plus_lines();
             }
-            painter.minus_lines.push(painter.prepare(&line, true));
-            State::HunkMinus
+            let state = match config.inspect_raw_lines {
+                cli::InspectRawLines::True
+                    if style::line_has_style_other_than(
+                        raw_line,
+                        [*style::GIT_DEFAULT_MINUS_STYLE, config.git_minus_style].iter(),
+                    ) =>
+                {
+                    State::HunkMinus(Some(painter.prepare_raw_line(raw_line)))
+                }
+                _ => State::HunkMinus(None),
+            };
+            painter
+                .minus_lines
+                .push((painter.prepare(&line, true), state.clone()));
+            state
         }
         Some('+') => {
-            painter.plus_lines.push(painter.prepare(&line, true));
-            State::HunkPlus
+            let state = match config.inspect_raw_lines {
+                cli::InspectRawLines::True
+                    if style::line_has_style_other_than(
+                        raw_line,
+                        [*style::GIT_DEFAULT_PLUS_STYLE, config.git_plus_style].iter(),
+                    ) =>
+                {
+                    State::HunkPlus(Some(painter.prepare_raw_line(raw_line)))
+                }
+                _ => State::HunkPlus(None),
+            };
+            painter
+                .plus_lines
+                .push((painter.prepare(&line, true), state.clone()));
+            state
         }
         Some(' ') => {
             painter.paint_buffered_minus_and_plus_lines();

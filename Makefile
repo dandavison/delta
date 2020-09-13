@@ -37,9 +37,9 @@ benchmark: build
 # https://github.com/brendangregg/FlameGraph
 flamegraph: build
 	$(BENCHMARK_COMMAND) | target/release/delta > /dev/null &
-	sample delta | stackcollapse-sample | flamegraph > performance/flamegraph.svg
+	sample delta | stackcollapse-sample | flamegraph > etc/performance/flamegraph.svg
 
 chronologer:
-	chronologer performance/chronologer.yaml
+	chronologer etc/performance/chronologer.yaml
 
-.PHONY: build format lint test unit-test end-to-end-test release version hash benchmark chronologer
+.PHONY: build format lint test unit-test end-to-end-test release version hash benchmark flamegraph chronologer

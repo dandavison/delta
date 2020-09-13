@@ -1,8 +1,8 @@
 #[cfg(test)]
 pub mod ansi_test_utils {
     use ansi_term;
-    use console::strip_ansi_codes;
 
+    use crate::ansi;
     use crate::config::Config;
     use crate::delta::State;
     use crate::paint;
@@ -61,7 +61,7 @@ pub mod ansi_test_utils {
 
     pub fn assert_line_has_no_color(output: &str, line_number: usize, expected_prefix: &str) {
         let line = output.lines().nth(line_number).unwrap();
-        let stripped_line = strip_ansi_codes(line);
+        let stripped_line = ansi::strip_ansi_codes(line);
         assert!(stripped_line.starts_with(expected_prefix));
         assert_eq!(line, stripped_line);
     }
@@ -74,12 +74,11 @@ pub mod ansi_test_utils {
         line_number: usize,
         expected_prefix: &str,
         language_extension: &str,
+        state: State,
         config: &Config,
     ) {
         let line = output.lines().nth(line_number).unwrap();
-        let stripped_line = &strip_ansi_codes(line);
-        assert!(stripped_line.starts_with(expected_prefix));
-        let painted_line = paint_line(expected_prefix, language_extension, config);
+        let painted_line = paint_line(expected_prefix, language_extension, state, config);
         // remove trailing newline appended by paint::paint_lines.
         assert!(line.starts_with(painted_line.trim_end()));
     }
@@ -99,7 +98,7 @@ pub mod ansi_test_utils {
     }
 
     pub fn get_color_variants(string: &str, config: &Config) -> (String, String) {
-        let string_without_any_color = strip_ansi_codes(string).to_string();
+        let string_without_any_color = ansi::strip_ansi_codes(string).to_string();
         let string_with_plus_color_only = config
             .plus_style
             .ansi_term_style
@@ -110,7 +109,12 @@ pub mod ansi_test_utils {
         )
     }
 
-    pub fn paint_line(line: &str, language_extension: &str, config: &Config) -> String {
+    pub fn paint_line(
+        line: &str,
+        language_extension: &str,
+        state: State,
+        config: &Config,
+    ) -> String {
         let mut output_buffer = String::new();
         let mut unused_writer = Vec::<u8>::new();
         let mut painter = paint::Painter::new(&mut unused_writer, config);
@@ -120,17 +124,28 @@ pub mod ansi_test_utils {
         };
         painter.set_syntax(Some(language_extension));
         painter.set_highlighter();
-        let line = format!(" {}", line); // TODO: a leading space must be added, as delta::prepare() does
-        let lines = vec![&line];
-        let syntax_style_sections = painter.highlighter.highlight(&line, &config.syntax_set);
+        let lines = vec![(format!(" {}", line), state.clone())];
+        let syntax_style_sections = paint::Painter::get_syntax_style_sections_for_lines(
+            &lines,
+            &state,
+            &mut painter.highlighter,
+            config,
+        );
+        let diff_style_sections = vec![vec![(syntax_highlighted_style, lines[0].0.as_str())]];
+        let prefix = match (&state, config.keep_plus_minus_markers) {
+            (State::HunkMinus(_), true) => "-",
+            (State::HunkZero, true) => " ",
+            (State::HunkPlus(_), true) => "+",
+            _ => "",
+        };
         paint::Painter::paint_lines(
-            vec![syntax_style_sections],
-            vec![vec![(syntax_highlighted_style, lines[0])]],
-            &State::Unknown,
+            syntax_style_sections,
+            diff_style_sections,
+            [state].iter(),
             &mut output_buffer,
             config,
             &mut None,
-            "",
+            prefix,
             None,
             None,
         );
@@ -146,7 +161,7 @@ pub mod ansi_test_utils {
         _4_bit_color: bool,
     ) -> bool {
         let line = output.lines().nth(line_number).unwrap();
-        assert!(strip_ansi_codes(line).starts_with(expected_prefix));
+        assert!(ansi::strip_ansi_codes(line).starts_with(expected_prefix));
         let mut style = Style::from_str(expected_style, None, None, config.true_color, false);
         if _4_bit_color {
             style.ansi_term_style.foreground = style
@@ -154,7 +169,7 @@ pub mod ansi_test_utils {
                 .foreground
                 .map(ansi_term_fixed_foreground_to_4_bit_color);
         }
-        line.starts_with(&style.ansi_term_style.prefix().to_string())
+        style.is_applied_to(line)
     }
 
     fn ansi_term_fixed_foreground_to_4_bit_color(color: ansi_term::Color) -> ansi_term::Color {

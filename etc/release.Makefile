@@ -1,10 +1,11 @@
 # TODO:
 # - Update binary assets from bat
 # - Update README prior to release
+# - Update help text in README, with BAT_THEME unset
 
 release: \
 	clean \
-	check_environment \
+	check-environment \
 	bump-version \
 	create-github-release \
 	bump-version-in-documentation-links \
@@ -17,7 +18,7 @@ clean:
 	rm -fr .make-sentinels
 
 
-check_environment:
+check-environment:
 	[ -n  "$$DELTA_OLD_VERSION" ]
 	[ -n  "$$DELTA_NEW_VERSION" ]
 	mkdir -p .make-sentinels
@@ -73,7 +74,7 @@ $(BUMP_PRIVATE_HOMEBREW_FORMULA_SENTINEL):
 BUMP_PUBLIC_HOMEBREW_FORMULA_SENTINEL=.make-sentinels/bump-public-homebrew-formula
 bump-public-homebrew-formula: $(BUMP_PUBLIC_HOMEBREW_FORMULA_SENTINEL)
 $(BUMP_PUBLIC_HOMEBREW_FORMULA_SENTINEL):
-	make -f release.Makefile test-public-homebrew-formula
+	make -f etc/release.Makefile test-public-homebrew-formula
 	cd "$$(brew --repo homebrew/core)" && brew bump-formula-pr --url "https://github.com/dandavison/delta/archive/$$DELTA_NEW_VERSION.tar.gz" git-delta
 	touch $(BUMP_PUBLIC_HOMEBREW_FORMULA_SENTINEL)
 

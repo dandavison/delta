@@ -1,5 +1,6 @@
 use std::collections::{HashMap, HashSet, VecDeque};
 use std::process;
+use std::result::Result;
 use std::str::FromStr;
 
 use console::Term;
@@ -10,12 +11,12 @@ use crate::bat::output::PagingMode;
 use crate::cli;
 use crate::config;
 use crate::env;
+use crate::errors::*;
 use crate::features;
 use crate::git_config;
 use crate::git_config_entry::{self, GitConfigEntry};
 use crate::options::option_value::{OptionValue, ProvenancedOptionValue};
-use crate::options::theme;
-use crate::style::Style;
+use crate::options::{self, theme};
 
 macro_rules! set_options {
 	([$( $field_ident:ident ),* ],
@@ -73,15 +74,23 @@ pub fn set_options(
         }
         set_git_config_entries(opt, git_config);
     }
+    opt.navigate = opt.navigate || env::get_boolean_env_var("DELTA_NAVIGATE");
 
     let option_names = cli::Opt::get_option_names();
 
     // Set features
-    let builtin_features = features::make_builtin_features();
+    let mut builtin_features = features::make_builtin_features();
+
+    // --color-only is used for interactive.diffFilter (git add -p) and side-by-side cannot be used
+    // there (does not emit lines in 1-1 correspondence with raw git output). See #274.
+    if config::user_supplied_option("color-only", arg_matches) {
+        builtin_features.remove("side-by-side");
+    }
+
     let features = gather_features(opt, &builtin_features, git_config);
     opt.features = features.join(" ");
 
-    set_widths(opt);
+    set_widths(opt, git_config, arg_matches, &option_names);
 
     // Set light, dark, and syntax-theme.
     set_true_color(opt);
@@ -129,8 +138,10 @@ pub fn set_options(
             hunk_header_style,
             hyperlinks,
             hyperlinks_file_link_format,
+            inspect_raw_lines,
             keep_plus_minus_markers,
             max_line_distance,
+            max_line_length,
             // Hack: minus-style must come before minus-*emph-style because the latter default
             // dynamically to the value of the former.
             minus_style,
@@ -171,7 +182,42 @@ pub fn set_options(
         true
     );
 
+    opt.computed.inspect_raw_lines =
+        cli::InspectRawLines::from_str(&opt.inspect_raw_lines).unwrap();
+    opt.computed.line_numbers_mode =
+        compute_line_numbers_mode(opt, &builtin_features, git_config, &option_names);
     opt.computed.paging_mode = parse_paging_mode(&opt.paging_mode);
+
+    // --color-only is used for interactive.diffFilter (git add -p) and side-by-side cannot be used
+    // there (does not emit lines in 1-1 correspondence with raw git output). See #274.
+    if opt.color_only {
+        opt.side_by_side = false;
+    }
+}
+
+fn compute_line_numbers_mode(
+    opt: &cli::Opt,
+    builtin_features: &HashMap<String, features::BuiltinFeature>,
+    git_config: &mut Option<git_config::GitConfig>,
+    option_names: &HashMap<&str, &str>,
+) -> cli::LineNumbersMode {
+    // line-numbers is in general treated as a boolean value. We read it as a string here in order
+    // to interpret an explicit "false" (as opposed to merely absence) as meaning "Do not show any
+    // line numbers; not even the first line number of the hunk".
+    let line_numbers_string_value: Option<Option<String>> = options::get::get_option_value(
+        option_names["line-numbers"],
+        builtin_features,
+        opt,
+        git_config,
+    );
+    match (
+        line_numbers_string_value.as_ref().map(|val| val.as_deref()),
+        opt.line_numbers,
+    ) {
+        (Some(Some("false")), _) => cli::LineNumbersMode::None,
+        (_, true) => cli::LineNumbersMode::Full,
+        (_, false) => cli::LineNumbersMode::First,
+    }
 }
 
 #[allow(non_snake_case)]
@@ -411,22 +457,12 @@ fn gather_builtin_features_recursively<'a>(
         return;
     }
     features.push_front(feature_string);
-    let feature_data = builtin_features.get(feature).unwrap();
-    if let Some(child_features_fn) = feature_data.get("features") {
-        if let ProvenancedOptionValue::DefaultValue(OptionValue::String(features_string)) =
-            child_features_fn(opt, &None)
-        {
-            for child_feature in split_feature_string(&features_string) {
-                gather_builtin_features_recursively(child_feature, features, builtin_features, opt);
-            }
-        }
-    }
-    for child_feature in builtin_features.keys() {
-        if let Some(child_features_fn) = feature_data.get(child_feature) {
-            if let ProvenancedOptionValue::DefaultValue(OptionValue::Boolean(value)) =
+    if let Some(feature_data) = builtin_features.get(feature) {
+        if let Some(child_features_fn) = feature_data.get("features") {
+            if let ProvenancedOptionValue::DefaultValue(OptionValue::String(features_string)) =
                 child_features_fn(opt, &None)
             {
-                if value {
+                for child_feature in split_feature_string(&features_string) {
                     gather_builtin_features_recursively(
                         child_feature,
                         features,
@@ -436,11 +472,101 @@ fn gather_builtin_features_recursively<'a>(
                 }
             }
         }
+        for child_feature in builtin_features.keys() {
+            if let Some(child_features_fn) = feature_data.get(child_feature) {
+                if let ProvenancedOptionValue::DefaultValue(OptionValue::Boolean(value)) =
+                    child_features_fn(opt, &None)
+                {
+                    if value {
+                        gather_builtin_features_recursively(
+                            child_feature,
+                            features,
+                            builtin_features,
+                            opt,
+                        );
+                    }
+                }
+            }
+        }
     }
 }
 
 fn split_feature_string(features: &str) -> impl Iterator<Item = &str> {
     features.split_whitespace().rev()
+}
+
+impl FromStr for cli::InspectRawLines {
+    type Err = Error;
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        match s.to_lowercase().as_str() {
+            "true" => Ok(Self::True),
+            "false" => Ok(Self::False),
+            _ => {
+                eprintln!(
+                    r#"Invalid value for inspect-raw-lines option: {}. Valid values are "true", and "false"."#,
+                    s
+                );
+                process::exit(1);
+            }
+        }
+    }
+}
+
+fn parse_paging_mode(paging_mode_string: &str) -> PagingMode {
+    match paging_mode_string.to_lowercase().as_str() {
+        "always" => PagingMode::Always,
+        "never" => PagingMode::Never,
+        "auto" => PagingMode::QuitIfOneScreen,
+        _ => {
+            eprintln!(
+                "Invalid value for --paging option: {} (valid values are \"always\", \"never\", and \"auto\")",
+                paging_mode_string
+            );
+            process::exit(1);
+        }
+    }
+}
+
+fn set_widths(
+    opt: &mut cli::Opt,
+    git_config: &mut Option<git_config::GitConfig>,
+    arg_matches: &clap::ArgMatches,
+    option_names: &HashMap<&str, &str>,
+) {
+    // Allow one character in case e.g. `less --status-column` is in effect. See #41 and #10.
+    opt.computed.available_terminal_width = (Term::stdout().size().1 - 1) as usize;
+
+    let empty_builtin_features = HashMap::new();
+    if opt.width.is_none() {
+        set_options!(
+            [width],
+            opt,
+            &empty_builtin_features,
+            git_config,
+            arg_matches,
+            option_names,
+            false
+        );
+    }
+
+    let (decorations_width, background_color_extends_to_terminal_width) = match opt.width.as_deref()
+    {
+        Some("variable") => (cli::Width::Variable, false),
+        Some(width) => {
+            let width = width.parse().unwrap_or_else(|_| {
+                eprintln!("Could not parse width as a positive integer: {:?}", width);
+                process::exit(1);
+            });
+            (cli::Width::Fixed(width), true)
+        }
+        None => (
+            cli::Width::Fixed(opt.computed.available_terminal_width),
+            true,
+        ),
+    };
+    opt.computed.decorations_width = decorations_width;
+    opt.computed.background_color_extends_to_terminal_width =
+        background_color_extends_to_terminal_width;
 }
 
 fn set_true_color(opt: &mut cli::Opt) {
@@ -464,58 +590,12 @@ fn is_truecolor_terminal() -> bool {
         .unwrap_or(false)
 }
 
-fn parse_paging_mode(paging_mode_string: &str) -> PagingMode {
-    match paging_mode_string {
-        "always" => PagingMode::Always,
-        "never" => PagingMode::Never,
-        "auto" => PagingMode::QuitIfOneScreen,
-        _ => {
-            eprintln!(
-                "Invalid value for --paging option: {} (valid values are \"always\", \"never\", and \"auto\")",
-                paging_mode_string
-            );
-            process::exit(1);
-        }
-    }
-}
-
-fn set_widths(opt: &mut cli::Opt) {
-    // Allow one character in case e.g. `less --status-column` is in effect. See #41 and #10.
-    opt.computed.available_terminal_width = (Term::stdout().size().1 - 1) as usize;
-    let (decorations_width, background_color_extends_to_terminal_width) = match opt.width.as_deref()
-    {
-        Some("variable") => (cli::Width::Variable, false),
-        Some(width) => {
-            let width = width.parse().unwrap_or_else(|_| {
-                eprintln!("Could not parse width as a positive integer: {:?}", width);
-                process::exit(1);
-            });
-            (cli::Width::Fixed(width), true)
-        }
-        None => (
-            cli::Width::Fixed(opt.computed.available_terminal_width),
-            true,
-        ),
-    };
-    opt.computed.decorations_width = decorations_width;
-    opt.computed.background_color_extends_to_terminal_width =
-        background_color_extends_to_terminal_width;
-}
-
 fn set_git_config_entries(opt: &mut cli::Opt, git_config: &mut git_config::GitConfig) {
     // Styles
     for key in &["color.diff.old", "color.diff.new"] {
         if let Some(style_string) = git_config.get::<String>(key) {
-            opt.git_config_entries.insert(
-                key.to_string(),
-                GitConfigEntry::Style(Style::from_str(
-                    &style_string,
-                    None,
-                    None,
-                    opt.computed.true_color,
-                    false,
-                )),
-            );
+            opt.git_config_entries
+                .insert(key.to_string(), GitConfigEntry::Style(style_string));
         }
     }
 
@@ -544,14 +624,17 @@ pub mod tests {
     use std::fs::remove_file;
 
     use crate::bat::output::PagingMode;
+    use crate::cli;
     use crate::tests::integration_test_utils::integration_test_utils;
 
     #[test]
     fn test_options_can_be_set_in_git_config() {
+        // In general the values here are not the default values. However there are some exceptions
+        // since e.g. color-only = true (non-default) forces side-by-side = false (default).
         let git_config_contents = b"
 [delta]
     24-bit-color = never
-    color-only = true
+    color-only = false
     commit-decoration-style = black black
     commit-style = black black
     dark = false
@@ -577,6 +660,7 @@ pub mod tests {
     line-numbers-right-style = black black
     line-numbers-zero-style = black black
     max-line-distance = 77
+    max-line-length = 77
     minus-emph-style = black black
     minus-empty-line-marker-style = black black
     minus-non-emph-style = black black
@@ -606,7 +690,7 @@ pub mod tests {
         );
 
         assert_eq!(opt.true_color, "never");
-        assert_eq!(opt.color_only, true);
+        assert_eq!(opt.color_only, false);
         assert_eq!(opt.commit_decoration_style, "black black");
         assert_eq!(opt.commit_style, "black black");
         assert_eq!(opt.dark, false);
@@ -633,6 +717,7 @@ pub mod tests {
         assert_eq!(opt.line_numbers_right_style, "black black");
         assert_eq!(opt.line_numbers_zero_style, "black black");
         assert_eq!(opt.max_line_distance, 77 as f64);
+        assert_eq!(opt.max_line_length, 77);
         assert_eq!(opt.minus_emph_style, "black black");
         assert_eq!(opt.minus_empty_line_marker_style, "black black");
         assert_eq!(opt.minus_non_emph_style, "black black");
@@ -653,6 +738,28 @@ pub mod tests {
         assert_eq!(opt.zero_style, "black black");
 
         assert_eq!(opt.computed.paging_mode, PagingMode::Never);
+
+        remove_file(git_config_path).unwrap();
+    }
+
+    #[test]
+    fn test_width_in_git_config_is_honored() {
+        let git_config_contents = b"
+[delta]
+    features = my-width-feature
+
+[delta \"my-width-feature\"]
+    width = variable
+";
+        let git_config_path = "delta__test_width_in_git_config_is_honored.gitconfig";
+
+        let opt = integration_test_utils::make_options_from_args_and_git_config(
+            &[],
+            Some(git_config_contents),
+            Some(git_config_path),
+        );
+
+        assert_eq!(opt.computed.decorations_width, cli::Width::Variable);
 
         remove_file(git_config_path).unwrap();
     }

@@ -76,7 +76,7 @@ pub fn format_and_paint_line_numbers<'a>(
         config.line_numbers_plus_style,
     );
     let ((minus_number, plus_number), (minus_style, plus_style)) = match state {
-        State::HunkMinus => {
+        State::HunkMinus(_) => {
             let m = *m_ref;
             *m_ref += 1;
             ((Some(m), None), (minus_style, plus_style))
@@ -87,7 +87,7 @@ pub fn format_and_paint_line_numbers<'a>(
             *p_ref += 1;
             ((Some(m), Some(p)), (zero_style, zero_style))
         }
-        State::HunkPlus => {
+        State::HunkPlus(_) => {
             let p = *p_ref;
             *p_ref += 1;
             ((None, Some(p)), (minus_style, plus_style))
@@ -309,9 +309,9 @@ fn format_line_number(
 
 #[cfg(test)]
 pub mod tests {
-    use console::strip_ansi_codes;
     use regex::Captures;
 
+    use crate::ansi::strip_ansi_codes;
     use crate::tests::integration_test_utils::integration_test_utils::{
         make_config_from_args, run_delta,
     };
@@ -547,6 +547,16 @@ pub mod tests {
         assert_eq!(lines.next().unwrap(), "10000⋮9999 │a = 1");
         assert_eq!(lines.next().unwrap(), "10001⋮     │b = 2");
         assert_eq!(lines.next().unwrap(), "     ⋮10000│bb = 2");
+    }
+
+    #[test]
+    fn test_color_only() {
+        let config = make_config_from_args(&["--line-numbers", "--color-only"]);
+        let output = run_delta(TWO_MINUS_LINES_DIFF, &config);
+        let mut lines = output.lines().skip(5);
+        let (line_1, line_2) = (lines.next().unwrap(), lines.next().unwrap());
+        assert_eq!(strip_ansi_codes(line_1), " 1  ⋮    │-a = 1");
+        assert_eq!(strip_ansi_codes(line_2), " 2  ⋮    │-b = 2");
     }
 
     pub const TWO_MINUS_LINES_DIFF: &str = "\

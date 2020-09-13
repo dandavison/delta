@@ -1,0 +1,11 @@
+#!/bin/bash
+
+DIR=$(dirname ${BASH_SOURCE[0]})
+
+delta --help | \
+    $DIR/ansifilter | \
+    rg ' --[^-].+ <' | \
+    rg -v 'deprecated' | \
+    awk 'BEGIN{FS="--"}; {print $2}' | \
+    awk '{print $1}' | \
+    sort

@@ -32,6 +32,10 @@ impl Style {
         }
     }
 
+    pub fn from_git_str(git_style_string: &str) -> Self {
+        Self::from_str(git_style_string, None, None, true, false)
+    }
+
     /// Construct Style but interpreting 'ul', 'box', etc as applying to the decoration style.
     fn from_str_with_handling_of_special_decoration_attributes(
         style_string: &str,

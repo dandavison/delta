@@ -1,0 +1,19 @@
+#!/bin/bash
+
+commands=(
+    "delta --version"
+    "less --version | head -n1"
+    "env | grep -E '(less|pager|bat)'"
+    "printf '\e[34m\e[43mtext\e[m\n'"
+    "printf '\e[38;5;19m\e[48;5;226mtext\e[m\n'"
+    "printf '\e[38;2;0;0;255m\e[48;2;255;255;0mtext\e[m\n'"
+    "printf '⋮│─'"
+    "delta --no-gitconfig <(echo a) <(echo b) | cat -A"
+    "delta  --no-gitconfig <(echo a) <(echo b)"
+)
+
+for cmd in "${commands[@]}"; do
+    echo "> $cmd"
+    eval "$cmd"
+    echo
+done

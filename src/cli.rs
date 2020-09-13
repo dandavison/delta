@@ -234,6 +234,19 @@ pub struct Opt {
     /// --file-renamed-label.
     pub navigate: bool,
 
+    #[structopt(long = "hyperlinks")]
+    /// Render commit hashes, file names, and line numbers as hyperlinks, according to the
+    /// hyperlink spec for terminal emulators:
+    /// https://gist.github.com/egmontkob/eb114294efbcd5adb1944c9f3cb5feda. By default, file names
+    /// and line numbers link to the local file using a file URL, whereas commit hashes link to the
+    /// commit in GitHub, if the remote repository is hosted by GitHub. See
+    /// --hyperlinks-file-link-format for full control over the file URLs emitted. Hyperlinks are
+    /// supported by several common terminal emulators. However, they are not yet supported by
+    /// less, so they will not work in delta unless you install a patched fork of less (see
+    /// https://github.com/dandavison/less). If you use tmux, then you will also need a patched
+    /// fork of tmux (see https://github.com/dandavison/tmux).
+    pub hyperlinks: bool,
+
     #[structopt(long = "keep-plus-minus-markers")]
     /// Prefix added/removed lines with a +/- character, exactly as git does. By default, delta
     /// does not emit any prefix, so code can be copied directly from delta's output.
@@ -341,19 +354,6 @@ pub struct Opt {
     /// (overline), or the combination 'ul ol'.
     pub file_decoration_style: String,
 
-    #[structopt(long = "hyperlinks")]
-    /// Render commit hashes, file names, and line numbers as hyperlinks, according to the
-    /// hyperlink spec for terminal emulators:
-    /// https://gist.github.com/egmontkob/eb114294efbcd5adb1944c9f3cb5feda. By default, file names
-    /// and line numbers link to the local file using a file URL, whereas commit hashes link to the
-    /// commit in GitHub, if the remote repository is hosted by GitHub. See
-    /// --hyperlinks-file-link-format for full control over the file URLs emitted. Hyperlinks are
-    /// supported by several common terminal emulators. However, they are not yet supported by
-    /// less, so they will not work in delta unless you install a patched fork of less (see
-    /// https://github.com/dandavison/less). If you use tmux, then you will also need a patched
-    /// fork of tmux (see https://github.com/dandavison/tmux).
-    pub hyperlinks: bool,
-
     /// Format string for file hyperlinks. The placeholders "{path}" and "{line}" will be replaced
     /// by the absolute file path and the line number, respectively. The default value of this
     /// option creates hyperlinks using standard file URLs; your operating system should open these
@@ -443,6 +443,12 @@ pub struct Opt {
     /// Text to display in front of a renamed file path.
     pub file_renamed_label: String,
 
+    #[structopt(long = "max-line-length", default_value = "512")]
+    /// Truncate lines longer than this. To prevent any truncation, set to zero. Note that
+    /// syntax-highlighting very long lines (e.g. minified .js) will be very slow if they are not
+    /// truncated.
+    pub max_line_length: usize,
+
     /// The width of underline/overline decorations. Use --width=variable to extend decorations and
     /// background colors to the end of the text only. Otherwise background colors extend to the
     /// full terminal width.
@@ -463,6 +469,12 @@ pub struct Opt {
     /// this environment variable, in which case you don't need to do anything.
     #[structopt(long = "24-bit-color", default_value = "auto")]
     pub true_color: String,
+
+    /// Whether to examine ANSI color escape sequences in raw lines received from Git and handle
+    /// lines colored in certain ways specially. This is on by default: it is how Delta supports
+    /// Git's --color-moved feature. Set this to "false" to disable this behavior.
+    #[structopt(long = "inspect-raw-lines", default_value = "true")]
+    pub inspect_raw_lines: String,
 
     /// Whether to use a pager when displaying output. Options are: auto, always, and never. The
     /// default pager is `less`: this can be altered by setting the environment variables BAT_PAGER
@@ -549,18 +561,20 @@ pub struct Opt {
 
 #[derive(Default, Clone, Debug)]
 pub struct ComputedValues {
+    pub available_terminal_width: usize,
+    pub background_color_extends_to_terminal_width: bool,
+    pub decorations_width: Width,
+    pub inspect_raw_lines: InspectRawLines,
     pub is_light_mode: bool,
+    pub line_numbers_mode: LineNumbersMode,
+    pub paging_mode: PagingMode,
+    pub syntax_dummy_theme: SyntaxTheme,
     pub syntax_set: SyntaxSet,
     pub syntax_theme: Option<SyntaxTheme>,
-    pub syntax_dummy_theme: SyntaxTheme,
     pub true_color: bool,
-    pub available_terminal_width: usize,
-    pub decorations_width: Width,
-    pub background_color_extends_to_terminal_width: bool,
-    pub paging_mode: PagingMode,
 }
 
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, PartialEq)]
 pub enum Width {
     Fixed(usize),
     Variable,
@@ -569,6 +583,31 @@ pub enum Width {
 impl Default for Width {
     fn default() -> Self {
         Width::Variable
+    }
+}
+
+#[derive(Clone, Debug)]
+pub enum InspectRawLines {
+    True,
+    False,
+}
+
+impl Default for InspectRawLines {
+    fn default() -> Self {
+        InspectRawLines::False
+    }
+}
+
+#[derive(Clone, Debug, PartialEq)]
+pub enum LineNumbersMode {
+    None,
+    First,
+    Full,
+}
+
+impl Default for LineNumbersMode {
+    fn default() -> Self {
+        LineNumbersMode::First
     }
 }
 

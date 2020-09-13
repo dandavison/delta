@@ -1,11 +1,11 @@
 #[cfg(test)]
 mod tests {
-    use console::strip_ansi_codes;
-
-    use crate::paint;
+    use crate::ansi::{self, strip_ansi_codes};
+    use crate::delta::State;
     use crate::style;
     use crate::tests::ansi_test_utils::ansi_test_utils;
     use crate::tests::integration_test_utils::integration_test_utils;
+    use crate::tests::test_utils::test_utils;
 
     #[test]
     fn test_added_file() {
@@ -39,7 +39,22 @@ mod tests {
         let config = integration_test_utils::make_config_from_args(&[]);
         let output = integration_test_utils::run_delta(RENAMED_FILE_INPUT, &config);
         let output = strip_ansi_codes(&output);
-        assert!(output.contains("\nrenamed: a.py ⟶   b.py\n"));
+        println!("{}", output);
+        assert!(test_utils::contains_once(
+            &output,
+            "\nrenamed: a.py ⟶   b.py\n"
+        ));
+    }
+
+    #[test]
+    fn test_renamed_file_with_changes() {
+        let config = integration_test_utils::make_config_from_args(&[]);
+        let output = integration_test_utils::run_delta(RENAMED_FILE_WITH_CHANGES_INPUT, &config);
+        let output = strip_ansi_codes(&output);
+        println!("{}", output);
+        assert!(test_utils::contains_once(
+            &output,
+            "\nrenamed: Casks/font-dejavusansmono-nerd-font.rb ⟶   Casks/font-dejavu-sans-mono-nerd-font.rb\n"));
     }
 
     #[test]
@@ -103,7 +118,7 @@ mod tests {
 
     #[test]
     fn test_diff_unified_two_directories() {
-        let config = integration_test_utils::make_config_from_args(&[]);
+        let config = integration_test_utils::make_config_from_args(&["--width", "80"]);
         let output = integration_test_utils::run_delta(DIFF_UNIFIED_TWO_DIRECTORIES, &config);
         let output = strip_ansi_codes(&output);
         let mut lines = output.split('\n');
@@ -795,6 +810,28 @@ src/align.rs
     }
 
     #[test]
+    fn test_hunk_header_style_raw_no_decoration_with_line_numbers() {
+        let config = integration_test_utils::make_config_from_args(&[
+            "--hunk-header-style",
+            "raw",
+            "--hunk-header-decoration-style",
+            "omit",
+            "--line-numbers",
+        ]);
+        let output = integration_test_utils::run_delta(GIT_DIFF_SINGLE_HUNK, &config);
+        assert!(output.contains("
+@@ -71,11 +71,8 @@ impl<'a> Alignment<'a> {"));
+        assert!(!output.contains("
+
+@@ -71,11 +71,8 @@ impl<'a> Alignment<'a> {"));
+        ansi_test_utils::assert_line_has_no_color(
+            &output,
+            9,
+            "@@ -71,11 +71,8 @@ impl<'a> Alignment<'a> {",
+        );
+    }
+
+    #[test]
     fn test_hunk_header_style_colored_input_color_is_stripped_under_normal() {
         let config = integration_test_utils::make_config_from_args(&[
             "--hunk-header-style",
@@ -999,6 +1036,7 @@ impl<'a> Alignment<'a> {
             11,
             "impl<'a> Alignment<'a> { ",
             "rs",
+            State::HunkHeader,
             &config,
         );
         ansi_test_utils::assert_line_has_no_color(&output, 12, "─────────────────────────┘");
@@ -1090,7 +1128,7 @@ impl<'a> Alignment<'a> { │
                 line,
                 &style
                     .ansi_term_style
-                    .paint(paint::ANSI_CSI_CLEAR_TO_EOL)
+                    .paint(ansi::ANSI_CSI_CLEAR_TO_EOL)
                     .to_string()
             );
         } else {
@@ -1099,7 +1137,7 @@ impl<'a> Alignment<'a> { │
                 line,
                 &style
                     .ansi_term_style
-                    .paint(paint::ANSI_CSI_CLEAR_TO_BOL)
+                    .paint(ansi::ANSI_CSI_CLEAR_TO_BOL)
                     .to_string()
             );
         }
@@ -1131,8 +1169,9 @@ impl<'a> Alignment<'a> { │
         ansi_test_utils::assert_line_is_syntax_highlighted(
             &output,
             12,
-            "         for (i, x_i) in self.x.iter().enumerate() {",
+            "        for (i, x_i) in self.x.iter().enumerate() {",
             "rs",
+            State::HunkZero,
             &config,
         );
     }
@@ -1337,6 +1376,30 @@ diff --git a/a.py b/b.py
 similarity index 100%
 rename from a.py
 rename to b.py
+";
+
+    const RENAMED_FILE_WITH_CHANGES_INPUT: &str = "\
+commit 5a6dd572797813525199c32e26471e88732cae1f
+Author: Waldir Pimenta <waldyrious@gmail.com>
+Date:   Sat Jul 11 19:14:43 2020 +0100
+
+    Rename font-dejavusansmono-nerd-font→font-dejavu-sans-mono-nerd-font
+    
+    This makes the filename more readable, and is consistent with `font-dejavu-sans-mono-for-powerline`.
+
+diff --git a/Casks/font-dejavusansmono-nerd-font.rb b/Casks/font-dejavu-sans-mono-nerd-font.rb
+similarity index 95%
+rename from Casks/font-dejavusansmono-nerd-font.rb
+rename to Casks/font-dejavu-sans-mono-nerd-font.rb
+index 2c8b440f..d1c1b0f3 100644
+--- a/Casks/font-dejavusansmono-nerd-font.rb
++++ b/Casks/font-dejavu-sans-mono-nerd-font.rb
+@@ -1,4 +1,4 @@
+-cask 'font-dejavusansmono-nerd-font' do
++cask 'font-dejavu-sans-mono-nerd-font' do
+   version '2.1.0'
+   sha256 '3fbcc4904c88f68d24c8b479784a1aba37f2d78b1162d21f6fc85a58ffcc0e0f'
+ 
 ";
 
     const DIFF_UNIFIED_TWO_FILES: &str = "\
