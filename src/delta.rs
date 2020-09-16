@@ -193,6 +193,14 @@ where
 
 /// Should a handle_* function be called on this element?
 fn should_handle(state: &State, config: &Config) -> bool {
+    // If interactive.diffFilter is enabled (color-only=true),
+    // output must be same as input, and must not be handled.
+    if config.color_only && (
+        *state == State::FileMeta ||
+        *state == State::CommitMeta
+    ) {
+        return false;
+    }
     if *state == State::HunkHeader && config.line_numbers {
         return true;
     }
