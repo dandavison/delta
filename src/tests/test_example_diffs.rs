@@ -832,6 +832,33 @@ src/align.rs
     }
 
     #[test]
+    fn test_diff_interactive_filter_has_same_output_with_corresponding_input() {
+        let config = integration_test_utils::make_config_from_args(&[
+            "--color-only",
+            "true",
+            "--file-style",
+            "blue",
+            "--commit-style",
+            "omit",
+            "--hunk-header-style",
+            "omit",
+            "--hunk-header-decoration-style",
+            "omit",
+        ]);
+        let output = integration_test_utils::run_delta(GIT_DIFF_SINGLE_HUNK, &config);
+
+        let output = strip_ansi_codes(&output);
+        let output_lines: Vec<&str> = output.split('\n').collect();
+        let input_lines: Vec<&str> = GIT_DIFF_SINGLE_HUNK.split('\n').collect();
+
+        assert_eq!(input_lines.len(), output_lines.len());
+
+        for n in 0..input_lines.len() {
+            assert_eq!(input_lines[n], output_lines[n]);
+        }
+    }
+
+    #[test]
     fn test_hunk_header_style_colored_input_color_is_stripped_under_normal() {
         let config = integration_test_utils::make_config_from_args(&[
             "--hunk-header-style",
