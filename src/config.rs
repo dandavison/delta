@@ -20,6 +20,7 @@ use crate::style::{self, Style};
 pub struct Config {
     pub available_terminal_width: usize,
     pub background_color_extends_to_terminal_width: bool,
+    pub color_only: bool,
     pub commit_style: Style,
     pub decorations_width: cli::Width,
     pub file_added_label: String,
@@ -148,6 +149,7 @@ impl From<cli::Opt> for Config {
             background_color_extends_to_terminal_width: opt
                 .computed
                 .background_color_extends_to_terminal_width,
+            color_only: opt.color_only,
             commit_style,
             decorations_width: opt.computed.decorations_width,
             file_added_label: opt.file_added_label,
