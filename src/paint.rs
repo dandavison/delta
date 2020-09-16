@@ -260,6 +260,9 @@ impl<'a> Painter<'a> {
                 .iter()
                 .zip_eq(diff_style_sections.iter()),
         ) {
+            if state == &State::HunkHeader && config.color_only {
+                continue;
+            }
             let (mut line, line_is_empty) = Painter::paint_line(
                 syntax_sections,
                 diff_sections,
