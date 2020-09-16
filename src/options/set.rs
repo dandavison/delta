@@ -19,8 +19,8 @@ use crate::options::option_value::{OptionValue, ProvenancedOptionValue};
 use crate::options::{self, theme};
 
 macro_rules! set_options {
-	([$( $field_ident:ident ),* ],
-     $opt:expr, $builtin_features:expr, $git_config:expr, $arg_matches:expr, $expected_option_name_map:expr, $check_names:expr) => {
+    ([$( $field_ident:ident ),* ],
+    $opt:expr, $builtin_features:expr, $git_config:expr, $arg_matches:expr, $expected_option_name_map:expr, $check_names:expr) => {
         let mut option_names = HashSet::new();
         $(
             let kebab_case_field_name = stringify!($field_ident).replace("_", "-");
@@ -59,7 +59,7 @@ macro_rules! set_options {
                              &option_names - &expected_option_names));
             }
         }
-	}
+    }
 }
 
 pub fn set_options(
