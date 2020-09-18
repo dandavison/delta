@@ -193,14 +193,6 @@ where
 
 /// Should a handle_* function be called on this element?
 fn should_handle(state: &State, config: &Config) -> bool {
-    // If interactive.diffFilter is enabled (color-only=true),
-    // output must be same as input, and must not be handled.
-    if config.color_only && (
-        *state == State::FileMeta ||
-        *state == State::CommitMeta
-    ) {
-        return false;
-    }
     if *state == State::HunkHeader && config.line_numbers {
         return true;
     }
@@ -442,9 +434,7 @@ fn handle_hunk_header_line(
             s if s.len() > 0 => format!("{} ", s),
             s => s,
         };
-        if !config.color_only {
-            writeln!(painter.writer)?;
-        }
+        writeln!(painter.writer)?;
         if !line.is_empty() {
             let lines = vec![(line, State::HunkHeader)];
             let syntax_style_sections = Painter::get_syntax_style_sections_for_lines(
@@ -465,35 +455,24 @@ fn handle_hunk_header_line(
                 Some(false),
             );
             painter.output_buffer.pop(); // trim newline
-            if !painter.output_buffer.is_empty() {
-                draw_fn(
-                    painter.writer,
-                    &painter.output_buffer,
-                    &painter.output_buffer,
-                    &config.decorations_width,
-                    config.hunk_header_style,
-                    decoration_ansi_term_style,
-                )?;
-            }
+            draw_fn(
+                painter.writer,
+                &painter.output_buffer,
+                &painter.output_buffer,
+                &config.decorations_width,
+                config.hunk_header_style,
+                decoration_ansi_term_style,
+            )?;
             painter.output_buffer.clear();
         }
     };
-
-    if config.color_only && !config.hunk_header_style.is_raw {
-        painter.emit()?;
-        writeln!(
-            painter.writer,
-            "{}",
-            format::format_raw_line(&raw_line, config)
-        )?;
-    }
 
     // Emit a single line number, or prepare for full line-numbering
     if config.line_numbers {
         painter
             .line_numbers_data
             .initialize_hunk(line_numbers, plus_file.to_string());
-    } else if config.line_numbers_show_first_line_number && !config.color_only && !config.hunk_header_style.is_raw {
+    } else if config.line_numbers_show_first_line_number && !config.hunk_header_style.is_raw {
         let plus_line_number = line_numbers[line_numbers.len() - 1].0;
         let formatted_plus_line_number = if config.hyperlinks {
             features::hyperlinks::format_osc8_file_hyperlink(
