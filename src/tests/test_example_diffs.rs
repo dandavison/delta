@@ -836,6 +836,50 @@ src/align.rs
     }
 
     #[test]
+    fn test_color_only_output_is_in_one_to_one_correspondence_with_input() {
+        _do_test_output_is_in_one_to_one_correspondence_with_input(&["--color-only", "true"]);
+        _do_test_output_is_in_one_to_one_correspondence_with_input(&[
+            "--color-only",
+            "true",
+            "--file-style",
+            "blue",
+            "--commit-style",
+            "omit",
+            "--hunk-header-style",
+            "omit",
+            "--hunk-header-decoration-style",
+            "omit",
+        ]);
+        _do_test_output_is_in_one_to_one_correspondence_with_input(&[
+            "--color-only",
+            "true",
+            "--file-style",
+            "blue",
+            "--commit-style",
+            "red",
+            "--hunk-header-style",
+            "syntax",
+            "--hunk-header-decoration-style",
+            "box",
+        ]);
+    }
+
+    fn _do_test_output_is_in_one_to_one_correspondence_with_input(args: &[&str]) {
+        let config = integration_test_utils::make_config_from_args(args);
+        let output = integration_test_utils::run_delta(GIT_DIFF_SINGLE_HUNK, &config);
+
+        let output = strip_ansi_codes(&output);
+        let output_lines: Vec<&str> = output.split('\n').collect();
+        let input_lines: Vec<&str> = GIT_DIFF_SINGLE_HUNK.split('\n').collect();
+
+        assert_eq!(input_lines.len(), output_lines.len());
+
+        for n in 0..input_lines.len() {
+            assert_eq!(input_lines[n], output_lines[n]);
+        }
+    }
+
+    #[test]
     fn test_hunk_header_style_colored_input_color_is_stripped_under_normal() {
         let config = integration_test_utils::make_config_from_args(&[
             "--hunk-header-style",
