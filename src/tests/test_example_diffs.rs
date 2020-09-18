@@ -819,11 +819,15 @@ src/align.rs
             "--line-numbers",
         ]);
         let output = integration_test_utils::run_delta(GIT_DIFF_SINGLE_HUNK, &config);
-        assert!(output.contains("
-@@ -71,11 +71,8 @@ impl<'a> Alignment<'a> {"));
-        assert!(!output.contains("
+        assert!(output.contains(
+            "
+@@ -71,11 +71,8 @@ impl<'a> Alignment<'a> {"
+        ));
+        assert!(!output.contains(
+            "
 
-@@ -71,11 +71,8 @@ impl<'a> Alignment<'a> {"));
+@@ -71,11 +71,8 @@ impl<'a> Alignment<'a> {"
+        ));
         ansi_test_utils::assert_line_has_no_color(
             &output,
             9,
