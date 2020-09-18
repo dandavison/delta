@@ -429,7 +429,9 @@ fn handle_hunk_header_line(
             config.hunk_header_style,
             decoration_ansi_term_style,
         )?;
-    } else if !config.hunk_header_style.is_omitted {
+    } else if config.hunk_header_style.is_omitted {
+        writeln!(painter.writer)?;
+    } else {
         let line = match painter.prepare(&raw_code_fragment, false) {
             s if s.len() > 0 => format!("{} ", s),
             s => s,
