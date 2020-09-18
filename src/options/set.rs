@@ -192,6 +192,10 @@ pub fn set_options(
     // there (does not emit lines in 1-1 correspondence with raw git output). See #274.
     if opt.color_only {
         opt.side_by_side = false;
+        opt.file_style = "raw".to_string();
+        opt.commit_style = "raw".to_string();
+        opt.hunk_header_style = "raw".to_string();
+        opt.hunk_header_decoration_style = "none".to_string();
     }
 }
 
