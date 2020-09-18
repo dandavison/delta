@@ -832,8 +832,9 @@ src/align.rs
     }
 
     #[test]
-    fn test_diff_interactive_filter_has_same_output_with_corresponding_input() {
-        let config = integration_test_utils::make_config_from_args(&[
+    fn test_color_only_output_is_in_one_to_one_correspondence_with_input() {
+        _do_test_output_is_in_one_to_one_correspondence_with_input(&["--color-only", "true"]);
+        _do_test_output_is_in_one_to_one_correspondence_with_input(&[
             "--color-only",
             "true",
             "--file-style",
@@ -845,6 +846,22 @@ src/align.rs
             "--hunk-header-decoration-style",
             "omit",
         ]);
+        _do_test_output_is_in_one_to_one_correspondence_with_input(&[
+            "--color-only",
+            "true",
+            "--file-style",
+            "blue",
+            "--commit-style",
+            "red",
+            "--hunk-header-style",
+            "syntax",
+            "--hunk-header-decoration-style",
+            "box",
+        ]);
+    }
+
+    fn _do_test_output_is_in_one_to_one_correspondence_with_input(args: &[&str]) {
+        let config = integration_test_utils::make_config_from_args(args);
         let output = integration_test_utils::run_delta(GIT_DIFF_SINGLE_HUNK, &config);
 
         let output = strip_ansi_codes(&output);
