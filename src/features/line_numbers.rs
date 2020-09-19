@@ -559,6 +559,21 @@ pub mod tests {
         assert_eq!(strip_ansi_codes(line_2), " 2  ⋮    │-b = 2");
     }
 
+    #[test]
+    fn test_hunk_header_style_is_omit() {
+        let config = make_config_from_args(&["--line-numbers", "--hunk-header-style", "omit"]);
+        let output = run_delta(TWO_LINE_DIFFS, &config);
+        let output = strip_ansi_codes(&output);
+        let mut lines = output.lines().skip(4);
+        assert_eq!(lines.next().unwrap(), " 1  ⋮ 1  │a = 1");
+        assert_eq!(lines.next().unwrap(), " 2  ⋮    │b = 2");
+        assert_eq!(lines.next().unwrap(), "    ⋮ 2  │bb = 2");
+        assert_eq!(lines.next().unwrap(), "");
+        assert_eq!(lines.next().unwrap(), "499 ⋮499 │a = 3");
+        assert_eq!(lines.next().unwrap(), "500 ⋮    │b = 4");
+        assert_eq!(lines.next().unwrap(), "    ⋮500 │bb = 4");
+    }
+
     pub const TWO_MINUS_LINES_DIFF: &str = "\
 diff --git i/a.py w/a.py
 index 223ca50..e69de29 100644
@@ -589,6 +604,21 @@ index 223ca50..367a6f6 100644
  a = 1
 -b = 2
 +bb = 2
+";
+
+    const TWO_LINE_DIFFS: &str = "\
+diff --git i/a.py w/a.py
+index 223ca50..367a6f6 100644
+--- i/a.py
++++ w/a.py
+@@ -1,2 +1,2 @@
+ a = 1
+-b = 2
++bb = 2
+@@ -499,2 +499,2 @@
+ a = 3
+-b = 4
++bb = 4
 ";
 
     const FIVE_DIGIT_LINE_NUMBER_DIFF: &str = "\
