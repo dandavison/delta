@@ -841,6 +841,13 @@ src/align.rs
         _do_test_output_is_in_one_to_one_correspondence_with_input(&[
             "--color-only",
             "true",
+            "--hunk-header-style",
+            "normal",
+            "--line-numbers",
+        ]);
+        _do_test_output_is_in_one_to_one_correspondence_with_input(&[
+            "--color-only",
+            "true",
             "--file-style",
             "blue",
             "--commit-style",
@@ -867,16 +874,11 @@ src/align.rs
     fn _do_test_output_is_in_one_to_one_correspondence_with_input(args: &[&str]) {
         let config = integration_test_utils::make_config_from_args(args);
         let output = integration_test_utils::run_delta(GIT_DIFF_SINGLE_HUNK, &config);
-
         let output = strip_ansi_codes(&output);
-        let output_lines: Vec<&str> = output.split('\n').collect();
-        let input_lines: Vec<&str> = GIT_DIFF_SINGLE_HUNK.split('\n').collect();
 
-        assert_eq!(input_lines.len(), output_lines.len());
-
-        for n in 0..input_lines.len() {
-            assert_eq!(input_lines[n], output_lines[n]);
-        }
+        let input_lines = GIT_DIFF_SINGLE_HUNK.split('\n').count();
+        let output_lines = output.split('\n').count();
+        assert_eq!(input_lines, output_lines);
     }
 
     #[test]
