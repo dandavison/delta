@@ -231,25 +231,20 @@ fn handle_commit_meta_header_line(
         return Ok(());
     }
     let decoration_ansi_term_style;
-    let mut pad = false;
     let draw_fn = match config.commit_style.decoration_style {
         DecorationStyle::Box(style) => {
-            pad = true;
             decoration_ansi_term_style = style;
             draw::write_boxed
         }
         DecorationStyle::BoxWithUnderline(style) => {
-            pad = true;
             decoration_ansi_term_style = style;
             draw::write_boxed_with_underline
         }
         DecorationStyle::BoxWithOverline(style) => {
-            pad = true;
             decoration_ansi_term_style = style;
             draw::write_boxed // TODO: not implemented
         }
         DecorationStyle::BoxWithUnderOverline(style) => {
-            pad = true;
             decoration_ansi_term_style = style;
             draw::write_boxed // TODO: not implemented
         }
@@ -287,8 +282,8 @@ fn handle_commit_meta_header_line(
 
     draw_fn(
         painter.writer,
-        &format!("{}{}", formatted_line, if pad { " " } else { "" }),
-        &format!("{}{}", formatted_raw_line, if pad { " " } else { "" }),
+        &format!("{}", formatted_line),
+        &format!("{}", formatted_raw_line),
         &config.decorations_width,
         config.commit_style,
         decoration_ansi_term_style,
@@ -322,25 +317,20 @@ fn handle_generic_file_meta_header_line(
         return Ok(());
     }
     let decoration_ansi_term_style;
-    let mut pad = false;
     let draw_fn = match config.file_style.decoration_style {
         DecorationStyle::Box(style) => {
-            pad = true;
             decoration_ansi_term_style = style;
             draw::write_boxed
         }
         DecorationStyle::BoxWithUnderline(style) => {
-            pad = true;
             decoration_ansi_term_style = style;
             draw::write_boxed_with_underline
         }
         DecorationStyle::BoxWithOverline(style) => {
-            pad = true;
             decoration_ansi_term_style = style;
             draw::write_boxed // TODO: not implemented
         }
         DecorationStyle::BoxWithUnderOverline(style) => {
-            pad = true;
             decoration_ansi_term_style = style;
             draw::write_boxed // TODO: not implemented
         }
@@ -364,8 +354,8 @@ fn handle_generic_file_meta_header_line(
     writeln!(painter.writer)?;
     draw_fn(
         painter.writer,
-        &format!("{}{}", line, if pad { " " } else { "" }),
-        &format!("{}{}", raw_line, if pad { " " } else { "" }),
+        &format!("{}", line),
+        &format!("{}", raw_line),
         &config.decorations_width,
         config.file_style,
         decoration_ansi_term_style,
@@ -423,8 +413,8 @@ fn handle_hunk_header_line(
         }
         draw_fn(
             painter.writer,
-            &format!("{} ", line),
-            &format!("{} ", raw_line),
+            &format!("{}", line),
+            &format!("{}", raw_line),
             &config.decorations_width,
             config.hunk_header_style,
             decoration_ansi_term_style,
@@ -433,7 +423,7 @@ fn handle_hunk_header_line(
         writeln!(painter.writer)?;
     } else {
         let line = match painter.prepare(&raw_code_fragment, false) {
-            s if s.len() > 0 => format!("{} ", s),
+            s if s.len() > 0 => format!("{}", s),
             s => s,
         };
         writeln!(painter.writer)?;

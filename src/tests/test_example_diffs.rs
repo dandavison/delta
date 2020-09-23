@@ -891,9 +891,7 @@ src/align.rs
             } else {
                 output_lines[n]
             };
-            // TODO: this trim() can be removed by simplifing width_boxed of draw_fn.
-            assert_eq!(input_line.trim(), output_line.trim());
-            // assert_eq!(input_line, output_line);
+            assert_eq!(input_line, output_line);
         }
     }
 
@@ -1080,7 +1078,7 @@ impl<'a> Alignment<'a> { │
         let output = strip_ansi_codes(&output);
         assert!(output.contains(
             "
-impl<'a> Alignment<'a> { 
+impl<'a> Alignment<'a> {
 ────────────────────────"
         ));
     }
@@ -1100,7 +1098,7 @@ impl<'a> Alignment<'a> {
         ansi_test_utils::assert_line_is_syntax_highlighted(
             &output,
             11,
-            "impl<'a> Alignment<'a> { ",
+            "impl<'a> Alignment<'a> {",
             "rs",
             State::HunkHeader,
             &config,
