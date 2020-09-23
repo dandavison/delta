@@ -876,9 +876,25 @@ src/align.rs
         let output = integration_test_utils::run_delta(GIT_DIFF_SINGLE_HUNK, &config);
         let output = strip_ansi_codes(&output);
 
-        let input_lines = GIT_DIFF_SINGLE_HUNK.split('\n').count();
-        let output_lines = output.split('\n').count();
-        assert_eq!(input_lines, output_lines);
+        let input_lines: Vec<&str> = GIT_DIFF_SINGLE_HUNK.split('\n').collect();
+        let output_lines: Vec<&str> = output.split('\n').collect();
+        assert_eq!(input_lines.len(), output_lines.len());
+
+        // Although git patch options only checks the line counts of input and output,
+        // we should check if they are identical as well to avoid unexpected decoration.
+        for n in 0..input_lines.len() {
+            let input_line = input_lines[n];
+            // If config.line_numbers is enabled,
+            // we should remove line_numbers decoration while checking.
+            let output_line = if config.line_numbers && n > 11 && n < input_lines.len() - 1 {
+                &output_lines[n][14..]
+            } else {
+                output_lines[n]
+            };
+            // TODO: this trim() can be removed by simplifing width_boxed of draw_fn.
+            assert_eq!(input_line.trim(), output_line.trim());
+            // assert_eq!(input_line, output_line);
+        }
     }
 
     #[test]
