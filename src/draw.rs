@@ -39,7 +39,7 @@ pub fn write_boxed(
     } else {
         box_drawing::light::UP_LEFT
     };
-    let box_width = ansi::measure_text_width(text) + 1;
+    let box_width = ansi::measure_text_width(text);
     write_boxed_partial(
         writer,
         text,
@@ -62,7 +62,7 @@ pub fn write_boxed_with_underline(
     text_style: Style,
     decoration_style: ansi_term::Style,
 ) -> std::io::Result<()> {
-    let box_width = ansi::measure_text_width(text) + 1;
+    let box_width = ansi::measure_text_width(text);
     write_boxed_with_horizontal_whisker(
         writer,
         text,
@@ -260,9 +260,9 @@ fn write_boxed_partial(
         decoration_style.paint(down_left),
     )?;
     if text_style.is_raw {
-        write!(writer, "{} ", raw_text)?;
+        write!(writer, "{}", raw_text)?;
     } else {
-        write!(writer, "{} ", text_style.paint(text))?;
+        write!(writer, "{}", text_style.paint(text))?;
     }
     write!(
         writer,
