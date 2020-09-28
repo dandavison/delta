@@ -411,6 +411,15 @@ pub fn user_supplied_option(option: &str, arg_matches: &clap::ArgMatches) -> boo
     arg_matches.occurrences_of(option) > 0
 }
 
+pub fn should_skip_config(option: &str, skip_config: &String) -> bool {
+    let skip_config_vec: Vec<&str> = skip_config.split(',').collect();
+    if skip_config_vec.contains(&option) {
+        true
+    } else {
+        false
+    }
+}
+
 pub fn delta_unreachable(message: &str) -> ! {
     eprintln!(
         "{} This should not be possible. \

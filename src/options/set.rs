@@ -26,13 +26,15 @@ macro_rules! set_options {
             let kebab_case_field_name = stringify!($field_ident).replace("_", "-");
             let option_name = $expected_option_name_map[kebab_case_field_name.as_str()];
             if !$crate::config::user_supplied_option(&option_name, $arg_matches) {
-                if let Some(value) = $crate::options::get::get_option_value(
-                    option_name,
-                    &$builtin_features,
-                    $opt,
-                    $git_config
-                ) {
-                    $opt.$field_ident = value;
+                if !$crate::config::should_skip_config(&option_name, &$opt.skip_config) {
+                    if let Some(value) = $crate::options::get::get_option_value(
+                        option_name,
+                        &$builtin_features,
+                        $opt,
+                        $git_config
+                    ) {
+                        $opt.$field_ident = value;
+                    }
                 }
             }
             if $check_names {
@@ -171,6 +173,7 @@ pub fn set_options(
             tokenization_regex,
             true_color,
             whitespace_error_style,
+            skip_config,
             width,
             zero_style
         ],
