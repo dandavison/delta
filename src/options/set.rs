@@ -767,4 +767,27 @@ pub mod tests {
 
         remove_file(git_config_path).unwrap();
     }
+
+    #[test]
+    fn test_skip_git_config() {
+        let git_config_contents = b"
+[delta]
+    line-numbers = true
+    file-style = blue
+    hunk-header-style = omit
+";
+        let git_config_path = "delta__test_skip_git_config";
+
+        let opt = integration_test_utils::make_options_from_args_and_git_config(
+            &["--skip-config", "line-numbers,file"],
+            Some(git_config_contents),
+            Some(git_config_path),
+        );
+
+        assert_eq!(opt.line_numbers, false);
+        assert_eq!(opt.file_style, "blue");
+        assert_eq!(opt.hunk_header_style, "omit");
+
+        remove_file(git_config_path).unwrap();
+    }
 }
