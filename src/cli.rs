@@ -507,6 +507,11 @@ pub struct Opt {
     #[structopt(long = "whitespace-error-style", default_value = "auto auto")]
     pub whitespace_error_style: String,
 
+    /// Disable gitconfig settings. To disable multiple settings,
+    /// concatinate with ',' such as "--skip-config=line-numbers,file-style".
+    #[structopt(short = "x", long = "skip-config", default_value = "")]
+    pub skip_config: String,
+
     #[structopt(long = "minus-color")]
     /// Deprecated: use --minus-style='normal my_background_color'.
     pub deprecated_minus_background_color: Option<String>,
