@@ -109,12 +109,16 @@ fn diff(
             plus_file.unwrap_or_else(die),
         ])
         .stdout(process::Stdio::piped())
-        .spawn();
+        .spawn()
+        .unwrap_or_else(|err| {
+            eprintln!("Failed to execute the command: diff: {}", err);
+            process::exit(1);
+        });
 
     let mut output_type = OutputType::from_mode(config.paging_mode, None, &config).unwrap();
     let mut writer = output_type.handle().unwrap();
     if let Err(error) = delta(
-        BufReader::new(diff_process.unwrap().stdout.unwrap()).byte_lines(),
+        BufReader::new(diff_process.stdout.unwrap()).byte_lines(),
         &mut writer,
         &config,
     ) {
