@@ -50,15 +50,18 @@ impl OutputType {
     ) -> Result<Self> {
         let mut replace_arguments_to_less = false;
 
-        let pager_from_env = match (env::get_env_var("BAT_PAGER"), env::get_env_var("PAGER")) {
-            (Some(bat_pager), _) => Some(bat_pager),
-            (_, Some(pager)) => {
-                // less needs to be called with the '-R' option in order to properly interpret the
-                // ANSI color sequences printed by bat. If someone has set PAGER="less -F", we
-                // therefore need to overwrite the arguments and add '-R'.
-                //
-                // We only do this for PAGER (as it is not specific to 'bat'), not for BAT_PAGER
-                // or bats '--pager' command line option.
+        let pager_from_env = match (
+            env::get_env_var("DELTA_PAGER"),
+            env::get_env_var("BAT_PAGER"),
+            env::get_env_var("PAGER"),
+        ) {
+            (Some(delta_pager), _, _) => Some(delta_pager),
+            (None, Some(bat_pager), _) => Some(bat_pager),
+            (None, None, Some(pager)) => {
+                // less needs to be called with the '-R' option in order to properly interpret ANSI
+                // color sequences. If someone has set PAGER="less -F", we therefore need to
+                // overwrite the arguments and add '-R'.
+                // We only do this for PAGER, since it is used in other contexts.
                 replace_arguments_to_less = true;
                 Some(pager)
             }

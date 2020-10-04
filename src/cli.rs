@@ -477,8 +477,8 @@ pub struct Opt {
     pub inspect_raw_lines: String,
 
     /// Whether to use a pager when displaying output. Options are: auto, always, and never. The
-    /// default pager is `less`: this can be altered by setting the environment variables BAT_PAGER
-    /// or PAGER (BAT_PAGER has priority).
+    /// default pager is `less`: this can be altered by setting the environment variables
+    /// DELTA_PAGER, BAT_PAGER, or PAGER (and that is their order of priority).
     #[structopt(long = "paging", default_value = "auto")]
     pub paging_mode: String,
 
