@@ -102,7 +102,8 @@ fn diff(
         eprintln!("Usage: delta minus_file plus_file");
         process::exit(1);
     };
-    let diff_process = process::Command::new(PathBuf::from("diff"))
+    let command = "diff";
+    let diff_process = process::Command::new(PathBuf::from(command))
         .arg("-u")
         .args(&[
             minus_file.unwrap_or_else(die),
@@ -111,7 +112,7 @@ fn diff(
         .stdout(process::Stdio::piped())
         .spawn()
         .unwrap_or_else(|err| {
-            eprintln!("Failed to execute the command: diff: {}", err);
+            eprintln!("Failed to execute the command '{}': {}", command, err);
             process::exit(1);
         });
 
