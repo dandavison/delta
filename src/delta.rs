@@ -136,11 +136,9 @@ where
             painter.paint_buffered_minus_and_plus_lines();
             state = State::HunkHeader;
             painter.set_highlighter();
-            if should_handle(&state, config) {
-                painter.emit()?;
-                handle_hunk_header_line(&mut painter, &line, &raw_line, &plus_file, config)?;
-                continue;
-            }
+            painter.emit()?;
+            handle_hunk_header_line(&mut painter, &line, &raw_line, &plus_file, config)?;
+            continue;
         } else if source == Source::DiffUnified && line.starts_with("Only in ")
             || line.starts_with("Submodule ")
             || line.starts_with("Binary files ")
@@ -193,9 +191,6 @@ where
 
 /// Should a handle_* function be called on this element?
 fn should_handle(state: &State, config: &Config) -> bool {
-    if *state == State::HunkHeader && config.line_numbers {
-        return true;
-    }
     let style = config.get_style(state);
     !(style.is_raw && style.decoration_style == DecorationStyle::NoDecoration)
 }
@@ -381,20 +376,25 @@ fn handle_hunk_header_line(
     config: &Config,
 ) -> std::io::Result<()> {
     let decoration_ansi_term_style;
+    let mut pad = false;
     let draw_fn = match config.hunk_header_style.decoration_style {
         DecorationStyle::Box(style) => {
+            pad = true;
             decoration_ansi_term_style = style;
             draw::write_boxed
         }
         DecorationStyle::BoxWithUnderline(style) => {
+            pad = true;
             decoration_ansi_term_style = style;
             draw::write_boxed_with_underline
         }
         DecorationStyle::BoxWithOverline(style) => {
+            pad = true;
             decoration_ansi_term_style = style;
             draw::write_boxed // TODO: not implemented
         }
         DecorationStyle::BoxWithUnderOverline(style) => {
+            pad = true;
             decoration_ansi_term_style = style;
             draw::write_boxed // TODO: not implemented
         }
@@ -423,8 +423,8 @@ fn handle_hunk_header_line(
         }
         draw_fn(
             painter.writer,
-            &format!("{} ", line),
-            &format!("{} ", raw_line),
+            &format!("{}{}", line, if pad { " " } else { "" }),
+            &format!("{}{}", raw_line, if pad { " " } else { "" }),
             &config.decorations_width,
             config.hunk_header_style,
             decoration_ansi_term_style,

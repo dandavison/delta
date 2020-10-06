@@ -891,9 +891,7 @@ src/align.rs
             } else {
                 output_lines[n]
             };
-            // TODO: this trim() can be removed by simplifing width_boxed of draw_fn.
-            assert_eq!(input_line.trim(), output_line.trim());
-            // assert_eq!(input_line, output_line);
+            assert_eq!(input_line, output_line);
         }
     }
 
