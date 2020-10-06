@@ -36,7 +36,7 @@ Code evolves, and we all spend time studying diffs. Delta aims to make this both
 - Stylable box/line decorations to draw attention to commit, file and hunk header sections.
 - Support for Git's `--color-moved` feature.
 - Code can be copied directly from the diff (`-/+` markers are removed by default).
-- `n` and `N` keybindings to move between files in large diffs, and between diffs in `log -p` views (`--navigate`)
+- `n` and `N` key bindings to move between files in large diffs, and between diffs in `log -p` views (`--navigate`)
 
 The most convenient way to configure delta is with a `[delta]` section in `~/.gitconfig`. Here's a quick example:
 
@@ -79,8 +79,8 @@ Contents
    * [Custom features](#custom-features)
    * [diff-highlight and diff-so-fancy emulation](#diff-highlight-and-diff-so-fancy-emulation)
    * [--color-moved support](#--color-moved-support)
-   * [Navigation keybindings for large diffs](#navigation-keybindings-for-large-diffs)
-   * [24 bit color (truecolor)](#24-bit-color-truecolor)
+   * [Navigation key bindings for large diffs](#navigation-key bindings-for-large-diffs)
+   * [24 bit color (TrueColor)](#24-bit-color-truecolor)
    * [Using Delta on Windows](#using-delta-on-windows)
    * [Mouse scrolling](#mouse-scrolling)
    * [Using Delta with Magit](#using-delta-with-magit)
