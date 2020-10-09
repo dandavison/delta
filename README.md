@@ -239,6 +239,10 @@ Alternatively, delta is available in the following package managers:
     <td>Windows (<a href="https://scoop.sh/">Scoop</a>)</td>
     <td><code>scoop install delta</code></td>
   </tr>
+  <tr>
+    <td>Cargo</td>
+    <td><code>cargo install git-delta</code></td>
+  </tr>
 </table>
 
 ## Configuration
