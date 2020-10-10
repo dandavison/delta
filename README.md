@@ -207,6 +207,10 @@ Alternatively, delta is available in the following package managers:
         <code>makepkg -si</code></td>
   </tr>
   <tr>
+    <td>Cargo</td>
+    <td><code>cargo install git-delta</code></td>
+  </tr>
+  <tr>
     <td>Debian</td>
     <td><br>.deb files are on the <a href="https://github.com/dandavison/delta/releases">releases</a> page and at <a href="https://github.com/barnumbirr/delta-debian/releases">barnumbirr/delta-debian</a><br>
     <code>dpkg -i file.deb</code></td>
@@ -242,10 +246,6 @@ Alternatively, delta is available in the following package managers:
   <tr>
     <td>Windows (<a href="https://scoop.sh/">Scoop</a>)</td>
     <td><code>scoop install delta</code></td>
-  </tr>
-  <tr>
-    <td>Cargo</td>
-    <td><code>cargo install git-delta</code></td>
   </tr>
 </table>
 
