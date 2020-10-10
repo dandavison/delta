@@ -581,7 +581,10 @@ FLAGS:
         --show-syntax-themes         Show all available syntax-highlighting themes, each with an example of highlighted
                                      diff output. If diff output is supplied on standard input then this will be used
                                      for the demo. For example: `git show --color=always | delta --show-syntax-themes`
-        --no-gitconfig               Do not take any settings from git config. See GIT CONFIG section
+        --no-gitconfig               Do not take specified settings from git config.
+                                     For example: `git show | delta --no-gitconfig=line-numbers,file-style`.
+                                     You can ignore all settings by specifying `--no-gitconfig=all`.
+                                     See GIT CONFIG section.
         --raw                        Do not alter the input in any way. This is mainly intended for testing delta
         --color-only                 Do not alter the input structurally in any way, but color and highlight hunk lines
                                      according to your delta configuration. This is mainly intended for other tools that
