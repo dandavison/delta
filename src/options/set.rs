@@ -69,8 +69,10 @@ pub fn set_options(
     assets: HighlightingAssets,
 ) {
     if let Some(git_config) = git_config {
-        if opt.no_gitconfig {
+        if opt.no_gitconfig.contains(&"all".to_string()) {
             git_config.enabled = false;
+        } else if !opt.no_gitconfig.is_empty() {
+            git_config.ignored_keys = opt.no_gitconfig.clone();
         }
         set_git_config_entries(opt, git_config);
     }

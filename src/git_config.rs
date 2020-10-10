@@ -7,6 +7,7 @@ use git2;
 pub struct GitConfig {
     config: git2::Config,
     pub enabled: bool,
+    pub ignored_keys: Vec<String>,
     pub repo: Option<git2::Repository>,
 }
 
@@ -30,6 +31,7 @@ impl GitConfig {
                     config,
                     repo,
                     enabled: true,
+                    ignored_keys: vec![],
                 })
             }
             None => None,
@@ -42,6 +44,7 @@ impl GitConfig {
             config: git2::Config::open(path).unwrap(),
             repo: None,
             enabled: true,
+            ignored_keys: vec![],
         }
     }
 
@@ -49,11 +52,18 @@ impl GitConfig {
     where
         T: GitConfigGet,
     {
-        if self.enabled {
-            T::git_config_get(key, self)
-        } else {
-            None
+        if !self.enabled {
+            return None;
         }
+
+        if !self.ignored_keys.is_empty() {
+            let key_name = &key.rsplit('.').collect::<Vec<&str>>()[0];
+            if self.ignored_keys.contains(&key_name.to_string()) {
+                return None;
+            }
+        }
+
+        T::git_config_get(key, self)
     }
 }
 
