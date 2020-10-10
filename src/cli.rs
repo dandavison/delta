@@ -273,7 +273,7 @@ pub struct Opt {
     #[structopt(long = "show-syntax-themes")]
     pub show_syntax_themes: bool,
 
-    #[structopt(long = "no-gitconfig", default_value = "", use_delimiter = true)]
+    #[structopt(long = "no-gitconfig", use_delimiter = true)]
     /// Do not take specified settings from git config.
     /// For example: `git show | delta --no-gitconfig=line-numbers,file-style`.
     /// You can ignore all settings by specifying `--no-gitconfig=all`.
