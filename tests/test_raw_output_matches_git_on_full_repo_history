@@ -1,5 +1,5 @@
 #!/bin/bash
-DELTA="./target/release/delta --no-gitconfig --raw --max-line-length 0"
+DELTA="./target/release/delta --no-gitconfig=all --raw --max-line-length 0"
 ANSIFILTER="./etc/bin/ansifilter"
 GIT_ARGS="log --patch --stat --numstat"
 diff -u <(git $GIT_ARGS | $ANSIFILTER) <(git $GIT_ARGS | $DELTA | $ANSIFILTER)

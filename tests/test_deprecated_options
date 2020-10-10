@@ -1,6 +1,6 @@
 #!/bin/bash
 
-DELTA="./target/release/delta --no-gitconfig"
+DELTA="./target/release/delta --no-gitconfig=all"
 
 foreground_color=red
 for decoration_attr in box underline plain; do

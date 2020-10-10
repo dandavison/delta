@@ -8,8 +8,8 @@ commands=(
     "printf '\e[38;5;19m\e[48;5;226mtext\e[m\n'"
     "printf '\e[38;2;0;0;255m\e[48;2;255;255;0mtext\e[m\n'"
     "printf '⋮│─'"
-    "delta --no-gitconfig <(echo a) <(echo b) | cat -A"
-    "delta  --no-gitconfig <(echo a) <(echo b)"
+    "delta --no-gitconfig=all <(echo a) <(echo b) | cat -A"
+    "delta  --no-gitconfig=all <(echo a) <(echo b)"
 )
 
 for cmd in "${commands[@]}"; do

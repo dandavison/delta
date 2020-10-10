@@ -24,7 +24,7 @@ pub mod integration_test_utils {
         let mut git_config = match (git_config_contents, git_config_path) {
             (Some(contents), Some(path)) => Some(make_git_config(contents, path)),
             _ => {
-                args.push("--no-gitconfig");
+                args.push("--no-gitconfig=all");
                 None
             }
         };
