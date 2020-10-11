@@ -719,8 +719,8 @@ OPTIONS:
             this to "false" to disable this behavior [default: true]
         --paging <paging-mode>
             Whether to use a pager when displaying output. Options are: auto, always, and never. The default pager is
-            `less`: this can be altered by setting the environment variables BAT_PAGER or PAGER (BAT_PAGER has priority)
-            [default: auto]
+            `less`: this can be altered by setting the environment variables DELTA_PAGER, BAT_PAGER, or PAGER (and that
+            is their order of priority) [default: auto]
         --minus-empty-line-marker-style <minus-empty-line-marker-style>
             Style for removed empty line marker (used only if --minus-style has no background color) [default: normal auto]
         --plus-empty-line-marker-style <plus-empty-line-marker-style>
