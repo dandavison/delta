@@ -549,7 +549,7 @@ and use the executable found at `./target/release/delta`.
 ## Full --help output
 
 ```
-delta 0.4.3
+delta 0.4.4
 A viewer for git and diff output
 
 USAGE:
