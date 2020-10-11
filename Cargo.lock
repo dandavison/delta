@@ -295,7 +295,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 
 [[package]]
 name = "git-delta"
-version = "0.4.4"
+version = "0.4.5"
 dependencies = [
  "ansi_colours 1.0.1 (registry+https://github.com/rust-lang/crates.io-index)",
  "ansi_term 0.12.1 (registry+https://github.com/rust-lang/crates.io-index)",
