@@ -236,6 +236,10 @@ Alternatively, delta is available in the following package managers:
     <td><code>nix-env -iA nixpkgs.gitAndTools.delta</code>
   </tr>
   <tr>
+    <td>openSUSE Tumbleweed</td>
+    <td><code>zypper install git-delta</code>
+  </tr>
+  <tr>
     <td>Void Linux</td>
     <td><code>xbps-install -S delta</code>
   </tr>
