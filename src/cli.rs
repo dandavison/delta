@@ -241,10 +241,9 @@ pub struct Opt {
     /// and line numbers link to the local file using a file URL, whereas commit hashes link to the
     /// commit in GitHub, if the remote repository is hosted by GitHub. See
     /// --hyperlinks-file-link-format for full control over the file URLs emitted. Hyperlinks are
-    /// supported by several common terminal emulators. However, they are not yet supported by
-    /// less, so they will not work in delta unless you install a patched fork of less (see
-    /// https://github.com/dandavison/less). If you use tmux, then you will also need a patched
-    /// fork of tmux (see https://github.com/dandavison/tmux).
+    /// supported by several common terminal emulators. To make them work, you must pass the -r (as
+    /// opposed to -R) flag to less, e.g. via `export DELTA_PAGER=less -rX`. If you use tmux, then
+    /// you will also need a patched fork of tmux (see https://github.com/dandavison/tmux).
     pub hyperlinks: bool,
 
     #[structopt(long = "keep-plus-minus-markers")]
