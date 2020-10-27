@@ -837,38 +837,115 @@ src/align.rs
 
     #[test]
     fn test_color_only_output_is_in_one_to_one_correspondence_with_input() {
-        _do_test_output_is_in_one_to_one_correspondence_with_input(&["--color-only", "true"]);
-        _do_test_output_is_in_one_to_one_correspondence_with_input(&[
-            "--color-only",
-            "true",
-            "--hunk-header-style",
-            "normal",
-            "--line-numbers",
-        ]);
-        _do_test_output_is_in_one_to_one_correspondence_with_input(&[
-            "--color-only",
-            "true",
-            "--file-style",
-            "blue",
-            "--commit-style",
-            "omit",
-            "--hunk-header-style",
-            "omit",
-            "--hunk-header-decoration-style",
-            "omit",
-        ]);
-        _do_test_output_is_in_one_to_one_correspondence_with_input(&[
-            "--color-only",
-            "true",
-            "--file-style",
-            "blue",
-            "--commit-style",
-            "red",
-            "--hunk-header-style",
-            "syntax",
-            "--hunk-header-decoration-style",
-            "box",
-        ]);
+        let user_suppliable_configs: &[&[&str]] = &[
+            &["--color-only", "--light", "true"],
+            &["--color-only", "--dark", "true"],
+            &["--color-only", "--line-numbers", "true"],
+            &["--color-only", "--side-by-side", "true"],
+            &["--color-only", "--diff-highlight", "true"],
+            &["--color-only", "--diff-so-fancy", "true"],
+            &["--color-only", "--navigate", "true"],
+            &["--color-only", "--hyperlinks", "true"],
+            &["--color-only", "--keep-plus-minus-markers", "true"],
+            &["--color-only", "--raw", "true"],
+            &["--color-only", "--syntax-theme", "Monokai Extended"],
+            &["--color-only", "--minus-style", "syntax bold auto"],
+            &["--color-only", "--zero-style", "red strike"],
+            &["--color-only", "--plus-style", "red blink"],
+            &["--color-only", "--minus-emph-style", "red dim"],
+            &["--color-only", "--minus-non-emph-style", "red hidden"],
+            &["--color-only", "--plus-emph-style", "red reverse"],
+            &["--color-only", "--plus-non-emph-style", "red bold ul"],
+            &["--color-only", "--commit-style", "red bold ul"],
+            &[
+                "--color-only",
+                "--commit-decoration-style",
+                "bold yellow box ul",
+            ],
+            &["--color-only", "--file-style", "red bold ul"],
+            &[
+                "--color-only",
+                "--file-decoration-style",
+                "bold yellow box ul",
+            ],
+            &["--color-only", "--hunk-header-style", "red bold ul"],
+            &[
+                "--color-only",
+                "--hunk-header-decoration-style",
+                "bold yellow box ul",
+            ],
+            &[
+                "--color-only",
+                "--line-numbers",
+                "true",
+                "--line-numbers-minus-style",
+                "#444444",
+            ],
+            &[
+                "--color-only",
+                "--line-numbers",
+                "true",
+                "--line-numbers-minus-style",
+                "#444444",
+            ],
+            &[
+                "--color-only",
+                "--line-numbers",
+                "true",
+                "--line-numbers-zero-style",
+                "#444444",
+            ],
+            &[
+                "--color-only",
+                "--line-numbers",
+                "true",
+                "--line-numbers-plus-style",
+                "#444444",
+            ],
+            &[
+                "--color-only",
+                "--line-numbers",
+                "true",
+                "--line-numbers-left-format",
+                "{nm:>4}┊",
+            ],
+            &[
+                "--color-only",
+                "--line-numbers",
+                "true",
+                "--line-numbers-right-format",
+                "{np:>4}│",
+            ],
+            &[
+                "--color-only",
+                "--line-numbers",
+                "true",
+                "--line-numbers-left-style",
+                "blue",
+            ],
+            &[
+                "--color-only",
+                "--line-numbers",
+                "true",
+                "--line-numbers-right-style",
+                "blue",
+            ],
+            &["--color-only", "--file-modified-label", "hogehoge"],
+            &["--color-only", "--file-removed-label", "hogehoge"],
+            &["--color-only", "--file-added-label", "hogehoge"],
+            &["--color-only", "--file-renamed-label", "hogehoge"],
+            &["--color-only", "--max-line-length", "1"],
+            &["--color-only", "--width", "1"],
+            &["--color-only", "--tabs", "10"],
+            &["--color-only", "--24-bit-color", "always"],
+            &["--color-only", "--inspect-raw-lines", "false"],
+            &["--color-only", "--whitespace-error-style", "22 reverse"],
+        ];
+
+        for config in user_suppliable_configs {
+            println!("{:?}", config);
+            _do_test_output_is_in_one_to_one_correspondence_with_input(config);
+        }
     }
 
     fn _do_test_output_is_in_one_to_one_correspondence_with_input(args: &[&str]) {
@@ -882,6 +959,9 @@ src/align.rs
 
         // Although git patch options only checks the line counts of input and output,
         // we should check if they are identical as well to avoid unexpected decoration.
+        if args.contains(&"--max-line-length") {
+            return;
+        }
         for n in 0..input_lines.len() {
             let input_line = input_lines[n];
             // If config.line_numbers is enabled,
