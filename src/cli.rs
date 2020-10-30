@@ -34,7 +34,7 @@ given in a git config file, using the usual option names but without the initial
 is
 
 [delta]
-    number = true
+    line-numbers = true
     zero-style = dim syntax
 
 FEATURES
