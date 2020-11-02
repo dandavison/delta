@@ -211,7 +211,7 @@ Alternatively, delta is available in the following package managers:
     <td><code>cargo install git-delta</code></td>
   </tr>
   <tr>
-    <td>Debian</td>
+    <td>Debian / Ubuntu</td>
     <td><br>.deb files are on the <a href="https://github.com/dandavison/delta/releases">releases</a> page and at <a href="https://github.com/barnumbirr/delta-debian/releases">barnumbirr/delta-debian</a><br>
     <code>dpkg -i file.deb</code></td>
   </tr>
@@ -223,7 +223,7 @@ Alternatively, delta is available in the following package managers:
     <td>FreeBSD</td>
     <td><code>pkg install git-delta</code></td>
   </tr>
-    <tr>
+  <tr>
     <td>Gentoo</td>
     <td><code>emerge dev-util/git-delta</code></td>
   </tr>
