@@ -223,6 +223,10 @@ Alternatively, delta is available in the following package managers:
     <td>FreeBSD</td>
     <td><code>pkg install git-delta</code></td>
   </tr>
+    <tr>
+    <td>Gentoo</td>
+    <td><code>emerge dev-util/git-delta</code></td>
+  </tr>
   <tr>
     <td>Homebrew</td>
     <td><code>brew install git-delta</code></td>
