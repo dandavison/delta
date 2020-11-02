@@ -585,7 +585,7 @@ impl Default for Width {
     }
 }
 
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, PartialEq)]
 pub enum InspectRawLines {
     True,
     False,
