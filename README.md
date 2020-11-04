@@ -211,7 +211,7 @@ Alternatively, delta is available in the following package managers:
     <td><code>cargo install git-delta</code></td>
   </tr>
   <tr>
-    <td>Debian</td>
+    <td>Debian / Ubuntu</td>
     <td><br>.deb files are on the <a href="https://github.com/dandavison/delta/releases">releases</a> page and at <a href="https://github.com/barnumbirr/delta-debian/releases">barnumbirr/delta-debian</a><br>
     <code>dpkg -i file.deb</code></td>
   </tr>
@@ -222,6 +222,10 @@ Alternatively, delta is available in the following package managers:
   <tr>
     <td>FreeBSD</td>
     <td><code>pkg install git-delta</code></td>
+  </tr>
+  <tr>
+    <td>Gentoo</td>
+    <td><code>emerge dev-util/git-delta</code></td>
   </tr>
   <tr>
     <td>Homebrew</td>
@@ -252,6 +256,8 @@ Alternatively, delta is available in the following package managers:
     <td><code>scoop install delta</code></td>
   </tr>
 </table>
+
+Behind the scenes, delta uses `less` for paging. The version of `less` that comes with your operating system may be too old (currently, less v551 is a good choice). On MacOS, install `less` from Homebrew. For Windows, see [Using Delta on Windows](#using-delta-on-windows).
 
 ## Configuration
 
@@ -432,7 +438,7 @@ and you may then  need to quit tmux completely for it to take effect.
 
 ### Using Delta on Windows
 
-Delta works on Windows. However, the `less.exe` installed with git has some bugs: you will see incorrect colors and other problems. A patched version of `less.exe` and instructions for installing can be found [here](https://github.com/lzybkr/less/releases/tag/fix_windows_vt).
+Delta works on Windows. If you see incorrect colors and/or strange characters in Delta output, it is probably because there is an old version of `less.exe` on your system. On Windows, Git ships with its own version of `less.exe` for this reason, however there are still some bugs that affect delta. A patched version of `less.exe` and instructions for installing can be found [here](https://github.com/lzybkr/less/releases/tag/fix_windows_vt).
 
 
 ### Mouse scrolling

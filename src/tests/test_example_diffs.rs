@@ -1,6 +1,7 @@
 #[cfg(test)]
 mod tests {
     use crate::ansi::{self, strip_ansi_codes};
+    use crate::cli::InspectRawLines;
     use crate::delta::State;
     use crate::style;
     use crate::tests::ansi_test_utils::ansi_test_utils;
@@ -1259,6 +1260,23 @@ impl<'a> Alignment<'a> { │
         assert_eq!(output, input);
     }
 
+    // See https://github.com/dandavison/delta/issues/371#issuecomment-720173435
+    #[test]
+    fn test_keep_plus_minus_markers_under_inspect_raw_lines() {
+        let config = integration_test_utils::make_config_from_args(&["--keep-plus-minus-markers"]);
+        assert_eq!(config.inspect_raw_lines, InspectRawLines::True);
+        let output = integration_test_utils::run_delta(
+            GIT_DIFF_UNDER_COLOR_MOVED_DIMMED_ZEBRA_WITH_ANSI_ESCAPE_SEQUENCES,
+            &config,
+        );
+        let output = strip_ansi_codes(&output);
+        assert!(output.contains(
+            r#"
+-    "stddev": 0.004157057519168492,
+"#
+        ));
+    }
+
     const GIT_DIFF_SINGLE_HUNK: &str = "\
 commit 94907c0f136f46dc46ffae2dc92dca9af7eb7c2e
 Author: Dan Davison <dandavison7@gmail.com>
@@ -1789,5 +1807,36 @@ index 386f291a..22666f79 100644
 +    return 0;
 @@ -5,0 +7 @@ int main() {
 +    return 0;
+"#;
+
+    const GIT_DIFF_UNDER_COLOR_MOVED_DIMMED_ZEBRA_WITH_ANSI_ESCAPE_SEQUENCES: &str = r#"
+[33mcommit 8406b1996daa176ca677ac33b18f071b766c87a5[m
+Author: Dan Davison <dandavison7@gmail.com>
+Date:   Sun Nov 1 15:28:53 2020 -0500
+
+    A change to investigate color-moved behavior, see #371
+
+[1mdiff --git a/etc/performance/all-benchmarks.json b/etc/performance/all-benchmarks.json[m
+[1mindex f86240e7..f707e5fd 100644[m
+[1m--- a/etc/performance/all-benchmarks.json[m
+[1m+++ b/etc/performance/all-benchmarks.json[m
+[31m@@ -7,9 +7,9 @@[m
+     "median": 0.004928057465000001,[m
+     "message": "cargo new delta\n",[m
+     "min": 0.003220796465,[m
+[2m-    "stddev": 0.004157057519168492,[m
+     "system": 0.0016010150000000001,[m
+     "time": 0.013288195465,[m
+[2m+[m[2m    "stddev": 0.004157057519168492,[m
+     "user": 0.0013687749999999996[m
+   },[m
+   {[m
+[31m@@ -26649,4 +26649,4 @@[m
+     "time": 1.8524859272050003,[m
+     "user": 1.8240279649999998[m
+   }[m
+[31m-][m
+\ No newline at end of file[m
+[32m+[m[32m][m
 "#;
 }
