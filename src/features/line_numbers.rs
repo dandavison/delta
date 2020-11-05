@@ -234,7 +234,7 @@ fn parse_line_number_format<'a>(format_string: &'a str) -> LineNumberFormatData<
 }
 
 fn format_and_paint_line_number_field<'a>(
-    format_data: &Vec<LineNumberPlaceholderData<'a>>,
+    format_data: &[LineNumberPlaceholderData<'a>],
     style: &Style,
     minus_number: Option<usize>,
     plus_number: Option<usize>,

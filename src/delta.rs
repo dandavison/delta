@@ -35,10 +35,7 @@ pub enum Source {
 
 impl State {
     fn is_in_hunk(&self) -> bool {
-        match *self {
-            State::HunkHeader | State::HunkZero | State::HunkMinus(_) | State::HunkPlus(_) => true,
-            _ => false,
-        }
+        matches!(*self, State::HunkHeader | State::HunkZero | State::HunkMinus(_) | State::HunkPlus(_))
     }
 }
 
@@ -267,14 +264,8 @@ fn handle_commit_meta_header_line(
     };
     let (formatted_line, formatted_raw_line) = if config.hyperlinks {
         (
-            Cow::from(
-                features::hyperlinks::format_commit_line_with_osc8_commit_hyperlink(line, config),
-            ),
-            Cow::from(
-                features::hyperlinks::format_commit_line_with_osc8_commit_hyperlink(
-                    raw_line, config,
-                ),
-            ),
+            features::hyperlinks::format_commit_line_with_osc8_commit_hyperlink(line, config),
+            features::hyperlinks::format_commit_line_with_osc8_commit_hyperlink(raw_line, config),
         )
     } else {
         (Cow::from(line), Cow::from(raw_line))
@@ -433,7 +424,7 @@ fn handle_hunk_header_line(
         writeln!(painter.writer)?;
     } else {
         let line = match painter.prepare(&raw_code_fragment, false) {
-            s if s.len() > 0 => format!("{} ", s),
+            s if !s.is_empty() => format!("{} ", s),
             s => s,
         };
         writeln!(painter.writer)?;

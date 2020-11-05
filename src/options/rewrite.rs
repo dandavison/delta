@@ -49,7 +49,7 @@ fn rewrite_style_strings_to_honor_deprecated_minus_plus_options(opt: &mut cli::O
         ),
         "minus",
     ) {
-        opt.minus_style = rewritten.to_string();
+        opt.minus_style = rewritten;
     }
     if let Some(rewritten) = _get_rewritten_minus_plus_style_string(
         &opt.minus_emph_style,
@@ -60,7 +60,7 @@ fn rewrite_style_strings_to_honor_deprecated_minus_plus_options(opt: &mut cli::O
         ),
         "minus-emph",
     ) {
-        opt.minus_emph_style = rewritten.to_string();
+        opt.minus_emph_style = rewritten;
     }
     if let Some(rewritten) = _get_rewritten_minus_plus_style_string(
         &opt.plus_style,
@@ -68,7 +68,7 @@ fn rewrite_style_strings_to_honor_deprecated_minus_plus_options(opt: &mut cli::O
         (None, opt.deprecated_plus_background_color.as_deref()),
         "plus",
     ) {
-        opt.plus_style = rewritten.to_string();
+        opt.plus_style = rewritten;
     }
     if let Some(rewritten) = _get_rewritten_minus_plus_style_string(
         &opt.plus_emph_style,
@@ -76,7 +76,7 @@ fn rewrite_style_strings_to_honor_deprecated_minus_plus_options(opt: &mut cli::O
         (None, opt.deprecated_plus_emph_background_color.as_deref()),
         "plus-emph",
     ) {
-        opt.plus_emph_style = rewritten.to_string();
+        opt.plus_emph_style = rewritten;
     }
 }
 

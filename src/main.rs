@@ -29,8 +29,6 @@ use std::io::{self, ErrorKind, Read, Write};
 use std::path::PathBuf;
 use std::process;
 
-use ansi_term;
-use atty;
 use bytelines::ByteLinesReader;
 use itertools::Itertools;
 use structopt::StructOpt;
@@ -237,8 +235,8 @@ fn show_config(config: &config::Config) {
         syntax_theme = config
             .syntax_theme
             .clone()
-            .map(|t| t.name.unwrap_or("none".to_string()))
-            .unwrap_or("none".to_string()),
+            .map(|t| t.name.unwrap_or_else(|| "none".to_string()))
+            .unwrap_or_else(|| "none".to_string()),
         width = match config.decorations_width {
             cli::Width::Fixed(width) => width.to_string(),
             cli::Width::Variable => "variable".to_string(),
@@ -255,8 +253,8 @@ where
     S: AsRef<str>,
 {
     let s = s.as_ref();
-    if s.ends_with(" ")
-        || s.starts_with(" ")
+    if s.ends_with(' ')
+        || s.starts_with(' ')
         || s.contains(&['\\', '{', '}', ':'][..])
         || s.is_empty()
     {
@@ -345,9 +343,9 @@ index f38589a..0f1bb83 100644
 
 pub fn list_syntax_themes() -> std::io::Result<()> {
     if atty::is(atty::Stream::Stdout) {
-        return _list_syntax_themes_for_humans();
+        _list_syntax_themes_for_humans()
     } else {
-        return _list_syntax_themes_for_machines();
+        _list_syntax_themes_for_machines()
     }
 }
 

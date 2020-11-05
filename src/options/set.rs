@@ -311,7 +311,7 @@ fn set__light__dark__syntax_theme__options(
 ///
 /// [delta "d"]
 ///     features = f e
-fn gather_features<'a>(
+fn gather_features(
     opt: &cli::Opt,
     builtin_features: &HashMap<String, features::BuiltinFeature>,
     git_config: &Option<git_config::GitConfig>,
@@ -364,7 +364,7 @@ fn gather_features<'a>(
     if let Some(git_config) = git_config {
         // Gather features from [delta] section if --features was not passed.
         if opt.features.is_empty() {
-            if let Some(feature_string) = git_config.get::<String>(&format!("delta.features")) {
+            if let Some(feature_string) = git_config.get::<String>("delta.features") {
                 for feature in split_feature_string(&feature_string.to_lowercase()) {
                     gather_features_recursively(
                         feature,
@@ -390,7 +390,7 @@ fn gather_features<'a>(
 }
 
 /// Add to feature list `features` all features in the tree rooted at `feature`.
-fn gather_features_recursively<'a>(
+fn gather_features_recursively(
     feature: &str,
     features: &mut VecDeque<String>,
     builtin_features: &HashMap<String, features::BuiltinFeature>,
@@ -426,7 +426,7 @@ fn gather_features_recursively<'a>(
 
 /// Look for builtin features requested via boolean feature flags (as opposed to via a "features"
 /// list) in a custom feature section in git config and add them to the features list.
-fn gather_builtin_features_from_flags_in_gitconfig<'a>(
+fn gather_builtin_features_from_flags_in_gitconfig(
     git_config_key: &str,
     features: &mut VecDeque<String>,
     builtin_features: &HashMap<String, features::BuiltinFeature>,
@@ -450,7 +450,7 @@ fn gather_builtin_features_from_flags_in_gitconfig<'a>(
 /// children of a node in the tree are features in (a) and (b). (In both cases the features
 /// referenced will be other builtin features, since a builtin feature is determined at compile
 /// time and therefore cannot know of the existence of a non-builtin custom features in gitconfig).
-fn gather_builtin_features_recursively<'a>(
+fn gather_builtin_features_recursively(
     feature: &str,
     features: &mut VecDeque<String>,
     builtin_features: &HashMap<String, features::BuiltinFeature>,

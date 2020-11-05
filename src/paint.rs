@@ -2,7 +2,6 @@ use lazy_static::lazy_static;
 use regex::Regex;
 use std::io::Write;
 
-use ansi_term;
 use itertools::Itertools;
 use syntect::easy::HighlightLines;
 use syntect::highlighting::Style as SyntectStyle;
@@ -65,11 +64,9 @@ impl<'a> Painter<'a> {
                 return syntax;
             }
         }
-        return syntax_set
+        syntax_set
             .find_syntax_by_extension("txt")
-            .unwrap_or_else(|| {
-                delta_unreachable("Failed to find any language syntax definitions.")
-            });
+            .unwrap_or_else(|| delta_unreachable("Failed to find any language syntax definitions."))
     }
 
     pub fn set_highlighter(&mut self) {
@@ -302,7 +299,7 @@ impl<'a> Painter<'a> {
     /// Determine whether the terminal should fill the line rightwards with a background color, and
     /// the style for doing so.
     pub fn get_should_right_fill_background_color_and_fill_style(
-        diff_sections: &Vec<(Style, &str)>,
+        diff_sections: &[(Style, &str)],
         state: &State,
         background_color_extends_to_terminal_width: Option<bool>,
         config: &config::Config,
@@ -379,8 +376,8 @@ impl<'a> Painter<'a> {
 
     /// Return painted line (maybe prefixed with line numbers field) and an is_empty? boolean.
     pub fn paint_line(
-        syntax_sections: &Vec<(SyntectStyle, &str)>,
-        diff_sections: &Vec<(Style, &str)>,
+        syntax_sections: &[(SyntectStyle, &str)],
+        diff_sections: &[(Style, &str)],
         state: &State,
         line_numbers_data: &mut Option<&mut line_numbers::LineNumbersData>,
         side_by_side_panel: Option<side_by_side::PanelSide>,
@@ -424,7 +421,7 @@ impl<'a> Painter<'a> {
                 if prefix != "" {
                     ansi_strings.push(section_style.paint(prefix));
                 }
-                if text.len() > 0 {
+                if !text.is_empty() {
                     text.remove(0);
                 }
                 handled_prefix = true;
@@ -468,7 +465,7 @@ impl<'a> Painter<'a> {
     }
 
     pub fn get_syntax_style_sections_for_lines<'s>(
-        lines: &'s Vec<(String, State)>,
+        lines: &'s [(String, State)],
         state: &State,
         highlighter: &mut HighlightLines,
         config: &config::Config,
@@ -491,8 +488,8 @@ impl<'a> Painter<'a> {
 
     /// Set background styles to represent diff for minus and plus lines in buffer.
     fn get_diff_style_sections<'b>(
-        minus_lines: &'b Vec<(String, State)>,
-        plus_lines: &'b Vec<(String, State)>,
+        minus_lines: &'b [(String, State)],
+        plus_lines: &'b [(String, State)],
         config: &config::Config,
     ) -> (
         Vec<Vec<(Style, &'b str)>>,
@@ -578,7 +575,7 @@ impl<'a> Painter<'a> {
 
 // edits::annotate doesn't return "coalesced" annotations (see comment there), so we can't assume
 // that `sections.len() > 1 <=> (multiple styles)`.
-fn style_sections_contain_more_than_one_style(sections: &Vec<(Style, &str)>) -> bool {
+fn style_sections_contain_more_than_one_style(sections: &[(Style, &str)]) -> bool {
     if sections.len() > 1 {
         let (first_style, _) = sections[0];
         sections
@@ -599,7 +596,7 @@ lazy_static! {
 // TODO: Git recognizes blank lines at end of file (blank-at-eof) as a whitespace error but delta
 // does not yet.
 // https://git-scm.com/docs/git-config#Documentation/git-config.txt-corewhitespace
-fn is_whitespace_error(sections: &Vec<(Style, &str)>) -> bool {
+fn is_whitespace_error(sections: &[(Style, &str)]) -> bool {
     !sections
         .iter()
         .any(|(_, s)| NON_WHITESPACE_REGEX.is_match(s))
@@ -692,7 +689,7 @@ mod superimpose_style_sections {
             }
 
             // TODO: This is not the ideal location for the following code.
-            if current_string.ends_with("\n") {
+            if current_string.ends_with('\n') {
                 // Remove the terminating newline whose presence was necessary for the syntax
                 // highlighter to work correctly.
                 current_string.truncate(current_string.len() - 1);

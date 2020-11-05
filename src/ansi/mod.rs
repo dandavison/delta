@@ -60,7 +60,7 @@ pub fn truncate_str<'a, 'b>(s: &'a str, display_width: usize, tail: &'b str) -> 
         }
     }
 
-    return Cow::from(format!("{}{}", result, result_tail));
+    Cow::from(format!("{}{}", result, result_tail))
 }
 
 pub fn parse_first_style(s: &str) -> Option<ansi_term::Style> {
@@ -72,7 +72,7 @@ pub fn parse_first_style(s: &str) -> Option<ansi_term::Style> {
 
 pub fn string_starts_with_ansi_style_sequence(s: &str) -> bool {
     AnsiElementIterator::new(s)
-        .nth(0)
+        .next()
         .map(|el| matches!(el, Element::CSI(_, _, _)))
         .unwrap_or(false)
 }

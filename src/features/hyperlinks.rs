@@ -67,9 +67,9 @@ lazy_static! {
     static ref COMMIT_LINE_REGEX: Regex = Regex::new("(.* )([0-9a-f]{40})(.*)").unwrap();
 }
 
-fn format_commit_line_captures_with_osc8_commit_hyperlink<'a, 'b>(
-    captures: &'a Captures,
-    github_repo: &'b str,
+fn format_commit_line_captures_with_osc8_commit_hyperlink(
+    captures: &Captures,
+    github_repo: &str,
 ) -> String {
     let commit = captures.get(2).unwrap().as_str();
     format!(

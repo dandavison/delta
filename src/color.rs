@@ -17,7 +17,7 @@ pub fn parse_color(s: &str, true_color: bool) -> Option<Color> {
         eprintln!("Invalid color or style attribute: {}", s);
         process::exit(1);
     };
-    let syntect_color = if s.starts_with("#") {
+    let syntect_color = if s.starts_with('#') {
         SyntectColor::from_str(s).unwrap_or_else(|_| die())
     } else {
         s.parse::<u8>()
