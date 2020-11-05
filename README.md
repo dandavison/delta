@@ -309,8 +309,6 @@ Delta respects the setting of some environment variables to derive the default p
 
 Hence if e.g. `$DELTA_PAGER` is unset, delta will use `$BAT_PAGER`, or `$PAGER` if that is unset, too. In environments wthout any of the three variable set, delta's fallback is `less`.
 
-_**NOTE:** Be aware that setting one of those environment variables to `delta` while leaving the ones with higher priority unset (or also pointing at `delta`) can lead to an infinite cycle of forked processes by delta recursively calling itself._
-
 ##### b) Third party apps
 Note that `$BAT_PAGER` (as well as `$PAGER`) is _also_ used by the standalone `bat` app. Please see `bat(1)` for a description. However, `$BAT_THEME`, `$BAT_STYLE` and `$BAT_CONFIG_PATH` are **not** regarded by delta.
 
