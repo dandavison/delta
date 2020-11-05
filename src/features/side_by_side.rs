@@ -177,8 +177,8 @@ pub fn paint_zero_lines_side_by_side(
 
 fn paint_left_panel_minus_line<'a>(
     line_index: Option<usize>,
-    syntax_style_sections: &Vec<Vec<(SyntectStyle, &str)>>,
-    diff_style_sections: &Vec<Vec<(Style, &str)>>,
+    syntax_style_sections: &[Vec<(SyntectStyle, &str)>],
+    diff_style_sections: &[Vec<(Style, &str)>],
     state: &'a State,
     line_numbers_data: &mut Option<&mut line_numbers::LineNumbersData>,
     prefix: &str,
@@ -210,8 +210,8 @@ fn paint_left_panel_minus_line<'a>(
 
 fn paint_right_panel_plus_line<'a>(
     line_index: Option<usize>,
-    syntax_style_sections: &Vec<Vec<(SyntectStyle, &str)>>,
-    diff_style_sections: &Vec<Vec<(Style, &str)>>,
+    syntax_style_sections: &[Vec<(SyntectStyle, &str)>],
+    diff_style_sections: &[Vec<(Style, &str)>],
     state: &'a State,
     line_numbers_data: &mut Option<&mut line_numbers::LineNumbersData>,
     prefix: &str,
@@ -243,7 +243,7 @@ fn paint_right_panel_plus_line<'a>(
 fn get_right_fill_style_for_left_panel(
     line_is_empty: bool,
     line_index: Option<usize>,
-    diff_style_sections: &Vec<Vec<(Style, &str)>>,
+    diff_style_sections: &[Vec<(Style, &str)>],
     state: &State,
     background_color_extends_to_terminal_width: Option<bool>,
     config: &Config,
@@ -289,10 +289,10 @@ fn get_right_fill_style_for_left_panel(
 // what this will do is set the line number pair in that function to `(Some(minus_number), None)`,
 // and then only emit the right field (which has a None number, i.e. blank). However, it will also
 // increment the minus line number, so we need to knock that back down.
-fn paint_minus_or_plus_panel_line<'a>(
+fn paint_minus_or_plus_panel_line(
     line_index: Option<usize>,
-    syntax_style_sections: &Vec<Vec<(SyntectStyle, &str)>>,
-    diff_style_sections: &Vec<Vec<(Style, &str)>>,
+    syntax_style_sections: &[Vec<(SyntectStyle, &str)>],
+    diff_style_sections: &[Vec<(Style, &str)>],
     state: &State,
     line_numbers_data: &mut Option<&mut line_numbers::LineNumbersData>,
     panel_side: PanelSide,
@@ -355,7 +355,7 @@ fn right_pad_left_panel_line(
     panel_line: &mut String,
     panel_line_is_empty: bool,
     line_index: Option<usize>,
-    diff_style_sections: &Vec<Vec<(Style, &str)>>,
+    diff_style_sections: &[Vec<(Style, &str)>],
     state: &State,
     background_color_extends_to_terminal_width: Option<bool>,
     config: &Config,
@@ -408,7 +408,7 @@ fn right_fill_right_panel_line(
     panel_line: &mut String,
     panel_line_is_empty: bool,
     line_index: Option<usize>,
-    diff_style_sections: &Vec<Vec<(Style, &str)>>,
+    diff_style_sections: &[Vec<(Style, &str)>],
     state: &State,
     background_color_extends_to_terminal_width: Option<bool>,
     config: &Config,

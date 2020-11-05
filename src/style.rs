@@ -1,7 +1,6 @@
 use std::borrow::Cow;
 use std::fmt;
 
-use ansi_term;
 use lazy_static::lazy_static;
 
 use crate::ansi;
@@ -135,9 +134,8 @@ impl Style {
             }
             (false, None) => words.push("normal".to_string()),
         }
-        match self.ansi_term_style.background {
-            Some(color) => words.push(color::color_to_string(color)),
-            None => {}
+        if let Some(color) = self.ansi_term_style.background {
+            words.push(color::color_to_string(color))
         }
         words.join(" ")
     }
@@ -155,10 +153,10 @@ pub fn ansi_term_style_equality(a: ansi_term::Style, b: ansi_term::Style) -> boo
         ..b
     };
     if a_attrs != b_attrs {
-        return false;
+        false
     } else {
-        return ansi_term_color_equality(a.foreground, b.foreground)
-            & ansi_term_color_equality(a.background, b.background);
+        ansi_term_color_equality(a.foreground, b.foreground)
+            & ansi_term_color_equality(a.background, b.background)
     }
 }
 
@@ -211,7 +209,7 @@ pub fn line_has_style_other_than<'a>(line: &str, styles: impl Iterator<Item = &'
             return false;
         }
     }
-    return true;
+    true
 }
 
 #[cfg(test)]

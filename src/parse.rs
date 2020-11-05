@@ -63,7 +63,7 @@ pub fn get_file_change_description_from_file_paths(
         format!("comparing: {} ⟶   {}", minus_file, plus_file)
     } else {
         let format_label = |label: &str| {
-            if label.len() > 0 {
+            if !label.is_empty() {
                 format!("{} ", label)
             } else {
                 "".to_string()
@@ -143,7 +143,7 @@ pub fn parse_hunk_header(line: &str) -> (String, Vec<(usize, usize)>) {
         })
         .collect();
     let code_fragment = &caps[2];
-    return (code_fragment.to_string(), line_numbers_and_hunk_lengths);
+    (code_fragment.to_string(), line_numbers_and_hunk_lengths)
 }
 
 /// Attempt to parse input as a file path and return extension as a &str.
