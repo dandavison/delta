@@ -729,7 +729,8 @@ OPTIONS:
         --paging <paging-mode>
             Whether to use a pager when displaying output. Options are: auto, always, and never. The default pager is
             `less`: this can be altered by setting the environment variables DELTA_PAGER, BAT_PAGER, or PAGER (and that
-            is their order of priority) [default: auto]
+            is their order of priority; *NOTE* be aware that setting one of those environment variables to `delta` while
+            the higher prioritized ones are unset will cause delta to endlessly fork itself) [default: auto]
         --minus-empty-line-marker-style <minus-empty-line-marker-style>
             Style for removed empty line marker (used only if --minus-style has no background color) [default: normal auto]
         --plus-empty-line-marker-style <plus-empty-line-marker-style>
