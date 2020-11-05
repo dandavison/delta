@@ -83,11 +83,7 @@ impl OutputType {
 
         match pagerflags.split_first() {
             Some((pager_name, args)) => {
-                let mut pager_path = PathBuf::from(pager_name);
-
-                if pager_path.file_stem() == Some(&OsString::from("bat")) {
-                    pager_path = PathBuf::from("less");
-                }
+                let pager_path = PathBuf::from(pager_name);
 
                 let is_less = pager_path.file_stem() == Some(&OsString::from("less"));
 
