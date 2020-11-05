@@ -72,6 +72,8 @@ Contents
 
 * [Installation](#installation)
 * [Configuration](#configuration)
+   * [Git config files](#git-config-files)
+   * [Environment](#environment)
 * [Usage](#usage)
    * [Choosing colors (styles)](#choosing-colors-styles)
    * [Line numbers](#line-numbers)
@@ -262,7 +264,7 @@ Behind the scenes, delta uses `less` for paging. The version of `less` that come
 ## Configuration
 
 
-#### Git's config files
+#### Git config files
 
 Set delta to be git's pager in your `.gitconfig`. Delta has many options to alter colors and other details of the output. An example is
 ```gitconfig
