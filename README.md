@@ -72,6 +72,8 @@ Contents
 
 * [Installation](#installation)
 * [Configuration](#configuration)
+   * [Git config files](#git-config-files)
+   * [Environment](#environment)
 * [Usage](#usage)
    * [Choosing colors (styles)](#choosing-colors-styles)
    * [Line numbers](#line-numbers)
@@ -261,6 +263,9 @@ Behind the scenes, delta uses `less` for paging. The version of `less` that come
 
 ## Configuration
 
+
+#### Git config files
+
 Set delta to be git's pager in your `.gitconfig`. Delta has many options to alter colors and other details of the output. An example is
 ```gitconfig
 [core]
@@ -293,6 +298,25 @@ delta a.txt b.txt
 
 diff -u a.txt b.txt | delta
 ```
+
+#### Environment
+
+##### a) Delta
+Delta respects the setting of some environment variables to derive the default pager to use. These are in descending order of priority :
+- `DELTA_PAGER`,
+- `BAT_PAGER` and
+- `PAGER`
+
+Hence if e.g. `$DELTA_PAGER` is unset, delta will use `$BAT_PAGER`, or `$PAGER` if that is unset, too. In environments without any of the three variable set, delta's fallback is `less`.
+
+##### b) Third party apps
+Note that `$BAT_PAGER` (as well as `$PAGER`) is _also_ used by the standalone `bat` app. Please see `bat(1)` for a [description](https://jlk.fjfi.cvut.cz/arch/manpages/man/community/bat/bat.1.en). However, `$BAT_THEME`, `$BAT_STYLE` and `$BAT_CONFIG_PATH` are **not** used by delta.
+
+The behavior of delta's default pager, less, can be controlled using the `LESS` environment variable. It may contain any of the `less` command line options and/or interactive less-commands (prefixed by a leading `+` sign) which will be executed every time right after less is launched. A real-life example for the latter would be `LESS='+Gg'`, causing the pager to briefly jump to the bottom of the buffer and back to the top right afterwards. The purpose of this example is to enable the full metadata display in less' status line, including the buffer contents length and relative position of the current view port, in percent and lines/characters.
+
+Less also uses a bunch of other environment variables as well as config files, although most of them are not relevant for use in combination with delta. For an in-depth explanation of these configuration options please see the `less(1)` [manual](https://jlk.fjfi.cvut.cz/arch/manpages/man/core/less/less.1.en).
+
+It should also be mentioned that, besides using the `core.pager` setting, you can also set `GIT_PAGER=delta` in your environment in order to define the default `git` pager. If set, this variable will take priority above the setting in the git config file(s).
 
 ## Usage
 
