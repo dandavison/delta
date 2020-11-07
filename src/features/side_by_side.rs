@@ -1,4 +1,5 @@
 use itertools::Itertools;
+use std::cmp::Ordering;
 use syntect::highlighting::Style as SyntectStyle;
 
 use crate::ansi;
@@ -137,10 +138,10 @@ pub fn paint_zero_lines_side_by_side(
         );
         // TODO: Avoid doing the superimpose_style_sections work twice.
         // HACK: These are getting incremented twice, so knock them back down once.
-        line_numbers_data.as_mut().map(|d| {
+        if let Some(d) = line_numbers_data.as_mut() {
             d.hunk_minus_line_number -= 1;
-            d.hunk_plus_line_number -= 1
-        });
+            d.hunk_plus_line_number -= 1;
+        }
         right_pad_left_panel_line(
             &mut left_panel_line,
             left_panel_line_is_empty,
@@ -335,14 +336,14 @@ fn paint_minus_or_plus_panel_line(
     match (state, &state_for_line_numbers_field) {
         (s, t) if s == t => {}
         (State::HunkPlus(_), State::HunkMinus(_)) => {
-            line_numbers_data
-                .as_mut()
-                .map(|d| d.hunk_minus_line_number -= 1);
+            if let Some(d) = line_numbers_data.as_mut() {
+                d.hunk_minus_line_number -= 1;
+            }
         }
         (State::HunkMinus(_), State::HunkPlus(_)) => {
-            line_numbers_data
-                .as_mut()
-                .map(|d| d.hunk_plus_line_number -= 1);
+            if let Some(d) = line_numbers_data.as_mut() {
+                d.hunk_plus_line_number -= 1;
+            }
         }
         _ => unreachable!(),
     }
@@ -380,23 +381,27 @@ fn right_pad_left_panel_line(
     // Pad with (maybe painted) spaces to the panel width.
     let text_width = ansi::measure_text_width(&panel_line);
     let panel_width = config.side_by_side_data.left_panel.width;
-    if text_width < panel_width {
-        let fill_style = get_right_fill_style_for_left_panel(
-            panel_line_is_empty,
-            line_index,
-            &diff_style_sections,
-            state,
-            background_color_extends_to_terminal_width,
-            config,
-        );
-        panel_line.push_str(
-            &fill_style
-                .paint(" ".repeat(panel_width - text_width))
-                .to_string(),
-        );
-    } else if text_width > panel_width {
-        *panel_line =
-            ansi::truncate_str(panel_line, panel_width, &config.truncation_symbol).to_string();
+    match text_width.cmp(&panel_width) {
+        Ordering::Less => {
+            let fill_style = get_right_fill_style_for_left_panel(
+                panel_line_is_empty,
+                line_index,
+                &diff_style_sections,
+                state,
+                background_color_extends_to_terminal_width,
+                config,
+            );
+            panel_line.push_str(
+                &fill_style
+                    .paint(" ".repeat(panel_width - text_width))
+                    .to_string(),
+            );
+        }
+        Ordering::Greater => {
+            *panel_line =
+                ansi::truncate_str(panel_line, panel_width, &config.truncation_symbol).to_string();
+        }
+        std::cmp::Ordering::Equal => {}
     };
 }
 

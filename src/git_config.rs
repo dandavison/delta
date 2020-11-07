@@ -2,8 +2,6 @@
 use std::path::Path;
 use std::process;
 
-use git2;
-
 pub struct GitConfig {
     config: git2::Config,
     pub enabled: bool,

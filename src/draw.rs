@@ -1,9 +1,6 @@
 use std::cmp::max;
 use std::io::Write;
 
-use ansi_term;
-use box_drawing;
-
 use crate::ansi;
 use crate::cli::Width;
 use crate::style::Style;
@@ -85,7 +82,7 @@ pub fn write_boxed_with_underline(
         text_style,
         decoration_style,
     )?;
-    write!(writer, "\n")?;
+    writeln!(writer)?;
     Ok(())
 }
 
@@ -169,7 +166,7 @@ fn _write_under_or_over_lined(
     let mut write_line: Box<dyn FnMut(&mut dyn Write) -> std::io::Result<()>> =
         Box::new(|writer| {
             write_horizontal_line(writer, line_width, text_style, decoration_style)?;
-            write!(writer, "\n")?;
+            writeln!(writer)?;
             Ok(())
         });
     match underoverline {
@@ -253,9 +250,9 @@ fn write_boxed_partial(
         )
     };
     let horizontal_edge = horizontal.repeat(box_width);
-    write!(
+    writeln!(
         writer,
-        "{}{}\n",
+        "{}{}",
         decoration_style.paint(&horizontal_edge),
         decoration_style.paint(down_left),
     )?;

@@ -95,7 +95,7 @@ pub fn list_languages() -> std::io::Result<()> {
 
     if loop_through {
         for lang in languages {
-            write!(stdout, "{}:{}\n", lang.name, lang.file_extensions.join(","))?;
+            writeln!(stdout, "{}:{}", lang.name, lang.file_extensions.join(","))?;
         }
     } else {
         let longest = languages

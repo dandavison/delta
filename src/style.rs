@@ -96,10 +96,12 @@ impl Style {
     pub fn to_painted_string(&self) -> ansi_term::ANSIGenericString<str> {
         self.paint(self.to_string())
     }
+}
 
-    fn to_string(&self) -> String {
+impl fmt::Display for Style {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         if self.is_raw {
-            return "raw".to_string();
+            return write!(f, "raw");
         }
         let mut words = Vec::<String>::new();
         if self.is_omitted {
@@ -137,7 +139,8 @@ impl Style {
         if let Some(color) = self.ansi_term_style.background {
             words.push(color::color_to_string(color))
         }
-        words.join(" ")
+        let style_str = words.join(" ");
+        write!(f, "{}", style_str)
     }
 }
 

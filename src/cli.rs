@@ -3,7 +3,6 @@ use std::collections::{HashMap, HashSet};
 use std::ffi::OsString;
 use std::path::PathBuf;
 
-use itertools;
 use lazy_static::lazy_static;
 use structopt::clap::AppSettings::{ColorAlways, ColoredHelp, DeriveDisplayOrder};
 use structopt::{clap, StructOpt};

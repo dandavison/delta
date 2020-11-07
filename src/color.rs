@@ -84,7 +84,7 @@ lazy_static! {
 }
 
 pub fn ansi_16_color_name_to_number(name: &str) -> Option<u8> {
-    ANSI_16_COLORS.get(name).map(|n| *n)
+    ANSI_16_COLORS.get(name).copied()
 }
 
 fn ansi_16_color_number_to_name(n: u8) -> Option<&'static str> {

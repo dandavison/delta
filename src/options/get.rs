@@ -100,7 +100,7 @@ pub trait GetOptionValue {
                 return Some(value_function(opt, &git_config));
             }
         }
-        return None;
+        None
     }
 }
 

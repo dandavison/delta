@@ -6,8 +6,6 @@ use std::io::{self, Write};
 use std::path::PathBuf;
 use std::process::{Child, Command, Stdio};
 
-use shell_words;
-
 use super::less::retrieve_less_version;
 
 use crate::config;
