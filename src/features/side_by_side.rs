@@ -1,5 +1,4 @@
 use itertools::Itertools;
-use std::cmp::Ordering;
 use syntect::highlighting::Style as SyntectStyle;
 
 use crate::ansi;
@@ -352,6 +351,7 @@ fn paint_minus_or_plus_panel_line(
 
 /// Right-pad a line in the left panel with (possibly painted) spaces. A line in the left panel is
 /// either a minus line or a zero line.
+#[allow(clippy::comparison_chain)]
 fn right_pad_left_panel_line(
     panel_line: &mut String,
     panel_line_is_empty: bool,
@@ -381,28 +381,24 @@ fn right_pad_left_panel_line(
     // Pad with (maybe painted) spaces to the panel width.
     let text_width = ansi::measure_text_width(&panel_line);
     let panel_width = config.side_by_side_data.left_panel.width;
-    match text_width.cmp(&panel_width) {
-        Ordering::Less => {
-            let fill_style = get_right_fill_style_for_left_panel(
-                panel_line_is_empty,
-                line_index,
-                &diff_style_sections,
-                state,
-                background_color_extends_to_terminal_width,
-                config,
-            );
-            panel_line.push_str(
-                &fill_style
-                    .paint(" ".repeat(panel_width - text_width))
-                    .to_string(),
-            );
-        }
-        Ordering::Greater => {
-            *panel_line =
-                ansi::truncate_str(panel_line, panel_width, &config.truncation_symbol).to_string();
-        }
-        std::cmp::Ordering::Equal => {}
-    };
+    if text_width < panel_width {
+        let fill_style = get_right_fill_style_for_left_panel(
+            panel_line_is_empty,
+            line_index,
+            &diff_style_sections,
+            state,
+            background_color_extends_to_terminal_width,
+            config,
+        );
+        panel_line.push_str(
+            &fill_style
+                .paint(" ".repeat(panel_width - text_width))
+                .to_string(),
+        );
+    } else if text_width > panel_width {
+        *panel_line =
+            ansi::truncate_str(panel_line, panel_width, &config.truncation_symbol).to_string();
+    }
 }
 
 /// Right-fill the background color of a line in the right panel. A line in the right panel is
