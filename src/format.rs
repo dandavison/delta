@@ -1,7 +1,5 @@
 use std::borrow::Cow;
 
-use atty;
-
 use crate::config::Config;
 use crate::features;
 

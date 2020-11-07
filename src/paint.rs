@@ -578,11 +578,7 @@ impl<'a> Painter<'a> {
 fn style_sections_contain_more_than_one_style(sections: &[(Style, &str)]) -> bool {
     if sections.len() > 1 {
         let (first_style, _) = sections[0];
-        sections
-            .iter()
-            .filter(|(style, _)| *style != first_style)
-            .next()
-            .is_some()
+        sections.iter().any(|(style, _)| *style != first_style)
     } else {
         false
     }

@@ -1,6 +1,5 @@
 use std::cmp::max;
 
-use ansi_term;
 use lazy_static::lazy_static;
 use regex::Regex;
 
@@ -201,7 +200,7 @@ impl<'a> LineNumbersData<'a> {
     }
 }
 
-fn parse_line_number_format<'a>(format_string: &'a str) -> LineNumberFormatData<'a> {
+fn parse_line_number_format(format_string: &str) -> LineNumberFormatData {
     let mut format_data = Vec::new();
     let mut offset = 0;
 

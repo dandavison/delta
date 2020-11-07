@@ -34,7 +34,7 @@ pub fn measure_text_width(s: &str) -> usize {
 //    display_width of the result would exceed `display_width`.
 pub fn truncate_str<'a, 'b>(s: &'a str, display_width: usize, tail: &'b str) -> Cow<'a, str> {
     let items = ansi_strings_iterator(s).collect::<Vec<(&str, bool)>>();
-    let width = strip_ansi_codes_from_strings_iterator(items.iter().map(|el| *el)).width();
+    let width = strip_ansi_codes_from_strings_iterator(items.iter().copied()).width();
     if width <= display_width {
         return Cow::from(s);
     }

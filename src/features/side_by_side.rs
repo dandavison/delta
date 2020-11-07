@@ -137,10 +137,10 @@ pub fn paint_zero_lines_side_by_side(
         );
         // TODO: Avoid doing the superimpose_style_sections work twice.
         // HACK: These are getting incremented twice, so knock them back down once.
-        line_numbers_data.as_mut().map(|d| {
+        if let Some(d) = line_numbers_data.as_mut() {
             d.hunk_minus_line_number -= 1;
-            d.hunk_plus_line_number -= 1
-        });
+            d.hunk_plus_line_number -= 1;
+        }
         right_pad_left_panel_line(
             &mut left_panel_line,
             left_panel_line_is_empty,
@@ -335,14 +335,14 @@ fn paint_minus_or_plus_panel_line(
     match (state, &state_for_line_numbers_field) {
         (s, t) if s == t => {}
         (State::HunkPlus(_), State::HunkMinus(_)) => {
-            line_numbers_data
-                .as_mut()
-                .map(|d| d.hunk_minus_line_number -= 1);
+            if let Some(d) = line_numbers_data.as_mut() {
+                d.hunk_minus_line_number -= 1;
+            }
         }
         (State::HunkMinus(_), State::HunkPlus(_)) => {
-            line_numbers_data
-                .as_mut()
-                .map(|d| d.hunk_plus_line_number -= 1);
+            if let Some(d) = line_numbers_data.as_mut() {
+                d.hunk_plus_line_number -= 1;
+            }
         }
         _ => unreachable!(),
     }
@@ -351,6 +351,7 @@ fn paint_minus_or_plus_panel_line(
 
 /// Right-pad a line in the left panel with (possibly painted) spaces. A line in the left panel is
 /// either a minus line or a zero line.
+#[allow(clippy::comparison_chain)]
 fn right_pad_left_panel_line(
     panel_line: &mut String,
     panel_line_is_empty: bool,
@@ -397,7 +398,7 @@ fn right_pad_left_panel_line(
     } else if text_width > panel_width {
         *panel_line =
             ansi::truncate_str(panel_line, panel_width, &config.truncation_symbol).to_string();
-    };
+    }
 }
 
 /// Right-fill the background color of a line in the right panel. A line in the right panel is

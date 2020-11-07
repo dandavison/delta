@@ -100,15 +100,15 @@ pub fn set_options(
     // HACK: make minus-line styles have syntax-highlighting iff side-by-side.
     if features.contains(&"side-by-side".to_string()) {
         let prefix = "normal ";
-        if !config::user_supplied_option("minus-style", arg_matches) {
-            if opt.minus_style.starts_with(prefix) {
-                opt.minus_style = format!("syntax {}", &opt.minus_style[prefix.len()..]);
-            }
+        if !config::user_supplied_option("minus-style", arg_matches)
+            && opt.minus_style.starts_with(prefix)
+        {
+            opt.minus_style = format!("syntax {}", &opt.minus_style[prefix.len()..]);
         }
-        if !config::user_supplied_option("minus-emph-style", arg_matches) {
-            if opt.minus_emph_style.starts_with(prefix) {
-                opt.minus_emph_style = format!("syntax {}", &opt.minus_emph_style[prefix.len()..]);
-            }
+        if !config::user_supplied_option("minus-emph-style", arg_matches)
+            && opt.minus_emph_style.starts_with(prefix)
+        {
+            opt.minus_emph_style = format!("syntax {}", &opt.minus_emph_style[prefix.len()..]);
         }
     }
 

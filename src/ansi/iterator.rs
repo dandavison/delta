@@ -1,8 +1,5 @@
 use core::str::Bytes;
 
-use ansi_term;
-use vte;
-
 pub struct AnsiElementIterator<'a> {
     // The input bytes
     bytes: Bytes<'a>,
@@ -131,19 +128,16 @@ impl vte::Perform for Performer {
             return;
         }
 
-        match (c, intermediates.get(0)) {
-            ('m', None) => {
-                if params.is_empty() {
-                    // Attr::Reset;
-                } else {
-                    self.element = Some(Element::CSI(
-                        ansi_term_style_from_sgr_parameters(params),
-                        0,
-                        0,
-                    ));
-                }
+        if let ('m', None) = (c, intermediates.get(0)) {
+            if params.is_empty() {
+                // Attr::Reset;
+            } else {
+                self.element = Some(Element::CSI(
+                    ansi_term_style_from_sgr_parameters(params),
+                    0,
+                    0,
+                ));
             }
-            _ => {}
         }
     }
 
