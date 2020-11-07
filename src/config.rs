@@ -161,17 +161,15 @@ impl From<cli::Opt> for Config {
             hyperlinks_file_link_format: opt.hyperlinks_file_link_format,
             inspect_raw_lines: opt.computed.inspect_raw_lines,
             keep_plus_minus_markers: opt.keep_plus_minus_markers,
-            line_numbers: matches!(opt.computed.line_numbers_mode, cli::LineNumbersMode::Full),
+            line_numbers: (opt.computed.line_numbers_mode == cli::LineNumbersMode::Full),
             line_numbers_left_format: opt.line_numbers_left_format,
             line_numbers_left_style,
             line_numbers_minus_style,
             line_numbers_plus_style,
             line_numbers_right_format: opt.line_numbers_right_format,
             line_numbers_right_style,
-            line_numbers_show_first_line_number: matches!(
-                opt.computed.line_numbers_mode,
-                cli::LineNumbersMode::First
-            ),
+            line_numbers_show_first_line_number: (opt.computed.line_numbers_mode
+                == cli::LineNumbersMode::First),
             line_numbers_zero_style,
             max_buffered_lines: 32,
             max_line_distance: opt.max_line_distance,
