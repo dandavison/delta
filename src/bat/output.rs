@@ -1,6 +1,7 @@
 // https://github.com/sharkdp/bat a1b9334a44a2c652f52dddaa83dbacba57372468
 // src/output.rs
 // See src/bat/LICENSE
+use std::env;
 use std::ffi::OsString;
 use std::io::{self, Write};
 use std::path::PathBuf;
@@ -9,7 +10,6 @@ use std::process::{Child, Command, Stdio};
 use super::less::retrieve_less_version;
 
 use crate::config;
-use crate::env;
 use crate::features::navigate;
 
 #[derive(Debug, Clone, Copy, PartialEq)]
@@ -49,13 +49,13 @@ impl OutputType {
         let mut replace_arguments_to_less = false;
 
         let pager_from_env = match (
-            env::get_env_var("DELTA_PAGER"),
-            env::get_env_var("BAT_PAGER"),
-            env::get_env_var("PAGER"),
+            env::var("DELTA_PAGER"),
+            env::var("BAT_PAGER"),
+            env::var("PAGER"),
         ) {
-            (Some(delta_pager), _, _) => Some(delta_pager),
-            (None, Some(bat_pager), _) => Some(bat_pager),
-            (None, None, Some(pager)) => {
+            (Ok(delta_pager), _, _) => Some(delta_pager),
+            (_, Ok(bat_pager), _) => Some(bat_pager),
+            (_, _, Ok(pager)) => {
                 // less needs to be called with the '-R' option in order to properly interpret ANSI
                 // color sequences. If someone has set PAGER="less -F", we therefore need to
                 // overwrite the arguments and add '-R'.
