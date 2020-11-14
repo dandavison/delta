@@ -11,10 +11,6 @@ readme = "README.md"
 repository = "https://github.com/dandavison/delta"
 version = "0.4.5"
 
-[[bin]]
-name = "delta"
-path = "src/main.rs"
-
 [dependencies]
 ansi_colours = "1.0.1"
 ansi_term = "0.12.1"
