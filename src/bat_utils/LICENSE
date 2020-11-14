@@ -1,4 +1,4 @@
-Files under this directory (i.e. src/bat/) originated as copies of
+Files under this directory (i.e. src/bat_utils/) originated as copies of
 files from the `bat` project (https://github.com/sharkdp/bat), with
 subsequent modifications, as recorded in git history. The `bat`
 license is reproduced below.

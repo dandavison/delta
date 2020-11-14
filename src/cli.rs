@@ -9,8 +9,8 @@ use structopt::{clap, StructOpt};
 use syntect::highlighting::Theme as SyntaxTheme;
 use syntect::parsing::SyntaxSet;
 
-use crate::bat::assets::HighlightingAssets;
-use crate::bat::output::PagingMode;
+use crate::bat_utils::assets::HighlightingAssets;
+use crate::bat_utils::output::PagingMode;
 use crate::git_config::GitConfig;
 use crate::git_config_entry::GitConfigEntry;
 use crate::options;

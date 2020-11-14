@@ -1,5 +1,5 @@
 // Based on code from https://github.com/sharkdp/bat e981e974076a926a38f124b7d8746de2ca5f0a28
-// See src/bat/LICENSE
+// See src/bat_utils/LICENSE
 
 use dirs as dirs_rs;
 use lazy_static::lazy_static;

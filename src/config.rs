@@ -8,7 +8,7 @@ use syntect::highlighting::Style as SyntectStyle;
 use syntect::highlighting::Theme as SyntaxTheme;
 use syntect::parsing::SyntaxSet;
 
-use crate::bat::output::PagingMode;
+use crate::bat_utils::output::PagingMode;
 use crate::cli;
 use crate::color;
 use crate::delta::State;

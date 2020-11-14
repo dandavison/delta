@@ -1,6 +1,6 @@
 // https://github.com/sharkdp/bat a1b9334a44a2c652f52dddaa83dbacba57372468
 // src/output.rs
-// See src/bat/LICENSE
+// See src/bat_utils/LICENSE
 use std::env;
 use std::ffi::OsString;
 use std::io::{self, Write};

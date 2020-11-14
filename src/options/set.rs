@@ -6,8 +6,8 @@ use std::str::FromStr;
 use console::Term;
 use structopt::clap;
 
-use crate::bat::assets::HighlightingAssets;
-use crate::bat::output::PagingMode;
+use crate::bat_utils::assets::HighlightingAssets;
+use crate::bat_utils::output::PagingMode;
 use crate::cli;
 use crate::config;
 use crate::env;
@@ -627,7 +627,7 @@ fn set_git_config_entries(opt: &mut cli::Opt, git_config: &mut git_config::GitCo
 pub mod tests {
     use std::fs::remove_file;
 
-    use crate::bat::output::PagingMode;
+    use crate::bat_utils::output::PagingMode;
     use crate::cli;
     use crate::tests::integration_test_utils::integration_test_utils;
 

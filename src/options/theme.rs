@@ -8,7 +8,7 @@
 /// default is selected.
 use syntect::highlighting::ThemeSet;
 
-use crate::bat::assets::HighlightingAssets;
+use crate::bat_utils::assets::HighlightingAssets;
 use crate::cli;
 use crate::env;
 

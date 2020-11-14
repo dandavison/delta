@@ -1,5 +1,5 @@
 // Based on code from https://github.com/sharkdp/bat a1b9334a44a2c652f52dddaa83dbacba57372468
-// See src/bat/LICENSE
+// See src/bat_utils/LICENSE
 
 use std::fs::File;
 use std::io::{self, BufReader, Write};
@@ -11,7 +11,7 @@ use syntect::dumps::{from_binary, from_reader};
 use syntect::highlighting::ThemeSet;
 use syntect::parsing::SyntaxSet;
 
-use crate::bat::dirs::PROJECT_DIRS;
+use crate::bat_utils::dirs::PROJECT_DIRS;
 use crate::errors::*;
 
 pub struct HighlightingAssets {

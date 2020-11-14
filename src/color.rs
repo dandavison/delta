@@ -6,7 +6,7 @@ use ansi_term::Color;
 use lazy_static::lazy_static;
 use syntect::highlighting::Color as SyntectColor;
 
-use crate::bat::terminal::to_ansi_color;
+use crate::bat_utils::terminal::to_ansi_color;
 use crate::syntect_color;
 
 pub fn parse_color(s: &str, true_color: bool) -> Option<Color> {
