@@ -19,10 +19,10 @@ cargo build
 
 ### Useful Commands
 
-- Build and run release version:
+- Build release version:
 
   ```shell
-  cargo build --release && cargo run --release
+  cargo build --release
   ```
 
 - Run Clippy:
@@ -34,7 +34,7 @@ cargo build
 - Run all tests:
 
   ```shell
-  cargo test
+  make test
   ```
 
 - Check to see if there are code formatting issues
