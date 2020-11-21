@@ -40,7 +40,6 @@ mod tests {
         let config = integration_test_utils::make_config_from_args(&[]);
         let output = integration_test_utils::run_delta(RENAMED_FILE_INPUT, &config);
         let output = strip_ansi_codes(&output);
-        println!("{}", output);
         assert!(test_utils::contains_once(
             &output,
             "\nrenamed: a.py ⟶   b.py\n"
