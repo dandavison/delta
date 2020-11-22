@@ -292,7 +292,7 @@ impl<'a> Painter<'a> {
                 }
             };
             output_buffer.push_str(&line);
-            output_buffer.push_str("\n");
+            output_buffer.push('\n');
         }
     }
 

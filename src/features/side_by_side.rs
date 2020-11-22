@@ -107,7 +107,7 @@ pub fn paint_minus_and_plus_lines_side_by_side<'a>(
             background_color_extends_to_terminal_width,
             config,
         ));
-        output_buffer.push_str("\n");
+        output_buffer.push('\n');
     }
 }
 
@@ -171,7 +171,7 @@ pub fn paint_zero_lines_side_by_side(
             config,
         );
         output_buffer.push_str(&right_panel_line);
-        output_buffer.push_str("\n");
+        output_buffer.push('\n');
     }
 }
 
