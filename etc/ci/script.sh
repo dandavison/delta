@@ -2,6 +2,9 @@
 
 set -ex
 
+# verify code is well formatted
+cargo fmt --all -- --check
+
 # Incorporate TARGET env var to the build and test process
 cargo build --target "$TARGET" --verbose
 
