@@ -38,6 +38,12 @@ pub enum Element {
     Text(usize, usize),
 }
 
+impl From<AnsiElementIterator<'_>> for Vec<Element> {
+    fn from(it: AnsiElementIterator<'_>) -> Vec<Element> {
+        it.collect()
+    }
+}
+
 impl<'a> AnsiElementIterator<'a> {
     pub fn new(s: &'a str) -> Self {
         Self {
@@ -48,11 +54,6 @@ impl<'a> AnsiElementIterator<'a> {
             start: 0,
             pos: 0,
         }
-    }
-
-    #[allow(dead_code)]
-    pub fn to_vec(self) -> Vec<Element> {
-        self.collect()
     }
 
     #[allow(dead_code)]
@@ -380,7 +381,7 @@ mod tests {
     fn test_iterator_1() {
         let minus_line = "\x1b[31m0123\x1b[m\n";
         assert_eq!(
-            AnsiElementIterator::new(minus_line).to_vec(),
+            Vec::<Element>::from(AnsiElementIterator::new(minus_line)),
             vec![
                 Element::CSI(
                     ansi_term::Style {
@@ -403,7 +404,7 @@ mod tests {
     fn test_iterator_2() {
         let minus_line = "\x1b[31m0123\x1b[m456\n";
         assert_eq!(
-            AnsiElementIterator::new(minus_line).to_vec(),
+            Vec::<Element>::from(AnsiElementIterator::new(minus_line)),
             vec![
                 Element::CSI(
                     ansi_term::Style {
@@ -426,7 +427,7 @@ mod tests {
     fn test_iterator_styled_non_ascii() {
         let s = "\x1b[31mバー\x1b[0m";
         assert_eq!(
-            AnsiElementIterator::new(s).to_vec(),
+            Vec::<Element>::from(AnsiElementIterator::new(s)),
             vec![
                 Element::CSI(
                     ansi_term::Style {
@@ -458,7 +459,7 @@ mod tests {
         assert_eq!(&s[87..91], "\x1b[0m");
         assert_eq!(&s[91..92], "\n");
         assert_eq!(
-            AnsiElementIterator::new(s).to_vec(),
+            Vec::<Element>::from(AnsiElementIterator::new(s)),
             vec![
                 Element::CSI(
                     ansi_term::Style {
