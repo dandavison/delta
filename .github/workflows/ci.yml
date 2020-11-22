@@ -15,9 +15,12 @@ jobs:
           toolchain: stable
           profile: minimal
           override: true
-      - uses: actions-rs/cargo@v1
+      - name: Unit tests
+        uses: actions-rs/cargo@v1
         with:
           command: test
+      - name: End to end tests
+        run: make end-to-end-test
 
   rustfmt:
     name: Rustfmt
