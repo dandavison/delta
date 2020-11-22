@@ -561,7 +561,7 @@ fn handle_hunk_line(
             painter
                 .output_buffer
                 .push_str(&painter.expand_tabs(raw_line.graphemes(true)));
-            painter.output_buffer.push_str("\n");
+            painter.output_buffer.push('\n');
             State::HunkZero
         }
     }
