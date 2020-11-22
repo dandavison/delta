@@ -98,6 +98,7 @@ Contents
 * [Delta configs used in screenshots](#delta-configs-used-in-screenshots)
    * [Side-by-side view](#side-by-side-view-1)
 
+
 Here's what `git show` can look like with git configured to use delta:
 
 <br>
