@@ -838,16 +838,16 @@ src/align.rs
     #[test]
     fn test_color_only_output_is_in_one_to_one_correspondence_with_input() {
         let user_suppliable_configs: &[&[&str]] = &[
-            &["--color-only", "--light", "true"],
-            &["--color-only", "--dark", "true"],
-            &["--color-only", "--line-numbers", "true"],
-            &["--color-only", "--side-by-side", "true"],
-            &["--color-only", "--diff-highlight", "true"],
-            &["--color-only", "--diff-so-fancy", "true"],
-            &["--color-only", "--navigate", "true"],
-            &["--color-only", "--hyperlinks", "true"],
-            &["--color-only", "--keep-plus-minus-markers", "true"],
-            &["--color-only", "--raw", "true"],
+            &["--color-only", "--light"],
+            &["--color-only", "--dark"],
+            &["--color-only", "--line-numbers"],
+            &["--color-only", "--side-by-side"],
+            &["--color-only", "--diff-highlight"],
+            &["--color-only", "--diff-so-fancy"],
+            &["--color-only", "--navigate"],
+            &["--color-only", "--hyperlinks"],
+            &["--color-only", "--keep-plus-minus-markers"],
+            &["--color-only", "--raw"],
             &["--color-only", "--syntax-theme", "Monokai Extended"],
             &["--color-only", "--minus-style", "syntax bold auto"],
             &["--color-only", "--zero-style", "red strike"],
@@ -877,56 +877,42 @@ src/align.rs
             &[
                 "--color-only",
                 "--line-numbers",
-                "true",
                 "--line-numbers-minus-style",
                 "#444444",
             ],
             &[
                 "--color-only",
                 "--line-numbers",
-                "true",
-                "--line-numbers-minus-style",
-                "#444444",
-            ],
-            &[
-                "--color-only",
-                "--line-numbers",
-                "true",
                 "--line-numbers-zero-style",
                 "#444444",
             ],
             &[
                 "--color-only",
                 "--line-numbers",
-                "true",
                 "--line-numbers-plus-style",
                 "#444444",
             ],
             &[
                 "--color-only",
                 "--line-numbers",
-                "true",
                 "--line-numbers-left-format",
                 "{nm:>4}┊",
             ],
             &[
                 "--color-only",
                 "--line-numbers",
-                "true",
                 "--line-numbers-right-format",
                 "{np:>4}│",
             ],
             &[
                 "--color-only",
                 "--line-numbers",
-                "true",
                 "--line-numbers-left-style",
                 "blue",
             ],
             &[
                 "--color-only",
                 "--line-numbers",
-                "true",
                 "--line-numbers-right-style",
                 "blue",
             ],
@@ -943,7 +929,6 @@ src/align.rs
         ];
 
         for config in user_suppliable_configs {
-            println!("{:?}", config);
             _do_test_output_is_in_one_to_one_correspondence_with_input(config);
         }
     }
