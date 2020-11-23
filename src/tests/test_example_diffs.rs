@@ -47,6 +47,17 @@ mod tests {
     }
 
     #[test]
+    fn test_copied_file() {
+        let config = integration_test_utils::make_config_from_args(&[]);
+        let output = integration_test_utils::run_delta(GIT_DIFF_WITH_COPIED_FILE, &config);
+        let output = strip_ansi_codes(&output);
+        assert!(test_utils::contains_once(
+            &output,
+            "\ncopied: first_file ⟶   copied_file\n"
+        ));
+    }
+
+    #[test]
     fn test_renamed_file_with_changes() {
         let config = integration_test_utils::make_config_from_args(&[]);
         let output = integration_test_utils::run_delta(RENAMED_FILE_WITH_CHANGES_INPUT, &config);
@@ -1656,6 +1667,19 @@ diff --git a/foo b/foo
 new file mode 100644
 index 0000000..b572921
 Binary files /dev/null and b/foo differ
+";
+
+    const GIT_DIFF_WITH_COPIED_FILE: &str = "
+commit f600ed5ced4d98295ffa97571ed240cd86c34ac6 (HEAD -> master)
+Author: Dan Davison <dandavison7@gmail.com>
+Date:   Fri Nov 20 20:18:30 2020 -0500
+
+    copy
+
+diff --git a/first_file b/copied_file
+similarity index 100%
+copy from first_file
+copy to copied_file
 ";
 
     // git --no-pager show -p --cc --format=  --numstat --stat
