@@ -21,14 +21,6 @@ pub fn get_file_extension_from_marker_line(line: &str) -> Option<&str> {
 
 pub fn get_file_path_from_file_meta_line(line: &str, git_diff_name: bool) -> String {
     match line {
-        line if line.starts_with("rename from ") => {
-            let offset = "rename from ".len();
-            &line[offset..]
-        }
-        line if line.starts_with("rename to ") => {
-            let offset = "rename to ".len();
-            &line[offset..]
-        }
         line if line.starts_with("--- ") || line.starts_with("+++ ") => {
             let offset = 4;
             match &line[offset..] {
@@ -39,6 +31,12 @@ pub fn get_file_path_from_file_meta_line(line: &str, git_diff_name: bool) -> Str
                 path if git_diff_name => &path,
                 path => path.split('\t').next().unwrap_or(""),
             }
+        }
+        line if line.starts_with("rename from ") => {
+            &line[12..] // "rename from ".len()
+        }
+        line if line.starts_with("rename to ") => {
+            &line[10..] // "rename to ".len()
         }
         _ => "",
     }
