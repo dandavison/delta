@@ -437,6 +437,10 @@ pub struct Opt {
     /// Text to display in front of a added file path.
     pub file_added_label: String,
 
+    #[structopt(long = "file-copied-label", default_value = "copied:")]
+    /// Text to display in front of a copied file path.
+    pub file_copied_label: String,
+
     #[structopt(long = "file-renamed-label", default_value = "renamed:")]
     /// Text to display in front of a renamed file path.
     pub file_renamed_label: String,

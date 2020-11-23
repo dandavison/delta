@@ -22,6 +22,7 @@ pub fn get_file_extension_from_marker_line(line: &str) -> Option<&str> {
 #[derive(Debug, PartialEq)]
 pub enum FileEvent {
     Change,
+    Copy,
     Rename,
     NoEvent,
 }
@@ -46,6 +47,12 @@ pub fn parse_file_meta_line(line: &str, git_diff_name: bool) -> (String, FileEve
         }
         line if line.starts_with("rename to ") => {
             (line[10..].to_string(), FileEvent::Rename) // "rename to ".len()
+        }
+        line if line.starts_with("copy from ") => {
+            (line[10..].to_string(), FileEvent::Copy) // "copy from ".len()
+        }
+        line if line.starts_with("copy to ") => {
+            (line[8..].to_string(), FileEvent::Copy) // "copy to ".len()
         }
         _ => ("".to_string(), FileEvent::NoEvent),
     }
@@ -103,6 +110,7 @@ pub fn get_file_change_description_from_file_paths(
                 "{}{} ⟶   {}",
                 format_label(match file_event {
                     FileEvent::Rename => &config.file_renamed_label,
+                    FileEvent::Copy => &config.file_copied_label,
                     _ => "",
                 }),
                 format_file(minus_file),

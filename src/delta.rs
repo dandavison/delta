@@ -98,7 +98,9 @@ where
             state = State::FileMeta;
             handled_file_meta_header_line_file_pair = None;
         } else if (state == State::FileMeta || source == Source::DiffUnified)
-            && (line.starts_with("--- ") || line.starts_with("rename from "))
+            && (line.starts_with("--- ")
+                || line.starts_with("rename from ")
+                || line.starts_with("copy from "))
         {
             let parsed_file_meta_line =
                 parse::parse_file_meta_line(&line, source == Source::GitDiff);
@@ -114,7 +116,9 @@ where
                 ));
             }
         } else if (state == State::FileMeta || source == Source::DiffUnified)
-            && (line.starts_with("+++ ") || line.starts_with("rename to "))
+            && (line.starts_with("+++ ")
+                || line.starts_with("rename to ")
+                || line.starts_with("copy to "))
         {
             let parsed_file_meta_line =
                 parse::parse_file_meta_line(&line, source == Source::GitDiff);
