@@ -62,6 +62,7 @@ where
     let mut painter = Painter::new(writer, config);
     let mut minus_file = "".to_string();
     let mut plus_file = "".to_string();
+    let mut file_event = parse::FileEvent::NoEvent;
     let mut state = State::Unknown;
     let mut source = Source::Unknown;
 
@@ -99,7 +100,11 @@ where
         } else if (state == State::FileMeta || source == Source::DiffUnified)
             && (line.starts_with("--- ") || line.starts_with("rename from "))
         {
-            minus_file = parse::get_file_path_from_file_meta_line(&line, source == Source::GitDiff);
+            let parsed_file_meta_line =
+                parse::parse_file_meta_line(&line, source == Source::GitDiff);
+            minus_file = parsed_file_meta_line.0;
+            file_event = parsed_file_meta_line.1;
+
             if source == Source::DiffUnified {
                 state = State::FileMeta;
                 painter.set_syntax(parse::get_file_extension_from_marker_line(&line));
@@ -111,7 +116,9 @@ where
         } else if (state == State::FileMeta || source == Source::DiffUnified)
             && (line.starts_with("+++ ") || line.starts_with("rename to "))
         {
-            plus_file = parse::get_file_path_from_file_meta_line(&line, source == Source::GitDiff);
+            let parsed_file_meta_line =
+                parse::parse_file_meta_line(&line, source == Source::GitDiff);
+            plus_file = parsed_file_meta_line.0;
             painter.set_syntax(parse::get_file_extension_from_file_meta_line_file_path(
                 &plus_file,
             ));
@@ -125,6 +132,7 @@ where
                     &minus_file,
                     &plus_file,
                     config,
+                    &file_event,
                     source == Source::DiffUnified,
                 )?;
                 handled_file_meta_header_line_file_pair = current_file_pair
@@ -288,10 +296,11 @@ fn handle_file_meta_header_line(
     minus_file: &str,
     plus_file: &str,
     config: &Config,
+    file_event: &parse::FileEvent,
     comparing: bool,
 ) -> std::io::Result<()> {
     let line = parse::get_file_change_description_from_file_paths(
-        minus_file, plus_file, comparing, config,
+        minus_file, plus_file, comparing, file_event, config,
     );
     // FIXME: no support for 'raw'
     handle_generic_file_meta_header_line(painter, &line, &line, config)
