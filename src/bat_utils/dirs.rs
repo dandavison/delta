@@ -1,7 +1,7 @@
 // Based on code from https://github.com/sharkdp/bat e981e974076a926a38f124b7d8746de2ca5f0a28
 // See src/bat_utils/LICENSE
 
-use dirs as dirs_rs;
+use dirs_next;
 use lazy_static::lazy_static;
 use std::path::{Path, PathBuf};
 
@@ -24,7 +24,7 @@ impl BatProjectDirs {
             .or_else(|| dirs_rs::home_dir().map(|d| d.join(".cache")));
 
         #[cfg(not(target_os = "macos"))]
-        let cache_dir_op = dirs_rs::cache_dir();
+        let cache_dir_op = dirs_next::cache_dir();
 
         let cache_dir = cache_dir_op.map(|d| d.join("bat"))?;
 
