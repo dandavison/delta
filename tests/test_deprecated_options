@@ -1,6 +1,8 @@
 #!/bin/bash
 
-DELTA="./target/release/delta --no-gitconfig"
+# if first arg provided, use it, otherwise default to release
+DELTA_BIN=${1:=./target/release/delta}
+DELTA="$DELTA_BIN --no-gitconfig"
 
 foreground_color=red
 for decoration_attr in box underline plain; do
