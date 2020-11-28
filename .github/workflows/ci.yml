@@ -36,14 +36,12 @@ jobs:
     runs-on: ${{ matrix.os }}
     strategy:
       matrix:
-        os: [macos-latest, ubuntu-latest, windows-latest]
+        os: [macos-latest, ubuntu-latest]
         include:
           - os: macos-latest
             target: x86_64-apple-darwin
           - os: ubuntu-latest
             target: x86_64-unknown-linux-gnu
-          - os: windows-latest
-            target: x86_64-pc-windows-msvc
     steps:
       - name: Checkout repository
         uses: actions/checkout@v2
