@@ -3,7 +3,7 @@ name: Continuous Integration
 
 jobs:
 
-  unit tests:
+  unit_tests:
     name: Unit tests
     runs-on: ${{ matrix.os }}
     strategy:
@@ -31,7 +31,7 @@ jobs:
           command: test
           args: --target ${{ matrix.target }} --verbose
 
-  integration tests:
+  integration_tests:
     name: Integration tests
     runs-on: ${{ matrix.os }}
     strategy:
