@@ -12,10 +12,25 @@ jobs:
         include:
           - os: macos-latest
             target: x86_64-apple-darwin
-          - os: ubuntu-latest
-            target: x86_64-unknown-linux-gnu
+            use-cross: false
           - os: windows-latest
             target: x86_64-pc-windows-msvc
+            use-cross: false
+          - os: ubuntu-latest
+            target: x86_64-unknown-linux-gnu
+            use-cross: false
+          - os: ubuntu-latest
+            target: x86_64-unknown-linux-musl
+            use-cross: true
+          - os: ubuntu-latest
+            target: i686-unknown-linux-gnu
+            use-cross: false
+          - os: ubuntu-latest
+            target: arm-unknown-linux-gnueabihf
+            use-cross: true
+          - os: ubuntu-latest
+            target: aarch64-unknown-linux-gnu
+            use-cross: true
     steps:
       - name: Checkout repository
         uses: actions/checkout@v2
@@ -23,12 +38,14 @@ jobs:
         uses: actions-rs/toolchain@v1
         with:
           toolchain: stable
+          target: ${{ matrix.target }}
           profile: minimal
           override: true
       - name: Unit tests
         uses: actions-rs/cargo@v1
         with:
           command: test
+          use-cross: ${{ matrix.use-cross }}
           args: --target ${{ matrix.target }} --verbose
 
   integration_tests:
