@@ -23,15 +23,15 @@ jobs:
         uses: actions-rs/toolchain@v1
         with:
           toolchain: stable
-          target: ${{ matrix.target }}
+          target: ${{ matrix.job.target }}
           profile: minimal
           override: true
       - name: Unit tests
         uses: actions-rs/cargo@v1
         with:
           command: test
-          use-cross: ${{ matrix.use-cross }}
-          args: --target ${{ matrix.target }} --verbose
+          use-cross: ${{ matrix.job.use-cross }}
+          args: --target ${{ matrix.job.target }} --verbose
 
   integration_tests:
     name: Integration tests
