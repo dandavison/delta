@@ -1,0 +1,67 @@
+name: Continuous Deployment
+
+on:
+  push:
+    tags:
+      - '[0-9]+.[0-9]+.[0-9]+'
+
+jobs:
+  publish:
+    name: Publishing for ${{ matrix.job.os }}
+    runs-on: ${{ matrix.job.os }}
+    strategy:
+      matrix:
+        job:
+          - { os: macos-latest,   target: x86_64-apple-darwin,         use-cross: false }
+          - { os: windows-latest, target: x86_64-pc-windows-msvc,      use-cross: false }
+          - { os: ubuntu-latest , target: x86_64-unknown-linux-gnu,    use-cross: false }
+          - { os: ubuntu-latest,  target: x86_64-unknown-linux-musl,   use-cross: true }
+          - { os: ubuntu-latest,  target: i686-unknown-linux-gnu,      use-cross: true }
+          - { os: ubuntu-latest,  target: arm-unknown-linux-gnueabihf, use-cross: true }
+          - { os: ubuntu-latest,  target: aarch64-unknown-linux-gnu,   use-cross: true }
+
+    steps:
+      - name: Installing Rust toolchain
+        uses: actions-rs/toolchain@v1
+        with:
+          toolchain: stable
+          profile: minimal
+          override: true
+      - name: Checkout repository
+        uses: actions/checkout@v2
+      - name: Cargo build
+        uses: actions-rs/cargo@v1
+        with:
+          command: build
+          use-cross: ${{ matrix.job.use-cross }}
+          args: --release --target ${{ matrix.job.target }}
+
+      - name: Install required dependencies
+        shell: bash
+        run: |
+          if [[ ${{ matrix.job.target }} == arm-unknown-linux-gnueabihf ]]; then
+              sudo apt update
+              sudo apt-get install -y binutils-arm-linux-gnueabihf
+          fi
+          if [[ ${{ matrix.job.target }} == aarch64-unknown-linux-gnu ]]; then
+              sudo apt update
+              sudo apt-get install -y binutils-aarch64-linux-gnu
+          fi
+
+      - name: Packaging final binary
+        shell: bash
+        env:
+          TARGET: ${{ matrix.job.target }}
+          PROJECT_NAME: delta
+          PACKAGE_NAME: git-delta
+          OS_NAME: ${{ matrix.job.os }}
+        run: ./etc/ci/before_deploy.sh
+
+      - name: Releasing assets
+        uses: softprops/action-gh-release@v1
+        with:
+          files: |
+            delta-*-${{ matrix.job.target }}.*
+            git-delta*.deb
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
