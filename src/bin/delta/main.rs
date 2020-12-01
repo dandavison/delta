@@ -1,30 +1,5 @@
 extern crate bitflags;
 
-#[macro_use]
-extern crate error_chain;
-
-mod align;
-mod ansi;
-mod bat_utils;
-mod cli;
-mod color;
-mod config;
-mod delta;
-mod draw;
-mod edits;
-mod env;
-mod features;
-mod format;
-mod git_config;
-mod git_config_entry;
-mod options;
-mod paint;
-mod parse;
-mod parse_style;
-mod style;
-mod syntect_color;
-mod tests;
-
 use std::io::{self, ErrorKind, Read, Write};
 use std::path::PathBuf;
 use std::process;
@@ -33,27 +8,19 @@ use bytelines::ByteLinesReader;
 use itertools::Itertools;
 use structopt::StructOpt;
 
-use crate::bat_utils::assets::{list_languages, HighlightingAssets};
-use crate::bat_utils::output::{OutputType, PagingMode};
-use crate::delta::delta;
-use crate::options::theme::is_light_syntax_theme;
-
-pub mod errors {
-    error_chain! {
-        foreign_links {
-            Io(::std::io::Error);
-            SyntectError(::syntect::LoadingError);
-            ParseIntError(::std::num::ParseIntError);
-        }
-    }
-}
+use git_delta::bat_utils;
+use git_delta::cli;
+use git_delta::config;
+use git_delta::delta::delta;
+use git_delta::git_config;
+use git_delta::options::theme::is_light_syntax_theme;
 
 fn main() -> std::io::Result<()> {
-    let assets = HighlightingAssets::new();
+    let assets = bat_utils::assets::HighlightingAssets::new();
     let opt = cli::Opt::from_args_and_git_config(&mut git_config::GitConfig::try_create(), assets);
 
     if opt.list_languages {
-        list_languages()?;
+        bat_utils::assets::list_languages()?;
         process::exit(0);
     } else if opt.list_syntax_themes {
         list_syntax_themes()?;
@@ -77,7 +44,8 @@ fn main() -> std::io::Result<()> {
         );
     }
 
-    let mut output_type = OutputType::from_mode(config.paging_mode, None, &config).unwrap();
+    let mut output_type =
+        bat_utils::output::OutputType::from_mode(config.paging_mode, None, &config).unwrap();
     let mut writer = output_type.handle().unwrap();
 
     if let Err(error) = delta(io::stdin().lock().byte_lines(), &mut writer, &config) {
@@ -114,7 +82,8 @@ fn diff(
             process::exit(1);
         });
 
-    let mut output_type = OutputType::from_mode(config.paging_mode, None, &config).unwrap();
+    let mut output_type =
+        bat_utils::output::OutputType::from_mode(config.paging_mode, None, &config).unwrap();
     let mut writer = output_type.handle().unwrap();
     if let Err(error) = delta(
         BufReader::new(diff_process.stdout.unwrap()).byte_lines(),
@@ -227,9 +196,9 @@ fn show_config(config: &config::Config) {
         max_line_length = config.max_line_length,
         navigate = config.navigate,
         paging_mode = match config.paging_mode {
-            PagingMode::Always => "always",
-            PagingMode::Never => "never",
-            PagingMode::QuitIfOneScreen => "auto",
+            bat_utils::output::PagingMode::Always => "always",
+            bat_utils::output::PagingMode::Never => "never",
+            bat_utils::output::PagingMode::QuitIfOneScreen => "auto",
         },
         side_by_side = config.side_by_side,
         syntax_theme = config
@@ -266,9 +235,9 @@ where
 
 fn show_syntax_themes() -> std::io::Result<()> {
     let mut opt = cli::Opt::from_args();
-    let assets = HighlightingAssets::new();
-    let mut output_type = OutputType::from_mode(
-        PagingMode::QuitIfOneScreen,
+    let assets = bat_utils::assets::HighlightingAssets::new();
+    let mut output_type = bat_utils::output::OutputType::from_mode(
+        bat_utils::output::PagingMode::QuitIfOneScreen,
         None,
         &config::Config::from(cli::Opt::default()),
     )
@@ -320,7 +289,7 @@ index f38589a..0f1bb83 100644
     opt.computed.is_light_mode = is_light_mode;
     let mut config = config::Config::from(opt);
     let title_style = ansi_term::Style::new().bold();
-    let assets = HighlightingAssets::new();
+    let assets = bat_utils::assets::HighlightingAssets::new();
 
     for syntax_theme in assets
         .theme_set
@@ -350,7 +319,7 @@ pub fn list_syntax_themes() -> std::io::Result<()> {
 }
 
 pub fn _list_syntax_themes_for_humans() -> std::io::Result<()> {
-    let assets = HighlightingAssets::new();
+    let assets = bat_utils::assets::HighlightingAssets::new();
     let themes = &assets.theme_set.themes;
     let stdout = io::stdout();
     let mut stdout = stdout.lock();
@@ -371,7 +340,7 @@ pub fn _list_syntax_themes_for_humans() -> std::io::Result<()> {
 }
 
 pub fn _list_syntax_themes_for_machines() -> std::io::Result<()> {
-    let assets = HighlightingAssets::new();
+    let assets = bat_utils::assets::HighlightingAssets::new();
     let themes = &assets.theme_set.themes;
     let stdout = io::stdout();
     let mut stdout = stdout.lock();
