@@ -341,6 +341,7 @@ index f38589a..0f1bb83 100644
     Ok(())
 }
 
+#[cfg(not(tarpaulin_include))]
 pub fn list_syntax_themes() -> std::io::Result<()> {
     let stdout = io::stdout();
     let mut stdout = stdout.lock();
@@ -379,7 +380,7 @@ pub fn _list_syntax_themes_for_machines(writer: &mut dyn Write) -> std::io::Resu
     {
         writeln!(
             writer,
-            "{:5}\t{}",
+            "{}\t{}",
             if is_light_syntax_theme(theme) {
                 "light"
             } else {
@@ -389,4 +390,34 @@ pub fn _list_syntax_themes_for_machines(writer: &mut dyn Write) -> std::io::Resu
         )?;
     }
     Ok(())
+}
+
+#[cfg(test)]
+mod main_tests {
+    use super::*;
+    use std::io::{Cursor, Seek, SeekFrom};
+
+    #[test]
+    fn test_list_syntax_themes_for_humans() {
+        let mut writer = Cursor::new(vec![0; 512]);
+        _list_syntax_themes_for_humans(&mut writer).unwrap();
+        let mut s = String::new();
+        writer.seek(SeekFrom::Start(0)).unwrap();
+        writer.read_to_string(&mut s).unwrap();
+        assert!(s.contains("Light themes:\n"));
+        assert!(s.contains("    GitHub\n"));
+        assert!(s.contains("Dark themes:\n"));
+        assert!(s.contains("    Dracula\n"));
+    }
+
+    #[test]
+    fn test_list_syntax_themes_for_machines() {
+        let mut writer = Cursor::new(vec![0; 512]);
+        _list_syntax_themes_for_machines(&mut writer).unwrap();
+        let mut s = String::new();
+        writer.seek(SeekFrom::Start(0)).unwrap();
+        writer.read_to_string(&mut s).unwrap();
+        assert!(s.contains("light	GitHub\n"));
+        assert!(s.contains("dark	Dracula\n"));
+    }
 }
