@@ -342,45 +342,43 @@ index f38589a..0f1bb83 100644
 }
 
 pub fn list_syntax_themes() -> std::io::Result<()> {
+    let stdout = io::stdout();
+    let mut stdout = stdout.lock();
     if atty::is(atty::Stream::Stdout) {
-        _list_syntax_themes_for_humans()
+        _list_syntax_themes_for_humans(&mut stdout)
     } else {
-        _list_syntax_themes_for_machines()
+        _list_syntax_themes_for_machines(&mut stdout)
     }
 }
 
-pub fn _list_syntax_themes_for_humans() -> std::io::Result<()> {
+pub fn _list_syntax_themes_for_humans(writer: &mut dyn Write) -> std::io::Result<()> {
     let assets = HighlightingAssets::new();
     let themes = &assets.theme_set.themes;
-    let stdout = io::stdout();
-    let mut stdout = stdout.lock();
 
-    writeln!(stdout, "Light themes:")?;
+    writeln!(writer, "Light themes:")?;
     for (theme, _) in themes.iter().filter(|(t, _)| is_light_syntax_theme(*t)) {
-        writeln!(stdout, "    {}", theme)?;
+        writeln!(writer, "    {}", theme)?;
     }
-    writeln!(stdout, "\nDark themes:")?;
+    writeln!(writer, "\nDark themes:")?;
     for (theme, _) in themes.iter().filter(|(t, _)| !is_light_syntax_theme(*t)) {
-        writeln!(stdout, "    {}", theme)?;
+        writeln!(writer, "    {}", theme)?;
     }
     writeln!(
-        stdout,
+        writer,
         "\nUse delta --show-syntax-themes to demo the themes."
     )?;
     Ok(())
 }
 
-pub fn _list_syntax_themes_for_machines() -> std::io::Result<()> {
+pub fn _list_syntax_themes_for_machines(writer: &mut dyn Write) -> std::io::Result<()> {
     let assets = HighlightingAssets::new();
     let themes = &assets.theme_set.themes;
-    let stdout = io::stdout();
-    let mut stdout = stdout.lock();
     for (theme, _) in themes
         .iter()
         .sorted_by_key(|(t, _)| is_light_syntax_theme(*t))
     {
         writeln!(
-            stdout,
+            writer,
             "{:5}\t{}",
             if is_light_syntax_theme(theme) {
                 "light"
