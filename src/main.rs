@@ -264,6 +264,7 @@ where
     }
 }
 
+#[cfg(not(tarpaulin_include))]
 fn show_syntax_themes() -> std::io::Result<()> {
     let mut opt = cli::Opt::from_args();
     let assets = HighlightingAssets::new();
@@ -396,6 +397,23 @@ pub fn _list_syntax_themes_for_machines(writer: &mut dyn Write) -> std::io::Resu
 mod main_tests {
     use super::*;
     use std::io::{Cursor, Seek, SeekFrom};
+
+    use crate::ansi;
+    use crate::tests::integration_test_utils::integration_test_utils;
+
+    #[test]
+    fn test_show_syntax_themes() {
+        let opt = integration_test_utils::make_options_from_args(&[]);
+
+        let mut writer = Cursor::new(vec![0; 1024]);
+        _show_syntax_themes(opt, true, &mut writer).unwrap();
+        let mut s = String::new();
+        writer.seek(SeekFrom::Start(0)).unwrap();
+        writer.read_to_string(&mut s).unwrap();
+        let s = ansi::strip_ansi_codes(&s);
+        assert!(s.contains("\nTheme: gruvbox-white\n"));
+        assert!(s.contains("\nfn print_cube(num: f64) {\n"));
+    }
 
     #[test]
     fn test_list_syntax_themes_for_humans() {
