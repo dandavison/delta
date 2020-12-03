@@ -30,8 +30,8 @@ jobs:
           args: --target ${{ matrix.target }} --release
       - name: End to end tests
         run: >-
-          ./tests/test_raw_output_matches_git_on_full_repo_history target/${{ matrix.target }}/release/delta &&
-          ./tests/test_deprecated_options target/${{ matrix.target }}/release/delta > /dev/null
+          bash -c "./tests/test_raw_output_matches_git_on_full_repo_history target/${{ matrix.target }}/release/delta &&
+                   ./tests/test_deprecated_options target/${{ matrix.target }}/release/delta > /dev/null"
       - name: Run executable
         run: cargo run --release --target ${{ matrix.target }} -- < /dev/null
 
