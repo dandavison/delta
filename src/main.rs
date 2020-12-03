@@ -413,6 +413,19 @@ mod main_tests {
     use crate::tests::integration_test_utils::integration_test_utils;
 
     #[test]
+    fn test_show_config() {
+        let config = integration_test_utils::make_config_from_args(&[]);
+        let mut writer = Cursor::new(vec![0; 1024]);
+        show_config(&config, &mut writer).unwrap();
+        let mut s = String::new();
+        writer.seek(SeekFrom::Start(0)).unwrap();
+        writer.read_to_string(&mut s).unwrap();
+        let s = ansi::strip_ansi_codes(&s);
+        assert!(s.contains("    commit-style                  = raw\n"));
+        assert!(s.contains(r"    word-diff-regex               = '\w+'"));
+    }
+
+    #[test]
     fn test_show_syntax_themes() {
         let opt = integration_test_utils::make_options_from_args(&[]);
 
