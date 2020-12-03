@@ -307,12 +307,7 @@ fn _show_syntax_themes(
 ) -> std::io::Result<()> {
     use bytelines::ByteLines;
     use std::io::BufReader;
-    let input = if !atty::is(atty::Stream::Stdin) {
-        let mut buf = Vec::new();
-        io::stdin().lock().read_to_end(&mut buf)?;
-        buf
-    } else {
-        b"\
+    let mut input = b"\
 diff --git a/example.rs b/example.rs
 index f38589a..0f1bb83 100644
 --- a/example.rs
@@ -327,7 +322,13 @@ index f38589a..0f1bb83 100644
 +    let result = f64::powf(num, 3.0);
 +    println!(\"The cube of {:.2} is {:.2}.\", num, result);
 "
-        .to_vec()
+    .to_vec();
+    if !atty::is(atty::Stream::Stdin) {
+        let mut buf = Vec::new();
+        io::stdin().lock().read_to_end(&mut buf)?;
+        if !buf.is_empty() {
+            input = buf;
+        }
     };
 
     opt.computed.is_light_mode = is_light_mode;
