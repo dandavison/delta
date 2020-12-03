@@ -59,6 +59,7 @@ impl SideBySideData {
 }
 
 /// Emit a sequence of minus and plus lines in side-by-side mode.
+#[allow(clippy::too_many_arguments)]
 pub fn paint_minus_and_plus_lines_side_by_side<'a>(
     minus_syntax_style_sections: Vec<Vec<(SyntectStyle, &str)>>,
     minus_diff_style_sections: Vec<Vec<(Style, &str)>>,
@@ -111,6 +112,7 @@ pub fn paint_minus_and_plus_lines_side_by_side<'a>(
     }
 }
 
+#[allow(clippy::too_many_arguments)]
 pub fn paint_zero_lines_side_by_side(
     syntax_style_sections: Vec<Vec<(SyntectStyle, &str)>>,
     diff_style_sections: Vec<Vec<(Style, &str)>>,
@@ -175,6 +177,7 @@ pub fn paint_zero_lines_side_by_side(
     }
 }
 
+#[allow(clippy::too_many_arguments)]
 fn paint_left_panel_minus_line<'a>(
     line_index: Option<usize>,
     syntax_style_sections: &[Vec<(SyntectStyle, &str)>],
@@ -208,6 +211,7 @@ fn paint_left_panel_minus_line<'a>(
     panel_line
 }
 
+#[allow(clippy::too_many_arguments)]
 fn paint_right_panel_plus_line<'a>(
     line_index: Option<usize>,
     syntax_style_sections: &[Vec<(SyntectStyle, &str)>],
@@ -289,6 +293,7 @@ fn get_right_fill_style_for_left_panel(
 // what this will do is set the line number pair in that function to `(Some(minus_number), None)`,
 // and then only emit the right field (which has a None number, i.e. blank). However, it will also
 // increment the minus line number, so we need to knock that back down.
+#[allow(clippy::too_many_arguments)]
 fn paint_minus_or_plus_panel_line(
     line_index: Option<usize>,
     syntax_style_sections: &[Vec<(SyntectStyle, &str)>],
