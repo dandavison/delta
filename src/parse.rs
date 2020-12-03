@@ -9,6 +9,7 @@ use crate::features;
 // https://git-scm.com/docs/git-config#Documentation/git-config.txt-diffmnemonicPrefix
 const DIFF_PREFIXES: [&str; 6] = ["a/", "b/", "c/", "i/", "o/", "w/"];
 
+#[allow(clippy::tabs_in_doc_comments)]
 /// Given input like
 /// "--- one.rs	2019-11-20 06:16:08.000000000 +0100"
 /// Return "rs"

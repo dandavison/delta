@@ -240,6 +240,7 @@ impl<'a> Painter<'a> {
 
     /// Superimpose background styles and foreground syntax
     /// highlighting styles, and write colored lines to output buffer.
+    #[allow(clippy::too_many_arguments)]
     pub fn paint_lines(
         syntax_style_sections: Vec<Vec<(SyntectStyle, &str)>>,
         diff_style_sections: Vec<Vec<(Style, &str)>>,
@@ -487,6 +488,7 @@ impl<'a> Painter<'a> {
     }
 
     /// Set background styles to represent diff for minus and plus lines in buffer.
+    #[allow(clippy::type_complexity)]
     fn get_diff_style_sections<'b>(
         minus_lines: &'b [(String, State)],
         plus_lines: &'b [(String, State)],
@@ -635,6 +637,7 @@ mod superimpose_style_sections {
         exploded
     }
 
+    #[allow(clippy::type_complexity)]
     fn superimpose(
         style_section_pairs: Vec<(&(SyntectStyle, char), (Style, char))>,
     ) -> Vec<((SyntectStyle, Style), char)> {
