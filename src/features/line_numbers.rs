@@ -232,6 +232,7 @@ fn parse_line_number_format(format_string: &str) -> LineNumberFormatData {
     format_data
 }
 
+#[allow(clippy::too_many_arguments)]
 fn format_and_paint_line_number_field<'a>(
     format_data: &[LineNumberPlaceholderData<'a>],
     style: &Style,
