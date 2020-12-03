@@ -59,7 +59,9 @@ jobs:
           command: build
           args: --target ${{ matrix.target }} --release
       - name: End to end tests
-        run: DELTA_BIN=target/${{ matrix.target }}/release/delta make end-to-end-test > /dev/null
+        run: |
+            DELTA_BIN=target/${{ matrix.target }}/release/delta bash tests/test_raw_output_matches_git_on_full_repo_history
+            DELTA_BIN=target/${{ matrix.target }}/release/delta bash tests/test_deprecated_options > /dev/null
       - name: Run executable
         run: cargo run --release --target ${{ matrix.target }} -- < /dev/null
 
