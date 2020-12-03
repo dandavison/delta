@@ -1,7 +1,9 @@
 #!/bin/bash
 
-DELTA="${DELTA_BIN:-./target/release/delta} --no-gitconfig --raw --max-line-length 0"
+# if first arg provided, use it, otherwise default to release
+DELTA_BIN=${1:=./target/release/delta}
+DELTA="$DELTA_BIN --no-gitconfig --raw --max-line-length 0"
+
 ANSIFILTER="./etc/bin/ansifilter"
 GIT_ARGS="log --patch --stat --numstat"
-
 diff -u <(git $GIT_ARGS | $ANSIFILTER) <(git $GIT_ARGS | $DELTA | $ANSIFILTER)
