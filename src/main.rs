@@ -67,7 +67,9 @@ fn main() -> std::io::Result<()> {
     let config = config::Config::from(opt);
 
     if _show_config {
-        show_config(&config);
+        let stdout = io::stdout();
+        let mut stdout = stdout.lock();
+        show_config(&config, &mut stdout)?;
         process::exit(0);
     } else if atty::is(atty::Stream::Stdin) {
         return diff(
@@ -129,9 +131,10 @@ fn diff(
     Ok(())
 }
 
-fn show_config(config: &config::Config) {
+fn show_config(config: &config::Config, writer: &mut dyn Write) -> std::io::Result<()> {
     // styles first
-    println!(
+    writeln!(
+        writer,
         "    commit-style                  = {commit_style}
     file-style                    = {file_style}
     hunk-header-style             = {hunk_header_style}
@@ -158,9 +161,10 @@ fn show_config(config: &config::Config) {
         plus_style = config.plus_style.to_painted_string(),
         whitespace_error_style = config.whitespace_error_style.to_painted_string(),
         zero_style = config.zero_style.to_painted_string(),
-    );
+    )?;
     // Everything else
-    println!(
+    writeln!(
+        writer,
         "    24-bit-color                  = {true_color}
     file-added-label              = {file_added_label}
     file-modified-label           = {file_modified_label}
@@ -171,18 +175,21 @@ fn show_config(config: &config::Config) {
         file_modified_label = format_option_value(&config.file_modified_label),
         file_removed_label = format_option_value(&config.file_removed_label),
         file_renamed_label = format_option_value(&config.file_renamed_label),
-    );
-    println!(
+    )?;
+    writeln!(
+        writer,
         "    hyperlinks                    = {hyperlinks}",
         hyperlinks = config.hyperlinks
-    );
+    )?;
     if config.hyperlinks {
-        println!(
+        writeln!(
+            writer,
             "    hyperlinks-file-link-format   = {hyperlinks_file_link_format}",
             hyperlinks_file_link_format = format_option_value(&config.hyperlinks_file_link_format),
-        )
+        )?
     }
-    println!(
+    writeln!(
+        writer,
         "    inspect-raw-lines             = {inspect_raw_lines}
     keep-plus-minus-markers       = {keep_plus_minus_markers}",
         inspect_raw_lines = match config.inspect_raw_lines {
@@ -190,13 +197,15 @@ fn show_config(config: &config::Config) {
             cli::InspectRawLines::False => "false",
         },
         keep_plus_minus_markers = config.keep_plus_minus_markers,
-    );
-    println!(
+    )?;
+    writeln!(
+        writer,
         "    line-numbers                  = {line_numbers}",
         line_numbers = config.line_numbers
-    );
+    )?;
     if config.line_numbers {
-        println!(
+        writeln!(
+            writer,
             "    line-numbers-minus-style      = {line_numbers_minus_style}
     line-numbers-zero-style       = {line_numbers_zero_style}
     line-numbers-plus-style       = {line_numbers_plus_style}
@@ -211,9 +220,10 @@ fn show_config(config: &config::Config) {
             line_numbers_right_style = config.line_numbers_right_style.to_painted_string(),
             line_numbers_left_format = format_option_value(&config.line_numbers_left_format),
             line_numbers_right_format = format_option_value(&config.line_numbers_right_format),
-        )
+        )?
     }
-    println!(
+    writeln!(
+        writer,
         "    max-line-distance             = {max_line_distance}
     max-line-length               = {max_line_length}
     navigate                      = {navigate}
@@ -243,7 +253,8 @@ fn show_config(config: &config::Config) {
         },
         tab_width = config.tab_width,
         tokenization_regex = format_option_value(&config.tokenization_regex.to_string()),
-    );
+    )?;
+    Ok(())
 }
 
 // Heuristics determining whether to quote string option values when printing values intended for
