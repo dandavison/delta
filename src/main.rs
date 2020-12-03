@@ -48,6 +48,7 @@ pub mod errors {
     }
 }
 
+#[cfg(not(tarpaulin_include))]
 fn main() -> std::io::Result<()> {
     let assets = HighlightingAssets::new();
     let opt = cli::Opt::from_args_and_git_config(&mut git_config::GitConfig::try_create(), assets);
