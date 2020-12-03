@@ -437,6 +437,7 @@ mod main_tests {
         writer.read_to_string(&mut s).unwrap();
         let s = ansi::strip_ansi_codes(&s);
         assert!(s.contains("\nTheme: gruvbox-white\n"));
+        println!("{}", s);
         assert!(s.contains("\nfn print_cube(num: f64) {\n"));
     }
 
