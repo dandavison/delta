@@ -13,8 +13,8 @@ unit-test:
 	cargo test
 
 end-to-end-test:
-	./tests/test_raw_output_matches_git_on_full_repo_history
-	./tests/test_deprecated_options > /dev/null
+	./tests/test_raw_output_matches_git_on_full_repo_history $(DELTA_BIN)
+	./tests/test_deprecated_options $(DELTA_BIN) > /dev/null
 
 release:
 	@make -f release.Makefile release
