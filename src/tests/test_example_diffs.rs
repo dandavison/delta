@@ -113,7 +113,7 @@ mod tests {
         let config = integration_test_utils::make_config_from_args(&[]);
         let output = integration_test_utils::run_delta(DIFF_UNIFIED_TWO_FILES, &config);
         let output = strip_ansi_codes(&output);
-        let mut lines = output.split('\n');
+        let mut lines = output.lines();
 
         // Header
         assert_eq!(lines.nth(1).unwrap(), "comparing: one.rs ⟶   src/two.rs");
@@ -132,7 +132,7 @@ mod tests {
         let config = integration_test_utils::make_config_from_args(&["--width", "80"]);
         let output = integration_test_utils::run_delta(DIFF_UNIFIED_TWO_DIRECTORIES, &config);
         let output = strip_ansi_codes(&output);
-        let mut lines = output.split('\n');
+        let mut lines = output.lines();
 
         // Header
         assert_eq!(
@@ -196,7 +196,7 @@ mod tests {
         let output = integration_test_utils::run_delta(DIFF_WITH_MERGE_CONFLICT, &config);
         // TODO: The + in the first column is being removed.
         assert!(strip_ansi_codes(&output).contains("+>>>>>>> Stashed changes"));
-        assert_eq!(output.split('\n').count(), 47);
+        assert_eq!(output.lines().count(), 46);
     }
 
     #[test]
@@ -949,8 +949,8 @@ src/align.rs
         let output = integration_test_utils::run_delta(GIT_DIFF_SINGLE_HUNK, &config);
         let output = strip_ansi_codes(&output);
 
-        let input_lines: Vec<&str> = GIT_DIFF_SINGLE_HUNK.split('\n').collect();
-        let output_lines: Vec<&str> = output.split('\n').collect();
+        let input_lines: Vec<&str> = GIT_DIFF_SINGLE_HUNK.lines().collect();
+        let output_lines: Vec<&str> = output.lines().collect();
         assert_eq!(input_lines.len(), output_lines.len());
 
         // Although git patch options only checks the line counts of input and output,
@@ -962,7 +962,7 @@ src/align.rs
             let input_line = input_lines[n];
             // If config.line_numbers is enabled,
             // we should remove line_numbers decoration while checking.
-            let output_line = if config.line_numbers && n > 11 && n < input_lines.len() - 1 {
+            let output_line = if config.line_numbers && n > 11 && n < input_lines.len() {
                 &output_lines[n][14..]
             } else {
                 output_lines[n]
