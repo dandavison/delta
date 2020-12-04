@@ -1316,6 +1316,19 @@ impl<'a> Alignment<'a> { │
     }
 
     #[test]
+    fn test_single_character_line_is_not_whitespace_error() {
+        let plus_style = "bold yellow red ul";
+        let config = integration_test_utils::make_config_from_args(&[
+            "--light",
+            "--keep-plus-minus-markers",
+            "--plus-style",
+            plus_style,
+        ]);
+        let output = integration_test_utils::run_delta(DIFF_WITH_SINGLE_CHARACTER_LINE, &config);
+        ansi_test_utils::assert_line_has_style(&output, 12, "+}", plus_style, &config)
+    }
+
+    #[test]
     fn test_color_only() {
         let config = integration_test_utils::make_config_from_args(&["--color-only"]);
         let output = integration_test_utils::run_delta(GIT_DIFF_SINGLE_HUNK, &config);
@@ -1861,6 +1874,22 @@ index e69de29..8b13789 100644
 +++ w/a
 @@ -0,0 +1 @@
 +
+";
+
+    const DIFF_WITH_SINGLE_CHARACTER_LINE: &str = r"
+diff --git a/Person.java b/Person.java
+new file mode 100644
+index 0000000..c6c830c
+--- /dev/null
++++ b/Person.java
+@@ -0,0 +1,7 @@
++import lombok.Data;
++
++@Data
++public class Person {
++  private Long id;
++  private String name;
++}
 ";
 
     const DIFF_WITH_WHITESPACE_ERROR: &str = r"
