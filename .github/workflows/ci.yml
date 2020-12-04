@@ -118,7 +118,7 @@ jobs:
       - name: Run cargo-tarpaulin
         uses: actions-rs/tarpaulin@v0.1
         with:
-          args: '--ignore-tests --out Lcov --output-dir target/tarpaulin --timeout 300'
+          args: '--ignore-tests --out Lcov --output-dir target/tarpaulin --timeout 3000'
       - name: Upload to Coveralls
         # upload only if push
         if: ${{ github.event_name == 'push' }}
