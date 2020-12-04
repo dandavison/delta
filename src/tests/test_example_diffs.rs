@@ -1303,6 +1303,19 @@ impl<'a> Alignment<'a> { │
     }
 
     #[test]
+    fn test_added_empty_line_is_not_whitespace_error() {
+        let plus_style = "bold yellow red ul";
+        let config = integration_test_utils::make_config_from_args(&[
+            "--light",
+            "--keep-plus-minus-markers",
+            "--plus-style",
+            plus_style,
+        ]);
+        let output = integration_test_utils::run_delta(DIFF_WITH_ADDED_EMPTY_LINE, &config);
+        ansi_test_utils::assert_line_has_style(&output, 6, "", plus_style, &config)
+    }
+
+    #[test]
     fn test_color_only() {
         let config = integration_test_utils::make_config_from_args(&["--color-only"]);
         let output = integration_test_utils::run_delta(GIT_DIFF_SINGLE_HUNK, &config);
