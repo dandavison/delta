@@ -1,5 +1,3 @@
-use lazy_static::lazy_static;
-use regex::Regex;
 use std::io::Write;
 
 use itertools::Itertools;
@@ -586,10 +584,6 @@ fn style_sections_contain_more_than_one_style(sections: &[(Style, &str)]) -> boo
     }
 }
 
-lazy_static! {
-    static ref WHITESPACE_ERROR_REGEX: Regex = Regex::new(r" \s+\n").unwrap();
-}
-
 /// True iff the line represented by `sections` constitutes a whitespace error.
 // Note that a space is always present as the first character in the line (it was put there as a
 // replacement for the leading +/- marker; see paint::prepare()). A line is a whitespace error iff,
@@ -599,9 +593,20 @@ lazy_static! {
 // does not yet.
 // https://git-scm.com/docs/git-config#Documentation/git-config.txt-corewhitespace
 fn is_whitespace_error(sections: &[(Style, &str)]) -> bool {
-    // TODO: Do this more efficiently, i.e. without reassembling the entire line.
-    let text: String = sections.iter().map(|(_, s)| *s).collect();
-    WHITESPACE_ERROR_REGEX.is_match(&text)
+    let mut chars = sections.iter().flat_map(|(_, s)| s.chars()).skip(1);
+    if let Some(c) = chars.next() {
+        if c == '\n' {
+            false
+        } else {
+            if let Some(c) = chars.skip_while(|&c| c == ' ' || c == '\t').next() {
+                c == '\n'
+            } else {
+                true
+            }
+        }
+    } else {
+        false
+    }
 }
 
 mod superimpose_style_sections {
