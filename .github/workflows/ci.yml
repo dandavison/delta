@@ -29,7 +29,7 @@ jobs:
           command: build
           args: --target ${{ matrix.target }} --release
       - name: End to end tests
-        run: make DELTA_BIN=target/${{ matrix.target }}/release/delta end-to-end-test
+        run: make end-to-end-test DELTA_BIN=target/${{ matrix.target }}/release/delta
       - name: Run executable
         run: cargo run --release --target ${{ matrix.target }} -- < /dev/null
 
