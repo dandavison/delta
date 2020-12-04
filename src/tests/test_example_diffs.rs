@@ -1220,7 +1220,7 @@ impl<'a> Alignment<'a> { │
 
     #[test]
     fn test_added_empty_line_highlight() {
-        let plus_empty_line_marker_style = "bold yellow magenta ul";
+        let plus_empty_line_marker_style = "bold yellow red ul";
         _do_test_added_empty_line_highlight(plus_empty_line_marker_style, "green reverse", true);
         _do_test_added_empty_line_highlight(plus_empty_line_marker_style, "normal green", true);
         _do_test_added_empty_line_highlight(plus_empty_line_marker_style, "green", false);
@@ -1285,7 +1285,7 @@ impl<'a> Alignment<'a> { │
 
     #[test]
     fn test_whitespace_error() {
-        let whitespace_error_style = "bold yellow magenta ul";
+        let whitespace_error_style = "bold yellow red ul";
         let config = integration_test_utils::make_config_from_args(&[
             "--whitespace-error-style",
             whitespace_error_style,
