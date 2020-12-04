@@ -597,12 +597,10 @@ fn is_whitespace_error(sections: &[(Style, &str)]) -> bool {
     if let Some(c) = chars.next() {
         if c == '\n' {
             false
+        } else if let Some(c) = chars.skip_while(|&c| c == ' ' || c == '\t').next() {
+            c == '\n'
         } else {
-            if let Some(c) = chars.skip_while(|&c| c == ' ' || c == '\t').next() {
-                c == '\n'
-            } else {
-                true
-            }
+            true
         }
     } else {
         false
