@@ -593,18 +593,17 @@ fn style_sections_contain_more_than_one_style(sections: &[(Style, &str)]) -> boo
 // does not yet.
 // https://git-scm.com/docs/git-config#Documentation/git-config.txt-corewhitespace
 fn is_whitespace_error(sections: &[(Style, &str)]) -> bool {
-    let mut chars = sections.iter().flat_map(|(_, s)| s.chars()).skip(1);
-    if let Some(c) = chars.next() {
+    let mut any_chars = false;
+    for c in sections.iter().flat_map(|(_, s)| s.chars()).skip(1) {
         if c == '\n' {
-            false
-        } else if let Some(c) = chars.find(|&c| c != ' ' && c != '\t') {
-            c == '\n'
+            return any_chars;
+        } else if c != ' ' && c != '\t' {
+            return false;
         } else {
-            true
+            any_chars = true;
         }
-    } else {
-        false
     }
+    false
 }
 
 mod superimpose_style_sections {
