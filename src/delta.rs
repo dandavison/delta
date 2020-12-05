@@ -456,7 +456,7 @@ fn handle_hunk_header_line(
                 &mut painter.output_buffer,
                 config,
                 &mut None,
-                "",
+                None,
                 None,
                 Some(false),
             );
