@@ -174,7 +174,7 @@ fn ansi_term_style_from_sgr_parameters(params: &mut ParamsIter<'_>) -> ansi_term
             [1] => style.is_bold = true,
             [2] => style.is_dimmed = true,
             [3] => style.is_italic = true,
-            [4] => style.is_underline = true,
+            [4, ..] => style.is_underline = true,
             [5] => style.is_blink = true, // blink slow
             [6] => style.is_blink = true, // blink fast
             [7] => style.is_reverse = true,
