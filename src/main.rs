@@ -5,6 +5,7 @@ extern crate error_chain;
 
 mod align;
 mod ansi;
+#[cfg(not(tarpaulin_include))]
 mod bat_utils;
 mod cli;
 mod color;
