@@ -124,6 +124,27 @@ mod tests {
             "delta.__workdir__".to_string(),
             GitConfigEntry::Path(PathBuf::from("/working/directory")),
         );
+        println!(
+            "{}",
+            format!(
+                "\x1b]8;;file://{}\x1b\\link-text\x1b]8;;\x1b\\",
+                Path::new("/working/directory/relative/path/file.rs").to_string_lossy()
+            )
+        );
+        println!(
+            "{}",
+            format_osc8_file_hyperlink("relative/path/file.rs", None, "link-text", &config)
+        );
+        dbg!(format!(
+            "\x1b]8;;file://{}\x1b\\link-text\x1b]8;;\x1b\\",
+            Path::new("/working/directory/relative/path/file.rs").to_string_lossy()
+        ));
+        dbg!(format_osc8_file_hyperlink(
+            "relative/path/file.rs",
+            None,
+            "link-text",
+            &config
+        ));
         assert_eq!(
             format!(
                 "\x1b]8;;file://{}\x1b\\link-text\x1b]8;;\x1b\\",
