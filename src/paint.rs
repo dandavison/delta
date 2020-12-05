@@ -1,5 +1,3 @@
-use lazy_static::lazy_static;
-use regex::Regex;
 use std::io::Write;
 
 use itertools::Itertools;
@@ -586,18 +584,26 @@ fn style_sections_contain_more_than_one_style(sections: &[(Style, &str)]) -> boo
     }
 }
 
-lazy_static! {
-    static ref NON_WHITESPACE_REGEX: Regex = Regex::new(r"\S").unwrap();
-}
-
 /// True iff the line represented by `sections` constitutes a whitespace error.
+// Note that a space is always present as the first character in the line (it was put there as a
+// replacement for the leading +/- marker; see paint::prepare()). A line is a whitespace error iff,
+// beyond the initial space character, (a) there are more characters and (b) they are all
+// whitespace characters.
 // TODO: Git recognizes blank lines at end of file (blank-at-eof) as a whitespace error but delta
 // does not yet.
 // https://git-scm.com/docs/git-config#Documentation/git-config.txt-corewhitespace
 fn is_whitespace_error(sections: &[(Style, &str)]) -> bool {
-    !sections
-        .iter()
-        .any(|(_, s)| NON_WHITESPACE_REGEX.is_match(s))
+    let mut any_chars = false;
+    for c in sections.iter().flat_map(|(_, s)| s.chars()).skip(1) {
+        if c == '\n' {
+            return any_chars;
+        } else if c != ' ' && c != '\t' {
+            return false;
+        } else {
+            any_chars = true;
+        }
+    }
+    false
 }
 
 mod superimpose_style_sections {
