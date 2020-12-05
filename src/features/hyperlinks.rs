@@ -93,7 +93,7 @@ mod tests {
     use super::*;
     use crate::tests::integration_test_utils::integration_test_utils::make_config_from_args_and_git_config;
     use std::fs::remove_file;
-    use std::path::PathBuf;
+    use std::path::{Path, PathBuf};
 
     #[test]
     fn test_format_commit_line_with_osc8_commit_hyperlink() {
@@ -125,7 +125,10 @@ mod tests {
             GitConfigEntry::Path(PathBuf::from("/working/directory")),
         );
         assert_eq!(
-            "\x1b]8;;file:///working/directory/relative/path/file.rs\x1b\\link-text\x1b]8;;\x1b\\",
+            format!(
+                "\x1b]8;;file://{}\x1b\\link-text\x1b]8;;\x1b\\",
+                Path::new("/working/directory/relative/path/file.rs").to_string_lossy()
+            ),
             format_osc8_file_hyperlink("relative/path/file.rs", None, "link-text", &config)
         )
     }
@@ -142,7 +145,10 @@ mod tests {
             GitConfigEntry::Path(PathBuf::from("/working/directory")),
         );
         assert_eq!(
-            "\x1b]8;;file-line:///working/directory/relative/path/file.rs:7\x1b\\link-text\x1b]8;;\x1b\\",
+            format!(
+                "\x1b]8;;file-line://{}:7\x1b\\link-text\x1b]8;;\x1b\\",
+                Path::new("/working/directory/relative/path/file.rs").to_string_lossy()
+            ),
             format_osc8_file_hyperlink("relative/path/file.rs", Some(7), "link-text", &config)
         )
     }
