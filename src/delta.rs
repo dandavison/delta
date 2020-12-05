@@ -518,8 +518,8 @@ fn handle_hunk_line(
     // Don't let the line buffers become arbitrarily large -- if we
     // were to allow that, then for a large deleted/added file we
     // would process the entire file before painting anything.
-    if painter.minus_lines.len() > config.max_buffered_lines
-        || painter.plus_lines.len() > config.max_buffered_lines
+    if painter.minus_lines.len() > config.line_buffer_size
+        || painter.plus_lines.len() > config.line_buffer_size
     {
         painter.paint_buffered_minus_and_plus_lines();
     }
