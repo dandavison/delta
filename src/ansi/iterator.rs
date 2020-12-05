@@ -128,7 +128,8 @@ impl vte::Perform for Performer {
 
         if let ('m', None) = (c, intermediates.get(0)) {
             if params.is_empty() {
-                // Attr::Reset; TODO: does this need to be handled?
+                // Attr::Reset
+                // Probably doesn't need to be handled: https://github.com/dandavison/delta/pull/431#discussion_r536883568
             } else {
                 self.element = Some(Element::CSI(
                     ansi_term_style_from_sgr_parameters(&mut params.iter()),
