@@ -83,11 +83,11 @@ pub fn paint_minus_and_plus_lines_side_by_side<'a>(
                 None => &State::HunkMinus(None),
             },
             line_numbers_data,
-            &config.minus_style.paint(if config.keep_plus_minus_markers {
-                "-"
+            if config.keep_plus_minus_markers {
+                Some(config.minus_style.paint("-"))
             } else {
-                ""
-            }),
+                None
+            },
             background_color_extends_to_terminal_width,
             config,
         ));
@@ -100,11 +100,11 @@ pub fn paint_minus_and_plus_lines_side_by_side<'a>(
                 None => &State::HunkPlus(None),
             },
             line_numbers_data,
-            &config.plus_style.paint(if config.keep_plus_minus_markers {
-                "+"
+            if config.keep_plus_minus_markers {
+                Some(config.plus_style.paint("+"))
             } else {
-                ""
-            }),
+                None
+            },
             background_color_extends_to_terminal_width,
             config,
         ));
@@ -120,7 +120,7 @@ pub fn paint_zero_lines_side_by_side(
     output_buffer: &mut String,
     config: &Config,
     line_numbers_data: &mut Option<&mut line_numbers::LineNumbersData>,
-    painted_prefix: &ansi_term::ANSIString,
+    painted_prefix: Option<ansi_term::ANSIString>,
     background_color_extends_to_terminal_width: Option<bool>,
 ) {
     for (line_index, (syntax_sections, diff_sections)) in syntax_style_sections
@@ -134,7 +134,7 @@ pub fn paint_zero_lines_side_by_side(
             state,
             line_numbers_data,
             Some(PanelSide::Left),
-            painted_prefix,
+            painted_prefix.clone(),
             config,
         );
         // TODO: Avoid doing the superimpose_style_sections work twice.
@@ -160,7 +160,7 @@ pub fn paint_zero_lines_side_by_side(
             state,
             line_numbers_data,
             Some(PanelSide::Right),
-            painted_prefix,
+            painted_prefix.clone(),
             config,
         );
         right_fill_right_panel_line(
@@ -184,7 +184,7 @@ fn paint_left_panel_minus_line<'a>(
     diff_style_sections: &[Vec<(Style, &str)>],
     state: &'a State,
     line_numbers_data: &mut Option<&mut line_numbers::LineNumbersData>,
-    painted_prefix: &ansi_term::ANSIString,
+    painted_prefix: Option<ansi_term::ANSIString>,
     background_color_extends_to_terminal_width: Option<bool>,
     config: &Config,
 ) -> String {
@@ -218,7 +218,7 @@ fn paint_right_panel_plus_line<'a>(
     diff_style_sections: &[Vec<(Style, &str)>],
     state: &'a State,
     line_numbers_data: &mut Option<&mut line_numbers::LineNumbersData>,
-    painted_prefix: &ansi_term::ANSIString,
+    painted_prefix: Option<ansi_term::ANSIString>,
     background_color_extends_to_terminal_width: Option<bool>,
     config: &Config,
 ) -> String {
@@ -301,7 +301,7 @@ fn paint_minus_or_plus_panel_line(
     state: &State,
     line_numbers_data: &mut Option<&mut line_numbers::LineNumbersData>,
     panel_side: PanelSide,
-    painted_prefix: &ansi_term::ANSIString,
+    painted_prefix: Option<ansi_term::ANSIString>,
     config: &Config,
 ) -> (String, bool) {
     let (empty_line_syntax_sections, empty_line_diff_sections) = (Vec::new(), Vec::new());
