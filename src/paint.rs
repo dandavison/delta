@@ -163,11 +163,14 @@ impl<'a> Painter<'a> {
                     &mut self.output_buffer,
                     self.config,
                     &mut Some(&mut self.line_numbers_data),
-                    if self.config.keep_plus_minus_markers {
-                        "-"
-                    } else {
-                        ""
-                    },
+                    &self
+                        .config
+                        .minus_style
+                        .paint(if self.config.keep_plus_minus_markers {
+                            "-"
+                        } else {
+                            ""
+                        }),
                     Some(self.config.minus_empty_line_marker_style),
                     None,
                 );
@@ -180,11 +183,14 @@ impl<'a> Painter<'a> {
                     &mut self.output_buffer,
                     self.config,
                     &mut Some(&mut self.line_numbers_data),
-                    if self.config.keep_plus_minus_markers {
-                        "+"
-                    } else {
-                        ""
-                    },
+                    &self
+                        .config
+                        .plus_style
+                        .paint(if self.config.keep_plus_minus_markers {
+                            "+"
+                        } else {
+                            ""
+                        }),
                     Some(self.config.plus_empty_line_marker_style),
                     None,
                 );
@@ -196,11 +202,13 @@ impl<'a> Painter<'a> {
 
     pub fn paint_zero_line(&mut self, line: &str) {
         let state = State::HunkZero;
-        let prefix = if self.config.keep_plus_minus_markers && !line.is_empty() {
-            &line[..1]
-        } else {
-            ""
-        };
+        let painted_prefix = &self.config.zero_style.paint(
+            if self.config.keep_plus_minus_markers && !line.is_empty() {
+                &line[..1]
+            } else {
+                ""
+            },
+        );
         let lines = vec![(self.prepare(line, true), state.clone())];
         let syntax_style_sections = Painter::get_syntax_style_sections_for_lines(
             &lines,
@@ -218,7 +226,7 @@ impl<'a> Painter<'a> {
                 &mut self.output_buffer,
                 self.config,
                 &mut Some(&mut self.line_numbers_data),
-                prefix,
+                painted_prefix,
                 None,
             );
         } else {
@@ -229,7 +237,7 @@ impl<'a> Painter<'a> {
                 &mut self.output_buffer,
                 self.config,
                 &mut Some(&mut self.line_numbers_data),
-                prefix,
+                painted_prefix,
                 None,
                 None,
             );
@@ -246,14 +254,13 @@ impl<'a> Painter<'a> {
         output_buffer: &mut String,
         config: &config::Config,
         line_numbers_data: &mut Option<&mut line_numbers::LineNumbersData>,
-        prefix: &str,
+        painted_prefix: &ansi_term::ANSIString,
         empty_line_style: Option<Style>, // a style with background color to highlight an empty line
         background_color_extends_to_terminal_width: Option<bool>,
     ) {
         // There's some unfortunate hackery going on here for two reasons:
         //
-        // 1. The prefix needs to be injected into the output stream. We paint
-        //    this with whatever style the line starts with.
+        // 1. The prefix needs to be injected into the output stream.
         //
         // 2. We must ensure that we fill rightwards with the appropriate
         //    non-emph background color. In that case we don't use the last
@@ -269,7 +276,7 @@ impl<'a> Painter<'a> {
                 state,
                 line_numbers_data,
                 None,
-                prefix,
+                painted_prefix,
                 config,
             );
             let (should_right_fill_background_color, fill_style) =
@@ -380,7 +387,7 @@ impl<'a> Painter<'a> {
         state: &State,
         line_numbers_data: &mut Option<&mut line_numbers::LineNumbersData>,
         side_by_side_panel: Option<side_by_side::PanelSide>,
-        prefix: &str,
+        painted_prefix: &ansi_term::ANSIString,
         config: &config::Config,
     ) -> (String, bool) {
         let output_line_numbers = config.line_numbers && line_numbers_data.is_some();
@@ -417,8 +424,8 @@ impl<'a> Painter<'a> {
             config.null_syntect_style,
         ) {
             if !handled_prefix {
-                if prefix != "" {
-                    ansi_strings.push(section_style.paint(prefix));
+                if &**painted_prefix != "" {
+                    ansi_strings.push(painted_prefix.clone());
                 }
                 if !text.is_empty() {
                     text.remove(0);
