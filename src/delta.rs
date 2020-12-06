@@ -147,6 +147,7 @@ where
             painter.set_highlighter();
             painter.emit()?;
             handle_hunk_header_line(&mut painter, &line, &raw_line, &plus_file, config)?;
+            painter.set_highlighter();
             continue;
         } else if source == Source::DiffUnified && line.starts_with("Only in ")
             || line.starts_with("Submodule ")
