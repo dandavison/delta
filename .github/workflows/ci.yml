@@ -126,3 +126,17 @@ jobs:
         with:
           github-token: ${{ secrets.GITHUB_TOKEN }}
           path-to-lcov: './target/tarpaulin/lcov.info'
+
+  loc_badge:
+    name: Count lines of code
+    runs-on: ubuntu-latest
+    steps:
+      - name: Count lines of code
+        uses: shadowmoose/GHA-LoC-Badge@1.0.0
+        id: badge
+        with:
+          debug: true
+          directory: ./src/
+          badge: ./etc/loc-badge.svg
+          patterns: '*.rs'  # Patterns in the format of a '.gitignore' file, separated by pipes.
+          ignore: 'bat_utils'

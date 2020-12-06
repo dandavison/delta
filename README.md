@@ -1,5 +1,5 @@
 [![CI](https://github.com/dandavison/delta/workflows/Continuous%20Integration/badge.svg)](https://github.com/dandavison/delta/actions)
-[![Lines Of Code](https://tokei.rs/b1/github/dandavison/delta?category=code)](https://github.com/dandavison/delta)
+![Generated Button](https://raw.githubusercontent.com/dandavison/delta/etc/loc-badge.svg)
 [![Coverage Status](https://coveralls.io/repos/github/dandavison/delta/badge.svg?branch=master)](https://coveralls.io/github/dandavison/delta?branch=master)
 [![Gitter](https://badges.gitter.im/dandavison-delta/community.svg)](https://gitter.im/dandavison-delta/community?utm_source=badge&utm_medium=badge&utm_campaign=pr-badge)
 
