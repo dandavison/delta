@@ -136,7 +136,5 @@ jobs:
         id: badge
         with:
           debug: true
-          directory: ./src/
+          directory: ./
           badge: ./etc/loc-badge.svg
-          patterns: '*.rs'  # Patterns in the format of a '.gitignore' file, separated by pipes.
-          ignore: 'bat_utils'
