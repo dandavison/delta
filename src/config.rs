@@ -21,6 +21,7 @@ pub struct Config {
     pub available_terminal_width: usize,
     pub background_color_extends_to_terminal_width: bool,
     pub commit_style: Style,
+    pub color_only: bool,
     pub decorations_width: cli::Width,
     pub file_added_label: String,
     pub file_copied_label: String,
@@ -150,6 +151,7 @@ impl From<cli::Opt> for Config {
                 .computed
                 .background_color_extends_to_terminal_width,
             commit_style,
+            color_only: opt.color_only,
             decorations_width: opt.computed.decorations_width,
             file_added_label: opt.file_added_label,
             file_copied_label: opt.file_copied_label,
