@@ -195,7 +195,6 @@ pub fn set_options(
         opt.side_by_side = false;
         opt.file_decoration_style = "none".to_string();
         opt.commit_decoration_style = "none".to_string();
-        opt.file_style = "raw".to_string();
         opt.commit_style = "raw".to_string();
         opt.hunk_header_style = "raw".to_string();
         opt.hunk_header_decoration_style = "none".to_string();
