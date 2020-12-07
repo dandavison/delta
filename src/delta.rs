@@ -188,7 +188,8 @@ where
             continue;
         }
 
-        if state == State::FileMeta && should_handle(&State::FileMeta, config) && !config.color_only {
+        if state == State::FileMeta && should_handle(&State::FileMeta, config) && !config.color_only
+        {
             // The file metadata section is 4 lines. Skip them under non-plain file-styles.
             continue;
         } else {
