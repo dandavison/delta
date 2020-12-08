@@ -327,7 +327,6 @@ fn handle_generic_file_meta_header_line(
     raw_line: &str,
     config: &Config,
 ) -> std::io::Result<()> {
-    // FIXME: this may be able to be refactored by moving to should_handle.
     if config.file_style.is_omitted && !config.color_only {
         return Ok(());
     }
