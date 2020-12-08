@@ -972,7 +972,6 @@ src/align.rs
     }
 
     #[test]
-    // TODO: commit-style and hunk-header-style are required to add.
     fn test_file_style_with_color_only_has_style() {
         let config =
             integration_test_utils::make_config_from_args(&["--color-only", "--file-style", "red"]);
@@ -987,6 +986,27 @@ src/align.rs
 +++ b/src/align.rs
 "
         ));
+    }
+
+    #[test]
+    // TODO: commit-style is required to add.
+    fn test_hunk_header_style_with_color_only_has_style() {
+        let config = integration_test_utils::make_config_from_args(&[
+            "--color-only",
+            "--hunk-header-style",
+            "red",
+        ]);
+        let output = integration_test_utils::run_delta(GIT_DIFF_SINGLE_HUNK, &config);
+
+        ansi_test_utils::assert_line_has_style(
+            &output,
+            10,
+            "@@ -71,11 +71,8 @@ impl<'a> Alignment<'a> {",
+            "red",
+            &config,
+        );
+        let output = strip_ansi_codes(&output);
+        assert!(output.contains("@@ -71,11 +71,8 @@ impl<'a> Alignment<'a> {"));
     }
 
     #[test]
