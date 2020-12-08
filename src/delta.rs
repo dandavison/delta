@@ -434,7 +434,7 @@ fn handle_hunk_header_line(
     };
     let (raw_code_fragment, line_numbers) = parse::parse_hunk_header(&line);
     // Emit the hunk header, with any requested decoration
-    if config.hunk_header_style.is_raw {
+    if config.hunk_header_style.is_raw || config.color_only {
         if config.hunk_header_style.decoration_style != DecorationStyle::NoDecoration {
             writeln!(painter.writer)?;
         }
@@ -491,7 +491,10 @@ fn handle_hunk_header_line(
         painter
             .line_numbers_data
             .initialize_hunk(line_numbers, plus_file.to_string());
-    } else if config.line_numbers_show_first_line_number && !config.hunk_header_style.is_raw {
+    } else if config.line_numbers_show_first_line_number
+        && !config.hunk_header_style.is_raw
+        && !config.color_only
+    {
         let plus_line_number = line_numbers[line_numbers.len() - 1].0;
         let formatted_plus_line_number = if config.hyperlinks {
             features::hyperlinks::format_osc8_file_hyperlink(
