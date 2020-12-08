@@ -115,6 +115,10 @@ where
                     &minus_file,
                 ));
             }
+            if config.color_only {
+                handle_generic_file_meta_header_line(&mut painter, &line, &raw_line, config)?;
+                continue;
+            }
         } else if (state == State::FileMeta || source == Source::DiffUnified)
             && (line.starts_with("+++ ")
                 || line.starts_with("rename to ")
@@ -127,6 +131,10 @@ where
                 &plus_file,
             ));
             current_file_pair = Some((minus_file.clone(), plus_file.clone()));
+            if config.color_only {
+                handle_generic_file_meta_header_line(&mut painter, &line, &raw_line, config)?;
+                continue;
+            }
             if should_handle(&State::FileMeta, config)
                 && handled_file_meta_header_line_file_pair != current_file_pair
             {
@@ -181,7 +189,8 @@ where
             continue;
         }
 
-        if state == State::FileMeta && should_handle(&State::FileMeta, config) {
+        if state == State::FileMeta && should_handle(&State::FileMeta, config) && !config.color_only
+        {
             // The file metadata section is 4 lines. Skip them under non-plain file-styles.
             continue;
         } else {
@@ -318,7 +327,8 @@ fn handle_generic_file_meta_header_line(
     raw_line: &str,
     config: &Config,
 ) -> std::io::Result<()> {
-    if config.file_style.is_omitted {
+    // FIXME: this may be able to be refactored by moving to should_handle.
+    if config.file_style.is_omitted && !config.color_only {
         return Ok(());
     }
     let decoration_ansi_term_style;
@@ -361,7 +371,9 @@ fn handle_generic_file_meta_header_line(
             draw::write_no_decoration
         }
     };
-    writeln!(painter.writer)?;
+    if !config.color_only {
+        writeln!(painter.writer)?;
+    }
     draw_fn(
         painter.writer,
         &format!("{}{}", line, if pad { " " } else { "" }),
