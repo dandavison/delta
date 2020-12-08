@@ -1,5 +1,3 @@
-use lazy_static::lazy_static;
-use regex::Regex;
 use std::io::Write;
 
 use itertools::Itertools;
@@ -166,9 +164,9 @@ impl<'a> Painter<'a> {
                     self.config,
                     &mut Some(&mut self.line_numbers_data),
                     if self.config.keep_plus_minus_markers {
-                        "-"
+                        Some(self.config.minus_style.paint("-"))
                     } else {
-                        ""
+                        None
                     },
                     Some(self.config.minus_empty_line_marker_style),
                     None,
@@ -183,9 +181,9 @@ impl<'a> Painter<'a> {
                     self.config,
                     &mut Some(&mut self.line_numbers_data),
                     if self.config.keep_plus_minus_markers {
-                        "+"
+                        Some(self.config.plus_style.paint("+"))
                     } else {
-                        ""
+                        None
                     },
                     Some(self.config.plus_empty_line_marker_style),
                     None,
@@ -198,10 +196,10 @@ impl<'a> Painter<'a> {
 
     pub fn paint_zero_line(&mut self, line: &str) {
         let state = State::HunkZero;
-        let prefix = if self.config.keep_plus_minus_markers && !line.is_empty() {
-            &line[..1]
+        let painted_prefix = if self.config.keep_plus_minus_markers && !line.is_empty() {
+            Some(self.config.zero_style.paint(&line[..1]))
         } else {
-            ""
+            None
         };
         let lines = vec![(self.prepare(line, true), state.clone())];
         let syntax_style_sections = Painter::get_syntax_style_sections_for_lines(
@@ -220,7 +218,7 @@ impl<'a> Painter<'a> {
                 &mut self.output_buffer,
                 self.config,
                 &mut Some(&mut self.line_numbers_data),
-                prefix,
+                painted_prefix,
                 None,
             );
         } else {
@@ -231,7 +229,7 @@ impl<'a> Painter<'a> {
                 &mut self.output_buffer,
                 self.config,
                 &mut Some(&mut self.line_numbers_data),
-                prefix,
+                painted_prefix,
                 None,
                 None,
             );
@@ -240,6 +238,7 @@ impl<'a> Painter<'a> {
 
     /// Superimpose background styles and foreground syntax
     /// highlighting styles, and write colored lines to output buffer.
+    #[allow(clippy::too_many_arguments)]
     pub fn paint_lines(
         syntax_style_sections: Vec<Vec<(SyntectStyle, &str)>>,
         diff_style_sections: Vec<Vec<(Style, &str)>>,
@@ -247,14 +246,13 @@ impl<'a> Painter<'a> {
         output_buffer: &mut String,
         config: &config::Config,
         line_numbers_data: &mut Option<&mut line_numbers::LineNumbersData>,
-        prefix: &str,
+        painted_prefix: Option<ansi_term::ANSIString>,
         empty_line_style: Option<Style>, // a style with background color to highlight an empty line
         background_color_extends_to_terminal_width: Option<bool>,
     ) {
         // There's some unfortunate hackery going on here for two reasons:
         //
-        // 1. The prefix needs to be injected into the output stream. We paint
-        //    this with whatever style the line starts with.
+        // 1. The prefix needs to be injected into the output stream.
         //
         // 2. We must ensure that we fill rightwards with the appropriate
         //    non-emph background color. In that case we don't use the last
@@ -270,7 +268,7 @@ impl<'a> Painter<'a> {
                 state,
                 line_numbers_data,
                 None,
-                prefix,
+                painted_prefix.clone(),
                 config,
             );
             let (should_right_fill_background_color, fill_style) =
@@ -381,7 +379,7 @@ impl<'a> Painter<'a> {
         state: &State,
         line_numbers_data: &mut Option<&mut line_numbers::LineNumbersData>,
         side_by_side_panel: Option<side_by_side::PanelSide>,
-        prefix: &str,
+        painted_prefix: Option<ansi_term::ANSIString>,
         config: &config::Config,
     ) -> (String, bool) {
         let output_line_numbers = config.line_numbers && line_numbers_data.is_some();
@@ -418,8 +416,8 @@ impl<'a> Painter<'a> {
             config.null_syntect_style,
         ) {
             if !handled_prefix {
-                if prefix != "" {
-                    ansi_strings.push(section_style.paint(prefix));
+                if let Some(painted_prefix) = painted_prefix.clone() {
+                    ansi_strings.push(painted_prefix);
                 }
                 if !text.is_empty() {
                     text.remove(0);
@@ -487,6 +485,7 @@ impl<'a> Painter<'a> {
     }
 
     /// Set background styles to represent diff for minus and plus lines in buffer.
+    #[allow(clippy::type_complexity)]
     fn get_diff_style_sections<'b>(
         minus_lines: &'b [(String, State)],
         plus_lines: &'b [(String, State)],
@@ -584,18 +583,26 @@ fn style_sections_contain_more_than_one_style(sections: &[(Style, &str)]) -> boo
     }
 }
 
-lazy_static! {
-    static ref NON_WHITESPACE_REGEX: Regex = Regex::new(r"\S").unwrap();
-}
-
 /// True iff the line represented by `sections` constitutes a whitespace error.
+// Note that a space is always present as the first character in the line (it was put there as a
+// replacement for the leading +/- marker; see paint::prepare()). A line is a whitespace error iff,
+// beyond the initial space character, (a) there are more characters and (b) they are all
+// whitespace characters.
 // TODO: Git recognizes blank lines at end of file (blank-at-eof) as a whitespace error but delta
 // does not yet.
 // https://git-scm.com/docs/git-config#Documentation/git-config.txt-corewhitespace
 fn is_whitespace_error(sections: &[(Style, &str)]) -> bool {
-    !sections
-        .iter()
-        .any(|(_, s)| NON_WHITESPACE_REGEX.is_match(s))
+    let mut any_chars = false;
+    for c in sections.iter().flat_map(|(_, s)| s.chars()).skip(1) {
+        if c == '\n' {
+            return any_chars;
+        } else if c != ' ' && c != '\t' {
+            return false;
+        } else {
+            any_chars = true;
+        }
+    }
+    false
 }
 
 mod superimpose_style_sections {
@@ -635,6 +642,7 @@ mod superimpose_style_sections {
         exploded
     }
 
+    #[allow(clippy::type_complexity)]
     fn superimpose(
         style_section_pairs: Vec<(&(SyntectStyle, char), (Style, char))>,
     ) -> Vec<((SyntectStyle, Style), char)> {

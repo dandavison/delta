@@ -12,6 +12,8 @@ use crate::align;
 /// minus and plus lines. `noop_deletions[i]` is the appropriate deletion operation tag to be used
 /// for `minus_lines[i]`; `noop_deletions` is guaranteed to be the same length as `minus_lines`.
 /// The equivalent statements hold for `plus_insertions` and `plus_lines`.
+#[allow(clippy::too_many_arguments)]
+#[allow(clippy::type_complexity)]
 pub fn infer_edits<'a, EditOperation>(
     minus_lines: Vec<&'a str>,
     plus_lines: Vec<&'a str>,
@@ -123,6 +125,7 @@ fn tokenize<'a>(line: &'a str, regex: &Regex) -> Vec<&'a str> {
 // This function doesn't return "coalesced" annotations: i.e. they're often are runs of consecutive
 // occurrences of the same operation. Since it is returning &strs pointing into the memory of the
 // original line, it's not possible to coalesce them in this function.
+#[allow(clippy::type_complexity)]
 fn annotate<'a, Annotation>(
     alignment: align::Alignment<'a>,
     noop_deletion: Annotation,

@@ -1,7 +1,6 @@
-[![Build Status](https://travis-ci.com/dandavison/delta.svg?branch=master)](https://travis-ci.com/dandavison/delta)
-[![Gitter](https://badges.gitter.im/dandavison-delta/community.svg)](https://gitter.im/dandavison-delta/community?utm_source=badge&utm_medium=badge&utm_campaign=pr-badge)
 [![CI](https://github.com/dandavison/delta/workflows/Continuous%20Integration/badge.svg)](https://github.com/dandavison/delta/actions)
 [![Coverage Status](https://coveralls.io/repos/github/dandavison/delta/badge.svg?branch=master)](https://coveralls.io/github/dandavison/delta?branch=master)
+[![Gitter](https://badges.gitter.im/dandavison-delta/community.svg)](https://gitter.im/dandavison-delta/community?utm_source=badge&utm_medium=badge&utm_campaign=pr-badge)
 
 ## A viewer for git and diff output
 

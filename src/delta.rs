@@ -115,6 +115,10 @@ where
                     &minus_file,
                 ));
             }
+            if config.color_only {
+                handle_generic_file_meta_header_line(&mut painter, &line, &raw_line, config)?;
+                continue;
+            }
         } else if (state == State::FileMeta || source == Source::DiffUnified)
             && (line.starts_with("+++ ")
                 || line.starts_with("rename to ")
@@ -127,6 +131,10 @@ where
                 &plus_file,
             ));
             current_file_pair = Some((minus_file.clone(), plus_file.clone()));
+            if config.color_only {
+                handle_generic_file_meta_header_line(&mut painter, &line, &raw_line, config)?;
+                continue;
+            }
             if should_handle(&State::FileMeta, config)
                 && handled_file_meta_header_line_file_pair != current_file_pair
             {
@@ -147,6 +155,7 @@ where
             painter.set_highlighter();
             painter.emit()?;
             handle_hunk_header_line(&mut painter, &line, &raw_line, &plus_file, config)?;
+            painter.set_highlighter();
             continue;
         } else if source == Source::DiffUnified && line.starts_with("Only in ")
             || line.starts_with("Submodule ")
@@ -180,7 +189,8 @@ where
             continue;
         }
 
-        if state == State::FileMeta && should_handle(&State::FileMeta, config) {
+        if state == State::FileMeta && should_handle(&State::FileMeta, config) && !config.color_only
+        {
             // The file metadata section is 4 lines. Skip them under non-plain file-styles.
             continue;
         } else {
@@ -317,7 +327,7 @@ fn handle_generic_file_meta_header_line(
     raw_line: &str,
     config: &Config,
 ) -> std::io::Result<()> {
-    if config.file_style.is_omitted {
+    if config.file_style.is_omitted && !config.color_only {
         return Ok(());
     }
     let decoration_ansi_term_style;
@@ -360,7 +370,9 @@ fn handle_generic_file_meta_header_line(
             draw::write_no_decoration
         }
     };
-    writeln!(painter.writer)?;
+    if !config.color_only {
+        writeln!(painter.writer)?;
+    }
     draw_fn(
         painter.writer,
         &format!("{}{}", line, if pad { " " } else { "" }),
@@ -421,7 +433,7 @@ fn handle_hunk_header_line(
     };
     let (raw_code_fragment, line_numbers) = parse::parse_hunk_header(&line);
     // Emit the hunk header, with any requested decoration
-    if config.hunk_header_style.is_raw {
+    if config.hunk_header_style.is_raw || config.color_only {
         if config.hunk_header_style.decoration_style != DecorationStyle::NoDecoration {
             writeln!(painter.writer)?;
         }
@@ -456,7 +468,7 @@ fn handle_hunk_header_line(
                 &mut painter.output_buffer,
                 config,
                 &mut None,
-                "",
+                None,
                 None,
                 Some(false),
             );
@@ -478,7 +490,12 @@ fn handle_hunk_header_line(
         painter
             .line_numbers_data
             .initialize_hunk(line_numbers, plus_file.to_string());
-    } else if config.line_numbers_show_first_line_number && !config.hunk_header_style.is_raw {
+    } else if config.line_numbers_show_first_line_number
+        && !config.hunk_header_style.is_raw
+        && !config.color_only
+    {
+        // With raw mode or color-only mode,
+        // we should prevent the output from creating new line for printing line number
         let plus_line_number = line_numbers[line_numbers.len() - 1].0;
         let formatted_plus_line_number = if config.hyperlinks {
             features::hyperlinks::format_osc8_file_hyperlink(
@@ -518,8 +535,8 @@ fn handle_hunk_line(
     // Don't let the line buffers become arbitrarily large -- if we
     // were to allow that, then for a large deleted/added file we
     // would process the entire file before painting anything.
-    if painter.minus_lines.len() > config.max_buffered_lines
-        || painter.plus_lines.len() > config.max_buffered_lines
+    if painter.minus_lines.len() > config.line_buffer_size
+        || painter.plus_lines.len() > config.line_buffer_size
     {
         painter.paint_buffered_minus_and_plus_lines();
     }

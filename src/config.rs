@@ -21,6 +21,7 @@ pub struct Config {
     pub available_terminal_width: usize,
     pub background_color_extends_to_terminal_width: bool,
     pub commit_style: Style,
+    pub color_only: bool,
     pub decorations_width: cli::Width,
     pub file_added_label: String,
     pub file_copied_label: String,
@@ -43,7 +44,7 @@ pub struct Config {
     pub line_numbers_right_style: Style,
     pub line_numbers_show_first_line_number: bool,
     pub line_numbers_zero_style: Style,
-    pub max_buffered_lines: usize,
+    pub line_buffer_size: usize,
     pub max_line_distance: f64,
     pub max_line_distance_for_naively_paired_lines: f64,
     pub max_line_length: usize,
@@ -150,6 +151,7 @@ impl From<cli::Opt> for Config {
                 .computed
                 .background_color_extends_to_terminal_width,
             commit_style,
+            color_only: opt.color_only,
             decorations_width: opt.computed.decorations_width,
             file_added_label: opt.file_added_label,
             file_copied_label: opt.file_copied_label,
@@ -173,7 +175,7 @@ impl From<cli::Opt> for Config {
             line_numbers_show_first_line_number: (opt.computed.line_numbers_mode
                 == cli::LineNumbersMode::First),
             line_numbers_zero_style,
-            max_buffered_lines: 32,
+            line_buffer_size: opt.line_buffer_size,
             max_line_distance: opt.max_line_distance,
             max_line_distance_for_naively_paired_lines,
             max_line_length: opt.max_line_length,

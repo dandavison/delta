@@ -509,6 +509,15 @@ pub struct Opt {
     #[structopt(long = "whitespace-error-style", default_value = "auto auto")]
     pub whitespace_error_style: String,
 
+    #[structopt(long = "line-buffer-size", default_value = "32")]
+    /// Size of internal line buffer. Delta compares the added and removed versions of nearby lines
+    /// in order to detect and highlight changes at the level of individual words/tokens.
+    /// Therefore, nearby lines must be buffered internally before they are painted and emitted.
+    /// Increasing this value might improve highlighting of some large diff hunks. However, setting
+    /// this to a high value will adversely affect delta's performance when entire files are
+    /// added/removed.
+    pub line_buffer_size: usize,
+
     #[structopt(long = "minus-color")]
     /// Deprecated: use --minus-style='normal my_background_color'.
     pub deprecated_minus_background_color: Option<String>,

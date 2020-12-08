@@ -1,0 +1,85 @@
+commit f6086641f4cfe7c28559db99c27a964b3af31dab (HEAD -> master, origin/master)
+Author: Eric Nielsen <eric@amalgamar.com.br>
+Date:   Thu Oct 8 10:10:45 2020 -0500
+
+    Add class Name
+
+diff --git a/Person.java b/Person.java
+index 971edb4..ef67116 100644
+--- a/Person.java
++++ b/Person.java
+@@ -3,6 +3,11 @@ import lombok.NonNull;
+
+ @Data
+ public class Person {
+-           private Long id;
+-  @NonNull private String name;
++  private Long id;
++  @Data
++  public class Name {
++    @NonNull private String first;
++    @NonNull private String last;
++  }
++  @NonNull private Name name;
+ }
+
+commit f94abd9a5d883bcf2bdee4ff735f1c3a62cc9346
+Author: Eric Nielsen <eric@amalgamar.com.br>
+Date:   Thu Oct 8 10:03:54 2020 -0500
+
+    Replace "@NonNull" by spaces
+
+diff --git a/Person.java b/Person.java
+index 07255bf..971edb4 100644
+--- a/Person.java
++++ b/Person.java
+@@ -3,6 +3,6 @@ import lombok.NonNull;
+
+ @Data
+ public class Person {
+-  @NonNull private Long id;
++           private Long id;
+   @NonNull private String name;
+ }
+
+commit 4b3c2a712bef024228a95db7a318de3ebc23e11d
+Author: Eric Nielsen <eric@amalgamar.com.br>
+Date:   Wed Oct 7 18:28:30 2020 -0500
+
+    Add "@NonNull "
+
+diff --git a/Person.java b/Person.java
+index c6c830c..07255bf 100644
+--- a/Person.java
++++ b/Person.java
+@@ -1,7 +1,8 @@
+ import lombok.Data;
++import lombok.NonNull;
+
+ @Data
+ public class Person {
+-  private Long id;
+-  private String name;
++  @NonNull private Long id;
++  @NonNull private String name;
+ }
+
+commit 27866afcea30970731ac032b108661fd0c247f2b
+Author: Eric Nielsen <eric@amalgamar.com.br>
+Date:   Wed Oct 7 18:27:28 2020 -0500
+
+    First commit
+
+diff --git a/Person.java b/Person.java
+new file mode 100644
+index 0000000..c6c830c
+--- /dev/null
++++ b/Person.java
+@@ -0,0 +1,7 @@
++import lombok.Data;
++
++@Data
++public class Person {
++  private Long id;
++  private String name;
++}

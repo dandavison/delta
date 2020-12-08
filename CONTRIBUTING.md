@@ -14,27 +14,23 @@ This is no different than other Rust projects.
 ```shell
 git clone https://github.com/dandavison/delta/
 cd delta
-cargo build
+cargo build --release
 ```
+
+The executable is then at `./target/release/delta`.
 
 ### Useful Commands
 
-- Build release version:
+- Run all tests:
 
   ```shell
-  cargo build --release
+  make test
   ```
 
 - Run Clippy:
 
   ```shell
   cargo clippy
-  ```
-
-- Run all tests:
-
-  ```shell
-  make test
   ```
 
 - Check to see if there are code formatting issues
@@ -48,3 +44,9 @@ cargo build
   ```shell
   cargo fmt
   ```
+
+- Debug build
+
+A "debug" build can be built using `cargo build` and
+`./target/debug/delta`. This is faster to compile, but has much worse
+performance than the release build.

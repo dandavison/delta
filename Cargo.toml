@@ -31,7 +31,7 @@ shell-words = "1.0.0"
 structopt = "0.3.20"
 unicode-segmentation = "1.7.0"
 unicode-width = "0.1.8"
-vte = "0.8.0"
+vte = "0.9.0"
 
 [dependencies.git2]
 version = "0.13.12"

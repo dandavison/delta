@@ -1,0 +1,6 @@
+diff --git a/Cargo.toml b/Cargo.toml
+index 93f58aea..2f945245 100644
+--- a/Cargo.toml
++++ b/Cargo.toml
+@@ -11,6 +11,7 @@ readme = "README.md"
++
