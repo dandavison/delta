@@ -198,7 +198,6 @@ pub fn set_options(
         opt.file_decoration_style = "none".to_string();
         opt.commit_decoration_style = "none".to_string();
         opt.commit_style = "raw".to_string();
-        opt.hunk_header_style = "raw".to_string();
         opt.hunk_header_decoration_style = "none".to_string();
     }
 }
