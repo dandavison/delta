@@ -494,6 +494,8 @@ fn handle_hunk_header_line(
         && !config.hunk_header_style.is_raw
         && !config.color_only
     {
+        // With raw mode or color-only mode,
+        // we should prevent the output from creating new line for printing line number
         let plus_line_number = line_numbers[line_numbers.len() - 1].0;
         let formatted_plus_line_number = if config.hyperlinks {
             features::hyperlinks::format_osc8_file_hyperlink(
