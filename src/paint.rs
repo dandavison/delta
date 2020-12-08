@@ -53,7 +53,11 @@ impl<'a> Painter<'a> {
     }
 
     pub fn set_syntax(&mut self, extension: Option<&str>) {
-        self.syntax = Painter::get_syntax(&self.config.syntax_set, extension);
+        self.syntax = Painter::get_syntax(
+            &self.config.syntax_set,
+            extension,
+            &self.config.syntax_mapping,
+        );
     }
 
     fn get_syntax(syntax_set: &'a SyntaxSet, extension: Option<&str>) -> &'a SyntaxReference {
