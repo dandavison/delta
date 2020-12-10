@@ -448,6 +448,7 @@ fn handle_hunk_header_line(
     } else if config.hunk_header_style.is_omitted {
         writeln!(painter.writer)?;
     } else {
+        // Keep the raw_line structure when color_only mode
         let line = if config.color_only {
             format!(" {}", &line)
         } else {
