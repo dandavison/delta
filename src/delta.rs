@@ -433,7 +433,7 @@ fn handle_hunk_header_line(
     };
     let (raw_code_fragment, line_numbers) = parse::parse_hunk_header(&line);
     // Emit the hunk header, with any requested decoration
-    if config.hunk_header_style.is_raw || config.color_only {
+    if config.hunk_header_style.is_raw {
         if config.hunk_header_style.decoration_style != DecorationStyle::NoDecoration {
             writeln!(painter.writer)?;
         }
@@ -448,11 +448,18 @@ fn handle_hunk_header_line(
     } else if config.hunk_header_style.is_omitted {
         writeln!(painter.writer)?;
     } else {
-        let line = match painter.prepare(&raw_code_fragment, false) {
-            s if !s.is_empty() => format!("{} ", s),
-            s => s,
+        let line = if config.color_only {
+            format!(" {}", &line)
+        } else {
+            match painter.prepare(&raw_code_fragment, false) {
+                s if !s.is_empty() => format!("{} ", s),
+                s => s,
+            }
         };
-        writeln!(painter.writer)?;
+
+        if !config.color_only {
+            writeln!(painter.writer)?;
+        }
         if !line.is_empty() {
             let lines = vec![(line, State::HunkHeader)];
             let syntax_style_sections = Painter::get_syntax_style_sections_for_lines(
