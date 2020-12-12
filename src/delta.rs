@@ -115,6 +115,11 @@ where
                     &minus_file,
                 ));
             }
+
+            // In color_only mode, raw_line's structure shouldn't be changed.
+            // So it needs to avoid fn handle_file_meta_header_line
+            // (it connects the plus_file and minus_file),
+            // and to call fn handle_generic_file_meta_header_line directly.
             if config.color_only {
                 handle_generic_file_meta_header_line(&mut painter, &line, &raw_line, config)?;
                 continue;
@@ -131,6 +136,11 @@ where
                 &plus_file,
             ));
             current_file_pair = Some((minus_file.clone(), plus_file.clone()));
+
+            // In color_only mode, raw_line's structure shouldn't be changed.
+            // So it needs to avoid fn handle_file_meta_header_line
+            // (it connects the plus_file and minus_file),
+            // and to call fn handle_generic_file_meta_header_line directly.
             if config.color_only {
                 handle_generic_file_meta_header_line(&mut painter, &line, &raw_line, config)?;
                 continue;
@@ -192,6 +202,8 @@ where
         if state == State::FileMeta && should_handle(&State::FileMeta, config) && !config.color_only
         {
             // The file metadata section is 4 lines. Skip them under non-plain file-styles.
+            // However in the case of color_only mode,
+            // we won't skip because we can't change raw_line structure.
             continue;
         } else {
             painter.emit()?;
@@ -327,6 +339,9 @@ fn handle_generic_file_meta_header_line(
     raw_line: &str,
     config: &Config,
 ) -> std::io::Result<()> {
+    // If file_style is "omit", we'll skip the process and print nothing.
+    // However in the case of color_only mode,
+    // we won't skip because we can't change raw_line structure.
     if config.file_style.is_omitted && !config.color_only {
         return Ok(());
     }
@@ -370,6 +385,9 @@ fn handle_generic_file_meta_header_line(
             draw::write_no_decoration
         }
     };
+    // Prints the new line below file-meta-line.
+    // However in the case of color_only mode,
+    // we won't print it because we can't change raw_line structure.
     if !config.color_only {
         writeln!(painter.writer)?;
     }
@@ -433,7 +451,7 @@ fn handle_hunk_header_line(
     };
     let (raw_code_fragment, line_numbers) = parse::parse_hunk_header(&line);
     // Emit the hunk header, with any requested decoration
-    if config.hunk_header_style.is_raw || config.color_only {
+    if config.hunk_header_style.is_raw {
         if config.hunk_header_style.decoration_style != DecorationStyle::NoDecoration {
             writeln!(painter.writer)?;
         }
@@ -448,11 +466,24 @@ fn handle_hunk_header_line(
     } else if config.hunk_header_style.is_omitted {
         writeln!(painter.writer)?;
     } else {
-        let line = match painter.prepare(&raw_code_fragment, false) {
-            s if !s.is_empty() => format!("{} ", s),
-            s => s,
+        // Adjust the hunk-header-line before paint_lines.
+        // However in the case of color_only mode,
+        // we'll just use raw_line because we can't change raw_line structure.
+        let line = if config.color_only {
+            format!(" {}", &line)
+        } else {
+            match painter.prepare(&raw_code_fragment, false) {
+                s if !s.is_empty() => format!("{} ", s),
+                s => s,
+            }
         };
-        writeln!(painter.writer)?;
+
+        // Prints the new line below hunk-header-line.
+        // However in the case of color_only mode,
+        // we won't print it because we can't change raw_line structure.
+        if !config.color_only {
+            writeln!(painter.writer)?;
+        }
         if !line.is_empty() {
             let lines = vec![(line, State::HunkHeader)];
             let syntax_style_sections = Painter::get_syntax_style_sections_for_lines(
@@ -485,17 +516,18 @@ fn handle_hunk_header_line(
         }
     };
 
-    // Emit a single line number, or prepare for full line-numbering
+    // Emit a full line-numbering
     if config.line_numbers {
         painter
             .line_numbers_data
             .initialize_hunk(line_numbers, plus_file.to_string());
+    // Emit a single line number.
+    // However with raw mode or color-only mode,
+    // we should prevent the output from creating new line for printing line number.
     } else if config.line_numbers_show_first_line_number
         && !config.hunk_header_style.is_raw
         && !config.color_only
     {
-        // With raw mode or color-only mode,
-        // we should prevent the output from creating new line for printing line number
         let plus_line_number = line_numbers[line_numbers.len() - 1].0;
         let formatted_plus_line_number = if config.hyperlinks {
             features::hyperlinks::format_osc8_file_hyperlink(
