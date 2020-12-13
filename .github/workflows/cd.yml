@@ -65,3 +65,14 @@ jobs:
             git-delta*.deb
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+  bump:
+    runs-on: macos-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v2
+      - name: Bump brew formulae
+        uses: dawidd6/action-homebrew-bump-formula@v3
+        with:
+          formula: git-delta
+          token: ${{ secrets.GITHUB_TOKEN }}
