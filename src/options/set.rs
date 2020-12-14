@@ -368,6 +368,8 @@ fn gather_features(
         if opt.features.is_empty() {
             if let Some(feature_string) = git_config.get::<String>("delta.features") {
                 for feature in split_feature_string(&feature_string.to_lowercase()) {
+                    println!("feature: {}", feature);
+
                     gather_features_recursively(
                         feature,
                         &mut features,
@@ -388,6 +390,7 @@ fn gather_features(
         );
     }
 
+    dbg!(&features);
     Vec::<String>::from(features)
 }
 
@@ -399,6 +402,8 @@ fn gather_features_recursively(
     opt: &cli::Opt,
     git_config: &git_config::GitConfig,
 ) {
+    println!("    {}", feature);
+
     if builtin_features.contains_key(feature) {
         gather_builtin_features_recursively(feature, features, builtin_features, opt);
     } else {
