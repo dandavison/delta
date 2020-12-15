@@ -1,0 +1,15 @@
+--- minus.txt   2020-12-04 20:47:52.000000000 -0500
++++ plus.txt    2020-12-04 20:48:00.000000000 -0500
+@@ -1,5 +1,5 @@
+-key_0: value_0
+-key_1: value_1
+-key_2: value_2
+-key_3: value_3
+-key_4: value_4
+\ No newline at end of file
++key_0: value_1
++key_1: value_2
++key_2: value_3
++key_3: value_4
++key_4: value_5
+\ No newline at end of file

@@ -194,6 +194,9 @@ where
         } else if state.is_in_hunk() {
             // A true hunk line should start with one of: '+', '-', ' '. However, handle_hunk_line
             // handles all lines until the state machine transitions away from the hunk states.
+            if line == r"\ No newline at end of file" {
+                continue;
+            }
             state = handle_hunk_line(&mut painter, &line, &raw_line, state, config);
             painter.emit()?;
             continue;
