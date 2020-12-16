@@ -1,5 +1,5 @@
 <p align="center">
-  <img width=600px src="https://user-images.githubusercontent.com/52205/102416950-ae124300-3ff2-11eb-9d66-40d2aef4888f.png" alt="image" />
+  <img width=800px src="https://user-images.githubusercontent.com/52205/102416950-ae124300-3ff2-11eb-9d66-40d2aef4888f.png" alt="image" />
 </p>
 <p align="center">
   <a href="https://github.com/dandavison/delta/actions">
