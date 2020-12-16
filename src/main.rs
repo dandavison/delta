@@ -36,6 +36,7 @@ use structopt::StructOpt;
 
 use crate::bat_utils::assets::{list_languages, HighlightingAssets};
 use crate::bat_utils::output::{OutputType, PagingMode};
+use crate::config::delta_unreachable;
 use crate::delta::delta;
 use crate::options::theme::is_light_syntax_theme;
 
@@ -73,16 +74,19 @@ fn main() -> std::io::Result<()> {
         let mut stdout = stdout.lock();
         show_config(&config, &mut stdout)?;
         process::exit(0);
-    } else if atty::is(atty::Stream::Stdin) {
-        return diff(
-            config.minus_file.as_ref(),
-            config.plus_file.as_ref(),
-            &config,
-        );
     }
 
     let mut output_type = OutputType::from_mode(config.paging_mode, None, &config).unwrap();
     let mut writer = output_type.handle().unwrap();
+
+    if atty::is(atty::Stream::Stdin) {
+        process::exit(diff(
+            config.minus_file.as_ref(),
+            config.plus_file.as_ref(),
+            &config,
+            &mut writer,
+        ));
+    }
 
     if let Err(error) = delta(io::stdin().lock().byte_lines(), &mut writer, &config) {
         match error.kind() {
@@ -98,14 +102,15 @@ fn diff(
     minus_file: Option<&PathBuf>,
     plus_file: Option<&PathBuf>,
     config: &config::Config,
-) -> std::io::Result<()> {
+    writer: &mut dyn Write,
+) -> i32 {
     use std::io::BufReader;
     let die = || {
         eprintln!("Usage: delta minus_file plus_file");
-        process::exit(1);
+        process::exit(config.error_exit_code);
     };
-    let command = "diff";
-    let diff_process = process::Command::new(PathBuf::from(command))
+    let diff_command = "diff";
+    let mut diff_process = process::Command::new(PathBuf::from(diff_command))
         .arg("-u")
         .args(&[
             minus_file.unwrap_or_else(die),
@@ -114,23 +119,34 @@ fn diff(
         .stdout(process::Stdio::piped())
         .spawn()
         .unwrap_or_else(|err| {
-            eprintln!("Failed to execute the command '{}': {}", command, err);
-            process::exit(1);
+            eprintln!("Failed to execute the command '{}': {}", diff_command, err);
+            process::exit(config.error_exit_code);
+        });
+    let exit_code = diff_process
+        .wait()
+        .unwrap_or_else(|_| {
+            delta_unreachable(&format!("'{}' process not running.", diff_command));
+        })
+        .code()
+        .unwrap_or_else(|| {
+            eprintln!("'{}' process terminated without exit status.", diff_command);
+            process::exit(config.error_exit_code);
         });
 
-    let mut output_type = OutputType::from_mode(config.paging_mode, None, &config).unwrap();
-    let mut writer = output_type.handle().unwrap();
     if let Err(error) = delta(
         BufReader::new(diff_process.stdout.unwrap()).byte_lines(),
-        &mut writer,
+        writer,
         &config,
     ) {
         match error.kind() {
             ErrorKind::BrokenPipe => process::exit(0),
-            _ => eprintln!("{}", error),
+            _ => {
+                eprintln!("{}", error);
+                process::exit(config.error_exit_code);
+            }
         }
     };
-    Ok(())
+    exit_code
 }
 
 fn show_config(config: &config::Config, writer: &mut dyn Write) -> std::io::Result<()> {
@@ -466,5 +482,60 @@ mod main_tests {
         writer.read_to_string(&mut s).unwrap();
         assert!(s.contains("light	GitHub\n"));
         assert!(s.contains("dark	Dracula\n"));
+    }
+
+    #[test]
+    #[cfg_attr(target_os = "windows", ignore)]
+    fn test_diff_same_empty_file() {
+        let config = integration_test_utils::make_config_from_args(&[]);
+        let mut writer = Cursor::new(vec![]);
+        let exit_code = diff(
+            Some(&PathBuf::from("/dev/null")),
+            Some(&PathBuf::from("/dev/null")),
+            &config,
+            &mut writer,
+        );
+        assert_eq!(exit_code, 0);
+        let mut s = String::new();
+        writer.seek(SeekFrom::Start(0)).unwrap();
+        writer.read_to_string(&mut s).unwrap();
+        assert!(s.is_empty());
+    }
+
+    #[test]
+    #[cfg_attr(target_os = "windows", ignore)]
+    fn test_diff_same_non_empty_file() {
+        let config = integration_test_utils::make_config_from_args(&[]);
+        let mut writer = Cursor::new(vec![]);
+        let exit_code = diff(
+            Some(&PathBuf::from("/etc/passwd")),
+            Some(&PathBuf::from("/etc/passwd")),
+            &config,
+            &mut writer,
+        );
+        assert_eq!(exit_code, 0);
+        let mut s = String::new();
+        writer.seek(SeekFrom::Start(0)).unwrap();
+        writer.read_to_string(&mut s).unwrap();
+        assert!(s.is_empty());
+    }
+
+    #[test]
+    #[cfg_attr(target_os = "windows", ignore)]
+    fn test_diff_differing_files() {
+        let config = integration_test_utils::make_config_from_args(&[]);
+        let mut writer = Cursor::new(vec![]);
+        let exit_code = diff(
+            Some(&PathBuf::from("/dev/null")),
+            Some(&PathBuf::from("/etc/passwd")),
+            &config,
+            &mut writer,
+        );
+        assert_eq!(exit_code, 1);
+        let mut s = String::new();
+        writer.seek(SeekFrom::Start(0)).unwrap();
+        writer.read_to_string(&mut s).unwrap();
+        let s = ansi::strip_ansi_codes(&s);
+        assert!(s.contains("comparing: /dev/null ⟶   /etc/passwd\n"));
     }
 }

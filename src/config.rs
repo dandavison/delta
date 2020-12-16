@@ -23,6 +23,7 @@ pub struct Config {
     pub commit_style: Style,
     pub color_only: bool,
     pub decorations_width: cli::Width,
+    pub error_exit_code: i32,
     pub file_added_label: String,
     pub file_copied_label: String,
     pub file_modified_label: String,
@@ -153,6 +154,7 @@ impl From<cli::Opt> for Config {
             commit_style,
             color_only: opt.color_only,
             decorations_width: opt.computed.decorations_width,
+            error_exit_code: 2, // Use 2 for error because diff uses 0 and 1 for non-error.
             file_added_label: opt.file_added_label,
             file_copied_label: opt.file_copied_label,
             file_modified_label: opt.file_modified_label,
@@ -411,10 +413,11 @@ pub fn user_supplied_option(option: &str, arg_matches: &clap::ArgMatches) -> boo
 }
 
 pub fn delta_unreachable(message: &str) -> ! {
+    let error_exit_code = 2; // This is also stored in Config.
     eprintln!(
         "{} This should not be possible. \
          Please report the bug at https://github.com/dandavison/delta/issues.",
         message
     );
-    process::exit(1);
+    process::exit(error_exit_code);
 }
