@@ -580,6 +580,7 @@ and use the executable found at `./target/release/delta`.
 - [bigH/git-fuzzy](https://github.com/bigH/git-fuzzy)
 - [dandavison/magit-delta](https://github.com/dandavison/magit-delta)
 - [jesseduffield/lazygit](https://github.com/jesseduffield/lazygit/)
+- [junegunn/fzf.vim](https://github.com/junegunn/fzf.vim)
 - [ms-jpq/sad](https://github.com/ms-jpq/sad)
 - [wfxr/forgit](https://github.com/wfxr/forgit)
 
