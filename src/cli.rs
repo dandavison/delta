@@ -286,7 +286,7 @@ pub struct Opt {
     pub color_only: bool,
 
     ////////////////////////////////////////////////////////////////////////////////////////////
-    #[structopt(long = "features", default_value = "")]
+    #[structopt(long = "features", default_value = "", env = "DELTA_FEATURES")]
     /// Name of delta features to use (space-separated). A feature is a named collection of delta
     /// options in ~/.gitconfig. See FEATURES section.
     pub features: String,
