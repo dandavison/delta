@@ -509,7 +509,7 @@ fn handle_hunk_header_line(
                 &painter.output_buffer,
                 &painter.output_buffer,
                 &config.decorations_width,
-                config.hunk_header_style,
+                config.null_style,
                 decoration_ansi_term_style,
             )?;
             painter.output_buffer.clear();
