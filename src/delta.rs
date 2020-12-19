@@ -1,4 +1,5 @@
 use std::borrow::Cow;
+use std::fmt::Write as FmtWrite;
 use std::io::BufRead;
 use std::io::Write;
 
@@ -485,6 +486,13 @@ fn handle_hunk_header_line(
             writeln!(painter.writer)?;
         }
         if !line.is_empty() {
+            if config.hunk_header_style_include_file_path {
+                let _ = write!(
+                    &mut painter.output_buffer,
+                    "{}: ",
+                    config.file_style.paint(plus_file)
+                );
+            };
             let lines = vec![(line, State::HunkHeader)];
             let syntax_style_sections = Painter::get_syntax_style_sections_for_lines(
                 &lines,

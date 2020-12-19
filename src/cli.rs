@@ -365,7 +365,8 @@ pub struct Opt {
 
     #[structopt(long = "hunk-header-style", default_value = "syntax")]
     /// Style (foreground, background, attributes) for the hunk-header. See STYLES section. The
-    /// style 'omit' can be used to remove the hunk header section from the output.
+    /// special attribute 'file' can be used to include the file path in the hunk header. The style
+    /// 'omit' can be used to remove the hunk header section from the output.
     pub hunk_header_style: String,
 
     #[structopt(long = "hunk-header-decoration-style", default_value = "blue box")]

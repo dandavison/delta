@@ -32,6 +32,7 @@ pub struct Config {
     pub file_style: Style,
     pub git_config_entries: HashMap<String, GitConfigEntry>,
     pub hunk_header_style: Style,
+    pub hunk_header_style_include_file_path: bool,
     pub hyperlinks: bool,
     pub hyperlinks_file_link_format: String,
     pub inspect_raw_lines: cli::InspectRawLines,
@@ -163,6 +164,10 @@ impl From<cli::Opt> for Config {
             file_style,
             git_config_entries: opt.git_config_entries,
             hunk_header_style,
+            hunk_header_style_include_file_path: opt
+                .hunk_header_style
+                .split(' ')
+                .any(|s| s == "file"),
             hyperlinks: opt.hyperlinks,
             hyperlinks_file_link_format: opt.hyperlinks_file_link_format,
             inspect_raw_lines: opt.computed.inspect_raw_lines,
