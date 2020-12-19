@@ -1009,6 +1009,27 @@ src/align.rs
     }
 
     #[test]
+    fn test_hunk_header_style_with_file() {
+        let config = integration_test_utils::make_config_from_args(&[
+            "--file-style",
+            "yellow",
+            "--hunk-header-style",
+            "file red",
+        ]);
+        let output = integration_test_utils::run_delta(GIT_DIFF_SINGLE_HUNK, &config);
+
+        ansi_test_utils::assert_line_has_style(
+            &output,
+            11,
+            "src/align.rs: impl<'a> Alignment<'a> {",
+            "yellow",
+            &config,
+        );
+        let output = strip_ansi_codes(&output);
+        assert!(output.contains("src/align.rs: impl<'a> Alignment<'a> {"));
+    }
+
+    #[test]
     fn test_commit_style_with_color_only_has_style() {
         let config = integration_test_utils::make_config_from_args(&[
             "--color-only",
