@@ -48,8 +48,8 @@ const LIGHT_SYNTAX_THEMES: [&str; 7] = [
     "Solarized (light)",
 ];
 
-const DEFAULT_LIGHT_SYNTAX_THEME: &str = "GitHub";
-const DEFAULT_DARK_SYNTAX_THEME: &str = "Monokai Extended";
+pub const DEFAULT_LIGHT_SYNTAX_THEME: &str = "GitHub";
+pub const DEFAULT_DARK_SYNTAX_THEME: &str = "Monokai Extended";
 
 fn is_no_syntax_highlighting_syntax_theme_name(theme_name: &str) -> bool {
     theme_name.to_lowercase() == "none"

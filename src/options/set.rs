@@ -93,8 +93,8 @@ pub fn set_options(
     set_widths(opt, git_config, arg_matches, &option_names);
 
     // Set light, dark, and syntax-theme.
-    set_true_color(opt);
-    set__light__dark__syntax_theme__options(opt, git_config, arg_matches, &option_names);
+    // set_true_color(opt);
+    // set__light__dark__syntax_theme__options(opt, git_config, arg_matches, &option_names);
     theme::set__is_light_mode__syntax_theme__syntax_set(opt, assets);
 
     // HACK: make minus-line styles have syntax-highlighting iff side-by-side.

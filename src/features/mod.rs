@@ -83,9 +83,11 @@ macro_rules! builtin_feature {
 }
 
 pub mod color_only;
+pub mod dark;
 pub mod diff_highlight;
 pub mod diff_so_fancy;
 pub mod hyperlinks;
+pub mod light;
 pub mod line_numbers;
 pub mod navigate;
 pub mod raw;
