@@ -29,7 +29,7 @@ lazy_static = "1.4"
 regex = "1.4.2"
 shell-words = "1.0.0"
 structopt = "0.3.20"
-unicode-segmentation = "1.7.0"
+unicode-segmentation = "1.7.1"
 unicode-width = "0.1.8"
 vte = "0.9.0"
 
