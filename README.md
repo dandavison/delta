@@ -197,7 +197,7 @@ In addition, delta handles traditional unified diff output.
 
 ## Installation
 
-You can download an executable for your system: [Linux](https://github.com/dandavison/delta/releases/download/0.4.4/delta-0.4.4-x86_64-unknown-linux-gnu.tar.gz) | [MacOS](https://github.com/dandavison/delta/releases/download/0.4.4/delta-0.4.4-x86_64-apple-darwin.tar.gz) | [Windows](https://github.com/dandavison/delta/releases/download/0.4.4/delta-0.4.4-x86_64-pc-windows-msvc.zip) | [All](https://github.com/dandavison/delta/releases)
+You can download an executable for your system: [Linux](https://github.com/dandavison/delta/releases/download/0.4.5/delta-0.4.5-x86_64-unknown-linux-gnu.tar.gz) | [MacOS](https://github.com/dandavison/delta/releases/download/0.4.5/delta-0.4.5-x86_64-apple-darwin.tar.gz) | [Windows](https://github.com/dandavison/delta/releases/download/0.4.5/delta-0.4.5-x86_64-pc-windows-msvc.zip) | [All](https://github.com/dandavison/delta/releases)
 
 Alternatively, delta is available in the following package managers:
 
@@ -596,7 +596,7 @@ and use the executable found at `./target/release/delta`.
 ## Full --help output
 
 ```
-delta 0.4.5 (dev)
+delta 0.4.5
 A viewer for git and diff output
 
 USAGE:
@@ -647,7 +647,7 @@ FLAGS:
 OPTIONS:
         --features <features>
             Name of delta features to use (space-separated). A feature is a named collection of delta options in
-            ~/.gitconfig. See FEATURES section [default: ]
+            ~/.gitconfig. See FEATURES section [env: DELTA_FEATURES=]  [default: ]
         --syntax-theme <syntax-theme>
             The code syntax-highlighting theme to use. Use --show-syntax-themes to demo available themes. If the syntax-
             highlighting theme is not set using this option, it will be taken from the BAT_THEME environment
@@ -694,8 +694,9 @@ OPTIONS:
             application to handle the custom "file-line" URL scheme by opening the file in your editor/IDE at the
             indicated line number. See https://github.com/dandavison/open-in-editor for an example [default: file://{path}]
         --hunk-header-style <hunk-header-style>
-            Style (foreground, background, attributes) for the hunk-header. See STYLES section. The style 'omit' can be
-            used to remove the hunk header section from the output [default: syntax]
+            Style (foreground, background, attributes) for the hunk-header. See STYLES section. The special attribute
+            'file' can be used to include the file path in the hunk header. The style 'omit' can be used to remove the
+            hunk header section from the output [default: syntax]
         --hunk-header-decoration-style <hunk-header-decoration-style>
             Style (foreground, background, attributes) for the hunk-header decoration. See STYLES section. The style
             string should contain one of the special attributes 'box', 'ul' (underline), 'ol' (overline), or the
@@ -739,6 +740,9 @@ OPTIONS:
         --file-added-label <file-added-label>
             Text to display in front of a added file path [default: added:]
 
+        --file-copied-label <file-copied-label>
+            Text to display in front of a copied file path [default: copied:]
+
         --file-renamed-label <file-renamed-label>
             Text to display in front of a renamed file path [default: renamed:]
 
@@ -774,6 +778,12 @@ OPTIONS:
         --whitespace-error-style <whitespace-error-style>
             Style for whitespace errors. Defaults to color.diff.whitespace if that is set in git config, or else
             'magenta reverse' [default: auto auto]
+        --line-buffer-size <line-buffer-size>
+            Size of internal line buffer. Delta compares the added and removed versions of nearby lines in order to
+            detect and highlight changes at the level of individual words/tokens. Therefore, nearby lines must be
+            buffered internally before they are painted and emitted. Increasing this value might improve highlighting of
+            some large diff hunks. However, setting this to a high value will adversely affect delta's performance when
+            entire files are added/removed [default: 32]
         --minus-color <deprecated-minus-background-color>
             Deprecated: use --minus-style='normal my_background_color'
 
@@ -815,7 +825,7 @@ given in a git config file, using the usual option names but without the initial
 is
 
 [delta]
-    number = true
+    line-numbers = true
     zero-style = dim syntax
 
 FEATURES
