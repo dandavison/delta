@@ -271,6 +271,8 @@ Alternatively, delta is available in the following package managers:
   </tr>
 </table>
 
+See [repology.org/git-delta](https://repology.org/project/git-delta/versions) for the current version in each package repository.
+
 Behind the scenes, delta uses `less` for paging. The version of `less` that comes with your operating system may be too old (currently, less v551 is a good choice). On MacOS, install `less` from Homebrew. For Windows, see [Using Delta on Windows](#using-delta-on-windows).
 
 ## Configuration
