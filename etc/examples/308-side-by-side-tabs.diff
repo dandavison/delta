@@ -1,0 +1,12 @@
+diff --git .config/git/config .config/git/config
+index bc4ae2e..b058f99 100644
+--- .config/git/config
++++ .config/git/config
+@@ -26,7 +21,6 @@
+ 	# Show summary of changes to submodules. See also:
+ 	# https://git-scm.com/book/en/v2/Git-Tools-Submodules
+ 	submoduleSummary = true
+-	showStash = true
+
+ [diff]
+ 	tool = vimdiff
