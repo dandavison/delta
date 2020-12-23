@@ -66,7 +66,7 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
-  publish-cargo:
+  publish-to-cargo:
     name: Publishing to Cargo
     runs-on: ubuntu-latest
     steps:
@@ -80,3 +80,14 @@ jobs:
         with:
           command: publish
           args: --token ${{ secrets.CARGO_API_KEY }} --allow-dirty
+          
+  bump-homebrew-formula:
+    runs-on: macos-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v2
+      - name: Bump Homebrew formulae
+        uses: dawidd6/action-homebrew-bump-formula@v3
+        with:
+          formula: git-delta
+          token: ${{ secrets.GITHUB_TOKEN }}

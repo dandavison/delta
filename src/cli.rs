@@ -286,7 +286,7 @@ pub struct Opt {
     pub color_only: bool,
 
     ////////////////////////////////////////////////////////////////////////////////////////////
-    #[structopt(long = "features", default_value = "")]
+    #[structopt(long = "features", default_value = "", env = "DELTA_FEATURES")]
     /// Name of delta features to use (space-separated). A feature is a named collection of delta
     /// options in ~/.gitconfig. See FEATURES section.
     pub features: String,
@@ -365,7 +365,8 @@ pub struct Opt {
 
     #[structopt(long = "hunk-header-style", default_value = "syntax")]
     /// Style (foreground, background, attributes) for the hunk-header. See STYLES section. The
-    /// style 'omit' can be used to remove the hunk header section from the output.
+    /// special attribute 'file' can be used to include the file path in the hunk header. The style
+    /// 'omit' can be used to remove the hunk header section from the output.
     pub hunk_header_style: String,
 
     #[structopt(long = "hunk-header-decoration-style", default_value = "blue box")]
@@ -508,6 +509,15 @@ pub struct Opt {
     /// config, or else 'magenta reverse'.
     #[structopt(long = "whitespace-error-style", default_value = "auto auto")]
     pub whitespace_error_style: String,
+
+    #[structopt(long = "line-buffer-size", default_value = "32")]
+    /// Size of internal line buffer. Delta compares the added and removed versions of nearby lines
+    /// in order to detect and highlight changes at the level of individual words/tokens.
+    /// Therefore, nearby lines must be buffered internally before they are painted and emitted.
+    /// Increasing this value might improve highlighting of some large diff hunks. However, setting
+    /// this to a high value will adversely affect delta's performance when entire files are
+    /// added/removed.
+    pub line_buffer_size: usize,
 
     #[structopt(long = "minus-color")]
     /// Deprecated: use --minus-style='normal my_background_color'.

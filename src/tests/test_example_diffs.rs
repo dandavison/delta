@@ -113,7 +113,7 @@ mod tests {
         let config = integration_test_utils::make_config_from_args(&[]);
         let output = integration_test_utils::run_delta(DIFF_UNIFIED_TWO_FILES, &config);
         let output = strip_ansi_codes(&output);
-        let mut lines = output.split('\n');
+        let mut lines = output.lines();
 
         // Header
         assert_eq!(lines.nth(1).unwrap(), "comparing: one.rs ⟶   src/two.rs");
@@ -132,7 +132,7 @@ mod tests {
         let config = integration_test_utils::make_config_from_args(&["--width", "80"]);
         let output = integration_test_utils::run_delta(DIFF_UNIFIED_TWO_DIRECTORIES, &config);
         let output = strip_ansi_codes(&output);
-        let mut lines = output.split('\n');
+        let mut lines = output.lines();
 
         // Header
         assert_eq!(
@@ -196,7 +196,7 @@ mod tests {
         let output = integration_test_utils::run_delta(DIFF_WITH_MERGE_CONFLICT, &config);
         // TODO: The + in the first column is being removed.
         assert!(strip_ansi_codes(&output).contains("+>>>>>>> Stashed changes"));
-        assert_eq!(output.split('\n').count(), 47);
+        assert_eq!(output.lines().count(), 46);
     }
 
     #[test]
@@ -949,8 +949,8 @@ src/align.rs
         let output = integration_test_utils::run_delta(GIT_DIFF_SINGLE_HUNK, &config);
         let output = strip_ansi_codes(&output);
 
-        let input_lines: Vec<&str> = GIT_DIFF_SINGLE_HUNK.split('\n').collect();
-        let output_lines: Vec<&str> = output.split('\n').collect();
+        let input_lines: Vec<&str> = GIT_DIFF_SINGLE_HUNK.lines().collect();
+        let output_lines: Vec<&str> = output.lines().collect();
         assert_eq!(input_lines.len(), output_lines.len());
 
         // Although git patch options only checks the line counts of input and output,
@@ -962,13 +962,91 @@ src/align.rs
             let input_line = input_lines[n];
             // If config.line_numbers is enabled,
             // we should remove line_numbers decoration while checking.
-            let output_line = if config.line_numbers && n > 11 && n < input_lines.len() - 1 {
+            let output_line = if config.line_numbers && n > 11 && n < input_lines.len() {
                 &output_lines[n][14..]
             } else {
                 output_lines[n]
             };
             assert_eq!(input_line, output_line);
         }
+    }
+
+    #[test]
+    fn test_file_style_with_color_only_has_style() {
+        let config =
+            integration_test_utils::make_config_from_args(&["--color-only", "--file-style", "red"]);
+        let output = integration_test_utils::run_delta(GIT_DIFF_SINGLE_HUNK, &config);
+
+        ansi_test_utils::assert_line_has_style(&output, 8, "--- a/src/align.rs", "red", &config);
+        ansi_test_utils::assert_line_has_style(&output, 9, "+++ b/src/align.rs", "red", &config);
+        let output = strip_ansi_codes(&output);
+        assert!(output.contains(
+            "\
+--- a/src/align.rs
++++ b/src/align.rs
+"
+        ));
+    }
+
+    #[test]
+    fn test_hunk_header_style_with_color_only_has_style() {
+        let config = integration_test_utils::make_config_from_args(&[
+            "--color-only",
+            "--hunk-header-style",
+            "red",
+        ]);
+        let output = integration_test_utils::run_delta(GIT_DIFF_SINGLE_HUNK, &config);
+
+        ansi_test_utils::assert_line_has_style(
+            &output,
+            10,
+            "@@ -71,11 +71,8 @@ impl<'a> Alignment<'a> {",
+            "red",
+            &config,
+        );
+        let output = strip_ansi_codes(&output);
+        assert!(output.contains("@@ -71,11 +71,8 @@ impl<'a> Alignment<'a> {"));
+    }
+
+    #[test]
+    fn test_hunk_header_style_with_file() {
+        let config = integration_test_utils::make_config_from_args(&[
+            "--file-style",
+            "yellow",
+            "--hunk-header-style",
+            "file red",
+        ]);
+        let output = integration_test_utils::run_delta(GIT_DIFF_SINGLE_HUNK, &config);
+
+        ansi_test_utils::assert_line_has_style(
+            &output,
+            11,
+            "src/align.rs: impl<'a> Alignment<'a> {",
+            "yellow",
+            &config,
+        );
+        let output = strip_ansi_codes(&output);
+        assert!(output.contains("src/align.rs: impl<'a> Alignment<'a> {"));
+    }
+
+    #[test]
+    fn test_commit_style_with_color_only_has_style() {
+        let config = integration_test_utils::make_config_from_args(&[
+            "--color-only",
+            "--commit-style",
+            "red",
+        ]);
+        let output = integration_test_utils::run_delta(GIT_DIFF_SINGLE_HUNK, &config);
+
+        ansi_test_utils::assert_line_has_style(
+            &output,
+            0,
+            "commit 94907c0f136f46dc46ffae2dc92dca9af7eb7c2e",
+            "red",
+            &config,
+        );
+        let output = strip_ansi_codes(&output);
+        assert!(output.contains("commit 94907c0f136f46dc46ffae2dc92dca9af7eb7c2e"));
     }
 
     #[test]
@@ -1220,7 +1298,7 @@ impl<'a> Alignment<'a> { │
 
     #[test]
     fn test_added_empty_line_highlight() {
-        let plus_empty_line_marker_style = "bold yellow magenta ul";
+        let plus_empty_line_marker_style = "bold yellow red ul";
         _do_test_added_empty_line_highlight(plus_empty_line_marker_style, "green reverse", true);
         _do_test_added_empty_line_highlight(plus_empty_line_marker_style, "normal green", true);
         _do_test_added_empty_line_highlight(plus_empty_line_marker_style, "green", false);
@@ -1285,7 +1363,7 @@ impl<'a> Alignment<'a> { │
 
     #[test]
     fn test_whitespace_error() {
-        let whitespace_error_style = "bold yellow magenta ul";
+        let whitespace_error_style = "bold yellow red ul";
         let config = integration_test_utils::make_config_from_args(&[
             "--whitespace-error-style",
             whitespace_error_style,
@@ -1300,6 +1378,32 @@ impl<'a> Alignment<'a> { │
             whitespace_error_style,
             &config,
         );
+    }
+
+    #[test]
+    fn test_added_empty_line_is_not_whitespace_error() {
+        let plus_style = "bold yellow red ul";
+        let config = integration_test_utils::make_config_from_args(&[
+            "--light",
+            "--keep-plus-minus-markers",
+            "--plus-style",
+            plus_style,
+        ]);
+        let output = integration_test_utils::run_delta(DIFF_WITH_ADDED_EMPTY_LINE, &config);
+        ansi_test_utils::assert_line_has_style(&output, 6, "", plus_style, &config)
+    }
+
+    #[test]
+    fn test_single_character_line_is_not_whitespace_error() {
+        let plus_style = "bold yellow red ul";
+        let config = integration_test_utils::make_config_from_args(&[
+            "--light",
+            "--keep-plus-minus-markers",
+            "--plus-style",
+            plus_style,
+        ]);
+        let output = integration_test_utils::run_delta(DIFF_WITH_SINGLE_CHARACTER_LINE, &config);
+        ansi_test_utils::assert_line_has_style(&output, 12, "+}", plus_style, &config)
     }
 
     #[test]
@@ -1848,6 +1952,22 @@ index e69de29..8b13789 100644
 +++ w/a
 @@ -0,0 +1 @@
 +
+";
+
+    const DIFF_WITH_SINGLE_CHARACTER_LINE: &str = r"
+diff --git a/Person.java b/Person.java
+new file mode 100644
+index 0000000..c6c830c
+--- /dev/null
++++ b/Person.java
+@@ -0,0 +1,7 @@
++import lombok.Data;
++
++@Data
++public class Person {
++  private Long id;
++  private String name;
++}
 ";
 
     const DIFF_WITH_WHITESPACE_ERROR: &str = r"

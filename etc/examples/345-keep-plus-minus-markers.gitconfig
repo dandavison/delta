@@ -1,0 +1,36 @@
+[core]
+	pager = delta
+[color "diff-highlight"]
+	oldNormal = red bold
+	oldHighlight = red bold 52
+	newNormal = green bold
+	newHighlight = green bold 22
+[color "diff"]
+	meta = yellow bold
+	frag = magenta bold
+	commit = yellow bold
+	old = red bold
+	new = green bold
+	whitespace = red reverse
+[delta]
+	commit-decoration-style = yellow ol ul
+	file-style = bold yellow
+	file-decoration-style = yellow box
+	hunk-header-style = bold 146
+	hunk-header-decoration-style =
+	minus-style = bold red
+	minus-non-emph-style = bold red
+	minus-emph-style = bold red 52
+	minus-empty-line-marker-style = normal
+	zero-style = normal
+	plus-style = bold green
+	plus-non-emph-style = bold green
+	plus-emph-style = bold green 22
+	plus-empty-line-marker-style = normal
+	keep-plus-minus-markers = true
+	line-numbers = false
+	side-by-side = true
+[diff-so-fancy]
+	markEmptyLines = false
+	stripLeadingSymbols = false
+	rulerWidth = 50

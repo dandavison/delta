@@ -141,6 +141,7 @@ pub fn set_options(
             hyperlinks_file_link_format,
             inspect_raw_lines,
             keep_plus_minus_markers,
+            line_buffer_size,
             max_line_distance,
             max_line_length,
             // Hack: minus-style must come before minus-*emph-style because the latter default
@@ -189,15 +190,13 @@ pub fn set_options(
         compute_line_numbers_mode(opt, &builtin_features, git_config, &option_names);
     opt.computed.paging_mode = parse_paging_mode(&opt.paging_mode);
 
-    // --color-only is used for interactive.diffFilter (git add -p) and side-by-side cannot be used
-    // there (does not emit lines in 1-1 correspondence with raw git output). See #274.
+    // --color-only is used for interactive.diffFilter (git add -p). side-by-side, and
+    // **-decoration-style cannot be used there (does not emit lines in 1-1 correspondence with raw git output).
+    // See #274.
     if opt.color_only {
         opt.side_by_side = false;
         opt.file_decoration_style = "none".to_string();
         opt.commit_decoration_style = "none".to_string();
-        opt.file_style = "raw".to_string();
-        opt.commit_style = "raw".to_string();
-        opt.hunk_header_style = "raw".to_string();
         opt.hunk_header_decoration_style = "none".to_string();
     }
 }

@@ -1,4 +1,4 @@
-on: [push, pull_request]
+on: [pull_request]
 name: Continuous Integration
 
 jobs:
@@ -31,7 +31,7 @@ jobs:
         with:
           command: test
           use-cross: ${{ matrix.job.use-cross }}
-          args: --target ${{ matrix.job.target }} --verbose
+          args: --target ${{ matrix.job.target }} --verbose -- --nocapture
 
   integration_tests:
     name: Integration tests

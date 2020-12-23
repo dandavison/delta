@@ -10,7 +10,6 @@ release: \
 	create-github-release \
 	bump-version-in-documentation-links \
 	bump-private-homebrew-formula \
-	bump-public-homebrew-formula \
 	publish-to-cargo
 
 
@@ -71,24 +70,6 @@ $(BUMP_PRIVATE_HOMEBREW_FORMULA_SENTINEL):
 	touch $(BUMP_PRIVATE_HOMEBREW_FORMULA_SENTINEL)
 
 
-BUMP_PUBLIC_HOMEBREW_FORMULA_SENTINEL=.make-sentinels/bump-public-homebrew-formula
-bump-public-homebrew-formula: $(BUMP_PUBLIC_HOMEBREW_FORMULA_SENTINEL)
-$(BUMP_PUBLIC_HOMEBREW_FORMULA_SENTINEL):
-	make -f etc/release.Makefile test-public-homebrew-formula
-	cd "$$(brew --repo homebrew/core)" && brew bump-formula-pr --url "https://github.com/dandavison/delta/archive/$$DELTA_NEW_VERSION.tar.gz" git-delta
-	touch $(BUMP_PUBLIC_HOMEBREW_FORMULA_SENTINEL)
-
-
-test-public-homebrew-formula:
-	cd $$(brew --repo homebrew/homebrew-core) && \
-	brew uninstall --force git-delta && \
-	brew install --build-from-source git-delta && \
-	brew test git-delta && \
-	brew uninstall --force git-delta && \
-	brew install git-delta && \
-	brew audit --strict git-delta
-
-
 PUBLISH_TO_CARGO_SENTINEL=.make-sentinels/publish-to-cargo
 publish-to-cargo: $(PUBLISH_TO_CARGO_SENTINEL)
 $(PUBLISH_TO_CARGO_SENTINEL):
@@ -104,6 +85,4 @@ $(PUBLISH_TO_CARGO_SENTINEL):
 	create-github-release \
 	bump-version-in-documentation-links \
 	bump-private-homebrew-formula \
-	bump-public-homebrew-formula \
-	test-public-homebrew-formula \
 	publish-to-cargo

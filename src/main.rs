@@ -5,6 +5,7 @@ extern crate error_chain;
 
 mod align;
 mod ansi;
+#[cfg(not(tarpaulin_include))]
 mod bat_utils;
 mod cli;
 mod color;
@@ -35,6 +36,7 @@ use structopt::StructOpt;
 
 use crate::bat_utils::assets::{list_languages, HighlightingAssets};
 use crate::bat_utils::output::{OutputType, PagingMode};
+use crate::config::delta_unreachable;
 use crate::delta::delta;
 use crate::options::theme::is_light_syntax_theme;
 
@@ -48,6 +50,7 @@ pub mod errors {
     }
 }
 
+#[cfg(not(tarpaulin_include))]
 fn main() -> std::io::Result<()> {
     let assets = HighlightingAssets::new();
     let opt = cli::Opt::from_args_and_git_config(&mut git_config::GitConfig::try_create(), assets);
@@ -67,18 +70,23 @@ fn main() -> std::io::Result<()> {
     let config = config::Config::from(opt);
 
     if _show_config {
-        show_config(&config);
+        let stdout = io::stdout();
+        let mut stdout = stdout.lock();
+        show_config(&config, &mut stdout)?;
         process::exit(0);
-    } else if atty::is(atty::Stream::Stdin) {
-        return diff(
-            config.minus_file.as_ref(),
-            config.plus_file.as_ref(),
-            &config,
-        );
     }
 
     let mut output_type = OutputType::from_mode(config.paging_mode, None, &config).unwrap();
     let mut writer = output_type.handle().unwrap();
+
+    if atty::is(atty::Stream::Stdin) {
+        process::exit(diff(
+            config.minus_file.as_ref(),
+            config.plus_file.as_ref(),
+            &config,
+            &mut writer,
+        ));
+    }
 
     if let Err(error) = delta(io::stdin().lock().byte_lines(), &mut writer, &config) {
         match error.kind() {
@@ -94,14 +102,15 @@ fn diff(
     minus_file: Option<&PathBuf>,
     plus_file: Option<&PathBuf>,
     config: &config::Config,
-) -> std::io::Result<()> {
+    writer: &mut dyn Write,
+) -> i32 {
     use std::io::BufReader;
     let die = || {
         eprintln!("Usage: delta minus_file plus_file");
-        process::exit(1);
+        process::exit(config.error_exit_code);
     };
-    let command = "diff";
-    let diff_process = process::Command::new(PathBuf::from(command))
+    let diff_command = "diff";
+    let mut diff_process = process::Command::new(PathBuf::from(diff_command))
         .arg("-u")
         .args(&[
             minus_file.unwrap_or_else(die),
@@ -110,28 +119,40 @@ fn diff(
         .stdout(process::Stdio::piped())
         .spawn()
         .unwrap_or_else(|err| {
-            eprintln!("Failed to execute the command '{}': {}", command, err);
-            process::exit(1);
+            eprintln!("Failed to execute the command '{}': {}", diff_command, err);
+            process::exit(config.error_exit_code);
+        });
+    let exit_code = diff_process
+        .wait()
+        .unwrap_or_else(|_| {
+            delta_unreachable(&format!("'{}' process not running.", diff_command));
+        })
+        .code()
+        .unwrap_or_else(|| {
+            eprintln!("'{}' process terminated without exit status.", diff_command);
+            process::exit(config.error_exit_code);
         });
 
-    let mut output_type = OutputType::from_mode(config.paging_mode, None, &config).unwrap();
-    let mut writer = output_type.handle().unwrap();
     if let Err(error) = delta(
         BufReader::new(diff_process.stdout.unwrap()).byte_lines(),
-        &mut writer,
+        writer,
         &config,
     ) {
         match error.kind() {
             ErrorKind::BrokenPipe => process::exit(0),
-            _ => eprintln!("{}", error),
+            _ => {
+                eprintln!("{}", error);
+                process::exit(config.error_exit_code);
+            }
         }
     };
-    Ok(())
+    exit_code
 }
 
-fn show_config(config: &config::Config) {
+fn show_config(config: &config::Config, writer: &mut dyn Write) -> std::io::Result<()> {
     // styles first
-    println!(
+    writeln!(
+        writer,
         "    commit-style                  = {commit_style}
     file-style                    = {file_style}
     hunk-header-style             = {hunk_header_style}
@@ -158,9 +179,10 @@ fn show_config(config: &config::Config) {
         plus_style = config.plus_style.to_painted_string(),
         whitespace_error_style = config.whitespace_error_style.to_painted_string(),
         zero_style = config.zero_style.to_painted_string(),
-    );
+    )?;
     // Everything else
-    println!(
+    writeln!(
+        writer,
         "    24-bit-color                  = {true_color}
     file-added-label              = {file_added_label}
     file-modified-label           = {file_modified_label}
@@ -171,18 +193,21 @@ fn show_config(config: &config::Config) {
         file_modified_label = format_option_value(&config.file_modified_label),
         file_removed_label = format_option_value(&config.file_removed_label),
         file_renamed_label = format_option_value(&config.file_renamed_label),
-    );
-    println!(
+    )?;
+    writeln!(
+        writer,
         "    hyperlinks                    = {hyperlinks}",
         hyperlinks = config.hyperlinks
-    );
+    )?;
     if config.hyperlinks {
-        println!(
+        writeln!(
+            writer,
             "    hyperlinks-file-link-format   = {hyperlinks_file_link_format}",
             hyperlinks_file_link_format = format_option_value(&config.hyperlinks_file_link_format),
-        )
+        )?
     }
-    println!(
+    writeln!(
+        writer,
         "    inspect-raw-lines             = {inspect_raw_lines}
     keep-plus-minus-markers       = {keep_plus_minus_markers}",
         inspect_raw_lines = match config.inspect_raw_lines {
@@ -190,13 +215,15 @@ fn show_config(config: &config::Config) {
             cli::InspectRawLines::False => "false",
         },
         keep_plus_minus_markers = config.keep_plus_minus_markers,
-    );
-    println!(
+    )?;
+    writeln!(
+        writer,
         "    line-numbers                  = {line_numbers}",
         line_numbers = config.line_numbers
-    );
+    )?;
     if config.line_numbers {
-        println!(
+        writeln!(
+            writer,
             "    line-numbers-minus-style      = {line_numbers_minus_style}
     line-numbers-zero-style       = {line_numbers_zero_style}
     line-numbers-plus-style       = {line_numbers_plus_style}
@@ -211,9 +238,10 @@ fn show_config(config: &config::Config) {
             line_numbers_right_style = config.line_numbers_right_style.to_painted_string(),
             line_numbers_left_format = format_option_value(&config.line_numbers_left_format),
             line_numbers_right_format = format_option_value(&config.line_numbers_right_format),
-        )
+        )?
     }
-    println!(
+    writeln!(
+        writer,
         "    max-line-distance             = {max_line_distance}
     max-line-length               = {max_line_length}
     navigate                      = {navigate}
@@ -243,7 +271,8 @@ fn show_config(config: &config::Config) {
         },
         tab_width = config.tab_width,
         tokenization_regex = format_option_value(&config.tokenization_regex.to_string()),
-    );
+    )?;
+    Ok(())
 }
 
 // Heuristics determining whether to quote string option values when printing values intended for
@@ -264,6 +293,7 @@ where
     }
 }
 
+#[cfg(not(tarpaulin_include))]
 fn show_syntax_themes() -> std::io::Result<()> {
     let mut opt = cli::Opt::from_args();
     let assets = HighlightingAssets::new();
@@ -294,12 +324,7 @@ fn _show_syntax_themes(
 ) -> std::io::Result<()> {
     use bytelines::ByteLines;
     use std::io::BufReader;
-    let input = if !atty::is(atty::Stream::Stdin) {
-        let mut buf = Vec::new();
-        io::stdin().lock().read_to_end(&mut buf)?;
-        buf
-    } else {
-        b"\
+    let mut input = b"\
 diff --git a/example.rs b/example.rs
 index f38589a..0f1bb83 100644
 --- a/example.rs
@@ -314,7 +339,13 @@ index f38589a..0f1bb83 100644
 +    let result = f64::powf(num, 3.0);
 +    println!(\"The cube of {:.2} is {:.2}.\", num, result);
 "
-        .to_vec()
+    .to_vec();
+    if !atty::is(atty::Stream::Stdin) {
+        let mut buf = Vec::new();
+        io::stdin().lock().read_to_end(&mut buf)?;
+        if !buf.is_empty() {
+            input = buf;
+        }
     };
 
     opt.computed.is_light_mode = is_light_mode;
@@ -341,47 +372,46 @@ index f38589a..0f1bb83 100644
     Ok(())
 }
 
+#[cfg(not(tarpaulin_include))]
 pub fn list_syntax_themes() -> std::io::Result<()> {
+    let stdout = io::stdout();
+    let mut stdout = stdout.lock();
     if atty::is(atty::Stream::Stdout) {
-        _list_syntax_themes_for_humans()
+        _list_syntax_themes_for_humans(&mut stdout)
     } else {
-        _list_syntax_themes_for_machines()
+        _list_syntax_themes_for_machines(&mut stdout)
     }
 }
 
-pub fn _list_syntax_themes_for_humans() -> std::io::Result<()> {
+pub fn _list_syntax_themes_for_humans(writer: &mut dyn Write) -> std::io::Result<()> {
     let assets = HighlightingAssets::new();
     let themes = &assets.theme_set.themes;
-    let stdout = io::stdout();
-    let mut stdout = stdout.lock();
 
-    writeln!(stdout, "Light themes:")?;
+    writeln!(writer, "Light themes:")?;
     for (theme, _) in themes.iter().filter(|(t, _)| is_light_syntax_theme(*t)) {
-        writeln!(stdout, "    {}", theme)?;
+        writeln!(writer, "    {}", theme)?;
     }
-    writeln!(stdout, "\nDark themes:")?;
+    writeln!(writer, "\nDark themes:")?;
     for (theme, _) in themes.iter().filter(|(t, _)| !is_light_syntax_theme(*t)) {
-        writeln!(stdout, "    {}", theme)?;
+        writeln!(writer, "    {}", theme)?;
     }
     writeln!(
-        stdout,
+        writer,
         "\nUse delta --show-syntax-themes to demo the themes."
     )?;
     Ok(())
 }
 
-pub fn _list_syntax_themes_for_machines() -> std::io::Result<()> {
+pub fn _list_syntax_themes_for_machines(writer: &mut dyn Write) -> std::io::Result<()> {
     let assets = HighlightingAssets::new();
     let themes = &assets.theme_set.themes;
-    let stdout = io::stdout();
-    let mut stdout = stdout.lock();
     for (theme, _) in themes
         .iter()
         .sorted_by_key(|(t, _)| is_light_syntax_theme(*t))
     {
         writeln!(
-            stdout,
-            "{:5}\t{}",
+            writer,
+            "{}\t{}",
             if is_light_syntax_theme(theme) {
                 "light"
             } else {
@@ -391,4 +421,121 @@ pub fn _list_syntax_themes_for_machines() -> std::io::Result<()> {
         )?;
     }
     Ok(())
+}
+
+#[cfg(test)]
+mod main_tests {
+    use super::*;
+    use std::io::{Cursor, Seek, SeekFrom};
+
+    use crate::ansi;
+    use crate::tests::integration_test_utils::integration_test_utils;
+
+    #[test]
+    fn test_show_config() {
+        let config = integration_test_utils::make_config_from_args(&[]);
+        let mut writer = Cursor::new(vec![0; 1024]);
+        show_config(&config, &mut writer).unwrap();
+        let mut s = String::new();
+        writer.seek(SeekFrom::Start(0)).unwrap();
+        writer.read_to_string(&mut s).unwrap();
+        let s = ansi::strip_ansi_codes(&s);
+        assert!(s.contains("    commit-style                  = raw\n"));
+        assert!(s.contains(r"    word-diff-regex               = '\w+'"));
+    }
+
+    #[test]
+    #[ignore] // Not working (timing out) when run by tarpaulin, presumably due to stdin detection.
+    fn test_show_syntax_themes() {
+        let opt = integration_test_utils::make_options_from_args(&[]);
+
+        let mut writer = Cursor::new(vec![0; 1024]);
+        _show_syntax_themes(opt, true, &mut writer).unwrap();
+        let mut s = String::new();
+        writer.seek(SeekFrom::Start(0)).unwrap();
+        writer.read_to_string(&mut s).unwrap();
+        let s = ansi::strip_ansi_codes(&s);
+        assert!(s.contains("\nTheme: gruvbox-white\n"));
+        println!("{}", s);
+        assert!(s.contains("\nfn print_cube(num: f64) {\n"));
+    }
+
+    #[test]
+    fn test_list_syntax_themes_for_humans() {
+        let mut writer = Cursor::new(vec![0; 512]);
+        _list_syntax_themes_for_humans(&mut writer).unwrap();
+        let mut s = String::new();
+        writer.seek(SeekFrom::Start(0)).unwrap();
+        writer.read_to_string(&mut s).unwrap();
+        assert!(s.contains("Light themes:\n"));
+        assert!(s.contains("    GitHub\n"));
+        assert!(s.contains("Dark themes:\n"));
+        assert!(s.contains("    Dracula\n"));
+    }
+
+    #[test]
+    fn test_list_syntax_themes_for_machines() {
+        let mut writer = Cursor::new(vec![0; 512]);
+        _list_syntax_themes_for_machines(&mut writer).unwrap();
+        let mut s = String::new();
+        writer.seek(SeekFrom::Start(0)).unwrap();
+        writer.read_to_string(&mut s).unwrap();
+        assert!(s.contains("light	GitHub\n"));
+        assert!(s.contains("dark	Dracula\n"));
+    }
+
+    #[test]
+    #[cfg_attr(target_os = "windows", ignore)]
+    fn test_diff_same_empty_file() {
+        let config = integration_test_utils::make_config_from_args(&[]);
+        let mut writer = Cursor::new(vec![]);
+        let exit_code = diff(
+            Some(&PathBuf::from("/dev/null")),
+            Some(&PathBuf::from("/dev/null")),
+            &config,
+            &mut writer,
+        );
+        assert_eq!(exit_code, 0);
+        let mut s = String::new();
+        writer.seek(SeekFrom::Start(0)).unwrap();
+        writer.read_to_string(&mut s).unwrap();
+        assert!(s.is_empty());
+    }
+
+    #[test]
+    #[cfg_attr(target_os = "windows", ignore)]
+    fn test_diff_same_non_empty_file() {
+        let config = integration_test_utils::make_config_from_args(&[]);
+        let mut writer = Cursor::new(vec![]);
+        let exit_code = diff(
+            Some(&PathBuf::from("/etc/passwd")),
+            Some(&PathBuf::from("/etc/passwd")),
+            &config,
+            &mut writer,
+        );
+        assert_eq!(exit_code, 0);
+        let mut s = String::new();
+        writer.seek(SeekFrom::Start(0)).unwrap();
+        writer.read_to_string(&mut s).unwrap();
+        assert!(s.is_empty());
+    }
+
+    #[test]
+    #[cfg_attr(target_os = "windows", ignore)]
+    fn test_diff_differing_files() {
+        let config = integration_test_utils::make_config_from_args(&[]);
+        let mut writer = Cursor::new(vec![]);
+        let exit_code = diff(
+            Some(&PathBuf::from("/dev/null")),
+            Some(&PathBuf::from("/etc/passwd")),
+            &config,
+            &mut writer,
+        );
+        assert_eq!(exit_code, 1);
+        let mut s = String::new();
+        writer.seek(SeekFrom::Start(0)).unwrap();
+        writer.read_to_string(&mut s).unwrap();
+        let s = ansi::strip_ansi_codes(&s);
+        assert!(s.contains("comparing: /dev/null ⟶   /etc/passwd\n"));
+    }
 }

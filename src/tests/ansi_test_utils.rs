@@ -145,7 +145,7 @@ pub mod ansi_test_utils {
             &mut output_buffer,
             config,
             &mut None,
-            prefix,
+            Some(config.null_style.paint(prefix)),
             None,
             None,
         );

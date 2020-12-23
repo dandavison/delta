@@ -21,7 +21,9 @@ pub struct Config {
     pub available_terminal_width: usize,
     pub background_color_extends_to_terminal_width: bool,
     pub commit_style: Style,
+    pub color_only: bool,
     pub decorations_width: cli::Width,
+    pub error_exit_code: i32,
     pub file_added_label: String,
     pub file_copied_label: String,
     pub file_modified_label: String,
@@ -30,6 +32,7 @@ pub struct Config {
     pub file_style: Style,
     pub git_config_entries: HashMap<String, GitConfigEntry>,
     pub hunk_header_style: Style,
+    pub hunk_header_style_include_file_path: bool,
     pub hyperlinks: bool,
     pub hyperlinks_file_link_format: String,
     pub inspect_raw_lines: cli::InspectRawLines,
@@ -43,7 +46,7 @@ pub struct Config {
     pub line_numbers_right_style: Style,
     pub line_numbers_show_first_line_number: bool,
     pub line_numbers_zero_style: Style,
-    pub max_buffered_lines: usize,
+    pub line_buffer_size: usize,
     pub max_line_distance: f64,
     pub max_line_distance_for_naively_paired_lines: f64,
     pub max_line_length: usize,
@@ -150,7 +153,9 @@ impl From<cli::Opt> for Config {
                 .computed
                 .background_color_extends_to_terminal_width,
             commit_style,
+            color_only: opt.color_only,
             decorations_width: opt.computed.decorations_width,
+            error_exit_code: 2, // Use 2 for error because diff uses 0 and 1 for non-error.
             file_added_label: opt.file_added_label,
             file_copied_label: opt.file_copied_label,
             file_modified_label: opt.file_modified_label,
@@ -159,6 +164,10 @@ impl From<cli::Opt> for Config {
             file_style,
             git_config_entries: opt.git_config_entries,
             hunk_header_style,
+            hunk_header_style_include_file_path: opt
+                .hunk_header_style
+                .split(' ')
+                .any(|s| s == "file"),
             hyperlinks: opt.hyperlinks,
             hyperlinks_file_link_format: opt.hyperlinks_file_link_format,
             inspect_raw_lines: opt.computed.inspect_raw_lines,
@@ -173,7 +182,7 @@ impl From<cli::Opt> for Config {
             line_numbers_show_first_line_number: (opt.computed.line_numbers_mode
                 == cli::LineNumbersMode::First),
             line_numbers_zero_style,
-            max_buffered_lines: 32,
+            line_buffer_size: opt.line_buffer_size,
             max_line_distance: opt.max_line_distance,
             max_line_distance_for_naively_paired_lines,
             max_line_length: opt.max_line_length,
@@ -409,10 +418,11 @@ pub fn user_supplied_option(option: &str, arg_matches: &clap::ArgMatches) -> boo
 }
 
 pub fn delta_unreachable(message: &str) -> ! {
+    let error_exit_code = 2; // This is also stored in Config.
     eprintln!(
         "{} This should not be possible. \
          Please report the bug at https://github.com/dandavison/delta/issues.",
         message
     );
-    process::exit(1);
+    process::exit(error_exit_code);
 }
