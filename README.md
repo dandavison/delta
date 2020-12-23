@@ -476,7 +476,7 @@ and you may then  need to quit tmux completely for it to take effect.
 
 ### Using Delta on Windows
 
-Delta works on Windows. If you see incorrect colors and/or strange characters in Delta output, it is probably because there is an old version of `less.exe` on your system. On Windows, Git ships with its own version of `less.exe` for this reason, however there are still some bugs that affect delta. A patched version of `less.exe` and instructions for installing can be found [here](https://github.com/lzybkr/less/releases/tag/fix_windows_vt).
+Delta works on Windows. However, it is essential to use a recent version of `less.exe`: you can download one from https://github.com/jftuga/less-Windows/releases/latest. If you see incorrect colors and/or strange characters in Delta output, then it is probably because Delta is picking up an old version of `less.exe` on your system.
 
 
 ### Mouse scrolling
