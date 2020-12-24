@@ -197,7 +197,7 @@ In addition, delta handles traditional unified diff output.
 
 ## Installation
 
-You can download an executable for your system: [Linux](https://github.com/dandavison/delta/releases/download/0.4.5/delta-0.4.5-x86_64-unknown-linux-gnu.tar.gz) | [MacOS](https://github.com/dandavison/delta/releases/download/0.4.5/delta-0.4.5-x86_64-apple-darwin.tar.gz) | [Windows](https://github.com/dandavison/delta/releases/download/0.4.5/delta-0.4.5-x86_64-pc-windows-msvc.zip) | [All](https://github.com/dandavison/delta/releases)
+You can download an executable for your system: [Linux](https://github.com/dandavison/delta/releases/download/0.4.5/delta-0.4.5-x86_64-unknown-linux-gnu.tar.gz) | [MacOS (recent versions)](https://github.com/dandavison/delta/releases/download/0.4.5/delta-0.4.5-x86_64-apple-darwin.tar.gz) | [Windows](https://github.com/dandavison/delta/releases/download/0.4.5/delta-0.4.5-x86_64-pc-windows-msvc.zip) | [All](https://github.com/dandavison/delta/releases)
 
 Alternatively, delta is available in the following package managers:
 
@@ -270,6 +270,8 @@ Alternatively, delta is available in the following package managers:
     <td><code>scoop install delta</code></td>
   </tr>
 </table>
+
+Users of older MacOS versions (e.g. 10.11 El Capitan) should install using Homebrew, Cargo, or MacPorts: the binaries on the release page will not work.
 
 See [repology.org/git-delta](https://repology.org/project/git-delta/versions) for the current version in each package repository.
 
