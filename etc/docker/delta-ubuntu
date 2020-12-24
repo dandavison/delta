@@ -1,0 +1,1 @@
+docker run -i delta-ubuntu delta $@
