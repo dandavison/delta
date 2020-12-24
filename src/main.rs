@@ -76,17 +76,17 @@ fn main() -> std::io::Result<()> {
         process::exit(0);
     }
 
-    let mut output_type = OutputType::from_mode(config.paging_mode, None, &config).unwrap();
-    let mut writer = output_type.handle().unwrap();
-
     if atty::is(atty::Stream::Stdin) {
         process::exit(diff(
             config.minus_file.as_ref(),
             config.plus_file.as_ref(),
             &config,
-            &mut writer,
+            None,
         ));
     }
+
+    let mut output_type = OutputType::from_mode(config.paging_mode, None, &config).unwrap();
+    let mut writer = output_type.handle().unwrap();
 
     if let Err(error) = delta(io::stdin().lock().byte_lines(), &mut writer, &config) {
         match error.kind() {
@@ -102,7 +102,7 @@ fn diff(
     minus_file: Option<&PathBuf>,
     plus_file: Option<&PathBuf>,
     config: &config::Config,
-    writer: &mut dyn Write,
+    writer: Option<&mut dyn Write>,
 ) -> i32 {
     use std::io::BufReader;
     let die = || {
@@ -133,11 +133,24 @@ fn diff(
             process::exit(config.error_exit_code);
         });
 
-    if let Err(error) = delta(
-        BufReader::new(diff_process.stdout.unwrap()).byte_lines(),
-        writer,
-        &config,
-    ) {
+    let delta_result = match writer {
+        None => {
+            let mut output_type = OutputType::from_mode(config.paging_mode, None, &config).unwrap();
+            let writer = output_type.handle().unwrap();
+            delta(
+                BufReader::new(diff_process.stdout.unwrap()).byte_lines(),
+                writer,
+                &config,
+            )
+        }
+        Some(writer) => delta(
+            BufReader::new(diff_process.stdout.unwrap()).byte_lines(),
+            writer,
+            &config,
+        ),
+    };
+
+    if let Err(error) = delta_result {
         match error.kind() {
             ErrorKind::BrokenPipe => process::exit(0),
             _ => {
@@ -493,7 +506,7 @@ mod main_tests {
             Some(&PathBuf::from("/dev/null")),
             Some(&PathBuf::from("/dev/null")),
             &config,
-            &mut writer,
+            Some(&mut writer),
         );
         assert_eq!(exit_code, 0);
         let mut s = String::new();
@@ -511,7 +524,7 @@ mod main_tests {
             Some(&PathBuf::from("/etc/passwd")),
             Some(&PathBuf::from("/etc/passwd")),
             &config,
-            &mut writer,
+            Some(&mut writer),
         );
         assert_eq!(exit_code, 0);
         let mut s = String::new();
@@ -529,7 +542,7 @@ mod main_tests {
             Some(&PathBuf::from("/dev/null")),
             Some(&PathBuf::from("/etc/passwd")),
             &config,
-            &mut writer,
+            Some(&mut writer),
         );
         assert_eq!(exit_code, 1);
         let mut s = String::new();
