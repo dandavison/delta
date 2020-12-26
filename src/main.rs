@@ -27,6 +27,7 @@ mod syntect_color;
 mod tests;
 
 use std::io::{self, ErrorKind, Read, Write};
+use std::mem;
 use std::path::PathBuf;
 use std::process;
 
@@ -80,12 +81,14 @@ fn main() -> std::io::Result<()> {
     let mut writer = output_type.handle().unwrap();
 
     if atty::is(atty::Stream::Stdin) {
-        process::exit(diff(
+        let exit_code = diff(
             config.minus_file.as_ref(),
             config.plus_file.as_ref(),
             &config,
             &mut writer,
-        ));
+        );
+        mem::drop(output_type);
+        process::exit(exit_code);
     }
 
     if let Err(error) = delta(io::stdin().lock().byte_lines(), &mut writer, &config) {
