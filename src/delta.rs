@@ -485,33 +485,36 @@ fn handle_hunk_header_line(
         if !config.color_only {
             writeln!(painter.writer)?;
         }
-        if !line.is_empty() {
+        if !line.is_empty() || config.hunk_header_style_include_file_path {
             if config.hunk_header_style_include_file_path {
                 let _ = write!(
                     &mut painter.output_buffer,
-                    "{}: ",
-                    config.file_style.paint(plus_file)
+                    "{}{} ",
+                    config.file_style.paint(plus_file),
+                    if line.is_empty() { "" } else { ":" },
                 );
             };
-            let lines = vec![(line, State::HunkHeader)];
-            let syntax_style_sections = Painter::get_syntax_style_sections_for_lines(
-                &lines,
-                &State::HunkHeader,
-                &mut painter.highlighter,
-                &painter.config,
-            );
-            Painter::paint_lines(
-                syntax_style_sections,
-                vec![vec![(config.hunk_header_style, &lines[0].0)]], // TODO: compute style from state
-                [State::HunkHeader].iter(),
-                &mut painter.output_buffer,
-                config,
-                &mut None,
-                None,
-                None,
-                Some(false),
-            );
-            painter.output_buffer.pop(); // trim newline
+            if !line.is_empty() {
+                let lines = vec![(line, State::HunkHeader)];
+                let syntax_style_sections = Painter::get_syntax_style_sections_for_lines(
+                    &lines,
+                    &State::HunkHeader,
+                    &mut painter.highlighter,
+                    &painter.config,
+                );
+                Painter::paint_lines(
+                    syntax_style_sections,
+                    vec![vec![(config.hunk_header_style, &lines[0].0)]], // TODO: compute style from state
+                    [State::HunkHeader].iter(),
+                    &mut painter.output_buffer,
+                    config,
+                    &mut None,
+                    None,
+                    None,
+                    Some(false),
+                );
+                painter.output_buffer.pop(); // trim newline
+            }
             draw_fn(
                 painter.writer,
                 &painter.output_buffer,
