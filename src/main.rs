@@ -133,21 +133,14 @@ fn diff(
             process::exit(config.error_exit_code);
         });
 
+    let diff_output = BufReader::new(diff_process.stdout.unwrap()).byte_lines();
     let delta_result = match writer {
         None => {
             let mut output_type = OutputType::from_mode(config.paging_mode, None, &config).unwrap();
             let writer = output_type.handle().unwrap();
-            delta(
-                BufReader::new(diff_process.stdout.unwrap()).byte_lines(),
-                writer,
-                &config,
-            )
+            delta(diff_output, writer, &config)
         }
-        Some(writer) => delta(
-            BufReader::new(diff_process.stdout.unwrap()).byte_lines(),
-            writer,
-            &config,
-        ),
+        Some(writer) => delta(diff_output, writer, &config),
     };
 
     if let Err(error) = delta_result {
