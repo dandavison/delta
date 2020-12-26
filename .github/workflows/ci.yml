@@ -1,5 +1,10 @@
-on: [pull_request]
 name: Continuous Integration
+
+on:
+  push:
+    branches:
+      - master
+  pull_request:
 
 jobs:
 
