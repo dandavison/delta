@@ -1015,6 +1015,8 @@ src/align.rs
             "yellow",
             "--hunk-header-style",
             "file red",
+            "--hunk-header-decoration-style",
+            "box",
         ]);
         let output = integration_test_utils::run_delta(GIT_DIFF_SINGLE_HUNK, &config);
 
@@ -1026,7 +1028,14 @@ src/align.rs
             &config,
         );
         let output = strip_ansi_codes(&output);
-        assert!(output.contains("src/align.rs: impl<'a> Alignment<'a> {"));
+        assert!(output.contains(
+            "
+───────────────────────────────────────┐
+src/align.rs: impl<'a> Alignment<'a> { │
+───────────────────────────────────────┘
+"
+        ));
+    }
     }
 
     #[test]
