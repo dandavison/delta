@@ -30,6 +30,8 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v2
       - name: Cargo build
+        env:
+          MACOSX_DEPLOYMENT_TARGET: 10.7
         uses: actions-rs/cargo@v1
         with:
           command: build
