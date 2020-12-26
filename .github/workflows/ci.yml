@@ -1,4 +1,4 @@
-on: [pull_request]
+on: [push, pull_request]
 name: Continuous Integration
 
 jobs:
