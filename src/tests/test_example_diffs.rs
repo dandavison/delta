@@ -1015,6 +1015,8 @@ src/align.rs
             "yellow",
             "--hunk-header-style",
             "file red",
+            "--hunk-header-decoration-style",
+            "box",
         ]);
         let output = integration_test_utils::run_delta(GIT_DIFF_SINGLE_HUNK, &config);
 
@@ -1026,7 +1028,36 @@ src/align.rs
             &config,
         );
         let output = strip_ansi_codes(&output);
-        assert!(output.contains("src/align.rs: impl<'a> Alignment<'a> {"));
+        assert!(output.contains(
+            "
+───────────────────────────────────────┐
+src/align.rs: impl<'a> Alignment<'a> { │
+───────────────────────────────────────┘
+"
+        ));
+    }
+
+    #[test]
+    fn test_hunk_header_style_with_file_no_frag() {
+        let config = integration_test_utils::make_config_from_args(&[
+            "--file-style",
+            "yellow",
+            "--hunk-header-style",
+            "file red",
+            "--hunk-header-decoration-style",
+            "box",
+        ]);
+        let output = integration_test_utils::run_delta(GIT_DIFF_SINGLE_HUNK_NO_FRAG, &config);
+
+        ansi_test_utils::assert_line_has_style(&output, 5, "src/delta.rs", "yellow", &config);
+        let output = strip_ansi_codes(&output);
+        assert!(output.contains(
+            "
+─────────────┐
+src/delta.rs │
+─────────────┘
+"
+        ));
     }
 
     #[test]
@@ -1481,6 +1512,18 @@ index 8e37a9e..6ce4863 100644
                  let candidates = [
                      Cell {
                          parent: left,
+";
+
+    const GIT_DIFF_SINGLE_HUNK_NO_FRAG: &str = "\
+diff --git a/src/delta.rs b/src/delta.rs
+index e401e269..e5304e01 100644
+--- a/src/delta.rs
++++ b/src/delta.rs
+@@ -1,4 +1,3 @@
+-use std::borrow::Cow;
+ use std::fmt::Write as FmtWrite;
+ use std::io::BufRead;
+ use std::io::Write;
 ";
 
     const GIT_DIFF_SINGLE_HUNK_WITH_ANSI_ESCAPE_SEQUENCES: &str = "\
