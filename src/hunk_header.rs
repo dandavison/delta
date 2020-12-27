@@ -31,18 +31,15 @@ pub fn handle_hunk_header_line(
     } else if config.hunk_header_style.is_omitted {
         writeln!(painter.writer)?;
     } else {
-        _write_hunk_header(&raw_code_fragment, painter, line, plus_file, config)?;
+        _write_hunk_header(
+            &raw_code_fragment,
+            &line_numbers,
+            painter,
+            line,
+            plus_file,
+            config,
+        )?;
     };
-
-    // Do not emit a line number in color-only mode, since the extra line would break the
-    // requirement for output lines to be in one-to-one correspondence with input lines.
-    if !config.line_numbers
-        && config.line_numbers_show_first_line_number
-        && !config.hunk_header_style.is_raw
-        && !config.color_only
-    {
-        _write_line_number(&line_numbers, painter, plus_file, config)?;
-    }
     Ok(())
 }
 
@@ -69,6 +66,7 @@ fn _write_hunk_header_raw(
 
 fn _write_hunk_header(
     raw_code_fragment: &str,
+    line_numbers: &Vec<(usize, usize)>,
     painter: &mut Painter,
     line: &str,
     plus_file: &str,
@@ -93,13 +91,26 @@ fn _write_hunk_header(
     if config.hunk_header_style_include_file_path {
         let _ = write!(
             &mut painter.output_buffer,
-            "{}{} ",
+            "{}",
             config.file_style.paint(plus_file),
-            if line.is_empty() { "" } else { ":" },
         );
         have_hunk_header = true;
     };
+    if !config.line_numbers
+        && config.line_numbers_show_first_line_number
+        && !config.hunk_header_style.is_raw
+        && !config.color_only
+    {
+        if have_hunk_header {
+            let _ = write!(&mut painter.output_buffer, ":");
+        }
+        _write_line_number(&line_numbers, painter, plus_file, config)?;
+        have_hunk_header = true;
+    }
     if !line.is_empty() {
+        if have_hunk_header {
+            let _ = write!(&mut painter.output_buffer, ": ");
+        }
         let lines = vec![(line, delta::State::HunkHeader)];
         let syntax_style_sections = Painter::get_syntax_style_sections_for_lines(
             &lines,
@@ -120,6 +131,8 @@ fn _write_hunk_header(
         );
         painter.output_buffer.pop(); // trim newline
         have_hunk_header = true;
+    } else if have_hunk_header {
+        let _ = write!(&mut painter.output_buffer, " ");
     }
     if have_hunk_header {
         draw_fn(
@@ -196,12 +209,16 @@ fn _write_line_number(
         Cow::from(format!("{}", plus_line_number))
     };
     match config.hunk_header_style.decoration_ansi_term_style() {
-        Some(style) => writeln!(
-            painter.writer,
-            "{}",
-            style.paint(formatted_plus_line_number)
-        )?,
-        None => writeln!(painter.writer, "{}", formatted_plus_line_number)?,
+        Some(style) => {
+            let _ = write!(
+                &mut painter.output_buffer,
+                "{}",
+                style.paint(formatted_plus_line_number)
+            );
+        }
+        None => {
+            let _ = write!(&mut painter.output_buffer, "{}", formatted_plus_line_number);
+        }
     }
     Ok(())
 }
