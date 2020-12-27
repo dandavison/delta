@@ -74,7 +74,7 @@ mod tests {
         let config = integration_test_utils::make_config_from_args(&[]);
         let output = integration_test_utils::get_line_of_code_from_delta(
             &ADDED_FILE_INPUT,
-            11,
+            14,
             "class X:",
             &config,
         );
@@ -88,7 +88,7 @@ mod tests {
         let config = integration_test_utils::make_config_from_args(&[]);
         let input = ADDED_FILE_INPUT.replace("a.py", "a");
         let output =
-            integration_test_utils::get_line_of_code_from_delta(&input, 11, "class X:", &config);
+            integration_test_utils::get_line_of_code_from_delta(&input, 14, "class X:", &config);
         ansi_test_utils::assert_has_color_other_than_plus_color(&output, &config);
     }
 
@@ -104,7 +104,7 @@ mod tests {
         ]);
         let input = ADDED_FILE_INPUT.replace("a.py", "a");
         let output =
-            integration_test_utils::get_line_of_code_from_delta(&input, 11, "class X:", &config);
+            integration_test_utils::get_line_of_code_from_delta(&input, 14, "class X:", &config);
         ansi_test_utils::assert_has_plus_color_only(&output, &config);
     }
 
@@ -118,9 +118,9 @@ mod tests {
         // Header
         assert_eq!(lines.nth(1).unwrap(), "comparing: one.rs ⟶   src/two.rs");
         // Change
-        assert_eq!(lines.nth(4).unwrap(), "println!(\"Hello ruster\");");
+        assert_eq!(lines.nth(7).unwrap(), "println!(\"Hello ruster\");");
         // Unchanged in second chunk
-        assert_eq!(lines.nth(4).unwrap(), "Unchanged");
+        assert_eq!(lines.nth(7).unwrap(), "Unchanged");
     }
 
     #[test]
@@ -136,7 +136,7 @@ mod tests {
             "comparing: a/different ⟶   b/different"
         );
         // Change
-        assert_eq!(lines.nth(4).unwrap(), "This is different from b");
+        assert_eq!(lines.nth(7).unwrap(), "This is different from b");
         // File uniqueness
         assert_eq!(lines.nth(2).unwrap(), "Only in a/: just_a");
         // FileMeta divider
@@ -1017,16 +1017,16 @@ src/align.rs
         ansi_test_utils::assert_line_has_style(
             &output,
             11,
-            "src/align.rs: impl<'a> Alignment<'a> {",
+            "src/align.rs:71: impl<'a> Alignment<'a> {",
             "yellow",
             &config,
         );
         let output = strip_ansi_codes(&output);
         assert!(output.contains(
             "
-───────────────────────────────────────┐
-src/align.rs: impl<'a> Alignment<'a> { │
-───────────────────────────────────────┘
+──────────────────────────────────────────┐
+src/align.rs:71: impl<'a> Alignment<'a> { │
+──────────────────────────────────────────┘
 "
         ));
     }
@@ -1043,13 +1043,13 @@ src/align.rs: impl<'a> Alignment<'a> { │
         ]);
         let output = integration_test_utils::run_delta(GIT_DIFF_SINGLE_HUNK_NO_FRAG, &config);
 
-        ansi_test_utils::assert_line_has_style(&output, 5, "src/delta.rs", "yellow", &config);
+        ansi_test_utils::assert_line_has_style(&output, 5, "src/delta.rs:1 ", "yellow", &config);
         let output = strip_ansi_codes(&output);
         assert!(output.contains(
             "
-─────────────┐
-src/delta.rs │
-─────────────┘
+───────────────┐
+src/delta.rs:1 │
+───────────────┘
 "
         ));
     }
@@ -1088,7 +1088,7 @@ src/delta.rs │
         );
         // An additional newline is inserted under anything other than `style=raw,
         // decoration-style=omit`, to better separate the hunks. Hence 9 + 1.
-        ansi_test_utils::assert_line_has_no_color(&output, 9 + 1, "impl<'a> Alignment<'a> {");
+        ansi_test_utils::assert_line_has_no_color(&output, 9 + 1, "71: impl<'a> Alignment<'a> {");
     }
 
     #[test]
@@ -1182,23 +1182,23 @@ impl<'a> Alignment<'a> {
         ansi_test_utils::assert_line_has_style(
             &output,
             10,
-            "─────────────────────────┐",
+            "─────────────────────────────┐",
             "white",
             &config,
         );
         ansi_test_utils::assert_line_has_style(
             &output,
             12,
-            "─────────────────────────┘",
+            "─────────────────────────────┘",
             "white",
             &config,
         );
         let output = strip_ansi_codes(&output);
         assert!(output.contains(
             "
-─────────────────────────┐
-impl<'a> Alignment<'a> { │
-─────────────────────────┘
+─────────────────────────────┐
+71: impl<'a> Alignment<'a> { │
+─────────────────────────────┘
 "
         ));
     }
@@ -1257,8 +1257,8 @@ impl<'a> Alignment<'a> { │
         let output = strip_ansi_codes(&output);
         assert!(output.contains(
             "
-impl<'a> Alignment<'a> { 
-────────────────────────"
+71: impl<'a> Alignment<'a> { 
+────────────────────────────"
         ));
     }
 
@@ -1273,22 +1273,23 @@ impl<'a> Alignment<'a> {
             "box",
         ]);
         let output = integration_test_utils::run_delta(GIT_DIFF_SINGLE_HUNK, &config);
-        ansi_test_utils::assert_line_has_no_color(&output, 10, "─────────────────────────┐");
-        ansi_test_utils::assert_line_is_syntax_highlighted(
+        ansi_test_utils::assert_line_has_no_color(&output, 10, "─────────────────────────────┐");
+        ansi_test_utils::assert_line_has_syntax_highlighted_substring(
             &output,
             11,
+            4,
             "impl<'a> Alignment<'a> { ",
             "rs",
             State::HunkHeader,
             &config,
         );
-        ansi_test_utils::assert_line_has_no_color(&output, 12, "─────────────────────────┘");
+        ansi_test_utils::assert_line_has_no_color(&output, 12, "─────────────────────────────┘");
         let output = strip_ansi_codes(&output);
         assert!(output.contains(
             "
-─────────────────────────┐
-impl<'a> Alignment<'a> { │
-─────────────────────────┘
+─────────────────────────────┐
+71: impl<'a> Alignment<'a> { │
+─────────────────────────────┘
 "
         ));
     }
@@ -1364,7 +1365,7 @@ impl<'a> Alignment<'a> { │
             empty_line_marker_style,
         ]);
         let output = integration_test_utils::run_delta(example_diff, &config);
-        let line = output.lines().nth(5).unwrap();
+        let line = output.lines().nth(8).unwrap();
         if base_style_has_background_color {
             let style = style::Style::from_str(base_style, None, None, true, false);
             assert_eq!(
@@ -1394,11 +1395,11 @@ impl<'a> Alignment<'a> { │
             whitespace_error_style,
         ]);
         let output = integration_test_utils::run_delta(DIFF_WITH_WHITESPACE_ERROR, &config);
-        ansi_test_utils::assert_line_has_style(&output, 5, " ", whitespace_error_style, &config);
+        ansi_test_utils::assert_line_has_style(&output, 8, " ", whitespace_error_style, &config);
         let output = integration_test_utils::run_delta(DIFF_WITH_REMOVED_WHITESPACE_ERROR, &config);
         ansi_test_utils::assert_line_does_not_have_style(
             &output,
-            5,
+            8,
             " ",
             whitespace_error_style,
             &config,
@@ -1415,7 +1416,7 @@ impl<'a> Alignment<'a> { │
             plus_style,
         ]);
         let output = integration_test_utils::run_delta(DIFF_WITH_ADDED_EMPTY_LINE, &config);
-        ansi_test_utils::assert_line_has_style(&output, 5, "", plus_style, &config)
+        ansi_test_utils::assert_line_has_style(&output, 8, "", plus_style, &config)
     }
 
     #[test]
@@ -1428,16 +1429,17 @@ impl<'a> Alignment<'a> { │
             plus_style,
         ]);
         let output = integration_test_utils::run_delta(DIFF_WITH_SINGLE_CHARACTER_LINE, &config);
-        ansi_test_utils::assert_line_has_style(&output, 11, "+}", plus_style, &config)
+        ansi_test_utils::assert_line_has_style(&output, 14, "+}", plus_style, &config)
     }
 
     #[test]
     fn test_color_only() {
         let config = integration_test_utils::make_config_from_args(&["--color-only"]);
         let output = integration_test_utils::run_delta(GIT_DIFF_SINGLE_HUNK, &config);
-        ansi_test_utils::assert_line_is_syntax_highlighted(
+        ansi_test_utils::assert_line_has_syntax_highlighted_substring(
             &output,
             12,
+            1,
             "        for (i, x_i) in self.x.iter().enumerate() {",
             "rs",
             State::HunkZero,
