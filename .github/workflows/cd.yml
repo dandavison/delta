@@ -92,4 +92,4 @@ jobs:
         uses: dawidd6/action-homebrew-bump-formula@v3
         with:
           formula: git-delta
-          token: ${{ secrets.GITHUB_TOKEN }}
+          token: ${{ secrets.HOMEBREW_GITHUB_API_TOKEN }}
