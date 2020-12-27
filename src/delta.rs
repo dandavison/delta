@@ -11,7 +11,7 @@ use crate::config::Config;
 use crate::draw;
 use crate::features;
 use crate::format;
-use crate::hunk_header::handle_hunk_header_line;
+use crate::hunk_header;
 use crate::paint::Painter;
 use crate::parse;
 use crate::style::{self, DecorationStyle};
@@ -400,6 +400,38 @@ fn handle_generic_file_meta_header_line(
         config.file_style,
         decoration_ansi_term_style,
     )?;
+    Ok(())
+}
+
+/// Emit the hunk header, with any requested decoration.
+fn handle_hunk_header_line(
+    painter: &mut Painter,
+    line: &str,
+    raw_line: &str,
+    plus_file: &str,
+    config: &Config,
+) -> std::io::Result<()> {
+    let (raw_code_fragment, line_numbers) = parse::parse_hunk_header(&line);
+    if config.line_numbers {
+        painter
+            .line_numbers_data
+            .initialize_hunk(&line_numbers, plus_file.to_string());
+    }
+
+    if config.hunk_header_style.is_raw {
+        hunk_header::write_hunk_header_raw(painter, line, raw_line, config)?;
+    } else if config.hunk_header_style.is_omitted {
+        writeln!(painter.writer)?;
+    } else {
+        hunk_header::write_hunk_header(
+            &raw_code_fragment,
+            &line_numbers,
+            painter,
+            line,
+            plus_file,
+            config,
+        )?;
+    };
     Ok(())
 }
 

@@ -8,42 +8,9 @@ use crate::delta;
 use crate::draw;
 use crate::features;
 use crate::paint::Painter;
-use crate::parse;
 use crate::style::{self, DecorationStyle};
 
-/// Emit the hunk header, with any requested decoration.
-pub fn handle_hunk_header_line(
-    painter: &mut Painter,
-    line: &str,
-    raw_line: &str,
-    plus_file: &str,
-    config: &Config,
-) -> std::io::Result<()> {
-    let (raw_code_fragment, line_numbers) = parse::parse_hunk_header(&line);
-    if config.line_numbers {
-        painter
-            .line_numbers_data
-            .initialize_hunk(&line_numbers, plus_file.to_string());
-    }
-
-    if config.hunk_header_style.is_raw {
-        _write_hunk_header_raw(painter, line, raw_line, config)?;
-    } else if config.hunk_header_style.is_omitted {
-        writeln!(painter.writer)?;
-    } else {
-        _write_hunk_header(
-            &raw_code_fragment,
-            &line_numbers,
-            painter,
-            line,
-            plus_file,
-            config,
-        )?;
-    };
-    Ok(())
-}
-
-fn _write_hunk_header_raw(
+pub fn write_hunk_header_raw(
     painter: &mut Painter,
     line: &str,
     raw_line: &str,
@@ -64,7 +31,7 @@ fn _write_hunk_header_raw(
     Ok(())
 }
 
-fn _write_hunk_header(
+pub fn write_hunk_header(
     raw_code_fragment: &str,
     line_numbers: &Vec<(usize, usize)>,
     painter: &mut Painter,
