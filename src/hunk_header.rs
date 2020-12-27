@@ -75,16 +75,12 @@ fn _write_hunk_header(
     config: &Config,
 ) -> std::io::Result<()> {
     let (mut draw_fn, _, decoration_ansi_term_style) = _get_draw_fn(config);
-    // Adjust the hunk-header-line before paint_lines.
-    // However in the case of color_only mode,
-    // we'll just use raw_line because we can't change raw_line structure.
     let line = if config.color_only {
         format!(" {}", &line)
+    } else if !raw_code_fragment.is_empty() {
+        format!("{} ", raw_code_fragment)
     } else {
-        match painter.prepare(&raw_code_fragment, false) {
-            s if !s.is_empty() => format!("{} ", s),
-            s => s,
-        }
+        "".to_string()
     };
 
     // Add a blank line below the hunk-header-line for readability, unless

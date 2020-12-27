@@ -442,7 +442,7 @@ fn handle_hunk_line(
             };
             painter
                 .minus_lines
-                .push((painter.prepare(&line, true), state.clone()));
+                .push((painter.prepare(&line), state.clone()));
             state
         }
         Some('+') => {
@@ -459,7 +459,7 @@ fn handle_hunk_line(
             };
             painter
                 .plus_lines
-                .push((painter.prepare(&line, true), state.clone()));
+                .push((painter.prepare(&line), state.clone()));
             state
         }
         Some(' ') => {
