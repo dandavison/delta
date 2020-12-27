@@ -96,7 +96,8 @@ fn _write_hunk_header(
         );
         have_hunk_header = true;
     };
-    if !config.line_numbers
+    if false
+        && !config.line_numbers
         && config.line_numbers_show_first_line_number
         && !config.hunk_header_style.is_raw
         && !config.color_only

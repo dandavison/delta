@@ -74,7 +74,7 @@ mod tests {
         let config = integration_test_utils::make_config_from_args(&[]);
         let output = integration_test_utils::get_line_of_code_from_delta(
             &ADDED_FILE_INPUT,
-            12,
+            11,
             "class X:",
             &config,
         );
@@ -88,7 +88,7 @@ mod tests {
         let config = integration_test_utils::make_config_from_args(&[]);
         let input = ADDED_FILE_INPUT.replace("a.py", "a");
         let output =
-            integration_test_utils::get_line_of_code_from_delta(&input, 12, "class X:", &config);
+            integration_test_utils::get_line_of_code_from_delta(&input, 11, "class X:", &config);
         ansi_test_utils::assert_has_color_other_than_plus_color(&output, &config);
     }
 
@@ -104,7 +104,7 @@ mod tests {
         ]);
         let input = ADDED_FILE_INPUT.replace("a.py", "a");
         let output =
-            integration_test_utils::get_line_of_code_from_delta(&input, 12, "class X:", &config);
+            integration_test_utils::get_line_of_code_from_delta(&input, 11, "class X:", &config);
         ansi_test_utils::assert_has_plus_color_only(&output, &config);
     }
 
@@ -117,14 +117,10 @@ mod tests {
 
         // Header
         assert_eq!(lines.nth(1).unwrap(), "comparing: one.rs ⟶   src/two.rs");
-        // Line
-        assert_eq!(lines.nth(2).unwrap(), "5");
         // Change
-        assert_eq!(lines.nth(2).unwrap(), "println!(\"Hello ruster\");");
-        // Next chunk
-        assert_eq!(lines.nth(2).unwrap(), "43");
+        assert_eq!(lines.nth(4).unwrap(), "println!(\"Hello ruster\");");
         // Unchanged in second chunk
-        assert_eq!(lines.nth(2).unwrap(), "Unchanged");
+        assert_eq!(lines.nth(4).unwrap(), "Unchanged");
     }
 
     #[test]
@@ -139,10 +135,8 @@ mod tests {
             lines.nth(1).unwrap(),
             "comparing: a/different ⟶   b/different"
         );
-        // Line number
-        assert_eq!(lines.nth(2).unwrap(), "1");
         // Change
-        assert_eq!(lines.nth(2).unwrap(), "This is different from b");
+        assert_eq!(lines.nth(4).unwrap(), "This is different from b");
         // File uniqueness
         assert_eq!(lines.nth(2).unwrap(), "Only in a/: just_a");
         // FileMeta divider
@@ -196,7 +190,7 @@ mod tests {
         let output = integration_test_utils::run_delta(DIFF_WITH_MERGE_CONFLICT, &config);
         // TODO: The + in the first column is being removed.
         assert!(strip_ansi_codes(&output).contains("+>>>>>>> Stashed changes"));
-        assert_eq!(output.lines().count(), 46);
+        assert_eq!(output.lines().count(), 45);
     }
 
     #[test]
@@ -1370,7 +1364,7 @@ impl<'a> Alignment<'a> { │
             empty_line_marker_style,
         ]);
         let output = integration_test_utils::run_delta(example_diff, &config);
-        let line = output.lines().nth(6).unwrap();
+        let line = output.lines().nth(5).unwrap();
         if base_style_has_background_color {
             let style = style::Style::from_str(base_style, None, None, true, false);
             assert_eq!(
@@ -1400,11 +1394,11 @@ impl<'a> Alignment<'a> { │
             whitespace_error_style,
         ]);
         let output = integration_test_utils::run_delta(DIFF_WITH_WHITESPACE_ERROR, &config);
-        ansi_test_utils::assert_line_has_style(&output, 6, " ", whitespace_error_style, &config);
+        ansi_test_utils::assert_line_has_style(&output, 5, " ", whitespace_error_style, &config);
         let output = integration_test_utils::run_delta(DIFF_WITH_REMOVED_WHITESPACE_ERROR, &config);
         ansi_test_utils::assert_line_does_not_have_style(
             &output,
-            6,
+            5,
             " ",
             whitespace_error_style,
             &config,
@@ -1421,7 +1415,7 @@ impl<'a> Alignment<'a> { │
             plus_style,
         ]);
         let output = integration_test_utils::run_delta(DIFF_WITH_ADDED_EMPTY_LINE, &config);
-        ansi_test_utils::assert_line_has_style(&output, 6, "", plus_style, &config)
+        ansi_test_utils::assert_line_has_style(&output, 5, "", plus_style, &config)
     }
 
     #[test]
@@ -1434,7 +1428,7 @@ impl<'a> Alignment<'a> { │
             plus_style,
         ]);
         let output = integration_test_utils::run_delta(DIFF_WITH_SINGLE_CHARACTER_LINE, &config);
-        ansi_test_utils::assert_line_has_style(&output, 12, "+}", plus_style, &config)
+        ansi_test_utils::assert_line_has_style(&output, 11, "+}", plus_style, &config)
     }
 
     #[test]
