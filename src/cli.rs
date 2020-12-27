@@ -578,7 +578,6 @@ pub struct ComputedValues {
     pub decorations_width: Width,
     pub inspect_raw_lines: InspectRawLines,
     pub is_light_mode: bool,
-    pub line_numbers_mode: LineNumbersMode,
     pub paging_mode: PagingMode,
     pub syntax_dummy_theme: SyntaxTheme,
     pub syntax_set: SyntaxSet,
@@ -607,19 +606,6 @@ pub enum InspectRawLines {
 impl Default for InspectRawLines {
     fn default() -> Self {
         InspectRawLines::False
-    }
-}
-
-#[derive(Clone, Debug, PartialEq)]
-pub enum LineNumbersMode {
-    None,
-    First,
-    Full,
-}
-
-impl Default for LineNumbersMode {
-    fn default() -> Self {
-        LineNumbersMode::First
     }
 }
 
