@@ -1008,7 +1008,7 @@ src/align.rs
             "--file-style",
             "yellow",
             "--hunk-header-style",
-            "file red",
+            "file line-number red",
             "--hunk-header-decoration-style",
             "box",
         ]);
@@ -1037,7 +1037,7 @@ src/align.rs:71: impl<'a> Alignment<'a> { │
             "--file-style",
             "yellow",
             "--hunk-header-style",
-            "file red",
+            "file line-number red",
             "--hunk-header-decoration-style",
             "box",
         ]);
@@ -1078,7 +1078,7 @@ src/delta.rs:1 │
     fn test_hunk_header_style_colored_input_color_is_stripped_under_normal() {
         let config = integration_test_utils::make_config_from_args(&[
             "--hunk-header-style",
-            "normal",
+            "line-number normal",
             "--hunk-header-decoration-style",
             "omit",
         ]);
@@ -1268,7 +1268,7 @@ impl<'a> Alignment<'a> {
         // otherwise it will confuse assert_line_is_syntax_highlighted.
         let config = integration_test_utils::make_config_from_args(&[
             "--hunk-header-style",
-            "syntax",
+            "line-number syntax",
             "--hunk-header-decoration-style",
             "box",
         ]);
