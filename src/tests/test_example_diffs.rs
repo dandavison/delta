@@ -1172,6 +1172,36 @@ impl<'a> Alignment<'a> {
     }
 
     #[test]
+    fn test_hunk_header_style_box_line_number() {
+        _do_test_hunk_header_style_box(&[
+            "--hunk-header-style",
+            "line-number",
+            "--hunk-header-decoration-style",
+            "white box",
+        ]);
+    }
+
+    #[test]
+    fn test_hunk_header_style_box_file_line_number() {
+        _do_test_hunk_header_style_box_file_line_number(&[
+            "--hunk-header-style",
+            "file line-number",
+            "--hunk-header-decoration-style",
+            "white box",
+        ]);
+    }
+
+    #[test]
+    fn test_hunk_header_style_box_file() {
+        _do_test_hunk_header_style_box_file(&[
+            "--hunk-header-style",
+            "file",
+            "--hunk-header-decoration-style",
+            "white box",
+        ]);
+    }
+
+    #[test]
     fn test_hunk_header_style_box_deprecated_options() {
         _do_test_hunk_header_style_box(&["--hunk-color", "white", "--hunk-style", "box"]);
     }
@@ -1199,6 +1229,60 @@ impl<'a> Alignment<'a> {
 ─────────────────────────────┐
 71: impl<'a> Alignment<'a> { │
 ─────────────────────────────┘
+"
+        ));
+    }
+
+    fn _do_test_hunk_header_style_box_file(args: &[&str]) {
+        let config = integration_test_utils::make_config_from_args(args);
+        let output = integration_test_utils::run_delta(GIT_DIFF_SINGLE_HUNK, &config);
+        ansi_test_utils::assert_line_has_style(
+            &output,
+            10,
+            "───────────────────────────────────────┐",
+            "white",
+            &config,
+        );
+        ansi_test_utils::assert_line_has_style(
+            &output,
+            12,
+            "───────────────────────────────────────┘",
+            "white",
+            &config,
+        );
+        let output = strip_ansi_codes(&output);
+        assert!(output.contains(
+            "
+───────────────────────────────────────┐
+src/align.rs: impl<'a> Alignment<'a> { │
+───────────────────────────────────────┘
+"
+        ));
+    }
+
+    fn _do_test_hunk_header_style_box_file_line_number(args: &[&str]) {
+        let config = integration_test_utils::make_config_from_args(args);
+        let output = integration_test_utils::run_delta(GIT_DIFF_SINGLE_HUNK, &config);
+        ansi_test_utils::assert_line_has_style(
+            &output,
+            10,
+            "──────────────────────────────────────────┐",
+            "white",
+            &config,
+        );
+        ansi_test_utils::assert_line_has_style(
+            &output,
+            12,
+            "──────────────────────────────────────────┘",
+            "white",
+            &config,
+        );
+        let output = strip_ansi_codes(&output);
+        assert!(output.contains(
+            "
+──────────────────────────────────────────┐
+src/align.rs:71: impl<'a> Alignment<'a> { │
+──────────────────────────────────────────┘
 "
         ));
     }
