@@ -112,10 +112,7 @@ where
         let mut handled_line = if line.starts_with("commit ") {
             machine.handle_commit_meta_header_line(&line, &raw_line)?
         } else if line.starts_with("diff ") {
-            machine.painter.paint_buffered_minus_and_plus_lines();
-            machine.state = State::FileMeta;
-            machine.handled_file_meta_header_line_file_pair = None;
-            false
+            machine.handle_file_meta_diff_line()?
         } else if (machine.state == State::FileMeta || machine.source == Source::DiffUnified)
             && (line.starts_with("--- ")
                 || line.starts_with("rename from ")
@@ -220,6 +217,13 @@ impl<'a> StateMachine<'a> {
             decoration_ansi_term_style,
         )?;
         Ok(())
+    }
+
+    fn handle_file_meta_diff_line(&mut self) -> std::io::Result<bool> {
+        self.painter.paint_buffered_minus_and_plus_lines();
+        self.state = State::FileMeta;
+        self.handled_file_meta_header_line_file_pair = None;
+        Ok(false)
     }
 
     fn handle_file_meta_minus_line(&mut self, line: &str, raw_line: &str) -> std::io::Result<bool> {
