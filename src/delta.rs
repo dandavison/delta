@@ -54,8 +54,10 @@ impl State {
 
 struct StateMachine<'a> {
     state: State,
+    source: Source,
     minus_file: String,
     plus_file: String,
+    file_event: parse::FileEvent,
     painter: Painter<'a>,
     config: &'a Config,
 
@@ -72,8 +74,10 @@ impl<'a> StateMachine<'a> {
     pub fn new(writer: &'a mut dyn Write, config: &'a Config) -> Self {
         Self {
             state: State::Unknown,
+            source: Source::Unknown,
             minus_file: "".to_string(),
             plus_file: "".to_string(),
+            file_event: parse::FileEvent::NoEvent,
             current_file_pair: None,
             handled_file_meta_header_line_file_pair: None,
             painter: Painter::new(writer, config),
@@ -91,9 +95,7 @@ where
     I: BufRead,
 {
     let mut machine = StateMachine::new(writer, config);
-    let mut file_event = parse::FileEvent::NoEvent;
     let mut should_continue;
-    let mut source = Source::Unknown;
 
     while let Some(Ok(raw_line_bytes)) = lines.next() {
         let raw_line = String::from_utf8_lossy(&raw_line_bytes);
@@ -104,8 +106,8 @@ where
         };
         let line = ansi::strip_ansi_codes(&raw_line).to_string();
 
-        if source == Source::Unknown {
-            source = detect_source(&line);
+        if machine.source == Source::Unknown {
+            machine.source = detect_source(&line);
         }
         if line.starts_with("commit ") {
             let should_continue = machine.handle_commit_meta_header_line(&line, &raw_line)?;
@@ -116,27 +118,22 @@ where
             machine.painter.paint_buffered_minus_and_plus_lines();
             machine.state = State::FileMeta;
             machine.handled_file_meta_header_line_file_pair = None;
-        } else if (machine.state == State::FileMeta || source == Source::DiffUnified)
+        } else if (machine.state == State::FileMeta || machine.source == Source::DiffUnified)
             && (line.starts_with("--- ")
                 || line.starts_with("rename from ")
                 || line.starts_with("copy from "))
         {
-            let parsed_file_meta_line =
-                parse::parse_file_meta_line(&line, source == Source::GitDiff);
-            machine.minus_file = parsed_file_meta_line.0;
-            file_event = parsed_file_meta_line.1;
-
-            should_continue = machine.handle_file_meta_minus_line(&source, &line, &raw_line)?;
+            should_continue = machine.handle_file_meta_minus_line(&line, &raw_line)?;
             if should_continue {
                 continue;
             }
-        } else if (machine.state == State::FileMeta || source == Source::DiffUnified)
+        } else if (machine.state == State::FileMeta || machine.source == Source::DiffUnified)
             && (line.starts_with("+++ ")
                 || line.starts_with("rename to ")
                 || line.starts_with("copy to "))
         {
             let parsed_file_meta_line =
-                parse::parse_file_meta_line(&line, source == Source::GitDiff);
+                parse::parse_file_meta_line(&line, machine.source == Source::GitDiff);
             machine.plus_file = parsed_file_meta_line.0;
             machine
                 .painter
@@ -168,8 +165,8 @@ where
                     &machine.minus_file,
                     &machine.plus_file,
                     config,
-                    &file_event,
-                    source == Source::DiffUnified,
+                    &machine.file_event,
+                    machine.source == Source::DiffUnified,
                 )?;
                 machine.handled_file_meta_header_line_file_pair = machine.current_file_pair.clone()
             }
@@ -187,7 +184,7 @@ where
             )?;
             machine.painter.set_highlighter();
             continue;
-        } else if source == Source::DiffUnified && line.starts_with("Only in ")
+        } else if machine.source == Source::DiffUnified && line.starts_with("Only in ")
             || line.starts_with("Submodule ")
             || line.starts_with("Binary files ")
         {
@@ -309,14 +306,15 @@ impl<'a> StateMachine<'a> {
         Ok(())
     }
 
-    fn handle_file_meta_minus_line(
-        &mut self,
-        source: &Source,
-        line: &str,
-        raw_line: &str,
-    ) -> std::io::Result<bool> {
+    fn handle_file_meta_minus_line(&mut self, line: &str, raw_line: &str) -> std::io::Result<bool> {
         let mut should_continue = false;
-        if source == &Source::DiffUnified {
+
+        let parsed_file_meta_line =
+            parse::parse_file_meta_line(&line, self.source == Source::GitDiff);
+        self.minus_file = parsed_file_meta_line.0;
+        self.file_event = parsed_file_meta_line.1;
+
+        if self.source == Source::DiffUnified {
             self.state = State::FileMeta;
             self.painter
                 .set_syntax(parse::get_file_extension_from_marker_line(&line));
