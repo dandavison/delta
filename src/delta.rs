@@ -95,9 +95,9 @@ where
     I: BufRead,
 {
     let mut machine = StateMachine::new(writer, config);
-    let mut should_continue = false;
 
     while let Some(Ok(raw_line_bytes)) = lines.next() {
+        let mut should_continue = false;
         let raw_line = String::from_utf8_lossy(&raw_line_bytes);
         let raw_line = if config.max_line_length > 0 && raw_line.len() > config.max_line_length {
             ansi::truncate_str(&raw_line, config.max_line_length, &config.truncation_symbol)
@@ -111,9 +111,6 @@ where
         }
         if line.starts_with("commit ") {
             should_continue = machine.handle_commit_meta_header_line(&line, &raw_line)?;
-            if should_continue {
-                continue;
-            }
         } else if line.starts_with("diff ") {
             machine.painter.paint_buffered_minus_and_plus_lines();
             machine.state = State::FileMeta;
@@ -124,38 +121,26 @@ where
                 || line.starts_with("copy from "))
         {
             should_continue = machine.handle_file_meta_minus_line(&line, &raw_line)?;
-            if should_continue {
-                continue;
-            }
         } else if (machine.state == State::FileMeta || machine.source == Source::DiffUnified)
             && (line.starts_with("+++ ")
                 || line.starts_with("rename to ")
                 || line.starts_with("copy to "))
         {
             should_continue = machine.handle_file_meta_plus_line(&line, &raw_line)?;
-            if should_continue {
-                continue;
-            }
         } else if line.starts_with("@@") {
             should_continue = machine.handle_hunk_header_line(&line, &raw_line)?;
-            if should_continue {
-                continue;
-            }
         } else if machine.source == Source::DiffUnified && line.starts_with("Only in ")
             || line.starts_with("Submodule ")
             || line.starts_with("Binary files ")
         {
             should_continue = machine.handle_additional_file_meta_cases(&line, &raw_line)?;
-            if should_continue {
-                continue;
-            }
         } else if machine.state.is_in_hunk() {
             // A true hunk line should start with one of: '+', '-', ' '. However, handle_hunk_line
             // handles all lines until the state machine transitions away from the hunk states.
             should_continue = machine.handle_hunk_line(&line, &raw_line)?;
-            if should_continue {
-                continue;
-            }
+        }
+        if should_continue {
+            continue;
         }
 
         if machine.state == State::FileMeta && machine.should_handle() && !config.color_only {
