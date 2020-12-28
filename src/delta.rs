@@ -54,6 +54,8 @@ impl State {
 
 struct StateMachine<'a> {
     state: State,
+    minus_file: String,
+    plus_file: String,
     painter: Painter<'a>,
     config: &'a Config,
 }
@@ -62,6 +64,8 @@ impl<'a> StateMachine<'a> {
     pub fn new(writer: &'a mut dyn Write, config: &'a Config) -> Self {
         Self {
             state: State::Unknown,
+            minus_file: "".to_string(),
+            plus_file: "".to_string(),
             painter: Painter::new(writer, config),
             config,
         }
@@ -77,8 +81,6 @@ where
     I: BufRead,
 {
     let mut machine = StateMachine::new(writer, config);
-    let mut minus_file = "".to_string();
-    let mut plus_file = "".to_string();
     let mut file_event = parse::FileEvent::NoEvent;
     let mut should_continue;
     let mut source = Source::Unknown;
@@ -121,13 +123,13 @@ where
         {
             let parsed_file_meta_line =
                 parse::parse_file_meta_line(&line, source == Source::GitDiff);
-            minus_file = parsed_file_meta_line.0;
+            machine.minus_file = parsed_file_meta_line.0;
             file_event = parsed_file_meta_line.1;
 
             should_continue = handle_file_meta_minus_line(
                 &mut machine.state,
                 &source,
-                &minus_file,
+                &machine.minus_file,
                 &mut machine.painter,
                 &line,
                 &raw_line,
@@ -143,13 +145,13 @@ where
         {
             let parsed_file_meta_line =
                 parse::parse_file_meta_line(&line, source == Source::GitDiff);
-            plus_file = parsed_file_meta_line.0;
+            machine.plus_file = parsed_file_meta_line.0;
             machine
                 .painter
                 .set_syntax(parse::get_file_extension_from_file_meta_line_file_path(
-                    &plus_file,
+                    &machine.plus_file,
                 ));
-            current_file_pair = Some((minus_file.clone(), plus_file.clone()));
+            current_file_pair = Some((machine.minus_file.clone(), machine.plus_file.clone()));
 
             // In color_only mode, raw_line's structure shouldn't be changed.
             // So it needs to avoid fn handle_file_meta_header_line
@@ -170,8 +172,8 @@ where
                 machine.painter.emit()?;
                 handle_file_meta_header_line(
                     &mut machine.painter,
-                    &minus_file,
-                    &plus_file,
+                    &machine.minus_file,
+                    &machine.plus_file,
                     config,
                     &file_event,
                     source == Source::DiffUnified,
@@ -183,7 +185,13 @@ where
             machine.state = State::HunkHeader;
             machine.painter.set_highlighter();
             machine.painter.emit()?;
-            handle_hunk_header_line(&mut machine.painter, &line, &raw_line, &plus_file, config)?;
+            handle_hunk_header_line(
+                &mut machine.painter,
+                &line,
+                &raw_line,
+                &machine.plus_file,
+                config,
+            )?;
             machine.painter.set_highlighter();
             continue;
         } else if source == Source::DiffUnified && line.starts_with("Only in ")
