@@ -132,43 +132,9 @@ where
                 || line.starts_with("rename to ")
                 || line.starts_with("copy to "))
         {
-            let parsed_file_meta_line =
-                parse::parse_file_meta_line(&line, machine.source == Source::GitDiff);
-            machine.plus_file = parsed_file_meta_line.0;
-            machine
-                .painter
-                .set_syntax(parse::get_file_extension_from_file_meta_line_file_path(
-                    &machine.plus_file,
-                ));
-            machine.current_file_pair =
-                Some((machine.minus_file.clone(), machine.plus_file.clone()));
-
-            // In color_only mode, raw_line's structure shouldn't be changed.
-            // So it needs to avoid fn handle_file_meta_header_line
-            // (it connects the plus_file and minus_file),
-            // and to call fn handle_generic_file_meta_header_line directly.
-            if config.color_only {
-                handle_generic_file_meta_header_line(
-                    &mut machine.painter,
-                    &line,
-                    &raw_line,
-                    config,
-                )?;
+            should_continue = machine.handle_file_meta_plus_line(&line, &raw_line)?;
+            if should_continue {
                 continue;
-            }
-            if machine.should_handle()
-                && machine.handled_file_meta_header_line_file_pair != machine.current_file_pair
-            {
-                machine.painter.emit()?;
-                handle_file_meta_header_line(
-                    &mut machine.painter,
-                    &machine.minus_file,
-                    &machine.plus_file,
-                    config,
-                    &machine.file_event,
-                    machine.source == Source::DiffUnified,
-                )?;
-                machine.handled_file_meta_header_line_file_pair = machine.current_file_pair.clone()
             }
         } else if line.starts_with("@@") {
             machine.painter.paint_buffered_minus_and_plus_lines();
@@ -332,6 +298,41 @@ impl<'a> StateMachine<'a> {
         if self.config.color_only {
             handle_generic_file_meta_header_line(&mut self.painter, &line, &raw_line, self.config)?;
             should_continue = true;
+        }
+        Ok(should_continue)
+    }
+
+    fn handle_file_meta_plus_line(&mut self, line: &str, raw_line: &str) -> std::io::Result<bool> {
+        let mut should_continue = false;
+        let parsed_file_meta_line =
+            parse::parse_file_meta_line(&line, self.source == Source::GitDiff);
+        self.plus_file = parsed_file_meta_line.0;
+        self.painter
+            .set_syntax(parse::get_file_extension_from_file_meta_line_file_path(
+                &self.plus_file,
+            ));
+        self.current_file_pair = Some((self.minus_file.clone(), self.plus_file.clone()));
+
+        // In color_only mode, raw_line's structure shouldn't be changed.
+        // So it needs to avoid fn handle_file_meta_header_line
+        // (it connects the plus_file and minus_file),
+        // and to call fn handle_generic_file_meta_header_line directly.
+        if self.config.color_only {
+            handle_generic_file_meta_header_line(&mut self.painter, &line, &raw_line, self.config)?;
+            should_continue = true
+        } else if self.should_handle()
+            && self.handled_file_meta_header_line_file_pair != self.current_file_pair
+        {
+            self.painter.emit()?;
+            handle_file_meta_header_line(
+                &mut self.painter,
+                &self.minus_file,
+                &self.plus_file,
+                self.config,
+                &self.file_event,
+                self.source == Source::DiffUnified,
+            )?;
+            self.handled_file_meta_header_line_file_pair = self.current_file_pair.clone()
         }
         Ok(should_continue)
     }
