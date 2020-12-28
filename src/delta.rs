@@ -53,14 +53,207 @@ impl State {
 // | HunkPlus    | flush, emit | flush, emit | flush, emit | flush, emit | flush, push | push     |
 
 struct StateMachine<'a> {
+    state: State,
     painter: Painter<'a>,
+    config: &'a Config,
 }
 
 impl<'a> StateMachine<'a> {
     pub fn new(writer: &'a mut dyn Write, config: &'a Config) -> Self {
         Self {
+            state: State::Unknown,
             painter: Painter::new(writer, config),
+            config,
         }
+    }
+}
+
+pub fn delta<I>(
+    mut lines: ByteLines<I>,
+    writer: &mut dyn Write,
+    config: &Config,
+) -> std::io::Result<()>
+where
+    I: BufRead,
+{
+    let mut machine = StateMachine::new(writer, config);
+    let mut minus_file = "".to_string();
+    let mut plus_file = "".to_string();
+    let mut file_event = parse::FileEvent::NoEvent;
+    let mut should_continue;
+    let mut source = Source::Unknown;
+
+    // When a file is modified, we use lines starting with '---' or '+++' to obtain the file name.
+    // When a file is renamed without changes, we use lines starting with 'rename' to obtain the
+    // file name (there is no diff hunk and hence no lines starting with '---' or '+++'). But when
+    // a file is renamed with changes, both are present, and we rely on the following variables to
+    // avoid emitting the file meta header line twice (#245).
+    let mut current_file_pair;
+    let mut handled_file_meta_header_line_file_pair = None;
+
+    while let Some(Ok(raw_line_bytes)) = lines.next() {
+        let raw_line = String::from_utf8_lossy(&raw_line_bytes);
+        let raw_line = if config.max_line_length > 0 && raw_line.len() > config.max_line_length {
+            ansi::truncate_str(&raw_line, config.max_line_length, &config.truncation_symbol)
+        } else {
+            raw_line
+        };
+        let line = ansi::strip_ansi_codes(&raw_line).to_string();
+        if source == Source::Unknown {
+            source = detect_source(&line);
+        }
+        if line.starts_with("commit ") {
+            machine.painter.paint_buffered_minus_and_plus_lines();
+            machine.state = State::CommitMeta;
+            if machine.should_handle() {
+                machine.painter.emit()?;
+                machine.handle_commit_meta_header_line(&line, &raw_line, config)?;
+                continue;
+            }
+        } else if line.starts_with("diff ") {
+            machine.painter.paint_buffered_minus_and_plus_lines();
+            machine.state = State::FileMeta;
+            handled_file_meta_header_line_file_pair = None;
+        } else if (machine.state == State::FileMeta || source == Source::DiffUnified)
+            && (line.starts_with("--- ")
+                || line.starts_with("rename from ")
+                || line.starts_with("copy from "))
+        {
+            let parsed_file_meta_line =
+                parse::parse_file_meta_line(&line, source == Source::GitDiff);
+            minus_file = parsed_file_meta_line.0;
+            file_event = parsed_file_meta_line.1;
+
+            should_continue = handle_file_meta_minus_line(
+                &mut machine.state,
+                &source,
+                &minus_file,
+                &mut machine.painter,
+                &line,
+                &raw_line,
+                config,
+            )?;
+            if should_continue {
+                continue;
+            }
+        } else if (machine.state == State::FileMeta || source == Source::DiffUnified)
+            && (line.starts_with("+++ ")
+                || line.starts_with("rename to ")
+                || line.starts_with("copy to "))
+        {
+            let parsed_file_meta_line =
+                parse::parse_file_meta_line(&line, source == Source::GitDiff);
+            plus_file = parsed_file_meta_line.0;
+            machine
+                .painter
+                .set_syntax(parse::get_file_extension_from_file_meta_line_file_path(
+                    &plus_file,
+                ));
+            current_file_pair = Some((minus_file.clone(), plus_file.clone()));
+
+            // In color_only mode, raw_line's structure shouldn't be changed.
+            // So it needs to avoid fn handle_file_meta_header_line
+            // (it connects the plus_file and minus_file),
+            // and to call fn handle_generic_file_meta_header_line directly.
+            if config.color_only {
+                handle_generic_file_meta_header_line(
+                    &mut machine.painter,
+                    &line,
+                    &raw_line,
+                    config,
+                )?;
+                continue;
+            }
+            if machine.should_handle()
+                && handled_file_meta_header_line_file_pair != current_file_pair
+            {
+                machine.painter.emit()?;
+                handle_file_meta_header_line(
+                    &mut machine.painter,
+                    &minus_file,
+                    &plus_file,
+                    config,
+                    &file_event,
+                    source == Source::DiffUnified,
+                )?;
+                handled_file_meta_header_line_file_pair = current_file_pair
+            }
+        } else if line.starts_with("@@") {
+            machine.painter.paint_buffered_minus_and_plus_lines();
+            machine.state = State::HunkHeader;
+            machine.painter.set_highlighter();
+            machine.painter.emit()?;
+            handle_hunk_header_line(&mut machine.painter, &line, &raw_line, &plus_file, config)?;
+            machine.painter.set_highlighter();
+            continue;
+        } else if source == Source::DiffUnified && line.starts_with("Only in ")
+            || line.starts_with("Submodule ")
+            || line.starts_with("Binary files ")
+        {
+            // Additional FileMeta cases:
+            //
+            // 1. When comparing directories with diff -u, if filenames match between the
+            //    directories, the files themselves will be compared. However, if an equivalent
+            //    filename is not present, diff outputs a single line (Only in...) starting
+            //    indicating that the file is present in only one of the directories.
+            //
+            // 2. Git diff emits lines describing submodule state such as "Submodule x/y/z contains
+            //    untracked content"
+            //
+            // See https://github.com/dandavison/delta/issues/60#issuecomment-557485242 for a
+            // proposal for more robust parsing logic.
+
+            machine.painter.paint_buffered_minus_and_plus_lines();
+            machine.state = State::FileMeta;
+            if machine.should_handle() {
+                machine.painter.emit()?;
+                handle_generic_file_meta_header_line(
+                    &mut machine.painter,
+                    &line,
+                    &raw_line,
+                    config,
+                )?;
+                continue;
+            }
+        } else if machine.state.is_in_hunk() {
+            // A true hunk line should start with one of: '+', '-', ' '. However, handle_hunk_line
+            // handles all lines until the state machine transitions away from the hunk states.
+            machine.state = handle_hunk_line(
+                &mut machine.painter,
+                &line,
+                &raw_line,
+                machine.state,
+                config,
+            );
+            machine.painter.emit()?;
+            continue;
+        }
+
+        if machine.state == State::FileMeta && machine.should_handle() && !config.color_only {
+            // The file metadata section is 4 lines. Skip them under non-plain file-styles.
+            // However in the case of color_only mode,
+            // we won't skip because we can't change raw_line structure.
+            continue;
+        } else {
+            machine.painter.emit()?;
+            writeln!(
+                machine.painter.writer,
+                "{}",
+                format::format_raw_line(&raw_line, config)
+            )?;
+        }
+    }
+
+    machine.painter.paint_buffered_minus_and_plus_lines();
+    machine.painter.emit()?;
+    Ok(())
+}
+
+impl<'a> StateMachine<'a> {
+    /// Should a handle_* function be called on this element?
+    fn should_handle(&self) -> bool {
+        let style = self.config.get_style(&self.state);
+        !(style.is_raw && style.decoration_style == DecorationStyle::NoDecoration)
     }
 
     fn handle_commit_meta_header_line(
@@ -95,189 +288,6 @@ impl<'a> StateMachine<'a> {
         )?;
         Ok(())
     }
-}
-
-pub fn delta<I>(
-    mut lines: ByteLines<I>,
-    writer: &mut dyn Write,
-    config: &Config,
-) -> std::io::Result<()>
-where
-    I: BufRead,
-{
-    let mut machine = StateMachine::new(writer, config);
-    let mut minus_file = "".to_string();
-    let mut plus_file = "".to_string();
-    let mut file_event = parse::FileEvent::NoEvent;
-    let mut state = State::Unknown;
-    let mut should_continue;
-    let mut source = Source::Unknown;
-
-    // When a file is modified, we use lines starting with '---' or '+++' to obtain the file name.
-    // When a file is renamed without changes, we use lines starting with 'rename' to obtain the
-    // file name (there is no diff hunk and hence no lines starting with '---' or '+++'). But when
-    // a file is renamed with changes, both are present, and we rely on the following variables to
-    // avoid emitting the file meta header line twice (#245).
-    let mut current_file_pair;
-    let mut handled_file_meta_header_line_file_pair = None;
-
-    while let Some(Ok(raw_line_bytes)) = lines.next() {
-        let raw_line = String::from_utf8_lossy(&raw_line_bytes);
-        let raw_line = if config.max_line_length > 0 && raw_line.len() > config.max_line_length {
-            ansi::truncate_str(&raw_line, config.max_line_length, &config.truncation_symbol)
-        } else {
-            raw_line
-        };
-        let line = ansi::strip_ansi_codes(&raw_line).to_string();
-        if source == Source::Unknown {
-            source = detect_source(&line);
-        }
-        if line.starts_with("commit ") {
-            machine.painter.paint_buffered_minus_and_plus_lines();
-            state = State::CommitMeta;
-            if should_handle(&state, config) {
-                machine.painter.emit()?;
-                machine.handle_commit_meta_header_line(&line, &raw_line, config)?;
-                continue;
-            }
-        } else if line.starts_with("diff ") {
-            machine.painter.paint_buffered_minus_and_plus_lines();
-            state = State::FileMeta;
-            handled_file_meta_header_line_file_pair = None;
-        } else if (state == State::FileMeta || source == Source::DiffUnified)
-            && (line.starts_with("--- ")
-                || line.starts_with("rename from ")
-                || line.starts_with("copy from "))
-        {
-            let parsed_file_meta_line =
-                parse::parse_file_meta_line(&line, source == Source::GitDiff);
-            minus_file = parsed_file_meta_line.0;
-            file_event = parsed_file_meta_line.1;
-
-            should_continue = handle_file_meta_minus_line(
-                &mut state,
-                &source,
-                &minus_file,
-                &mut machine.painter,
-                &line,
-                &raw_line,
-                config,
-            )?;
-            if should_continue {
-                continue;
-            }
-        } else if (state == State::FileMeta || source == Source::DiffUnified)
-            && (line.starts_with("+++ ")
-                || line.starts_with("rename to ")
-                || line.starts_with("copy to "))
-        {
-            let parsed_file_meta_line =
-                parse::parse_file_meta_line(&line, source == Source::GitDiff);
-            plus_file = parsed_file_meta_line.0;
-            machine
-                .painter
-                .set_syntax(parse::get_file_extension_from_file_meta_line_file_path(
-                    &plus_file,
-                ));
-            current_file_pair = Some((minus_file.clone(), plus_file.clone()));
-
-            // In color_only mode, raw_line's structure shouldn't be changed.
-            // So it needs to avoid fn handle_file_meta_header_line
-            // (it connects the plus_file and minus_file),
-            // and to call fn handle_generic_file_meta_header_line directly.
-            if config.color_only {
-                handle_generic_file_meta_header_line(
-                    &mut machine.painter,
-                    &line,
-                    &raw_line,
-                    config,
-                )?;
-                continue;
-            }
-            if should_handle(&State::FileMeta, config)
-                && handled_file_meta_header_line_file_pair != current_file_pair
-            {
-                machine.painter.emit()?;
-                handle_file_meta_header_line(
-                    &mut machine.painter,
-                    &minus_file,
-                    &plus_file,
-                    config,
-                    &file_event,
-                    source == Source::DiffUnified,
-                )?;
-                handled_file_meta_header_line_file_pair = current_file_pair
-            }
-        } else if line.starts_with("@@") {
-            machine.painter.paint_buffered_minus_and_plus_lines();
-            state = State::HunkHeader;
-            machine.painter.set_highlighter();
-            machine.painter.emit()?;
-            handle_hunk_header_line(&mut machine.painter, &line, &raw_line, &plus_file, config)?;
-            machine.painter.set_highlighter();
-            continue;
-        } else if source == Source::DiffUnified && line.starts_with("Only in ")
-            || line.starts_with("Submodule ")
-            || line.starts_with("Binary files ")
-        {
-            // Additional FileMeta cases:
-            //
-            // 1. When comparing directories with diff -u, if filenames match between the
-            //    directories, the files themselves will be compared. However, if an equivalent
-            //    filename is not present, diff outputs a single line (Only in...) starting
-            //    indicating that the file is present in only one of the directories.
-            //
-            // 2. Git diff emits lines describing submodule state such as "Submodule x/y/z contains
-            //    untracked content"
-            //
-            // See https://github.com/dandavison/delta/issues/60#issuecomment-557485242 for a
-            // proposal for more robust parsing logic.
-
-            machine.painter.paint_buffered_minus_and_plus_lines();
-            state = State::FileMeta;
-            if should_handle(&State::FileMeta, config) {
-                machine.painter.emit()?;
-                handle_generic_file_meta_header_line(
-                    &mut machine.painter,
-                    &line,
-                    &raw_line,
-                    config,
-                )?;
-                continue;
-            }
-        } else if state.is_in_hunk() {
-            // A true hunk line should start with one of: '+', '-', ' '. However, handle_hunk_line
-            // handles all lines until the state machine transitions away from the hunk states.
-            state = handle_hunk_line(&mut machine.painter, &line, &raw_line, state, config);
-            machine.painter.emit()?;
-            continue;
-        }
-
-        if state == State::FileMeta && should_handle(&State::FileMeta, config) && !config.color_only
-        {
-            // The file metadata section is 4 lines. Skip them under non-plain file-styles.
-            // However in the case of color_only mode,
-            // we won't skip because we can't change raw_line structure.
-            continue;
-        } else {
-            machine.painter.emit()?;
-            writeln!(
-                machine.painter.writer,
-                "{}",
-                format::format_raw_line(&raw_line, config)
-            )?;
-        }
-    }
-
-    machine.painter.paint_buffered_minus_and_plus_lines();
-    machine.painter.emit()?;
-    Ok(())
-}
-
-/// Should a handle_* function be called on this element?
-fn should_handle(state: &State, config: &Config) -> bool {
-    let style = config.get_style(state);
-    !(style.is_raw && style.decoration_style == DecorationStyle::NoDecoration)
 }
 
 /// Try to detect what is producing the input for delta.
