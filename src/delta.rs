@@ -152,15 +152,10 @@ where
         } else if machine.state.is_in_hunk() {
             // A true hunk line should start with one of: '+', '-', ' '. However, handle_hunk_line
             // handles all lines until the state machine transitions away from the hunk states.
-            machine.state = handle_hunk_line(
-                &mut machine.painter,
-                &line,
-                &raw_line,
-                machine.state,
-                config,
-            );
-            machine.painter.emit()?;
-            continue;
+            let should_continue = machine.handle_hunk_line(&line, &raw_line)?;
+            if should_continue {
+                continue;
+            }
         }
 
         if machine.state == State::FileMeta && machine.should_handle() && !config.color_only {
@@ -406,6 +401,80 @@ impl<'a> StateMachine<'a> {
         self.painter.set_highlighter();
         Ok(true)
     }
+
+    /// Handle a hunk line, i.e. a minus line, a plus line, or an unchanged line.
+    // In the case of a minus or plus line, we store the line in a
+    // buffer. When we exit the changed region we process the collected
+    // minus and plus lines jointly, in order to paint detailed
+    // highlighting according to inferred edit operations. In the case of
+    // an unchanged line, we paint it immediately.
+    fn handle_hunk_line(&mut self, line: &str, raw_line: &str) -> std::io::Result<bool> {
+        // Don't let the line buffers become arbitrarily large -- if we
+        // were to allow that, then for a large deleted/added file we
+        // would process the entire file before painting anything.
+        if self.painter.minus_lines.len() > self.config.line_buffer_size
+            || self.painter.plus_lines.len() > self.config.line_buffer_size
+        {
+            self.painter.paint_buffered_minus_and_plus_lines();
+        }
+        self.state = match line.chars().next() {
+            Some('-') => {
+                if let State::HunkPlus(_) = self.state {
+                    self.painter.paint_buffered_minus_and_plus_lines();
+                }
+                let state = match self.config.inspect_raw_lines {
+                    cli::InspectRawLines::True
+                        if style::line_has_style_other_than(
+                            raw_line,
+                            [*style::GIT_DEFAULT_MINUS_STYLE, self.config.git_minus_style].iter(),
+                        ) =>
+                    {
+                        State::HunkMinus(Some(self.painter.prepare_raw_line(raw_line)))
+                    }
+                    _ => State::HunkMinus(None),
+                };
+                self.painter
+                    .minus_lines
+                    .push((self.painter.prepare(&line), state.clone()));
+                state
+            }
+            Some('+') => {
+                let state = match self.config.inspect_raw_lines {
+                    cli::InspectRawLines::True
+                        if style::line_has_style_other_than(
+                            raw_line,
+                            [*style::GIT_DEFAULT_PLUS_STYLE, self.config.git_plus_style].iter(),
+                        ) =>
+                    {
+                        State::HunkPlus(Some(self.painter.prepare_raw_line(raw_line)))
+                    }
+                    _ => State::HunkPlus(None),
+                };
+                self.painter
+                    .plus_lines
+                    .push((self.painter.prepare(&line), state.clone()));
+                state
+            }
+            Some(' ') => {
+                self.painter.paint_buffered_minus_and_plus_lines();
+                self.painter.paint_zero_line(&line);
+                State::HunkZero
+            }
+            _ => {
+                // The first character here could be e.g. '\' from '\ No newline at end of file'. This
+                // is not a hunk line, but the parser does not have a more accurate state corresponding
+                // to this.
+                self.painter.paint_buffered_minus_and_plus_lines();
+                self.painter
+                    .output_buffer
+                    .push_str(&self.painter.expand_tabs(raw_line.graphemes(true)));
+                self.painter.output_buffer.push('\n');
+                State::HunkZero
+            }
+        };
+        self.painter.emit()?;
+        Ok(true)
+    }
 }
 
 /// Try to detect what is producing the input for delta.
@@ -426,83 +495,5 @@ fn detect_source(line: &str) -> Source {
         Source::DiffUnified
     } else {
         Source::Unknown
-    }
-}
-
-/// Handle a hunk line, i.e. a minus line, a plus line, or an unchanged line.
-// In the case of a minus or plus line, we store the line in a
-// buffer. When we exit the changed region we process the collected
-// minus and plus lines jointly, in order to paint detailed
-// highlighting according to inferred edit operations. In the case of
-// an unchanged line, we paint it immediately.
-fn handle_hunk_line(
-    painter: &mut Painter,
-    line: &str,
-    raw_line: &str,
-    state: State,
-    config: &Config,
-) -> State {
-    // Don't let the line buffers become arbitrarily large -- if we
-    // were to allow that, then for a large deleted/added file we
-    // would process the entire file before painting anything.
-    if painter.minus_lines.len() > config.line_buffer_size
-        || painter.plus_lines.len() > config.line_buffer_size
-    {
-        painter.paint_buffered_minus_and_plus_lines();
-    }
-    match line.chars().next() {
-        Some('-') => {
-            if let State::HunkPlus(_) = state {
-                painter.paint_buffered_minus_and_plus_lines();
-            }
-            let state = match config.inspect_raw_lines {
-                cli::InspectRawLines::True
-                    if style::line_has_style_other_than(
-                        raw_line,
-                        [*style::GIT_DEFAULT_MINUS_STYLE, config.git_minus_style].iter(),
-                    ) =>
-                {
-                    State::HunkMinus(Some(painter.prepare_raw_line(raw_line)))
-                }
-                _ => State::HunkMinus(None),
-            };
-            painter
-                .minus_lines
-                .push((painter.prepare(&line), state.clone()));
-            state
-        }
-        Some('+') => {
-            let state = match config.inspect_raw_lines {
-                cli::InspectRawLines::True
-                    if style::line_has_style_other_than(
-                        raw_line,
-                        [*style::GIT_DEFAULT_PLUS_STYLE, config.git_plus_style].iter(),
-                    ) =>
-                {
-                    State::HunkPlus(Some(painter.prepare_raw_line(raw_line)))
-                }
-                _ => State::HunkPlus(None),
-            };
-            painter
-                .plus_lines
-                .push((painter.prepare(&line), state.clone()));
-            state
-        }
-        Some(' ') => {
-            painter.paint_buffered_minus_and_plus_lines();
-            painter.paint_zero_line(&line);
-            State::HunkZero
-        }
-        _ => {
-            // The first character here could be e.g. '\' from '\ No newline at end of file'. This
-            // is not a hunk line, but the parser does not have a more accurate state corresponding
-            // to this.
-            painter.paint_buffered_minus_and_plus_lines();
-            painter
-                .output_buffer
-                .push_str(&painter.expand_tabs(raw_line.graphemes(true)));
-            painter.output_buffer.push('\n');
-            State::HunkZero
-        }
     }
 }
