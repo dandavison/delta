@@ -32,7 +32,7 @@ pub fn write_hunk_header_raw(
 
 pub fn write_hunk_header(
     raw_code_fragment: &str,
-    line_numbers: &Vec<(usize, usize)>,
+    line_numbers: &[(usize, usize)],
     painter: &mut Painter,
     line: &str,
     plus_file: &str,
@@ -117,7 +117,7 @@ pub fn write_hunk_header(
 }
 
 fn _write_line_number(
-    line_numbers: &Vec<(usize, usize)>,
+    line_numbers: &[(usize, usize)],
     painter: &mut Painter,
     plus_file: &str,
     config: &Config,
