@@ -137,13 +137,10 @@ where
                 continue;
             }
         } else if line.starts_with("@@") {
-            machine.painter.paint_buffered_minus_and_plus_lines();
-            machine.state = State::HunkHeader;
-            machine.painter.set_highlighter();
-            machine.painter.emit()?;
-            machine.handle_hunk_header_line(&line, &raw_line)?;
-            machine.painter.set_highlighter();
-            continue;
+            let should_continue = machine.handle_hunk_header_line(&line, &raw_line)?;
+            if should_continue {
+                continue;
+            }
         } else if machine.source == Source::DiffUnified && line.starts_with("Only in ")
             || line.starts_with("Submodule ")
             || line.starts_with("Binary files ")
@@ -332,7 +329,12 @@ impl<'a> StateMachine<'a> {
     }
 
     /// Emit the hunk header, with any requested decoration.
-    fn handle_hunk_header_line(&mut self, line: &str, raw_line: &str) -> std::io::Result<()> {
+    fn handle_hunk_header_line(&mut self, line: &str, raw_line: &str) -> std::io::Result<bool> {
+        self.painter.paint_buffered_minus_and_plus_lines();
+        self.state = State::HunkHeader;
+        self.painter.set_highlighter();
+        self.painter.emit()?;
+
         let (raw_code_fragment, line_numbers) = parse::parse_hunk_header(&line);
         if self.config.line_numbers {
             self.painter
@@ -354,7 +356,8 @@ impl<'a> StateMachine<'a> {
                 self.config,
             )?;
         };
-        Ok(())
+        self.painter.set_highlighter();
+        Ok(true)
     }
 }
 
