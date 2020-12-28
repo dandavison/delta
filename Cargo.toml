@@ -33,7 +33,7 @@ unicode-width = "0.1.8"
 vte = "0.9.0"
 
 [dependencies.git2]
-version = "0.13.13"
+version = "0.13.14"
 default-features = false
 features = []
 
