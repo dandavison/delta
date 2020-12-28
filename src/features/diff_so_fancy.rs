@@ -38,7 +38,7 @@ pub fn make_feature() -> Vec<(String, OptionValueFunction)> {
             "hunk-header-style",
             String,
             Some("color.diff.frag"),
-            _opt => "bold syntax"
+            _opt => "file line-number bold syntax"
         ),
         (
             "hunk-header-decoration-style",
@@ -70,7 +70,7 @@ pub mod tests {
         assert_eq!(opt.file_style, "11");
         assert_eq!(opt.file_decoration_style, "bold yellow ul ol");
 
-        assert_eq!(opt.hunk_header_style, "bold syntax");
+        assert_eq!(opt.hunk_header_style, "file line-number bold syntax");
         assert_eq!(opt.hunk_header_decoration_style, "magenta box");
     }
 

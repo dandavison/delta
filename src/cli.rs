@@ -363,10 +363,13 @@ pub struct Opt {
     #[structopt(long = "hyperlinks-file-link-format", default_value = "file://{path}")]
     pub hyperlinks_file_link_format: String,
 
-    #[structopt(long = "hunk-header-style", default_value = "syntax")]
-    /// Style (foreground, background, attributes) for the hunk-header. See STYLES section. The
-    /// special attribute 'file' can be used to include the file path in the hunk header. The style
-    /// 'omit' can be used to remove the hunk header section from the output.
+    #[structopt(long = "hunk-header-style", default_value = "line-number syntax")]
+    /// Style (foreground, background, attributes) for the hunk-header. See STYLES section. Special
+    /// attributes 'file' and 'line-number' can be used to include the file path, and number of
+    /// first hunk line, in the hunk header. If included in the hunk header, 'file' and
+    /// 'line-number' are styled according to 'file-style' and 'hunk-header-decoration-style'
+    /// respectively. The style 'omit' can be used to remove the hunk header section from the
+    /// output.
     pub hunk_header_style: String,
 
     #[structopt(long = "hunk-header-decoration-style", default_value = "blue box")]
@@ -578,7 +581,6 @@ pub struct ComputedValues {
     pub decorations_width: Width,
     pub inspect_raw_lines: InspectRawLines,
     pub is_light_mode: bool,
-    pub line_numbers_mode: LineNumbersMode,
     pub paging_mode: PagingMode,
     pub syntax_dummy_theme: SyntaxTheme,
     pub syntax_set: SyntaxSet,
@@ -607,19 +609,6 @@ pub enum InspectRawLines {
 impl Default for InspectRawLines {
     fn default() -> Self {
         InspectRawLines::False
-    }
-}
-
-#[derive(Clone, Debug, PartialEq)]
-pub enum LineNumbersMode {
-    None,
-    First,
-    Full,
-}
-
-impl Default for LineNumbersMode {
-    fn default() -> Self {
-        LineNumbersMode::First
     }
 }
 

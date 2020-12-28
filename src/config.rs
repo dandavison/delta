@@ -33,6 +33,7 @@ pub struct Config {
     pub git_config_entries: HashMap<String, GitConfigEntry>,
     pub hunk_header_style: Style,
     pub hunk_header_style_include_file_path: bool,
+    pub hunk_header_style_include_line_number: bool,
     pub hyperlinks: bool,
     pub hyperlinks_file_link_format: String,
     pub inspect_raw_lines: cli::InspectRawLines,
@@ -44,7 +45,6 @@ pub struct Config {
     pub line_numbers_plus_style: Style,
     pub line_numbers_right_format: String,
     pub line_numbers_right_style: Style,
-    pub line_numbers_show_first_line_number: bool,
     pub line_numbers_zero_style: Style,
     pub line_buffer_size: usize,
     pub max_line_distance: f64,
@@ -168,19 +168,21 @@ impl From<cli::Opt> for Config {
                 .hunk_header_style
                 .split(' ')
                 .any(|s| s == "file"),
+            hunk_header_style_include_line_number: opt
+                .hunk_header_style
+                .split(' ')
+                .any(|s| s == "line-number"),
             hyperlinks: opt.hyperlinks,
             hyperlinks_file_link_format: opt.hyperlinks_file_link_format,
             inspect_raw_lines: opt.computed.inspect_raw_lines,
             keep_plus_minus_markers: opt.keep_plus_minus_markers,
-            line_numbers: (opt.computed.line_numbers_mode == cli::LineNumbersMode::Full),
+            line_numbers: opt.line_numbers,
             line_numbers_left_format: opt.line_numbers_left_format,
             line_numbers_left_style,
             line_numbers_minus_style,
             line_numbers_plus_style,
             line_numbers_right_format: opt.line_numbers_right_format,
             line_numbers_right_style,
-            line_numbers_show_first_line_number: (opt.computed.line_numbers_mode
-                == cli::LineNumbersMode::First),
             line_numbers_zero_style,
             line_buffer_size: opt.line_buffer_size,
             max_line_distance: opt.max_line_distance,

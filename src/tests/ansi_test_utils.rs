@@ -66,21 +66,26 @@ pub mod ansi_test_utils {
         assert_eq!(line, stripped_line);
     }
 
-    /// Assert that the specified line number of output (a) matches
-    /// `expected_prefix` and (b) for the length of expected_prefix is
-    /// syntax-highlighted according to `language_extension`.
-    pub fn assert_line_is_syntax_highlighted(
+    /// Assert that the specified line number of output (a) has, after stripping ANSI codes, a
+    /// substring starting at `substring_begin` equal to `expected_substring` and (b) in its raw
+    /// form contains a version of that substring syntax-highlighted according to
+    /// `language_extension`.
+    pub fn assert_line_has_syntax_highlighted_substring(
         output: &str,
         line_number: usize,
-        expected_prefix: &str,
+        substring_begin: usize,
+        expected_substring: &str,
         language_extension: &str,
         state: State,
         config: &Config,
     ) {
         let line = output.lines().nth(line_number).unwrap();
-        let painted_line = paint_line(expected_prefix, language_extension, state, config);
+        let substring_end = substring_begin + expected_substring.len();
+        let substring = &ansi::strip_ansi_codes(&line)[substring_begin..substring_end];
+        assert_eq!(substring, expected_substring);
+        let painted_substring = paint_line(substring, language_extension, state, config);
         // remove trailing newline appended by paint::paint_lines.
-        assert!(line.starts_with(painted_line.trim_end()));
+        assert!(line.contains(painted_substring.trim_end()));
     }
 
     pub fn assert_has_color_other_than_plus_color(string: &str, config: &Config) {
