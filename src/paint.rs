@@ -78,8 +78,7 @@ impl<'a> Painter<'a> {
     // Terminating with newline character is necessary for many of the sublime syntax definitions to
     // highlight correctly.
     // See https://docs.rs/syntect/3.2.0/syntect/parsing/struct.SyntaxSetBuilder.html#method.add_from_folder
-    pub fn prepare(&self, line: &str, append_newline: bool) -> String {
-        let terminator = if append_newline { "\n" } else { "" };
+    pub fn prepare(&self, line: &str) -> String {
         if !line.is_empty() {
             let mut line = line.graphemes(true);
 
@@ -90,9 +89,9 @@ impl<'a> Painter<'a> {
             // TODO: Things should, but do not, work if this leading space is omitted at this stage.
             // See comment in align::Alignment::new.
             line.next();
-            format!(" {}{}", self.expand_tabs(line), terminator)
+            format!(" {}\n", self.expand_tabs(line))
         } else {
-            terminator.to_string()
+            "\n".to_string()
         }
     }
 
@@ -201,7 +200,7 @@ impl<'a> Painter<'a> {
         } else {
             None
         };
-        let lines = vec![(self.prepare(line, true), state.clone())];
+        let lines = vec![(self.prepare(line), state.clone())];
         let syntax_style_sections = Painter::get_syntax_style_sections_for_lines(
             &lines,
             &state,

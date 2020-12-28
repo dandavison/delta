@@ -188,7 +188,7 @@ impl<'a> LineNumbersData<'a> {
     }
 
     /// Initialize line number data for a hunk.
-    pub fn initialize_hunk(&mut self, line_numbers: Vec<(usize, usize)>, plus_file: String) {
+    pub fn initialize_hunk(&mut self, line_numbers: &Vec<(usize, usize)>, plus_file: String) {
         // Typically, line_numbers has length 2: an entry for the minus file, and one for the plus
         // file. In the case of merge commits, it may be longer.
         self.hunk_minus_line_number = line_numbers[0].0;

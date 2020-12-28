@@ -1,5 +1,4 @@
 use std::borrow::Cow;
-use std::fmt::Write as FmtWrite;
 use std::io::BufRead;
 use std::io::Write;
 
@@ -12,6 +11,7 @@ use crate::config::Config;
 use crate::draw;
 use crate::features;
 use crate::format;
+use crate::hunk_header::handle_hunk_header_line;
 use crate::paint::Painter;
 use crate::parse;
 use crate::style::{self, DecorationStyle};
@@ -403,165 +403,6 @@ fn handle_generic_file_meta_header_line(
     Ok(())
 }
 
-fn handle_hunk_header_line(
-    painter: &mut Painter,
-    line: &str,
-    raw_line: &str,
-    plus_file: &str,
-    config: &Config,
-) -> std::io::Result<()> {
-    let decoration_ansi_term_style;
-    let mut pad = false;
-    let draw_fn = match config.hunk_header_style.decoration_style {
-        DecorationStyle::Box(style) => {
-            pad = true;
-            decoration_ansi_term_style = style;
-            draw::write_boxed
-        }
-        DecorationStyle::BoxWithUnderline(style) => {
-            pad = true;
-            decoration_ansi_term_style = style;
-            draw::write_boxed_with_underline
-        }
-        DecorationStyle::BoxWithOverline(style) => {
-            pad = true;
-            decoration_ansi_term_style = style;
-            draw::write_boxed // TODO: not implemented
-        }
-        DecorationStyle::BoxWithUnderOverline(style) => {
-            pad = true;
-            decoration_ansi_term_style = style;
-            draw::write_boxed // TODO: not implemented
-        }
-        DecorationStyle::Underline(style) => {
-            decoration_ansi_term_style = style;
-            draw::write_underlined
-        }
-        DecorationStyle::Overline(style) => {
-            decoration_ansi_term_style = style;
-            draw::write_overlined
-        }
-        DecorationStyle::UnderOverline(style) => {
-            decoration_ansi_term_style = style;
-            draw::write_underoverlined
-        }
-        DecorationStyle::NoDecoration => {
-            decoration_ansi_term_style = ansi_term::Style::new();
-            draw::write_no_decoration
-        }
-    };
-    let (raw_code_fragment, line_numbers) = parse::parse_hunk_header(&line);
-    // Emit the hunk header, with any requested decoration
-    if config.hunk_header_style.is_raw {
-        if config.hunk_header_style.decoration_style != DecorationStyle::NoDecoration {
-            writeln!(painter.writer)?;
-        }
-        draw_fn(
-            painter.writer,
-            &format!("{}{}", line, if pad { " " } else { "" }),
-            &format!("{}{}", raw_line, if pad { " " } else { "" }),
-            &config.decorations_width,
-            config.hunk_header_style,
-            decoration_ansi_term_style,
-        )?;
-    } else if config.hunk_header_style.is_omitted {
-        writeln!(painter.writer)?;
-    } else {
-        // Adjust the hunk-header-line before paint_lines.
-        // However in the case of color_only mode,
-        // we'll just use raw_line because we can't change raw_line structure.
-        let line = if config.color_only {
-            format!(" {}", &line)
-        } else {
-            match painter.prepare(&raw_code_fragment, false) {
-                s if !s.is_empty() => format!("{} ", s),
-                s => s,
-            }
-        };
-
-        // Prints the new line below hunk-header-line.
-        // However in the case of color_only mode,
-        // we won't print it because we can't change raw_line structure.
-        if !config.color_only {
-            writeln!(painter.writer)?;
-        }
-        if !line.is_empty() || config.hunk_header_style_include_file_path {
-            if config.hunk_header_style_include_file_path {
-                let _ = write!(
-                    &mut painter.output_buffer,
-                    "{}{} ",
-                    config.file_style.paint(plus_file),
-                    if line.is_empty() { "" } else { ":" },
-                );
-            };
-            if !line.is_empty() {
-                let lines = vec![(line, State::HunkHeader)];
-                let syntax_style_sections = Painter::get_syntax_style_sections_for_lines(
-                    &lines,
-                    &State::HunkHeader,
-                    &mut painter.highlighter,
-                    &painter.config,
-                );
-                Painter::paint_lines(
-                    syntax_style_sections,
-                    vec![vec![(config.hunk_header_style, &lines[0].0)]], // TODO: compute style from state
-                    [State::HunkHeader].iter(),
-                    &mut painter.output_buffer,
-                    config,
-                    &mut None,
-                    None,
-                    None,
-                    Some(false),
-                );
-                painter.output_buffer.pop(); // trim newline
-            }
-            draw_fn(
-                painter.writer,
-                &painter.output_buffer,
-                &painter.output_buffer,
-                &config.decorations_width,
-                config.null_style,
-                decoration_ansi_term_style,
-            )?;
-            painter.output_buffer.clear();
-        }
-    };
-
-    // Emit a full line-numbering
-    if config.line_numbers {
-        painter
-            .line_numbers_data
-            .initialize_hunk(line_numbers, plus_file.to_string());
-    // Emit a single line number.
-    // However with raw mode or color-only mode,
-    // we should prevent the output from creating new line for printing line number.
-    } else if config.line_numbers_show_first_line_number
-        && !config.hunk_header_style.is_raw
-        && !config.color_only
-    {
-        let plus_line_number = line_numbers[line_numbers.len() - 1].0;
-        let formatted_plus_line_number = if config.hyperlinks {
-            features::hyperlinks::format_osc8_file_hyperlink(
-                plus_file,
-                Some(plus_line_number),
-                &format!("{}", plus_line_number),
-                config,
-            )
-        } else {
-            Cow::from(format!("{}", plus_line_number))
-        };
-        match config.hunk_header_style.decoration_ansi_term_style() {
-            Some(style) => writeln!(
-                painter.writer,
-                "{}",
-                style.paint(formatted_plus_line_number)
-            )?,
-            None => writeln!(painter.writer, "{}", formatted_plus_line_number)?,
-        }
-    }
-    Ok(())
-}
-
 /// Handle a hunk line, i.e. a minus line, a plus line, or an unchanged line.
 // In the case of a minus or plus line, we store the line in a
 // buffer. When we exit the changed region we process the collected
@@ -601,7 +442,7 @@ fn handle_hunk_line(
             };
             painter
                 .minus_lines
-                .push((painter.prepare(&line, true), state.clone()));
+                .push((painter.prepare(&line), state.clone()));
             state
         }
         Some('+') => {
@@ -618,7 +459,7 @@ fn handle_hunk_line(
             };
             painter
                 .plus_lines
-                .push((painter.prepare(&line, true), state.clone()));
+                .push((painter.prepare(&line), state.clone()));
             state
         }
         Some(' ') => {

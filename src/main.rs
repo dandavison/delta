@@ -18,6 +18,7 @@ mod features;
 mod format;
 mod git_config;
 mod git_config_entry;
+mod hunk_header;
 mod options;
 mod paint;
 mod parse;
