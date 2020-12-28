@@ -58,6 +58,14 @@ struct StateMachine<'a> {
     plus_file: String,
     painter: Painter<'a>,
     config: &'a Config,
+
+    // When a file is modified, we use lines starting with '---' or '+++' to obtain the file name.
+    // When a file is renamed without changes, we use lines starting with 'rename' to obtain the
+    // file name (there is no diff hunk and hence no lines starting with '---' or '+++'). But when
+    // a file is renamed with changes, both are present, and we rely on the following variables to
+    // avoid emitting the file meta header line twice (#245).
+    current_file_pair: Option<(String, String)>,
+    handled_file_meta_header_line_file_pair: Option<(String, String)>,
 }
 
 impl<'a> StateMachine<'a> {
@@ -66,6 +74,8 @@ impl<'a> StateMachine<'a> {
             state: State::Unknown,
             minus_file: "".to_string(),
             plus_file: "".to_string(),
+            current_file_pair: None,
+            handled_file_meta_header_line_file_pair: None,
             painter: Painter::new(writer, config),
             config,
         }
@@ -84,14 +94,6 @@ where
     let mut file_event = parse::FileEvent::NoEvent;
     let mut should_continue;
     let mut source = Source::Unknown;
-
-    // When a file is modified, we use lines starting with '---' or '+++' to obtain the file name.
-    // When a file is renamed without changes, we use lines starting with 'rename' to obtain the
-    // file name (there is no diff hunk and hence no lines starting with '---' or '+++'). But when
-    // a file is renamed with changes, both are present, and we rely on the following variables to
-    // avoid emitting the file meta header line twice (#245).
-    let mut current_file_pair;
-    let mut handled_file_meta_header_line_file_pair = None;
 
     while let Some(Ok(raw_line_bytes)) = lines.next() {
         let raw_line = String::from_utf8_lossy(&raw_line_bytes);
@@ -115,7 +117,7 @@ where
         } else if line.starts_with("diff ") {
             machine.painter.paint_buffered_minus_and_plus_lines();
             machine.state = State::FileMeta;
-            handled_file_meta_header_line_file_pair = None;
+            machine.handled_file_meta_header_line_file_pair = None;
         } else if (machine.state == State::FileMeta || source == Source::DiffUnified)
             && (line.starts_with("--- ")
                 || line.starts_with("rename from ")
@@ -151,7 +153,8 @@ where
                 .set_syntax(parse::get_file_extension_from_file_meta_line_file_path(
                     &machine.plus_file,
                 ));
-            current_file_pair = Some((machine.minus_file.clone(), machine.plus_file.clone()));
+            machine.current_file_pair =
+                Some((machine.minus_file.clone(), machine.plus_file.clone()));
 
             // In color_only mode, raw_line's structure shouldn't be changed.
             // So it needs to avoid fn handle_file_meta_header_line
@@ -167,7 +170,7 @@ where
                 continue;
             }
             if machine.should_handle()
-                && handled_file_meta_header_line_file_pair != current_file_pair
+                && machine.handled_file_meta_header_line_file_pair != machine.current_file_pair
             {
                 machine.painter.emit()?;
                 handle_file_meta_header_line(
@@ -178,7 +181,7 @@ where
                     &file_event,
                     source == Source::DiffUnified,
                 )?;
-                handled_file_meta_header_line_file_pair = current_file_pair
+                machine.handled_file_meta_header_line_file_pair = machine.current_file_pair.clone()
             }
         } else if line.starts_with("@@") {
             machine.painter.paint_buffered_minus_and_plus_lines();
