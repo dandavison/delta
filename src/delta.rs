@@ -145,29 +145,8 @@ where
             || line.starts_with("Submodule ")
             || line.starts_with("Binary files ")
         {
-            // Additional FileMeta cases:
-            //
-            // 1. When comparing directories with diff -u, if filenames match between the
-            //    directories, the files themselves will be compared. However, if an equivalent
-            //    filename is not present, diff outputs a single line (Only in...) starting
-            //    indicating that the file is present in only one of the directories.
-            //
-            // 2. Git diff emits lines describing submodule state such as "Submodule x/y/z contains
-            //    untracked content"
-            //
-            // See https://github.com/dandavison/delta/issues/60#issuecomment-557485242 for a
-            // proposal for more robust parsing logic.
-
-            machine.painter.paint_buffered_minus_and_plus_lines();
-            machine.state = State::FileMeta;
-            if machine.should_handle() {
-                machine.painter.emit()?;
-                handle_generic_file_meta_header_line(
-                    &mut machine.painter,
-                    &line,
-                    &raw_line,
-                    config,
-                )?;
+            let should_continue = machine.handle_additional_file_meta_cases(&line, &raw_line)?;
+            if should_continue {
                 continue;
             }
         } else if machine.state.is_in_hunk() {
@@ -325,6 +304,37 @@ impl<'a> StateMachine<'a> {
             )?;
             self.handled_file_meta_header_line_file_pair = self.current_file_pair.clone()
         }
+        Ok(should_continue)
+    }
+
+    fn handle_additional_file_meta_cases(
+        &mut self,
+        line: &str,
+        raw_line: &str,
+    ) -> std::io::Result<bool> {
+        let mut should_continue = false;
+
+        // Additional FileMeta cases:
+        //
+        // 1. When comparing directories with diff -u, if filenames match between the
+        //    directories, the files themselves will be compared. However, if an equivalent
+        //    filename is not present, diff outputs a single line (Only in...) starting
+        //    indicating that the file is present in only one of the directories.
+        //
+        // 2. Git diff emits lines describing submodule state such as "Submodule x/y/z contains
+        //    untracked content"
+        //
+        // See https://github.com/dandavison/delta/issues/60#issuecomment-557485242 for a
+        // proposal for more robust parsing logic.
+
+        self.painter.paint_buffered_minus_and_plus_lines();
+        self.state = State::FileMeta;
+        if self.should_handle() {
+            self.painter.emit()?;
+            handle_generic_file_meta_header_line(&mut self.painter, &line, &raw_line, self.config)?;
+            should_continue = true;
+        }
+
         Ok(should_continue)
     }
 
