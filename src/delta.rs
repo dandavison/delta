@@ -148,9 +148,7 @@ where
             // we won't skip because we can't change raw_line structure.
             should_continue = true
         }
-        if should_continue {
-            continue;
-        } else {
+        if !should_continue {
             machine.painter.emit()?;
             writeln!(
                 machine.painter.writer,
