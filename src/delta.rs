@@ -103,15 +103,13 @@ where
             raw_line
         };
         let line = ansi::strip_ansi_codes(&raw_line).to_string();
+
         if source == Source::Unknown {
             source = detect_source(&line);
         }
         if line.starts_with("commit ") {
-            machine.painter.paint_buffered_minus_and_plus_lines();
-            machine.state = State::CommitMeta;
-            if machine.should_handle() {
-                machine.painter.emit()?;
-                machine.handle_commit_meta_header_line(&line, &raw_line, config)?;
+            let should_continue = machine.handle_commit_meta_header_line(&line, &raw_line)?;
+            if should_continue {
                 continue;
             }
         } else if line.starts_with("diff ") {
@@ -263,18 +261,37 @@ impl<'a> StateMachine<'a> {
         &mut self,
         line: &str,
         raw_line: &str,
-        config: &Config,
+    ) -> std::io::Result<bool> {
+        self.painter.paint_buffered_minus_and_plus_lines();
+        self.state = State::CommitMeta;
+        if self.should_handle() {
+            self.painter.emit()?;
+            self._handle_commit_meta_header_line(&line, &raw_line)?;
+            Ok(true)
+        } else {
+            Ok(false)
+        }
+    }
+
+    fn _handle_commit_meta_header_line(
+        &mut self,
+        line: &str,
+        raw_line: &str,
     ) -> std::io::Result<()> {
-        if config.commit_style.is_omitted {
+        if self.config.commit_style.is_omitted {
             return Ok(());
         }
         let (mut draw_fn, pad, decoration_ansi_term_style) =
-            draw::get_draw_function(config.commit_style.decoration_style);
-        let (formatted_line, formatted_raw_line) = if config.hyperlinks {
+            draw::get_draw_function(self.config.commit_style.decoration_style);
+        let (formatted_line, formatted_raw_line) = if self.config.hyperlinks {
             (
-                features::hyperlinks::format_commit_line_with_osc8_commit_hyperlink(line, config),
                 features::hyperlinks::format_commit_line_with_osc8_commit_hyperlink(
-                    raw_line, config,
+                    line,
+                    self.config,
+                ),
+                features::hyperlinks::format_commit_line_with_osc8_commit_hyperlink(
+                    raw_line,
+                    self.config,
                 ),
             )
         } else {
@@ -285,8 +302,8 @@ impl<'a> StateMachine<'a> {
             self.painter.writer,
             &format!("{}{}", formatted_line, if pad { " " } else { "" }),
             &format!("{}{}", formatted_raw_line, if pad { " " } else { "" }),
-            &config.decorations_width,
-            config.commit_style,
+            &self.config.decorations_width,
+            self.config.commit_style,
             decoration_ansi_term_style,
         )?;
         Ok(())
