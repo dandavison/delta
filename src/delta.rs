@@ -266,7 +266,7 @@ impl<'a> StateMachine<'a> {
         // (it connects the plus_file and minus_file),
         // and to call fn handle_generic_file_meta_header_line directly.
         if self.config.color_only {
-            handle_generic_file_meta_header_line(&mut self.painter, &line, &raw_line, self.config)?;
+            self._handle_generic_file_meta_header_line(&line, &raw_line)?;
             should_continue = true;
         }
         Ok(should_continue)
@@ -288,7 +288,7 @@ impl<'a> StateMachine<'a> {
         // (it connects the plus_file and minus_file),
         // and to call fn handle_generic_file_meta_header_line directly.
         if self.config.color_only {
-            handle_generic_file_meta_header_line(&mut self.painter, &line, &raw_line, self.config)?;
+            self._handle_generic_file_meta_header_line(&line, &raw_line)?;
             should_continue = true
         } else if self.should_handle()
             && self.handled_file_meta_header_line_file_pair != self.current_file_pair
@@ -310,7 +310,7 @@ impl<'a> StateMachine<'a> {
             self.config,
         );
         // FIXME: no support for 'raw'
-        handle_generic_file_meta_header_line(&mut self.painter, &line, &line, self.config)
+        self._handle_generic_file_meta_header_line(&line, &line)
     }
 
     fn handle_additional_file_meta_cases(
@@ -337,11 +337,42 @@ impl<'a> StateMachine<'a> {
         self.state = State::FileMeta;
         if self.should_handle() {
             self.painter.emit()?;
-            handle_generic_file_meta_header_line(&mut self.painter, &line, &raw_line, self.config)?;
+            self._handle_generic_file_meta_header_line(&line, &raw_line)?;
             should_continue = true;
         }
 
         Ok(should_continue)
+    }
+
+    /// Write `line` with FileMeta styling.
+    fn _handle_generic_file_meta_header_line(
+        &mut self,
+        line: &str,
+        raw_line: &str,
+    ) -> std::io::Result<()> {
+        // If file_style is "omit", we'll skip the process and print nothing.
+        // However in the case of color_only mode,
+        // we won't skip because we can't change raw_line structure.
+        if self.config.file_style.is_omitted && !self.config.color_only {
+            return Ok(());
+        }
+        let (mut draw_fn, pad, decoration_ansi_term_style) =
+            draw::get_draw_function(self.config.file_style.decoration_style);
+        // Prints the new line below file-meta-line.
+        // However in the case of color_only mode,
+        // we won't print it because we can't change raw_line structure.
+        if !self.config.color_only {
+            writeln!(self.painter.writer)?;
+        }
+        draw_fn(
+            self.painter.writer,
+            &format!("{}{}", line, if pad { " " } else { "" }),
+            &format!("{}{}", raw_line, if pad { " " } else { "" }),
+            &self.config.decorations_width,
+            self.config.file_style,
+            decoration_ansi_term_style,
+        )?;
+        Ok(())
     }
 
     /// Emit the hunk header, with any requested decoration.
@@ -396,38 +427,6 @@ fn detect_source(line: &str) -> Source {
     } else {
         Source::Unknown
     }
-}
-
-/// Write `line` with FileMeta styling.
-fn handle_generic_file_meta_header_line(
-    painter: &mut Painter,
-    line: &str,
-    raw_line: &str,
-    config: &Config,
-) -> std::io::Result<()> {
-    // If file_style is "omit", we'll skip the process and print nothing.
-    // However in the case of color_only mode,
-    // we won't skip because we can't change raw_line structure.
-    if config.file_style.is_omitted && !config.color_only {
-        return Ok(());
-    }
-    let (mut draw_fn, pad, decoration_ansi_term_style) =
-        draw::get_draw_function(config.file_style.decoration_style);
-    // Prints the new line below file-meta-line.
-    // However in the case of color_only mode,
-    // we won't print it because we can't change raw_line structure.
-    if !config.color_only {
-        writeln!(painter.writer)?;
-    }
-    draw_fn(
-        painter.writer,
-        &format!("{}{}", line, if pad { " " } else { "" }),
-        &format!("{}{}", raw_line, if pad { " " } else { "" }),
-        &config.decorations_width,
-        config.file_style,
-        decoration_ansi_term_style,
-    )?;
-    Ok(())
 }
 
 /// Handle a hunk line, i.e. a minus line, a plus line, or an unchanged line.
