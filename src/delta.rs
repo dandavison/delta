@@ -52,6 +52,51 @@ impl State {
 // | HunkMinus   | flush, emit | flush, emit | flush, emit | flush, emit | push        | push     |
 // | HunkPlus    | flush, emit | flush, emit | flush, emit | flush, emit | flush, push | push     |
 
+struct StateMachine<'a> {
+    painter: Painter<'a>,
+}
+
+impl<'a> StateMachine<'a> {
+    pub fn new(writer: &'a mut dyn Write, config: &'a Config) -> Self {
+        Self {
+            painter: Painter::new(writer, config),
+        }
+    }
+
+    fn handle_commit_meta_header_line(
+        &mut self,
+        line: &str,
+        raw_line: &str,
+        config: &Config,
+    ) -> std::io::Result<()> {
+        if config.commit_style.is_omitted {
+            return Ok(());
+        }
+        let (mut draw_fn, pad, decoration_ansi_term_style) =
+            draw::get_draw_function(config.commit_style.decoration_style);
+        let (formatted_line, formatted_raw_line) = if config.hyperlinks {
+            (
+                features::hyperlinks::format_commit_line_with_osc8_commit_hyperlink(line, config),
+                features::hyperlinks::format_commit_line_with_osc8_commit_hyperlink(
+                    raw_line, config,
+                ),
+            )
+        } else {
+            (Cow::from(line), Cow::from(raw_line))
+        };
+
+        draw_fn(
+            self.painter.writer,
+            &format!("{}{}", formatted_line, if pad { " " } else { "" }),
+            &format!("{}{}", formatted_raw_line, if pad { " " } else { "" }),
+            &config.decorations_width,
+            config.commit_style,
+            decoration_ansi_term_style,
+        )?;
+        Ok(())
+    }
+}
+
 pub fn delta<I>(
     mut lines: ByteLines<I>,
     writer: &mut dyn Write,
@@ -60,7 +105,7 @@ pub fn delta<I>(
 where
     I: BufRead,
 {
-    let mut painter = Painter::new(writer, config);
+    let mut machine = StateMachine::new(writer, config);
     let mut minus_file = "".to_string();
     let mut plus_file = "".to_string();
     let mut file_event = parse::FileEvent::NoEvent;
@@ -88,15 +133,15 @@ where
             source = detect_source(&line);
         }
         if line.starts_with("commit ") {
-            painter.paint_buffered_minus_and_plus_lines();
+            machine.painter.paint_buffered_minus_and_plus_lines();
             state = State::CommitMeta;
             if should_handle(&state, config) {
-                painter.emit()?;
-                handle_commit_meta_header_line(&mut painter, &line, &raw_line, config)?;
+                machine.painter.emit()?;
+                machine.handle_commit_meta_header_line(&line, &raw_line, config)?;
                 continue;
             }
         } else if line.starts_with("diff ") {
-            painter.paint_buffered_minus_and_plus_lines();
+            machine.painter.paint_buffered_minus_and_plus_lines();
             state = State::FileMeta;
             handled_file_meta_header_line_file_pair = None;
         } else if (state == State::FileMeta || source == Source::DiffUnified)
@@ -113,7 +158,7 @@ where
                 &mut state,
                 &source,
                 &minus_file,
-                &mut painter,
+                &mut machine.painter,
                 &line,
                 &raw_line,
                 config,
@@ -129,9 +174,11 @@ where
             let parsed_file_meta_line =
                 parse::parse_file_meta_line(&line, source == Source::GitDiff);
             plus_file = parsed_file_meta_line.0;
-            painter.set_syntax(parse::get_file_extension_from_file_meta_line_file_path(
-                &plus_file,
-            ));
+            machine
+                .painter
+                .set_syntax(parse::get_file_extension_from_file_meta_line_file_path(
+                    &plus_file,
+                ));
             current_file_pair = Some((minus_file.clone(), plus_file.clone()));
 
             // In color_only mode, raw_line's structure shouldn't be changed.
@@ -139,15 +186,20 @@ where
             // (it connects the plus_file and minus_file),
             // and to call fn handle_generic_file_meta_header_line directly.
             if config.color_only {
-                handle_generic_file_meta_header_line(&mut painter, &line, &raw_line, config)?;
+                handle_generic_file_meta_header_line(
+                    &mut machine.painter,
+                    &line,
+                    &raw_line,
+                    config,
+                )?;
                 continue;
             }
             if should_handle(&State::FileMeta, config)
                 && handled_file_meta_header_line_file_pair != current_file_pair
             {
-                painter.emit()?;
+                machine.painter.emit()?;
                 handle_file_meta_header_line(
-                    &mut painter,
+                    &mut machine.painter,
                     &minus_file,
                     &plus_file,
                     config,
@@ -157,12 +209,12 @@ where
                 handled_file_meta_header_line_file_pair = current_file_pair
             }
         } else if line.starts_with("@@") {
-            painter.paint_buffered_minus_and_plus_lines();
+            machine.painter.paint_buffered_minus_and_plus_lines();
             state = State::HunkHeader;
-            painter.set_highlighter();
-            painter.emit()?;
-            handle_hunk_header_line(&mut painter, &line, &raw_line, &plus_file, config)?;
-            painter.set_highlighter();
+            machine.painter.set_highlighter();
+            machine.painter.emit()?;
+            handle_hunk_header_line(&mut machine.painter, &line, &raw_line, &plus_file, config)?;
+            machine.painter.set_highlighter();
             continue;
         } else if source == Source::DiffUnified && line.starts_with("Only in ")
             || line.starts_with("Submodule ")
@@ -181,18 +233,23 @@ where
             // See https://github.com/dandavison/delta/issues/60#issuecomment-557485242 for a
             // proposal for more robust parsing logic.
 
-            painter.paint_buffered_minus_and_plus_lines();
+            machine.painter.paint_buffered_minus_and_plus_lines();
             state = State::FileMeta;
             if should_handle(&State::FileMeta, config) {
-                painter.emit()?;
-                handle_generic_file_meta_header_line(&mut painter, &line, &raw_line, config)?;
+                machine.painter.emit()?;
+                handle_generic_file_meta_header_line(
+                    &mut machine.painter,
+                    &line,
+                    &raw_line,
+                    config,
+                )?;
                 continue;
             }
         } else if state.is_in_hunk() {
             // A true hunk line should start with one of: '+', '-', ' '. However, handle_hunk_line
             // handles all lines until the state machine transitions away from the hunk states.
-            state = handle_hunk_line(&mut painter, &line, &raw_line, state, config);
-            painter.emit()?;
+            state = handle_hunk_line(&mut machine.painter, &line, &raw_line, state, config);
+            machine.painter.emit()?;
             continue;
         }
 
@@ -203,17 +260,17 @@ where
             // we won't skip because we can't change raw_line structure.
             continue;
         } else {
-            painter.emit()?;
+            machine.painter.emit()?;
             writeln!(
-                painter.writer,
+                machine.painter.writer,
                 "{}",
                 format::format_raw_line(&raw_line, config)
             )?;
         }
     }
 
-    painter.paint_buffered_minus_and_plus_lines();
-    painter.emit()?;
+    machine.painter.paint_buffered_minus_and_plus_lines();
+    machine.painter.emit()?;
     Ok(())
 }
 
@@ -242,37 +299,6 @@ fn detect_source(line: &str) -> Source {
     } else {
         Source::Unknown
     }
-}
-
-fn handle_commit_meta_header_line(
-    painter: &mut Painter,
-    line: &str,
-    raw_line: &str,
-    config: &Config,
-) -> std::io::Result<()> {
-    if config.commit_style.is_omitted {
-        return Ok(());
-    }
-    let (mut draw_fn, pad, decoration_ansi_term_style) =
-        draw::get_draw_function(config.commit_style.decoration_style);
-    let (formatted_line, formatted_raw_line) = if config.hyperlinks {
-        (
-            features::hyperlinks::format_commit_line_with_osc8_commit_hyperlink(line, config),
-            features::hyperlinks::format_commit_line_with_osc8_commit_hyperlink(raw_line, config),
-        )
-    } else {
-        (Cow::from(line), Cow::from(raw_line))
-    };
-
-    draw_fn(
-        painter.writer,
-        &format!("{}{}", formatted_line, if pad { " " } else { "" }),
-        &format!("{}{}", formatted_raw_line, if pad { " " } else { "" }),
-        &config.decorations_width,
-        config.commit_style,
-        decoration_ansi_term_style,
-    )?;
-    Ok(())
 }
 
 fn handle_file_meta_minus_line(
