@@ -141,13 +141,7 @@ where
             machine.state = State::HunkHeader;
             machine.painter.set_highlighter();
             machine.painter.emit()?;
-            handle_hunk_header_line(
-                &mut machine.painter,
-                &line,
-                &raw_line,
-                &machine.plus_file,
-                config,
-            )?;
+            machine.handle_hunk_header_line(&line, &raw_line)?;
             machine.painter.set_highlighter();
             continue;
         } else if machine.source == Source::DiffUnified && line.starts_with("Only in ")
@@ -336,6 +330,32 @@ impl<'a> StateMachine<'a> {
         }
         Ok(should_continue)
     }
+
+    /// Emit the hunk header, with any requested decoration.
+    fn handle_hunk_header_line(&mut self, line: &str, raw_line: &str) -> std::io::Result<()> {
+        let (raw_code_fragment, line_numbers) = parse::parse_hunk_header(&line);
+        if self.config.line_numbers {
+            self.painter
+                .line_numbers_data
+                .initialize_hunk(&line_numbers, self.plus_file.to_string());
+        }
+
+        if self.config.hunk_header_style.is_raw {
+            hunk_header::write_hunk_header_raw(&mut self.painter, line, raw_line, self.config)?;
+        } else if self.config.hunk_header_style.is_omitted {
+            writeln!(self.painter.writer)?;
+        } else {
+            hunk_header::write_hunk_header(
+                &raw_code_fragment,
+                &line_numbers,
+                &mut self.painter,
+                line,
+                &self.plus_file,
+                self.config,
+            )?;
+        };
+        Ok(())
+    }
 }
 
 /// Try to detect what is producing the input for delta.
@@ -404,38 +424,6 @@ fn handle_generic_file_meta_header_line(
         config.file_style,
         decoration_ansi_term_style,
     )?;
-    Ok(())
-}
-
-/// Emit the hunk header, with any requested decoration.
-fn handle_hunk_header_line(
-    painter: &mut Painter,
-    line: &str,
-    raw_line: &str,
-    plus_file: &str,
-    config: &Config,
-) -> std::io::Result<()> {
-    let (raw_code_fragment, line_numbers) = parse::parse_hunk_header(&line);
-    if config.line_numbers {
-        painter
-            .line_numbers_data
-            .initialize_hunk(&line_numbers, plus_file.to_string());
-    }
-
-    if config.hunk_header_style.is_raw {
-        hunk_header::write_hunk_header_raw(painter, line, raw_line, config)?;
-    } else if config.hunk_header_style.is_omitted {
-        writeln!(painter.writer)?;
-    } else {
-        hunk_header::write_hunk_header(
-            &raw_code_fragment,
-            &line_numbers,
-            painter,
-            line,
-            plus_file,
-            config,
-        )?;
-    };
     Ok(())
 }
 
