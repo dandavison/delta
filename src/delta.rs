@@ -170,7 +170,7 @@ impl<'a> StateMachine<'a> {
             )
             .to_string()
         };
-        self.line = ansi::strip_ansi_codes(&self.raw_line).to_string();
+        self.line = ansi::strip_ansi_codes(&self.raw_line);
     }
 
     /// Should a handle_* function be called on this element?
