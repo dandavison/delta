@@ -262,7 +262,7 @@ impl<'a> StateMachine<'a> {
         }
 
         // In color_only mode, raw_line's structure shouldn't be changed.
-        // So it needs to avoid fn handle_file_meta_header_line
+        // So it needs to avoid fn _handle_file_meta_header_line
         // (it connects the plus_file and minus_file),
         // and to call fn handle_generic_file_meta_header_line directly.
         if self.config.color_only {
@@ -284,7 +284,7 @@ impl<'a> StateMachine<'a> {
         self.current_file_pair = Some((self.minus_file.clone(), self.plus_file.clone()));
 
         // In color_only mode, raw_line's structure shouldn't be changed.
-        // So it needs to avoid fn handle_file_meta_header_line
+        // So it needs to avoid fn _handle_file_meta_header_line
         // (it connects the plus_file and minus_file),
         // and to call fn handle_generic_file_meta_header_line directly.
         if self.config.color_only {
@@ -294,17 +294,23 @@ impl<'a> StateMachine<'a> {
             && self.handled_file_meta_header_line_file_pair != self.current_file_pair
         {
             self.painter.emit()?;
-            handle_file_meta_header_line(
-                &mut self.painter,
-                &self.minus_file,
-                &self.plus_file,
-                self.config,
-                &self.file_event,
-                self.source == Source::DiffUnified,
-            )?;
+            self._handle_file_meta_header_line(self.source == Source::DiffUnified)?;
             self.handled_file_meta_header_line_file_pair = self.current_file_pair.clone()
         }
         Ok(should_continue)
+    }
+
+    /// Construct file change line from minus and plus file and write with FileMeta styling.
+    fn _handle_file_meta_header_line(&mut self, comparing: bool) -> std::io::Result<()> {
+        let line = parse::get_file_change_description_from_file_paths(
+            &self.minus_file,
+            &self.plus_file,
+            comparing,
+            &self.file_event,
+            self.config,
+        );
+        // FIXME: no support for 'raw'
+        handle_generic_file_meta_header_line(&mut self.painter, &line, &line, self.config)
     }
 
     fn handle_additional_file_meta_cases(
@@ -390,22 +396,6 @@ fn detect_source(line: &str) -> Source {
     } else {
         Source::Unknown
     }
-}
-
-/// Construct file change line from minus and plus file and write with FileMeta styling.
-fn handle_file_meta_header_line(
-    painter: &mut Painter,
-    minus_file: &str,
-    plus_file: &str,
-    config: &Config,
-    file_event: &parse::FileEvent,
-    comparing: bool,
-) -> std::io::Result<()> {
-    let line = parse::get_file_change_description_from_file_paths(
-        minus_file, plus_file, comparing, file_event, config,
-    );
-    // FIXME: no support for 'raw'
-    handle_generic_file_meta_header_line(painter, &line, &line, config)
 }
 
 /// Write `line` with FileMeta styling.
