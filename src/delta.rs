@@ -259,15 +259,15 @@ impl<'a> StateMachine<'a> {
         line: &str,
         raw_line: &str,
     ) -> std::io::Result<bool> {
+        let mut should_continue = false;
         self.painter.paint_buffered_minus_and_plus_lines();
         self.state = State::CommitMeta;
         if self.should_handle() {
             self.painter.emit()?;
             self._handle_commit_meta_header_line(&line, &raw_line)?;
-            Ok(true)
-        } else {
-            Ok(false)
+            should_continue = true
         }
+        Ok(should_continue)
     }
 
     fn _handle_commit_meta_header_line(
