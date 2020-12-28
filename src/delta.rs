@@ -109,7 +109,7 @@ where
             machine.source = detect_source(&line);
         }
 
-        let should_continue = if line.starts_with("commit ") {
+        let mut should_continue = if line.starts_with("commit ") {
             machine.handle_commit_meta_header_line(&line, &raw_line)?
         } else if line.starts_with("diff ") {
             machine.painter.paint_buffered_minus_and_plus_lines();
@@ -142,14 +142,13 @@ where
         } else {
             false
         };
-        if should_continue {
-            continue;
-        }
-
         if machine.state == State::FileMeta && machine.should_handle() && !config.color_only {
             // The file metadata section is 4 lines. Skip them under non-plain file-styles.
             // However in the case of color_only mode,
             // we won't skip because we can't change raw_line structure.
+            should_continue = true
+        }
+        if should_continue {
             continue;
         } else {
             machine.painter.emit()?;
