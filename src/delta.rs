@@ -95,7 +95,7 @@ where
     I: BufRead,
 {
     let mut machine = StateMachine::new(writer, config);
-    let mut should_continue;
+    let mut should_continue = false;
 
     while let Some(Ok(raw_line_bytes)) = lines.next() {
         let raw_line = String::from_utf8_lossy(&raw_line_bytes);
@@ -110,7 +110,7 @@ where
             machine.source = detect_source(&line);
         }
         if line.starts_with("commit ") {
-            let should_continue = machine.handle_commit_meta_header_line(&line, &raw_line)?;
+            should_continue = machine.handle_commit_meta_header_line(&line, &raw_line)?;
             if should_continue {
                 continue;
             }
@@ -137,7 +137,7 @@ where
                 continue;
             }
         } else if line.starts_with("@@") {
-            let should_continue = machine.handle_hunk_header_line(&line, &raw_line)?;
+            should_continue = machine.handle_hunk_header_line(&line, &raw_line)?;
             if should_continue {
                 continue;
             }
@@ -145,14 +145,14 @@ where
             || line.starts_with("Submodule ")
             || line.starts_with("Binary files ")
         {
-            let should_continue = machine.handle_additional_file_meta_cases(&line, &raw_line)?;
+            should_continue = machine.handle_additional_file_meta_cases(&line, &raw_line)?;
             if should_continue {
                 continue;
             }
         } else if machine.state.is_in_hunk() {
             // A true hunk line should start with one of: '+', '-', ' '. However, handle_hunk_line
             // handles all lines until the state machine transitions away from the hunk states.
-            let should_continue = machine.handle_hunk_line(&line, &raw_line)?;
+            should_continue = machine.handle_hunk_line(&line, &raw_line)?;
             if should_continue {
                 continue;
             }
