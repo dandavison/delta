@@ -1,55 +1,21 @@
 use std::borrow::Cow;
 use std::fmt::Write as FmtWrite;
-use std::io::Write;
 
-use crate::cli;
 use crate::config::Config;
 use crate::delta;
 use crate::draw;
 use crate::features;
 use crate::paint::Painter;
-use crate::parse;
-use crate::style::{self, DecorationStyle};
+use crate::style::DecorationStyle;
 
-/// Emit the hunk header, with any requested decoration.
-pub fn handle_hunk_header_line(
-    painter: &mut Painter,
-    line: &str,
-    raw_line: &str,
-    plus_file: &str,
-    config: &Config,
-) -> std::io::Result<()> {
-    let (raw_code_fragment, line_numbers) = parse::parse_hunk_header(&line);
-    if config.line_numbers {
-        painter
-            .line_numbers_data
-            .initialize_hunk(&line_numbers, plus_file.to_string());
-    }
-
-    if config.hunk_header_style.is_raw {
-        _write_hunk_header_raw(painter, line, raw_line, config)?;
-    } else if config.hunk_header_style.is_omitted {
-        writeln!(painter.writer)?;
-    } else {
-        _write_hunk_header(
-            &raw_code_fragment,
-            &line_numbers,
-            painter,
-            line,
-            plus_file,
-            config,
-        )?;
-    };
-    Ok(())
-}
-
-fn _write_hunk_header_raw(
+pub fn write_hunk_header_raw(
     painter: &mut Painter,
     line: &str,
     raw_line: &str,
     config: &Config,
 ) -> std::io::Result<()> {
-    let (mut draw_fn, pad, decoration_ansi_term_style) = _get_draw_fn(config);
+    let (mut draw_fn, pad, decoration_ansi_term_style) =
+        draw::get_draw_function(config.hunk_header_style.decoration_style);
     if config.hunk_header_style.decoration_style != DecorationStyle::NoDecoration {
         writeln!(painter.writer)?;
     }
@@ -64,15 +30,16 @@ fn _write_hunk_header_raw(
     Ok(())
 }
 
-fn _write_hunk_header(
+pub fn write_hunk_header(
     raw_code_fragment: &str,
-    line_numbers: &Vec<(usize, usize)>,
+    line_numbers: &[(usize, usize)],
     painter: &mut Painter,
     line: &str,
     plus_file: &str,
     config: &Config,
 ) -> std::io::Result<()> {
-    let (mut draw_fn, _, decoration_ansi_term_style) = _get_draw_fn(config);
+    let (mut draw_fn, _, decoration_ansi_term_style) =
+        draw::get_draw_function(config.hunk_header_style.decoration_style);
     let line = if config.color_only {
         format!(" {}", &line)
     } else if !raw_code_fragment.is_empty() {
@@ -149,50 +116,8 @@ fn _write_hunk_header(
     Ok(())
 }
 
-fn _get_draw_fn(
-    config: &Config,
-) -> (
-    Box<
-        dyn FnMut(
-            &mut dyn Write,
-            &str,
-            &str,
-            &cli::Width,
-            style::Style,
-            ansi_term::Style,
-        ) -> std::io::Result<()>,
-    >,
-    bool,
-    ansi_term::Style,
-) {
-    match config.hunk_header_style.decoration_style {
-        DecorationStyle::Box(style) => (Box::new(draw::write_boxed), true, style),
-        DecorationStyle::BoxWithUnderline(style) => {
-            (Box::new(draw::write_boxed_with_underline), true, style)
-        }
-        DecorationStyle::BoxWithOverline(style) => {
-            // TODO: not implemented
-            (Box::new(draw::write_boxed), true, style)
-        }
-        DecorationStyle::BoxWithUnderOverline(style) => {
-            // TODO: not implemented
-            (Box::new(draw::write_boxed), true, style)
-        }
-        DecorationStyle::Underline(style) => (Box::new(draw::write_underlined), false, style),
-        DecorationStyle::Overline(style) => (Box::new(draw::write_overlined), false, style),
-        DecorationStyle::UnderOverline(style) => {
-            (Box::new(draw::write_underoverlined), false, style)
-        }
-        DecorationStyle::NoDecoration => (
-            Box::new(draw::write_no_decoration),
-            false,
-            ansi_term::Style::new(),
-        ),
-    }
-}
-
 fn _write_line_number(
-    line_numbers: &Vec<(usize, usize)>,
+    line_numbers: &[(usize, usize)],
     painter: &mut Painter,
     plus_file: &str,
     config: &Config,

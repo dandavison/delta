@@ -3,9 +3,39 @@ use std::io::Write;
 
 use crate::ansi;
 use crate::cli::Width;
-use crate::style::Style;
+use crate::style::{DecorationStyle, Style};
 
-pub fn write_no_decoration(
+pub type DrawFunction =
+    dyn FnMut(&mut dyn Write, &str, &str, &Width, Style, ansi_term::Style) -> std::io::Result<()>;
+
+pub fn get_draw_function(
+    decoration_style: DecorationStyle,
+) -> (Box<DrawFunction>, bool, ansi_term::Style) {
+    match decoration_style {
+        DecorationStyle::Box(style) => (Box::new(write_boxed), true, style),
+        DecorationStyle::BoxWithUnderline(style) => {
+            (Box::new(write_boxed_with_underline), true, style)
+        }
+        DecorationStyle::BoxWithOverline(style) => {
+            // TODO: not implemented
+            (Box::new(write_boxed), true, style)
+        }
+        DecorationStyle::BoxWithUnderOverline(style) => {
+            // TODO: not implemented
+            (Box::new(write_boxed), true, style)
+        }
+        DecorationStyle::Underline(style) => (Box::new(write_underlined), false, style),
+        DecorationStyle::Overline(style) => (Box::new(write_overlined), false, style),
+        DecorationStyle::UnderOverline(style) => (Box::new(write_underoverlined), false, style),
+        DecorationStyle::NoDecoration => (
+            Box::new(write_no_decoration),
+            false,
+            ansi_term::Style::new(),
+        ),
+    }
+}
+
+fn write_no_decoration(
     writer: &mut dyn Write,
     text: &str,
     raw_text: &str,
@@ -23,7 +53,7 @@ pub fn write_no_decoration(
 
 /// Write text to stream, surrounded by a box, leaving the cursor just
 /// beyond the bottom right corner.
-pub fn write_boxed(
+fn write_boxed(
     writer: &mut dyn Write,
     text: &str,
     raw_text: &str,
@@ -51,7 +81,7 @@ pub fn write_boxed(
 
 /// Write text to stream, surrounded by a box, and extend a line from
 /// the bottom right corner.
-pub fn write_boxed_with_underline(
+fn write_boxed_with_underline(
     writer: &mut dyn Write,
     text: &str,
     raw_text: &str,
@@ -92,7 +122,7 @@ enum UnderOverline {
     Underover,
 }
 
-pub fn write_underlined(
+fn write_underlined(
     writer: &mut dyn Write,
     text: &str,
     raw_text: &str,
@@ -111,7 +141,7 @@ pub fn write_underlined(
     )
 }
 
-pub fn write_overlined(
+fn write_overlined(
     writer: &mut dyn Write,
     text: &str,
     raw_text: &str,
@@ -130,7 +160,7 @@ pub fn write_overlined(
     )
 }
 
-pub fn write_underoverlined(
+fn write_underoverlined(
     writer: &mut dyn Write,
     text: &str,
     raw_text: &str,

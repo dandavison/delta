@@ -11,7 +11,7 @@ use crate::config::Config;
 use crate::draw;
 use crate::features;
 use crate::format;
-use crate::hunk_header::handle_hunk_header_line;
+use crate::hunk_header;
 use crate::paint::Painter;
 use crate::parse;
 use crate::style::{self, DecorationStyle};
@@ -257,46 +257,8 @@ fn handle_commit_meta_header_line(
     if config.commit_style.is_omitted {
         return Ok(());
     }
-    let decoration_ansi_term_style;
-    let mut pad = false;
-    let draw_fn = match config.commit_style.decoration_style {
-        DecorationStyle::Box(style) => {
-            pad = true;
-            decoration_ansi_term_style = style;
-            draw::write_boxed
-        }
-        DecorationStyle::BoxWithUnderline(style) => {
-            pad = true;
-            decoration_ansi_term_style = style;
-            draw::write_boxed_with_underline
-        }
-        DecorationStyle::BoxWithOverline(style) => {
-            pad = true;
-            decoration_ansi_term_style = style;
-            draw::write_boxed // TODO: not implemented
-        }
-        DecorationStyle::BoxWithUnderOverline(style) => {
-            pad = true;
-            decoration_ansi_term_style = style;
-            draw::write_boxed // TODO: not implemented
-        }
-        DecorationStyle::Underline(style) => {
-            decoration_ansi_term_style = style;
-            draw::write_underlined
-        }
-        DecorationStyle::Overline(style) => {
-            decoration_ansi_term_style = style;
-            draw::write_overlined
-        }
-        DecorationStyle::UnderOverline(style) => {
-            decoration_ansi_term_style = style;
-            draw::write_underoverlined
-        }
-        DecorationStyle::NoDecoration => {
-            decoration_ansi_term_style = ansi_term::Style::new();
-            draw::write_no_decoration
-        }
-    };
+    let (mut draw_fn, pad, decoration_ansi_term_style) =
+        draw::get_draw_function(config.commit_style.decoration_style);
     let (formatted_line, formatted_raw_line) = if config.hyperlinks {
         (
             features::hyperlinks::format_commit_line_with_osc8_commit_hyperlink(line, config),
@@ -346,46 +308,8 @@ fn handle_generic_file_meta_header_line(
     if config.file_style.is_omitted && !config.color_only {
         return Ok(());
     }
-    let decoration_ansi_term_style;
-    let mut pad = false;
-    let draw_fn = match config.file_style.decoration_style {
-        DecorationStyle::Box(style) => {
-            pad = true;
-            decoration_ansi_term_style = style;
-            draw::write_boxed
-        }
-        DecorationStyle::BoxWithUnderline(style) => {
-            pad = true;
-            decoration_ansi_term_style = style;
-            draw::write_boxed_with_underline
-        }
-        DecorationStyle::BoxWithOverline(style) => {
-            pad = true;
-            decoration_ansi_term_style = style;
-            draw::write_boxed // TODO: not implemented
-        }
-        DecorationStyle::BoxWithUnderOverline(style) => {
-            pad = true;
-            decoration_ansi_term_style = style;
-            draw::write_boxed // TODO: not implemented
-        }
-        DecorationStyle::Underline(style) => {
-            decoration_ansi_term_style = style;
-            draw::write_underlined
-        }
-        DecorationStyle::Overline(style) => {
-            decoration_ansi_term_style = style;
-            draw::write_overlined
-        }
-        DecorationStyle::UnderOverline(style) => {
-            decoration_ansi_term_style = style;
-            draw::write_underoverlined
-        }
-        DecorationStyle::NoDecoration => {
-            decoration_ansi_term_style = ansi_term::Style::new();
-            draw::write_no_decoration
-        }
-    };
+    let (mut draw_fn, pad, decoration_ansi_term_style) =
+        draw::get_draw_function(config.file_style.decoration_style);
     // Prints the new line below file-meta-line.
     // However in the case of color_only mode,
     // we won't print it because we can't change raw_line structure.
@@ -400,6 +324,38 @@ fn handle_generic_file_meta_header_line(
         config.file_style,
         decoration_ansi_term_style,
     )?;
+    Ok(())
+}
+
+/// Emit the hunk header, with any requested decoration.
+fn handle_hunk_header_line(
+    painter: &mut Painter,
+    line: &str,
+    raw_line: &str,
+    plus_file: &str,
+    config: &Config,
+) -> std::io::Result<()> {
+    let (raw_code_fragment, line_numbers) = parse::parse_hunk_header(&line);
+    if config.line_numbers {
+        painter
+            .line_numbers_data
+            .initialize_hunk(&line_numbers, plus_file.to_string());
+    }
+
+    if config.hunk_header_style.is_raw {
+        hunk_header::write_hunk_header_raw(painter, line, raw_line, config)?;
+    } else if config.hunk_header_style.is_omitted {
+        writeln!(painter.writer)?;
+    } else {
+        hunk_header::write_hunk_header(
+            &raw_code_fragment,
+            &line_numbers,
+            painter,
+            line,
+            plus_file,
+            config,
+        )?;
+    };
     Ok(())
 }
 
