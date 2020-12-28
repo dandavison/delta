@@ -128,15 +128,7 @@ where
             machine.minus_file = parsed_file_meta_line.0;
             file_event = parsed_file_meta_line.1;
 
-            should_continue = handle_file_meta_minus_line(
-                &mut machine.state,
-                &source,
-                &machine.minus_file,
-                &mut machine.painter,
-                &line,
-                &raw_line,
-                config,
-            )?;
+            should_continue = machine.handle_file_meta_minus_line(&source, &line, &raw_line)?;
             if should_continue {
                 continue;
             }
@@ -299,6 +291,35 @@ impl<'a> StateMachine<'a> {
         )?;
         Ok(())
     }
+
+    fn handle_file_meta_minus_line(
+        &mut self,
+        source: &Source,
+        line: &str,
+        raw_line: &str,
+    ) -> std::io::Result<bool> {
+        let mut should_continue = false;
+        if source == &Source::DiffUnified {
+            self.state = State::FileMeta;
+            self.painter
+                .set_syntax(parse::get_file_extension_from_marker_line(&line));
+        } else {
+            self.painter
+                .set_syntax(parse::get_file_extension_from_file_meta_line_file_path(
+                    &self.minus_file,
+                ));
+        }
+
+        // In color_only mode, raw_line's structure shouldn't be changed.
+        // So it needs to avoid fn handle_file_meta_header_line
+        // (it connects the plus_file and minus_file),
+        // and to call fn handle_generic_file_meta_header_line directly.
+        if self.config.color_only {
+            handle_generic_file_meta_header_line(&mut self.painter, &line, &raw_line, self.config)?;
+            should_continue = true;
+        }
+        Ok(should_continue)
+    }
 }
 
 /// Try to detect what is producing the input for delta.
@@ -320,36 +341,6 @@ fn detect_source(line: &str) -> Source {
     } else {
         Source::Unknown
     }
-}
-
-fn handle_file_meta_minus_line(
-    state: &mut State,
-    source: &Source,
-    minus_file: &str,
-    painter: &mut Painter,
-    line: &str,
-    raw_line: &str,
-    config: &Config,
-) -> std::io::Result<bool> {
-    let mut should_continue = false;
-    if source == &Source::DiffUnified {
-        *state = State::FileMeta;
-        painter.set_syntax(parse::get_file_extension_from_marker_line(&line));
-    } else {
-        painter.set_syntax(parse::get_file_extension_from_file_meta_line_file_path(
-            &minus_file,
-        ));
-    }
-
-    // In color_only mode, raw_line's structure shouldn't be changed.
-    // So it needs to avoid fn handle_file_meta_header_line
-    // (it connects the plus_file and minus_file),
-    // and to call fn handle_generic_file_meta_header_line directly.
-    if config.color_only {
-        handle_generic_file_meta_header_line(painter, &line, &raw_line, config)?;
-        should_continue = true;
-    }
-    Ok(should_continue)
 }
 
 /// Construct file change line from minus and plus file and write with FileMeta styling.
