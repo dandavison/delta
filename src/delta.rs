@@ -65,6 +65,7 @@ where
     let mut plus_file = "".to_string();
     let mut file_event = parse::FileEvent::NoEvent;
     let mut state = State::Unknown;
+    let mut should_continue;
     let mut source = Source::Unknown;
 
     // When a file is modified, we use lines starting with '---' or '+++' to obtain the file name.
@@ -108,21 +109,16 @@ where
             minus_file = parsed_file_meta_line.0;
             file_event = parsed_file_meta_line.1;
 
-            if source == Source::DiffUnified {
-                state = State::FileMeta;
-                painter.set_syntax(parse::get_file_extension_from_marker_line(&line));
-            } else {
-                painter.set_syntax(parse::get_file_extension_from_file_meta_line_file_path(
-                    &minus_file,
-                ));
-            }
-
-            // In color_only mode, raw_line's structure shouldn't be changed.
-            // So it needs to avoid fn handle_file_meta_header_line
-            // (it connects the plus_file and minus_file),
-            // and to call fn handle_generic_file_meta_header_line directly.
-            if config.color_only {
-                handle_generic_file_meta_header_line(&mut painter, &line, &raw_line, config)?;
+            should_continue = handle_file_meta_minus_line(
+                &mut state,
+                &source,
+                &minus_file,
+                &mut painter,
+                &line,
+                &raw_line,
+                config,
+            )?;
+            if should_continue {
                 continue;
             }
         } else if (state == State::FileMeta || source == Source::DiffUnified)
@@ -277,6 +273,36 @@ fn handle_commit_meta_header_line(
         decoration_ansi_term_style,
     )?;
     Ok(())
+}
+
+fn handle_file_meta_minus_line(
+    state: &mut State,
+    source: &Source,
+    minus_file: &str,
+    painter: &mut Painter,
+    line: &str,
+    raw_line: &str,
+    config: &Config,
+) -> std::io::Result<bool> {
+    let mut should_continue = false;
+    if source == &Source::DiffUnified {
+        *state = State::FileMeta;
+        painter.set_syntax(parse::get_file_extension_from_marker_line(&line));
+    } else {
+        painter.set_syntax(parse::get_file_extension_from_file_meta_line_file_path(
+            &minus_file,
+        ));
+    }
+
+    // In color_only mode, raw_line's structure shouldn't be changed.
+    // So it needs to avoid fn handle_file_meta_header_line
+    // (it connects the plus_file and minus_file),
+    // and to call fn handle_generic_file_meta_header_line directly.
+    if config.color_only {
+        handle_generic_file_meta_header_line(painter, &line, &raw_line, config)?;
+        should_continue = true;
+    }
+    Ok(should_continue)
 }
 
 /// Construct file change line from minus and plus file and write with FileMeta styling.
