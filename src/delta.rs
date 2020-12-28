@@ -109,7 +109,7 @@ where
             machine.source = detect_source(&line);
         }
 
-        let mut should_continue = if line.starts_with("commit ") {
+        let mut handled_line = if line.starts_with("commit ") {
             machine.handle_commit_meta_header_line(&line, &raw_line)?
         } else if line.starts_with("diff ") {
             machine.painter.paint_buffered_minus_and_plus_lines();
@@ -146,9 +146,9 @@ where
             // The file metadata section is 4 lines. Skip them under non-plain file-styles.
             // However in the case of color_only mode,
             // we won't skip because we can't change raw_line structure.
-            should_continue = true
+            handled_line = true
         }
-        if !should_continue {
+        if !handled_line {
             machine.painter.emit()?;
             writeln!(
                 machine.painter.writer,
@@ -175,15 +175,15 @@ impl<'a> StateMachine<'a> {
         line: &str,
         raw_line: &str,
     ) -> std::io::Result<bool> {
-        let mut should_continue = false;
+        let mut handled_line = false;
         self.painter.paint_buffered_minus_and_plus_lines();
         self.state = State::CommitMeta;
         if self.should_handle() {
             self.painter.emit()?;
             self._handle_commit_meta_header_line(&line, &raw_line)?;
-            should_continue = true
+            handled_line = true
         }
-        Ok(should_continue)
+        Ok(handled_line)
     }
 
     fn _handle_commit_meta_header_line(
@@ -223,7 +223,7 @@ impl<'a> StateMachine<'a> {
     }
 
     fn handle_file_meta_minus_line(&mut self, line: &str, raw_line: &str) -> std::io::Result<bool> {
-        let mut should_continue = false;
+        let mut handled_line = false;
 
         let parsed_file_meta_line =
             parse::parse_file_meta_line(&line, self.source == Source::GitDiff);
@@ -247,13 +247,13 @@ impl<'a> StateMachine<'a> {
         // and to call fn handle_generic_file_meta_header_line directly.
         if self.config.color_only {
             self._handle_generic_file_meta_header_line(&line, &raw_line)?;
-            should_continue = true;
+            handled_line = true;
         }
-        Ok(should_continue)
+        Ok(handled_line)
     }
 
     fn handle_file_meta_plus_line(&mut self, line: &str, raw_line: &str) -> std::io::Result<bool> {
-        let mut should_continue = false;
+        let mut handled_line = false;
         let parsed_file_meta_line =
             parse::parse_file_meta_line(&line, self.source == Source::GitDiff);
         self.plus_file = parsed_file_meta_line.0;
@@ -269,7 +269,7 @@ impl<'a> StateMachine<'a> {
         // and to call fn handle_generic_file_meta_header_line directly.
         if self.config.color_only {
             self._handle_generic_file_meta_header_line(&line, &raw_line)?;
-            should_continue = true
+            handled_line = true
         } else if self.should_handle()
             && self.handled_file_meta_header_line_file_pair != self.current_file_pair
         {
@@ -277,7 +277,7 @@ impl<'a> StateMachine<'a> {
             self._handle_file_meta_header_line(self.source == Source::DiffUnified)?;
             self.handled_file_meta_header_line_file_pair = self.current_file_pair.clone()
         }
-        Ok(should_continue)
+        Ok(handled_line)
     }
 
     /// Construct file change line from minus and plus file and write with FileMeta styling.
@@ -298,7 +298,7 @@ impl<'a> StateMachine<'a> {
         line: &str,
         raw_line: &str,
     ) -> std::io::Result<bool> {
-        let mut should_continue = false;
+        let mut handled_line = false;
 
         // Additional FileMeta cases:
         //
@@ -318,10 +318,10 @@ impl<'a> StateMachine<'a> {
         if self.should_handle() {
             self.painter.emit()?;
             self._handle_generic_file_meta_header_line(&line, &raw_line)?;
-            should_continue = true;
+            handled_line = true;
         }
 
-        Ok(should_continue)
+        Ok(handled_line)
     }
 
     /// Write `line` with FileMeta styling.
