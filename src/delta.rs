@@ -72,6 +72,13 @@ struct StateMachine<'a> {
     handled_file_meta_header_line_file_pair: Option<(String, String)>,
 }
 
+pub fn delta<I>(lines: ByteLines<I>, writer: &mut dyn Write, config: &Config) -> std::io::Result<()>
+where
+    I: BufRead,
+{
+    StateMachine::new(writer, config).consume(lines)
+}
+
 impl<'a> StateMachine<'a> {
     pub fn new(writer: &'a mut dyn Write, config: &'a Config) -> Self {
         Self {
@@ -88,78 +95,70 @@ impl<'a> StateMachine<'a> {
             config,
         }
     }
-}
 
-pub fn delta<I>(
-    mut lines: ByteLines<I>,
-    writer: &mut dyn Write,
-    config: &Config,
-) -> std::io::Result<()>
-where
-    I: BufRead,
-{
-    let mut machine = StateMachine::new(writer, config);
+    fn consume<I>(&mut self, mut lines: ByteLines<I>) -> std::io::Result<()>
+    where
+        I: BufRead,
+    {
+        while let Some(Ok(raw_line_bytes)) = lines.next() {
+            self.ingest_line(raw_line_bytes);
+            let line = &self.line;
 
-    while let Some(Ok(raw_line_bytes)) = lines.next() {
-        machine.ingest_line(raw_line_bytes);
-        let line = &machine.line;
+            if self.source == Source::Unknown {
+                self.source = detect_source(&line);
+            }
 
-        if machine.source == Source::Unknown {
-            machine.source = detect_source(&line);
+            let mut handled_line = if line.starts_with("commit ") {
+                self.handle_commit_meta_header_line()?
+            } else if line.starts_with("diff ") {
+                self.handle_file_meta_diff_line()?
+            } else if (self.state == State::FileMeta || self.source == Source::DiffUnified)
+                && (line.starts_with("--- ")
+                    || line.starts_with("rename from ")
+                    || line.starts_with("copy from "))
+            {
+                self.handle_file_meta_minus_line()?
+            } else if (self.state == State::FileMeta || self.source == Source::DiffUnified)
+                && (line.starts_with("+++ ")
+                    || line.starts_with("rename to ")
+                    || line.starts_with("copy to "))
+            {
+                self.handle_file_meta_plus_line()?
+            } else if line.starts_with("@@") {
+                self.handle_hunk_header_line()?
+            } else if self.source == Source::DiffUnified && line.starts_with("Only in ")
+                || line.starts_with("Submodule ")
+                || line.starts_with("Binary files ")
+            {
+                self.handle_additional_file_meta_cases()?
+            } else if self.state.is_in_hunk() {
+                // A true hunk line should start with one of: '+', '-', ' '. However, handle_hunk_line
+                // handles all lines until the state self transitions away from the hunk states.
+                self.handle_hunk_line()?
+            } else {
+                false
+            };
+            if self.state == State::FileMeta && self.should_handle() && !self.config.color_only {
+                // The file metadata section is 4 lines. Skip them under non-plain file-styles.
+                // However in the case of color_only mode,
+                // we won't skip because we can't change raw_line structure.
+                handled_line = true
+            }
+            if !handled_line {
+                self.painter.emit()?;
+                writeln!(
+                    self.painter.writer,
+                    "{}",
+                    format::format_raw_line(&self.raw_line, self.config)
+                )?;
+            }
         }
 
-        let mut handled_line = if line.starts_with("commit ") {
-            machine.handle_commit_meta_header_line()?
-        } else if line.starts_with("diff ") {
-            machine.handle_file_meta_diff_line()?
-        } else if (machine.state == State::FileMeta || machine.source == Source::DiffUnified)
-            && (line.starts_with("--- ")
-                || line.starts_with("rename from ")
-                || line.starts_with("copy from "))
-        {
-            machine.handle_file_meta_minus_line()?
-        } else if (machine.state == State::FileMeta || machine.source == Source::DiffUnified)
-            && (line.starts_with("+++ ")
-                || line.starts_with("rename to ")
-                || line.starts_with("copy to "))
-        {
-            machine.handle_file_meta_plus_line()?
-        } else if line.starts_with("@@") {
-            machine.handle_hunk_header_line()?
-        } else if machine.source == Source::DiffUnified && line.starts_with("Only in ")
-            || line.starts_with("Submodule ")
-            || line.starts_with("Binary files ")
-        {
-            machine.handle_additional_file_meta_cases()?
-        } else if machine.state.is_in_hunk() {
-            // A true hunk line should start with one of: '+', '-', ' '. However, handle_hunk_line
-            // handles all lines until the state machine transitions away from the hunk states.
-            machine.handle_hunk_line()?
-        } else {
-            false
-        };
-        if machine.state == State::FileMeta && machine.should_handle() && !config.color_only {
-            // The file metadata section is 4 lines. Skip them under non-plain file-styles.
-            // However in the case of color_only mode,
-            // we won't skip because we can't change raw_line structure.
-            handled_line = true
-        }
-        if !handled_line {
-            machine.painter.emit()?;
-            writeln!(
-                machine.painter.writer,
-                "{}",
-                format::format_raw_line(&machine.raw_line, config)
-            )?;
-        }
+        self.painter.paint_buffered_minus_and_plus_lines();
+        self.painter.emit()?;
+        Ok(())
     }
 
-    machine.painter.paint_buffered_minus_and_plus_lines();
-    machine.painter.emit()?;
-    Ok(())
-}
-
-impl<'a> StateMachine<'a> {
     fn ingest_line(&mut self, raw_line_bytes: &[u8]) {
         // TODO: retain raw_line as Cow
         self.raw_line = String::from_utf8_lossy(&raw_line_bytes).to_string();
@@ -255,7 +254,7 @@ impl<'a> StateMachine<'a> {
         // (it connects the plus_file and minus_file),
         // and to call fn handle_generic_file_meta_header_line directly.
         if self.config.color_only {
-            _handle_generic_file_meta_header_line(
+            _write_generic_file_meta_header_line(
                 &self.line,
                 &self.raw_line,
                 &mut self.painter,
@@ -282,7 +281,7 @@ impl<'a> StateMachine<'a> {
         // (it connects the plus_file and minus_file),
         // and to call fn handle_generic_file_meta_header_line directly.
         if self.config.color_only {
-            _handle_generic_file_meta_header_line(
+            _write_generic_file_meta_header_line(
                 &self.line,
                 &self.raw_line,
                 &mut self.painter,
@@ -309,7 +308,7 @@ impl<'a> StateMachine<'a> {
             self.config,
         );
         // FIXME: no support for 'raw'
-        _handle_generic_file_meta_header_line(&line, &line, &mut self.painter, self.config)
+        _write_generic_file_meta_header_line(&line, &line, &mut self.painter, self.config)
     }
 
     fn handle_additional_file_meta_cases(&mut self) -> std::io::Result<bool> {
@@ -332,7 +331,7 @@ impl<'a> StateMachine<'a> {
         self.state = State::FileMeta;
         if self.should_handle() {
             self.painter.emit()?;
-            _handle_generic_file_meta_header_line(
+            _write_generic_file_meta_header_line(
                 &self.line,
                 &self.raw_line,
                 &mut self.painter,
@@ -457,7 +456,7 @@ impl<'a> StateMachine<'a> {
 }
 
 /// Write `line` with FileMeta styling.
-fn _handle_generic_file_meta_header_line(
+fn _write_generic_file_meta_header_line(
     line: &str,
     raw_line: &str,
     painter: &mut Painter,
