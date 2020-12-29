@@ -28,7 +28,6 @@ mod syntect_color;
 mod tests;
 
 use std::io::{self, ErrorKind, Read, Write};
-use std::mem;
 use std::path::PathBuf;
 use std::process;
 
@@ -53,19 +52,20 @@ pub mod errors {
 }
 
 #[cfg(not(tarpaulin_include))]
-fn main() -> std::io::Result<()> {
+/// `Ok` of the `Result` contains with the exit code value
+fn run_app() -> std::io::Result<i32> {
     let assets = HighlightingAssets::new();
     let opt = cli::Opt::from_args_and_git_config(&mut git_config::GitConfig::try_create(), assets);
 
     if opt.list_languages {
         list_languages()?;
-        process::exit(0);
+        return Ok(0);
     } else if opt.list_syntax_themes {
         list_syntax_themes()?;
-        process::exit(0);
+        return Ok(0);
     } else if opt.show_syntax_themes {
         show_syntax_themes()?;
-        process::exit(0);
+        return Ok(0);
     }
 
     let _show_config = opt.show_config;
@@ -75,7 +75,7 @@ fn main() -> std::io::Result<()> {
         let stdout = io::stdout();
         let mut stdout = stdout.lock();
         show_config(&config, &mut stdout)?;
-        process::exit(0);
+        return Ok(0);
     }
 
     let mut output_type = OutputType::from_mode(config.paging_mode, None, &config).unwrap();
@@ -88,17 +88,23 @@ fn main() -> std::io::Result<()> {
             &config,
             &mut writer,
         );
-        mem::drop(output_type);
-        process::exit(exit_code);
+        return Ok(exit_code);
     }
 
     if let Err(error) = delta(io::stdin().lock().byte_lines(), &mut writer, &config) {
         match error.kind() {
-            ErrorKind::BrokenPipe => process::exit(0),
+            ErrorKind::BrokenPipe => return Ok(0),
             _ => eprintln!("{}", error),
         }
     };
-    Ok(())
+    Ok(0)
+}
+
+#[cfg(not(tarpaulin_include))]
+fn main() -> std::io::Result<()> {
+    let exit_code = run_app()?;
+    // when you call prcess::exit, no destructors are called, so we want to do it only once, here
+    process::exit(exit_code);
 }
 
 /// Run `diff -u` on the files provided on the command line and display the output.
