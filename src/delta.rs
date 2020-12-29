@@ -350,7 +350,7 @@ impl<'a> StateMachine<'a> {
         self.painter.set_highlighter();
         self.painter.emit()?;
 
-        let (raw_code_fragment, line_numbers) = parse::parse_hunk_header(&self.line);
+        let (code_fragment, line_numbers) = parse::parse_hunk_header(&self.line);
         if self.config.line_numbers {
             self.painter
                 .line_numbers_data
@@ -367,8 +367,14 @@ impl<'a> StateMachine<'a> {
         } else if self.config.hunk_header_style.is_omitted {
             writeln!(self.painter.writer)?;
         } else {
+            // Add a blank line below the hunk-header-line for readability, unless
+            // color_only mode is active.
+            if !self.config.color_only {
+                writeln!(self.painter.writer)?;
+            }
+
             hunk_header::write_hunk_header(
-                &raw_code_fragment,
+                &code_fragment,
                 &line_numbers,
                 &mut self.painter,
                 &self.line,

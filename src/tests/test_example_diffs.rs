@@ -1043,13 +1043,13 @@ src/align.rs:71: impl<'a> Alignment<'a> { │
         ]);
         let output = integration_test_utils::run_delta(GIT_DIFF_SINGLE_HUNK_NO_FRAG, &config);
 
-        ansi_test_utils::assert_line_has_style(&output, 5, "src/delta.rs:1 ", "yellow", &config);
+        ansi_test_utils::assert_line_has_style(&output, 5, "src/delta.rs:1: ", "yellow", &config);
         let output = strip_ansi_codes(&output);
         assert!(output.contains(
             "
-───────────────┐
-src/delta.rs:1 │
-───────────────┘
+────────────────┐
+src/delta.rs:1: │
+────────────────┘
 "
         ));
     }

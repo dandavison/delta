@@ -1,4 +1,24 @@
-use std::borrow::Cow;
+//! A module for constructing and writing the hunk header.
+//!
+//! The structure of the hunk header output by delta is
+//! ```
+//! (file):(line-number): (code-fragment)
+//! ```
+//!
+//! The code fragment and line number derive from a line of git/diff output that looks like
+//! ```
+//! @@ -119,12 +119,7 @@ fn write_to_output_buffer(
+//! ```
+//!
+//! Whether or not file and line-number are included is controlled by the presence of the special
+//! style attributes 'file' and 'line-number' in the hunk-header-style string. For example, delta
+//! might output the above hunk header as
+//! ```
+//! ───────────────────────────────────────────────────┐
+//! src/hunk_header.rs:119: fn write_to_output_buffer( │
+//! ───────────────────────────────────────────────────┘
+//! ```
+
 use std::fmt::Write as FmtWrite;
 
 use crate::config::Config;
@@ -31,7 +51,7 @@ pub fn write_hunk_header_raw(
 }
 
 pub fn write_hunk_header(
-    raw_code_fragment: &str,
+    code_fragment: &str,
     line_numbers: &[(usize, usize)],
     painter: &mut Painter,
     line: &str,
@@ -42,42 +62,78 @@ pub fn write_hunk_header(
         draw::get_draw_function(config.hunk_header_style.decoration_style);
     let line = if config.color_only {
         format!(" {}", &line)
-    } else if !raw_code_fragment.is_empty() {
-        format!("{} ", raw_code_fragment)
+    } else if !code_fragment.is_empty() {
+        format!("{} ", code_fragment)
     } else {
         "".to_string()
     };
 
-    // Add a blank line below the hunk-header-line for readability, unless
-    // color_only mode is active.
-    if !config.color_only {
-        writeln!(painter.writer)?;
+    let file_with_line_number = get_painted_file_with_line_number(line_numbers, plus_file, config);
+
+    if !line.is_empty() || !file_with_line_number.is_empty() {
+        write_to_output_buffer(&file_with_line_number, line, painter, config);
+        draw_fn(
+            painter.writer,
+            &painter.output_buffer,
+            &painter.output_buffer,
+            &config.decorations_width,
+            config.null_style,
+            decoration_ansi_term_style,
+        )?;
+        painter.output_buffer.clear();
     }
 
-    let mut have_hunk_header = false;
+    Ok(())
+}
+
+fn get_painted_file_with_line_number(
+    line_numbers: &[(usize, usize)],
+    plus_file: &str,
+    config: &Config,
+) -> String {
+    let mut file_with_line_number = Vec::new();
+    let plus_line_number = line_numbers[line_numbers.len() - 1].0;
     if config.hunk_header_style_include_file_path {
-        let _ = write!(
-            &mut painter.output_buffer,
-            "{}",
-            config.file_style.paint(plus_file),
-        );
-        have_hunk_header = true;
+        file_with_line_number.push(config.file_style.paint(plus_file))
     };
     if !config.line_numbers
         && config.hunk_header_style_include_line_number
         && !config.hunk_header_style.is_raw
         && !config.color_only
     {
-        if have_hunk_header {
-            let _ = write!(&mut painter.output_buffer, ":");
+        if !file_with_line_number.is_empty() {
+            file_with_line_number.push(ansi_term::ANSIString::from(":"));
         }
-        _write_line_number(&line_numbers, painter, plus_file, config)?;
-        have_hunk_header = true;
+        if let Some(style) = config.hunk_header_style.decoration_ansi_term_style() {
+            file_with_line_number.push(style.paint(format!("{}", plus_line_number)))
+        } else {
+            file_with_line_number.push(ansi_term::ANSIString::from(format!("{}", plus_line_number)))
+        }
+    }
+    let file_with_line_number = ansi_term::ANSIStrings(&file_with_line_number).to_string();
+    if config.hyperlinks {
+        features::hyperlinks::format_osc8_file_hyperlink(
+            plus_file,
+            Some(plus_line_number),
+            &file_with_line_number,
+            config,
+        )
+        .into()
+    } else {
+        file_with_line_number
+    }
+}
+
+fn write_to_output_buffer(
+    file_with_line_number: &str,
+    line: String,
+    painter: &mut Painter,
+    config: &Config,
+) {
+    if !file_with_line_number.is_empty() {
+        let _ = write!(&mut painter.output_buffer, "{}: ", file_with_line_number);
     }
     if !line.is_empty() {
-        if have_hunk_header {
-            let _ = write!(&mut painter.output_buffer, ": ");
-        }
         let lines = vec![(line, delta::State::HunkHeader)];
         let syntax_style_sections = Painter::get_syntax_style_sections_for_lines(
             &lines,
@@ -97,53 +153,5 @@ pub fn write_hunk_header(
             Some(false),
         );
         painter.output_buffer.pop(); // trim newline
-        have_hunk_header = true;
-    } else if have_hunk_header {
-        let _ = write!(&mut painter.output_buffer, " ");
     }
-    if have_hunk_header {
-        draw_fn(
-            painter.writer,
-            &painter.output_buffer,
-            &painter.output_buffer,
-            &config.decorations_width,
-            config.null_style,
-            decoration_ansi_term_style,
-        )?;
-        painter.output_buffer.clear();
-    }
-
-    Ok(())
-}
-
-fn _write_line_number(
-    line_numbers: &[(usize, usize)],
-    painter: &mut Painter,
-    plus_file: &str,
-    config: &Config,
-) -> std::io::Result<()> {
-    let plus_line_number = line_numbers[line_numbers.len() - 1].0;
-    let formatted_plus_line_number = if config.hyperlinks {
-        features::hyperlinks::format_osc8_file_hyperlink(
-            plus_file,
-            Some(plus_line_number),
-            &format!("{}", plus_line_number),
-            config,
-        )
-    } else {
-        Cow::from(format!("{}", plus_line_number))
-    };
-    match config.hunk_header_style.decoration_ansi_term_style() {
-        Some(style) => {
-            let _ = write!(
-                &mut painter.output_buffer,
-                "{}",
-                style.paint(formatted_plus_line_number)
-            );
-        }
-        None => {
-            let _ = write!(&mut painter.output_buffer, "{}", formatted_plus_line_number);
-        }
-    }
-    Ok(())
 }
