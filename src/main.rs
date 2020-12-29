@@ -103,7 +103,7 @@ fn run_app() -> std::io::Result<i32> {
 #[cfg(not(tarpaulin_include))]
 fn main() -> std::io::Result<()> {
     let exit_code = run_app()?;
-    // when you call prcess::exit, no destructors are called, so we want to do it only once, here
+    // when you call process::exit, no destructors are called, so we want to do it only once, here
     process::exit(exit_code);
 }
 
