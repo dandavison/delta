@@ -22,6 +22,8 @@ mod paint;
 mod parse_style;
 mod plusminus;
 mod style;
+mod wrapping;
+
 mod subcommands;
 mod syntect_color;
 mod tests;

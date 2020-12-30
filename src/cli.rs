@@ -498,6 +498,32 @@ pub struct Opt {
     #[structopt(long = "line-numbers-right-style", default_value = "auto")]
     pub line_numbers_right_style: String,
 
+    /// How often a line should be wrapped if it does not fit. Zero means to never wrap. Any content
+    /// which does not fit will be truncated. A value of "unlimited" means a line will be wrapped
+    /// as many times as required.
+    #[structopt(long = "wrap-max-lines", default_value = "2")]
+    pub wrap_max_lines: String,
+
+    /// Symbol added to the end of a line indicating that the content has been wrapped
+    /// onto the next line and continues left-aligned.
+    #[structopt(long = "wrap-left-symbol", default_value = "↵")]
+    pub wrap_left_symbol: String,
+
+    /// Symbol added to the end of a line indicating that the content has been wrapped
+    /// onto the next line and continues right-aligned.
+    #[structopt(long = "wrap-right-symbol", default_value = "↴")]
+    pub wrap_right_symbol: String,
+
+    /// Threshold for right-aligning wrapped content. If the length of the remaining wrapped
+    /// content, as a percentage of width, is less than this quantity it will be right-aligned.
+    /// Otherwise it will be left-aligned.
+    #[structopt(long = "wrap-right-percent", default_value = "37.0")]
+    pub wrap_right_percent: String,
+
+    /// Symbol displayed in front of right-aligned wrapped content.
+    #[structopt(long = "wrap-right-prefix-symbol", default_value = "…")]
+    pub wrap_right_prefix_symbol: String,
+
     #[structopt(long = "file-modified-label", default_value = "")]
     /// Text to display in front of a modified file path.
     pub file_modified_label: String,
@@ -525,6 +551,7 @@ pub struct Opt {
     #[structopt(long = "max-line-length", default_value = "512")]
     /// Truncate lines longer than this. To prevent any truncation, set to zero. Note that
     /// delta will be slow on very long lines (e.g. minified .js) if truncation is disabled.
+    /// When wrapping lines it is automatically set to fit at least all visible characters.
     pub max_line_length: usize,
 
     /// How to extend the background color to the end of the line in side-by-side mode. Can
