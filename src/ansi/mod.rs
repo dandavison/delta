@@ -12,6 +12,7 @@ use iterator::{AnsiElementIterator, Element};
 pub const ANSI_CSI_CLEAR_TO_EOL: &str = "\x1b[0K";
 pub const ANSI_CSI_CLEAR_TO_BOL: &str = "\x1b[1K";
 pub const ANSI_SGR_RESET: &str = "\x1b[0m";
+pub const ANSI_SGR_REVERSE: &str = "\x1b[7m";
 
 pub fn strip_ansi_codes(s: &str) -> String {
     strip_ansi_codes_from_strings_iterator(ansi_strings_iterator(s))

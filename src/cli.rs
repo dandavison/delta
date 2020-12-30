@@ -217,6 +217,10 @@ pub struct Opt {
     #[structopt(short = "s", long = "side-by-side")]
     pub side_by_side: bool,
 
+    /// Display a side-by-side diff and wrap overlong lines instead of truncating them.
+    #[structopt(short = "S", long = "side-by-side-wrapped")]
+    pub side_by_side_wrapped: bool,
+
     #[structopt(long = "diff-highlight")]
     /// Emulate diff-highlight (https://github.com/git/git/tree/master/contrib/diff-highlight)
     pub diff_highlight: bool,

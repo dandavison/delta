@@ -9,6 +9,7 @@ use crate::cli;
 use crate::config::Config;
 use crate::delta::State;
 use crate::features::line_numbers;
+use crate::features::side_by_side_wrap;
 use crate::features::OptionValueFunction;
 use crate::paint::BgFillMethod;
 use crate::paint::BgFillWidth;
@@ -77,6 +78,7 @@ impl<T: Default> Default for LeftRight<T> {
     }
 }
 
+#[derive(Debug)]
 pub struct Panel {
     pub width: usize,
     pub offset: usize,
@@ -129,12 +131,38 @@ pub fn line_is_too_long(line: &str, line_width: usize) -> bool {
     line_sum > line_width + 2
 }
 
+// Return whether any of the input lines is too long, and a data
+// structure indicating which are too long. This is done to avoid
+// calculating the length again later.
+pub fn has_long_lines(
+    lines: &LeftRight<&Vec<(String, State)>>,
+    line_width: &line_numbers::SideBySideLineWidth,
+) -> (bool, LeftRight<Vec<bool>>) {
+    let check_lines = |lines: &Vec<(String, State)>, line_width| {
+        let mut wrap_any = false;
+        let wrapping_lines = lines
+            .iter()
+            .map(|(line, _)| line_is_too_long(line, line_width))
+            .inspect(|b| wrap_any |= b)
+            .collect();
+        (wrap_any, wrapping_lines)
+    };
+
+    let (wrap_left, left_wrapping_lines) = check_lines(&lines.left, line_width.left);
+    let (wrap_right, right_wrapping_lines) = check_lines(&lines.right, line_width.right);
+
+    (
+        wrap_left || wrap_right,
+        LeftRight::new(left_wrapping_lines, right_wrapping_lines),
+    )
+}
+
 /// Emit a sequence of minus and plus lines in side-by-side mode.
 #[allow(clippy::too_many_arguments)]
-pub fn paint_minus_and_plus_lines_side_by_side<'a>(
+pub fn paint_minus_and_plus_lines_side_by_side(
     syntax_left_right: LeftRight<Vec<Vec<(SyntectStyle, &str)>>>,
     diff_left_right: LeftRight<Vec<Vec<(Style, &str)>>>,
-    states_left_right: LeftRight<Vec<&'a State>>,
+    states_left_right: LeftRight<Vec<State>>,
     line_alignment: Vec<(Option<usize>, Option<usize>)>,
     output_buffer: &mut String,
     config: &Config,
@@ -147,15 +175,10 @@ pub fn paint_minus_and_plus_lines_side_by_side<'a>(
             &syntax_left_right[Left],
             &diff_left_right[Left],
             match minus_line_index {
-                Some(i) => states_left_right[Left][i],
+                Some(i) => &states_left_right[Left][i],
                 None => &State::HunkMinus(None),
             },
             line_numbers_data,
-            if config.keep_plus_minus_markers {
-                Some(config.minus_style.paint("-"))
-            } else {
-                None
-            },
             background_color_extends_to_terminal_width[Left],
             config,
         ));
@@ -164,15 +187,10 @@ pub fn paint_minus_and_plus_lines_side_by_side<'a>(
             &syntax_left_right[Right],
             &diff_left_right[Right],
             match plus_line_index {
-                Some(i) => states_left_right[Right][i],
+                Some(i) => &states_left_right[Right][i],
                 None => &State::HunkPlus(None),
             },
             line_numbers_data,
-            if config.keep_plus_minus_markers {
-                Some(config.plus_style.paint("+"))
-            } else {
-                None
-            },
             background_color_extends_to_terminal_width[Right],
             config,
         ));
@@ -182,6 +200,7 @@ pub fn paint_minus_and_plus_lines_side_by_side<'a>(
 
 #[allow(clippy::too_many_arguments)]
 pub fn paint_zero_lines_side_by_side(
+    raw_line: &str,
     syntax_style_sections: Vec<Vec<(SyntectStyle, &str)>>,
     diff_style_sections: Vec<Vec<(Style, &str)>>,
     output_buffer: &mut String,
@@ -190,16 +209,30 @@ pub fn paint_zero_lines_side_by_side(
     painted_prefix: Option<ansi_term::ANSIString>,
     background_color_extends_to_terminal_width: BgFillWidth,
 ) {
-    let state = State::HunkZero;
+    let states = vec![State::HunkZero];
 
-    for (line_index, (syntax_sections, diff_sections)) in syntax_style_sections
-        .iter()
+    let (states, syntax_style_sections, diff_style_sections) = if config.side_by_side_wrapped {
+        side_by_side_wrap::wrap_zero_block(
+            &config,
+            &raw_line,
+            states,
+            syntax_style_sections,
+            diff_style_sections,
+            &line_numbers_data,
+        )
+    } else {
+        (states, syntax_style_sections, diff_style_sections)
+    };
+
+    for (line_index, ((syntax_sections, diff_sections), state)) in syntax_style_sections
+        .into_iter()
         .zip_eq(diff_style_sections.iter())
+        .zip_eq(states.into_iter())
         .enumerate()
     {
         for panel_side in &[PanelSide::Left, PanelSide::Right] {
             let (mut panel_line, panel_line_is_empty) = Painter::paint_line(
-                syntax_sections,
+                &syntax_sections,
                 diff_sections,
                 &state,
                 line_numbers_data,
@@ -219,7 +252,7 @@ pub fn paint_zero_lines_side_by_side(
             );
             output_buffer.push_str(&panel_line);
 
-            if panel_side == &PanelSide::Left {
+            if panel_side == &PanelSide::Left && state != State::HunkZeroWrapped {
                 // TODO: Avoid doing the superimpose_style_sections work twice.
                 // HACK: These are getting incremented twice, so knock them back down once.
                 if let Some(d) = line_numbers_data.as_mut() {
@@ -239,7 +272,6 @@ fn paint_left_panel_minus_line<'a>(
     diff_style_sections: &[Vec<(Style, &str)>],
     state: &'a State,
     line_numbers_data: &mut Option<&mut line_numbers::LineNumbersData>,
-    painted_prefix: Option<ansi_term::ANSIString>,
     background_color_extends_to_terminal_width: BgFillWidth,
     config: &Config,
 ) -> String {
@@ -250,7 +282,6 @@ fn paint_left_panel_minus_line<'a>(
         state,
         line_numbers_data,
         PanelSide::Left,
-        painted_prefix,
         config,
     );
     pad_panel_line_to_width(
@@ -274,7 +305,6 @@ fn paint_right_panel_plus_line<'a>(
     diff_style_sections: &[Vec<(Style, &str)>],
     state: &'a State,
     line_numbers_data: &mut Option<&mut line_numbers::LineNumbersData>,
-    painted_prefix: Option<ansi_term::ANSIString>,
     background_color_extends_to_terminal_width: BgFillWidth,
     config: &Config,
 ) -> String {
@@ -285,7 +315,6 @@ fn paint_right_panel_plus_line<'a>(
         state,
         line_numbers_data,
         PanelSide::Right,
-        painted_prefix,
         config,
     );
 
@@ -369,7 +398,6 @@ fn paint_minus_or_plus_panel_line(
     state: &State,
     line_numbers_data: &mut Option<&mut line_numbers::LineNumbersData>,
     panel_side: PanelSide,
-    painted_prefix: Option<ansi_term::ANSIString>,
     config: &Config,
 ) -> (String, bool) {
     let (empty_line_syntax_sections, empty_line_diff_sections) = (Vec::new(), Vec::new());
@@ -393,6 +421,15 @@ fn paint_minus_or_plus_panel_line(
                 opposite_state,
             )
         };
+
+    let painted_prefix = match (config.keep_plus_minus_markers, panel_side, state) {
+        (true, _, State::HunkPlusWrapped) | (true, _, State::HunkMinusWrapped) => {
+            Some(config.plus_style.paint(" "))
+        }
+        (true, PanelSide::Left, _) => Some(config.minus_style.paint("-")),
+        (true, PanelSide::Right, _) => Some(config.plus_style.paint("+")),
+        _ => None,
+    };
 
     let (line, line_is_empty) = Painter::paint_line(
         line_syntax_sections,
@@ -537,7 +574,7 @@ pub mod tests {
         let output = run_delta(TWO_PLUS_LINES_DIFF, &config);
         let mut lines = output.lines().skip(7);
         let (line_1, line_2) = (lines.next().unwrap(), lines.next().unwrap());
-        assert_eq!("│    │         │ 1  │a = 1    ", strip_ansi_codes(line_1));
+        assert_eq!("│    │         │ 1  │a = 1", strip_ansi_codes(line_1));
         assert_eq!("│    │         │ 2  │b = 2345>", strip_ansi_codes(line_2));
     }
 

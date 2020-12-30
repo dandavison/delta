@@ -83,15 +83,18 @@ pub fn format_and_paint_line_numbers<'a>(
             line_numbers_data.line_number[Left] += 1;
             ((Some(nr_left), None), (minus_style, plus_style))
         }
+        State::HunkMinusWrapped => ((None, None), (minus_style, plus_style)),
         State::HunkZero => {
             line_numbers_data.line_number[Left] += 1;
             line_numbers_data.line_number[Right] += 1;
             ((Some(nr_left), Some(nr_right)), (zero_style, zero_style))
         }
+        State::HunkZeroWrapped => ((None, None), (zero_style, zero_style)),
         State::HunkPlus(_) => {
             line_numbers_data.line_number[Right] += 1;
             ((None, Some(nr_right)), (minus_style, plus_style))
         }
+        State::HunkPlusWrapped => ((None, None), (minus_style, plus_style)),
         _ => return Vec::new(),
     };
 
@@ -153,7 +156,7 @@ lazy_static! {
     .unwrap();
 }
 
-#[derive(Default)]
+#[derive(Default, Debug)]
 pub struct LineNumbersData<'a> {
     pub format_data: LeftRight<LineNumberFormatData<'a>>,
     pub line_number: LeftRight<usize>,

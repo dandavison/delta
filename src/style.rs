@@ -6,7 +6,7 @@ use lazy_static::lazy_static;
 use crate::ansi;
 use crate::color;
 
-#[derive(Clone, Copy, Debug, PartialEq)]
+#[derive(Clone, Copy, Debug, PartialEq, Default)]
 pub struct Style {
     pub ansi_term_style: ansi_term::Style,
     pub is_emph: bool,
@@ -26,6 +26,12 @@ pub enum DecorationStyle {
     BoxWithOverline(ansi_term::Style),
     BoxWithUnderOverline(ansi_term::Style),
     NoDecoration,
+}
+
+impl Default for DecorationStyle {
+    fn default() -> Self {
+        Self::NoDecoration
+    }
 }
 
 impl Style {

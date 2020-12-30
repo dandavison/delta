@@ -2,6 +2,7 @@ extern crate bitflags;
 
 #[macro_use]
 extern crate error_chain;
+extern crate static_assertions;
 
 mod align;
 mod ansi;

@@ -55,6 +55,10 @@ pub fn make_builtin_features() -> HashMap<String, BuiltinFeature> {
             "side-by-side".to_string(),
             side_by_side::make_feature().into_iter().collect(),
         ),
+        (
+            "side-by-side-wrapped".to_string(),
+            side_by_side_wrap::make_feature().into_iter().collect(),
+        ),
     ]
     .into_iter()
     .collect()
@@ -90,6 +94,7 @@ pub mod line_numbers;
 pub mod navigate;
 pub mod raw;
 pub mod side_by_side;
+pub mod side_by_side_wrap;
 
 #[cfg(test)]
 pub mod tests {

@@ -8,6 +8,7 @@ use syntect::highlighting::Style as SyntectStyle;
 use syntect::highlighting::Theme as SyntaxTheme;
 use syntect::parsing::SyntaxSet;
 
+use crate::ansi;
 use crate::bat_utils::output::PagingMode;
 use crate::cli;
 use crate::color;
@@ -15,8 +16,10 @@ use crate::delta::State;
 use crate::env;
 use crate::features::navigate;
 use crate::features::side_by_side;
+use crate::features::side_by_side_wrap;
 use crate::git_config::GitConfigEntry;
 use crate::style::{self, Style};
+use crate::syntect_color;
 
 pub struct Config {
     pub available_terminal_width: usize,
@@ -39,6 +42,7 @@ pub struct Config {
     pub hunk_header_style_include_line_number: bool,
     pub hyperlinks: bool,
     pub hyperlinks_file_link_format: String,
+    pub inline_hint_color: Option<SyntectStyle>,
     pub inspect_raw_lines: cli::InspectRawLines,
     pub keep_plus_minus_markers: bool,
     pub line_numbers: bool,
@@ -72,6 +76,7 @@ pub struct Config {
     pub git_plus_style: Style,
     pub show_themes: bool,
     pub side_by_side: bool,
+    pub side_by_side_wrapped: bool,
     pub side_by_side_data: side_by_side::SideBySideData,
     pub syntax_dummy_theme: SyntaxTheme,
     pub syntax_set: SyntaxSet,
@@ -81,6 +86,7 @@ pub struct Config {
     pub true_color: bool,
     pub truncation_symbol: String,
     pub whitespace_error_style: Style,
+    pub wrap_config: side_by_side_wrap::WrapConfig,
     pub zero_style: Style,
 }
 
@@ -205,6 +211,11 @@ impl From<cli::Opt> for Config {
             hyperlinks: opt.hyperlinks,
             hyperlinks_file_link_format: opt.hyperlinks_file_link_format,
             inspect_raw_lines: opt.computed.inspect_raw_lines,
+            inline_hint_color: Some(SyntectStyle {
+                // TODO: color from theme?
+                foreground: syntect_color::syntect_color_from_ansi_name("blue").unwrap(),
+                ..SyntectStyle::default()
+            }),
             keep_plus_minus_markers: opt.keep_plus_minus_markers,
             line_numbers: opt.line_numbers,
             line_numbers_left_format: opt.line_numbers_left_format,
@@ -237,6 +248,7 @@ impl From<cli::Opt> for Config {
             git_plus_style,
             show_themes: opt.show_themes,
             side_by_side: opt.side_by_side,
+            side_by_side_wrapped: opt.side_by_side_wrapped,
             side_by_side_data,
             syntax_dummy_theme: SyntaxTheme::default(),
             syntax_set: opt.computed.syntax_set,
@@ -244,7 +256,23 @@ impl From<cli::Opt> for Config {
             tab_width: opt.tab_width,
             tokenization_regex,
             true_color: opt.computed.true_color,
-            truncation_symbol: "→".to_string(),
+            truncation_symbol: {
+                let sym = "→";
+                if opt.side_by_side_wrapped {
+                    format!("{}{}{}", ansi::ANSI_SGR_REVERSE, sym, ansi::ANSI_SGR_RESET)
+                } else {
+                    sym.to_string()
+                }
+            },
+            wrap_config: side_by_side_wrap::WrapConfig {
+                wrap_symbol: "↵".to_string(),
+                wrap_right_symbol: "↴".to_string(),
+                right_align_symbol: "…".to_string(),
+                // TODO, support multi-character symbols, and thus store
+                // right_align_symbol_len here?
+                use_wrap_right_permille: 370,
+                max_lines: 3,
+            },
             whitespace_error_style,
             zero_style,
         }
