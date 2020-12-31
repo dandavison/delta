@@ -1,0 +1,18 @@
+# To use these themes, first include this file in your own gitconfig file:
+#
+# [include]
+#     path = PATH/TO/delta/themes.gitconfig
+#
+# Then, in your own gitconfig file, activate the chosen theme, e.g.
+#
+# [delta]
+#    features = kingfisher
+#
+# Please add your own themes to this file, and open a PR. There is
+# only one rule: The name of the theme must be the name of some sort
+# of wild organism: mammal, bird, plant, mollusk -- whatever. It can
+# be in any language. For example:
+#
+# [delta "kingfisher"]
+#     hunk-header-style = file line-number syntax
+#     ...
