@@ -37,7 +37,7 @@ $(BUMP_VERSION_SENTINEL):
 
 
 CREATE_GITHUB_RELEASE_SENTINEL=.make-sentinels/create-github-release
-create-github-release: $(CREATE_GITHUB_RELEASE_SENTINEL)
+create-github-release: $(CREATE_GITHUB_RELEASE_SENTINEL) check-environment
 $(CREATE_GITHUB_RELEASE_SENTINEL):
 	which gren > /dev/null
 	@echo \# Creating release tag
@@ -70,13 +70,6 @@ $(BUMP_PRIVATE_HOMEBREW_FORMULA_SENTINEL):
 	touch $(BUMP_PRIVATE_HOMEBREW_FORMULA_SENTINEL)
 
 
-PUBLISH_TO_CARGO_SENTINEL=.make-sentinels/publish-to-cargo
-publish-to-cargo: $(PUBLISH_TO_CARGO_SENTINEL)
-$(PUBLISH_TO_CARGO_SENTINEL):
-	cargo publish
-	touch $(PUBLISH_TO_CARGO_SENTINEL)
-
-
 .PHONY: \
 	clean \
 	release	\
@@ -84,5 +77,4 @@ $(PUBLISH_TO_CARGO_SENTINEL):
 	bump-version \
 	create-github-release \
 	bump-version-in-documentation-links \
-	bump-private-homebrew-formula \
-	publish-to-cargo
+	bump-private-homebrew-formula
