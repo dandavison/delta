@@ -600,7 +600,7 @@ and use the executable found at `./target/release/delta`.
 ## Full --help output
 
 ```
-delta 0.4.5
+delta 0.5.0
 A viewer for git and diff output
 
 USAGE:
@@ -698,9 +698,11 @@ OPTIONS:
             application to handle the custom "file-line" URL scheme by opening the file in your editor/IDE at the
             indicated line number. See https://github.com/dandavison/open-in-editor for an example [default: file://{path}]
         --hunk-header-style <hunk-header-style>
-            Style (foreground, background, attributes) for the hunk-header. See STYLES section. The special attribute
-            'file' can be used to include the file path in the hunk header. The style 'omit' can be used to remove the
-            hunk header section from the output [default: syntax]
+            Style (foreground, background, attributes) for the hunk-header. See STYLES section. Special attributes
+            'file' and 'line-number' can be used to include the file path, and number of first hunk line, in the hunk
+            header. If included in the hunk header, 'file' and 'line-number' are styled according to 'file-style' and
+            'hunk-header-decoration-style' respectively. The style 'omit' can be used to remove the hunk header section
+            from the output [default: line-number syntax]
         --hunk-header-decoration-style <hunk-header-decoration-style>
             Style (foreground, background, attributes) for the hunk-header decoration. See STYLES section. The style
             string should contain one of the special attributes 'box', 'ul' (underline), 'ol' (overline), or the
