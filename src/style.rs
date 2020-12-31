@@ -73,19 +73,6 @@ impl Style {
         }
     }
 
-    pub fn decoration_ansi_term_style(&self) -> Option<ansi_term::Style> {
-        match self.decoration_style {
-            DecorationStyle::Box(style) => Some(style),
-            DecorationStyle::Underline(style) => Some(style),
-            DecorationStyle::Overline(style) => Some(style),
-            DecorationStyle::UnderOverline(style) => Some(style),
-            DecorationStyle::BoxWithUnderline(style) => Some(style),
-            DecorationStyle::BoxWithOverline(style) => Some(style),
-            DecorationStyle::BoxWithUnderOverline(style) => Some(style),
-            DecorationStyle::NoDecoration => None,
-        }
-    }
-
     pub fn is_applied_to(&self, s: &str) -> bool {
         match ansi::parse_first_style(s) {
             Some(parsed_style) => ansi_term_style_equality(parsed_style, self.ansi_term_style),

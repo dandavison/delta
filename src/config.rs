@@ -31,6 +31,8 @@ pub struct Config {
     pub file_renamed_label: String,
     pub file_style: Style,
     pub git_config_entries: HashMap<String, GitConfigEntry>,
+    pub hunk_header_file_style: Style,
+    pub hunk_header_line_number_style: Style,
     pub hunk_header_style: Style,
     pub hunk_header_style_include_file_path: bool,
     pub hunk_header_style_include_line_number: bool,
@@ -107,8 +109,13 @@ impl From<cli::Opt> for Config {
             whitespace_error_style,
         ) = make_hunk_styles(&opt);
 
-        let (commit_style, file_style, hunk_header_style) =
-            make_commit_file_hunk_header_styles(&opt);
+        let (
+            commit_style,
+            file_style,
+            hunk_header_style,
+            hunk_header_file_style,
+            hunk_header_line_number_style,
+        ) = make_commit_file_hunk_header_styles(&opt);
 
         let (
             line_numbers_minus_style,
@@ -163,6 +170,8 @@ impl From<cli::Opt> for Config {
             file_renamed_label: opt.file_renamed_label,
             file_style,
             git_config_entries: opt.git_config_entries,
+            hunk_header_file_style,
+            hunk_header_line_number_style,
             hunk_header_style,
             hunk_header_style_include_file_path: opt
                 .hunk_header_style
@@ -384,7 +393,7 @@ fn make_line_number_styles(opt: &cli::Opt) -> (Style, Style, Style, Style, Style
     )
 }
 
-fn make_commit_file_hunk_header_styles(opt: &cli::Opt) -> (Style, Style, Style) {
+fn make_commit_file_hunk_header_styles(opt: &cli::Opt) -> (Style, Style, Style, Style, Style) {
     let true_color = opt.computed.true_color;
     (
         Style::from_str_with_handling_of_special_decoration_attributes_and_respecting_deprecated_foreground_color_arg(
@@ -408,6 +417,20 @@ fn make_commit_file_hunk_header_styles(opt: &cli::Opt) -> (Style, Style, Style) 
             None,
             Some(&opt.hunk_header_decoration_style),
             opt.deprecated_hunk_color.as_deref(),
+            true_color,
+            false,
+        ),
+        Style::from_str_with_handling_of_special_decoration_attributes(
+            &opt.hunk_header_file_style,
+            None,
+            None,
+            true_color,
+            false,
+        ),
+        Style::from_str_with_handling_of_special_decoration_attributes(
+            &opt.hunk_header_line_number_style,
+            None,
+            None,
             true_color,
             false,
         ),

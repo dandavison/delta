@@ -136,6 +136,8 @@ pub fn set_options(
             file_renamed_label,
             file_style,
             hunk_header_decoration_style,
+            hunk_header_file_style,
+            hunk_header_line_number_style,
             hunk_header_style,
             hyperlinks,
             hyperlinks_file_link_format,

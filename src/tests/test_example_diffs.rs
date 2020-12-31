@@ -1005,7 +1005,7 @@ src/align.rs
     #[test]
     fn test_hunk_header_style_with_file() {
         let config = integration_test_utils::make_config_from_args(&[
-            "--file-style",
+            "--hunk-header-file-style",
             "yellow",
             "--hunk-header-style",
             "file line-number red",
@@ -1034,7 +1034,7 @@ src/align.rs:71: impl<'a> Alignment<'a> { │
     #[test]
     fn test_hunk_header_style_with_file_no_frag() {
         let config = integration_test_utils::make_config_from_args(&[
-            "--file-style",
+            "--hunk-header-file-style",
             "yellow",
             "--hunk-header-style",
             "file line-number red",
@@ -1079,6 +1079,8 @@ src/delta.rs:1: │
         let config = integration_test_utils::make_config_from_args(&[
             "--hunk-header-style",
             "line-number normal",
+            "--hunk-header-line-number-style",
+            "normal",
             "--hunk-header-decoration-style",
             "omit",
         ]);

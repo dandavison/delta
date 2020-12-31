@@ -372,6 +372,18 @@ pub struct Opt {
     /// output.
     pub hunk_header_style: String,
 
+    #[structopt(long = "hunk-header-file-style", default_value = "blue")]
+    /// Style (foreground, background, attributes) for the file path part of the hunk-header. See
+    /// STYLES section. The file path will only be displayed if hunk-header-style contains the
+    /// 'file' special attribute.
+    pub hunk_header_file_style: String,
+
+    #[structopt(long = "hunk-header-line-number-style", default_value = "blue")]
+    /// Style (foreground, background, attributes) for the line number part of the hunk-header. See
+    /// STYLES section. The line number will only be displayed if hunk-header-style contains the
+    /// 'line-number' special attribute.
+    pub hunk_header_line_number_style: String,
+
     #[structopt(long = "hunk-header-decoration-style", default_value = "blue box")]
     /// Style (foreground, background, attributes) for the hunk-header decoration. See STYLES
     /// section. The style string should contain one of the special attributes 'box', 'ul'

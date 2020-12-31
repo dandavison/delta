@@ -94,7 +94,7 @@ fn get_painted_file_with_line_number(
     let mut file_with_line_number = Vec::new();
     let plus_line_number = line_numbers[line_numbers.len() - 1].0;
     if config.hunk_header_style_include_file_path {
-        file_with_line_number.push(config.file_style.paint(plus_file))
+        file_with_line_number.push(config.hunk_header_file_style.paint(plus_file))
     };
     if config.hunk_header_style_include_line_number
         && !config.hunk_header_style.is_raw
@@ -103,11 +103,11 @@ fn get_painted_file_with_line_number(
         if !file_with_line_number.is_empty() {
             file_with_line_number.push(ansi_term::ANSIString::from(":"));
         }
-        if let Some(style) = config.hunk_header_style.decoration_ansi_term_style() {
-            file_with_line_number.push(style.paint(format!("{}", plus_line_number)))
-        } else {
-            file_with_line_number.push(ansi_term::ANSIString::from(format!("{}", plus_line_number)))
-        }
+        file_with_line_number.push(
+            config
+                .hunk_header_line_number_style
+                .paint(format!("{}", plus_line_number)),
+        )
     }
     let file_with_line_number = ansi_term::ANSIStrings(&file_with_line_number).to_string();
     if config.hyperlinks {

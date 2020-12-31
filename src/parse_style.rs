@@ -37,7 +37,7 @@ impl Style {
     }
 
     /// Construct Style but interpreting 'ul', 'box', etc as applying to the decoration style.
-    fn from_str_with_handling_of_special_decoration_attributes(
+    pub fn from_str_with_handling_of_special_decoration_attributes(
         style_string: &str,
         default: Option<Self>,
         decoration_style_string: Option<&str>,
