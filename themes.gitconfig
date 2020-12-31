@@ -16,3 +16,31 @@
 # [delta "kingfisher"]
 #     hunk-header-style = file line-number syntax
 #     ...
+[delta "woolly-mammoth"]
+	dark							= true
+	syntax-theme					= Vibrant Sunburst
+	zero-style						= syntax
+	minus-style						= syntax                 "#400000"
+	minus-emph-style				= syntax     bold        "#780000"
+	plus-style						= syntax                 "#004000"
+	plus-emph-style					= syntax     bold        "#007800"
+	whitespace-error-style			= "#280050"  reverse
+	commit-style					= 232        bold italic 130
+	commit-decoration-style			= 232                    130   box
+	file-style						= 232        bold        184
+	file-decoration-style			= "#606018"                    overline
+	hunk-header-style				= syntax     bold italic 237
+	hunk-header-decoration-style	=                              none
+	line-numbers					= true
+	line-numbers-zero-style			= "#545474" italic
+	line-numbers-left-format		= "{nm:>1}┊"
+	line-numbers-right-format		= "{np:>1}┊"
+	line-numbers-left-style			= red
+	line-numbers-right-style		= green
+	line-numbers-minus-style		= red       italic black
+	line-numbers-plus-style			= green     italic black
+	file-added-label				= [+]
+	file-copied-label				= [C]
+	file-modified-label				= [M]
+	file-removed-label				= [-]
+	file-renamed-label				= [R]
