@@ -96,8 +96,7 @@ fn get_painted_file_with_line_number(
     if config.hunk_header_style_include_file_path {
         file_with_line_number.push(config.file_style.paint(plus_file))
     };
-    if !config.line_numbers
-        && config.hunk_header_style_include_line_number
+    if config.hunk_header_style_include_line_number
         && !config.hunk_header_style.is_raw
         && !config.color_only
     {

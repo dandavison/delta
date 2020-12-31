@@ -468,7 +468,7 @@ pub mod tests {
     fn test_two_minus_lines() {
         let config = make_config_from_args(&["--side-by-side", "--width", "40"]);
         let output = run_delta(TWO_MINUS_LINES_DIFF, &config);
-        let mut lines = output.lines().skip(4);
+        let mut lines = output.lines().skip(7);
         let (line_1, line_2) = (lines.next().unwrap(), lines.next().unwrap());
         assert_eq!("│ 1  │a = 1         │    │", strip_ansi_codes(line_1));
         assert_eq!("│ 2  │b = 2         │    │", strip_ansi_codes(line_2));
@@ -478,7 +478,7 @@ pub mod tests {
     fn test_two_plus_lines() {
         let config = make_config_from_args(&["--side-by-side", "--width", "40"]);
         let output = run_delta(TWO_PLUS_LINES_DIFF, &config);
-        let mut lines = output.lines().skip(4);
+        let mut lines = output.lines().skip(7);
         let (line_1, line_2) = (lines.next().unwrap(), lines.next().unwrap());
         assert_eq!("│    │              │ 1  │a = 1", strip_ansi_codes(line_1));
         assert_eq!("│    │              │ 2  │b = 2", strip_ansi_codes(line_2));
@@ -489,7 +489,7 @@ pub mod tests {
         let config = make_config_from_args(&["--side-by-side", "--width", "40"]);
         let output = run_delta(ONE_MINUS_ONE_PLUS_LINE_DIFF, &config);
         let output = strip_ansi_codes(&output);
-        let mut lines = output.lines().skip(4);
+        let mut lines = output.lines().skip(7);
         assert_eq!("│ 1  │a = 1         │ 1  │a = 1", lines.next().unwrap());
         assert_eq!("│ 2  │b = 2         │ 2  │bb = 2", lines.next().unwrap());
     }
