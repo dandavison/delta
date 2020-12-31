@@ -338,7 +338,7 @@ checksum = "a06f77d526c1a601b7c4cdd98f54b5eaabffc14d5f2f0296febdc7f357c6d3ba"
 
 [[package]]
 name = "git-delta"
-version = "0.5.0"
+version = "0.5.1"
 dependencies = [
  "ansi_colours",
  "ansi_term 0.12.1",
