@@ -6,6 +6,7 @@
 # Then, in your own gitconfig file, activate the chosen theme, e.g.
 #
 # [delta]
+#    # author: https://github.com/me
 #    features = kingfisher
 #
 # Please add your own themes to this file, and open a PR. There is
@@ -16,7 +17,9 @@
 # [delta "kingfisher"]
 #     hunk-header-style = file line-number syntax
 #     ...
+
 [delta "woolly-mammoth"]
+    # author: https://github.com/Kr1ss-XD
 	dark							= true
 	syntax-theme					= Vibrant Sunburst
 	zero-style						= syntax
