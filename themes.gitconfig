@@ -9,14 +9,17 @@
 #    # author: https://github.com/me
 #    features = kingfisher
 #
-# Please add your own themes to this file, and open a PR. There is
-# only one rule: The name of the theme must be the name of some sort
-# of wild organism: mammal, bird, plant, mollusk -- whatever. It can
-# be in any language. For example:
+# Please add your own themes to this file, and open a PR. Instructions:
 #
-# [delta "kingfisher"]
-#     hunk-header-style = file line-number syntax
-#     ...
+# 1. The name of the theme must be the name of some sort of wild
+#    organism: mammal, bird, plant, mollusk -- whatever. It can be in
+#    any language.
+#
+# 2. Please include a comment line describing the terminal
+#    theme/colors that you typically use with this theme.
+#
+# 3. Feel free to include a comment line indicating who is the author
+#    of the theme. E.g. a link to your github user page.
 
 [delta "woolly-mammoth"]
     # author: https://github.com/Kr1ss-XD
