@@ -47,3 +47,23 @@
 	file-modified-label				= [M]
 	file-removed-label				= [-]
 	file-renamed-label				= [R]
+
+[delta "villsau"]
+	# author: https://github.com/torarnv
+	syntax-theme = OneHalfDark
+	line-numbers = false
+	hunk-header-style = file line-number syntax
+	hunk-header-line-number-style = dim magenta
+	hunk-header-file-style = magenta
+	hunk-header-decoration-style = omit
+	file-style = omit
+	zero-style = dim syntax
+	minus-style = bold red
+	minus-non-emph-style = dim red
+	minus-emph-style = bold red 52
+	minus-empty-line-marker-style = normal "#3f0001"
+	plus-style = bold green
+	plus-non-emph-style = dim green
+	plus-emph-style = bold green 22
+	plus-empty-line-marker-style = normal "#002800"
+	whitespace-error-style = reverse red
