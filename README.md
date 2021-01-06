@@ -483,8 +483,11 @@ Delta works on Windows. However, it is essential to use a recent version of `les
 
 ### Mouse scrolling
 
-If mouse scrolling isn't working correctly, try setting your `BAT_PAGER` environment variable to (at least) `less -R` .
-See [issue #58](https://github.com/dandavison/delta/issues/58) and [bat README / "Using a different pager"](https://github.com/sharkdp/bat#using-a-different-pager).
+If mouse scrolling isn't working correctly, ensure that you have a more recent version of `less`.
+* For Windows you can download from https://github.com/jftuga/less-Windows/releases/latest
+* For Mac you can install `brew install less; brew link less`
+
+Alternatively try setting your `BAT_PAGER` environment variable to (at least) `less -R`. See [issue #58](https://github.com/dandavison/delta/issues/58) and [bat README / "Using a different pager"](https://github.com/sharkdp/bat#using-a-different-pager).
 
 
 ### Using Delta with Magit
