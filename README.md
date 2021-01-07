@@ -700,9 +700,16 @@ OPTIONS:
         --hunk-header-style <hunk-header-style>
             Style (foreground, background, attributes) for the hunk-header. See STYLES section. Special attributes
             'file' and 'line-number' can be used to include the file path, and number of first hunk line, in the hunk
-            header. If included in the hunk header, 'file' and 'line-number' are styled according to 'file-style' and
-            'hunk-header-decoration-style' respectively. The style 'omit' can be used to remove the hunk header section
-            from the output [default: line-number syntax]
+            header. The style 'omit' can be used to remove the hunk header section from the output [default: line-
+            number syntax]
+        --hunk-header-file-style <hunk-header-file-style>
+            Style (foreground, background, attributes) for the file path part of the hunk-header. See STYLES section.
+            The file path will only be displayed if hunk-header-style contains the 'file' special attribute [default:
+            blue]
+        --hunk-header-line-number-style <hunk-header-line-number-style>
+            Style (foreground, background, attributes) for the line number part of the hunk-header. See STYLES section.
+            The line number will only be displayed if hunk-header-style contains the 'line-number' special attribute
+            [default: blue]
         --hunk-header-decoration-style <hunk-header-decoration-style>
             Style (foreground, background, attributes) for the hunk-header decoration. See STYLES section. The style
             string should contain one of the special attributes 'box', 'ul' (underline), 'ol' (overline), or the
