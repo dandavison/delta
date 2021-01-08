@@ -5,7 +5,7 @@ use regex::{Captures, Regex};
 
 use crate::config::Config;
 use crate::features::OptionValueFunction;
-use crate::git_config_entry::{GitConfigEntry, GitRemoteRepo};
+use crate::git_config::{GitConfigEntry, GitRemoteRepo};
 
 pub fn make_feature() -> Vec<(String, OptionValueFunction)> {
     builtin_feature!([

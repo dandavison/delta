@@ -14,7 +14,7 @@ use crate::color;
 use crate::delta::State;
 use crate::env;
 use crate::features::side_by_side;
-use crate::git_config_entry::GitConfigEntry;
+use crate::git_config::GitConfigEntry;
 use crate::style::{self, Style};
 
 pub struct Config {

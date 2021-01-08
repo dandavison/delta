@@ -13,8 +13,7 @@ use crate::config;
 use crate::env;
 use crate::errors::*;
 use crate::features;
-use crate::git_config;
-use crate::git_config_entry::{self, GitConfigEntry};
+use crate::git_config::{GitConfig, GitConfigEntry, GitRemoteRepo};
 use crate::options::option_value::{OptionValue, ProvenancedOptionValue};
 use crate::options::theme;
 
@@ -64,7 +63,7 @@ macro_rules! set_options {
 
 pub fn set_options(
     opt: &mut cli::Opt,
-    git_config: &mut Option<git_config::GitConfig>,
+    git_config: &mut Option<GitConfig>,
     arg_matches: &clap::ArgMatches,
     assets: HighlightingAssets,
 ) {
@@ -204,7 +203,7 @@ pub fn set_options(
 #[allow(non_snake_case)]
 fn set__light__dark__syntax_theme__options(
     opt: &mut cli::Opt,
-    git_config: &mut Option<git_config::GitConfig>,
+    git_config: &mut Option<GitConfig>,
     arg_matches: &clap::ArgMatches,
     option_names: &HashMap<&str, &str>,
 ) {
@@ -291,7 +290,7 @@ fn set__light__dark__syntax_theme__options(
 fn gather_features(
     opt: &cli::Opt,
     builtin_features: &HashMap<String, features::BuiltinFeature>,
-    git_config: &Option<git_config::GitConfig>,
+    git_config: &Option<GitConfig>,
 ) -> Vec<String> {
     let mut features = VecDeque::new();
 
@@ -372,7 +371,7 @@ fn gather_features_recursively(
     features: &mut VecDeque<String>,
     builtin_features: &HashMap<String, features::BuiltinFeature>,
     opt: &cli::Opt,
-    git_config: &git_config::GitConfig,
+    git_config: &GitConfig,
 ) {
     if builtin_features.contains_key(feature) {
         gather_builtin_features_recursively(feature, features, builtin_features, opt);
@@ -408,7 +407,7 @@ fn gather_builtin_features_from_flags_in_gitconfig(
     features: &mut VecDeque<String>,
     builtin_features: &HashMap<String, features::BuiltinFeature>,
     opt: &cli::Opt,
-    git_config: &git_config::GitConfig,
+    git_config: &GitConfig,
 ) {
     for child_feature in builtin_features.keys() {
         if let Some(value) =
@@ -510,7 +509,7 @@ fn parse_paging_mode(paging_mode_string: &str) -> PagingMode {
 
 fn set_widths(
     opt: &mut cli::Opt,
-    git_config: &mut Option<git_config::GitConfig>,
+    git_config: &mut Option<GitConfig>,
     arg_matches: &clap::ArgMatches,
     option_names: &HashMap<&str, &str>,
 ) {
@@ -571,7 +570,7 @@ fn is_truecolor_terminal() -> bool {
         .unwrap_or(false)
 }
 
-fn set_git_config_entries(opt: &mut cli::Opt, git_config: &mut git_config::GitConfig) {
+fn set_git_config_entries(opt: &mut cli::Opt, git_config: &mut GitConfig) {
     // Styles
     for key in &["color.diff.old", "color.diff.new"] {
         if let Some(style_string) = git_config.get::<String>(key) {
@@ -583,7 +582,7 @@ fn set_git_config_entries(opt: &mut cli::Opt, git_config: &mut git_config::GitCo
     // Strings
     for key in &["remote.origin.url"] {
         if let Some(string) = git_config.get::<String>(key) {
-            if let Ok(repo) = git_config_entry::GitRemoteRepo::from_str(&string) {
+            if let Ok(repo) = GitRemoteRepo::from_str(&string) {
                 opt.git_config_entries
                     .insert(key.to_string(), GitConfigEntry::GitRemote(repo));
             }

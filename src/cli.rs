@@ -11,8 +11,7 @@ use syntect::parsing::SyntaxSet;
 
 use crate::bat_utils::assets::HighlightingAssets;
 use crate::bat_utils::output::PagingMode;
-use crate::git_config::GitConfig;
-use crate::git_config_entry::GitConfigEntry;
+use crate::git_config::{GitConfig, GitConfigEntry};
 use crate::options;
 
 #[derive(StructOpt, Clone, Default)]
