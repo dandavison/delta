@@ -166,17 +166,17 @@ fn ansi_term_color_equality(a: Option<ansi_term::Color>, b: Option<ansi_term::Co
 }
 
 fn ansi_term_16_color_equality(a: ansi_term::Color, b: ansi_term::Color) -> bool {
-    match (a, b) {
-        (ansi_term::Color::Fixed(0), ansi_term::Color::Black) => true,
-        (ansi_term::Color::Fixed(1), ansi_term::Color::Red) => true,
-        (ansi_term::Color::Fixed(2), ansi_term::Color::Green) => true,
-        (ansi_term::Color::Fixed(3), ansi_term::Color::Yellow) => true,
-        (ansi_term::Color::Fixed(4), ansi_term::Color::Blue) => true,
-        (ansi_term::Color::Fixed(5), ansi_term::Color::Purple) => true,
-        (ansi_term::Color::Fixed(6), ansi_term::Color::Cyan) => true,
-        (ansi_term::Color::Fixed(7), ansi_term::Color::White) => true,
-        _ => false,
-    }
+    matches!(
+        (a, b),
+        (ansi_term::Color::Fixed(0), ansi_term::Color::Black)
+            | (ansi_term::Color::Fixed(1), ansi_term::Color::Red)
+            | (ansi_term::Color::Fixed(2), ansi_term::Color::Green)
+            | (ansi_term::Color::Fixed(3), ansi_term::Color::Yellow)
+            | (ansi_term::Color::Fixed(4), ansi_term::Color::Blue)
+            | (ansi_term::Color::Fixed(5), ansi_term::Color::Purple)
+            | (ansi_term::Color::Fixed(6), ansi_term::Color::Cyan)
+            | (ansi_term::Color::Fixed(7), ansi_term::Color::White)
+    )
 }
 
 lazy_static! {

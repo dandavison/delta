@@ -109,7 +109,7 @@ fn rewrite_options_to_implement_deprecated_hunk_style_option(opt: &mut cli::Opt)
         }
         match opt.deprecated_hunk_style.as_deref().map(str::to_lowercase) {
             Some(attr) if attr == "plain" => opt.hunk_header_decoration_style = "".to_string(),
-            Some(attr) if attr == "" => {}
+            Some(attr) if attr.is_empty() => {}
             Some(attr) => opt.hunk_header_decoration_style = attr,
             None => {}
         }
