@@ -483,7 +483,7 @@ Delta works on Windows. However, it is essential to use a recent version of `les
 
 ### Mouse scrolling
 
-If mouse scrolling isn't working correctly, ensure that you have a more recent version of `less`.
+If mouse scrolling isn't working correctly, ensure that you have the most recent version of `less`.
 * For Windows you can download from https://github.com/jftuga/less-Windows/releases/latest
 * For Mac you can install `brew install less; brew link less`
 
