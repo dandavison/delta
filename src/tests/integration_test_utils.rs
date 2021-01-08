@@ -18,11 +18,28 @@ pub mod integration_test_utils {
         git_config_contents: Option<&[u8]>,
         git_config_path: Option<&str>,
     ) -> cli::Opt {
+        _make_options_from_args_and_git_config(args, git_config_contents, git_config_path, false)
+    }
+
+    pub fn make_options_from_args_and_git_config_honoring_env_var(
+        args: &[&str],
+        git_config_contents: Option<&[u8]>,
+        git_config_path: Option<&str>,
+    ) -> cli::Opt {
+        _make_options_from_args_and_git_config(args, git_config_contents, git_config_path, true)
+    }
+
+    fn _make_options_from_args_and_git_config(
+        args: &[&str],
+        git_config_contents: Option<&[u8]>,
+        git_config_path: Option<&str>,
+        honor_env_var: bool,
+    ) -> cli::Opt {
         let mut args: Vec<&str> = itertools::chain(&["/dev/null", "/dev/null"], args)
             .map(|s| *s)
             .collect();
         let mut git_config = match (git_config_contents, git_config_path) {
-            (Some(contents), Some(path)) => Some(make_git_config(contents, path)),
+            (Some(contents), Some(path)) => Some(make_git_config(contents, path, honor_env_var)),
             _ => {
                 args.push("--no-gitconfig");
                 None
@@ -52,11 +69,11 @@ pub mod integration_test_utils {
         config::Config::from(make_options_from_args(args))
     }
 
-    fn make_git_config(contents: &[u8], path: &str) -> GitConfig {
+    fn make_git_config(contents: &[u8], path: &str, honor_env_var: bool) -> GitConfig {
         let path = Path::new(path);
         let mut file = File::create(path).unwrap();
         file.write_all(contents).unwrap();
-        GitConfig::from_path(&path)
+        GitConfig::from_path(&path, honor_env_var)
     }
 
     pub fn get_line_of_code_from_delta(

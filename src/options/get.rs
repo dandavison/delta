@@ -109,3 +109,170 @@ impl GetOptionValue for String {}
 impl GetOptionValue for bool {}
 impl GetOptionValue for f64 {}
 impl GetOptionValue for usize {}
+
+#[cfg(test)]
+pub mod tests {
+    use std::env;
+    use std::fs::remove_file;
+
+    use crate::tests::integration_test_utils::integration_test_utils;
+
+    // TODO: the followig tests are collapsed into one since they all set the same env var and thus
+    // could affect each other if allowed to run concurrently.
+
+    #[test]
+    fn test_env_var_overrides_git_config() {
+        // ----------------------------------------------------------------------------------------
+        // simple string
+        let git_config_contents = b"
+[delta]
+    plus-style = blue
+";
+        let git_config_path = "delta__test_simple_string_env_var_overrides_git_config.gitconfig";
+
+        let opt = integration_test_utils::make_options_from_args_and_git_config(
+            &[],
+            Some(git_config_contents),
+            Some(git_config_path),
+        );
+        assert_eq!(opt.plus_style, "blue");
+
+        env::set_var("GIT_CONFIG_PARAMETERS", "'delta.plus-style=green'");
+        let opt = integration_test_utils::make_options_from_args_and_git_config_honoring_env_var(
+            &[],
+            Some(git_config_contents),
+            Some(git_config_path),
+        );
+        assert_eq!(opt.plus_style, "green");
+
+        remove_file(git_config_path).unwrap();
+
+        // ----------------------------------------------------------------------------------------
+        // complex string
+        let git_config_contents = br##"
+[delta]
+    minus-style = red bold ul "#ffeeee"
+"##;
+        let git_config_path = "delta__test_complex_string_env_var_overrides_git_config.gitconfig";
+
+        let opt = integration_test_utils::make_options_from_args_and_git_config(
+            &[],
+            Some(git_config_contents),
+            Some(git_config_path),
+        );
+        assert_eq!(opt.minus_style, r##"red bold ul #ffeeee"##);
+
+        env::set_var(
+            "GIT_CONFIG_PARAMETERS",
+            r##"'delta.minus-style=magenta italic ol "#aabbcc"'"##,
+        );
+        let opt = integration_test_utils::make_options_from_args_and_git_config_honoring_env_var(
+            &[],
+            Some(git_config_contents),
+            Some(git_config_path),
+        );
+        assert_eq!(opt.minus_style, r##"magenta italic ol "#aabbcc""##,);
+
+        remove_file(git_config_path).unwrap();
+
+        // ----------------------------------------------------------------------------------------
+        // option string
+        let git_config_contents = b"
+[delta]
+    plus-style = blue
+";
+        let git_config_path = "delta__test_option_string_env_var_overrides_git_config.gitconfig";
+
+        let opt = integration_test_utils::make_options_from_args_and_git_config(
+            &[],
+            Some(git_config_contents),
+            Some(git_config_path),
+        );
+        assert_eq!(opt.plus_style, "blue");
+
+        env::set_var("GIT_CONFIG_PARAMETERS", "'delta.plus-style=green'");
+        let opt = integration_test_utils::make_options_from_args_and_git_config_honoring_env_var(
+            &[],
+            Some(git_config_contents),
+            Some(git_config_path),
+        );
+        assert_eq!(opt.plus_style, "green");
+
+        remove_file(git_config_path).unwrap();
+
+        // ----------------------------------------------------------------------------------------
+        // bool
+        let git_config_contents = b"
+[delta]
+    side-by-side = true
+";
+        let git_config_path = "delta__test_bool_env_var_overrides_git_config.gitconfig";
+
+        let opt = integration_test_utils::make_options_from_args_and_git_config(
+            &[],
+            Some(git_config_contents),
+            Some(git_config_path),
+        );
+        assert_eq!(opt.side_by_side, true);
+
+        env::set_var("GIT_CONFIG_PARAMETERS", "'delta.side-by-side=false'");
+        let opt = integration_test_utils::make_options_from_args_and_git_config_honoring_env_var(
+            &[],
+            Some(git_config_contents),
+            Some(git_config_path),
+        );
+        assert_eq!(opt.side_by_side, false);
+
+        remove_file(git_config_path).unwrap();
+
+        // ----------------------------------------------------------------------------------------
+        // int
+        let git_config_contents = b"
+[delta]
+    max-line-length = 1
+";
+        let git_config_path = "delta__test_int_env_var_overrides_git_config.gitconfig";
+
+        let opt = integration_test_utils::make_options_from_args_and_git_config(
+            &[],
+            Some(git_config_contents),
+            Some(git_config_path),
+        );
+        assert_eq!(opt.max_line_length, 1);
+
+        env::set_var("GIT_CONFIG_PARAMETERS", "'delta.max-line-length=2'");
+        let opt = integration_test_utils::make_options_from_args_and_git_config_honoring_env_var(
+            &[],
+            Some(git_config_contents),
+            Some(git_config_path),
+        );
+        assert_eq!(opt.max_line_length, 2);
+
+        remove_file(git_config_path).unwrap();
+
+        // ----------------------------------------------------------------------------------------
+        // float
+        let git_config_contents = b"
+[delta]
+    max-line-distance = 0.6
+";
+        let git_config_path = "delta__test_float_env_var_overrides_git_config.gitconfig";
+
+        let opt = integration_test_utils::make_options_from_args_and_git_config_honoring_env_var(
+            &[],
+            Some(git_config_contents),
+            Some(git_config_path),
+        );
+        assert_eq!(opt.max_line_distance, 0.6);
+
+        env::set_var("GIT_CONFIG_PARAMETERS", "'delta.max-line-distance=0.7'");
+        let opt = integration_test_utils::make_options_from_args_and_git_config_honoring_env_var(
+            &[],
+            Some(git_config_contents),
+            Some(git_config_path),
+        );
+        assert_eq!(opt.max_line_distance, 0.7);
+
+        remove_file(git_config_path).unwrap();
+    }
+}
