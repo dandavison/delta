@@ -42,10 +42,14 @@ impl GitConfig {
     }
 
     #[cfg(test)]
-    pub fn from_path(path: &Path) -> Self {
+    pub fn from_path(path: &Path, honor_env_var: bool) -> Self {
         Self {
             config: git2::Config::open(path).unwrap(),
-            config_from_env_var: parse_config_from_env_var(),
+            config_from_env_var: if honor_env_var {
+                parse_config_from_env_var()
+            } else {
+                HashMap::new()
+            },
             repo: None,
             enabled: true,
         }
