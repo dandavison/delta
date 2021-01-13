@@ -1,7 +1,7 @@
 [package]
 name = "git-delta-lib"
 authors = ["Dan Davison <dandavison7@gmail.com>"]
-categories = ["command-line-utilities", "development-tools"]
+categories = ["development-tools", "visualization"]
 description = "Not ready for use: use crate git-delta for the application"
 documentation = "https://github.com/dandavison/delta"
 edition = "2018"
@@ -13,6 +13,10 @@ version = "0.0.0"
 [[bin]]
 name = "delta"
 path = "src/main.rs"
+
+[lib]
+name = "delta_lib"
+path = "src/lib.rs"
 
 [dependencies]
 bat = "0.20.0"
