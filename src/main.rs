@@ -1,67 +1,17 @@
-extern crate bitflags;
-
-#[macro_use]
-extern crate error_chain;
-
-mod align;
-mod ansi;
-mod cli;
-mod color;
-mod colors;
-mod config;
-mod delta;
-mod edits;
-mod env;
-mod features;
-mod format;
-mod git_config;
-mod handlers;
-mod minusplus;
-mod options;
-mod paint;
-mod parse_style;
-mod parse_styles;
-mod style;
-mod utils;
-mod wrapping;
-
-mod subcommands;
-
-mod tests;
-
 use std::io::{self, ErrorKind};
 use std::process;
 
 use bytelines::ByteLinesReader;
 
-use crate::delta::delta;
-use crate::utils::bat::assets::{list_languages, HighlightingAssets};
-use crate::utils::bat::output::OutputType;
-
-pub fn fatal<T>(errmsg: T) -> !
-where
-    T: AsRef<str> + std::fmt::Display,
-{
-    #[cfg(not(test))]
-    {
-        eprintln!("{}", errmsg);
-        // As in Config::error_exit_code: use 2 for error
-        // because diff uses 0 and 1 for non-error.
-        process::exit(2);
-    }
-    #[cfg(test)]
-    panic!("{}\n", errmsg);
-}
-
-pub mod errors {
-    error_chain! {
-        foreign_links {
-            Io(::std::io::Error);
-            SyntectError(::syntect::LoadingError);
-            ParseIntError(::std::num::ParseIntError);
-        }
-    }
-}
+use libdelta::cli;
+use libdelta::config;
+use libdelta::delta::delta;
+use libdelta::fatal;
+use libdelta::git_config;
+use libdelta::subcommands;
+use libdelta::utils;
+use libdelta::utils::bat::assets::{list_languages, HighlightingAssets};
+use libdelta::utils::bat::output::OutputType;
 
 #[cfg(not(tarpaulin_include))]
 fn main() -> std::io::Result<()> {

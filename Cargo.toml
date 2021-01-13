@@ -14,6 +14,10 @@ version = "0.12.0"
 name = "delta"
 path = "src/main.rs"
 
+[lib]
+name = "libdelta"
+path = "src/lib.rs"
+
 [dependencies]
 chrono = "0.4.19"
 chrono-humanize = "0.2.1"
