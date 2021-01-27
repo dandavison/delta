@@ -261,7 +261,7 @@ fn ansi_term_style_from_sgr_parameters(params: &mut ParamsIter<'_>) -> ansi_term
 }
 
 // Based on https://github.com/alacritty/alacritty/blob/57c4ac9145a20fb1ae9a21102503458d3da06c7b/alacritty_terminal/src/ansi.rs#L1258
-fn parse_sgr_color(params: &mut dyn Iterator<Item = i64>) -> Option<ansi_term::Color> {
+fn parse_sgr_color(params: &mut dyn Iterator<Item = u16>) -> Option<ansi_term::Color> {
     match params.next() {
         Some(2) => {
             let r = u8::try_from(params.next()?).ok()?;
