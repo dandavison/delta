@@ -21,6 +21,8 @@
 
 use std::fmt::Write as FmtWrite;
 
+use unicode_segmentation::UnicodeSegmentation;
+
 use crate::config::Config;
 use crate::delta;
 use crate::draw;
@@ -133,7 +135,10 @@ fn write_to_output_buffer(
         let _ = write!(&mut painter.output_buffer, "{}: ", file_with_line_number);
     }
     if !line.is_empty() {
-        let lines = vec![(line, delta::State::HunkHeader)];
+        let lines = vec![(
+            painter.expand_tabs(line.graphemes(true)),
+            delta::State::HunkHeader,
+        )];
         let syntax_style_sections = Painter::get_syntax_style_sections_for_lines(
             &lines,
             &delta::State::HunkHeader,
