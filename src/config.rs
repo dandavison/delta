@@ -16,6 +16,7 @@ use crate::env;
 use crate::features::navigate;
 use crate::features::side_by_side;
 use crate::git_config::{GitConfig, GitConfigEntry};
+use crate::paint::BgFillMethod;
 use crate::style::{self, Style};
 
 pub struct Config {
@@ -51,6 +52,7 @@ pub struct Config {
     pub hyperlinks_file_link_format: String,
     pub inspect_raw_lines: cli::InspectRawLines,
     pub keep_plus_minus_markers: bool,
+    pub line_fill_method: BgFillMethod,
     pub line_numbers: bool,
     pub line_numbers_left_format: String,
     pub line_numbers_left_style: Style,
@@ -187,6 +189,16 @@ impl From<cli::Opt> for Config {
         let file_renamed_label = opt.file_renamed_label;
         let hunk_label = opt.hunk_label;
 
+        let line_fill_method = match opt.line_fill_method.as_deref() {
+            // Note that "default" is not documented
+            Some("ansi") | Some("default") | None => BgFillMethod::TryAnsiSequence,
+            Some("spaces") => BgFillMethod::Spaces,
+            _ => {
+                eprintln!("Invalid option for line-fill-method: Expected \"ansi\" or \"spaces\".");
+                process::exit(1);
+            }
+        };
+
         let navigate_regexp = if opt.navigate || opt.show_themes {
             Some(navigate::make_navigate_regexp(
                 opt.show_themes,
@@ -245,6 +257,7 @@ impl From<cli::Opt> for Config {
             hyperlinks_file_link_format: opt.hyperlinks_file_link_format,
             inspect_raw_lines: opt.computed.inspect_raw_lines,
             keep_plus_minus_markers: opt.keep_plus_minus_markers,
+            line_fill_method,
             line_numbers: opt.line_numbers,
             line_numbers_left_format: opt.line_numbers_left_format,
             line_numbers_left_style,

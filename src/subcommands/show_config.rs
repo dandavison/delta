@@ -3,6 +3,7 @@ use std::io::Write;
 use crate::bat_utils::output::PagingMode;
 use crate::cli;
 use crate::config;
+use crate::paint::BgFillMethod;
 
 pub fn show_config(config: &config::Config, writer: &mut dyn Write) -> std::io::Result<()> {
     // styles first
@@ -99,6 +100,7 @@ pub fn show_config(config: &config::Config, writer: &mut dyn Write) -> std::io::
         writer,
         "    max-line-distance             = {max_line_distance}
     max-line-length               = {max_line_length}
+    line-fill-method        = {line_fill_method}
     navigate                      = {navigate}
     navigate-regexp               = {navigate_regexp}
     pager                         = {pager}
@@ -110,6 +112,10 @@ pub fn show_config(config: &config::Config, writer: &mut dyn Write) -> std::io::
     word-diff-regex               = {tokenization_regex}",
         max_line_distance = config.max_line_distance,
         max_line_length = config.max_line_length,
+        line_fill_method = match config.line_fill_method {
+            BgFillMethod::TryAnsiSequence => "ansi",
+            BgFillMethod::Spaces => "spaces",
+        },
         navigate = config.navigate,
         navigate_regexp = match &config.navigate_regexp {
             None => "".to_string(),

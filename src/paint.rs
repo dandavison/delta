@@ -28,6 +28,28 @@ pub struct Painter<'a> {
     pub line_numbers_data: line_numbers::LineNumbersData<'a>,
 }
 
+// How the background of a line is filled up to the end
+#[derive(Debug, PartialEq, Clone, Copy)]
+pub enum BgFillMethod {
+    // Fill the background with ANSI spaces if possible,
+    // but might fallback to Spaces (e.g. in the left side-by-side panel)
+    TryAnsiSequence,
+    Spaces,
+}
+
+// If the background of a line extends to the end, and if configured to do so, how.
+#[derive(Debug, PartialEq, Clone, Copy)]
+pub enum BgShouldFill {
+    With(BgFillMethod),
+    No,
+}
+
+impl Default for BgShouldFill {
+    fn default() -> Self {
+        BgShouldFill::With(BgFillMethod::TryAnsiSequence)
+    }
+}
+
 impl<'a> Painter<'a> {
     pub fn new(writer: &'a mut dyn Write, config: &'a config::Config) -> Self {
         let default_syntax = Self::get_syntax(&config.syntax_set, None);
@@ -154,6 +176,13 @@ impl<'a> Painter<'a> {
                 self.plus_lines.iter().map(|(_, state)| state).collect(),
             );
 
+            let bg_fill_left_right = PlusMinus::new(
+                // Using an ANSI sequence to fill the left panel would not work
+                BgShouldFill::With(BgFillMethod::Spaces),
+                // Use the configured method for the right panel
+                BgShouldFill::With(self.config.line_fill_method),
+            );
+
             side_by_side::paint_minus_and_plus_lines_side_by_side(
                 syntax_left_right,
                 diff_left_right,
@@ -162,7 +191,7 @@ impl<'a> Painter<'a> {
                 &mut self.output_buffer,
                 self.config,
                 &mut Some(&mut self.line_numbers_data),
-                None,
+                bg_fill_left_right,
             );
         } else {
             if !self.minus_lines.is_empty() {
@@ -179,7 +208,7 @@ impl<'a> Painter<'a> {
                         None
                     },
                     Some(self.config.minus_empty_line_marker_style),
-                    None,
+                    BgShouldFill::default(),
                 );
             }
             if !self.plus_lines.is_empty() {
@@ -196,7 +225,7 @@ impl<'a> Painter<'a> {
                         None
                     },
                     Some(self.config.plus_empty_line_marker_style),
-                    None,
+                    BgShouldFill::default(),
                 );
             }
         }
@@ -224,12 +253,11 @@ impl<'a> Painter<'a> {
             side_by_side::paint_zero_lines_side_by_side(
                 syntax_style_sections,
                 vec![diff_style_sections],
-                &State::HunkZero,
                 &mut self.output_buffer,
                 self.config,
                 &mut Some(&mut self.line_numbers_data),
                 painted_prefix,
-                None,
+                BgShouldFill::With(BgFillMethod::Spaces),
             );
         } else {
             Painter::paint_lines(
@@ -241,7 +269,7 @@ impl<'a> Painter<'a> {
                 &mut Some(&mut self.line_numbers_data),
                 painted_prefix,
                 None,
-                None,
+                BgShouldFill::With(BgFillMethod::Spaces),
             );
         }
     }
@@ -258,7 +286,7 @@ impl<'a> Painter<'a> {
         line_numbers_data: &mut Option<&mut line_numbers::LineNumbersData>,
         painted_prefix: Option<ansi_term::ANSIString>,
         empty_line_style: Option<Style>, // a style with background color to highlight an empty line
-        background_color_extends_to_terminal_width: Option<bool>,
+        background_color_extends_to_terminal_width: BgShouldFill,
     ) {
         // There's some unfortunate hackery going on here for two reasons:
         //
@@ -281,15 +309,23 @@ impl<'a> Painter<'a> {
                 painted_prefix.clone(),
                 config,
             );
-            let (should_right_fill_background_color, fill_style) =
+            let (bg_fill_mode, fill_style) =
                 Painter::get_should_right_fill_background_color_and_fill_style(
                     diff_sections,
                     state,
                     background_color_extends_to_terminal_width,
                     config,
                 );
-            if should_right_fill_background_color {
+
+            if let Some(BgFillMethod::TryAnsiSequence) = bg_fill_mode {
                 Painter::right_fill_background_color(&mut line, fill_style);
+            } else if let Some(BgFillMethod::Spaces) = bg_fill_mode {
+                let text_width = ansi::measure_text_width(&line);
+                line.push_str(
+                    &fill_style
+                        .paint(" ".repeat(config.available_terminal_width - text_width))
+                        .to_string(),
+                );
             } else if line_is_empty {
                 if let Some(empty_line_style) = empty_line_style {
                     Painter::mark_empty_line(
@@ -299,6 +335,7 @@ impl<'a> Painter<'a> {
                     );
                 }
             };
+
             output_buffer.push_str(&line);
             output_buffer.push('\n');
         }
@@ -310,7 +347,7 @@ impl<'a> Painter<'a> {
         line: &str,
         style: Style,
         state: State,
-        background_color_extends_to_terminal_width: bool,
+        background_color_extends_to_terminal_width: BgShouldFill,
     ) {
         let lines = vec![(self.expand_tabs(line.graphemes(true)), state.clone())];
         let syntax_style_sections = Painter::get_syntax_style_sections_for_lines(
@@ -329,7 +366,7 @@ impl<'a> Painter<'a> {
             &mut None,
             None,
             None,
-            Some(background_color_extends_to_terminal_width),
+            background_color_extends_to_terminal_width,
         );
     }
 
@@ -338,9 +375,9 @@ impl<'a> Painter<'a> {
     pub fn get_should_right_fill_background_color_and_fill_style(
         diff_sections: &[(Style, &str)],
         state: &State,
-        background_color_extends_to_terminal_width: Option<bool>,
+        background_color_extends_to_terminal_width: BgShouldFill,
         config: &config::Config,
-    ) -> (bool, Style) {
+    ) -> (Option<BgFillMethod>, Style) {
         // style:          for right fill if line contains no emph sections
         // non_emph_style: for right fill if line contains emph sections
         let (style, non_emph_style) = match state {
@@ -379,10 +416,20 @@ impl<'a> Painter<'a> {
         } else {
             style
         };
-        let should_right_fill_background_color = fill_style.get_background_color().is_some()
-            && background_color_extends_to_terminal_width
-                .unwrap_or(config.background_color_extends_to_terminal_width);
-        (should_right_fill_background_color, fill_style)
+
+        match (
+            fill_style.get_background_color().is_some(),
+            background_color_extends_to_terminal_width,
+        ) {
+            (false, _) | (_, BgShouldFill::No) => (None, fill_style),
+            (_, BgShouldFill::With(bgmode)) => {
+                if config.background_color_extends_to_terminal_width {
+                    (Some(bgmode), fill_style)
+                } else {
+                    (None, fill_style)
+                }
+            }
+        }
     }
 
     /// Emit line with ANSI sequences that extend the background color to the terminal width.

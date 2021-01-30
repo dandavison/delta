@@ -6,6 +6,7 @@ use crate::color;
 use crate::config;
 use crate::delta::{self, State, StateMachine};
 use crate::format;
+use crate::paint::BgShouldFill;
 use crate::style::Style;
 
 impl<'a> StateMachine<'a> {
@@ -56,7 +57,7 @@ impl<'a> StateMachine<'a> {
                     blame.code,
                     style,
                     self.state.clone(),
-                    true,
+                    BgShouldFill::default(),
                 );
                 handled_line = true
             }

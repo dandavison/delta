@@ -526,6 +526,11 @@ pub struct Opt {
     /// delta will be slow on very long lines (e.g. minified .js) if truncation is disabled.
     pub max_line_length: usize,
 
+    /// How to extend the background color to the end of the line in side-by-side mode. Can
+    /// be ansi (default) or spaces. Has no effect if --width=variable is given.
+    #[structopt(long = "line-fill-method")]
+    pub line_fill_method: Option<String>,
+
     /// The width of underline/overline decorations. Use --width=variable to extend decorations and
     /// background colors to the end of the text only. Otherwise background colors extend to the
     /// full terminal width.
