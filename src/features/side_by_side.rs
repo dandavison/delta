@@ -1,3 +1,5 @@
+use std::ops::{Index, IndexMut};
+
 use itertools::Itertools;
 use syntect::highlighting::Style as SyntectStyle;
 
@@ -8,6 +10,7 @@ use crate::delta::State;
 use crate::features::line_numbers;
 use crate::features::OptionValueFunction;
 use crate::paint::Painter;
+use crate::plusminus::*;
 use crate::style::Style;
 
 pub fn make_feature() -> Vec<(String, OptionValueFunction)> {
@@ -24,49 +27,67 @@ pub fn make_feature() -> Vec<(String, OptionValueFunction)> {
     ])
 }
 
-pub enum PanelSide {
-    Left,
-    Right,
-}
-
-pub struct SideBySideData {
-    pub left_panel: Panel,
-    pub right_panel: Panel,
-}
-
 pub struct Panel {
     pub width: usize,
     pub offset: usize,
 }
 
+// Same as plusminus::PlusMinusIndex but with Left/Right instead
+// of Minus/Plus enum names. Only used in a side-by-side context.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum PanelSide {
+    Left,
+    Right,
+}
+
+use PanelSide::*;
+
+impl<T> Index<PanelSide> for PlusMinus<T> {
+    type Output = T;
+    fn index(&self, side: PanelSide) -> &Self::Output {
+        match side {
+            PanelSide::Left => &self.minus,
+            PanelSide::Right => &self.plus,
+        }
+    }
+}
+
+impl<T> IndexMut<PanelSide> for PlusMinus<T> {
+    fn index_mut(&mut self, side: PanelSide) -> &mut Self::Output {
+        match side {
+            PanelSide::Left => &mut self.minus,
+            PanelSide::Right => &mut self.plus,
+        }
+    }
+}
+
+pub type SideBySideData = PlusMinus<Panel>;
+
 impl SideBySideData {
-    pub fn new(decorations_width: &cli::Width, available_terminal_width: &usize) -> Self {
+    pub fn new_sbs(decorations_width: &cli::Width, available_terminal_width: &usize) -> Self {
         let panel_width = match decorations_width {
             cli::Width::Fixed(w) => w / 2,
             _ => available_terminal_width / 2,
         };
-        Self {
-            left_panel: Panel {
+        SideBySideData::new(
+            Panel {
                 width: panel_width,
                 offset: 0,
             },
-            right_panel: Panel {
+            Panel {
                 width: panel_width,
                 offset: 0,
             },
-        }
+        )
     }
 }
 
 /// Emit a sequence of minus and plus lines in side-by-side mode.
 #[allow(clippy::too_many_arguments)]
 pub fn paint_minus_and_plus_lines_side_by_side<'a>(
-    minus_syntax_style_sections: Vec<Vec<(SyntectStyle, &str)>>,
-    minus_diff_style_sections: Vec<Vec<(Style, &str)>>,
-    minus_states: Vec<&'a State>,
-    plus_syntax_style_sections: Vec<Vec<(SyntectStyle, &str)>>,
-    plus_diff_style_sections: Vec<Vec<(Style, &str)>>,
-    plus_states: Vec<&'a State>,
+    syntax_left_right: PlusMinus<Vec<Vec<(SyntectStyle, &str)>>>,
+    diff_left_right: PlusMinus<Vec<Vec<(Style, &str)>>>,
+    states_left_right: PlusMinus<Vec<&'a State>>,
     line_alignment: Vec<(Option<usize>, Option<usize>)>,
     output_buffer: &mut String,
     config: &Config,
@@ -76,10 +97,10 @@ pub fn paint_minus_and_plus_lines_side_by_side<'a>(
     for (minus_line_index, plus_line_index) in line_alignment {
         output_buffer.push_str(&paint_left_panel_minus_line(
             minus_line_index,
-            &minus_syntax_style_sections,
-            &minus_diff_style_sections,
+            &syntax_left_right[Left],
+            &diff_left_right[Left],
             match minus_line_index {
-                Some(i) => minus_states[i],
+                Some(i) => states_left_right[Left][i],
                 None => &State::HunkMinus(None),
             },
             line_numbers_data,
@@ -93,10 +114,10 @@ pub fn paint_minus_and_plus_lines_side_by_side<'a>(
         ));
         output_buffer.push_str(&paint_right_panel_plus_line(
             plus_line_index,
-            &plus_syntax_style_sections,
-            &plus_diff_style_sections,
+            &syntax_left_right[Right],
+            &diff_left_right[Right],
             match plus_line_index {
-                Some(i) => plus_states[i],
+                Some(i) => states_left_right[Right][i],
                 None => &State::HunkPlus(None),
             },
             line_numbers_data,
@@ -140,8 +161,8 @@ pub fn paint_zero_lines_side_by_side(
         // TODO: Avoid doing the superimpose_style_sections work twice.
         // HACK: These are getting incremented twice, so knock them back down once.
         if let Some(d) = line_numbers_data.as_mut() {
-            d.hunk_minus_line_number -= 1;
-            d.hunk_plus_line_number -= 1;
+            d.line_number[Left] -= 1;
+            d.line_number[Right] -= 1;
         }
         right_pad_left_panel_line(
             &mut left_panel_line,
@@ -194,7 +215,7 @@ fn paint_left_panel_minus_line<'a>(
         diff_style_sections,
         state,
         line_numbers_data,
-        PanelSide::Left,
+        Left,
         painted_prefix,
         config,
     );
@@ -228,7 +249,7 @@ fn paint_right_panel_plus_line<'a>(
         diff_style_sections,
         state,
         line_numbers_data,
-        PanelSide::Right,
+        Right,
         painted_prefix,
         config,
     );
@@ -341,12 +362,12 @@ fn paint_minus_or_plus_panel_line(
         (s, t) if s == t => {}
         (State::HunkPlus(_), State::HunkMinus(_)) => {
             if let Some(d) = line_numbers_data.as_mut() {
-                d.hunk_minus_line_number -= 1;
+                d.line_number[Left] -= 1;
             }
         }
         (State::HunkMinus(_), State::HunkPlus(_)) => {
             if let Some(d) = line_numbers_data.as_mut() {
-                d.hunk_plus_line_number -= 1;
+                d.line_number[Right] -= 1;
             }
         }
         _ => unreachable!(),
@@ -385,7 +406,7 @@ fn right_pad_left_panel_line(
     };
     // Pad with (maybe painted) spaces to the panel width.
     let text_width = ansi::measure_text_width(panel_line);
-    let panel_width = config.side_by_side_data.left_panel.width;
+    let panel_width = config.side_by_side_data[Left].width;
     if text_width < panel_width {
         let fill_style = get_right_fill_style_for_left_panel(
             panel_line_is_empty,
@@ -420,8 +441,8 @@ fn right_fill_right_panel_line(
     config: &Config,
 ) {
     *panel_line = ansi::truncate_str(
-        panel_line,
-        config.side_by_side_data.right_panel.width,
+        &panel_line,
+        config.side_by_side_data[Right].width,
         &config.truncation_symbol,
     )
     .to_string();
