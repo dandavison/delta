@@ -158,6 +158,7 @@ pub fn set_options(
             minus_non_emph_style,
             minus_non_emph_style,
             navigate,
+            line_fill_method,
             line_numbers,
             line_numbers_left_format,
             line_numbers_left_style,

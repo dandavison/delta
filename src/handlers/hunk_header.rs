@@ -28,7 +28,7 @@ use super::draw;
 use crate::config::Config;
 use crate::delta::{self, State, StateMachine};
 use crate::features;
-use crate::paint::Painter;
+use crate::paint::{BgShouldFill, Painter};
 use crate::style::DecorationStyle;
 
 impl<'a> StateMachine<'a> {
@@ -247,7 +247,7 @@ fn write_to_output_buffer(
             &line,
             config.hunk_header_style,
             delta::State::HunkHeader("".to_owned(), "".to_owned()),
-            false,
+            BgShouldFill::No,
         );
         painter.output_buffer.pop(); // trim newline
     }
