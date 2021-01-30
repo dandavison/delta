@@ -61,6 +61,23 @@ impl SideBySideData {
     }
 }
 
+pub fn available_line_width(
+    config: &Config,
+    data: &line_numbers::LineNumbersData,
+) -> line_numbers::SideBySideLineWidth {
+    let linennumbers_width = data.formatted_width();
+
+    // The width can be reduced by the line numbers and/or a possibly kept 1-wide "+/-/ " prefix.
+    let line_width = |side: PanelSide| {
+        config.side_by_side_data[side]
+            .width
+            .saturating_sub(linennumbers_width[side])
+            .saturating_sub(config.keep_plus_minus_markers as usize)
+    };
+
+    LeftRight::new(line_width(Left), line_width(Right))
+}
+
 /// Emit a sequence of minus and plus lines in side-by-side mode.
 #[allow(clippy::too_many_arguments)]
 pub fn paint_minus_and_plus_lines_side_by_side<'a>(

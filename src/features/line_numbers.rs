@@ -136,13 +136,15 @@ lazy_static! {
     static ref LINE_NUMBERS_PLACEHOLDER_REGEX: Regex = format::make_placeholder_regex(&["nm", "np"]);
 }
 
-#[derive(Default)]
+#[derive(Default, Debug)]
 pub struct LineNumbersData<'a> {
     pub format_data: PlusMinus<format::FormatStringData<'a>>,
     pub line_number: PlusMinus<usize>,
     pub hunk_max_line_number_width: usize,
     pub plus_file: String,
 }
+
+pub type SideBySideLineWidth = PlusMinus<usize>;
 
 // Although it's probably unusual, a single format string can contain multiple placeholders. E.g.
 // line-numbers-right-format = "{nm} {np}|"
@@ -169,6 +171,32 @@ impl<'a> LineNumbersData<'a> {
         self.hunk_max_line_number_width =
             1 + (hunk_max_line_number as f64).log10().floor() as usize;
         self.plus_file = plus_file;
+    }
+
+    pub fn formatted_width(&self) -> SideBySideLineWidth {
+        let format_data_width = |format_data: &format::FormatStringData<'a>| {
+            // Provide each Placeholder with the max_line_number_width to calculate the
+            // actual width. Only use prefix and suffix of the last element, otherwise
+            // only the prefix (as the suffix also contains the following prefix).
+            format_data
+                .last()
+                .map(|last| {
+                    let (prefix_width, suffix_width) = last.width(self.hunk_max_line_number_width);
+                    format_data
+                        .iter()
+                        .rev()
+                        .skip(1)
+                        .map(|p| p.width(self.hunk_max_line_number_width).0)
+                        .sum::<usize>()
+                        + prefix_width
+                        + suffix_width
+                })
+                .unwrap_or(0)
+        };
+        PlusMinus::new(
+            format_data_width(&self.format_data[Left]),
+            format_data_width(&self.format_data[Right]),
+        )
     }
 }
 
@@ -258,6 +286,8 @@ pub mod tests {
                 alignment_spec: None,
                 width: None,
                 suffix: "",
+                prefix_len: 0,
+                suffix_len: 0,
             }]
         )
     }
@@ -272,6 +302,8 @@ pub mod tests {
                 alignment_spec: None,
                 width: Some(4),
                 suffix: "",
+                prefix_len: 0,
+                suffix_len: 0,
             }]
         )
     }
@@ -286,6 +318,8 @@ pub mod tests {
                 alignment_spec: Some(">"),
                 width: Some(4),
                 suffix: "",
+                prefix_len: 0,
+                suffix_len: 0,
             }]
         )
     }
@@ -300,6 +334,8 @@ pub mod tests {
                 alignment_spec: Some(">"),
                 width: Some(4),
                 suffix: "",
+                prefix_len: 0,
+                suffix_len: 0,
             }]
         )
     }
@@ -314,6 +350,8 @@ pub mod tests {
                 alignment_spec: Some(">"),
                 width: Some(4),
                 suffix: "@@",
+                prefix_len: 2,
+                suffix_len: 2,
             }]
         )
     }
@@ -332,6 +370,8 @@ pub mod tests {
                     alignment_spec: Some("<"),
                     width: Some(3),
                     suffix: "@@---{np:_>4}**",
+                    prefix_len: 2,
+                    suffix_len: 15,
                 },
                 format::FormatStringPlaceholderData {
                     prefix: "@@---",
@@ -339,6 +379,8 @@ pub mod tests {
                     alignment_spec: Some(">"),
                     width: Some(4),
                     suffix: "**",
+                    prefix_len: 5,
+                    suffix_len: 2,
                 }
             ]
         )
@@ -354,8 +396,76 @@ pub mod tests {
                 alignment_spec: None,
                 width: None,
                 suffix: "__@@---**",
+                prefix_len: 0,
+                suffix_len: 9,
             },]
         )
+    }
+
+    #[test]
+    fn test_line_number_placeholder_width_one() {
+        use format::parse_line_number_format;
+
+        let data = parse_line_number_format("", &LINE_NUMBERS_PLACEHOLDER_REGEX);
+        assert_eq!(data[0].width(0), (0, 0));
+
+        let data = parse_line_number_format("", &LINE_NUMBERS_PLACEHOLDER_REGEX);
+        assert_eq!(data[0].width(4), (0, 0));
+
+        let data = parse_line_number_format("│+│", &LINE_NUMBERS_PLACEHOLDER_REGEX);
+        assert_eq!(data[0].width(4), (0, 3));
+
+        let data = parse_line_number_format("{np}", &LINE_NUMBERS_PLACEHOLDER_REGEX);
+        assert_eq!(data[0].width(4), (4, 0));
+
+        let data = parse_line_number_format("│{np}│", &LINE_NUMBERS_PLACEHOLDER_REGEX);
+        assert_eq!(data[0].width(4), (5, 1));
+
+        let data = parse_line_number_format("│{np:2}│", &LINE_NUMBERS_PLACEHOLDER_REGEX);
+        assert_eq!(data[0].width(4), (5, 1));
+
+        let data = parse_line_number_format("│{np:6}│", &LINE_NUMBERS_PLACEHOLDER_REGEX);
+        assert_eq!(data[0].width(4), (7, 1));
+    }
+
+    #[test]
+    fn test_line_number_placeholder_width_two() {
+        use format::parse_line_number_format;
+
+        let data = parse_line_number_format("│{nm}│{np}│", &LINE_NUMBERS_PLACEHOLDER_REGEX);
+        assert_eq!(data[0].width(1), (2, 6));
+        assert_eq!(data[1].width(1), (2, 1));
+
+        let data = parse_line_number_format("│{nm:_>5}│{np:1}│", &LINE_NUMBERS_PLACEHOLDER_REGEX);
+        assert_eq!(data[0].width(1), (6, 8));
+        assert_eq!(data[1].width(1), (2, 1));
+
+        let data = parse_line_number_format("│{nm}│{np:5}│", &LINE_NUMBERS_PLACEHOLDER_REGEX);
+        assert_eq!(data[0].width(7), (8, 8));
+        assert_eq!(data[1].width(7), (8, 1));
+    }
+
+    #[test]
+    fn test_line_numbers_data() {
+        let mut data = LineNumbersData::from_format_strings("", "");
+        data.initialize_hunk(&[(10, 11), (10000, 100001)], "a".into());
+        assert_eq!(data.formatted_width(), PlusMinus::new(0, 0));
+
+        let mut data = LineNumbersData::from_format_strings("│", "│+│");
+        data.initialize_hunk(&[(10, 11), (10000, 100001)], "a".into());
+        assert_eq!(data.formatted_width(), PlusMinus::new(1, 3));
+
+        let mut data = LineNumbersData::from_format_strings("│{nm:^3}│", "│{np:^3}│");
+        data.initialize_hunk(&[(10, 11), (10000, 100001)], "a".into());
+        assert_eq!(data.formatted_width(), PlusMinus::new(8, 8));
+
+        let mut data = LineNumbersData::from_format_strings("│{nm:^3}│ │{np:<12}│ │{nm}│", "");
+        data.initialize_hunk(&[(10, 11), (10000, 100001)], "a".into());
+        assert_eq!(data.formatted_width(), PlusMinus::new(32, 0));
+
+        let mut data = LineNumbersData::from_format_strings("│{np:^3}│ │{nm:<12}│ │{np}│", "");
+        data.initialize_hunk(&[(10, 11), (10000, 100001)], "a".into());
+        assert_eq!(data.formatted_width(), PlusMinus::new(32, 0));
     }
 
     fn _get_capture<'a>(i: usize, j: usize, caps: &'a Vec<Captures>) -> &'a str {
