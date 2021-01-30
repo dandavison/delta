@@ -582,7 +582,7 @@ pub mod tests {
         let mut lines = output.lines().skip(7);
         let (line_1, line_2) = (lines.next().unwrap(), lines.next().unwrap());
         assert_eq!(strip_ansi_codes(line_1), " 1  ⋮    │a = 1");
-        assert_eq!(strip_ansi_codes(line_2), " 2  ⋮    │b = 2");
+        assert_eq!(strip_ansi_codes(line_2), " 2  ⋮    │b = 23456");
     }
 
     #[test]
@@ -606,7 +606,7 @@ pub mod tests {
         let mut lines = output.lines().skip(7);
         let (line_1, line_2) = (lines.next().unwrap(), lines.next().unwrap());
         assert_eq!(strip_ansi_codes(line_1), "    ⋮ 1  │a = 1");
-        assert_eq!(strip_ansi_codes(line_2), "    ⋮ 2  │b = 2");
+        assert_eq!(strip_ansi_codes(line_2), "    ⋮ 2  │b = 234567");
     }
 
     #[test]
@@ -688,7 +688,7 @@ pub mod tests {
         let mut lines = output.lines().skip(5);
         let (line_1, line_2) = (lines.next().unwrap(), lines.next().unwrap());
         assert_eq!(strip_ansi_codes(line_1), " 1  ⋮    │-a = 1");
-        assert_eq!(strip_ansi_codes(line_2), " 2  ⋮    │-b = 2");
+        assert_eq!(strip_ansi_codes(line_2), " 2  ⋮    │-b = 23456");
     }
 
     #[test]
@@ -713,7 +713,7 @@ index 223ca50..e69de29 100644
 +++ w/a.py
 @@ -1,2 +0,0 @@
 -a = 1
--b = 2
+-b = 23456
 ";
 
     pub const TWO_PLUS_LINES_DIFF: &str = "\
@@ -724,7 +724,7 @@ index 0000000..223ca50
 +++ i/a.py
 @@ -0,0 +1,2 @@
 +a = 1
-+b = 2
++b = 234567
 ";
 
     pub const ONE_MINUS_ONE_PLUS_LINE_DIFF: &str = "\

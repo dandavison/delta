@@ -152,7 +152,7 @@ pub mod ansi_test_utils {
             &mut None,
             Some(config.null_style.paint(prefix)),
             None,
-            None,
+            paint::BgFillWidth::default(),
         );
         output_buffer
     }

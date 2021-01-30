@@ -2,6 +2,7 @@ use std::ops::{Index, IndexMut};
 
 use itertools::Itertools;
 use syntect::highlighting::Style as SyntectStyle;
+use unicode_segmentation::UnicodeSegmentation;
 
 use crate::ansi;
 use crate::cli;
@@ -9,6 +10,8 @@ use crate::config::Config;
 use crate::delta::State;
 use crate::features::line_numbers;
 use crate::features::OptionValueFunction;
+use crate::paint::BgFillMethod;
+use crate::paint::BgFillWidth;
 use crate::paint::Painter;
 use crate::style::Style;
 
@@ -117,6 +120,15 @@ pub fn available_line_width(
     LeftRight::new(line_width(PanelSide::Left), line_width(PanelSide::Right))
 }
 
+pub fn line_is_too_long(line: &str, line_width: usize) -> bool {
+    let line_sum = line.graphemes(true).count();
+
+    // `line_sum` is too large, because both a leading "+/-/ " and a trailing
+    // newline are present, counted, but are never printed. So allow two more
+    // characters.
+    line_sum > line_width + 2
+}
+
 /// Emit a sequence of minus and plus lines in side-by-side mode.
 #[allow(clippy::too_many_arguments)]
 pub fn paint_minus_and_plus_lines_side_by_side<'a>(
@@ -127,7 +139,7 @@ pub fn paint_minus_and_plus_lines_side_by_side<'a>(
     output_buffer: &mut String,
     config: &Config,
     line_numbers_data: &mut Option<&mut line_numbers::LineNumbersData>,
-    background_color_extends_to_terminal_width: Option<bool>,
+    background_color_extends_to_terminal_width: LeftRight<BgFillWidth>,
 ) {
     for (minus_line_index, plus_line_index) in line_alignment {
         output_buffer.push_str(&paint_left_panel_minus_line(
@@ -144,7 +156,7 @@ pub fn paint_minus_and_plus_lines_side_by_side<'a>(
             } else {
                 None
             },
-            background_color_extends_to_terminal_width,
+            background_color_extends_to_terminal_width[Left],
             config,
         ));
         output_buffer.push_str(&paint_right_panel_plus_line(
@@ -161,7 +173,7 @@ pub fn paint_minus_and_plus_lines_side_by_side<'a>(
             } else {
                 None
             },
-            background_color_extends_to_terminal_width,
+            background_color_extends_to_terminal_width[Right],
             config,
         ));
         output_buffer.push('\n');
@@ -172,63 +184,50 @@ pub fn paint_minus_and_plus_lines_side_by_side<'a>(
 pub fn paint_zero_lines_side_by_side(
     syntax_style_sections: Vec<Vec<(SyntectStyle, &str)>>,
     diff_style_sections: Vec<Vec<(Style, &str)>>,
-    state: &State,
     output_buffer: &mut String,
     config: &Config,
     line_numbers_data: &mut Option<&mut line_numbers::LineNumbersData>,
     painted_prefix: Option<ansi_term::ANSIString>,
-    background_color_extends_to_terminal_width: Option<bool>,
+    background_color_extends_to_terminal_width: BgFillWidth,
 ) {
+    let state = State::HunkZero;
+
     for (line_index, (syntax_sections, diff_sections)) in syntax_style_sections
         .iter()
         .zip_eq(diff_style_sections.iter())
         .enumerate()
     {
-        let (mut left_panel_line, left_panel_line_is_empty) = Painter::paint_line(
-            syntax_sections,
-            diff_sections,
-            state,
-            line_numbers_data,
-            Some(PanelSide::Left),
-            painted_prefix.clone(),
-            config,
-        );
-        // TODO: Avoid doing the superimpose_style_sections work twice.
-        // HACK: These are getting incremented twice, so knock them back down once.
-        if let Some(d) = line_numbers_data.as_mut() {
-            d.line_number[Left] -= 1;
-            d.line_number[Right] -= 1;
-        }
-        right_pad_left_panel_line(
-            &mut left_panel_line,
-            left_panel_line_is_empty,
-            Some(line_index),
-            &diff_style_sections,
-            &State::HunkZero,
-            background_color_extends_to_terminal_width,
-            config,
-        );
-        output_buffer.push_str(&left_panel_line);
+        for panel_side in &[PanelSide::Left, PanelSide::Right] {
+            let (mut panel_line, panel_line_is_empty) = Painter::paint_line(
+                syntax_sections,
+                diff_sections,
+                &state,
+                line_numbers_data,
+                Some(*panel_side),
+                painted_prefix.clone(),
+                config,
+            );
+            pad_panel_line_to_width(
+                &mut panel_line,
+                panel_line_is_empty,
+                Some(line_index),
+                &diff_style_sections,
+                &state,
+                *panel_side,
+                background_color_extends_to_terminal_width,
+                config,
+            );
+            output_buffer.push_str(&panel_line);
 
-        let (mut right_panel_line, right_panel_line_is_empty) = Painter::paint_line(
-            syntax_sections,
-            diff_sections,
-            state,
-            line_numbers_data,
-            Some(PanelSide::Right),
-            painted_prefix.clone(),
-            config,
-        );
-        right_fill_right_panel_line(
-            &mut right_panel_line,
-            right_panel_line_is_empty,
-            Some(line_index),
-            &diff_style_sections,
-            &State::HunkZero,
-            background_color_extends_to_terminal_width,
-            config,
-        );
-        output_buffer.push_str(&right_panel_line);
+            if panel_side == &PanelSide::Left {
+                // TODO: Avoid doing the superimpose_style_sections work twice.
+                // HACK: These are getting incremented twice, so knock them back down once.
+                if let Some(d) = line_numbers_data.as_mut() {
+                    d.line_number[Left] -= 1;
+                    d.line_number[Right] -= 1;
+                }
+            }
+        }
         output_buffer.push('\n');
     }
 }
@@ -241,7 +240,7 @@ fn paint_left_panel_minus_line<'a>(
     state: &'a State,
     line_numbers_data: &mut Option<&mut line_numbers::LineNumbersData>,
     painted_prefix: Option<ansi_term::ANSIString>,
-    background_color_extends_to_terminal_width: Option<bool>,
+    background_color_extends_to_terminal_width: BgFillWidth,
     config: &Config,
 ) -> String {
     let (mut panel_line, panel_line_is_empty) = paint_minus_or_plus_panel_line(
@@ -254,12 +253,13 @@ fn paint_left_panel_minus_line<'a>(
         painted_prefix,
         config,
     );
-    right_pad_left_panel_line(
+    pad_panel_line_to_width(
         &mut panel_line,
         panel_line_is_empty,
         line_index,
         diff_style_sections,
         state,
+        PanelSide::Left,
         background_color_extends_to_terminal_width,
         config,
     );
@@ -275,7 +275,7 @@ fn paint_right_panel_plus_line<'a>(
     state: &'a State,
     line_numbers_data: &mut Option<&mut line_numbers::LineNumbersData>,
     painted_prefix: Option<ansi_term::ANSIString>,
-    background_color_extends_to_terminal_width: Option<bool>,
+    background_color_extends_to_terminal_width: BgFillWidth,
     config: &Config,
 ) -> String {
     let (mut panel_line, panel_line_is_empty) = paint_minus_or_plus_panel_line(
@@ -288,41 +288,53 @@ fn paint_right_panel_plus_line<'a>(
         painted_prefix,
         config,
     );
-    right_fill_right_panel_line(
+
+    pad_panel_line_to_width(
         &mut panel_line,
         panel_line_is_empty,
         line_index,
         diff_style_sections,
         state,
+        PanelSide::Right,
         background_color_extends_to_terminal_width,
         config,
     );
+
     panel_line
 }
 
-fn get_right_fill_style_for_left_panel(
+fn get_right_fill_style_for_panel(
     line_is_empty: bool,
     line_index: Option<usize>,
     diff_style_sections: &[Vec<(Style, &str)>],
     state: &State,
-    background_color_extends_to_terminal_width: Option<bool>,
+    panel_side: PanelSide,
+    background_color_extends_to_terminal_width: BgFillWidth,
     config: &Config,
-) -> Style {
+) -> (Option<BgFillMethod>, Style) {
+    // If in the the left panel then it must be filled with spaces.
+    let none_or_override = if panel_side == PanelSide::Left {
+        Some(BgFillMethod::Spaces)
+    } else {
+        None
+    };
+
     match (line_is_empty, line_index) {
-        (true, _) => config.null_style,
-        (false, None) => config.null_style,
+        (true, _) => (none_or_override, config.null_style),
+        (false, None) => (none_or_override, config.null_style),
         (false, Some(index)) => {
-            let (should_fill, fill_style) =
+            let (bg_fill_mode, fill_style) =
                 Painter::get_should_right_fill_background_color_and_fill_style(
                     &diff_style_sections[index],
                     state,
                     background_color_extends_to_terminal_width,
                     config,
                 );
-            if should_fill {
-                fill_style
-            } else {
-                config.null_style
+
+            match bg_fill_mode {
+                None => (none_or_override, config.null_style),
+                _ if panel_side == PanelSide::Left => (Some(BgFillMethod::Spaces), fill_style),
+                _ => (bg_fill_mode, fill_style),
             }
         }
     }
@@ -410,21 +422,20 @@ fn paint_minus_or_plus_panel_line(
     (line, line_is_empty)
 }
 
-/// Right-pad a line in the left panel with (possibly painted) spaces. A line in the left panel is
-/// either a minus line or a zero line.
-#[allow(clippy::comparison_chain)]
-fn right_pad_left_panel_line(
+/// Right-fill the background color of a line in a panel. If in the left panel this is always
+/// done with spaces. The right panel can be filled with spaces or using ANSI sequences
+/// instructing the terminal emulator to fill the background color rightwards.
+#[allow(clippy::too_many_arguments, clippy::comparison_chain)]
+fn pad_panel_line_to_width(
     panel_line: &mut String,
     panel_line_is_empty: bool,
     line_index: Option<usize>,
     diff_style_sections: &[Vec<(Style, &str)>],
     state: &State,
-    background_color_extends_to_terminal_width: Option<bool>,
+    panel_side: PanelSide,
+    background_color_extends_to_terminal_width: BgFillWidth,
     config: &Config,
 ) {
-    // The left panel uses spaces to pad to the midpoint. This differs from the right panel,
-    // and from the non-side-by-side implementation.
-
     // Emit empty line marker if the panel line is empty but not empty-by-construction. IOW if the
     // other panel contains a real line, and we are currently emitting an empty counterpart panel
     // to form the other half of the line, then don't emit the empty line marker.
@@ -435,72 +446,6 @@ fn right_pad_left_panel_line(
                 panel_line,
                 Some(" "),
             ),
-            State::HunkZero => {}
-            _ => unreachable!(),
-        };
-    };
-    // Pad with (maybe painted) spaces to the panel width.
-    let text_width = ansi::measure_text_width(&panel_line);
-    let panel_width = config.side_by_side_data[Left].width;
-    if text_width < panel_width {
-        let fill_style = get_right_fill_style_for_left_panel(
-            panel_line_is_empty,
-            line_index,
-            &diff_style_sections,
-            state,
-            background_color_extends_to_terminal_width,
-            config,
-        );
-        panel_line.push_str(
-            &fill_style
-                .paint(" ".repeat(panel_width - text_width))
-                .to_string(),
-        );
-    } else if text_width > panel_width {
-        *panel_line =
-            ansi::truncate_str(panel_line, panel_width, &config.truncation_symbol).to_string();
-    }
-}
-
-/// Right-fill the background color of a line in the right panel. A line in the right panel is
-/// either a zero line or a plus line. The fill is achieved using ANSI sequences instructing the
-/// terminal emulator to fill the background color rightwards; it does not involve appending spaces
-/// to the line.
-fn right_fill_right_panel_line(
-    panel_line: &mut String,
-    panel_line_is_empty: bool,
-    line_index: Option<usize>,
-    diff_style_sections: &[Vec<(Style, &str)>],
-    state: &State,
-    background_color_extends_to_terminal_width: Option<bool>,
-    config: &Config,
-) {
-    *panel_line = ansi::truncate_str(
-        &panel_line,
-        config.side_by_side_data[Right].width,
-        &config.truncation_symbol,
-    )
-    .to_string();
-
-    // Unlike `right_pad_left_panel_line`, the line-end emissions here are basically the same as
-    // the non side-by-side implementation in Painter::paint_lines.
-    let (should_right_fill_background_color, fill_style) = if let Some(index) = line_index {
-        Painter::get_should_right_fill_background_color_and_fill_style(
-            &diff_style_sections[index],
-            state,
-            background_color_extends_to_terminal_width,
-            config,
-        )
-    } else {
-        (false, config.null_style)
-    };
-
-    if should_right_fill_background_color {
-        Painter::right_fill_background_color(panel_line, fill_style);
-    } else if panel_line_is_empty && line_index.is_some() {
-        // Emit empty line marker when the panel line is empty but not empty-by-construction. See
-        // parallel comment in `paint_left_panel_minus_line`.
-        match state {
             State::HunkPlus(_) => Painter::mark_empty_line(
                 &config.plus_empty_line_marker_style,
                 panel_line,
@@ -508,8 +453,39 @@ fn right_fill_right_panel_line(
             ),
             State::HunkZero => {}
             _ => unreachable!(),
-        }
+        };
     };
+
+    let text_width = ansi::measure_text_width(&panel_line);
+    let panel_width = config.side_by_side_data[panel_side].width;
+
+    if text_width > panel_width {
+        *panel_line =
+            ansi::truncate_str(panel_line, panel_width, &config.truncation_symbol).to_string();
+    }
+
+    let (bg_fill_mode, fill_style) = get_right_fill_style_for_panel(
+        panel_line_is_empty,
+        line_index,
+        &diff_style_sections,
+        state,
+        panel_side,
+        background_color_extends_to_terminal_width,
+        config,
+    );
+
+    match bg_fill_mode {
+        Some(BgFillMethod::TryAnsiSequence) => {
+            Painter::right_fill_background_color(panel_line, fill_style)
+        }
+        Some(BgFillMethod::Spaces) if text_width >= panel_width => (),
+        Some(BgFillMethod::Spaces) => panel_line.push_str(
+            &fill_style
+                .paint(" ".repeat(panel_width - text_width))
+                .to_string(),
+        ),
+        None => (),
+    }
 }
 
 #[cfg(test)]
@@ -527,7 +503,18 @@ pub mod tests {
         let mut lines = output.lines().skip(7);
         let (line_1, line_2) = (lines.next().unwrap(), lines.next().unwrap());
         assert_eq!("│ 1  │a = 1         │    │", strip_ansi_codes(line_1));
-        assert_eq!("│ 2  │b = 2         │    │", strip_ansi_codes(line_2));
+        assert_eq!("│ 2  │b = 23456     │    │", strip_ansi_codes(line_2));
+    }
+
+    #[test]
+    fn test_two_minus_lines_truncated() {
+        let mut config = make_config_from_args(&["--side-by-side", "--width", "28"]);
+        config.truncation_symbol = ">".into();
+        let output = run_delta(TWO_MINUS_LINES_DIFF, &config);
+        let mut lines = output.lines().skip(7);
+        let (line_1, line_2) = (lines.next().unwrap(), lines.next().unwrap());
+        assert_eq!("│ 1  │a = 1   │    │", strip_ansi_codes(line_1));
+        assert_eq!("│ 2  │b = 234>│    │", strip_ansi_codes(line_2));
     }
 
     #[test]
@@ -537,7 +524,32 @@ pub mod tests {
         let mut lines = output.lines().skip(7);
         let (line_1, line_2) = (lines.next().unwrap(), lines.next().unwrap());
         assert_eq!("│    │              │ 1  │a = 1", strip_ansi_codes(line_1));
-        assert_eq!("│    │              │ 2  │b = 2", strip_ansi_codes(line_2));
+        assert_eq!(
+            "│    │              │ 2  │b = 234567",
+            strip_ansi_codes(line_2)
+        );
+    }
+
+    #[test]
+    fn test_two_plus_lines_truncated() {
+        let mut config = make_config_from_args(&["--side-by-side", "--width", "30"]);
+        config.truncation_symbol = ">".into();
+        let output = run_delta(TWO_PLUS_LINES_DIFF, &config);
+        let mut lines = output.lines().skip(7);
+        let (line_1, line_2) = (lines.next().unwrap(), lines.next().unwrap());
+        assert_eq!("│    │         │ 1  │a = 1    ", strip_ansi_codes(line_1));
+        assert_eq!("│    │         │ 2  │b = 2345>", strip_ansi_codes(line_2));
+    }
+
+    #[test]
+    fn test_two_plus_lines_exact_fit() {
+        let mut config = make_config_from_args(&["--side-by-side", "--width", "32"]);
+        config.truncation_symbol = ">".into();
+        let output = run_delta(TWO_PLUS_LINES_DIFF, &config);
+        let mut lines = output.lines().skip(7);
+        let (line_1, line_2) = (lines.next().unwrap(), lines.next().unwrap());
+        assert_eq!("│    │          │ 1  │a = 1", strip_ansi_codes(line_1));
+        assert_eq!("│    │          │ 2  │b = 234567", strip_ansi_codes(line_2));
     }
 
     #[test]
