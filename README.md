@@ -73,6 +73,8 @@ The most convenient way to configure delta is with a `[delta]` section in `~/.gi
 
 </sub>
 
+Use `delta --help` to see all the available options.
+
 To quickly change delta configuration on-the-fly, use the `git config --global` command. For example
 
 ```bash
@@ -282,7 +284,7 @@ Behind the scenes, delta uses `less` for paging. The version of `less` that come
 
 #### Git config files
 
-Set delta to be git's pager in your `.gitconfig`. Delta has many options to alter colors and other details of the output. An example is
+Set delta to be git's pager in your `.gitconfig`. Delta has many options to alter colors and other details of the output; `delta --help` shows them all. An example is
 ```gitconfig
 [core]
     pager = delta
