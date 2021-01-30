@@ -12,6 +12,7 @@ use crate::delta::State;
 use crate::edits;
 use crate::features::line_numbers;
 use crate::features::side_by_side;
+use crate::features::side_by_side::LeftRight;
 use crate::paint::superimpose_style_sections::superimpose_style_sections;
 use crate::style::Style;
 
@@ -140,13 +141,24 @@ impl<'a> Painter<'a> {
             Self::get_diff_style_sections(&self.minus_lines, &self.plus_lines, self.config);
 
         if self.config.side_by_side {
-            side_by_side::paint_minus_and_plus_lines_side_by_side(
+            let syntax_left_right = LeftRight::new(
                 minus_line_syntax_style_sections,
-                minus_line_diff_style_sections,
-                self.minus_lines.iter().map(|(_, state)| state).collect(),
                 plus_line_syntax_style_sections,
+            );
+            let diff_left_right = LeftRight::new(
+                minus_line_diff_style_sections,
                 plus_line_diff_style_sections,
+            );
+
+            let states_left_right = LeftRight::new(
+                self.minus_lines.iter().map(|(_, state)| state).collect(),
                 self.plus_lines.iter().map(|(_, state)| state).collect(),
+            );
+
+            side_by_side::paint_minus_and_plus_lines_side_by_side(
+                syntax_left_right,
+                diff_left_right,
+                states_left_right,
                 line_alignment,
                 &mut self.output_buffer,
                 self.config,

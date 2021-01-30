@@ -143,7 +143,7 @@ impl From<cli::Opt> for Config {
             process::exit(1);
         });
 
-        let side_by_side_data = side_by_side::SideBySideData::new(
+        let side_by_side_data = side_by_side::SideBySideData::new_sbs(
             &opt.computed.decorations_width,
             &opt.computed.available_terminal_width,
         );
