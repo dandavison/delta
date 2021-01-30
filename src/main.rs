@@ -20,6 +20,7 @@ mod handlers;
 mod options;
 mod paint;
 mod parse_style;
+mod plusminus;
 mod style;
 mod subcommands;
 mod syntect_color;

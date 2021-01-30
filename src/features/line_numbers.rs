@@ -6,9 +6,10 @@ use regex::Regex;
 use crate::config;
 use crate::delta::State;
 use crate::features::hyperlinks;
-use crate::features::side_by_side;
+use crate::features::side_by_side::PanelSide;
 use crate::features::OptionValueFunction;
 use crate::format;
+use crate::plusminus::*;
 use crate::style::Style;
 
 pub fn make_feature() -> Vec<(String, OptionValueFunction)> {
@@ -65,11 +66,11 @@ pub fn make_feature() -> Vec<(String, OptionValueFunction)> {
 pub fn format_and_paint_line_numbers<'a>(
     line_numbers_data: &'a mut LineNumbersData,
     state: &State,
-    side_by_side_panel: Option<side_by_side::PanelSide>,
+    side_by_side_panel: Option<PanelSide>,
     config: &'a config::Config,
 ) -> Vec<ansi_term::ANSIGenericString<'a, str>> {
-    let m_ref = &mut line_numbers_data.hunk_minus_line_number;
-    let p_ref = &mut line_numbers_data.hunk_plus_line_number;
+    let nr_left = line_numbers_data.line_number[Minus];
+    let nr_right = line_numbers_data.line_number[Plus];
     let (minus_style, zero_style, plus_style) = (
         config.line_numbers_minus_style,
         config.line_numbers_zero_style,
@@ -77,20 +78,17 @@ pub fn format_and_paint_line_numbers<'a>(
     );
     let ((minus_number, plus_number), (minus_style, plus_style)) = match state {
         State::HunkMinus(_) => {
-            let m = *m_ref;
-            *m_ref += 1;
-            ((Some(m), None), (minus_style, plus_style))
+            line_numbers_data.line_number[Minus] += 1;
+            ((Some(nr_left), None), (minus_style, plus_style))
         }
         State::HunkZero => {
-            let (m, p) = (*m_ref, *p_ref);
-            *m_ref += 1;
-            *p_ref += 1;
-            ((Some(m), Some(p)), (zero_style, zero_style))
+            line_numbers_data.line_number[Minus] += 1;
+            line_numbers_data.line_number[Plus] += 1;
+            ((Some(nr_left), Some(nr_right)), (zero_style, zero_style))
         }
         State::HunkPlus(_) => {
-            let p = *p_ref;
-            *p_ref += 1;
-            ((None, Some(p)), (minus_style, plus_style))
+            line_numbers_data.line_number[Plus] += 1;
+            ((None, Some(nr_right)), (minus_style, plus_style))
         }
         _ => return Vec::new(),
     };
@@ -99,14 +97,14 @@ pub fn format_and_paint_line_numbers<'a>(
 
     let (emit_left, emit_right) = match (config.side_by_side, side_by_side_panel) {
         (false, _) => (true, true),
-        (true, Some(side_by_side::PanelSide::Left)) => (true, false),
-        (true, Some(side_by_side::PanelSide::Right)) => (false, true),
+        (true, Some(PanelSide::Left)) => (true, false),
+        (true, Some(PanelSide::Right)) => (false, true),
         (true, None) => unreachable!(),
     };
 
     if emit_left {
         formatted_numbers.extend(format_and_paint_line_number_field(
-            &line_numbers_data.left_format_data,
+            &line_numbers_data.format_data[PanelSide::Left],
             &config.line_numbers_left_style,
             minus_number,
             plus_number,
@@ -120,7 +118,7 @@ pub fn format_and_paint_line_numbers<'a>(
 
     if emit_right {
         formatted_numbers.extend(format_and_paint_line_number_field(
-            &line_numbers_data.right_format_data,
+            &line_numbers_data.format_data[PanelSide::Right],
             &config.line_numbers_right_style,
             minus_number,
             plus_number,
@@ -140,10 +138,8 @@ lazy_static! {
 
 #[derive(Default)]
 pub struct LineNumbersData<'a> {
-    pub left_format_data: format::FormatStringData<'a>,
-    pub right_format_data: format::FormatStringData<'a>,
-    pub hunk_minus_line_number: usize,
-    pub hunk_plus_line_number: usize,
+    pub format_data: PlusMinus<format::FormatStringData<'a>>,
+    pub line_number: PlusMinus<usize>,
     pub hunk_max_line_number_width: usize,
     pub plus_file: String,
 }
@@ -153,16 +149,11 @@ pub struct LineNumbersData<'a> {
 impl<'a> LineNumbersData<'a> {
     pub fn from_format_strings(left_format: &'a str, right_format: &'a str) -> LineNumbersData<'a> {
         Self {
-            left_format_data: format::parse_line_number_format(
-                left_format,
-                &*LINE_NUMBERS_PLACEHOLDER_REGEX,
+            format_data: PlusMinus::new(
+                format::parse_line_number_format(left_format, &*LINE_NUMBERS_PLACEHOLDER_REGEX),
+                format::parse_line_number_format(right_format, &*LINE_NUMBERS_PLACEHOLDER_REGEX),
             ),
-            right_format_data: format::parse_line_number_format(
-                right_format,
-                &*LINE_NUMBERS_PLACEHOLDER_REGEX,
-            ),
-            hunk_minus_line_number: 0,
-            hunk_plus_line_number: 0,
+            line_number: PlusMinus::new(0, 0),
             hunk_max_line_number_width: 0,
             plus_file: "".to_string(),
         }
@@ -172,8 +163,8 @@ impl<'a> LineNumbersData<'a> {
     pub fn initialize_hunk(&mut self, line_numbers: &[(usize, usize)], plus_file: String) {
         // Typically, line_numbers has length 2: an entry for the minus file, and one for the plus
         // file. In the case of merge commits, it may be longer.
-        self.hunk_minus_line_number = line_numbers[0].0;
-        self.hunk_plus_line_number = line_numbers[line_numbers.len() - 1].0;
+        self.line_number =
+            PlusMinus::new(line_numbers[0].0, line_numbers[line_numbers.len() - 1].0);
         let hunk_max_line_number = line_numbers.iter().map(|(n, d)| n + d).max().unwrap();
         self.hunk_max_line_number_width =
             1 + (hunk_max_line_number as f64).log10().floor() as usize;
