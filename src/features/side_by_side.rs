@@ -100,6 +100,23 @@ impl SideBySideData {
     }
 }
 
+pub fn available_line_width(
+    config: &Config,
+    data: &line_numbers::LineNumbersData,
+) -> line_numbers::SideBySideLineWidth {
+    let linennumbers_width = data.formatted_width();
+
+    // The width can be reduced by the line numbers and/or a possibly kept 1-wide "+/-/ " prefix.
+    let line_width = |side| {
+        config.side_by_side_data[side]
+            .width
+            .saturating_sub(linennumbers_width[side])
+            .saturating_sub(config.keep_plus_minus_markers as usize)
+    };
+
+    LeftRight::new(line_width(PanelSide::Left), line_width(PanelSide::Right))
+}
+
 /// Emit a sequence of minus and plus lines in side-by-side mode.
 #[allow(clippy::too_many_arguments)]
 pub fn paint_minus_and_plus_lines_side_by_side<'a>(
@@ -179,8 +196,8 @@ pub fn paint_zero_lines_side_by_side(
         // TODO: Avoid doing the superimpose_style_sections work twice.
         // HACK: These are getting incremented twice, so knock them back down once.
         if let Some(d) = line_numbers_data.as_mut() {
-            d.hunk_minus_line_number -= 1;
-            d.hunk_plus_line_number -= 1;
+            d.line_number[Left] -= 1;
+            d.line_number[Right] -= 1;
         }
         right_pad_left_panel_line(
             &mut left_panel_line,
@@ -380,12 +397,12 @@ fn paint_minus_or_plus_panel_line(
         (s, t) if s == t => {}
         (State::HunkPlus(_), State::HunkMinus(_)) => {
             if let Some(d) = line_numbers_data.as_mut() {
-                d.hunk_minus_line_number -= 1;
+                d.line_number[Left] -= 1;
             }
         }
         (State::HunkMinus(_), State::HunkPlus(_)) => {
             if let Some(d) = line_numbers_data.as_mut() {
-                d.hunk_plus_line_number -= 1;
+                d.line_number[Right] -= 1;
             }
         }
         _ => unreachable!(),
