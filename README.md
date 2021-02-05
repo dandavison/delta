@@ -75,10 +75,10 @@ The most convenient way to configure delta is with a `[delta]` section in `~/.gi
 
 Use `delta --help` to see all the available options.
 
-To quickly change delta configuration on-the-fly, use the `git config --global` command. For example
+To change your delta options in a one-off git command, use `git -c ...`. For example
 
-```bash
-git config --global delta.side-by-side true
+```
+git -c delta.line-numbers=false -c delta.max-line-distance=0.8 show
 ```
 
 Contents
@@ -448,18 +448,10 @@ In order to support this feature, Delta has to look at the raw colors it receive
 
 Use the `navigate` feature to activate navigation keybindings. In this mode, pressing `n` will jump forward to the next file in the diff, and `N` will jump backwards. If you are viewing multiple commits (e.g. via `git log -p`) then navigation will also visit commit boundaries.
 
-The recommended way to use `navigate` is to activate it only when needed, for example by using the environment variable `DELTA_NAVIGATE`:
+The recommended way to use `navigate` is to activate it only when needed, for example
 
 ```bash
-DELTA_NAVIGATE=1 git diff
-```
-
-Please note that if the environment variable is set to _anything at all_ (even `"false"` or `"0"` or `""`) then that is interpreted as true. The above command sets the environment variable in the child process only, so it has no permanent effect on your shell session. But if, for whatever reason, you do have it set in your shell environment then to deactivate it you must _unset_ the environment variable (e.g. using `unset DELTA_NAVIGATE`). You cannot deactivate it by assigning a value to it.
-
-An alternative is to mutate your git config file from the command line:
-
-```bash
-git config --global delta.navigate true
+git -c delta.navigate=true log -p
 ```
 
 The reason that `navigate` should not be used all the time is that Delta uses `less` as its pager, and the `navigate` feature works by doing `less --pattern <regex-matching-file-and-commit-lines>`. When the git output does not contain file/commit diff lines, `less --pattern` behaves unhelpfully (see [#234](https://github.com/dandavison/delta/issues/234), [#237](https://github.com/dandavison/delta/issues/237)).
