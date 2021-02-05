@@ -9,8 +9,7 @@ release: \
 	bump-version \
 	create-github-release \
 	bump-version-in-documentation-links \
-	bump-private-homebrew-formula \
-	publish-to-cargo
+	bump-private-homebrew-formula
 
 
 clean:
