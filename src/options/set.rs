@@ -170,6 +170,7 @@ pub fn set_options(
             plus_non_emph_style,
             raw,
             side_by_side,
+            tab_string,
             tab_width,
             tokenization_regex,
             true_color,

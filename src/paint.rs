@@ -114,10 +114,15 @@ impl<'a> Painter<'a> {
     where
         I: Iterator<Item = &'b str>,
     {
-        if self.config.tab_width > 0 {
-            let tab_replacement = " ".repeat(self.config.tab_width);
-            line.map(|s| if s == "\t" { &tab_replacement } else { s })
-                .collect::<String>()
+        if !self.config.tab_string.is_empty() {
+            line.map(|s| {
+                if s == "\t" {
+                    &self.config.tab_string
+                } else {
+                    s
+                }
+            })
+            .collect::<String>()
         } else {
             line.collect::<String>()
         }

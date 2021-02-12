@@ -73,7 +73,7 @@ pub struct Config {
     pub syntax_dummy_theme: SyntaxTheme,
     pub syntax_set: SyntaxSet,
     pub syntax_theme: Option<SyntaxTheme>,
-    pub tab_width: usize,
+    pub tab_string: String,
     pub tokenization_regex: Regex,
     pub true_color: bool,
     pub truncation_symbol: String,
@@ -218,7 +218,11 @@ impl From<cli::Opt> for Config {
             syntax_dummy_theme: SyntaxTheme::default(),
             syntax_set: opt.computed.syntax_set,
             syntax_theme: opt.computed.syntax_theme,
-            tab_width: opt.tab_width,
+            tab_string: if let Some(s) = opt.tab_string {
+                s
+            } else {
+                " ".repeat(opt.tab_width)
+            },
             tokenization_regex,
             true_color: opt.computed.true_color,
             truncation_symbol: "→".to_string(),

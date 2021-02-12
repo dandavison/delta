@@ -470,10 +470,16 @@ pub struct Opt {
     #[structopt(short = "w", long = "width")]
     pub width: Option<String>,
 
-    /// The number of spaces to replace tab characters with. Use --tabs=0 to pass tab characters
-    /// through directly, but note that in that case delta will calculate line widths assuming tabs
-    /// occupy one character's width on the screen: if your terminal renders tabs as more than than
-    /// one character wide then delta's output will look incorrect.
+    /// A string to use to display tab characters with. By default, each tab character will be
+    /// replaced by space characters. (See `tabs`)
+    #[structopt(long = "tab-string")]
+    pub tab_string: Option<String>,
+
+    /// The number of spaces to replace tab characters with, if tab-string has not been
+    /// supplied. Use --tabs=0 to pass tab characters through directly, but note that in that case
+    /// delta will calculate line widths assuming tabs occupy one character's width on the screen:
+    /// if your terminal renders tabs as more than than one character wide then delta's output will
+    /// look incorrect.
     #[structopt(long = "tabs", default_value = "4")]
     pub tab_width: usize,
 

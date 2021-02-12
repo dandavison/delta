@@ -258,7 +258,7 @@ fn show_config(config: &config::Config, writer: &mut dyn Write) -> std::io::Resu
     side-by-side                  = {side_by_side}
     syntax-theme                  = {syntax_theme}
     width                         = {width}
-    tabs                          = {tab_width}
+    tab_string                    = '{tab_string}'
     word-diff-regex               = {tokenization_regex}",
         max_line_distance = config.max_line_distance,
         max_line_length = config.max_line_length,
@@ -278,7 +278,7 @@ fn show_config(config: &config::Config, writer: &mut dyn Write) -> std::io::Resu
             cli::Width::Fixed(width) => width.to_string(),
             cli::Width::Variable => "variable".to_string(),
         },
-        tab_width = config.tab_width,
+        tab_string = config.tab_string,
         tokenization_regex = format_option_value(&config.tokenization_regex.to_string()),
     )?;
     Ok(())
