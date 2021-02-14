@@ -36,7 +36,10 @@ pub enum Source {
 
 impl State {
     fn is_in_hunk(&self) -> bool {
-        matches!(*self, State::HunkHeader | State::HunkZero | State::HunkMinus(_) | State::HunkPlus(_))
+        matches!(
+            *self,
+            State::HunkHeader | State::HunkZero | State::HunkMinus(_) | State::HunkPlus(_)
+        )
     }
 }
 
@@ -111,7 +114,7 @@ impl<'a> StateMachine<'a> {
             let mut handled_line = if line.starts_with("commit ") {
                 self.handle_commit_meta_header_line()?
             } else if line.starts_with("diff ") {
-                self.handle_file_meta_diff_line()?
+                self.handle_file_meta_diff_line()
             } else if (self.state == State::FileMeta || self.source == Source::DiffUnified)
                 && (line.starts_with("--- ")
                     || line.starts_with("rename from ")
@@ -223,11 +226,11 @@ impl<'a> StateMachine<'a> {
         Ok(())
     }
 
-    fn handle_file_meta_diff_line(&mut self) -> std::io::Result<bool> {
+    fn handle_file_meta_diff_line(&mut self) -> bool {
         self.painter.paint_buffered_minus_and_plus_lines();
         self.state = State::FileMeta;
         self.handled_file_meta_header_line_file_pair = None;
-        Ok(false)
+        false
     }
 
     fn handle_file_meta_minus_line(&mut self) -> std::io::Result<bool> {
