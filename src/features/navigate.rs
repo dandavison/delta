@@ -1,4 +1,3 @@
-use crate::config::Config;
 use crate::features::OptionValueFunction;
 
 pub fn make_feature() -> Vec<(String, OptionValueFunction)> {
@@ -16,16 +15,6 @@ pub fn make_feature() -> Vec<(String, OptionValueFunction)> {
             _opt => "Δ"
         )
     ])
-}
-
-pub fn make_navigate_regexp(config: &Config) -> String {
-    format!(
-        "^(commit|{}|{}|{}|{})",
-        config.file_modified_label,
-        config.file_added_label,
-        config.file_removed_label,
-        config.file_renamed_label
-    )
 }
 
 #[cfg(test)]

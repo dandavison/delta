@@ -10,7 +10,6 @@ use std::process::{Child, Command, Stdio};
 use super::less::retrieve_less_version;
 
 use crate::config;
-use crate::features::navigate;
 
 #[derive(Debug, Clone, Copy, PartialEq)]
 #[allow(dead_code)]
@@ -44,7 +43,7 @@ impl OutputType {
     fn try_pager(
         quit_if_one_screen: bool,
         pager_from_config: Option<&str>,
-        config: &config::Config,
+        _config: &config::Config,
     ) -> Result<Self> {
         let mut replace_arguments_to_less = false;
 
@@ -122,11 +121,6 @@ impl OutputType {
                     p.args(args);
                     p
                 };
-                if config.navigate {
-                    // "+" behaves approximately as if the subsequent keys were entered interactively.
-                    // "r" (repaint the screen) before "/" (search) shows the diff before "Pattern not found" in the case of no match.
-                    process.args(&[format!("+r/{}", navigate::make_navigate_regexp(&config))]);
-                }
                 Ok(process
                     .env("LESSANSIENDCHARS", "mK")
                     .stdin(Stdio::piped())
