@@ -36,7 +36,10 @@ pub enum Source {
 
 impl State {
     fn is_in_hunk(&self) -> bool {
-        matches!(*self, State::HunkHeader | State::HunkZero | State::HunkMinus(_) | State::HunkPlus(_))
+        matches!(
+            *self,
+            State::HunkHeader | State::HunkZero | State::HunkMinus(_) | State::HunkPlus(_)
+        )
     }
 }
 
