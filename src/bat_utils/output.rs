@@ -123,7 +123,9 @@ impl OutputType {
                     p
                 };
                 if config.navigate {
-                    process.args(&["--pattern", &navigate::make_navigate_regexp(&config)]);
+                    // "+" behaves approximately as if the subsequent keys were entered interactively.
+                    // "r" (repaint the screen) before "/" (search) shows the diff before "Pattern not found" in the case of no match.
+                    process.args(&[format!("+r/{}", navigate::make_navigate_regexp(&config))]);
                 }
                 Ok(process
                     .env("LESSANSIENDCHARS", "mK")
