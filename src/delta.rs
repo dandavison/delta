@@ -36,7 +36,10 @@ pub enum Source {
 
 impl State {
     fn is_in_hunk(&self) -> bool {
-        matches!(*self, State::HunkHeader | State::HunkZero | State::HunkMinus(_) | State::HunkPlus(_))
+        matches!(
+            *self,
+            State::HunkHeader | State::HunkZero | State::HunkMinus(_) | State::HunkPlus(_)
+        )
     }
 }
 
@@ -223,6 +226,7 @@ impl<'a> StateMachine<'a> {
         Ok(())
     }
 
+    #[allow(clippy::unnecessary_wraps)]
     fn handle_file_meta_diff_line(&mut self) -> std::io::Result<bool> {
         self.painter.paint_buffered_minus_and_plus_lines();
         self.state = State::FileMeta;
