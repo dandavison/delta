@@ -37,5 +37,5 @@ impl BatProjectDirs {
 
 lazy_static! {
     pub static ref PROJECT_DIRS: BatProjectDirs =
-        BatProjectDirs::new().expect("Could not get home directory");
+        BatProjectDirs::new().unwrap_or_else(|| panic!("Could not get home directory"));
 }
