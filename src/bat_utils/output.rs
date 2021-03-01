@@ -10,6 +10,7 @@ use std::process::{Child, Command, Stdio};
 use super::less::retrieve_less_version;
 
 use crate::config;
+use crate::features::navigate;
 
 #[derive(Debug, Clone, Copy, PartialEq)]
 #[allow(dead_code)]
@@ -43,7 +44,7 @@ impl OutputType {
     fn try_pager(
         quit_if_one_screen: bool,
         pager_from_config: Option<&str>,
-        _config: &config::Config,
+        config: &config::Config,
     ) -> Result<Self> {
         let mut replace_arguments_to_less = false;
 
@@ -121,6 +122,13 @@ impl OutputType {
                     p.args(args);
                     p
                 };
+                if config.navigate {
+                    if let Ok(hist_file) =
+                        navigate::copy_less_hist_file_and_append_navigate_regexp(config)
+                    {
+                        process.env("LESSHISTFILE", hist_file);
+                    }
+                }
                 Ok(process
                     .env("LESSANSIENDCHARS", "mK")
                     .stdin(Stdio::piped())
