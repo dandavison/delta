@@ -1,5 +1,5 @@
-use std::io::{Error, ErrorKind};
 use std::io::Write;
+use std::io::{Error, ErrorKind};
 use std::path::PathBuf;
 
 use crate::config::Config;
@@ -42,11 +42,13 @@ fn make_navigate_regexp(config: &Config) -> String {
 // history file so, for example, a (non-navigate) search performed in the delta less process will
 // not be stored in history.
 pub fn copy_less_hist_file_and_append_navigate_regexp(config: &Config) -> std::io::Result<PathBuf> {
-    let home_dir = dirs_next::home_dir().ok_or_else(|| Error::new(ErrorKind::NotFound, "Can't determine home dir"))?;
+    let home_dir = dirs_next::home_dir()
+        .ok_or_else(|| Error::new(ErrorKind::NotFound, "Can't determine home dir"))?;
     let initial_contents = "\
 .less-history-file:
 .search
-".to_string();
+"
+    .to_string();
     let contents = if let Some(hist_file) = get_less_hist_file(&home_dir) {
         std::fs::read_to_string(hist_file).unwrap_or(initial_contents)
     } else {
