@@ -118,6 +118,16 @@ impl OutputType {
                     p.env("LESSCHARSET", "UTF-8");
                     p
                 } else {
+                    if pager_path.file_stem() == Some(&OsString::from("delta")) {
+                        eprintln!(
+                            "\
+It looks like you have set delta as the value of $PAGER. \
+This would result in a non-terminating recursion. \
+delta is not an appropriate value for $PAGER \
+(but it is an appropriate value for $GIT_PAGER)."
+                        );
+                        std::process::exit(1);
+                    }
                     let mut p = Command::new(&pager_path);
                     p.args(args);
                     p
