@@ -290,15 +290,15 @@ Set delta to be git's pager in your `.gitconfig`. Delta has many options to alte
     pager = delta
 
 [delta]
-    plus-color = "#012800"
-    minus-color = "#340001"
+    plus-style = "syntax #012800"
+    minus-style = "syntax #340001"
     syntax-theme = Monokai Extended
 
 [interactive]
     diffFilter = delta --color-only
 ```
 
-Note that delta color argument values in ~/.gitconfig should be in double quotes, like `--minus-color="#340001"`. For theme names and other values, do not use quotes as they will be passed on to delta, like `theme = Monokai Extended`.
+Note that delta style argument values in ~/.gitconfig should be in double quotes, like `--minus-style="syntax #340001"`. For theme names and other values, do not use quotes as they will be passed on to delta, like `theme = Monokai Extended`.
 
 All git commands that display diff output should now display syntax-highlighted output. For example:
   - `git diff`
