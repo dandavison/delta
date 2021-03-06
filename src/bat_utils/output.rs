@@ -133,7 +133,11 @@ delta is not an appropriate value for $PAGER \
                     p
                 };
                 if config.navigate {
-                    process.args(&["--pattern", &navigate::make_navigate_regexp(&config)]);
+                    if let Ok(hist_file) =
+                        navigate::copy_less_hist_file_and_append_navigate_regexp(config)
+                    {
+                        process.env("LESSHISTFILE", hist_file);
+                    }
                 }
                 Ok(process
                     .env("LESSANSIENDCHARS", "mK")
