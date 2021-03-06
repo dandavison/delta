@@ -1,4 +1,4 @@
-use std::io::Write;
+use std::io::{Error, ErrorKind, Write};
 use std::path::PathBuf;
 
 use crate::config::Config;
@@ -41,8 +41,14 @@ fn make_navigate_regexp(config: &Config) -> String {
 // history file so, for example, a (non-navigate) search performed in the delta less process will
 // not be stored in history.
 pub fn copy_less_hist_file_and_append_navigate_regexp(config: &Config) -> std::io::Result<PathBuf> {
-    let xdg_dirs = xdg::BaseDirectories::with_prefix("delta")?;
-    let delta_less_hist = xdg_dirs.place_data_file("lesshst")?;
+    let delta_less_hist_file = if !cfg!(windows) {
+        xdg::BaseDirectories::with_prefix("delta")?.place_data_file("lesshst")?
+    } else {
+        let mut path = dirs_next::home_dir()
+            .ok_or_else(|| Error::new(ErrorKind::NotFound, "Can't determine home dir"))?;
+        path.push(".delta.lesshst");
+        path
+    };
     let initial_contents = "\
 .less-history-file:
 .search
@@ -54,12 +60,12 @@ pub fn copy_less_hist_file_and_append_navigate_regexp(config: &Config) -> std::i
         initial_contents
     };
     writeln!(
-        std::fs::File::create(&delta_less_hist)?,
+        std::fs::File::create(&delta_less_hist_file)?,
         "{}\"{}",
         contents,
         make_navigate_regexp(config)
     )?;
-    Ok(delta_less_hist)
+    Ok(delta_less_hist_file)
 }
 
 // LESSHISTFILE
