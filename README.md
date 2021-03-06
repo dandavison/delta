@@ -92,7 +92,8 @@ Contents
    * [Choosing colors (styles)](#choosing-colors-styles)
    * [Line numbers](#line-numbers)
    * [Side-by-side view](#side-by-side-view)
-   * [Custom features](#custom-features)
+   * ["Features": named groups of settings](#features-named-groups-of-settings)
+   * [Custom color themes](#custom-color-themes)
    * [diff-highlight and diff-so-fancy emulation](#diff-highlight-and-diff-so-fancy-emulation)
    * [--color-moved support](#--color-moved-support)
    * [Navigation keybindings for large diffs](#navigation-keybindings-for-large-diffs)
@@ -383,7 +384,7 @@ To disable the line numbers in side-by-side view, but keep a vertical delimiter 
 
 Wide lines in the left or right panel are currently truncated. If the truncation is a problem, one approach is to set the width of Delta's output to be  larger than your terminal (e.g. `delta --width 250`) and ensure that `less` doesn't wrap long lines (e.g. `export LESS=-RS`); then one can scroll right to view the full content. (Another approach is to decrease font size in your terminal.)
 
-### Custom features
+### "Features": named groups of settings
 
 All delta options can go under the `[delta]` section in your git config file. However, you can also use named "features" to keep things organized: these are sections in git config like `[delta "my-feature"]`. Here's an example using two custom features:
 
@@ -410,7 +411,23 @@ All delta options can go under the `[delta]` section in your git config file. Ho
 ```
 <table><tr><td><img width=400px src="https://user-images.githubusercontent.com/52205/86275048-a96ee500-bba0-11ea-8a19-584f69758aee.png" alt="image" /></td></tr></table>
 
+### Custom color themes
 
+A "theme" in delta is just a collection of settings grouped together in a named [feature](#features-named-groups-of-settings). The delta git repo contains a collection of themes created by users. These focus on the visual appearance: colors etc. If you want features like `side-by-side` or `navigate`, you would set that yourself, after selecting the color theme. To use the delta themes, clone the delta repo (or download the [themes.gitconfig](./themes.gitconfig) file) and add the following entry in your gitconfig:
+
+```gitconfig
+[include]
+    path = /PATH/TO/delta/themes.gitconfig
+```
+
+Then, add your chosen color theme to your features list, e.g.
+
+```gitconfig
+[delta]
+    features = collared-trogon
+    side-by-side = true
+    ...
+```
 
 ### diff-highlight and diff-so-fancy emulation
 

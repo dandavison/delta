@@ -6,7 +6,6 @@
 # Then, in your own gitconfig file, activate the chosen theme, e.g.
 #
 # [delta]
-#    # author: https://github.com/me
 #    features = kingfisher
 #
 # Please add your own themes to this file, and open a PR. Instructions:
