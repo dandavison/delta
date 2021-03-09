@@ -44,16 +44,15 @@ fn make_navigate_regexp(config: &Config) -> String {
 // not be stored in history.
 pub fn copy_less_hist_file_and_append_navigate_regexp(config: &Config) -> std::io::Result<PathBuf> {
     let delta_less_hist_file = get_delta_less_hist_file()?;
-    let initial_contents = "\
-.less-history-file:
-.search
-"
-    .to_string();
-    let contents = if let Some(hist_file) = get_less_hist_file() {
+    let initial_contents = ".less-history-file:\n".to_string();
+    let mut contents = if let Some(hist_file) = get_less_hist_file() {
         std::fs::read_to_string(hist_file).unwrap_or(initial_contents)
     } else {
         initial_contents
     };
+    if !contents.ends_with(".search\n") {
+        contents = format!("{}.search\n", contents);
+    }
     writeln!(
         std::fs::File::create(&delta_less_hist_file)?,
         "{}\"{}",
