@@ -1,0 +1,36 @@
+#!/bin/bash
+
+set -e
+
+die () {
+    echo "$1" 1>&2
+    exit 1
+}
+
+DELTA_BIN=${1:-./target/release/delta}
+DELTA="$DELTA_BIN --no-gitconfig --navigate"
+
+# Trick delta into thinking that its pager is less, when really it is cat.
+TEMPDIR=$(mktemp -d)
+DELTA_TEST_PAGER=$TEMPDIR/less
+echo cat > $DELTA_TEST_PAGER
+chmod +x $DELTA_TEST_PAGER
+export PAGER=$DELTA_TEST_PAGER
+
+test_delta_less_hist_file_created () {
+    DELTA_HIST_FILE=~/.local/share/delta/lesshst
+    rm -f ~/.lesshst $DELTA_HIST_FILE
+    [ -e $DELTA_HIST_FILE ] && die "Expected $DELTA_HIST_FILE not to exist"
+    git -c core.pager="$DELTA" log -p HEAD~2...HEAD
+    [ -e $DELTA_HIST_FILE ] || die "Expected $DELTA_HIST_FILE to exist"
+}
+
+test_delta_less_hist_file_created
+
+# Test it works with a custom LESSHISTFILE
+DELTA_TEST_LESSHISTFILE=$(mktemp)
+export LESSHISTFILE=TEMPDIR/delta.lesshst
+test_delta_less_hist_file_created
+
+# Cleanup
+rm -r "$TEMPDIR"
