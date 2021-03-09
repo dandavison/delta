@@ -90,3 +90,25 @@
     plus-style = syntax "#001a00"
     plus-emph-style = syntax "#003300"
     syntax-theme = Nord
+
+[delta "tangara-chilensis"]
+    # author: https://github.com/clnoll
+    commit-decoration-style = bold box ul "#34fd50"
+    file-style = omit
+    file-decoration-style = none
+    hunk-header-style = file line-number syntax
+    hunk-header-decoration-style = "#00b494" box ul
+    hunk-header-file-style = "#999999"
+    hunk-header-line-number-style = bold "#03a4ff"
+    line-numbers = true
+    line-numbers-minus-style = "#B10036"
+    line-numbers-plus-style = "#03a4ff"
+    line-numbers-zero-style = "#999999"
+    line-numbers-left-style = black
+    line-numbers-right-style = black
+    minus-style = normal "#990017"
+    minus-emph-style = normal "#de004e"
+    plus-style = syntax "#450eff"
+    plus-emph-style = syntax "#03a4ff"
+    side-by-side = true
+    syntax-theme = Vibrant Sunburst
