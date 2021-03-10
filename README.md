@@ -75,10 +75,10 @@ The most convenient way to configure delta is with a `[delta]` section in `~/.gi
 
 Use `delta --help` to see all the available options.
 
-To change your delta options in a one-off git command, use `git -c ...`. For example
+To change your delta options in a one-off git command, use `git -c`. For example
 
 ```
-git -c delta.line-numbers=false -c delta.max-line-distance=0.8 show
+git -c delta.line-numbers=false show
 ```
 
 Contents
