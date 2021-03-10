@@ -1,0 +1,59 @@
+#!/bin/bash
+
+set -e
+
+cleanup() {
+    rm -r "$TEMPDIR"
+}
+
+die() {
+    echo "$1" 1>&2
+    cleanup
+    exit 1
+}
+
+DELTA="${1:-./target/release/delta} --no-gitconfig --navigate"
+
+# Trick delta into thinking that its pager is less, when really it is cat.
+unset DELTA_PAGER
+TEMPDIR="$(mktemp -d)"
+export PAGER="$TEMPDIR/less"
+cat >"$PAGER" <<-EOF
+	#!/bin/sh
+	cat
+EOF
+chmod 755 $PAGER
+
+test_delta_less_hist_file_created () {
+    DELTA_HIST_FILE="${XDG_DATA_HOME:-$HOME/.local/share}/delta/lesshst"
+    rm -f ~/.lesshst "$DELTA_HIST_FILE"
+    [ -e "$DELTA_HIST_FILE" ] && die "Expected \"$DELTA_HIST_FILE\" not to exist"
+    git -c pager.log="$DELTA" log -p HEAD~2...HEAD
+    [ -e "$DELTA_HIST_FILE" ] || die "Expected \"$DELTA_HIST_FILE\" to exist"
+}
+
+# Basic test
+test_delta_less_hist_file_created
+
+# Test it works with a custom LESSHISTFILE
+export LESSHISTFILE=$TEMPDIR/delta.lesshst
+test_delta_less_hist_file_created
+
+# Test histfile sections other than `.search` at the end of the file (#1)
+cat >$LESSHISTFILE <<-EOF
+	.shell
+	"pwd
+	"ls -Al ../data/
+EOF
+test_delta_less_hist_file_created
+
+# Test histfile sections other than `.search` at the end of the file (#2)
+cat >>$LESSHISTFILE <<-EOF
+	.mark
+	m a 1 7740 /etc/gitconfig
+	m b 1 4221 /etc/profile
+EOF
+test_delta_less_hist_file_created
+
+# Cleanup
+cleanup
