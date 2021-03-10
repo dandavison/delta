@@ -97,7 +97,7 @@ fn get_less_hist_file() -> Option<PathBuf> {
             }
             Err(_) => {
                 // The user is using the default less histfile location.
-                let mut hist_file = home_dir.clone();
+                let mut hist_file = home_dir;
                 hist_file.push(if cfg!(windows) {
                     "_lesshst"
                 } else {
