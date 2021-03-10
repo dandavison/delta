@@ -18,10 +18,11 @@ DELTA="${1:-./target/release/delta} --no-gitconfig --navigate"
 unset DELTA_PAGER
 TEMPDIR="$(mktemp -d)"
 export PAGER="$TEMPDIR/less"
-install -m755 /dev/stdin "$PAGER" <<-EOF
+cat >"$PAGER" <<-EOF
 	#!/bin/sh
 	cat
 EOF
+chmod 755 $PAGER
 
 test_delta_less_hist_file_created () {
     DELTA_HIST_FILE="${XDG_DATA_HOME:-$HOME/.local/share}/delta/lesshst"
