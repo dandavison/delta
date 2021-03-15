@@ -66,4 +66,4 @@ _delta() {
 eval "$__delta_previous_extglob_setting"
 unset __delta_previous_extglob_setting
 
-complete -F _delta delta
+complete -F _delta -A file delta
