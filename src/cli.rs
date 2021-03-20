@@ -270,6 +270,12 @@ pub struct Opt {
     #[structopt(long = "show-syntax-themes")]
     pub show_syntax_themes: bool,
 
+    /// Show all available delta themes, each with an example of highlighted diff output.
+    /// If diff output is supplied on standard input then this will be used for the demo. For
+    /// example: `git show --color=always | delta --show-themes`.
+    #[structopt(long = "show-themes")]
+    pub show_themes: bool,
+
     #[structopt(long = "no-gitconfig")]
     /// Do not take any settings from git config. See GIT CONFIG section.
     pub no_gitconfig: bool,

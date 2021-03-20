@@ -65,6 +65,9 @@ fn run_app() -> std::io::Result<i32> {
     } else if opt.show_syntax_themes {
         show_syntax_themes()?;
         return Ok(0);
+    } else if opt.show_themes {
+        show_themes()?;
+        return Ok(0);
     }
 
     let _show_config = opt.show_config;
@@ -300,6 +303,10 @@ where
     } else {
         s.to_string()
     }
+}
+
+fn show_themes() -> std::io::Result<()> {
+    Ok(())
 }
 
 #[cfg(not(tarpaulin_include))]
