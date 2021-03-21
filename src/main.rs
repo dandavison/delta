@@ -305,7 +305,27 @@ where
     }
 }
 
+const THEMES: [&'static str; 4] = [
+    "collared-trogon",
+    "tangara-chilensis",
+    "villsau",
+    "woolly-mammoth",
+];
+
 fn show_themes() -> std::io::Result<()> {
+    let mut output_type = OutputType::from_mode(
+        PagingMode::QuitIfOneScreen,
+        None,
+        &config::Config::from(cli::Opt::default()),
+    )
+    .unwrap();
+    let title_style = ansi_term::Style::new().bold();
+    let writer = output_type.handle().unwrap();
+
+    for theme in &THEMES {
+        writeln!(writer, "\n\nTheme: {}\n", title_style.paint(*theme))?;
+    }
+
     Ok(())
 }
 
