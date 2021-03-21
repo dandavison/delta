@@ -23,14 +23,22 @@ pub fn make_feature() -> Vec<(String, OptionValueFunction)> {
     ])
 }
 
-fn make_navigate_regexp(config: &Config) -> String {
-    format!(
-        "^(commit|{}|{}|{}|{})",
-        config.file_modified_label,
-        config.file_added_label,
-        config.file_removed_label,
-        config.file_renamed_label
-    )
+// Construct the regexp used by less for paging, if --show-themes or --navigate is enabled.
+pub fn make_navigate_regexp(
+    show_themes: bool,
+    file_modified_label: &str,
+    file_added_label: &str,
+    file_removed_label: &str,
+    file_renamed_label: &str,
+) -> String {
+    if show_themes {
+        "^Theme:".to_string()
+    } else {
+        format!(
+            "^(commit|{}|{}|{}|{})",
+            file_modified_label, file_added_label, file_removed_label, file_renamed_label,
+        )
+    }
 }
 
 // Create a less history file to be used by delta's child less process. This file is initialized
@@ -57,7 +65,7 @@ pub fn copy_less_hist_file_and_append_navigate_regexp(config: &Config) -> std::i
         std::fs::File::create(&delta_less_hist_file)?,
         "{}\"{}",
         contents,
-        make_navigate_regexp(config)
+        config.navigate_regexp.as_ref().unwrap(),
     )?;
     Ok(delta_less_hist_file)
 }
