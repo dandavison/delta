@@ -315,31 +315,30 @@ const THEMES: [&'static str; 4] = [
 
 fn show_themes() -> std::io::Result<()> {
     use bytelines::ByteLines;
-    use std::io::BufReader;
     use sample_diff::DIFF;
-    let input = &DIFF.to_vec();
+    use std::io::BufReader;
+    let mut input = DIFF.to_vec();
+
+    if !atty::is(atty::Stream::Stdin) {
+        let mut buf = Vec::new();
+        io::stdin().lock().read_to_end(&mut buf)?;
+        if !buf.is_empty() {
+            input = buf;
+        }
+    };
 
     let mut git_config = git_config::GitConfig::try_create();
-    let opt = cli::Opt::from_iter_and_git_config(
-        &["", "", "--navigate"],
-        &mut git_config,
-    );
+    let opt = cli::Opt::from_iter_and_git_config(&["", "", "--navigate"], &mut git_config);
 
-    let mut output_type = OutputType::from_mode(
-        PagingMode::Always,
-        None,
-        &config::Config::from(opt),
-    )
-    .unwrap();
+    let mut output_type =
+        OutputType::from_mode(PagingMode::Always, None, &config::Config::from(opt)).unwrap();
     let title_style = ansi_term::Style::new().bold();
     let writer = output_type.handle().unwrap();
 
     for theme in &THEMES {
         writeln!(writer, "\n\nTheme: {}\n", title_style.paint(*theme))?;
-        let opt = cli::Opt::from_iter_and_git_config(
-            &["", "", "--features", theme],
-            &mut git_config,
-        );
+        let opt =
+            cli::Opt::from_iter_and_git_config(&["", "", "--features", theme], &mut git_config);
         let config = config::Config::from(opt);
         if let Err(error) = delta(ByteLines::new(BufReader::new(&input[0..])), writer, &config) {
             match error.kind() {
