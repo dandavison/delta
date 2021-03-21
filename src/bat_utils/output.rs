@@ -137,6 +137,9 @@ delta is not an appropriate value for $PAGER \
                         navigate::copy_less_hist_file_and_append_navigate_regexp(config)
                     {
                         process.env("LESSHISTFILE", hist_file);
+                        if config.show_themes {
+                            process.arg("+n");
+                        }
                     }
                 }
                 Ok(process
