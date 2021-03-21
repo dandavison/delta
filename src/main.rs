@@ -22,6 +22,7 @@ mod options;
 mod paint;
 mod parse;
 mod parse_style;
+mod sample_diff;
 mod style;
 mod syntect_color;
 mod tests;
@@ -315,27 +316,19 @@ const THEMES: [&'static str; 4] = [
 fn show_themes() -> std::io::Result<()> {
     use bytelines::ByteLines;
     use std::io::BufReader;
-    let input = b"\
-diff --git a/example.rs b/example.rs
-index f38589a..0f1bb83 100644
---- a/example.rs
-+++ b/example.rs
-@@ -1,5 +1,5 @@
--// Output the square of a number.
--fn print_square(num: f64) {
--    let result = f64::powf(num, 2.0);
--    println!(\"The square of {:.2} is {:.2}.\", num, result);
-+// Output the cube of a number.
-+fn print_cube(num: f64) {
-+    let result = f64::powf(num, 3.0);
-+    println!(\"The cube of {:.2} is {:.2}.\", num, result);
-"
-    .to_vec();
+    use sample_diff::DIFF;
+    let input = &DIFF.to_vec();
+
+    let mut git_config = git_config::GitConfig::try_create();
+    let opt = cli::Opt::from_iter_and_git_config(
+        &["", "", "--navigate"],
+        &mut git_config,
+    );
 
     let mut output_type = OutputType::from_mode(
-        PagingMode::QuitIfOneScreen,
+        PagingMode::Always,
         None,
-        &config::Config::from(cli::Opt::default()),
+        &config::Config::from(opt),
     )
     .unwrap();
     let title_style = ansi_term::Style::new().bold();
@@ -345,7 +338,7 @@ index f38589a..0f1bb83 100644
         writeln!(writer, "\n\nTheme: {}\n", title_style.paint(*theme))?;
         let opt = cli::Opt::from_iter_and_git_config(
             &["", "", "--features", theme],
-            &mut git_config::GitConfig::try_create(),
+            &mut git_config,
         );
         let config = config::Config::from(opt);
         if let Err(error) = delta(ByteLines::new(BufReader::new(&input[0..])), writer, &config) {
