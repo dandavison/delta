@@ -313,6 +313,25 @@ const THEMES: [&'static str; 4] = [
 ];
 
 fn show_themes() -> std::io::Result<()> {
+    use bytelines::ByteLines;
+    use std::io::BufReader;
+    let input = b"\
+diff --git a/example.rs b/example.rs
+index f38589a..0f1bb83 100644
+--- a/example.rs
++++ b/example.rs
+@@ -1,5 +1,5 @@
+-// Output the square of a number.
+-fn print_square(num: f64) {
+-    let result = f64::powf(num, 2.0);
+-    println!(\"The square of {:.2} is {:.2}.\", num, result);
++// Output the cube of a number.
++fn print_cube(num: f64) {
++    let result = f64::powf(num, 3.0);
++    println!(\"The cube of {:.2} is {:.2}.\", num, result);
+"
+    .to_vec();
+
     let mut output_type = OutputType::from_mode(
         PagingMode::QuitIfOneScreen,
         None,
@@ -324,6 +343,17 @@ fn show_themes() -> std::io::Result<()> {
 
     for theme in &THEMES {
         writeln!(writer, "\n\nTheme: {}\n", title_style.paint(*theme))?;
+        let opt = cli::Opt::from_iter_and_git_config(
+            &["", "", "--features", theme],
+            &mut git_config::GitConfig::try_create(),
+        );
+        let config = config::Config::from(opt);
+        if let Err(error) = delta(ByteLines::new(BufReader::new(&input[0..])), writer, &config) {
+            match error.kind() {
+                ErrorKind::BrokenPipe => process::exit(0),
+                _ => eprintln!("{}", error),
+            }
+        };
     }
 
     Ok(())

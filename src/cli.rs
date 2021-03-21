@@ -1,5 +1,4 @@
 use std::collections::{HashMap, HashSet};
-#[cfg(test)]
 use std::ffi::OsString;
 use std::path::PathBuf;
 
@@ -641,7 +640,6 @@ impl Opt {
         Self::from_clap_and_git_config(Self::clap().get_matches(), git_config, assets)
     }
 
-    #[cfg(test)]
     pub fn from_iter_and_git_config<I>(iter: I, git_config: &mut Option<GitConfig>) -> Self
     where
         I: IntoIterator,
