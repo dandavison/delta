@@ -2,7 +2,7 @@ build:
 	cargo build --release
 
 format:
-	rustfmt src/*.rs
+	git ls-files | grep '\.rs$' | xargs -P 0 rustfmt
 
 lint:
 	cargo clippy
