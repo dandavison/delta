@@ -80,8 +80,13 @@ impl OutputType {
             shell_words::split(&pager).chain_err(|| "Could not parse pager command.")?;
 
         match pagerflags.split_first() {
-            Some((pager_name, args)) => {
-                let pager_path = PathBuf::from(pager_name);
+            Some((pager_name, mut args)) => {
+                let mut pager_path = PathBuf::from(pager_name);
+                if pager_path.file_stem() == Some(&OsString::from("delta")) {
+                    // This would be a non-terminating recursion.
+                    pager_path = PathBuf::from("less");
+                    args = &[];
+                }
 
                 let is_less = pager_path.file_stem() == Some(&OsString::from("less"));
 
@@ -118,16 +123,6 @@ impl OutputType {
                     p.env("LESSCHARSET", "UTF-8");
                     p
                 } else {
-                    if pager_path.file_stem() == Some(&OsString::from("delta")) {
-                        eprintln!(
-                            "\
-It looks like you have set delta as the value of $PAGER. \
-This would result in a non-terminating recursion. \
-delta is not an appropriate value for $PAGER \
-(but it is an appropriate value for $GIT_PAGER)."
-                        );
-                        std::process::exit(1);
-                    }
                     let mut p = Command::new(&pager_path);
                     p.args(args);
                     p
