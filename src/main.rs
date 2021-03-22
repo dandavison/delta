@@ -27,6 +27,8 @@ mod style;
 mod syntect_color;
 mod tests;
 
+use lazy_static::lazy_static;
+use regex::Regex;
 use std::io::{self, ErrorKind, Read, Write};
 use std::path::PathBuf;
 use std::process;
@@ -311,12 +313,29 @@ where
     }
 }
 
-const THEMES: [&'static str; 4] = [
-    "collared-trogon",
-    "tangara-chilensis",
-    "villsau",
-    "woolly-mammoth",
-];
+lazy_static! {
+    static ref GIT_CONFIG_THEME_REGEX: Regex = Regex::new(r"^delta\.(.+)\.is-theme$").unwrap();
+}
+
+fn get_themes() -> Vec<String> {
+    let _git_config = git_config::GitConfig::try_create();
+    let mut themes: Vec<String> = Vec::new();
+    for e in &_git_config.unwrap().config.entries(None).unwrap() {
+        let entry = e.unwrap();
+        let entry_name = entry.name().unwrap();
+        let entry_value = entry.value().unwrap();
+        dbg!(entry_name, entry_value);
+        if entry_value == "true" {
+            let caps = GIT_CONFIG_THEME_REGEX.captures(entry_name);
+            if let Some(caps) = caps {
+                // need to check value i.e. whether is_theme = false
+                let name = caps.get(1).map_or("", |m| m.as_str()).to_string();
+                themes.push(name)
+            }
+        }
+    }
+    themes
+}
 
 fn show_themes() -> std::io::Result<()> {
     use bytelines::ByteLines;
@@ -337,17 +356,17 @@ fn show_themes() -> std::io::Result<()> {
         &["", "", "--navigate", "--show-themes"],
         &mut git_config,
     );
-
     let mut output_type =
         OutputType::from_mode(PagingMode::Always, None, &config::Config::from(opt)).unwrap();
     let title_style = ansi_term::Style::new().bold();
     let writer = output_type.handle().unwrap();
 
-    for theme in &THEMES {
-        writeln!(writer, "\n\nTheme: {}\n", title_style.paint(*theme))?;
+    for theme in &get_themes() {
+        writeln!(writer, "\n\nTheme: {}\n", title_style.paint(theme))?;
         let opt =
-            cli::Opt::from_iter_and_git_config(&["", "", "--features", theme], &mut git_config);
+            cli::Opt::from_iter_and_git_config(&["", "", "--features", &theme], &mut git_config);
         let config = config::Config::from(opt);
+
         if let Err(error) = delta(ByteLines::new(BufReader::new(&input[0..])), writer, &config) {
             match error.kind() {
                 ErrorKind::BrokenPipe => process::exit(0),
