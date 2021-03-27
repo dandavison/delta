@@ -1,3 +1,5 @@
+use lazy_static::lazy_static;
+use regex::Regex;
 use std::collections::HashMap;
 
 use crate::cli;
@@ -36,6 +38,28 @@ where
     T: Into<OptionValue>,
 {
     T::get_option_value(option_name, builtin_features, opt, git_config)
+}
+
+lazy_static! {
+    static ref GIT_CONFIG_THEME_REGEX: Regex = Regex::new(r"^delta\.(.+)\.is-theme$").unwrap();
+}
+
+pub fn get_themes(git_config: Option<git_config::GitConfig>) -> Vec<String> {
+    let mut themes: Vec<String> = Vec::new();
+    for e in &git_config.unwrap().config.entries(None).unwrap() {
+        let entry = e.unwrap();
+        let entry_name = entry.name().unwrap();
+        let entry_value = entry.value().unwrap();
+        if entry_value == "true" {
+            let caps = GIT_CONFIG_THEME_REGEX.captures(entry_name);
+            if let Some(caps) = caps {
+                // need to check value i.e. whether is_theme = false
+                let name = caps.get(1).map_or("", |m| m.as_str()).to_string();
+                themes.push(name)
+            }
+        }
+    }
+    themes
 }
 
 pub trait GetOptionValue {
@@ -115,6 +139,7 @@ pub mod tests {
     use std::env;
     use std::fs::remove_file;
 
+    use crate::options::get::get_themes;
     use crate::tests::integration_test_utils::integration_test_utils;
 
     // TODO: the followig tests are collapsed into one since they all set the same env var and thus
@@ -272,6 +297,35 @@ pub mod tests {
             Some(git_config_path),
         );
         assert_eq!(opt.max_line_distance, 0.7);
+
+        remove_file(git_config_path).unwrap();
+    }
+
+    #[test]
+    fn test_get_themes_from_config() {
+        let git_config_contents = b"
+[delta \"yes\"]
+    max-line-distance = 0.6
+    is-theme = true
+
+[delta \"not-a-theme\"]
+    max-line-distance = 0.6
+    is-theme = false
+
+[delta \"has-no-theme-entry\"]
+    max-line-distance = 0.6
+";
+        let git_config_path = "delta__test_get_themes_git_config.gitconfig";
+
+        let git_config = Some(integration_test_utils::make_git_config(
+            git_config_contents,
+            git_config_path,
+            false,
+        ));
+
+        let themes = get_themes(git_config);
+
+        assert_eq!(themes, ["yes"]);
 
         remove_file(git_config_path).unwrap();
     }
