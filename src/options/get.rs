@@ -49,14 +49,11 @@ pub fn get_themes(git_config: Option<git_config::GitConfig>) -> Vec<String> {
     for e in &git_config.unwrap().config.entries(None).unwrap() {
         let entry = e.unwrap();
         let entry_name = entry.name().unwrap();
-        let entry_value = entry.value().unwrap();
-        if entry_value == "true" {
-            let caps = GIT_CONFIG_THEME_REGEX.captures(entry_name);
-            if let Some(caps) = caps {
-                let name = caps.get(1).map_or("", |m| m.as_str()).to_string();
-                if !themes.contains(&name) {
-                    themes.push(name)
-                }
+        let caps = GIT_CONFIG_THEME_REGEX.captures(entry_name);
+        if let Some(caps) = caps {
+            let name = caps.get(1).map_or("", |m| m.as_str()).to_string();
+            if !themes.contains(&name) {
+                themes.push(name)
             }
         }
     }

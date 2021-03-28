@@ -271,7 +271,7 @@ pub struct Opt {
 
     /// Show available delta themes with an example of highlighted diff output.
     /// If diff output is supplied on standard input then this will be used for the demo. For
-    /// example: `git show --color=always | delta --show-themes`.
+    /// example: `git show | delta --show-themes`.
     /// By default, if delta is configured to use a light theme (as set by the user or inferred by the
     /// BAT_THEME), only displays light themes, otherwise will only display dark themes, unless the
     /// --dark or --light command line arguments are included.
