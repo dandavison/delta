@@ -66,7 +66,7 @@ fn is_no_syntax_highlighting_syntax_theme_name(theme_name: &str) -> bool {
 ///    chosen for a light or dark terminal background. (`bat` has no equivalent.)
 ///
 /// Basically:
-/// 1. The theme is specified by the `--theme` option. If this isn't supplied then it is specified
+/// 1. The theme is specified by the `--syntax-theme` option. If this isn't supplied then it is specified
 ///    by the `BAT_THEME` environment variable.
 /// 2. Light vs dark mode is specified by the `--light` or `--dark` options. If these aren't
 ///    supplied then it is inferred from the chosen theme.
