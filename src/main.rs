@@ -68,7 +68,7 @@ fn run_app() -> std::io::Result<i32> {
         show_syntax_themes()?;
         return Ok(0);
     } else if opt.show_themes {
-        show_themes(opt.dark, opt.light)?;
+        show_themes(opt.dark, opt.light, opt.computed.is_light_mode)?;
         return Ok(0);
     }
 
@@ -312,7 +312,7 @@ where
     }
 }
 
-fn show_themes(dark: bool, light: bool) -> std::io::Result<()> {
+fn show_themes(dark: bool, light: bool, computed_theme_is_light: bool) -> std::io::Result<()> {
     use bytelines::ByteLines;
     use sample_diff::DIFF;
     use std::io::BufReader;
@@ -343,7 +343,10 @@ fn show_themes(dark: bool, light: bool) -> std::io::Result<()> {
         let is_light_theme = opt.light;
         let config = config::Config::from(opt);
 
-        if (dark && is_dark_theme) || (light && is_light_theme) || (!dark && !light) {
+        if (!computed_theme_is_light && is_dark_theme)
+            || (computed_theme_is_light && is_light_theme)
+            || (dark && light)
+        {
             writeln!(writer, "\n\nTheme: {}\n", title_style.paint(theme))?;
 
             if let Err(error) = delta(ByteLines::new(BufReader::new(&input[0..])), writer, &config)
