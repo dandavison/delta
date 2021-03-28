@@ -115,7 +115,7 @@
 
 [delta "coracias-caudatus"]
     # author: https://github.com/clnoll
-    commit-decoration-style = ul "#7536ff"
+    commit-decoration-style = ol "#7536ff"
     commit-style = "#200078"
     file-decoration-style = none
     file-style = omit
