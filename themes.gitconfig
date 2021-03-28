@@ -112,3 +112,28 @@
     plus-emph-style = syntax "#03a4ff"
     side-by-side = true
     syntax-theme = Vibrant Sunburst
+
+[delta "coracias-caudatus"]
+    # author: https://github.com/clnoll
+    commit-decoration-style = ul "#7536ff"
+    commit-style = "#200078"
+    file-decoration-style = none
+    file-style = omit
+    hunk-header-decoration-style = "#cfd6ff" ul
+    hunk-header-file-style = "#858dff"
+    hunk-header-line-number-style = "#7536ff"
+    hunk-header-style = file line-number syntax
+    light = true
+    line-numbers = true
+    line-numbers-left-format = "{nm:>4} ."
+    line-numbers-left-style = "#e3ab02"
+    line-numbers-minus-style = "#ff38b6"
+    line-numbers-plus-style = "#00e0c2"
+    line-numbers-right-format = "{np:>4}  "
+    line-numbers-right-style = white
+    line-numbers-zero-style = "#cccccc"
+    minus-emph-style = bold "#ff3838" "#ffe3f7"
+    minus-style = "#ff0080"
+    plus-emph-style = "#008a81" bold "#00ffbf"
+    plus-style = syntax "#cffff3"
+    syntax-theme = Github
