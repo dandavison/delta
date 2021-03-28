@@ -14,8 +14,9 @@
 #    organism: mammal, bird, plant, mollusk -- whatever. It can be in
 #    any language.
 #
-# 2. Please include a comment line describing the terminal
-#    theme/colors that you typically use with this theme.
+# 2. Include either `dark = true` or `light = true` according to whether you feel
+#    it looks best on a dark or light terminal background. (This marks a feature
+#    as a "theme", causing it to be picked up by `delta --show-themes`).
 #
 # 3. Feel free to include a comment line indicating who is the author
 #    of the theme. E.g. a link to your github user page.
