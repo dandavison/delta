@@ -68,7 +68,7 @@ fn run_app() -> std::io::Result<i32> {
         show_syntax_themes()?;
         return Ok(0);
     } else if opt.show_themes {
-        show_themes()?;
+        show_themes(opt.dark, opt.light)?;
         return Ok(0);
     }
 
@@ -312,7 +312,7 @@ where
     }
 }
 
-fn show_themes() -> std::io::Result<()> {
+fn show_themes(dark: bool, light: bool) -> std::io::Result<()> {
     use bytelines::ByteLines;
     use sample_diff::DIFF;
     use std::io::BufReader;
@@ -337,17 +337,23 @@ fn show_themes() -> std::io::Result<()> {
     let writer = output_type.handle().unwrap();
 
     for theme in &get_themes(git_config::GitConfig::try_create()) {
-        writeln!(writer, "\n\nTheme: {}\n", title_style.paint(theme))?;
         let opt =
             cli::Opt::from_iter_and_git_config(&["", "", "--features", &theme], &mut git_config);
+        let is_dark_theme = opt.dark;
+        let is_light_theme = opt.light;
         let config = config::Config::from(opt);
 
-        if let Err(error) = delta(ByteLines::new(BufReader::new(&input[0..])), writer, &config) {
-            match error.kind() {
-                ErrorKind::BrokenPipe => process::exit(0),
-                _ => eprintln!("{}", error),
+        if (dark && is_dark_theme) || (light && is_light_theme) || (!dark && !light) {
+            writeln!(writer, "\n\nTheme: {}\n", title_style.paint(theme))?;
+
+            if let Err(error) = delta(ByteLines::new(BufReader::new(&input[0..])), writer, &config)
+            {
+                match error.kind() {
+                    ErrorKind::BrokenPipe => process::exit(0),
+                    _ => eprintln!("{}", error),
+                }
             }
-        };
+        }
     }
 
     Ok(())

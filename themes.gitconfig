@@ -49,10 +49,10 @@
     file-modified-label = [M]
     file-removed-label = [-]
     file-renamed-label = [R]
-    is-theme = true
 
 [delta "villsau"]
     # author: https://github.com/torarnv
+    dark = true
     syntax-theme = OneHalfDark
     line-numbers = false
     hunk-header-style = file line-number syntax
@@ -70,11 +70,11 @@
     plus-emph-style = bold green 22
     plus-empty-line-marker-style = normal "#002800"
     whitespace-error-style = reverse red
-    is-theme = true
 
 [delta "collared-trogon"]
     # author: https://github.com/clnoll
     commit-decoration-style = bold box ul
+    dark = true
     file-style = omit
     file-decoration-style = none
     hunk-header-style = file line-number syntax
@@ -92,11 +92,11 @@
     plus-style = syntax "#001a00"
     plus-emph-style = syntax "#003300"
     syntax-theme = Nord
-    is-theme = true
 
 [delta "tangara-chilensis"]
     # author: https://github.com/clnoll
     commit-decoration-style = bold box ul "#34fd50"
+    dark = true
     file-style = omit
     file-decoration-style = none
     hunk-header-style = file line-number syntax
@@ -115,4 +115,3 @@
     plus-emph-style = syntax "#03a4ff"
     side-by-side = true
     syntax-theme = Vibrant Sunburst
-    is-theme = true

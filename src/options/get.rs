@@ -41,7 +41,7 @@ where
 }
 
 lazy_static! {
-    static ref GIT_CONFIG_THEME_REGEX: Regex = Regex::new(r"^delta\.(.+)\.is-theme$").unwrap();
+    static ref GIT_CONFIG_THEME_REGEX: Regex = Regex::new(r"^delta\.(.+)\.(light|dark)$").unwrap();
 }
 
 pub fn get_themes(git_config: Option<git_config::GitConfig>) -> Vec<String> {
@@ -53,9 +53,10 @@ pub fn get_themes(git_config: Option<git_config::GitConfig>) -> Vec<String> {
         if entry_value == "true" {
             let caps = GIT_CONFIG_THEME_REGEX.captures(entry_name);
             if let Some(caps) = caps {
-                // need to check value i.e. whether is_theme = false
                 let name = caps.get(1).map_or("", |m| m.as_str()).to_string();
-                themes.push(name)
+                if !themes.contains(&name) {
+                    themes.push(name)
+                }
             }
         }
     }
@@ -304,15 +305,20 @@ pub mod tests {
     #[test]
     fn test_get_themes_from_config() {
         let git_config_contents = b"
-[delta \"yes\"]
+[delta \"dark-theme\"]
     max-line-distance = 0.6
-    is-theme = true
+    dark = true
+
+[delta \"light-theme\"]
+    max-line-distance = 0.6
+    light = true
+
+[delta \"light-and-dark-theme\"]
+    max-line-distance = 0.6
+    light = true
+    dark = true
 
 [delta \"not-a-theme\"]
-    max-line-distance = 0.6
-    is-theme = false
-
-[delta \"has-no-theme-entry\"]
     max-line-distance = 0.6
 ";
         let git_config_path = "delta__test_get_themes_git_config.gitconfig";
@@ -325,7 +331,10 @@ pub mod tests {
 
         let themes = get_themes(git_config);
 
-        assert_eq!(themes, ["yes"]);
+        assert_eq!(
+            themes,
+            ["dark-theme", "light-theme", "light-and-dark-theme"]
+        );
 
         remove_file(git_config_path).unwrap();
     }

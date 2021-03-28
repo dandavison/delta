@@ -201,11 +201,13 @@ https://github.com/dandavison/delta/issues.
 pub struct Opt {
     /// Use default colors appropriate for a light terminal background. For more control, see the
     /// style options and --syntax-theme.
+    /// When passed in with --show-themes, only light themes will be displayed.
     #[structopt(long = "light")]
     pub light: bool,
 
     /// Use default colors appropriate for a dark terminal background. For more control, see the
     /// style options and --syntax-theme.
+    /// When passed in with --show-themes, only dark themes will be displayed.
     #[structopt(long = "dark")]
     pub dark: bool,
 
@@ -272,6 +274,8 @@ pub struct Opt {
     /// Show all available delta themes, each with an example of highlighted diff output.
     /// If diff output is supplied on standard input then this will be used for the demo. For
     /// example: `git show --color=always | delta --show-themes`.
+    /// When used with the --dark or --light command line arguments, will only show dark or
+    /// light themes, respectively.
     #[structopt(long = "show-themes")]
     pub show_themes: bool,
 
