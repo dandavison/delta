@@ -301,27 +301,27 @@ pub mod tests {
 
     #[test]
     fn test_get_themes_from_config() {
-        let git_config_contents = b"
-[delta \"dark-theme\"]
+        let git_config_contents = r#"
+[delta "dark-theme"]
     max-line-distance = 0.6
     dark = true
 
-[delta \"light-theme\"]
+[delta "light-theme"]
     max-line-distance = 0.6
     light = true
 
-[delta \"light-and-dark-theme\"]
+[delta "light-and-dark-theme"]
     max-line-distance = 0.6
     light = true
     dark = true
 
-[delta \"not-a-theme\"]
+[delta "not-a-theme"]
     max-line-distance = 0.6
-";
+"#;
         let git_config_path = "delta__test_get_themes_git_config.gitconfig";
 
         let git_config = Some(integration_test_utils::make_git_config(
-            git_config_contents,
+            git_config_contents.as_bytes(),
             git_config_path,
             false,
         ));
