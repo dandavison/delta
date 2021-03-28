@@ -265,17 +265,17 @@ pub struct Opt {
 
     /// Show all available syntax-highlighting themes, each with an example of highlighted diff output.
     /// If diff output is supplied on standard input then this will be used for the demo. For
-    /// example: `git show --color=always | delta --show-syntax-themes`.
+    /// example: `git show | delta --show-syntax-themes`.
     #[structopt(long = "show-syntax-themes")]
     pub show_syntax_themes: bool,
 
-    /// Show available delta themes with an example of highlighted diff output.
-    /// If diff output is supplied on standard input then this will be used for the demo. For
-    /// example: `git show | delta --show-themes`.
-    /// By default, if delta is configured to use a light theme (as set by the user or inferred by the
-    /// BAT_THEME), only displays light themes, otherwise will only display dark themes, unless the
-    /// --dark or --light command line arguments are included.
-    /// If both --dark and --light command line arguments are included, will display all themes.
+    /// Show available delta themes, each with an example of highlighted diff output. A delta theme
+    /// is a delta named feature (see --features) that sets either `light` or `dark`. If diff
+    /// output is supplied on standard input then this will be used for the demo. For example: `git
+    /// show | delta --show-themes`. By default shows dark or light themes only, according to
+    /// whether delta is in dark or light mode (as set by the user or inferred from BAT_THEME). To
+    /// control the themes shown, use --dark or --light, or both, on the command line together with
+    /// this option.
     #[structopt(long = "show-themes")]
     pub show_themes: bool,
 
