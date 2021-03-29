@@ -65,7 +65,7 @@ pub fn truncate_str<'a, 'b>(s: &'a str, display_width: usize, tail: &'b str) -> 
 
 pub fn parse_first_style(s: &str) -> Option<ansi_term::Style> {
     AnsiElementIterator::new(s).find_map(|el| match el {
-        Element::CSI(style, _, _) => Some(style),
+        Element::Csi(style, _, _) => Some(style),
         _ => None,
     })
 }
@@ -73,7 +73,7 @@ pub fn parse_first_style(s: &str) -> Option<ansi_term::Style> {
 pub fn string_starts_with_ansi_style_sequence(s: &str) -> bool {
     AnsiElementIterator::new(s)
         .next()
-        .map(|el| matches!(el, Element::CSI(_, _, _)))
+        .map(|el| matches!(el, Element::Csi(_, _, _)))
         .unwrap_or(false)
 }
 
@@ -85,9 +85,9 @@ pub fn ansi_preserving_slice(s: &str, start: usize) -> String {
         .scan(0, |index, element| {
             // `index` is the index in non-ANSI-escape-sequence content.
             Some(match element {
-                Element::CSI(_, a, b) => &s[a..b],
-                Element::ESC(a, b) => &s[a..b],
-                Element::OSC(a, b) => &s[a..b],
+                Element::Csi(_, a, b) => &s[a..b],
+                Element::Esc(a, b) => &s[a..b],
+                Element::Osc(a, b) => &s[a..b],
                 Element::Text(a, b) => {
                     let i = *index;
                     *index += b - a;
@@ -109,9 +109,9 @@ pub fn ansi_preserving_slice(s: &str, start: usize) -> String {
 
 fn ansi_strings_iterator(s: &str) -> impl Iterator<Item = (&str, bool)> {
     AnsiElementIterator::new(s).map(move |el| match el {
-        Element::CSI(_, i, j) => (&s[i..j], true),
-        Element::ESC(i, j) => (&s[i..j], true),
-        Element::OSC(i, j) => (&s[i..j], true),
+        Element::Csi(_, i, j) => (&s[i..j], true),
+        Element::Esc(i, j) => (&s[i..j], true),
+        Element::Osc(i, j) => (&s[i..j], true),
         Element::Text(i, j) => (&s[i..j], false),
     })
 }
