@@ -8,18 +8,23 @@
 # [delta]
 #    features = kingfisher
 #
-# Please add your own themes to this file, and open a PR. Instructions:
+# Please add your own themes to this file, and open a PR.
 #
-# 1. The name of the theme must be the name of some sort of wild
-#    organism: mammal, bird, plant, mollusk -- whatever. It can be in
-#    any language.
+# Instructions:
 #
-# 2. Include either `dark = true` or `light = true` according to whether you feel
-#    it looks best on a dark or light terminal background. (This marks a feature
-#    as a "theme", causing it to be picked up by `delta --show-themes`).
+# 1. The name of the theme must be the name of some sort of wild organism:
+#    mammal, bird, plant, mollusk -- whatever. It can be in any language.
 #
-# 3. Feel free to include a comment line indicating who is the author
-#    of the theme. E.g. a link to your github user page.
+# 2. Use `delta --show-config` to list all the style settings that are active in
+#    your current delta environment, but only include settings in your theme
+#    that are essential to its appearance.
+#
+# 3. Include either `dark = true` or `light = true` according to whether it is
+#    designed for a light or dark terminal background. (This marks a feature as
+#    a "theme", causing it to be picked up by `delta --show-themes`).
+#
+# 4. Feel free to include a comment line indicating who is the author of the
+#    theme. E.g. a link to your github user page.
 
 [delta "collared-trogon"]
     # author: https://github.com/clnoll
