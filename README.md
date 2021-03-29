@@ -294,6 +294,7 @@ Set delta to be git's pager in your `.gitconfig`. Delta has many options to alte
     plus-style = "syntax #012800"
     minus-style = "syntax #340001"
     syntax-theme = Monokai Extended
+    navigate = true
 
 [interactive]
     diffFilter = delta --color-only
