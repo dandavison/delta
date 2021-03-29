@@ -57,6 +57,7 @@ pub fn get_themes(git_config: Option<git_config::GitConfig>) -> Vec<String> {
             }
         }
     }
+    themes.sort_by(|a, b| a.to_lowercase().cmp(&b.to_lowercase()));
     themes
 }
 
@@ -330,7 +331,7 @@ pub mod tests {
 
         assert_eq!(
             themes,
-            ["dark-theme", "light-theme", "light-and-dark-theme"]
+            ["dark-theme", "light-and-dark-theme", "light-theme",]
         );
 
         remove_file(git_config_path).unwrap();
