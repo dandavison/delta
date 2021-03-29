@@ -15,7 +15,7 @@ unit-test:
 end-to-end-test: build
 	./tests/test_raw_output_matches_git_on_full_repo_history
 	./tests/test_deprecated_options > /dev/null
-	./test/test_navigate_less_history_file
+	./tests/test_navigate_less_history_file
 
 release:
 	@make -f release.Makefile release
