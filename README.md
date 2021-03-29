@@ -606,7 +606,7 @@ and use the executable found at `./target/release/delta`.
 ## Full --help output
 
 ```
-delta 0.6.0
+delta 0.7.1
 A viewer for git and diff output
 
 USAGE:
@@ -644,7 +644,15 @@ FLAGS:
         --list-syntax-themes         List available syntax-highlighting color themes
         --show-syntax-themes         Show all available syntax-highlighting themes, each with an example of highlighted
                                      diff output. If diff output is supplied on standard input then this will be used
-                                     for the demo. For example: `git show --color=always | delta --show-syntax-themes`
+                                     for the demo. For example: `git show | delta --show-syntax-themes`
+        --show-themes                Show available delta themes, each with an example of highlighted diff output. A
+                                     delta theme is a delta named feature (see --features) that sets either `light` or
+                                     `dark`. See https://github.com/dandavison/delta#custom-color-themes. If diff output
+                                     is supplied on standard input then this will be used for the demo. For example:
+                                     `git show | delta --show-themes`. By default shows dark or light themes only,
+                                     according to whether delta is in dark or light mode (as set by the user or inferred
+                                     from BAT_THEME). To control the themes shown, use --dark or --light, or both, on
+                                     the command line together with this option
         --no-gitconfig               Do not take any settings from git config. See GIT CONFIG section
         --raw                        Do not alter the input in any way. This is mainly intended for testing delta
         --color-only                 Do not alter the input structurally in any way, but color and highlight hunk lines
