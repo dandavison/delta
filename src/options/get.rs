@@ -57,7 +57,7 @@ pub fn get_themes(git_config: Option<git_config::GitConfig>) -> Vec<String> {
             }
         }
     }
-    themes.sort_by(|a, b| a.to_lowercase().cmp(&b.to_lowercase()));
+    themes.sort_by_key(|a| a.to_lowercase());
     themes
 }
 
