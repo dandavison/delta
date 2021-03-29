@@ -69,7 +69,7 @@ pub mod integration_test_utils {
         config::Config::from(make_options_from_args(args))
     }
 
-    fn make_git_config(contents: &[u8], path: &str, honor_env_var: bool) -> GitConfig {
+    pub fn make_git_config(contents: &[u8], path: &str, honor_env_var: bool) -> GitConfig {
         let path = Path::new(path);
         let mut file = File::create(path).unwrap();
         file.write_all(contents).unwrap();

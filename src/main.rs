@@ -22,6 +22,7 @@ mod options;
 mod paint;
 mod parse;
 mod parse_style;
+mod sample_diff;
 mod style;
 mod syntect_color;
 mod tests;
@@ -38,6 +39,7 @@ use crate::bat_utils::assets::{list_languages, HighlightingAssets};
 use crate::bat_utils::output::{OutputType, PagingMode};
 use crate::config::delta_unreachable;
 use crate::delta::delta;
+use crate::options::get::get_themes;
 use crate::options::theme::is_light_syntax_theme;
 
 pub mod errors {
@@ -64,6 +66,9 @@ fn run_app() -> std::io::Result<i32> {
         return Ok(0);
     } else if opt.show_syntax_themes {
         show_syntax_themes()?;
+        return Ok(0);
+    } else if opt.show_themes {
+        show_themes(opt.dark, opt.light, opt.computed.is_light_mode)?;
         return Ok(0);
     }
 
@@ -254,6 +259,7 @@ fn show_config(config: &config::Config, writer: &mut dyn Write) -> std::io::Resu
         "    max-line-distance             = {max_line_distance}
     max-line-length               = {max_line_length}
     navigate                      = {navigate}
+    navigate-regexp               = {navigate_regexp}
     paging                        = {paging_mode}
     side-by-side                  = {side_by_side}
     syntax-theme                  = {syntax_theme}
@@ -263,6 +269,10 @@ fn show_config(config: &config::Config, writer: &mut dyn Write) -> std::io::Resu
         max_line_distance = config.max_line_distance,
         max_line_length = config.max_line_length,
         navigate = config.navigate,
+        navigate_regexp = match &config.navigate_regexp {
+            None => "".to_string(),
+            Some(s) => s.to_string(),
+        },
         paging_mode = match config.paging_mode {
             PagingMode::Always => "always",
             PagingMode::Never => "never",
@@ -300,6 +310,56 @@ where
     } else {
         s.to_string()
     }
+}
+
+fn show_themes(dark: bool, light: bool, computed_theme_is_light: bool) -> std::io::Result<()> {
+    use bytelines::ByteLines;
+    use sample_diff::DIFF;
+    use std::io::BufReader;
+    let mut input = DIFF.to_vec();
+
+    if !atty::is(atty::Stream::Stdin) {
+        let mut buf = Vec::new();
+        io::stdin().lock().read_to_end(&mut buf)?;
+        if !buf.is_empty() {
+            input = buf;
+        }
+    };
+
+    let mut git_config = git_config::GitConfig::try_create();
+    let opt = cli::Opt::from_iter_and_git_config(
+        &["", "", "--navigate", "--show-themes"],
+        &mut git_config,
+    );
+    let mut output_type =
+        OutputType::from_mode(PagingMode::Always, None, &config::Config::from(opt)).unwrap();
+    let title_style = ansi_term::Style::new().bold();
+    let writer = output_type.handle().unwrap();
+
+    for theme in &get_themes(git_config::GitConfig::try_create()) {
+        let opt =
+            cli::Opt::from_iter_and_git_config(&["", "", "--features", &theme], &mut git_config);
+        let is_dark_theme = opt.dark;
+        let is_light_theme = opt.light;
+        let config = config::Config::from(opt);
+
+        if (!computed_theme_is_light && is_dark_theme)
+            || (computed_theme_is_light && is_light_theme)
+            || (dark && light)
+        {
+            writeln!(writer, "\n\nTheme: {}\n", title_style.paint(theme))?;
+
+            if let Err(error) = delta(ByteLines::new(BufReader::new(&input[0..])), writer, &config)
+            {
+                match error.kind() {
+                    ErrorKind::BrokenPipe => process::exit(0),
+                    _ => eprintln!("{}", error),
+                }
+            }
+        }
+    }
+
+    Ok(())
 }
 
 #[cfg(not(tarpaulin_include))]

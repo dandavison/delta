@@ -13,6 +13,7 @@ use crate::cli;
 use crate::color;
 use crate::delta::State;
 use crate::env;
+use crate::features::navigate;
 use crate::features::side_by_side;
 use crate::git_config::GitConfigEntry;
 use crate::style::{self, Style};
@@ -58,6 +59,7 @@ pub struct Config {
     pub minus_non_emph_style: Style,
     pub minus_style: Style,
     pub navigate: bool,
+    pub navigate_regexp: Option<String>,
     pub null_style: Style,
     pub null_syntect_style: SyntectStyle,
     pub paging_mode: PagingMode,
@@ -68,6 +70,7 @@ pub struct Config {
     pub plus_style: Style,
     pub git_minus_style: Style,
     pub git_plus_style: Style,
+    pub show_themes: bool,
     pub side_by_side: bool,
     pub side_by_side_data: side_by_side::SideBySideData,
     pub syntax_dummy_theme: SyntaxTheme,
@@ -154,6 +157,24 @@ impl From<cli::Opt> for Config {
             _ => *style::GIT_DEFAULT_PLUS_STYLE,
         };
 
+        let file_added_label = opt.file_added_label;
+        let file_copied_label = opt.file_copied_label;
+        let file_modified_label = opt.file_modified_label;
+        let file_removed_label = opt.file_removed_label;
+        let file_renamed_label = opt.file_renamed_label;
+
+        let navigate_regexp = if opt.navigate || opt.show_themes {
+            Some(navigate::make_navigate_regexp(
+                opt.show_themes,
+                &file_modified_label,
+                &file_added_label,
+                &file_removed_label,
+                &file_renamed_label,
+            ))
+        } else {
+            None
+        };
+
         Self {
             available_terminal_width: opt.computed.available_terminal_width,
             background_color_extends_to_terminal_width: opt
@@ -163,11 +184,11 @@ impl From<cli::Opt> for Config {
             color_only: opt.color_only,
             decorations_width: opt.computed.decorations_width,
             error_exit_code: 2, // Use 2 for error because diff uses 0 and 1 for non-error.
-            file_added_label: opt.file_added_label,
-            file_copied_label: opt.file_copied_label,
-            file_modified_label: opt.file_modified_label,
-            file_removed_label: opt.file_removed_label,
-            file_renamed_label: opt.file_renamed_label,
+            file_added_label,
+            file_copied_label,
+            file_modified_label,
+            file_removed_label,
+            file_renamed_label,
             file_style,
             git_config_entries: opt.git_config_entries,
             hunk_header_file_style,
@@ -203,6 +224,7 @@ impl From<cli::Opt> for Config {
             minus_non_emph_style,
             minus_style,
             navigate: opt.navigate,
+            navigate_regexp,
             null_style: Style::new(),
             null_syntect_style: SyntectStyle::default(),
             paging_mode: opt.computed.paging_mode,
@@ -213,6 +235,7 @@ impl From<cli::Opt> for Config {
             plus_style,
             git_minus_style,
             git_plus_style,
+            show_themes: opt.show_themes,
             side_by_side: opt.side_by_side,
             side_by_side_data,
             syntax_dummy_theme: SyntaxTheme::default(),

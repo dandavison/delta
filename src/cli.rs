@@ -1,5 +1,4 @@
 use std::collections::{HashMap, HashSet};
-#[cfg(test)]
 use std::ffi::OsString;
 use std::path::PathBuf;
 
@@ -266,9 +265,22 @@ pub struct Opt {
 
     /// Show all available syntax-highlighting themes, each with an example of highlighted diff output.
     /// If diff output is supplied on standard input then this will be used for the demo. For
-    /// example: `git show --color=always | delta --show-syntax-themes`.
+    /// example: `git show | delta --show-syntax-themes`.
     #[structopt(long = "show-syntax-themes")]
     pub show_syntax_themes: bool,
+
+    /// Show available delta themes, each with an example of highlighted diff
+    /// output. A delta theme is a delta named feature (see --features) that
+    /// sets either `light` or `dark`. See
+    /// https://github.com/dandavison/delta#custom-color-themes. If diff output
+    /// is supplied on standard input then this will be used for the demo. For
+    /// example: `git show | delta --show-themes`. By default shows dark or
+    /// light themes only, according to whether delta is in dark or light mode
+    /// (as set by the user or inferred from BAT_THEME). To control the themes
+    /// shown, use --dark or --light, or both, on the command line together with
+    /// this option.
+    #[structopt(long = "show-themes")]
+    pub show_themes: bool,
 
     #[structopt(long = "no-gitconfig")]
     /// Do not take any settings from git config. See GIT CONFIG section.
@@ -635,7 +647,6 @@ impl Opt {
         Self::from_clap_and_git_config(Self::clap().get_matches(), git_config, assets)
     }
 
-    #[cfg(test)]
     pub fn from_iter_and_git_config<I>(iter: I, git_config: &mut Option<GitConfig>) -> Self
     where
         I: IntoIterator,

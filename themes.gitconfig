@@ -14,8 +14,9 @@
 #    organism: mammal, bird, plant, mollusk -- whatever. It can be in
 #    any language.
 #
-# 2. Please include a comment line describing the terminal
-#    theme/colors that you typically use with this theme.
+# 2. Include either `dark = true` or `light = true` according to whether you feel
+#    it looks best on a dark or light terminal background. (This marks a feature
+#    as a "theme", causing it to be picked up by `delta --show-themes`).
 #
 # 3. Feel free to include a comment line indicating who is the author
 #    of the theme. E.g. a link to your github user page.
@@ -52,6 +53,7 @@
 
 [delta "villsau"]
     # author: https://github.com/torarnv
+    dark = true
     syntax-theme = OneHalfDark
     line-numbers = false
     hunk-header-style = file line-number syntax
@@ -73,6 +75,7 @@
 [delta "collared-trogon"]
     # author: https://github.com/clnoll
     commit-decoration-style = bold box ul
+    dark = true
     file-style = omit
     file-decoration-style = none
     hunk-header-style = file line-number syntax
@@ -94,6 +97,7 @@
 [delta "tangara-chilensis"]
     # author: https://github.com/clnoll
     commit-decoration-style = bold box ul "#34fd50"
+    dark = true
     file-style = omit
     file-decoration-style = none
     hunk-header-style = file line-number syntax

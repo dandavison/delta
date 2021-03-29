@@ -1,3 +1,5 @@
+use lazy_static::lazy_static;
+use regex::Regex;
 use std::collections::HashMap;
 
 use crate::cli;
@@ -36,6 +38,27 @@ where
     T: Into<OptionValue>,
 {
     T::get_option_value(option_name, builtin_features, opt, git_config)
+}
+
+lazy_static! {
+    static ref GIT_CONFIG_THEME_REGEX: Regex = Regex::new(r"^delta\.(.+)\.(light|dark)$").unwrap();
+}
+
+pub fn get_themes(git_config: Option<git_config::GitConfig>) -> Vec<String> {
+    let mut themes: Vec<String> = Vec::new();
+    for e in &git_config.unwrap().config.entries(None).unwrap() {
+        let entry = e.unwrap();
+        let entry_name = entry.name().unwrap();
+        let caps = GIT_CONFIG_THEME_REGEX.captures(entry_name);
+        if let Some(caps) = caps {
+            let name = caps.get(1).map_or("", |m| m.as_str()).to_string();
+            if !themes.contains(&name) {
+                themes.push(name)
+            }
+        }
+    }
+    themes.sort_by(|a, b| a.to_lowercase().cmp(&b.to_lowercase()));
+    themes
 }
 
 pub trait GetOptionValue {
@@ -115,6 +138,7 @@ pub mod tests {
     use std::env;
     use std::fs::remove_file;
 
+    use crate::options::get::get_themes;
     use crate::tests::integration_test_utils::integration_test_utils;
 
     // TODO: the followig tests are collapsed into one since they all set the same env var and thus
@@ -272,6 +296,43 @@ pub mod tests {
             Some(git_config_path),
         );
         assert_eq!(opt.max_line_distance, 0.7);
+
+        remove_file(git_config_path).unwrap();
+    }
+
+    #[test]
+    fn test_get_themes_from_config() {
+        let git_config_contents = r#"
+[delta "dark-theme"]
+    max-line-distance = 0.6
+    dark = true
+
+[delta "light-theme"]
+    max-line-distance = 0.6
+    light = true
+
+[delta "light-and-dark-theme"]
+    max-line-distance = 0.6
+    light = true
+    dark = true
+
+[delta "not-a-theme"]
+    max-line-distance = 0.6
+"#;
+        let git_config_path = "delta__test_get_themes_git_config.gitconfig";
+
+        let git_config = Some(integration_test_utils::make_git_config(
+            git_config_contents.as_bytes(),
+            git_config_path,
+            false,
+        ));
+
+        let themes = get_themes(git_config);
+
+        assert_eq!(
+            themes,
+            ["dark-theme", "light-and-dark-theme", "light-theme",]
+        );
 
         remove_file(git_config_path).unwrap();
     }

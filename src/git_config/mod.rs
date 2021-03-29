@@ -12,7 +12,7 @@ use std::process;
 use lazy_static::lazy_static;
 
 pub struct GitConfig {
-    config: git2::Config,
+    pub config: git2::Config,
     config_from_env_var: HashMap<String, String>,
     pub enabled: bool,
     pub repo: Option<git2::Repository>,
