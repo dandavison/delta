@@ -132,7 +132,7 @@ mod tests {
         enum Mode {
             Light,
             Dark,
-        };
+        }
         for (
             syntax_theme,
             bat_theme_env_var,
