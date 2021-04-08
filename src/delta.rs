@@ -115,7 +115,7 @@ impl<'a> StateMachine<'a> {
                 self.source = detect_source(&line);
             }
 
-            let mut handled_line = if line.starts_with("commit ") {
+            let mut handled_line = if self.config.commit_regex.is_match(line) {
                 self.handle_commit_meta_header_line()?
             } else if (self.state == State::CommitMeta || self.state == State::Unknown)
                 && line.starts_with(' ')

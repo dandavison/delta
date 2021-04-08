@@ -23,6 +23,7 @@ pub struct Config {
     pub background_color_extends_to_terminal_width: bool,
     pub commit_style: Style,
     pub color_only: bool,
+    pub commit_regex: Regex,
     pub cwd_relative_to_repo_root: Option<String>,
     pub decorations_width: cli::Width,
     pub diff_stat_align_width: usize,
@@ -136,6 +137,16 @@ impl From<cli::Opt> for Config {
                 .map(|s| s.parse::<f64>().unwrap_or(0.0))
                 .unwrap_or(0.0);
 
+        let commit_regex = Regex::new(&opt.commit_regex).unwrap_or_else(|_| {
+            eprintln!(
+                "Invalid commit-regex: {}. \
+                 The value must be a valid Rust regular expression. \
+                 See https://docs.rs/regex.",
+                opt.commit_regex
+            );
+            process::exit(1);
+        });
+
         let tokenization_regex = Regex::new(&opt.tokenization_regex).unwrap_or_else(|_| {
             eprintln!(
                 "Invalid word-diff-regex: {}. \
@@ -185,6 +196,7 @@ impl From<cli::Opt> for Config {
                 .background_color_extends_to_terminal_width,
             commit_style,
             color_only: opt.color_only,
+            commit_regex,
             cwd_relative_to_repo_root: std::env::var("GIT_PREFIX").ok(),
             decorations_width: opt.computed.decorations_width,
             diff_stat_align_width: opt.diff_stat_align_width,
