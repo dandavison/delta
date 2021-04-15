@@ -55,10 +55,6 @@ pub fn make_builtin_features() -> HashMap<String, BuiltinFeature> {
             "side-by-side".to_string(),
             side_by_side::make_feature().into_iter().collect(),
         ),
-        (
-            "side-by-side-wrapped".to_string(),
-            side_by_side_wrap::make_feature().into_iter().collect(),
-        ),
     ]
     .into_iter()
     .collect()

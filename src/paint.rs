@@ -212,7 +212,7 @@ impl<'a> Painter<'a> {
             // too long are found.
             // If so, remember the calculated line width and which of the lines are too
             // long for later re-use.
-            let (should_wrap, line_width, long_lines) = if self.config.side_by_side_wrapped {
+            let (should_wrap, line_width, long_lines) = {
                 let line_width = available_line_width(&self.config, &self.line_numbers_data);
 
                 let lines = LeftRight::new(&self.minus_lines, &self.plus_lines);
@@ -220,8 +220,6 @@ impl<'a> Painter<'a> {
                 let (should_wrap, long_lines) = side_by_side::has_long_lines(&lines, &line_width);
 
                 (should_wrap, line_width, long_lines)
-            } else {
-                (false, LeftRight::default(), LeftRight::default())
             };
 
             let (line_alignment, line_states, syntax_left_right, diff_left_right) = if should_wrap {

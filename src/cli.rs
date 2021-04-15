@@ -217,10 +217,6 @@ pub struct Opt {
     #[structopt(short = "s", long = "side-by-side")]
     pub side_by_side: bool,
 
-    /// Display a side-by-side diff and wrap overlong lines instead of truncating them.
-    #[structopt(short = "S", long = "side-by-side-wrapped")]
-    pub side_by_side_wrapped: bool,
-
     #[structopt(long = "diff-highlight")]
     /// Emulate diff-highlight (https://github.com/git/git/tree/master/contrib/diff-highlight)
     pub diff_highlight: bool,
@@ -453,6 +449,31 @@ pub struct Opt {
     /// and LINE NUMBERS sections.
     #[structopt(long = "line-numbers-right-style", default_value = "auto")]
     pub line_numbers_right_style: String,
+
+    /// Maximum number of wrapped lines to display in side-by-side mode. Any
+    /// content that still does not fit will be truncated.
+    #[structopt(long = "side-by-side-wrap-max-lines", default_value = "3")]
+    pub side_by_side_wrap_max_lines: usize,
+
+    /// Symbol indicating that a line has been wrapped in side-by-side mode.
+    #[structopt(long = "side-by-side-wrap-symbol", default_value = "↵")]
+    pub side_by_side_wrap_symbol: String,
+
+    /// Threshold for right-aligning wrapped content in side-by-side mode. If
+    /// the length of remaining wrapped content, as a percentage of the panel
+    /// width, is less than this quantity then it will be displayed
+    /// right-aligned.
+    #[structopt(long = "side-by-side-wrap-right-percent", default_value = "37.0")]
+    pub side_by_side_wrap_right_percent: f64,
+
+    /// Symbol indicating that a line has been wrapped and that the subsequent
+    /// content is displayed right-aligned.
+    #[structopt(long = "side-by-side-wrap-right-symbol", default_value = "↴")]
+    pub side_by_side_wrap_right_symbol: String,
+
+    /// Symbol displayed in front of right-aligned wrapped content.
+    #[structopt(long = "side-by-side-wrap-right-align-symbol", default_value = "…")]
+    pub side_by_side_wrap_right_align_symbol: String,
 
     #[structopt(long = "file-modified-label", default_value = "")]
     /// Text to display in front of a modified file path.

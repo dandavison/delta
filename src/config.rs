@@ -76,7 +76,6 @@ pub struct Config {
     pub git_plus_style: Style,
     pub show_themes: bool,
     pub side_by_side: bool,
-    pub side_by_side_wrapped: bool,
     pub side_by_side_data: side_by_side::SideBySideData,
     pub syntax_dummy_theme: SyntaxTheme,
     pub syntax_set: SyntaxSet,
@@ -248,7 +247,6 @@ impl From<cli::Opt> for Config {
             git_plus_style,
             show_themes: opt.show_themes,
             side_by_side: opt.side_by_side,
-            side_by_side_wrapped: opt.side_by_side_wrapped,
             side_by_side_data,
             syntax_dummy_theme: SyntaxTheme::default(),
             syntax_set: opt.computed.syntax_set,
@@ -256,22 +254,24 @@ impl From<cli::Opt> for Config {
             tab_width: opt.tab_width,
             tokenization_regex,
             true_color: opt.computed.true_color,
-            truncation_symbol: {
-                let sym = "→";
-                if opt.side_by_side_wrapped {
-                    format!("{}{}{}", ansi::ANSI_SGR_REVERSE, sym, ansi::ANSI_SGR_RESET)
-                } else {
-                    sym.to_string()
-                }
-            },
+            truncation_symbol: format!("{}→{}", ansi::ANSI_SGR_REVERSE, ansi::ANSI_SGR_RESET),
             wrap_config: side_by_side_wrap::WrapConfig {
-                wrap_symbol: "↵".to_string(),
-                wrap_right_symbol: "↴".to_string(),
-                right_align_symbol: "…".to_string(),
+                wrap_symbol: opt.side_by_side_wrap_symbol,
+                wrap_right_symbol: opt.side_by_side_wrap_right_symbol,
+                right_align_symbol: opt.side_by_side_wrap_right_align_symbol,
                 // TODO, support multi-character symbols, and thus store
                 // right_align_symbol_len here?
-                use_wrap_right_permille: 370,
-                max_lines: 3,
+                use_wrap_right_permille: {
+                    let percent = if opt.side_by_side_wrap_right_percent < 0.0 {
+                        0.0
+                    } else if opt.side_by_side_wrap_right_percent > 100.0 {
+                        100.0
+                    } else {
+                        opt.side_by_side_wrap_right_percent
+                    };
+                    (percent * 10.0).round() as usize
+                },
+                max_lines: opt.side_by_side_wrap_max_lines,
             },
             whitespace_error_style,
             zero_style,

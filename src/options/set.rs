@@ -171,7 +171,11 @@ pub fn set_options(
             raw,
             show_themes,
             side_by_side,
-            side_by_side_wrapped,
+            side_by_side_wrap_max_lines,
+            side_by_side_wrap_right_align_symbol,
+            side_by_side_wrap_right_percent,
+            side_by_side_wrap_right_symbol,
+            side_by_side_wrap_symbol,
             tab_width,
             tokenization_regex,
             true_color,
@@ -337,14 +341,6 @@ fn gather_features(
     }
     if opt.side_by_side {
         gather_builtin_features_recursively("side-by-side", &mut features, &builtin_features, opt);
-    }
-    if opt.side_by_side_wrapped {
-        gather_builtin_features_recursively(
-            "side-by-side-wrapped",
-            &mut features,
-            &builtin_features,
-            opt,
-        );
     }
 
     if let Some(git_config) = git_config {

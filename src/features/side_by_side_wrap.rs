@@ -7,7 +7,6 @@ use crate::features::line_numbers;
 use crate::features::side_by_side::line_is_too_long;
 use crate::features::side_by_side::LeftRight;
 use crate::features::side_by_side::PanelSide::*;
-use crate::features::OptionValueFunction;
 use crate::style::Style;
 
 use super::{line_numbers::SideBySideLineWidth, side_by_side::available_line_width};
@@ -19,23 +18,6 @@ pub struct WrapConfig {
     pub right_align_symbol: String,
     pub use_wrap_right_permille: usize,
     pub max_lines: usize,
-}
-
-pub fn make_feature() -> Vec<(String, OptionValueFunction)> {
-    builtin_feature!([
-        (
-            "side-by-side-wrapped",
-            bool,
-            None,
-            _opt => true
-        ),
-        (
-            "side-by-side",
-            bool,
-            None,
-            _opt => true
-        )
-    ])
 }
 
 // Wrap the given `line` if it is longer than `line_width`. Wrap to at most
@@ -796,7 +778,7 @@ index 223ca50..e69de29 100644
     #[test]
     fn test_wrap_with_linefmt1() {
         let mut config = make_config_from_args(&[
-            "--side-by-side-wrapped",
+            "--side-by-side",
             "--line-numbers-left-format",
             "│L│",
             "--line-numbers-right-format",
@@ -825,7 +807,7 @@ index 223ca50..e69de29 100644
     #[test]
     fn test_wrap_with_linefmt2() {
         let mut config = make_config_from_args(&[
-            "--side-by-side-wrapped",
+            "--side-by-side",
             "--line-numbers-left-format",
             "│LLL│",
             "--line-numbers-right-format",
@@ -853,7 +835,7 @@ index 223ca50..e69de29 100644
     #[test]
     fn test_wrap_with_keep_markers() {
         let mut config = make_config_from_args(&[
-            "--side-by-side-wrapped",
+            "--side-by-side",
             "--keep-plus-minus-markers",
             "--width",
             "45",

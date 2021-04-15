@@ -211,18 +211,14 @@ pub fn paint_zero_lines_side_by_side(
 ) {
     let states = vec![State::HunkZero];
 
-    let (states, syntax_style_sections, diff_style_sections) = if config.side_by_side_wrapped {
-        side_by_side_wrap::wrap_zero_block(
-            &config,
-            &raw_line,
-            states,
-            syntax_style_sections,
-            diff_style_sections,
-            &line_numbers_data,
-        )
-    } else {
-        (states, syntax_style_sections, diff_style_sections)
-    };
+    let (states, syntax_style_sections, diff_style_sections) = side_by_side_wrap::wrap_zero_block(
+        &config,
+        &raw_line,
+        states,
+        syntax_style_sections,
+        diff_style_sections,
+        &line_numbers_data,
+    );
 
     for (line_index, ((syntax_sections, diff_sections), state)) in syntax_style_sections
         .into_iter()
@@ -535,7 +531,13 @@ pub mod tests {
 
     #[test]
     fn test_two_minus_lines() {
-        let config = make_config_from_args(&["--side-by-side", "--width", "40"]);
+        let config = make_config_from_args(&[
+            "--side-by-side",
+            "--side-by-side-wrap-max-lines",
+            "0",
+            "--width",
+            "40",
+        ]);
         let output = run_delta(TWO_MINUS_LINES_DIFF, &config);
         let mut lines = output.lines().skip(7);
         let (line_1, line_2) = (lines.next().unwrap(), lines.next().unwrap());
@@ -545,7 +547,13 @@ pub mod tests {
 
     #[test]
     fn test_two_minus_lines_truncated() {
-        let mut config = make_config_from_args(&["--side-by-side", "--width", "28"]);
+        let mut config = make_config_from_args(&[
+            "--side-by-side",
+            "--side-by-side-wrap-max-lines",
+            "0",
+            "--width",
+            "28",
+        ]);
         config.truncation_symbol = ">".into();
         let output = run_delta(TWO_MINUS_LINES_DIFF, &config);
         let mut lines = output.lines().skip(7);
@@ -556,7 +564,13 @@ pub mod tests {
 
     #[test]
     fn test_two_plus_lines() {
-        let config = make_config_from_args(&["--side-by-side", "--width", "40"]);
+        let config = make_config_from_args(&[
+            "--side-by-side",
+            "--side-by-side-wrap-max-lines",
+            "0",
+            "--width",
+            "40",
+        ]);
         let output = run_delta(TWO_PLUS_LINES_DIFF, &config);
         let mut lines = output.lines().skip(7);
         let (line_1, line_2) = (lines.next().unwrap(), lines.next().unwrap());
@@ -569,7 +583,13 @@ pub mod tests {
 
     #[test]
     fn test_two_plus_lines_truncated() {
-        let mut config = make_config_from_args(&["--side-by-side", "--width", "30"]);
+        let mut config = make_config_from_args(&[
+            "--side-by-side",
+            "--side-by-side-wrap-max-lines",
+            "0",
+            "--width",
+            "30",
+        ]);
         config.truncation_symbol = ">".into();
         let output = run_delta(TWO_PLUS_LINES_DIFF, &config);
         let mut lines = output.lines().skip(7);
@@ -580,7 +600,13 @@ pub mod tests {
 
     #[test]
     fn test_two_plus_lines_exact_fit() {
-        let mut config = make_config_from_args(&["--side-by-side", "--width", "32"]);
+        let mut config = make_config_from_args(&[
+            "--side-by-side",
+            "--side-by-side-wrap-max-lines",
+            "0",
+            "--width",
+            "32",
+        ]);
         config.truncation_symbol = ">".into();
         let output = run_delta(TWO_PLUS_LINES_DIFF, &config);
         let mut lines = output.lines().skip(7);
@@ -591,7 +617,13 @@ pub mod tests {
 
     #[test]
     fn test_one_minus_one_plus_line() {
-        let config = make_config_from_args(&["--side-by-side", "--width", "40"]);
+        let config = make_config_from_args(&[
+            "--side-by-side",
+            "--side-by-side-wrap-max-lines",
+            "0",
+            "--width",
+            "40",
+        ]);
         let output = run_delta(ONE_MINUS_ONE_PLUS_LINE_DIFF, &config);
         let output = strip_ansi_codes(&output);
         let mut lines = output.lines().skip(7);
