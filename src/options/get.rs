@@ -8,23 +8,23 @@ use crate::git_config::{self, GitConfigGet};
 use crate::options::option_value::{OptionValue, ProvenancedOptionValue};
 use ProvenancedOptionValue::*;
 
-/// Look up a value of type `T` associated with `option name`. The search rules are:
-///
-/// 1. If there is a value associated with `option_name` in the main [delta] git config
-///    section, then stop searching and return that value.
-///
-/// 2. For each feature in the ordered list of enabled features:
-///
-///    2.1 Look-up the value, treating `feature` as a custom feature.
-///        I.e., if there is a value associated with `option_name` in a git config section
-///        named [delta "`feature`"] then stop searching and return that value.
-///
-///    2.2 Look-up the value, treating `feature` as a builtin feature.
-///        I.e., if there is a value (not a default value) associated with `option_name` in a
-///        builtin feature named `feature`, then stop searching and return that value.
-///        Otherwise, record the default value and continue searching.
-///
-/// 3. Return the last default value that was encountered.
+// Look up a value of type `T` associated with `option name`. The search rules are:
+//
+// 1. If there is a value associated with `option_name` in the main [delta] git config
+//    section, then stop searching and return that value.
+//
+// 2. For each feature in the ordered list of enabled features:
+//
+//    2.1 Look-up the value, treating `feature` as a custom feature.
+//        I.e., if there is a value associated with `option_name` in a git config section
+//        named [delta "`feature`"] then stop searching and return that value.
+//
+//    2.2 Look-up the value, treating `feature` as a builtin feature.
+//        I.e., if there is a value (not a default value) associated with `option_name` in a
+//        builtin feature named `feature`, then stop searching and return that value.
+//        Otherwise, record the default value and continue searching.
+//
+// 3. Return the last default value that was encountered.
 pub fn get_option_value<T>(
     option_name: &str,
     builtin_features: &HashMap<String, features::BuiltinFeature>,

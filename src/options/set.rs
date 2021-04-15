@@ -239,55 +239,55 @@ fn set__light__dark__syntax_theme__options(
     );
 }
 
-/// Features are processed differently from all other options. The role of this function is to
-/// collect all configuration related to features and summarize it as a single list
-/// (space-separated string) of enabled features. The list is arranged in order of increasing
-/// priority in the sense that, when searching for a option value, one starts at the right-hand end
-/// and moves leftward, examining each feature in turn until a feature that associates a value with
-/// the option name is encountered. This search is documented in
-/// `get_option_value::get_option_value`.
-///
-/// The feature list comprises features deriving from the following sources, listed in order of
-/// decreasing priority:
-///
-/// 1. Suppose the command-line has `--features "a b"`. Then
-///    - `b`, followed by b's "ordered descendents"
-///    - `a`, followed by a's "ordered descendents"
-///
-/// 2. Suppose the command line enables two builtin features via `--navigate --diff-so-fancy`. Then
-///    - `diff-so-fancy`
-///    - `navigate`
-///
-/// 3. Suppose the main [delta] section has `features = d e`. Then
-///    - `e`, followed by e's "ordered descendents"
-///    - `d`, followed by d's "ordered descendents"
-///
-/// 4. Suppose the main [delta] section has `diff-highlight = true` followed by `raw = true`.
-///    Then
-///    - `diff-highlight`
-///    - `raw`
-///
-/// The "ordered descendents" of a feature `f` is a list of features obtained via a pre-order
-/// traversal of the feature tree rooted at `f`. This tree arises because it is allowed for a
-/// feature to contain a (key, value) pair that itself enables features.
-///
-/// If a feature has already been included at higher priority, and is encountered again, it is
-/// ignored.
-///
-/// Thus, for example:
-///
-/// delta --features "my-navigate-settings" --navigate   =>   "navigate my-navigate-settings"
-///
-/// In the following configuration, the feature names indicate their priority, with `a` having
-/// highest priority:
-///
-/// delta --g --features "d a"
-///
-/// [delta "a"]
-///     features = c b
-///
-/// [delta "d"]
-///     features = f e
+// Features are processed differently from all other options. The role of this function is to
+// collect all configuration related to features and summarize it as a single list
+// (space-separated string) of enabled features. The list is arranged in order of increasing
+// priority in the sense that, when searching for a option value, one starts at the right-hand end
+// and moves leftward, examining each feature in turn until a feature that associates a value with
+// the option name is encountered. This search is documented in
+// `get_option_value::get_option_value`.
+//
+// The feature list comprises features deriving from the following sources, listed in order of
+// decreasing priority:
+//
+// 1. Suppose the command-line has `--features "a b"`. Then
+//    - `b`, followed by b's "ordered descendents"
+//    - `a`, followed by a's "ordered descendents"
+//
+// 2. Suppose the command line enables two builtin features via `--navigate --diff-so-fancy`. Then
+//    - `diff-so-fancy`
+//    - `navigate`
+//
+// 3. Suppose the main [delta] section has `features = d e`. Then
+//    - `e`, followed by e's "ordered descendents"
+//    - `d`, followed by d's "ordered descendents"
+//
+// 4. Suppose the main [delta] section has `diff-highlight = true` followed by `raw = true`.
+//    Then
+//    - `diff-highlight`
+//    - `raw`
+//
+// The "ordered descendents" of a feature `f` is a list of features obtained via a pre-order
+// traversal of the feature tree rooted at `f`. This tree arises because it is allowed for a
+// feature to contain a (key, value) pair that itself enables features.
+//
+// If a feature has already been included at higher priority, and is encountered again, it is
+// ignored.
+//
+// Thus, for example:
+//
+// delta --features "my-navigate-settings" --navigate   =>   "navigate my-navigate-settings"
+//
+// In the following configuration, the feature names indicate their priority, with `a` having
+// highest priority:
+//
+// delta --g --features "d a"
+//
+// [delta "a"]
+//     features = c b
+//
+// [delta "d"]
+//     features = f e
 fn gather_features(
     opt: &cli::Opt,
     builtin_features: &HashMap<String, features::BuiltinFeature>,

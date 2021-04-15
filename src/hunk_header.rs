@@ -1,23 +1,23 @@
-//! A module for constructing and writing the hunk header.
-//!
-//! The structure of the hunk header output by delta is
-//! ```
-//! (file):(line-number): (code-fragment)
-//! ```
-//!
-//! The code fragment and line number derive from a line of git/diff output that looks like
-//! ```
-//! @@ -119,12 +119,7 @@ fn write_to_output_buffer(
-//! ```
-//!
-//! Whether or not file and line-number are included is controlled by the presence of the special
-//! style attributes 'file' and 'line-number' in the hunk-header-style string. For example, delta
-//! might output the above hunk header as
-//! ```
-//! ───────────────────────────────────────────────────┐
-//! src/hunk_header.rs:119: fn write_to_output_buffer( │
-//! ───────────────────────────────────────────────────┘
-//! ```
+// A module for constructing and writing the hunk header.
+//
+// The structure of the hunk header output by delta is
+// ```
+// (file):(line-number): (code-fragment)
+// ```
+//
+// The code fragment and line number derive from a line of git/diff output that looks like
+// ```
+// @@ -119,12 +119,7 @@ fn write_to_output_buffer(
+// ```
+//
+// Whether or not file and line-number are included is controlled by the presence of the special
+// style attributes 'file' and 'line-number' in the hunk-header-style string. For example, delta
+// might output the above hunk header as
+// ```
+// ───────────────────────────────────────────────────┐
+// src/hunk_header.rs:119: fn write_to_output_buffer( │
+// ───────────────────────────────────────────────────┘
+// ```
 
 use std::fmt::Write as FmtWrite;
 
