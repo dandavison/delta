@@ -16,6 +16,8 @@ pub struct WrapConfig {
     pub wrap_symbol: String,
     pub wrap_right_symbol: String,
     pub right_align_symbol: String,
+    // In fractions of 1000 so that a >100 wide panel can
+    // still be configured down to a single character.
     pub use_wrap_right_permille: usize,
     pub max_lines: usize,
 }
@@ -194,9 +196,9 @@ where
         if result.is_empty() {
             result.push(Vec::new());
         }
-        result
-            .last_mut()
-            .map(|vec| vec.extend(stack.into_iter().rev()));
+
+        // unwrap: previous `if` ensures result can not be empty
+        result.last_mut().unwrap().extend(stack.into_iter().rev());
     }
 
     result
@@ -461,7 +463,11 @@ pub fn wrap_zero_block<'c: 'a, 'a>(
             &config,
             diff_style_sections.into_iter().flatten(),
             line_width,
-            &config.null_style,
+            // To actually highlight `config.inline_hint_color` characters:
+            &Style {
+                is_syntax_highlighted: true,
+                ..config.null_style
+            },
             &None,
         );
 

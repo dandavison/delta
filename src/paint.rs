@@ -164,13 +164,6 @@ impl<'a> Painter<'a> {
             Self::get_diff_style_sections(&self.minus_lines, &self.plus_lines, self.config);
 
         if self.config.side_by_side {
-            let avail_width = available_line_width(&self.config, &self.line_numbers_data);
-
-            let right_panel_too_long = self
-                .plus_lines
-                .iter()
-                .any(|(line, _)| side_by_side::line_is_too_long(&line, avail_width.right));
-
             let syntax_left_right = LeftRight::new(
                 minus_line_syntax_style_sections,
                 plus_line_syntax_style_sections,
@@ -199,13 +192,22 @@ impl<'a> Painter<'a> {
                 // the truncation symbol. And to be consistent, use spaces for the entire
                 // block.
 
-                // TODO, see prev. patch
-                if right_panel_too_long {
-                    // BgFillWidth::CfgDefault(BgFillMethod::Spaces)
-                    BgFillWidth::CfgDefault(BgFillMethod::TryAnsiSequence)
-                } else {
-                    BgFillWidth::CfgDefault(BgFillMethod::TryAnsiSequence)
-                },
+                // TODO, see "background extending" patch
+                /*
+
+                let avail_width = available_line_width(&self.config, &self.line_numbers_data);
+                let right_panel_too_long = self
+                    .plus_lines
+                    .iter()
+                    .any(|(line, _)| side_by_side::line_is_too_long(&line, avail_width.right));
+
+                        if right_panel_too_long {
+                        // BgFillWidth::CfgDefault(BgFillMethod::Spaces)
+                        BgFillWidth::CfgDefault(BgFillMethod::TryAnsiSequence)
+                    } else {
+                        BgFillWidth::CfgDefault(BgFillMethod::TryAnsiSequence)
+                    }, */
+                BgFillWidth::CfgDefault(BgFillMethod::TryAnsiSequence),
             );
 
             // Only set `should_wrap` to true if wrapping is wanted and lines which are

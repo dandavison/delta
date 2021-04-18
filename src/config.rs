@@ -262,13 +262,7 @@ impl From<cli::Opt> for Config {
                 // TODO, support multi-character symbols, and thus store
                 // right_align_symbol_len here?
                 use_wrap_right_permille: {
-                    let percent = if opt.side_by_side_wrap_right_percent < 0.0 {
-                        0.0
-                    } else if opt.side_by_side_wrap_right_percent > 100.0 {
-                        100.0
-                    } else {
-                        opt.side_by_side_wrap_right_percent
-                    };
+                    let percent = opt.side_by_side_wrap_right_percent.clamp(0.0, 100.0);
                     (percent * 10.0).round() as usize
                 },
                 max_lines: opt.side_by_side_wrap_max_lines,
