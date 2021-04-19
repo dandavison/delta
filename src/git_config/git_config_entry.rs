@@ -20,7 +20,7 @@ pub enum GitRemoteRepo {
 }
 
 lazy_static! {
-    static ref GITHUB_REMOTE_URL: Regex = Regex::new(r"github\.com[:/]([^/]+)/(.+)\.git").unwrap();
+    static ref GITHUB_REMOTE_URL: Regex = Regex::new(r"github\.com[:/]([^/]+)/(.+)").unwrap();
 }
 
 impl FromStr for GitRemoteRepo {
