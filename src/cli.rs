@@ -468,12 +468,12 @@ pub struct Opt {
 
     /// Symbol indicating that a line has been wrapped and that the subsequent
     /// content is displayed right-aligned.
-    #[structopt(long = "side-by-side-wrap-right-symbol", default_value = "↴")]
-    pub side_by_side_wrap_right_symbol: String,
+    #[structopt(long = "side-by-side-wrap-right-wrap-symbol", default_value = "↴")]
+    pub side_by_side_wrap_right_wrap_symbol: String,
 
     /// Symbol displayed in front of right-aligned wrapped content.
-    #[structopt(long = "side-by-side-wrap-right-align-symbol", default_value = "…")]
-    pub side_by_side_wrap_right_align_symbol: String,
+    #[structopt(long = "side-by-side-wrap-right-prefix-symbol", default_value = "…")]
+    pub side_by_side_wrap_right_prefix_symbol: String,
 
     #[structopt(long = "file-modified-label", default_value = "")]
     /// Text to display in front of a modified file path.

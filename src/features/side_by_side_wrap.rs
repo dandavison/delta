@@ -14,8 +14,8 @@ use super::{line_numbers::SideBySideLineWidth, side_by_side::available_line_widt
 #[derive(Clone)]
 pub struct WrapConfig {
     pub wrap_symbol: String,
-    pub wrap_right_symbol: String,
-    pub right_align_symbol: String,
+    pub wrap_right_wrap_symbol: String,
+    pub wrap_right_prefix_symbol: String,
     // In fractions of 1000 so that a >100 wide panel can
     // still be configured down to a single character.
     pub use_wrap_right_permille: usize,
@@ -165,7 +165,7 @@ where
 
             match result.last_mut() {
                 Some(ref mut vec) if !vec.is_empty() => {
-                    vec.last_mut().unwrap().1 = &wrap_config.wrap_right_symbol
+                    vec.last_mut().unwrap().1 = &wrap_config.wrap_right_wrap_symbol
                 }
                 _ => unreachable!("wrap result must not be empty"),
             }
@@ -181,7 +181,7 @@ where
                 n => right_aligned_line.push((*fill_style, &SPACES[0..n])),
             }
 
-            right_aligned_line.push((symbol_style, &wrap_config.right_align_symbol));
+            right_aligned_line.push((symbol_style, &wrap_config.wrap_right_prefix_symbol));
 
             // skip LINEPREFIX
             right_aligned_line.extend(curr_line.into_iter().skip(1));
@@ -520,8 +520,8 @@ mod tests {
     lazy_static! {
         static ref TEST_WRAP_CFG: WrapConfig = WrapConfig {
             wrap_symbol: W.into(),
-            wrap_right_symbol: WR.into(),
-            right_align_symbol: RA.into(),
+            wrap_right_wrap_symbol: WR.into(),
+            wrap_right_prefix_symbol: RA.into(),
             use_wrap_right_permille: 370,
             max_lines: 5,
         };

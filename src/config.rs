@@ -261,8 +261,8 @@ impl From<cli::Opt> for Config {
             truncation_symbol: format!("{}→{}", ansi::ANSI_SGR_REVERSE, ansi::ANSI_SGR_RESET),
             wrap_config: side_by_side_wrap::WrapConfig {
                 wrap_symbol: opt.side_by_side_wrap_symbol,
-                wrap_right_symbol: opt.side_by_side_wrap_right_symbol,
-                right_align_symbol: opt.side_by_side_wrap_right_align_symbol,
+                wrap_right_wrap_symbol: opt.side_by_side_wrap_right_wrap_symbol,
+                wrap_right_prefix_symbol: opt.side_by_side_wrap_right_prefix_symbol,
                 // TODO, support multi-character symbols, and thus store
                 // right_align_symbol_len here?
                 use_wrap_right_permille: {
