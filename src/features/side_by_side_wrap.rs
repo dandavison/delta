@@ -58,14 +58,10 @@ where
 
     let max_len = line_width + LINEPREFIX.len();
 
-    // Stay defensive just in case: guard against infinite loops.
-    let mut n = max_len * wrap_config.max_lines * 2;
-
     let mut curr_line = Vec::new();
     let mut curr_len = 0;
 
-    // Determine the background (diff) and color (syntax) of
-    // an inserted symbol.
+    // Determine the background (diff) and color (syntax) of an inserted symbol.
     let symbol_style = match inline_hint_style {
         Some(style) => *style,
         None => *fill_style,
@@ -73,17 +69,23 @@ where
 
     let mut stack = line.into_iter().rev().collect::<Vec<_>>();
 
-    while !stack.is_empty()
-        && result.len() + 1 < wrap_config.max_lines
-        && max_len > LINEPREFIX.len()
-        && n > 0
-    {
-        n -= 1;
+    let line_limit_reached = |result: &Vec<_>| {
+        // If only the wrap symbol and no extra text fits then wrapping is not possible.
+        let max_lines = if line_width > 1 {
+            wrap_config.max_lines
+        } else {
+            1
+        };
 
+        max_lines > 0 && result.len() + 1 >= max_lines
+    };
+
+    while !stack.is_empty() && !line_limit_reached(&result) && max_len > LINEPREFIX.len() {
         let (style, text, graphemes) = stack
             .pop()
             .map(|(style, text)| (style, text, text.grapheme_indices(true).collect::<Vec<_>>()))
             .unwrap();
+
         let new_sum = curr_len + graphemes.len();
 
         let must_split = if new_sum < max_len {

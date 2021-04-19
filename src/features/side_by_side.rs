@@ -534,7 +534,7 @@ pub mod tests {
         let config = make_config_from_args(&[
             "--side-by-side",
             "--side-by-side-wrap-max-lines",
-            "0",
+            "1",
             "--width",
             "40",
         ]);
@@ -550,7 +550,7 @@ pub mod tests {
         let mut config = make_config_from_args(&[
             "--side-by-side",
             "--side-by-side-wrap-max-lines",
-            "0",
+            "1",
             "--width",
             "28",
         ]);
@@ -567,7 +567,7 @@ pub mod tests {
         let config = make_config_from_args(&[
             "--side-by-side",
             "--side-by-side-wrap-max-lines",
-            "0",
+            "1",
             "--width",
             "40",
         ]);
@@ -586,7 +586,7 @@ pub mod tests {
         let mut config = make_config_from_args(&[
             "--side-by-side",
             "--side-by-side-wrap-max-lines",
-            "0",
+            "1",
             "--width",
             "30",
         ]);
@@ -603,7 +603,7 @@ pub mod tests {
         let mut config = make_config_from_args(&[
             "--side-by-side",
             "--side-by-side-wrap-max-lines",
-            "0",
+            "1",
             "--width",
             "32",
         ]);
@@ -620,7 +620,7 @@ pub mod tests {
         let config = make_config_from_args(&[
             "--side-by-side",
             "--side-by-side-wrap-max-lines",
-            "0",
+            "1",
             "--width",
             "40",
         ]);

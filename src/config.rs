@@ -227,7 +227,11 @@ impl From<cli::Opt> for Config {
             line_buffer_size: opt.line_buffer_size,
             max_line_distance: opt.max_line_distance,
             max_line_distance_for_naively_paired_lines,
-            max_line_length: opt.max_line_length,
+            max_line_length: if opt.side_by_side_wrap_max_lines == 0 {
+                0
+            } else {
+                opt.max_line_length
+            },
             minus_emph_style,
             minus_empty_line_marker_style,
             minus_file: opt.minus_file,
