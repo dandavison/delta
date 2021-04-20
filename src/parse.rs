@@ -28,8 +28,12 @@ pub enum FileEvent {
     NoEvent,
 }
 
-pub fn parse_file_meta_line(line: &str, git_diff_name: bool) -> (String, FileEvent) {
-    match line {
+pub fn parse_file_meta_line(
+    line: &str,
+    git_diff_name: bool,
+    cwd_relative_to_repo_root: Option<&str>,
+) -> (String, FileEvent) {
+    let (mut path, file_event) = match line {
         line if line.starts_with("--- ") || line.starts_with("+++ ") => {
             let offset = 4;
             let file = match &line[offset..] {
@@ -56,7 +60,44 @@ pub fn parse_file_meta_line(line: &str, git_diff_name: bool) -> (String, FileEve
             (line[8..].to_string(), FileEvent::Copy) // "copy to ".len()
         }
         _ => ("".to_string(), FileEvent::NoEvent),
+    };
+
+    if let Some(cwd) = cwd_relative_to_repo_root {
+        if let Some(relative_path) = pathdiff::diff_paths(&path, cwd) {
+            if let Some(relative_path) = relative_path.to_str() {
+                path = relative_path.to_owned();
+            }
+        }
     }
+
+    (path, file_event)
+}
+
+// A regex to capture the path, and the content from the pipe onwards, in lines
+// like these:
+// " src/delta.rs  | 14 ++++++++++----"
+// " src/config.rs |  2 ++"
+lazy_static! {
+    static ref DIFF_STAT_LINE_REGEX: Regex =
+        Regex::new(r" ([^\| ][^\|]+[^\| ]) +(\| +[0-9]+ .+)").unwrap();
+}
+
+pub fn relativize_path_in_diff_stat_line(
+    line: &str,
+    cwd_relative_to_repo_root: &str,
+) -> Option<String> {
+    if let Some(caps) = DIFF_STAT_LINE_REGEX.captures(line) {
+        let path_relative_to_repo_root = caps.get(1).unwrap().as_str();
+        if let Some(relative_path) =
+            pathdiff::diff_paths(path_relative_to_repo_root, cwd_relative_to_repo_root)
+        {
+            if let Some(relative_path) = relative_path.to_str() {
+                let suffix = caps.get(2).unwrap().as_str();
+                return Some(format!(" {:<30}{}", relative_path, suffix,));
+            }
+        }
+    }
+    return None;
 }
 
 pub fn get_file_extension_from_file_meta_line_file_path(path: &str) -> Option<&str> {
@@ -245,21 +286,21 @@ mod tests {
     #[test]
     fn test_get_file_path_from_git_file_meta_line() {
         assert_eq!(
-            parse_file_meta_line("--- /dev/null", true),
+            parse_file_meta_line("--- /dev/null", true, None),
             ("/dev/null".to_string(), FileEvent::Change)
         );
         for prefix in &DIFF_PREFIXES {
             assert_eq!(
-                parse_file_meta_line(&format!("--- {}src/delta.rs", prefix), true),
+                parse_file_meta_line(&format!("--- {}src/delta.rs", prefix), true, None),
                 ("src/delta.rs".to_string(), FileEvent::Change)
             );
         }
         assert_eq!(
-            parse_file_meta_line("--- src/delta.rs", true),
+            parse_file_meta_line("--- src/delta.rs", true, None),
             ("src/delta.rs".to_string(), FileEvent::Change)
         );
         assert_eq!(
-            parse_file_meta_line("+++ src/delta.rs", true),
+            parse_file_meta_line("+++ src/delta.rs", true, None),
             ("src/delta.rs".to_string(), FileEvent::Change)
         );
     }
@@ -267,23 +308,23 @@ mod tests {
     #[test]
     fn test_get_file_path_from_git_file_meta_line_containing_spaces() {
         assert_eq!(
-            parse_file_meta_line("+++ a/my src/delta.rs", true),
+            parse_file_meta_line("+++ a/my src/delta.rs", true, None),
             ("my src/delta.rs".to_string(), FileEvent::Change)
         );
         assert_eq!(
-            parse_file_meta_line("+++ my src/delta.rs", true),
+            parse_file_meta_line("+++ my src/delta.rs", true, None),
             ("my src/delta.rs".to_string(), FileEvent::Change)
         );
         assert_eq!(
-            parse_file_meta_line("+++ a/src/my delta.rs", true),
+            parse_file_meta_line("+++ a/src/my delta.rs", true, None),
             ("src/my delta.rs".to_string(), FileEvent::Change)
         );
         assert_eq!(
-            parse_file_meta_line("+++ a/my src/my delta.rs", true),
+            parse_file_meta_line("+++ a/my src/my delta.rs", true, None),
             ("my src/my delta.rs".to_string(), FileEvent::Change)
         );
         assert_eq!(
-            parse_file_meta_line("+++ b/my src/my enough/my delta.rs", true),
+            parse_file_meta_line("+++ b/my src/my enough/my delta.rs", true, None),
             (
                 "my src/my enough/my delta.rs".to_string(),
                 FileEvent::Change
@@ -294,7 +335,7 @@ mod tests {
     #[test]
     fn test_get_file_path_from_git_file_meta_line_rename() {
         assert_eq!(
-            parse_file_meta_line("rename from nospace/file2.el", true),
+            parse_file_meta_line("rename from nospace/file2.el", true, None),
             ("nospace/file2.el".to_string(), FileEvent::Rename)
         );
     }
@@ -302,7 +343,7 @@ mod tests {
     #[test]
     fn test_get_file_path_from_git_file_meta_line_rename_containing_spaces() {
         assert_eq!(
-            parse_file_meta_line("rename from with space/file1.el", true),
+            parse_file_meta_line("rename from with space/file1.el", true, None),
             ("with space/file1.el".to_string(), FileEvent::Rename)
         );
     }
@@ -310,11 +351,11 @@ mod tests {
     #[test]
     fn test_parse_file_meta_line() {
         assert_eq!(
-            parse_file_meta_line("--- src/delta.rs", false),
+            parse_file_meta_line("--- src/delta.rs", false, None),
             ("src/delta.rs".to_string(), FileEvent::Change)
         );
         assert_eq!(
-            parse_file_meta_line("+++ src/delta.rs", false),
+            parse_file_meta_line("+++ src/delta.rs", false, None),
             ("src/delta.rs".to_string(), FileEvent::Change)
         );
     }
@@ -368,5 +409,39 @@ mod tests {
         assert_eq!(line_numbers_and_hunk_lengths[0], (293, 11),);
         assert_eq!(line_numbers_and_hunk_lengths[1], (358, 15),);
         assert_eq!(line_numbers_and_hunk_lengths[2], (358, 16),);
+    }
+
+    #[test]
+    fn test_relative_path() {
+        for (path, cwd_relative_to_repo_root, expected) in &[
+            ("file.rs", "", "file.rs"),
+            ("file.rs", "a/", "../file.rs"),
+            ("a/file.rs", "a/", "file.rs"),
+            ("a/b/file.rs", "a", "b/file.rs"),
+            ("c/d/file.rs", "a/b/", "../../c/d/file.rs"),
+        ] {
+            assert_eq!(
+                pathdiff::diff_paths(path, cwd_relative_to_repo_root),
+                Some(expected.into())
+            )
+        }
+    }
+
+    #[test]
+    fn test_diff_stat_line_regex_1() {
+        let caps = DIFF_STAT_LINE_REGEX.captures(" src/delta.rs  | 14 ++++++++++----");
+        assert!(caps.is_some());
+        let caps = caps.unwrap();
+        assert_eq!(caps.get(1).unwrap().as_str(), "src/delta.rs");
+        assert_eq!(caps.get(2).unwrap().as_str(), "| 14 ++++++++++----");
+    }
+
+    #[test]
+    fn test_diff_stat_line_regex_2() {
+        let caps = DIFF_STAT_LINE_REGEX.captures(" src/config.rs |  2 ++");
+        assert!(caps.is_some());
+        let caps = caps.unwrap();
+        assert_eq!(caps.get(1).unwrap().as_str(), "src/config.rs");
+        assert_eq!(caps.get(2).unwrap().as_str(), "|  2 ++");
     }
 }

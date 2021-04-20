@@ -113,6 +113,8 @@ impl<'a> StateMachine<'a> {
 
             let mut handled_line = if line.starts_with("commit ") {
                 self.handle_commit_meta_header_line()?
+            } else if self.state == State::CommitMeta && line.starts_with(" ") {
+                self.handle_diff_stat_line()?
             } else if line.starts_with("diff ") {
                 self.handle_file_meta_diff_line()?
             } else if (self.state == State::FileMeta || self.source == Source::DiffUnified)
@@ -226,6 +228,20 @@ impl<'a> StateMachine<'a> {
         Ok(())
     }
 
+    fn handle_diff_stat_line(&mut self) -> std::io::Result<bool> {
+        let mut handled_line = false;
+        if let Some(cwd) = self.config.cwd_relative_to_repo_root.as_deref() {
+            if let Some(replacement_line) =
+                parse::relativize_path_in_diff_stat_line(&self.raw_line, cwd)
+            {
+                self.painter.emit()?;
+                writeln!(self.painter.writer, "{}", replacement_line)?;
+                handled_line = true
+            }
+        }
+        Ok(handled_line)
+    }
+
     #[allow(clippy::unnecessary_wraps)]
     fn handle_file_meta_diff_line(&mut self) -> std::io::Result<bool> {
         self.painter.paint_buffered_minus_and_plus_lines();
@@ -237,8 +253,11 @@ impl<'a> StateMachine<'a> {
     fn handle_file_meta_minus_line(&mut self) -> std::io::Result<bool> {
         let mut handled_line = false;
 
-        let parsed_file_meta_line =
-            parse::parse_file_meta_line(&self.line, self.source == Source::GitDiff);
+        let parsed_file_meta_line = parse::parse_file_meta_line(
+            &self.line,
+            self.source == Source::GitDiff,
+            self.config.cwd_relative_to_repo_root.as_deref(),
+        );
         self.minus_file = parsed_file_meta_line.0;
         self.file_event = parsed_file_meta_line.1;
 
@@ -271,8 +290,11 @@ impl<'a> StateMachine<'a> {
 
     fn handle_file_meta_plus_line(&mut self) -> std::io::Result<bool> {
         let mut handled_line = false;
-        let parsed_file_meta_line =
-            parse::parse_file_meta_line(&self.line, self.source == Source::GitDiff);
+        let parsed_file_meta_line = parse::parse_file_meta_line(
+            &self.line,
+            self.source == Source::GitDiff,
+            self.config.cwd_relative_to_repo_root.as_deref(),
+        );
         self.plus_file = parsed_file_meta_line.0;
         self.painter
             .set_syntax(parse::get_file_extension_from_file_meta_line_file_path(
