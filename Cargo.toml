@@ -30,7 +30,7 @@ shell-words = "1.0.0"
 structopt = "0.3.21"
 unicode-segmentation = "1.7.1"
 unicode-width = "0.1.8"
-vte = "0.10.0"
+vte = "0.10.1"
 xdg = "2.2.0"
 
 [dependencies.git2]
