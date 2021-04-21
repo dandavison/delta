@@ -25,6 +25,7 @@ pub struct Config {
     pub color_only: bool,
     pub cwd_relative_to_repo_root: Option<String>,
     pub decorations_width: cli::Width,
+    pub diff_stat_align_width: usize,
     pub error_exit_code: i32,
     pub file_added_label: String,
     pub file_copied_label: String,
@@ -185,6 +186,7 @@ impl From<cli::Opt> for Config {
             color_only: opt.color_only,
             cwd_relative_to_repo_root: std::env::var("GIT_PREFIX").ok(),
             decorations_width: opt.computed.decorations_width,
+            diff_stat_align_width: opt.diff_stat_align_width,
             error_exit_code: 2, // Use 2 for error because diff uses 0 and 1 for non-error.
             file_added_label,
             file_copied_label,

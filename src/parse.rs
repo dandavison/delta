@@ -85,6 +85,7 @@ lazy_static! {
 pub fn relativize_path_in_diff_stat_line(
     line: &str,
     cwd_relative_to_repo_root: &str,
+    diff_stat_align_width: usize,
 ) -> Option<String> {
     if let Some(caps) = DIFF_STAT_LINE_REGEX.captures(line) {
         let path_relative_to_repo_root = caps.get(1).unwrap().as_str();
@@ -93,7 +94,11 @@ pub fn relativize_path_in_diff_stat_line(
         {
             if let Some(relative_path) = relative_path.to_str() {
                 let suffix = caps.get(2).unwrap().as_str();
-                return Some(format!(" {:<30}{}", relative_path, suffix,));
+                let pad_width = diff_stat_align_width
+                    .checked_sub(relative_path.len())
+                    .unwrap_or(0);
+                let padding = " ".repeat(pad_width);
+                return Some(format!(" {}{}{}", relative_path, padding, suffix));
             }
         }
     }

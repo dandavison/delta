@@ -231,9 +231,11 @@ impl<'a> StateMachine<'a> {
     fn handle_diff_stat_line(&mut self) -> std::io::Result<bool> {
         let mut handled_line = false;
         if let Some(cwd) = self.config.cwd_relative_to_repo_root.as_deref() {
-            if let Some(replacement_line) =
-                parse::relativize_path_in_diff_stat_line(&self.raw_line, cwd)
-            {
+            if let Some(replacement_line) = parse::relativize_path_in_diff_stat_line(
+                &self.raw_line,
+                cwd,
+                self.config.diff_stat_align_width,
+            ) {
                 self.painter.emit()?;
                 writeln!(self.painter.writer, "{}", replacement_line)?;
                 handled_line = true
