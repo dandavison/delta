@@ -94,15 +94,13 @@ pub fn relativize_path_in_diff_stat_line(
         {
             if let Some(relative_path) = relative_path.to_str() {
                 let suffix = caps.get(2).unwrap().as_str();
-                let pad_width = diff_stat_align_width
-                    .checked_sub(relative_path.len())
-                    .unwrap_or(0);
+                let pad_width = diff_stat_align_width.saturating_sub(relative_path.len());
                 let padding = " ".repeat(pad_width);
                 return Some(format!(" {}{}{}", relative_path, padding, suffix));
             }
         }
     }
-    return None;
+    None
 }
 
 pub fn get_file_extension_from_file_meta_line_file_path(path: &str) -> Option<&str> {
