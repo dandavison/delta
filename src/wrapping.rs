@@ -26,6 +26,7 @@ pub struct WrapConfig {
     // This value is --wrap-max-lines + 1, and unlimited is 0, see
     // adapt_wrap_max_lines_argument()
     pub max_lines: usize,
+    pub inline_hint_syntect_style: SyntectStyle,
 }
 
 /// Wrap the given `line` if it is longer than `line_width`. Wrap to at most
@@ -344,9 +345,22 @@ pub fn wrap_plusminus_block<'c: 'a, 'a>(
                 .unwrap_or_else(|| panic!("bad syntax alignment {}", errhint)),
             must_wrap,
             line_width,
-            &SyntectStyle::default(),
-            &config.inline_hint_color,
+            &config.null_syntect_style,
+            &Some(config.wrap_config.inline_hint_syntect_style),
         );
+
+        // TODO: Why is the background color set to white when
+        // ansi_term_style.background is None?
+        let inline_hint_style = if config
+            .inline_hint_style
+            .ansi_term_style
+            .background
+            .is_some()
+        {
+            Some(config.inline_hint_style)
+        } else {
+            None
+        };
 
         let (start2, extended_to2) = wrap_if_too_long(
             config,
@@ -357,7 +371,7 @@ pub fn wrap_plusminus_block<'c: 'a, 'a>(
             must_wrap,
             line_width,
             fill_style,
-            &None,
+            &inline_hint_style,
         );
 
         // The underlying text is the same for the style and diff, so
@@ -510,18 +524,31 @@ pub fn wrap_zero_block<'c: 'a, 'a>(
             syntax_style_sections.into_iter().flatten(),
             line_width,
             &SyntectStyle::default(),
-            &config.inline_hint_color,
+            &Some(config.wrap_config.inline_hint_syntect_style),
         );
+
+        // TODO: Why is the background color set to white when
+        // ansi_term_style.background is None?
+        let inline_hint_style = if config
+            .inline_hint_style
+            .ansi_term_style
+            .background
+            .is_some()
+        {
+            Some(config.inline_hint_style)
+        } else {
+            None
+        };
         let diff_style = wrap_line(
             config,
             diff_style_sections.into_iter().flatten(),
             line_width,
-            // To actually highlight `config.inline_hint_color` characters:
+            // To actually highlight inline hint characters:
             &Style {
                 is_syntax_highlighted: true,
                 ..config.null_style
             },
-            &None,
+            &inline_hint_style,
         );
 
         states.resize_with(syntax_style.len(), || State::HunkZeroWrapped);

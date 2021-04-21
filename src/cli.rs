@@ -447,6 +447,12 @@ pub struct Opt {
     #[structopt(long = "default-language")]
     pub default_language: Option<String>,
 
+    #[structopt(long = "inline-hint-style", default_value = "blue")]
+    /// Style (foreground, background, attributes) for content added by delta to
+    /// the original diff such as special characters to highlight tabs, and the
+    /// symbols used to indicate wrapped lines. See STYLES section.
+    pub inline_hint_style: String,
+
     /// The regular expression used to decide what a word is for the within-line highlight
     /// algorithm. For less fine-grained matching than the default try --word-diff-regex="\S+"
     /// --max-line-distance=1.0 (this is more similar to `git --word-diff`).

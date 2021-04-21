@@ -21,7 +21,7 @@ use crate::features::side_by_side;
 use crate::git_config::{GitConfig, GitConfigEntry};
 use crate::paint::BgFillMethod;
 use crate::style::{self, Style};
-use crate::syntect_utils;
+use crate::syntect_utils::FromDeltaStyle;
 use crate::wrapping::WrapConfig;
 
 pub const INLINE_SYMBOL_WIDTH_1: usize = 1;
@@ -84,7 +84,7 @@ pub struct Config {
     pub hyperlinks: bool,
     pub hyperlinks_commit_link_format: Option<String>,
     pub hyperlinks_file_link_format: String,
-    pub inline_hint_color: Option<SyntectStyle>,
+    pub inline_hint_style: Style,
     pub inspect_raw_lines: cli::InspectRawLines,
     pub keep_plus_minus_markers: bool,
     pub line_fill_method: BgFillMethod,
@@ -209,6 +209,13 @@ impl From<cli::Opt> for Config {
             &opt.computed.available_terminal_width,
         );
 
+        let inline_hint_style = Style::from_str(
+            &opt.inline_hint_style,
+            None,
+            None,
+            opt.computed.true_color,
+            false,
+        );
         let git_minus_style = match opt.git_config_entries.get("color.diff.old") {
             Some(GitConfigEntry::Style(s)) => Style::from_git_str(s),
             _ => *style::GIT_DEFAULT_MINUS_STYLE,
@@ -291,10 +298,7 @@ impl From<cli::Opt> for Config {
             hyperlinks_commit_link_format: opt.hyperlinks_commit_link_format,
             hyperlinks_file_link_format: opt.hyperlinks_file_link_format,
             inspect_raw_lines: opt.computed.inspect_raw_lines,
-            inline_hint_color: Some(SyntectStyle {
-                foreground: syntect_utils::syntect_color_from_ansi_name("blue").unwrap(),
-                ..SyntectStyle::default()
-            }),
+            inline_hint_style,
             keep_plus_minus_markers: opt.keep_plus_minus_markers,
             line_fill_method: if opt.side_by_side {
                 // Panels in side-by-side always sum up to an even number, if the terminal has
@@ -386,6 +390,7 @@ impl From<cli::Opt> for Config {
                     }
                 },
                 max_lines: wrap_max_lines_plus1,
+                inline_hint_syntect_style: SyntectStyle::from_delta_style(inline_hint_style),
             },
             whitespace_error_style,
             zero_style,
