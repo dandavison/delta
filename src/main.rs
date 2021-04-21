@@ -25,7 +25,8 @@ mod style;
 mod wrapping;
 
 mod subcommands;
-mod syntect_color;
+mod syntect_utils;
+
 mod tests;
 
 use std::io::{self, ErrorKind};
