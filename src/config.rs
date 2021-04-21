@@ -19,7 +19,6 @@ use crate::features::side_by_side;
 use crate::features::side_by_side_wrap;
 use crate::git_config::GitConfigEntry;
 use crate::style::{self, Style};
-use crate::syntect_color;
 
 pub struct Config {
     pub available_terminal_width: usize,
@@ -42,7 +41,7 @@ pub struct Config {
     pub hunk_header_style_include_line_number: bool,
     pub hyperlinks: bool,
     pub hyperlinks_file_link_format: String,
-    pub inline_hint_color: Option<SyntectStyle>,
+    pub inline_hint_style: Style,
     pub inspect_raw_lines: cli::InspectRawLines,
     pub keep_plus_minus_markers: bool,
     pub line_numbers: bool,
@@ -162,6 +161,14 @@ impl From<cli::Opt> for Config {
             _ => *style::GIT_DEFAULT_PLUS_STYLE,
         };
 
+        let inline_hint_style = Style::from_str(
+            &opt.inline_hint_style,
+            None,
+            None,
+            opt.computed.true_color,
+            false,
+        );
+
         let file_added_label = opt.file_added_label;
         let file_copied_label = opt.file_copied_label;
         let file_modified_label = opt.file_modified_label;
@@ -209,12 +216,8 @@ impl From<cli::Opt> for Config {
                 .any(|s| s == "line-number"),
             hyperlinks: opt.hyperlinks,
             hyperlinks_file_link_format: opt.hyperlinks_file_link_format,
+            inline_hint_style,
             inspect_raw_lines: opt.computed.inspect_raw_lines,
-            inline_hint_color: Some(SyntectStyle {
-                // TODO: color from theme?
-                foreground: syntect_color::syntect_color_from_ansi_name("blue").unwrap(),
-                ..SyntectStyle::default()
-            }),
             keep_plus_minus_markers: opt.keep_plus_minus_markers,
             line_numbers: opt.line_numbers,
             line_numbers_left_format: opt.line_numbers_left_format,

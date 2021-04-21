@@ -35,7 +35,7 @@ pub fn wrap_line<'a, I, S>(
     line: I,
     line_width: usize,
     fill_style: &S,
-    inline_hint_style: &Option<S>,
+    inline_hint_style: &S,
 ) -> Vec<Vec<(S, &'a str)>>
 where
     I: IntoIterator<Item = (S, &'a str)> + std::fmt::Debug,
@@ -60,12 +60,6 @@ where
 
     let mut curr_line = Vec::new();
     let mut curr_len = 0;
-
-    // Determine the background (diff) and color (syntax) of an inserted symbol.
-    let symbol_style = match inline_hint_style {
-        Some(style) => *style,
-        None => *fill_style,
-    };
 
     let mut stack = line.into_iter().rev().collect::<Vec<_>>();
 
@@ -138,7 +132,7 @@ where
             };
             stack.push((style, next_line));
 
-            curr_line.push((symbol_style, &wrap_config.wrap_symbol));
+            curr_line.push((*inline_hint_style, &wrap_config.wrap_symbol));
             result.push(curr_line);
 
             curr_line = vec![(S::default(), LINEPREFIX)];
@@ -181,7 +175,7 @@ where
                 n => right_aligned_line.push((*fill_style, &SPACES[0..n])),
             }
 
-            right_aligned_line.push((symbol_style, &wrap_config.wrap_right_prefix_symbol));
+            right_aligned_line.push((*inline_hint_style, &wrap_config.wrap_right_prefix_symbol));
 
             // skip LINEPREFIX
             right_aligned_line.extend(curr_line.into_iter().skip(1));
@@ -213,7 +207,7 @@ fn wrap_if_too_long<'a, S>(
     must_wrap: bool,
     line_width: usize,
     fill_style: &S,
-    inline_hint_style: &Option<S>,
+    inline_hint_style: &S,
 ) -> (usize, usize)
 where
     S: Copy + Default + std::fmt::Debug,
@@ -226,7 +220,7 @@ where
             input_vec.into_iter(),
             line_width,
             fill_style,
-            &inline_hint_style,
+            inline_hint_style,
         ));
     } else {
         wrapped.push(input_vec.to_vec());
@@ -294,7 +288,7 @@ pub fn wrap_plusminus_block<'c: 'a, 'a>(
             must_wrap,
             line_width,
             &SyntectStyle::default(),
-            &config.inline_hint_color,
+            &SyntectStyle::default(),
         );
 
         let (start2, extended_to2) = wrap_if_too_long(
@@ -306,7 +300,7 @@ pub fn wrap_plusminus_block<'c: 'a, 'a>(
             must_wrap,
             line_width,
             &fill_style,
-            &None,
+            &config.inline_hint_style,
         );
 
         // The underlying text is the same for the style and diff, so
@@ -458,19 +452,16 @@ pub fn wrap_zero_block<'c: 'a, 'a>(
             &config,
             syntax_style_sections.into_iter().flatten(),
             line_width,
-            &SyntectStyle::default(),
-            &config.inline_hint_color,
+            // We do not express any delta styling using the stream of syntax styles.
+            &config.null_syntect_style,
+            &config.null_syntect_style,
         );
         let diff_style = wrap_line(
             &config,
             diff_style_sections.into_iter().flatten(),
             line_width,
-            // To actually highlight `config.inline_hint_color` characters:
-            &Style {
-                is_syntax_highlighted: true,
-                ..config.null_style
-            },
-            &None,
+            &config.null_style,
+            &config.inline_hint_style,
         );
 
         states.resize_with(syntax_style.len(), || State::HunkZeroWrapped);

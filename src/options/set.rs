@@ -140,6 +140,7 @@ pub fn set_options(
             hunk_header_style,
             hyperlinks,
             hyperlinks_file_link_format,
+            inline_hint_style,
             inspect_raw_lines,
             keep_plus_minus_markers,
             line_buffer_size,
