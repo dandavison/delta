@@ -375,13 +375,25 @@ fn show_syntax_themes() -> std::io::Result<()> {
     let mut writer = output_type.handle().unwrap();
     opt.computed.syntax_set = assets.syntax_set;
 
-    if !(opt.dark || opt.light) {
-        _show_syntax_themes(opt.clone(), false, &mut writer)?;
-        _show_syntax_themes(opt, true, &mut writer)?;
-    } else if opt.light {
-        _show_syntax_themes(opt, true, &mut writer)?;
+    let stdin_data = if !atty::is(atty::Stream::Stdin) {
+        let mut buf = Vec::new();
+        io::stdin().lock().read_to_end(&mut buf)?;
+        if !buf.is_empty() {
+            Some(buf)
+        } else {
+            None
+        }
     } else {
-        _show_syntax_themes(opt, false, &mut writer)?
+        None
+    };
+
+    if !(opt.dark || opt.light) {
+        _show_syntax_themes(opt.clone(), false, &mut writer, stdin_data.as_ref())?;
+        _show_syntax_themes(opt, true, &mut writer, stdin_data.as_ref())?;
+    } else if opt.light {
+        _show_syntax_themes(opt, true, &mut writer, stdin_data.as_ref())?;
+    } else {
+        _show_syntax_themes(opt, false, &mut writer, stdin_data.as_ref())?
     };
     Ok(())
 }
@@ -390,10 +402,14 @@ fn _show_syntax_themes(
     mut opt: cli::Opt,
     is_light_mode: bool,
     writer: &mut dyn Write,
+    stdin: Option<&Vec<u8>>,
 ) -> std::io::Result<()> {
     use bytelines::ByteLines;
     use std::io::BufReader;
-    let mut input = b"\
+    let input = match stdin {
+        Some(stdin_data) => &stdin_data[..],
+        None => {
+            b"\
 diff --git a/example.rs b/example.rs
 index f38589a..0f1bb83 100644
 --- a/example.rs
@@ -408,12 +424,6 @@ index f38589a..0f1bb83 100644
 +    let result = f64::powf(num, 3.0);
 +    println!(\"The cube of {:.2} is {:.2}.\", num, result);
 "
-    .to_vec();
-    if !atty::is(atty::Stream::Stdin) {
-        let mut buf = Vec::new();
-        io::stdin().lock().read_to_end(&mut buf)?;
-        if !buf.is_empty() {
-            input = buf;
         }
     };
 
@@ -520,12 +530,12 @@ mod main_tests {
         let opt = integration_test_utils::make_options_from_args(&[]);
 
         let mut writer = Cursor::new(vec![0; 1024]);
-        _show_syntax_themes(opt, true, &mut writer).unwrap();
+        _show_syntax_themes(opt, true, &mut writer, None).unwrap();
         let mut s = String::new();
         writer.seek(SeekFrom::Start(0)).unwrap();
         writer.read_to_string(&mut s).unwrap();
         let s = ansi::strip_ansi_codes(&s);
-        assert!(s.contains("\nTheme: gruvbox-white\n"));
+        assert!(s.contains("\nTheme: gruvbox-light\n"));
         println!("{}", s);
         assert!(s.contains("\nfn print_cube(num: f64) {\n"));
     }
