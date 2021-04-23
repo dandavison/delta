@@ -40,6 +40,7 @@ macro_rules! set_options {
         )*
         if $check_names {
             option_names.extend(&[
+                "24-bit-color",
                 "diff-highlight", // Does not exist as a flag on config
                 "diff-so-fancy", // Does not exist as a flag on config
                 "features",  // Processed differently
@@ -551,13 +552,20 @@ fn set_widths(
 }
 
 fn set_true_color(opt: &mut cli::Opt) {
+    if opt.true_color == "auto" {
+        // It's equal to its default, so the user might be using the deprecated
+        // --24-bit-color option.
+        if let Some(_24_bit_color) = opt._24_bit_color.as_ref() {
+            opt.true_color = _24_bit_color.clone();
+        }
+    }
     opt.computed.true_color = match opt.true_color.as_ref() {
         "always" => true,
         "never" => false,
         "auto" => is_truecolor_terminal(),
         _ => {
             eprintln!(
-                "Invalid value for --24-bit-color option: {} (valid values are \"always\", \"never\", and \"auto\")",
+                "Invalid value for --true-color option: {} (valid values are \"always\", \"never\", and \"auto\")",
                 opt.true_color
             );
             process::exit(1);
@@ -614,7 +622,6 @@ pub mod tests {
         // since e.g. color-only = true (non-default) forces side-by-side = false (default).
         let git_config_contents = b"
 [delta]
-    24-bit-color = never
     color-only = false
     commit-decoration-style = black black
     commit-style = black black
@@ -656,6 +663,7 @@ pub mod tests {
     side-by-side = true
     syntax-theme = xxxyyyzzz
     tabs = 77
+    true-color = never
     whitespace-error-style = black black
     width = 77
     word-diff-regex = xxxyyyzzz

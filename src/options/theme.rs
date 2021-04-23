@@ -188,10 +188,10 @@ mod tests {
             }
             let is_true_color = true;
             if is_true_color {
-                args.push("--24-bit-color");
+                args.push("--true-color");
                 args.push("always");
             } else {
-                args.push("--24-bit-color");
+                args.push("--true-color");
                 args.push("never");
             }
             match mode {

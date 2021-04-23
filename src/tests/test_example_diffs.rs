@@ -928,7 +928,7 @@ src/align.rs
             &["--color-only", "--max-line-length", "1"],
             &["--color-only", "--width", "1"],
             &["--color-only", "--tabs", "10"],
-            &["--color-only", "--24-bit-color", "always"],
+            &["--color-only", "--true-color", "always"],
             &["--color-only", "--inspect-raw-lines", "false"],
             &["--color-only", "--whitespace-error-style", "22 reverse"],
         ];

@@ -494,8 +494,12 @@ pub struct Opt {
     /// has the value "truecolor" or "24bit". If your terminal application (the application you use
     /// to enter commands at a shell prompt) supports 24 bit colors, then it probably already sets
     /// this environment variable, in which case you don't need to do anything.
-    #[structopt(long = "24-bit-color", default_value = "auto")]
+    #[structopt(long = "true-color", default_value = "auto")]
     pub true_color: String,
+
+    /// Deprecated: use --true-color.
+    #[structopt(long = "24-bit-color")]
+    pub _24_bit_color: Option<String>,
 
     /// Whether to examine ANSI color escape sequences in raw lines received from Git and handle
     /// lines colored in certain ways specially. This is on by default: it is how Delta supports
