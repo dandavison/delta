@@ -197,7 +197,7 @@ fn show_config(config: &config::Config, writer: &mut dyn Write) -> std::io::Resu
     // Everything else
     writeln!(
         writer,
-        "    24-bit-color                  = {true_color}
+        "    true-color                    = {true_color}
     file-added-label              = {file_added_label}
     file-modified-label           = {file_modified_label}
     file-removed-label            = {file_removed_label}
