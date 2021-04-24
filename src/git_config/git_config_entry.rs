@@ -44,22 +44,20 @@ mod tests {
     use super::*;
 
     #[test]
-    fn test_parse_github_url_with_dot_git_suffix() {
-        let parsed = GitRemoteRepo::from_str("git@github.com:dandavison/delta.git");
-        assert!(parsed.is_ok());
-        assert_eq!(
-            parsed.unwrap(),
-            GitRemoteRepo::GitHubRepo("dandavison/delta".to_string())
-        );
-    }
-
-    #[test]
-    fn test_parse_github_url_without_dot_git_suffix() {
-        let parsed = GitRemoteRepo::from_str("git@github.com:dandavison/delta");
-        assert!(parsed.is_ok());
-        assert_eq!(
-            parsed.unwrap(),
-            GitRemoteRepo::GitHubRepo("dandavison/delta".to_string())
-        );
+    fn test_parse_github_urls() {
+        let urls = &[
+            "https://github.com/dandavison/delta.git",
+            "https://github.com/dandavison/delta",
+            "git@github.com:dandavison/delta.git",
+            "git@github.com:dandavison/delta",
+        ];
+        for url in urls {
+            let parsed = GitRemoteRepo::from_str(url);
+            assert!(parsed.is_ok());
+            assert_eq!(
+                parsed.unwrap(),
+                GitRemoteRepo::GitHubRepo("dandavison/delta".to_string())
+            );
+        }
     }
 }
