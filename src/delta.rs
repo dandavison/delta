@@ -230,15 +230,17 @@ impl<'a> StateMachine<'a> {
 
     fn handle_diff_stat_line(&mut self) -> std::io::Result<bool> {
         let mut handled_line = false;
-        if let Some(cwd) = self.config.cwd_relative_to_repo_root.as_deref() {
-            if let Some(replacement_line) = parse::relativize_path_in_diff_stat_line(
-                &self.raw_line,
-                cwd,
-                self.config.diff_stat_align_width,
-            ) {
-                self.painter.emit()?;
-                writeln!(self.painter.writer, "{}", replacement_line)?;
-                handled_line = true
+        if self.config.relative_paths {
+            if let Some(cwd) = self.config.cwd_relative_to_repo_root.as_deref() {
+                if let Some(replacement_line) = parse::relativize_path_in_diff_stat_line(
+                    &self.raw_line,
+                    cwd,
+                    self.config.diff_stat_align_width,
+                ) {
+                    self.painter.emit()?;
+                    writeln!(self.painter.writer, "{}", replacement_line)?;
+                    handled_line = true
+                }
             }
         }
         Ok(handled_line)
@@ -258,7 +260,11 @@ impl<'a> StateMachine<'a> {
         let parsed_file_meta_line = parse::parse_file_meta_line(
             &self.line,
             self.source == Source::GitDiff,
-            self.config.cwd_relative_to_repo_root.as_deref(),
+            if self.config.relative_paths {
+                self.config.cwd_relative_to_repo_root.as_deref()
+            } else {
+                None
+            },
         );
         self.minus_file = parsed_file_meta_line.0;
         self.file_event = parsed_file_meta_line.1;
@@ -295,7 +301,11 @@ impl<'a> StateMachine<'a> {
         let parsed_file_meta_line = parse::parse_file_meta_line(
             &self.line,
             self.source == Source::GitDiff,
-            self.config.cwd_relative_to_repo_root.as_deref(),
+            if self.config.relative_paths {
+                self.config.cwd_relative_to_repo_root.as_deref()
+            } else {
+                None
+            },
         );
         self.plus_file = parsed_file_meta_line.0;
         self.painter

@@ -31,7 +31,7 @@ pub enum FileEvent {
 pub fn parse_file_meta_line(
     line: &str,
     git_diff_name: bool,
-    cwd_relative_to_repo_root: Option<&str>,
+    relative_path_base: Option<&str>,
 ) -> (String, FileEvent) {
     let (mut path, file_event) = match line {
         line if line.starts_with("--- ") || line.starts_with("+++ ") => {
@@ -62,8 +62,8 @@ pub fn parse_file_meta_line(
         _ => ("".to_string(), FileEvent::NoEvent),
     };
 
-    if let Some(cwd) = cwd_relative_to_repo_root {
-        if let Some(relative_path) = pathdiff::diff_paths(&path, cwd) {
+    if let Some(base) = relative_path_base {
+        if let Some(relative_path) = pathdiff::diff_paths(&path, base) {
             if let Some(relative_path) = relative_path.to_str() {
                 path = relative_path.to_owned();
             }

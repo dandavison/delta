@@ -231,6 +231,11 @@ pub struct Opt {
     /// --file-renamed-label.
     pub navigate: bool,
 
+    #[structopt(long = "relative-paths")]
+    /// Output all file paths relative to the current directory so that they
+    /// resolve correctly when clicked on or used in shell commands.
+    pub relative_paths: bool,
+
     #[structopt(long = "hyperlinks")]
     /// Render commit hashes, file names, and line numbers as hyperlinks, according to the
     /// hyperlink spec for terminal emulators:

@@ -171,6 +171,7 @@ pub fn set_options(
             plus_empty_line_marker_style,
             plus_non_emph_style,
             raw,
+            relative_paths,
             show_themes,
             side_by_side,
             tab_width,
