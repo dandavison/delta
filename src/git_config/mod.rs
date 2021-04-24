@@ -80,8 +80,12 @@ fn parse_config_from_env_var() -> HashMap<String, String> {
 }
 
 lazy_static! {
-    static ref GIT_CONFIG_PARAMETERS_REGEX: Regex =
-        Regex::new(r"'(delta\.[a-z-]+)=([^']+)'").unwrap();
+    static ref GIT_CONFIG_PARAMETERS_REGEX: Regex = Regex::new(
+        r"(?x)
+        '(delta\.[a-z-]+)=([^']+)'
+        "
+    )
+    .unwrap();
 }
 
 fn parse_config_from_env_var_value(s: &str) -> HashMap<String, String> {
