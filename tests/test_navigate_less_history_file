@@ -28,7 +28,13 @@ test_delta_less_hist_file_created () {
     DELTA_HIST_FILE="${XDG_DATA_HOME:-$HOME/.local/share}/delta/lesshst"
     rm -f ~/.lesshst "$DELTA_HIST_FILE"
     [ -e "$DELTA_HIST_FILE" ] && die "Expected \"$DELTA_HIST_FILE\" not to exist"
-    git -c pager.log="$DELTA" log -p HEAD~2...HEAD
+    if [[ "$OSTYPE" = darwin* ]]; then
+        # Trick git and delta into invoking their pager child processes, despite
+        # output not being a tty.
+        script -q /dev/null git -c pager.log="$DELTA" log -p HEAD~2...HEAD > /dev/null
+    else
+        git -c pager.log="$DELTA" log -p HEAD~2...HEAD
+    fi
     [ -e "$DELTA_HIST_FILE" ] || die "Expected \"$DELTA_HIST_FILE\" to exist"
 }
 
