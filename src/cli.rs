@@ -231,6 +231,11 @@ pub struct Opt {
     /// --file-renamed-label.
     pub navigate: bool,
 
+    #[structopt(long = "relative-paths")]
+    /// Output all file paths relative to the current directory so that they
+    /// resolve correctly when clicked on or used in shell commands.
+    pub relative_paths: bool,
+
     #[structopt(long = "hyperlinks")]
     /// Render commit hashes, file names, and line numbers as hyperlinks, according to the
     /// hyperlink spec for terminal emulators:
@@ -481,6 +486,11 @@ pub struct Opt {
     /// full terminal width.
     #[structopt(short = "w", long = "width")]
     pub width: Option<String>,
+
+    /// Width allocated for file paths in a diff stat section. If a relativized
+    /// file path exceeds this width then the diff stat will be misaligned.
+    #[structopt(long = "diff-stat-align-width", default_value = "48")]
+    pub diff_stat_align_width: usize,
 
     /// The number of spaces to replace tab characters with. Use --tabs=0 to pass tab characters
     /// through directly, but note that in that case delta will calculate line widths assuming tabs
