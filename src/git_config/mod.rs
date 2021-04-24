@@ -80,14 +80,38 @@ fn parse_config_from_env_var() -> HashMap<String, String> {
 }
 
 lazy_static! {
-    static ref GIT_CONFIG_PARAMETERS_REGEX: Regex =
-        Regex::new(r"'(delta\.[a-z-]+)=([^']+)'").unwrap();
+    static ref GIT_CONFIG_PARAMETERS_REGEX: Regex = Regex::new(
+        r"(?x)
+        (?:                               # Non-capturing group containing union
+            '(delta\.[a-z-]+)=([^']+)'    # Git <2.31.0 format
+        |
+            '(delta\.[a-z-]+)'='([^']+)'  # Git ≥2.31.0 format
+        )
+        "
+    )
+    .unwrap();
 }
 
 fn parse_config_from_env_var_value(s: &str) -> HashMap<String, String> {
     GIT_CONFIG_PARAMETERS_REGEX
         .captures_iter(s)
-        .map(|captures| (captures[1].to_string(), captures[2].to_string()))
+        .map(|captures| {
+            let (i, j) = match (
+                captures.get(1),
+                captures.get(2),
+                captures.get(3),
+                captures.get(4),
+            ) {
+                (Some(_), Some(_), None, None) => (1, 2),
+                (None, None, Some(_), Some(_)) => (3, 4),
+                _ => (0, 0),
+            };
+            if (i, j) == (0, 0) {
+                ("".to_string(), "".to_string())
+            } else {
+                (captures[i].to_string(), captures[j].to_string())
+            }
+        })
         .collect()
 }
 
@@ -167,32 +191,51 @@ mod tests {
         // [core]
         //     pager = env | grep GIT_CONFIG_PARAMETERS
 
-        let config = parse_config_from_env_var_value("'user.name=xxx'");
-        assert!(config.is_empty());
+        // We test multiple formats because the format of the value stored by
+        // git in this environment variable has changed in recent versions of
+        // Git. See
+        // https://github.com/git/git/blob/311531c9de557d25ac087c1637818bd2aad6eb3a/Documentation/RelNotes/2.31.0.txt#L127-L130
 
-        let config = parse_config_from_env_var_value("'delta.plus-style=green'");
-        assert_eq!(config["delta.plus-style"], "green");
+        for env_var_value in &["'user.name=xxx'", "'user.name'='xxx'"] {
+            let config = parse_config_from_env_var_value(env_var_value);
+            assert!(config.is_empty());
+        }
 
-        let config = parse_config_from_env_var_value(
+        for env_var_value in &["'delta.plus-style=green'", "'delta.plus-style'='green'"] {
+            let config = parse_config_from_env_var_value(env_var_value);
+            assert_eq!(config["delta.plus-style"], "green");
+        }
+
+        for env_var_value in &[
             r##"'user.name=xxx' 'delta.hunk-header-line-number-style=red "#067a00"'"##,
-        );
-        assert_eq!(
-            config["delta.hunk-header-line-number-style"],
-            r##"red "#067a00""##
-        );
+            r##"'user.name'='xxx' 'delta.hunk-header-line-number-style'='red "#067a00"'"##,
+        ] {
+            let config = parse_config_from_env_var_value(env_var_value);
+            assert_eq!(
+                config["delta.hunk-header-line-number-style"],
+                r##"red "#067a00""##
+            );
+        }
 
-        let config =
-            parse_config_from_env_var_value(r##"'user.name=xxx' 'delta.side-by-side=false'"##);
-        assert_eq!(config["delta.side-by-side"], "false");
+        for env_var_value in &[
+            r##"'user.name=xxx' 'delta.side-by-side=false'"##,
+            r##"'user.name'='xxx' 'delta.side-by-side'='false'"##,
+        ] {
+            let config = parse_config_from_env_var_value(env_var_value);
+            assert_eq!(config["delta.side-by-side"], "false");
+        }
 
-        let config = parse_config_from_env_var_value(
+        for env_var_value in &[
             r##"'delta.plus-style=green' 'delta.side-by-side=false' 'delta.hunk-header-line-number-style=red "#067a00"'"##,
-        );
-        assert_eq!(config["delta.plus-style"], "green");
-        assert_eq!(config["delta.side-by-side"], "false");
-        assert_eq!(
-            config["delta.hunk-header-line-number-style"],
-            r##"red "#067a00""##
-        );
+            r##"'delta.plus-style'='green' 'delta.side-by-side'='false' 'delta.hunk-header-line-number-style'='red "#067a00"'"##,
+        ] {
+            let config = parse_config_from_env_var_value(env_var_value);
+            assert_eq!(config["delta.plus-style"], "green");
+            assert_eq!(config["delta.side-by-side"], "false");
+            assert_eq!(
+                config["delta.hunk-header-line-number-style"],
+                r##"red "#067a00""##
+            );
+        }
     }
 }
