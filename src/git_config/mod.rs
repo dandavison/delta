@@ -82,7 +82,11 @@ fn parse_config_from_env_var() -> HashMap<String, String> {
 lazy_static! {
     static ref GIT_CONFIG_PARAMETERS_REGEX: Regex = Regex::new(
         r"(?x)
-        '(delta\.[a-z-]+)=([^']+)'
+        (?:                               # Non-capturing group containing union
+            '(delta\.[a-z-]+)=([^']+)'    # Git <2.31.0 format
+        |
+            '(delta\.[a-z-]+)'='([^']+)'  # Git ≥2.31.0 format
+        )
         "
     )
     .unwrap();
@@ -91,7 +95,23 @@ lazy_static! {
 fn parse_config_from_env_var_value(s: &str) -> HashMap<String, String> {
     GIT_CONFIG_PARAMETERS_REGEX
         .captures_iter(s)
-        .map(|captures| (captures[1].to_string(), captures[2].to_string()))
+        .map(|captures| {
+            let (i, j) = match (
+                captures.get(1),
+                captures.get(2),
+                captures.get(3),
+                captures.get(4),
+            ) {
+                (Some(_), Some(_), None, None) => (1, 2),
+                (None, None, Some(_), Some(_)) => (3, 4),
+                _ => (0, 0),
+            };
+            if (i, j) == (0, 0) {
+                ("".to_string(), "".to_string())
+            } else {
+                (captures[i].to_string(), captures[j].to_string())
+            }
+        })
         .collect()
 }
 
