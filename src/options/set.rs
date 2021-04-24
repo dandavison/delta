@@ -172,6 +172,7 @@ pub fn set_options(
             raw,
             show_themes,
             side_by_side,
+            tab_string,
             tab_width,
             tokenization_regex,
             true_color,
