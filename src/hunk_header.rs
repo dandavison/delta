@@ -94,6 +94,11 @@ fn get_painted_file_with_line_number(
     config: &Config,
 ) -> String {
     let mut file_with_line_number = Vec::new();
+    let modified_label;
+    if config.navigate {
+        modified_label = format!("{} ", config.file_modified_label);
+        file_with_line_number.push(config.hunk_header_file_style.paint(&modified_label));
+    }
     let plus_line_number = line_numbers[line_numbers.len() - 1].0;
     if config.hunk_header_style_include_file_path {
         file_with_line_number.push(config.hunk_header_file_style.paint(plus_file))
