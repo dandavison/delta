@@ -113,7 +113,9 @@ impl<'a> StateMachine<'a> {
 
             let mut handled_line = if line.starts_with("commit ") {
                 self.handle_commit_meta_header_line()?
-            } else if self.state == State::CommitMeta && line.starts_with(' ') {
+            } else if (self.state == State::CommitMeta || self.state == State::Unknown)
+                && line.starts_with(' ')
+            {
                 self.handle_diff_stat_line()?
             } else if line.starts_with("diff ") {
                 self.handle_file_meta_diff_line()?
