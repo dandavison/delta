@@ -38,13 +38,12 @@ pub fn is_light_syntax_theme(theme: &str) -> bool {
     LIGHT_SYNTAX_THEMES.contains(&theme)
 }
 
-const LIGHT_SYNTAX_THEMES: [&str; 7] = [
+const LIGHT_SYNTAX_THEMES: [&str; 6] = [
     "GitHub",
     "gruvbox-light",
     "gruvbox-white",
     "Monokai Extended Light",
     "OneHalfLight",
-    "ansi-light",
     "Solarized (light)",
 ];
 

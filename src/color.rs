@@ -26,7 +26,7 @@ pub fn parse_color(s: &str, true_color: bool) -> Option<Color> {
             .or_else(|| syntect_color::syntect_color_from_ansi_name(s))
             .unwrap_or_else(die)
     };
-    Some(to_ansi_color(syntect_color, true_color))
+    to_ansi_color(syntect_color, true_color)
 }
 
 pub fn color_to_string(color: Color) -> String {

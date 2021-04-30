@@ -334,8 +334,6 @@ mod tests {
 
     use ansi_term;
 
-    use crate::color::ansi_16_color_name_to_number;
-
     #[test]
     fn test_parse_ansi_term_style() {
         assert_eq!(
@@ -346,9 +344,7 @@ mod tests {
             parse_ansi_term_style("red", None, false),
             (
                 ansi_term::Style {
-                    foreground: Some(ansi_term::Color::Fixed(
-                        ansi_16_color_name_to_number("red").unwrap()
-                    )),
+                    foreground: Some(ansi_term::Color::Red),
                     ..ansi_term::Style::new()
                 },
                 false,
@@ -360,12 +356,8 @@ mod tests {
             parse_ansi_term_style("red green", None, false),
             (
                 ansi_term::Style {
-                    foreground: Some(ansi_term::Color::Fixed(
-                        ansi_16_color_name_to_number("red").unwrap()
-                    )),
-                    background: Some(ansi_term::Color::Fixed(
-                        ansi_16_color_name_to_number("green").unwrap()
-                    )),
+                    foreground: Some(ansi_term::Color::Red),
+                    background: Some(ansi_term::Color::Green),
                     ..ansi_term::Style::new()
                 },
                 false,
@@ -377,12 +369,8 @@ mod tests {
             parse_ansi_term_style("bold red underline green blink", None, false),
             (
                 ansi_term::Style {
-                    foreground: Some(ansi_term::Color::Fixed(
-                        ansi_16_color_name_to_number("red").unwrap()
-                    )),
-                    background: Some(ansi_term::Color::Fixed(
-                        ansi_16_color_name_to_number("green").unwrap()
-                    )),
+                    foreground: Some(ansi_term::Color::Red),
+                    background: Some(ansi_term::Color::Green),
                     is_blink: true,
                     is_bold: true,
                     is_underline: true,
@@ -405,9 +393,7 @@ mod tests {
             parse_ansi_term_style("syntax italic white hidden", None, false),
             (
                 ansi_term::Style {
-                    background: Some(ansi_term::Color::Fixed(
-                        ansi_16_color_name_to_number("white").unwrap()
-                    )),
+                    background: Some(ansi_term::Color::White),
                     is_italic: true,
                     is_hidden: true,
                     ..ansi_term::Style::new()
@@ -421,9 +407,7 @@ mod tests {
             parse_ansi_term_style("bold syntax italic white hidden", None, false),
             (
                 ansi_term::Style {
-                    background: Some(ansi_term::Color::Fixed(
-                        ansi_16_color_name_to_number("white").unwrap()
-                    )),
+                    background: Some(ansi_term::Color::White),
                     is_bold: true,
                     is_italic: true,
                     is_hidden: true,
@@ -447,9 +431,7 @@ mod tests {
             parse_ansi_term_style("omit syntax italic white hidden", None, false),
             (
                 ansi_term::Style {
-                    background: Some(ansi_term::Color::Fixed(
-                        ansi_16_color_name_to_number("white").unwrap()
-                    )),
+                    background: Some(ansi_term::Color::White),
                     is_italic: true,
                     is_hidden: true,
                     ..ansi_term::Style::new()
@@ -472,9 +454,7 @@ mod tests {
             parse_ansi_term_style("raw syntax italic white hidden", None, false),
             (
                 ansi_term::Style {
-                    background: Some(ansi_term::Color::Fixed(
-                        ansi_16_color_name_to_number("white").unwrap()
-                    )),
+                    background: Some(ansi_term::Color::White),
                     is_italic: true,
                     is_hidden: true,
                     ..ansi_term::Style::new()
@@ -542,8 +522,8 @@ mod tests {
         assert_eq!(
             DecorationStyle::from_str("ol red box bold green ul", true),
             DecorationStyle::BoxWithUnderOverline(ansi_term::Style {
-                foreground: Some(ansi_term::Color::Fixed(1)),
-                background: Some(ansi_term::Color::Fixed(2)),
+                foreground: Some(ansi_term::Color::Red),
+                background: Some(ansi_term::Color::Green),
                 is_bold: true,
                 ..ansi_term::Style::new()
             })
@@ -560,8 +540,8 @@ mod tests {
             false,
         );
         let red_green_bold = ansi_term::Style {
-            foreground: Some(ansi_term::Color::Fixed(1)),
-            background: Some(ansi_term::Color::Fixed(2)),
+            foreground: Some(ansi_term::Color::Red),
+            background: Some(ansi_term::Color::Green),
             is_bold: true,
             ..ansi_term::Style::new()
         };
@@ -594,8 +574,8 @@ mod tests {
     fn test_style_from_str_decoration_style_only() {
         let actual_style = Style::from_str("", None, Some("ol red box bold green ul"), true, false);
         let red_green_bold = ansi_term::Style {
-            foreground: Some(ansi_term::Color::Fixed(1)),
-            background: Some(ansi_term::Color::Fixed(2)),
+            foreground: Some(ansi_term::Color::Red),
+            background: Some(ansi_term::Color::Green),
             is_bold: true,
             ..ansi_term::Style::new()
         };
@@ -618,8 +598,8 @@ mod tests {
             false,
         );
         let expected_decoration_style = DecorationStyle::BoxWithUnderOverline(ansi_term::Style {
-            foreground: Some(ansi_term::Color::Fixed(1)),
-            background: Some(ansi_term::Color::Fixed(2)),
+            foreground: Some(ansi_term::Color::Red),
+            background: Some(ansi_term::Color::Green),
             is_bold: true,
             ..ansi_term::Style::new()
         });
@@ -657,8 +637,8 @@ mod tests {
     fn test_style_from_str_with_handling_of_special_decoration_attributes_and_respecting_deprecated_foreground_color_arg(
     ) {
         let expected_decoration_style = DecorationStyle::BoxWithUnderOverline(ansi_term::Style {
-            foreground: Some(ansi_term::Color::Fixed(1)),
-            background: Some(ansi_term::Color::Fixed(2)),
+            foreground: Some(ansi_term::Color::Red),
+            background: Some(ansi_term::Color::Green),
             is_bold: true,
             ..ansi_term::Style::new()
         });

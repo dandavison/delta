@@ -667,7 +667,7 @@ mod superimpose_style_sections {
             if style.is_syntax_highlighted && syntect_style != null_syntect_style {
                 Style {
                     ansi_term_style: ansi_term::Style {
-                        foreground: Some(to_ansi_color(syntect_style.foreground, true_color)),
+                        foreground: to_ansi_color(syntect_style.foreground, true_color),
                         ..style.ansi_term_style
                     },
                     ..style
@@ -755,7 +755,7 @@ mod superimpose_style_sections {
         lazy_static! {
             static ref SUPERIMPOSED_STYLE: Style = Style {
                 ansi_term_style: ansi_term::Style {
-                    foreground: Some(to_ansi_color(SyntectColor::BLACK, true)),
+                    foreground: to_ansi_color(SyntectColor::BLACK, true),
                     background: Some(Color::White),
                     is_underline: true,
                     ..ansi_term::Style::new()
