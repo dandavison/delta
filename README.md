@@ -230,7 +230,7 @@ Alternatively, delta is available in the following package managers:
   <tr>
     <td>Debian / Ubuntu</td>
     <td><br>.deb files are on the <a href="https://github.com/dandavison/delta/releases">releases</a> page and at <a href="https://github.com/barnumbirr/delta-debian/releases">barnumbirr/delta-debian</a><br>
-    <code>dpkg -i file.deb</code>. **IMPORTANT** If you are using Ubuntu <= 19.10 or are mixing apt sources, read https://github.com/dandavison/delta/issues/504, be extremely cautious, and try the versions linked against musl.</td>
+    <code>dpkg -i file.deb</code>. **IMPORTANT** If you are using Ubuntu <= 19.10 or are mixing apt sources, read <a href="https://github.com/dandavison/delta/issues/504">https://github.com/dandavison/delta/issues/504</a>, be extremely cautious, and try the versions linked against musl.</td>
   </tr>
   <tr>
     <td>Fedora</td>
