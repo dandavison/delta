@@ -90,7 +90,7 @@ fn run_app() -> std::io::Result<i32> {
             config.minus_file.as_ref(),
             config.plus_file.as_ref(),
             &config,
-            &mut writer,
+            &std::env::args().next().unwrap(),
         );
         return Ok(exit_code);
     }
@@ -111,32 +111,33 @@ fn main() -> std::io::Result<()> {
     process::exit(exit_code);
 }
 
-/// Run `diff -u` on the files provided on the command line and display the output.
+/// Run `git diff` on the files provided on the command line and display the output.
 fn diff(
     minus_file: Option<&PathBuf>,
     plus_file: Option<&PathBuf>,
     config: &config::Config,
-    writer: &mut dyn Write,
+    pager: &str,
 ) -> i32 {
-    use std::io::BufReader;
     let die = || {
-        eprintln!("Usage: delta minus_file plus_file");
+        eprintln!(
+            "\
+The main way to use delta is to configure it as the pager for git: \
+see https://github.com/dandavison/delta#configuration. \
+You can also use delta to diff two files: `delta file_A file_B`."
+        );
         process::exit(config.error_exit_code);
     };
-    let diff_command = "diff";
-    let mut diff_process = process::Command::new(PathBuf::from(diff_command))
-        .arg("-u")
-        .args(&[
-            minus_file.unwrap_or_else(die),
-            plus_file.unwrap_or_else(die),
-        ])
-        .stdout(process::Stdio::piped())
+    let diff_command = "git";
+    let minus_file = minus_file.unwrap_or_else(die);
+    let plus_file = plus_file.unwrap_or_else(die);
+    process::Command::new(PathBuf::from(diff_command))
+        .args(&["-c", &format!("pager.diff={}", pager), "diff", "--no-index"])
+        .args(&[minus_file, plus_file])
         .spawn()
         .unwrap_or_else(|err| {
             eprintln!("Failed to execute the command '{}': {}", diff_command, err);
             process::exit(config.error_exit_code);
-        });
-    let exit_code = diff_process
+        })
         .wait()
         .unwrap_or_else(|_| {
             delta_unreachable(&format!("'{}' process not running.", diff_command));
@@ -145,22 +146,7 @@ fn diff(
         .unwrap_or_else(|| {
             eprintln!("'{}' process terminated without exit status.", diff_command);
             process::exit(config.error_exit_code);
-        });
-
-    if let Err(error) = delta(
-        BufReader::new(diff_process.stdout.unwrap()).byte_lines(),
-        writer,
-        &config,
-    ) {
-        match error.kind() {
-            ErrorKind::BrokenPipe => process::exit(0),
-            _ => {
-                eprintln!("{}", error);
-                process::exit(config.error_exit_code);
-            }
-        }
-    };
-    exit_code
+        })
 }
 
 fn show_config(config: &config::Config, writer: &mut dyn Write) -> std::io::Result<()> {
@@ -505,7 +491,6 @@ pub fn _list_syntax_themes_for_machines(writer: &mut dyn Write) -> std::io::Resu
 #[cfg(test)]
 mod main_tests {
     use super::*;
-    use std::fs;
     use std::io::{Cursor, Seek, SeekFrom};
 
     use crate::ansi;
@@ -566,48 +551,38 @@ mod main_tests {
 
     #[test]
     #[cfg_attr(target_os = "windows", ignore)]
+    #[cfg_attr(all(target_os = "linux", target_arch = "x86"), ignore)]
     fn test_diff_same_empty_file() {
-        _do_diff_test("/dev/null", "/dev/null", false, None);
+        _do_diff_test("/dev/null", "/dev/null", false);
     }
 
     #[test]
     #[cfg_attr(target_os = "windows", ignore)]
     fn test_diff_same_non_empty_file() {
-        _do_diff_test("/etc/passwd", "/etc/passwd", false, None);
+        _do_diff_test("/etc/passwd", "/etc/passwd", false);
     }
 
     #[test]
     #[cfg_attr(target_os = "windows", ignore)]
     fn test_diff_empty_vs_non_empty_file() {
-        _do_diff_test("/dev/null", "/etc/passwd", true, Some("/etc/passwd"));
+        _do_diff_test("/dev/null", "/etc/passwd", true);
     }
 
     #[test]
     #[cfg_attr(target_os = "windows", ignore)]
     fn test_diff_two_non_empty_files() {
-        _do_diff_test("/etc/group", "/etc/passwd", true, None);
+        _do_diff_test("/etc/group", "/etc/passwd", true);
     }
 
-    fn _do_diff_test(file_a: &str, file_b: &str, expect_diff: bool, expected_diff: Option<&str>) {
+    fn _do_diff_test(file_a: &str, file_b: &str, expect_diff: bool) {
         let config = integration_test_utils::make_config_from_args(&[]);
-        let mut writer = Cursor::new(vec![]);
         let exit_code = diff(
             Some(&PathBuf::from(file_a)),
             Some(&PathBuf::from(file_b)),
             &config,
-            &mut writer,
+            "cat",
         );
-        let s = ansi::strip_ansi_codes(&_read_to_string(&mut writer));
-        if expect_diff {
-            assert_eq!(exit_code, 1);
-            assert!(s.contains(&format!("comparing: {} ⟶   {}\n", file_a, file_b)));
-            if let Some(expected_diff) = expected_diff {
-                assert!(s.contains(&fs::read_to_string(expected_diff).unwrap()));
-            }
-        } else {
-            assert_eq!(exit_code, 0);
-            assert!(s.is_empty());
-        }
+        assert_eq!(exit_code, if expect_diff { 1 } else { 0 });
     }
 
     fn _read_to_string(cursor: &mut Cursor<Vec<u8>>) -> String {
