@@ -123,6 +123,8 @@ fn diff(
         process::exit(config.error_exit_code);
     };
     let diff_command = "git";
+    let minus_file = minus_file.unwrap_or_else(die);
+    let plus_file = plus_file.unwrap_or_else(die);
     process::Command::new(PathBuf::from(diff_command))
         .args(&[
             "-c",
@@ -130,10 +132,7 @@ fn diff(
             "diff",
             "--no-index",
         ])
-        .args(&[
-            minus_file.unwrap_or_else(die),
-            plus_file.unwrap_or_else(die),
-        ])
+        .args(&[minus_file, plus_file])
         .envs(envs)
         .spawn()
         .unwrap_or_else(|err| {
