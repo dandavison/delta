@@ -588,8 +588,8 @@ mod main_tests {
     }
 
     fn _has_executable(name: &str) -> bool {
-        process::Command::new(PathBuf::from(name))
-            .args(&["--help"])
+        process::Command::new(PathBuf::from("which"))
+            .args(&[name])
             .spawn()
             .unwrap()
             .wait()
