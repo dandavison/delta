@@ -580,7 +580,7 @@ mod main_tests {
             Some(&PathBuf::from(file_a)),
             Some(&PathBuf::from(file_b)),
             &config,
-            vec![("GIT_PAGER", "cat > /dev/null")],
+            vec![("GIT_PAGER", "cat")],
         );
         assert_eq!(exit_code, if expect_diff { 1 } else { 0 });
     }
