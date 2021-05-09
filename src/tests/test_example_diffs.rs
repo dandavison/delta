@@ -862,12 +862,14 @@ src/align.rs
             &["--color-only", "--plus-emph-style", "red reverse"],
             &["--color-only", "--plus-non-emph-style", "red bold ul"],
             &["--color-only", "--commit-style", "red bold ul"],
+            &["--color-only", "--commit-style", "red bold box"],
             &[
                 "--color-only",
                 "--commit-decoration-style",
                 "bold yellow box ul",
             ],
             &["--color-only", "--file-style", "red bold ul"],
+            &["--color-only", "--file-style", "red bold box"],
             &[
                 "--color-only",
                 "--file-decoration-style",
