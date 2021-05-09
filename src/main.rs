@@ -119,7 +119,12 @@ fn diff(
     envs: Vec<(&str, &str)>,
 ) -> i32 {
     let die = || {
-        eprintln!("Usage: delta minus_file plus_file");
+        eprintln!(
+            "\
+The main way to use delta is to configure it as the pager for git: \
+see https://github.com/dandavison/delta#configuration. \
+You can also use delta to diff two files: `delta file_A file_B`."
+        );
         process::exit(config.error_exit_code);
     };
     let diff_command = "git";
