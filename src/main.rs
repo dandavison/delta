@@ -120,7 +120,7 @@ fn diff(minus_file: Option<&PathBuf>, plus_file: Option<&PathBuf>, config: &conf
     process::Command::new(PathBuf::from(diff_command))
         .args(&[
             "-c",
-            &format!("core.pager={}", std::env::args().next().unwrap()),
+            &format!("pager.diff={}", std::env::args().next().unwrap()),
             "diff",
             "--no-index",
         ])
