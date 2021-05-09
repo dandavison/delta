@@ -575,6 +575,8 @@ mod main_tests {
     }
 
     fn _do_diff_test(file_a: &str, file_b: &str, expect_diff: bool) {
+        assert!(_has_executable("git"));
+        assert!(_has_executable("cat"));
         let config = integration_test_utils::make_config_from_args(&[]);
         let exit_code = diff(
             Some(&PathBuf::from(file_a)),
@@ -583,6 +585,18 @@ mod main_tests {
             vec![("GIT_PAGER", "cat")],
         );
         assert_eq!(exit_code, if expect_diff { 1 } else { 0 });
+    }
+
+    fn _has_executable(name: &str) -> bool {
+        process::Command::new(PathBuf::from(name))
+            .args(&["--help"])
+            .spawn()
+            .unwrap()
+            .wait()
+            .unwrap()
+            .code()
+            .unwrap()
+            == 0
     }
 
     fn _read_to_string(cursor: &mut Cursor<Vec<u8>>) -> String {
