@@ -90,6 +90,7 @@ fn run_app() -> std::io::Result<i32> {
             config.minus_file.as_ref(),
             config.plus_file.as_ref(),
             &config,
+            vec![],
         );
         return Ok(exit_code);
     }
@@ -111,7 +112,12 @@ fn main() -> std::io::Result<()> {
 }
 
 /// Run `git diff` on the files provided on the command line and display the output.
-fn diff(minus_file: Option<&PathBuf>, plus_file: Option<&PathBuf>, config: &config::Config) -> i32 {
+fn diff(
+    minus_file: Option<&PathBuf>,
+    plus_file: Option<&PathBuf>,
+    config: &config::Config,
+    envs: Vec<(&str, &str)>,
+) -> i32 {
     let die = || {
         eprintln!("Usage: delta minus_file plus_file");
         process::exit(config.error_exit_code);
@@ -128,6 +134,7 @@ fn diff(minus_file: Option<&PathBuf>, plus_file: Option<&PathBuf>, config: &conf
             minus_file.unwrap_or_else(die),
             plus_file.unwrap_or_else(die),
         ])
+        .envs(envs)
         .spawn()
         .unwrap_or_else(|err| {
             eprintln!("Failed to execute the command '{}': {}", diff_command, err);
@@ -574,6 +581,7 @@ mod main_tests {
             Some(&PathBuf::from(file_a)),
             Some(&PathBuf::from(file_b)),
             &config,
+            vec![("GIT_PAGER", "cat > /dev/null")],
         );
         assert_eq!(exit_code, if expect_diff { 1 } else { 0 });
     }
