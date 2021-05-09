@@ -577,6 +577,14 @@ mod main_tests {
     fn _do_diff_test(file_a: &str, file_b: &str, expect_diff: bool) {
         assert!(_has_executable("git"));
         assert!(_has_executable("cat"));
+        process::Command::new(PathBuf::from("git"))
+            .args(&["diff", "--no-index", "/dev/null", "/dev/null"])
+            .spawn()
+            .unwrap()
+            .wait()
+            .unwrap()
+            .code()
+            .unwrap();
         let config = integration_test_utils::make_config_from_args(&[]);
         let exit_code = diff(
             Some(&PathBuf::from(file_a)),
