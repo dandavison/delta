@@ -90,7 +90,7 @@ fn run_app() -> std::io::Result<i32> {
             config.minus_file.as_ref(),
             config.plus_file.as_ref(),
             &config,
-            vec![],
+            &std::env::args().next().unwrap(),
         );
         return Ok(exit_code);
     }
@@ -116,7 +116,7 @@ fn diff(
     minus_file: Option<&PathBuf>,
     plus_file: Option<&PathBuf>,
     config: &config::Config,
-    envs: Vec<(&str, &str)>,
+    pager: &str,
 ) -> i32 {
     let die = || {
         eprintln!(
@@ -131,14 +131,8 @@ You can also use delta to diff two files: `delta file_A file_B`."
     let minus_file = minus_file.unwrap_or_else(die);
     let plus_file = plus_file.unwrap_or_else(die);
     process::Command::new(PathBuf::from(diff_command))
-        .args(&[
-            "-c",
-            &format!("pager.diff={}", std::env::args().next().unwrap()),
-            "diff",
-            "--no-index",
-        ])
+        .args(&["-c", &format!("pager.diff={}", pager), "diff", "--no-index"])
         .args(&[minus_file, plus_file])
-        .envs(envs)
         .spawn()
         .unwrap_or_else(|err| {
             eprintln!("Failed to execute the command '{}': {}", diff_command, err);
@@ -586,7 +580,7 @@ mod main_tests {
             Some(&PathBuf::from(file_a)),
             Some(&PathBuf::from(file_b)),
             &config,
-            vec![("GIT_PAGER", "cat > /dev/null")],
+            "cat",
         );
         assert_eq!(exit_code, if expect_diff { 1 } else { 0 });
     }
