@@ -495,9 +495,10 @@ impl<'a> Painter<'a> {
         Vec<(Option<usize>, Option<usize>)>,
     ) {
         let (minus_lines, minus_styles): (Vec<&str>, Vec<Style>) = minus_lines
-            .iter()
-            .map(|(s, t)| (s.as_str(), *config.get_style(&t)))
-            .unzip();
+                // This is a new line
+                .iter()
+                .map(|(s, t)| (s.as_str(), *config.get_style(&t)))
+                .unzip();
         let (plus_lines, plus_styles): (Vec<&str>, Vec<Style>) = plus_lines
             .iter()
             .map(|(s, t)| (s.as_str(), *config.get_style(&t)))
