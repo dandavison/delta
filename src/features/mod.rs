@@ -69,10 +69,7 @@ macro_rules! builtin_feature {
                 $option_name.to_string(),
                 Box::new(move |$opt: &$crate::cli::Opt, git_config: &Option<$crate::git_config::GitConfig>| {
                     match (git_config, $git_config_key) {
-                        (Some(git_config), Some(git_config_key)) => match git_config.get::<$type>(git_config_key) {
-                            Some(value) => Some($crate::features::GitConfigValue(value.into())),
-                            _ => None,
-                        },
+                        (Some(git_config), Some(git_config_key)) => git_config.get::<$type>(git_config_key).map(|value| $crate::features::GitConfigValue(value.into())),
                         _ => None,
                     }
                     .unwrap_or_else(|| $crate::features::DefaultValue($value.into()))
