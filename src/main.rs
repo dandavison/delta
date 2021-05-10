@@ -550,8 +550,7 @@ mod main_tests {
     }
 
     #[test]
-    #[cfg_attr(target_os = "windows", ignore)]
-    #[cfg_attr(all(target_os = "linux", target_arch = "x86"), ignore)]
+    #[ignore] // https://github.com/dandavison/delta/pull/546
     fn test_diff_same_empty_file() {
         _do_diff_test("/dev/null", "/dev/null", false);
     }
