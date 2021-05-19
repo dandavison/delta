@@ -140,7 +140,7 @@ impl<'a> StateMachine<'a> {
                 self.handle_additional_file_meta_cases()?
             } else if self.state.is_in_hunk() {
                 // A true hunk line should start with one of: '+', '-', ' '. However, handle_hunk_line
-                // handles all lines until the state self transitions away from the hunk states.
+                // handles all lines until the state transitions away from the hunk states.
                 self.handle_hunk_line()?
             } else {
                 false
