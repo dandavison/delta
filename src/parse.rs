@@ -25,6 +25,7 @@ pub enum FileEvent {
     Change,
     Copy,
     Rename,
+    ModeChange(String),
     NoEvent,
 }
 
@@ -33,7 +34,7 @@ pub fn parse_file_meta_line(
     git_diff_name: bool,
     relative_path_base: Option<&str>,
 ) -> (String, FileEvent) {
-    let (mut path, file_event) = match line {
+    let (mut path_or_mode, file_event) = match line {
         line if line.starts_with("--- ") || line.starts_with("+++ ") => {
             let offset = 4;
             let file = _parse_file_path(&line[offset..], git_diff_name);
@@ -51,18 +52,35 @@ pub fn parse_file_meta_line(
         line if line.starts_with("copy to ") => {
             (line[8..].to_string(), FileEvent::Copy) // "copy to ".len()
         }
+        line if line.starts_with("old mode ") => {
+            ("".to_string(), FileEvent::ModeChange(line[9..].to_string())) // "old mode ".len()
+        }
+        line if line.starts_with("new mode ") => {
+            ("".to_string(), FileEvent::ModeChange(line[9..].to_string())) // "new mode ".len()
+        }
         _ => ("".to_string(), FileEvent::NoEvent),
     };
 
     if let Some(base) = relative_path_base {
-        if let Some(relative_path) = pathdiff::diff_paths(&path, base) {
+        if let FileEvent::ModeChange(_) = file_event {
+        } else if let Some(relative_path) = pathdiff::diff_paths(&path_or_mode, base) {
             if let Some(relative_path) = relative_path.to_str() {
-                path = relative_path.to_owned();
+                path_or_mode = relative_path.to_owned();
             }
         }
     }
 
-    (path, file_event)
+    (path_or_mode, file_event)
+}
+
+/// Given input like "diff --git a/src/main.rs b/src/main.rs"
+/// return (Some("src/main.rs"), Some("src/main.rs"))
+pub fn get_file_paths_from_diff_line(line: &str) -> (Option<String>, Option<String>) {
+    let mut iter = line.split(' ').skip(2);
+    (
+        iter.next().map(|s| _parse_file_path(&s[2..], true)),
+        iter.next().map(|s| _parse_file_path(&s[2..], true)),
+    )
 }
 
 fn _parse_file_path(s: &str, git_diff_name: bool) -> String {
@@ -117,7 +135,8 @@ pub fn get_file_change_description_from_file_paths(
     minus_file: &str,
     plus_file: &str,
     comparing: bool,
-    file_event: &FileEvent,
+    minus_file_event: &FileEvent,
+    plus_file_event: &FileEvent,
     config: &Config,
 ) -> String {
     if comparing {
@@ -137,23 +156,33 @@ pub fn get_file_change_description_from_file_paths(
                 Cow::from(file)
             }
         };
-        match (minus_file, plus_file) {
-            (minus_file, plus_file) if minus_file == plus_file => format!(
+        match (minus_file, plus_file, minus_file_event, plus_file_event) {
+            (
+                minus_file,
+                plus_file,
+                FileEvent::ModeChange(old_mode),
+                FileEvent::ModeChange(new_mode),
+            ) if minus_file == plus_file => {
+                format!("{}: {} ⟶   {}", plus_file, old_mode, new_mode)
+            }
+            (minus_file, plus_file, _, _) if minus_file == plus_file => format!(
                 "{}{}",
                 format_label(&config.file_modified_label),
                 format_file(minus_file)
             ),
-            (minus_file, "/dev/null") => format!(
+            (minus_file, "/dev/null", _, _) => format!(
                 "{}{}",
                 format_label(&config.file_removed_label),
                 format_file(minus_file)
             ),
-            ("/dev/null", plus_file) => format!(
+            ("/dev/null", plus_file, _, _) => format!(
                 "{}{}",
                 format_label(&config.file_added_label),
                 format_file(plus_file)
             ),
-            (minus_file, plus_file) => format!(
+            // minus_file_event == plus_file_event, except in the ModeChange
+            // case above.
+            (minus_file, plus_file, file_event, _) => format!(
                 "{}{} ⟶   {}",
                 format_label(match file_event {
                     FileEvent::Rename => &config.file_renamed_label,

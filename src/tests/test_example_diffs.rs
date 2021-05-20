@@ -1569,6 +1569,14 @@ src/align.rs:71: impl<'a> Alignment<'a> { │
         ));
     }
 
+    #[test]
+    fn test_file_mode_change() {
+        let config = integration_test_utils::make_config_from_args(&[]);
+        let output = integration_test_utils::run_delta(GIT_DIFF_FILE_MODE_CHANGE, &config);
+        let output = strip_ansi_codes(&output);
+        assert!(output.contains(r"src/delta.rs: 100644 ⟶   100755"));
+    }
+
     const GIT_DIFF_SINGLE_HUNK: &str = "\
 commit 94907c0f136f46dc46ffae2dc92dca9af7eb7c2e
 Author: Dan Davison <dandavison7@gmail.com>
@@ -2172,4 +2180,10 @@ Date:   Sun Nov 1 15:28:53 2020 -0500
 \ No newline at end of file[m
 [32m+[m[32m][m
 "#;
+
+    const GIT_DIFF_FILE_MODE_CHANGE: &str = "
+diff --git a/src/delta.rs b/src/delta.rs
+old mode 100644
+new mode 100755
+";
 }
