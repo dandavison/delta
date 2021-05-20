@@ -8,7 +8,7 @@ pub fn retrieve_less_version() -> Option<usize> {
 fn parse_less_version(output: &[u8]) -> Option<usize> {
     if output.starts_with(b"less ") {
         let version = std::str::from_utf8(&output[5..]).ok()?;
-        let end = version.find(' ')?;
+        let end = version.find(|c: char| !c.is_ascii_digit())?;
         version[..end].parse::<usize>().ok()
     } else {
         None
