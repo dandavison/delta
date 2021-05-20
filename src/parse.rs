@@ -36,15 +36,7 @@ pub fn parse_file_meta_line(
     let (mut path, file_event) = match line {
         line if line.starts_with("--- ") || line.starts_with("+++ ") => {
             let offset = 4;
-            let file = match &line[offset..] {
-                path if path == "/dev/null" => "/dev/null",
-                path if git_diff_name && DIFF_PREFIXES.iter().any(|s| path.starts_with(s)) => {
-                    &path[2..]
-                }
-                path if git_diff_name => &path,
-                path => path.split('\t').next().unwrap_or(""),
-            }
-            .to_string();
+            let file = _parse_file_path(&line[offset..], git_diff_name);
             (file, FileEvent::Change)
         }
         line if line.starts_with("rename from ") => {
@@ -71,6 +63,16 @@ pub fn parse_file_meta_line(
     }
 
     (path, file_event)
+}
+
+fn _parse_file_path(s: &str, git_diff_name: bool) -> String {
+    match s {
+        path if path == "/dev/null" => "/dev/null",
+        path if git_diff_name && DIFF_PREFIXES.iter().any(|s| path.starts_with(s)) => &path[2..],
+        path if git_diff_name => &path,
+        path => path.split('\t').next().unwrap_or(""),
+    }
+    .to_string()
 }
 
 // A regex to capture the path, and the content from the pipe onwards, in lines
