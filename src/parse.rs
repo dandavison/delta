@@ -162,9 +162,13 @@ pub fn get_file_change_description_from_file_paths(
                 plus_file,
                 FileEvent::ModeChange(old_mode),
                 FileEvent::ModeChange(new_mode),
-            ) if minus_file == plus_file => {
-                format!("{}: {} ⟶   {}", plus_file, old_mode, new_mode)
-            }
+            ) if minus_file == plus_file => match (old_mode.as_str(), new_mode.as_str()) {
+                // 100755 for executable and 100644 for non-executable are the only file modes Git records.
+                // https://medium.com/@tahteche/how-git-treats-changes-in-file-permissions-f71874ca239d
+                ("100644", "100755") => format!("{}: mode +x", plus_file),
+                ("100755", "100644") => format!("{}: mode -x", plus_file),
+                _ => format!("{}: {} ⟶   {}", plus_file, old_mode, new_mode),
+            },
             (minus_file, plus_file, _, _) if minus_file == plus_file => format!(
                 "{}{}",
                 format_label(&config.file_modified_label),

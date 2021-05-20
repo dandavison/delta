@@ -1570,11 +1570,25 @@ src/align.rs:71: impl<'a> Alignment<'a> { │
     }
 
     #[test]
-    fn test_file_mode_change() {
+    fn test_file_mode_change_gain_executable_bit() {
         let config = integration_test_utils::make_config_from_args(&[]);
-        let output = integration_test_utils::run_delta(GIT_DIFF_FILE_MODE_CHANGE, &config);
+        let output = integration_test_utils::run_delta(
+            GIT_DIFF_FILE_MODE_CHANGE_GAIN_EXECUTABLE_BIT,
+            &config,
+        );
         let output = strip_ansi_codes(&output);
-        assert!(output.contains(r"src/delta.rs: 100644 ⟶   100755"));
+        assert!(output.contains(r"src/delta.rs: mode +x"));
+    }
+
+    #[test]
+    fn test_file_mode_change_lose_executable_bit() {
+        let config = integration_test_utils::make_config_from_args(&[]);
+        let output = integration_test_utils::run_delta(
+            GIT_DIFF_FILE_MODE_CHANGE_LOSE_EXECUTABLE_BIT,
+            &config,
+        );
+        let output = strip_ansi_codes(&output);
+        assert!(output.contains(r"src/delta.rs: mode -x"));
     }
 
     const GIT_DIFF_SINGLE_HUNK: &str = "\
@@ -2181,9 +2195,15 @@ Date:   Sun Nov 1 15:28:53 2020 -0500
 [32m+[m[32m][m
 "#;
 
-    const GIT_DIFF_FILE_MODE_CHANGE: &str = "
+    const GIT_DIFF_FILE_MODE_CHANGE_GAIN_EXECUTABLE_BIT: &str = "
 diff --git a/src/delta.rs b/src/delta.rs
 old mode 100644
 new mode 100755
+";
+
+    const GIT_DIFF_FILE_MODE_CHANGE_LOSE_EXECUTABLE_BIT: &str = "
+diff --git a/src/delta.rs b/src/delta.rs
+old mode 100755
+new mode 100644
 ";
 }
