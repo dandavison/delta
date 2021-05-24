@@ -357,6 +357,10 @@ pub struct Opt {
     /// (underline), 'ol' (overline), or the combination 'ul ol'.
     pub commit_decoration_style: String,
 
+    /// The regular expression used to identify the commit line when parsing git output.
+    #[structopt(long = "commit-regex", default_value = r"^commit ")]
+    pub commit_regex: String,
+
     #[structopt(long = "file-style", default_value = "blue")]
     /// Style (foreground, background, attributes) for the file section. See STYLES section. The
     /// style 'omit' can be used to remove the file section from the output.
