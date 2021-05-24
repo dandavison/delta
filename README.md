@@ -81,37 +81,35 @@ To change your delta options in a one-off git command, use `git -c`. For example
 git -c delta.line-numbers=false show
 ```
 
-Contents
-========
+# Contents
 
-* [Installation](#installation)
-* [Configuration](#configuration)
-   * [Git config files](#git-config-files)
-   * [Environment](#environment)
-* [Usage](#usage)
-   * [Choosing colors (styles)](#choosing-colors-styles)
-   * [Line numbers](#line-numbers)
-   * [Side-by-side view](#side-by-side-view)
-   * ["Features": named groups of settings](#features-named-groups-of-settings)
-   * [Custom color themes](#custom-color-themes)
-   * [diff-highlight and diff-so-fancy emulation](#diff-highlight-and-diff-so-fancy-emulation)
-   * [--color-moved support](#--color-moved-support)
-   * [Navigation keybindings for large diffs](#navigation-keybindings-for-large-diffs)
-   * [24 bit color (truecolor)](#24-bit-color-truecolor)
-   * [Using Delta on Windows](#using-delta-on-windows)
-   * [Mouse scrolling](#mouse-scrolling)
-   * [Using Delta with Magit](#using-delta-with-magit)
-   * [Supported languages and themes](#supported-languages-and-themes)
-* [Comparisons with other tools](#comparisons-with-other-tools)
-* [Build delta from source](#build-delta-from-source)
-* [Related projects](#related-projects)
-   * [Used by delta](#used-by-delta)
-   * [Using delta](#using-delta)
-   * [Similar projects](#similar-projects)
-* [Full --help output](#full---help-output)
-* [Delta configs used in screenshots](#delta-configs-used-in-screenshots)
-   * [Side-by-side view](#side-by-side-view-1)
-
+- [Installation](#installation)
+- [Configuration](#configuration)
+  - [Git config files](#git-config-files)
+  - [Environment](#environment)
+- [Usage](#usage)
+  - [Choosing colors (styles)](#choosing-colors-styles)
+  - [Line numbers](#line-numbers)
+  - [Side-by-side view](#side-by-side-view)
+  - ["Features": named groups of settings](#features-named-groups-of-settings)
+  - [Custom color themes](#custom-color-themes)
+  - [diff-highlight and diff-so-fancy emulation](#diff-highlight-and-diff-so-fancy-emulation)
+  - [--color-moved support](#--color-moved-support)
+  - [Navigation keybindings for large diffs](#navigation-keybindings-for-large-diffs)
+  - [24 bit color (truecolor)](#24-bit-color-truecolor)
+  - [Using Delta on Windows](#using-delta-on-windows)
+  - [Mouse scrolling](#mouse-scrolling)
+  - [Using Delta with Magit](#using-delta-with-magit)
+  - [Supported languages and themes](#supported-languages-and-themes)
+- [Comparisons with other tools](#comparisons-with-other-tools)
+- [Build delta from source](#build-delta-from-source)
+- [Related projects](#related-projects)
+  - [Used by delta](#used-by-delta)
+  - [Using delta](#using-delta)
+  - [Similar projects](#similar-projects)
+- [Full --help output](#full---help-output)
+- [Delta configs used in screenshots](#delta-configs-used-in-screenshots)
+  - [Side-by-side view](#side-by-side-view-1)
 
 Here's what `git show` can look like with git configured to use delta:
 
@@ -150,7 +148,6 @@ Here's what `git show` can look like with git configured to use delta:
   <img width=650px src="https://user-images.githubusercontent.com/52205/81059276-254cf980-8e9e-11ea-95c3-8b757a4c11b5.png" alt="image" />
 </td></tr></table>
 
-
 <br>
 <br>
 
@@ -180,18 +177,17 @@ Here's what `git show` can look like with git configured to use delta:
   </tr>
 </table>
 
-
 <br>
 
 |                                                | delta | git | [diff-so-fancy] /<br>[diff-highlight] | github/gitlab |
-|------------------------------------------------|-------|-----|---------------------------------------|---------------|
-| language syntax highlighting                   | ✅    | ❌  | ❌                                    | ✅           |
-| within-line insertion/deletion detection       | ✅    | ❌  | ✅                                    | ✅           |
-| multiple insertion/deletions detected per line | ✅    | ❌  | ❌                                    | ✅           |
-| matching of unequal numbers of changed lines   | ✅    | ❌  | ❌                                    | ❌           |
-| independently stylable elements                | ✅    | ✅  | ✅                                    | ❌           |
-| line numbering                                 | ✅    | ❌  | ❌                                    | ✅           |
-| side-by-side view                              | ✅    | ❌  | ❌                                    | ✅           |
+| ---------------------------------------------- | ----- | --- | ------------------------------------- | ------------- |
+| language syntax highlighting                   | ✅    | ❌  | ❌                                    | ✅            |
+| within-line insertion/deletion detection       | ✅    | ❌  | ✅                                    | ✅            |
+| multiple insertion/deletions detected per line | ✅    | ❌  | ❌                                    | ✅            |
+| matching of unequal numbers of changed lines   | ✅    | ❌  | ❌                                    | ❌            |
+| independently stylable elements                | ✅    | ✅  | ✅                                    | ❌            |
+| line numbering                                 | ✅    | ❌  | ❌                                    | ✅            |
+| side-by-side view                              | ✅    | ❌  | ❌                                    | ✅            |
 
 In addition, delta handles traditional unified diff output.
 
@@ -282,10 +278,10 @@ Behind the scenes, delta uses `less` for paging. The version of `less` that come
 
 ## Configuration
 
-
 #### Git config files
 
 Set delta to be git's pager in your `.gitconfig`. Delta has many options to alter colors and other details of the output; `delta --help` shows them all. An example is
+
 ```gitconfig
 [core]
     pager = delta
@@ -303,43 +299,45 @@ Set delta to be git's pager in your `.gitconfig`. Delta has many options to alte
 Note that delta style argument values in ~/.gitconfig should be in double quotes, like `--minus-style="syntax #340001"`. For theme names and other values, do not use quotes as they will be passed on to delta, like `theme = Monokai Extended`.
 
 All git commands that display diff output should now display syntax-highlighted output. For example:
-  - `git diff`
-  - `git show`
-  - `git log -p`
-  - `git stash show -p`
-  - `git reflog -p`
-  - `git add -p`
 
-For Mercurial, you can add delta, with its command line options, to the `[pager]` section of `.hgrc`.
+- `git diff`
+- `git show`
+- `git log -p`
+- `git stash show -p`
+- `git reflog -p`
+- `git add -p`
 
-Delta also handles unified diff output, and can be used as an alternative way of invoking `diff -u`. The following two commands do the same thing:
+Delta can also be used as a shorthand for diffing two files: the following two commands do the same thing:
+
 ```
 delta a.txt b.txt
 
-diff -u a.txt b.txt | delta
+git diff a.txt b.txt
 ```
+
+Delta also handles unified diff format, e.g. `diff -u a.txt b.txt | delta`.
+
+For Mercurial, you can add delta, with its command line options, to the `[pager]` section of `.hgrc`.
 
 #### Environment
 
-##### a) Delta
-Delta respects the setting of some environment variables to derive the default pager to use. These are in descending order of priority :
-- `DELTA_PAGER`,
-- `BAT_PAGER` and
+Delta acts as a pager for git's output, and delta in turn passes its own output on to a "real" pager.
+The pager that delta uses is determined by consulting the following environment variables (in this order):
+
+- `DELTA_PAGER`
 - `PAGER`
 
-Hence if e.g. `$DELTA_PAGER` is unset, delta will use `$BAT_PAGER`, or `$PAGER` if that is unset, too. In environments without any of the three variable set, delta's fallback is `less`.
+If neither is set, delta's fallback is `less -R`.
 
-##### b) Third party apps
-Note that `$BAT_PAGER` (as well as `$PAGER`) is _also_ used by the standalone `bat` app. Please see `bat(1)` for a [description](https://jlk.fjfi.cvut.cz/arch/manpages/man/community/bat/bat.1.en). However, `$BAT_THEME`, `$BAT_STYLE` and `$BAT_CONFIG_PATH` are **not** used by delta.
+The behavior of delta's default pager, `less`, can be controlled using the `LESS` environment variable.
+It may contain any of the `less` command line options and/or interactive less-commands (prefixed by a leading `+` sign; these are executed every time right after less is launched).
+For full documentation of `less` configuration options, please see the `less(1)` [manual](https://jlk.fjfi.cvut.cz/arch/manpages/man/core/less/less.1.en).
 
-The behavior of delta's default pager, less, can be controlled using the `LESS` environment variable. It may contain any of the `less` command line options and/or interactive less-commands (prefixed by a leading `+` sign) which will be executed every time right after less is launched. A real-life example for the latter would be `LESS='+Gg'`, causing the pager to briefly jump to the bottom of the buffer and back to the top right afterwards. The purpose of this example is to enable the full metadata display in less' status line, including the buffer contents length and relative position of the current view port, in percent and lines/characters.
-
-Less also uses a bunch of other environment variables as well as config files, although most of them are not relevant for use in combination with delta. For an in-depth explanation of these configuration options please see the `less(1)` [manual](https://jlk.fjfi.cvut.cz/arch/manpages/man/core/less/less.1.en).
-
-It should also be mentioned that, besides using the `core.pager` setting, you can also set `GIT_PAGER=delta` in your environment in order to define the default `git` pager. If set, this variable will take priority above the setting in the git config file(s).
+In addition to `DELTA_PAGER`, and `PAGER`, delta currently also consults `$BAT_PAGER` (with priority between the two).
+However, this is deprecated: please use `DELTA_PAGER` instead.
+No other [`bat`](https://github.com/sharkdp/bat) environment variables are used by delta.
 
 ## Usage
-
 
 ### Choosing colors (styles)
 
@@ -359,23 +357,29 @@ That means: For removed lines, set the foreground (text) color to 'red', make it
 For full details, see the `STYLES` section in [`delta --help`](#full---help-output).
 
 ### Line numbers
+
 ```gitconfig
 [delta]
     line-numbers = true
 ```
+
 <table><tr><td><img width=400px src="https://user-images.githubusercontent.com/52205/86275526-76792100-bba1-11ea-9e78-6be9baa80b29.png" alt="image" /></td></tr></table>
 
 The numbers are displayed in two columns and there are several configuration options: see the `LINE NUMBERS` section in [`delta --help`](#full---help-output) for details, and see the next section for an example of configuring line numbers.
 
 ### Side-by-side view
+
 ```gitconfig
 [delta]
     side-by-side = true
 ```
+
 By default, side-by-side view has line-numbers activated, and has syntax highlighting in both the left and right panels: [[config](#side-by-side-view-1)]
+
 <table><tr><td><img width=800px src="https://user-images.githubusercontent.com/52205/87230973-412eb900-c381-11ea-8aec-cc200290bd1b.png" alt="image" /></td></tr></table>
 
 To disable the line numbers in side-by-side view, but keep a vertical delimiter line between the left and right panels, use the line-numbers format options. For example:
+
 ```gitconfig
 [delta]
     side-by-side = true
@@ -383,7 +387,7 @@ To disable the line numbers in side-by-side view, but keep a vertical delimiter 
     line-numbers-right-format = "│ "
 ```
 
-Wide lines in the left or right panel are currently truncated. If the truncation is a problem, one approach is to set the width of Delta's output to be  larger than your terminal (e.g. `delta --width 250`) and ensure that `less` doesn't wrap long lines (e.g. `export LESS=-RS`); then one can scroll right to view the full content. (Another approach is to decrease font size in your terminal.)
+Wide lines in the left or right panel are currently truncated. If the truncation is a problem, one approach is to set the width of Delta's output to be larger than your terminal (e.g. `delta --width 250`) and ensure that `less` doesn't wrap long lines (e.g. `export LESS=-RS`); then one can scroll right to view the full content. (Another approach is to decrease font size in your terminal.)
 
 ### "Features": named groups of settings
 
@@ -410,6 +414,7 @@ All delta options can go under the `[delta]` section in your git config file. Ho
     file-decoration-style = none
     hunk-header-decoration-style = yellow box
 ```
+
 <table><tr><td><img width=400px src="https://user-images.githubusercontent.com/52205/86275048-a96ee500-bba0-11ea-8a19-584f69758aee.png" alt="image" /></td></tr></table>
 
 ### Custom color themes
@@ -466,33 +471,32 @@ In order to support this feature, Delta has to look at the raw colors it receive
 
 Use the `navigate` feature to activate navigation keybindings. In this mode, pressing `n` will jump forward to the next file in the diff, and `N` will jump backwards. If you are viewing multiple commits (e.g. via `git log -p`) then navigation will also visit commit boundaries.
 
-
 ### 24 bit color (truecolor)
 
 Delta looks best if your terminal application supports 24 bit colors. See https://gist.github.com/XVilka/8346728. For example, on MacOS, iTerm2 supports 24-bit colors but Terminal.app does not.
 
 If your terminal application does not support 24-bit color, delta will still work, by automatically choosing the closest color from those available. See the `Colors` section of the help output below.
 
-If you're using tmux, it's worth checking that 24 bit color is  working correctly. For example, run a color test script like [this  one](https://gist.githubusercontent.com/lifepillar/09a44b8cf0f9397465614e622979107f/raw/24-bit-color.sh),  or one of the others listed [here](https://gist.github.com/XVilka/8346728). If  you do not see smooth color gradients, see the discussion at  [tmux#696](https://github.com/tmux/tmux/issues/696). The short  version is you need something like this in your `~/.tmux.conf`:
+If you're using tmux, it's worth checking that 24 bit color is working correctly. For example, run a color test script like [this one](https://gist.githubusercontent.com/lifepillar/09a44b8cf0f9397465614e622979107f/raw/24-bit-color.sh), or one of the others listed [here](https://gist.github.com/XVilka/8346728). If you do not see smooth color gradients, see the discussion at [tmux#696](https://github.com/tmux/tmux/issues/696). The short version is you need something like this in your `~/.tmux.conf`:
+
 ```
 set -ga terminal-overrides ",xterm-256color:Tc"
 ```
-and you may then  need to quit tmux completely for it to take effect.
 
+and you may then need to quit tmux completely for it to take effect.
 
 ### Using Delta on Windows
 
 Delta works on Windows. However, it is essential to use a recent version of `less.exe`: you can download one from https://github.com/jftuga/less-Windows/releases/latest. If you see incorrect colors and/or strange characters in Delta output, then it is probably because Delta is picking up an old version of `less.exe` on your system.
 
-
 ### Mouse scrolling
 
 If mouse scrolling isn't working correctly, ensure that you have the most recent version of `less`.
-* For Windows you can download from https://github.com/jftuga/less-Windows/releases/latest
-* For Mac you can install `brew install less; brew link less`
+
+- For Windows you can download from https://github.com/jftuga/less-Windows/releases/latest
+- For Mac you can install `brew install less; brew link less`
 
 Alternatively try setting your `DELTA_PAGER` environment variable to (at least) `less -R`. See [issue #58](https://github.com/dandavison/delta/issues/58). See also [bat README / "Using a different pager"](https://github.com/sharkdp/bat#using-a-different-pager), since the `DELTA_PAGER` environment variable functions very similarly for delta.
-
 
 ### Using Delta with Magit
 
@@ -500,11 +504,12 @@ Delta can be used when displaying diffs in the Magit git client: see [magit-delt
 
 <table><tr><td><img width=500px src="https://user-images.githubusercontent.com/52205/79934267-2acb2e00-8420-11ea-8bc4-546508fd3581.png" alt="image" /></td></tr></table>
 
-
 ### Supported languages and themes
+
 To list the supported languages and color themes, use `delta --list-languages` and `delta --list-syntax-themes`. To see a demo of the color themes, use `delta --show-syntax-themes`:
 
 To add your own custom color theme, or language, please follow the instructions in the Customization section of the [bat documentation](https://github.com/sharkdp/bat/#customization):
+
 - [Adding a custom language](https://github.com/sharkdp/bat/#adding-new-syntaxes--language-definitions)
 - [Adding a custom theme](https://github.com/sharkdp/bat/#adding-new-themes)
 
@@ -512,12 +517,9 @@ Delta automatically recognizes custom themes and languages added to bat. You wil
 
 The languages and color themes that ship with delta are those that ship with bat. So, to propose a new language or color theme for inclusion in delta, it would need to be a helpful addition to bat, in which case please open a PR against bat.
 
-
 ## Comparisons with other tools
 
 (`delta --light`)
-
-
 
 <table>
   <tr>
@@ -567,7 +569,6 @@ The languages and color themes that ship with delta are those that ship with bat
   </tr>
 </table>
 
-
 ## Build delta from source
 
 You'll need to [install the rust tools](https://www.rust-lang.org/learn/get-started). Then:
@@ -581,6 +582,7 @@ and use the executable found at `./target/release/delta`.
 ## Related projects
 
 ### Used by delta
+
 - [alacritty/vte](https://github.com/alacritty/vte)
 - [mitsuhiko/console](https://github.com/mitsuhiko/console)
 - [ogham/rust-ansi-term](https://github.com/ogham/rust-ansi-term)
@@ -588,6 +590,7 @@ and use the executable found at `./target/release/delta`.
 - [trishume/syntect](https://github.com/trishume/syntect)
 
 ### Using delta
+
 - [bigH/git-fuzzy](https://github.com/bigH/git-fuzzy)
 - [dandavison/magit-delta](https://github.com/dandavison/magit-delta)
 - [jesseduffield/lazygit](https://github.com/jesseduffield/lazygit/)
@@ -596,6 +599,7 @@ and use the executable found at `./target/release/delta`.
 - [wfxr/forgit](https://github.com/wfxr/forgit)
 
 ### Similar projects
+
 - [da-x/fancydiff](https://github.com/da-x/fancydiff)
 - [git/diff-highlight](https://github.com/git/git/tree/master/contrib/diff-highlight)
 - [banga/git-split-diffs](https://github.com/banga/git-split-diffs)
@@ -603,7 +607,6 @@ and use the executable found at `./target/release/delta`.
 - [kovidgoyal/kitty-diff](https://sw.kovidgoyal.net/kitty/kittens/diff.html)
 - [mookid/diffr](https://github.com/mookid/diffr)
 - [so-fancy/diff-so-fancy](https://github.com/so-fancy/diff-so-fancy)
-
 
 ## Full --help output
 
