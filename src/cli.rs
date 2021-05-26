@@ -237,15 +237,17 @@ pub struct Opt {
     pub relative_paths: bool,
 
     #[structopt(long = "hyperlinks")]
-    /// Render commit hashes, file names, and line numbers as hyperlinks, according to the
-    /// hyperlink spec for terminal emulators:
-    /// https://gist.github.com/egmontkob/eb114294efbcd5adb1944c9f3cb5feda. By default, file names
-    /// and line numbers link to the local file using a file URL, whereas commit hashes link to the
-    /// commit in GitHub, if the remote repository is hosted by GitHub. See
-    /// --hyperlinks-file-link-format for full control over the file URLs emitted. Hyperlinks are
-    /// supported by several common terminal emulators. To make them work, you must pass the -r (as
-    /// opposed to -R) flag to less, e.g. via `export DELTA_PAGER=less -rX`. If you use tmux, then
-    /// you will also need a patched fork of tmux (see https://github.com/dandavison/tmux).
+    /// Render commit hashes, file names, and line numbers as hyperlinks,
+    /// according to the hyperlink spec for terminal emulators:
+    /// https://gist.github.com/egmontkob/eb114294efbcd5adb1944c9f3cb5feda. By
+    /// default, file names and line numbers link to the local file using a file
+    /// URL, whereas commit hashes link to the commit in GitHub, if the remote
+    /// repository is hosted by GitHub. See --hyperlinks-file-link-format for
+    /// full control over the file URLs emitted. Hyperlinks are supported by
+    /// several common terminal emulators. To make them work, you must use less
+    /// version >= 581 with the -R flag (or use -r with older less versions, but
+    /// this will break e.g. --navigate). If you use tmux, then you will also
+    /// need a patched fork of tmux (see https://github.com/dandavison/tmux).
     pub hyperlinks: bool,
 
     #[structopt(long = "keep-plus-minus-markers")]
