@@ -55,8 +55,11 @@ The most convenient way to configure delta is with a `[delta]` section in `~/.gi
 <sub>
 
 ```gitconfig
-[core]
-    pager = delta
+[pager]
+    diff = delta
+    log = delta
+    reflog = delta
+    show = delta
 
 [interactive]
     diffFilter = delta --color-only
@@ -278,13 +281,16 @@ Behind the scenes, delta uses `less` for paging. The version of `less` that come
 
 ## Configuration
 
-#### Git config files
+#### Git config file
 
-Set delta to be git's pager in your `.gitconfig`. Delta has many options to alter colors and other details of the output; `delta --help` shows them all. An example is
+Set delta to be the pager for git commands in your `.gitconfig`. Delta has many options to alter colors and other details of the output; `delta --help` shows them all. An example is
 
 ```gitconfig
-[core]
-    pager = delta
+[pager]
+    diff = delta
+    log = delta
+    reflog = delta
+    show = delta
 
 [delta]
     plus-style = "syntax #012800"
