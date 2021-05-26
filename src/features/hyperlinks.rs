@@ -51,16 +51,20 @@ pub fn format_osc8_file_hyperlink<'a>(
         } else {
             url = url.replace("{line}", "")
         };
-        Cow::from(format!(
-            "{osc}8;;{url}{st}{text}{osc}8;;{st}",
-            url = url,
-            text = text,
-            osc = "\x1b]",
-            st = "\x1b\\"
-        ))
+        Cow::from(format_osc8_hyperlink(&url, text))
     } else {
         Cow::from(relative_path)
     }
+}
+
+fn format_osc8_hyperlink(url: &str, text: &str) -> String {
+    format!(
+        "{osc}8;;{url}{st}{text}{osc}8;;{st}",
+        url = url,
+        text = text,
+        osc = "\x1b]",
+        st = "\x1b\\"
+    )
 }
 
 lazy_static! {
