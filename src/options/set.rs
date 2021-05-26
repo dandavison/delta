@@ -142,6 +142,7 @@ pub fn set_options(
             hunk_header_line_number_style,
             hunk_header_style,
             hyperlinks,
+            hyperlinks_commit_link_format,
             hyperlinks_file_link_format,
             inspect_raw_lines,
             keep_plus_minus_markers,

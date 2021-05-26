@@ -22,7 +22,12 @@ pub fn format_commit_line_with_osc8_commit_hyperlink<'a>(
     line: &'a str,
     config: &Config,
 ) -> Cow<'a, str> {
-    if let Some(GitConfigEntry::GitRemote(GitRemoteRepo::GitHubRepo(repo))) =
+    if let Some(commit_link_format) = &config.hyperlinks_commit_link_format {
+        COMMIT_LINE_REGEX.replace(line, |captures: &Captures| {
+            let commit = captures.get(2).unwrap().as_str();
+            format_osc8_hyperlink(&commit_link_format.replace("{commit}", commit), commit)
+        })
+    } else if let Some(GitConfigEntry::GitRemote(GitRemoteRepo::GitHubRepo(repo))) =
         config.git_config_entries.get("remote.origin.url")
     {
         COMMIT_LINE_REGEX.replace(line, |captures: &Captures| {

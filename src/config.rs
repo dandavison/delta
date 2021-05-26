@@ -41,6 +41,7 @@ pub struct Config {
     pub hunk_header_style_include_file_path: bool,
     pub hunk_header_style_include_line_number: bool,
     pub hyperlinks: bool,
+    pub hyperlinks_commit_link_format: Option<String>,
     pub hyperlinks_file_link_format: String,
     pub inspect_raw_lines: cli::InspectRawLines,
     pub keep_plus_minus_markers: bool,
@@ -220,6 +221,7 @@ impl From<cli::Opt> for Config {
                 .split(' ')
                 .any(|s| s == "line-number"),
             hyperlinks: opt.hyperlinks,
+            hyperlinks_commit_link_format: opt.hyperlinks_commit_link_format,
             hyperlinks_file_link_format: opt.hyperlinks_file_link_format,
             inspect_raw_lines: opt.computed.inspect_raw_lines,
             keep_plus_minus_markers: opt.keep_plus_minus_markers,

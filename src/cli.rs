@@ -372,6 +372,11 @@ pub struct Opt {
     /// (overline), or the combination 'ul ol'.
     pub file_decoration_style: String,
 
+    /// Format string for commit hyperlinks. The placeholder "{commit}" will be
+    /// replaced by the commit hash.
+    #[structopt(long = "hyperlinks-commit-link-format")]
+    pub hyperlinks_commit_link_format: Option<String>,
+
     /// Format string for file hyperlinks. The placeholders "{path}" and "{line}" will be replaced
     /// by the absolute file path and the line number, respectively. The default value of this
     /// option creates hyperlinks using standard file URLs; your operating system should open these
