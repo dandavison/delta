@@ -372,14 +372,23 @@ pub struct Opt {
     /// (overline), or the combination 'ul ol'.
     pub file_decoration_style: String,
 
-    /// Format string for file hyperlinks. The placeholders "{path}" and "{line}" will be replaced
-    /// by the absolute file path and the line number, respectively. The default value of this
-    /// option creates hyperlinks using standard file URLs; your operating system should open these
-    /// in the application registered for that file type. However, these do not make use of the
-    /// line number. In order for the link to open the file at the correct line number, you could
-    /// use a custom URL format such as "file-line://{path}:{line}" and register an application to
-    /// handle the custom "file-line" URL scheme by opening the file in your editor/IDE at the
-    /// indicated line number. See https://github.com/dandavison/open-in-editor for an example.
+    /// Format string for commit hyperlinks (requires --hyperlinks). The
+    /// placeholder "{commit}" will be replaced by the commit hash. For example:
+    /// --hyperlinks-commit-link-format='https://mygitrepo/{commit}/'
+    #[structopt(long = "hyperlinks-commit-link-format")]
+    pub hyperlinks_commit_link_format: Option<String>,
+
+    /// Format string for file hyperlinks (requires --hyperlinks). The
+    /// placeholders "{path}" and "{line}" will be replaced by the absolute file
+    /// path and the line number, respectively. The default value of this option
+    /// creates hyperlinks using standard file URLs; your operating system
+    /// should open these in the application registered for that file type.
+    /// However, these do not make use of the line number. In order for the link
+    /// to open the file at the correct line number, you could use a custom URL
+    /// format such as "file-line://{path}:{line}" and register an application
+    /// to handle the custom "file-line" URL scheme by opening the file in your
+    /// editor/IDE at the indicated line number. See
+    /// https://github.com/dandavison/open-in-editor for an example.
     #[structopt(long = "hyperlinks-file-link-format", default_value = "file://{path}")]
     pub hyperlinks_file_link_format: String,
 

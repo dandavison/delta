@@ -1591,6 +1591,23 @@ src/align.rs:71: impl<'a> Alignment<'a> { │
         assert!(output.contains(r"src/delta.rs: mode -x"));
     }
 
+    #[test]
+    fn test_hyperlinks_commit_link_format() {
+        let config = integration_test_utils::make_config_from_args(&[
+            // If commit-style is not set then the commit line is handled in raw
+            // mode, in which case we only format hyperlinks if output is a tty;
+            // this causes the test to fail on Github Actions, but pass locally
+            // if output is left going to the screen.
+            "--commit-style",
+            "blue",
+            "--hyperlinks",
+            "--hyperlinks-commit-link-format",
+            "https://invent.kde.org/utilities/konsole/-/commit/{commit}",
+        ]);
+        let output = integration_test_utils::run_delta(GIT_DIFF_SINGLE_HUNK, &config);
+        assert!(output.contains(r"https://invent.kde.org/utilities/konsole/-/commit/94907c0f136f46dc46ffae2dc92dca9af7eb7c2e"));
+    }
+
     const GIT_DIFF_SINGLE_HUNK: &str = "\
 commit 94907c0f136f46dc46ffae2dc92dca9af7eb7c2e
 Author: Dan Davison <dandavison7@gmail.com>
