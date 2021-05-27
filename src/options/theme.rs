@@ -35,7 +35,7 @@ pub fn set__is_light_mode__syntax_theme__syntax_set(
 }
 
 pub fn is_light_syntax_theme(theme: &str) -> bool {
-    LIGHT_SYNTAX_THEMES.contains(&theme)
+    LIGHT_SYNTAX_THEMES.contains(&theme) || theme.to_lowercase().contains("light")
 }
 
 const LIGHT_SYNTAX_THEMES: [&str; 6] = [
