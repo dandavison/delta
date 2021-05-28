@@ -637,6 +637,8 @@ FLAGS:
         --navigate                   Activate diff navigation: use n to jump forwards and N to jump backwards. To change
                                      the file labels used see --file-modified-label, --file-removed-label, --file-added-
                                      label, --file-renamed-label
+        --relative-paths             Output all file paths relative to the current directory so that they resolve
+                                     correctly when clicked on or used in shell commands
         --hyperlinks                 Render commit hashes, file names, and line numbers as hyperlinks, according to the
                                      hyperlink spec for terminal emulators:
                                      https://gist.github.com/egmontkob/eb114294efbcd5adb1944c9f3cb5feda. By default,
@@ -644,9 +646,9 @@ FLAGS:
                                      hashes link to the commit in GitHub, if the remote repository is hosted by GitHub.
                                      See --hyperlinks-file-link-format for full control over the file URLs emitted.
                                      Hyperlinks are supported by several common terminal emulators. To make them work,
-                                     you must pass the -r (as opposed to -R) flag to less, e.g. via `export
-                                     DELTA_PAGER=less -rX`. If you use tmux, then you will also need a patched fork of
-                                     tmux (see https://github.com/dandavison/tmux)
+                                     you must use less version >= 581 with the -R flag (or use -r with older less
+                                     versions, but this will break e.g. --navigate). If you use tmux, then you will also
+                                     need a patched fork of tmux (see https://github.com/dandavison/tmux)
         --keep-plus-minus-markers    Prefix added/removed lines with a +/- character, exactly as git does. By default,
                                      delta does not emit any prefix, so code can be copied directly from delta's output
         --show-config                Display the active values for all Delta options. Style options are displayed with
@@ -709,6 +711,9 @@ OPTIONS:
             Style (foreground, background, attributes) for the commit hash decoration. See STYLES section. The style
             string should contain one of the special attributes 'box', 'ul' (underline), 'ol' (overline), or the
             combination 'ul ol' [default: ]
+        --commit-regex <commit-regex>
+            The regular expression used to identify the commit line when parsing git output [default: ^commit ]
+
         --file-style <file-style>
             Style (foreground, background, attributes) for the file section. See STYLES section. The style 'omit' can be
             used to remove the file section from the output [default: blue]
@@ -716,14 +721,18 @@ OPTIONS:
             Style (foreground, background, attributes) for the file decoration. See STYLES section. The style string
             should contain one of the special attributes 'box', 'ul' (underline), 'ol' (overline), or the combination
             'ul ol' [default: blue ul]
+        --hyperlinks-commit-link-format <hyperlinks-commit-link-format>
+            Format string for commit hyperlinks (requires --hyperlinks). The placeholder "{commit}" will be replaced by
+            the commit hash. For example: --hyperlinks-commit-link-format='https://mygitrepo/{commit}/'
         --hyperlinks-file-link-format <hyperlinks-file-link-format>
-            Format string for file hyperlinks. The placeholders "{path}" and "{line}" will be replaced by the absolute
-            file path and the line number, respectively. The default value of this option creates hyperlinks using
-            standard file URLs; your operating system should open these in the application registered for that file
-            type. However, these do not make use of the line number. In order for the link to open the file at the
-            correct line number, you could use a custom URL format such as "file-line://{path}:{line}" and register an
-            application to handle the custom "file-line" URL scheme by opening the file in your editor/IDE at the
-            indicated line number. See https://github.com/dandavison/open-in-editor for an example [default: file://{path}]
+            Format string for file hyperlinks (requires --hyperlinks). The placeholders "{path}" and "{line}" will be
+            replaced by the absolute file path and the line number, respectively. The default value of this option
+            creates hyperlinks using standard file URLs; your operating system should open these in the application
+            registered for that file type. However, these do not make use of the line number. In order for the link to
+            open the file at the correct line number, you could use a custom URL format such as "file-
+            line://{path}:{line}" and register an application to handle the custom "file-line" URL scheme by
+            opening the file in your editor/IDE at the indicated line number. See https://github.com/dandavison/open-in-
+            editor for an example [default: file://{path}]
         --hunk-header-style <hunk-header-style>
             Style (foreground, background, attributes) for the hunk-header. See STYLES section. Special attributes
             'file' and 'line-number' can be used to include the file path, and number of first hunk line, in the hunk
@@ -792,17 +801,21 @@ OPTIONS:
     -w, --width <width>
             The width of underline/overline decorations. Use --width=variable to extend decorations and background
             colors to the end of the text only. Otherwise background colors extend to the full terminal width
+        --diff-stat-align-width <diff-stat-align-width>
+            Width allocated for file paths in a diff stat section. If a relativized file path exceeds this width then
+            the diff stat will be misaligned [default: 48]
         --tabs <tab-width>
             The number of spaces to replace tab characters with. Use --tabs=0 to pass tab characters through directly,
             but note that in that case delta will calculate line widths assuming tabs occupy one character's width on
             the screen: if your terminal renders tabs as more than than one character wide then delta's output will look
             incorrect [default: 4]
-        --24-bit-color <true-color>
+        --true-color <true-color>
             Whether to emit 24-bit ("true color") RGB color codes. Options are auto, always, and never. "auto" means
             that delta will emit 24-bit color codes if the environment variable COLORTERM has the value "truecolor" or
             "24bit". If your terminal application (the application you use to enter commands at a shell prompt) supports
             24 bit colors, then it probably already sets this environment variable, in which case you don't need to do
             anything [default: auto]
+        --24-bit-color <24-bit-color>                                      Deprecated: use --true-color
         --inspect-raw-lines <inspect-raw-lines>
             Whether to examine ANSI color escape sequences in raw lines received from Git and handle lines colored in
             certain ways specially. This is on by default: it is how Delta supports Git's --color-moved feature. Set
