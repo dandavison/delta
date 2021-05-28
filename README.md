@@ -279,7 +279,9 @@ Users of older MacOS versions (e.g. 10.11 El Capitan) should install using Homeb
 
 See [repology.org/git-delta](https://repology.org/project/git-delta/versions) for the current version in each package repository.
 
-Behind the scenes, delta uses `less` for paging. The version of `less` that comes with your operating system may be too old (currently, less v551 is a good choice). On MacOS, install `less` from Homebrew. For Windows, see [Using Delta on Windows](#using-delta-on-windows).
+Behind the scenes, delta uses [`less`](https://www.greenwoodsoftware.com/less/) for paging.
+It's important to have a reasonably recent version of less installed.
+On MacOS, install `less` from Homebrew. For Windows, see [Using Delta on Windows](#using-delta-on-windows).
 
 ## Configuration
 
