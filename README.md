@@ -90,7 +90,7 @@ git -c delta.line-numbers=false show
 
 - [Installation](#installation)
 - [Configuration](#configuration)
-  - [Git config files](#git-config-files)
+  - [Git config files](#git-config-file)
   - [Environment](#environment)
 - [Usage](#usage)
   - [Choosing colors (styles)](#choosing-colors-styles)
