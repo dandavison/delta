@@ -17,12 +17,6 @@ pub fn make_feature() -> Vec<(String, OptionValueFunction)> {
             _opt => "bold green 22"
         ),
         (
-            "commit-style",
-            String,
-            Some("color.diff.commit"),
-            _opt => "bold yellow"
-        ),
-        (
             "file-style",
             String,
             Some("color.diff.meta"),
@@ -64,7 +58,7 @@ pub mod tests {
             None,
         );
 
-        assert_eq!(opt.commit_style, "bold yellow");
+        assert_eq!(opt.commit_style, "raw");
         assert_eq!(opt.commit_decoration_style, "none");
 
         assert_eq!(opt.file_style, "11");
