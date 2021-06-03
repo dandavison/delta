@@ -258,6 +258,28 @@ mod tests {
     use super::*;
 
     #[test]
+    fn test_get_file_paths_from_diff_line() {
+        assert_eq!(
+            get_file_paths_from_diff_line("diff --git a/src/main.rs b/src/main.rs"),
+            (
+                Some("src/main.rs".to_string()),
+                Some("src/main.rs".to_string())
+            )
+        )
+    }
+
+    #[test]
+    fn test_get_file_paths_from_diff_line_with_spaces_in_file_paths() {
+        assert_eq!(
+            get_file_paths_from_diff_line("diff --git a/.config/Code - Insiders/User/settings.json b/.config/Code - Insiders/User/settings.json"),
+            (
+                Some(".config/Code - Insiders/User/settings.json".to_string()),
+                Some(".config/Code - Insiders/User/settings.json".to_string())
+            )
+        )
+    }
+
+    #[test]
     fn test_get_file_extension_from_marker_line() {
         assert_eq!(
             get_file_extension_from_marker_line(
