@@ -82,7 +82,8 @@ fn run_app() -> std::io::Result<i32> {
         return Ok(0);
     }
 
-    let mut output_type = OutputType::from_mode(config.paging_mode, None, &config).unwrap();
+    let mut output_type =
+        OutputType::from_mode(config.paging_mode, config.pager.clone(), &config).unwrap();
     let mut writer = output_type.handle().unwrap();
 
     if atty::is(atty::Stream::Stdin) {

@@ -29,7 +29,7 @@ pub enum OutputType {
 impl OutputType {
     pub fn from_mode(
         mode: PagingMode,
-        pager: Option<&str>,
+        pager: Option<String>,
         config: &config::Config,
     ) -> Result<Self> {
         use self::PagingMode::*;
@@ -43,7 +43,7 @@ impl OutputType {
     /// Try to launch the pager. Fall back to stdout in case of errors.
     fn try_pager(
         quit_if_one_screen: bool,
-        pager_from_config: Option<&str>,
+        pager_from_config: Option<String>,
         config: &config::Config,
     ) -> Result<Self> {
         let mut replace_arguments_to_less = false;
@@ -65,8 +65,6 @@ impl OutputType {
             }
             _ => None,
         };
-
-        let pager_from_config = pager_from_config.map(|p| p.to_string());
 
         if pager_from_config.is_some() {
             replace_arguments_to_less = false;
