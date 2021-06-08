@@ -165,6 +165,7 @@ pub fn set_options(
             line_numbers_right_format,
             line_numbers_right_style,
             line_numbers_zero_style,
+            pager,
             paging_mode,
             // Hack: plus-style must come before plus-*emph-style because the latter default
             // dynamically to the value of the former.
