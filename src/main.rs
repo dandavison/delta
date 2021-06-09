@@ -82,7 +82,8 @@ fn run_app() -> std::io::Result<i32> {
         return Ok(0);
     }
 
-    let mut output_type = OutputType::from_mode(config.paging_mode, None, &config).unwrap();
+    let mut output_type =
+        OutputType::from_mode(config.paging_mode, config.pager.clone(), &config).unwrap();
     let mut writer = output_type.handle().unwrap();
 
     if atty::is(atty::Stream::Stdin) {
@@ -246,6 +247,7 @@ fn show_config(config: &config::Config, writer: &mut dyn Write) -> std::io::Resu
     max-line-length               = {max_line_length}
     navigate                      = {navigate}
     navigate-regexp               = {navigate_regexp}
+    pager                         = {pager}
     paging                        = {paging_mode}
     side-by-side                  = {side_by_side}
     syntax-theme                  = {syntax_theme}
@@ -259,6 +261,7 @@ fn show_config(config: &config::Config, writer: &mut dyn Write) -> std::io::Resu
             None => "".to_string(),
             Some(s) => s.to_string(),
         },
+        pager = config.pager.clone().unwrap_or_else(|| "none".to_string()),
         paging_mode = match config.paging_mode {
             PagingMode::Always => "always",
             PagingMode::Never => "never",
