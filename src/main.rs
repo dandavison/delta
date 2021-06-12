@@ -91,7 +91,7 @@ fn run_app() -> std::io::Result<i32> {
             config.minus_file.as_ref(),
             config.plus_file.as_ref(),
             &config,
-            &std::env::args().next().unwrap(),
+            &std::env::args().join(" "),
         );
         return Ok(exit_code);
     }
