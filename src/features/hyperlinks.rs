@@ -73,7 +73,7 @@ fn format_osc8_hyperlink(url: &str, text: &str) -> String {
 }
 
 lazy_static! {
-    static ref COMMIT_LINE_REGEX: Regex = Regex::new("(.* )([0-9a-f]{40})(.*)").unwrap();
+    static ref COMMIT_LINE_REGEX: Regex = Regex::new(r"(.* ?)(\b[0-9a-f]{7,40}\b)(.*)").unwrap();
 }
 
 fn format_commit_line_captures_with_osc8_commit_hyperlink(
