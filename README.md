@@ -49,7 +49,7 @@ Code evolves, and we all spend time studying diffs. Delta aims to make this both
 - Support for Git's `--color-moved` feature.
 - Code can be copied directly from the diff (`-/+` markers are removed by default).
 - `n` and `N` keybindings to move between files in large diffs, and between diffs in `log -p` views (`--navigate`)
-- Commit hashes can be formatted as terminal [hyperlinks](https://gist.github.com/egmontkob/eb114294efbcd5adb1944c9f3cb5feda) to the Github/GitLab/Bitbucket page (`--hyperlinks`).
+- Commit hashes can be formatted as terminal [hyperlinks](https://gist.github.com/egmontkob/eb114294efbcd5adb1944c9f3cb5feda) to the GitHub/GitLab/Bitbucket page (`--hyperlinks`).
   File paths can also be formatted as hyperlinks for opening in your OS.
 
 The most convenient way to configure delta is with a `[delta]` section in `~/.gitconfig`. Here's a quick example:
