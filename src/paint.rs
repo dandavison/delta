@@ -808,7 +808,7 @@ mod superimpose_style_sections {
         fn test_explode() {
             let arbitrary = 0;
             assert_eq!(
-                explode(&vec![(arbitrary, "ab")]),
+                explode(&[(arbitrary, "ab")]),
                 vec![(arbitrary, 'a'), (arbitrary, 'b')]
             )
         }
