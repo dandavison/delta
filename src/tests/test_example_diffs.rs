@@ -1611,30 +1611,32 @@ src/align.rs:71: impl<'a> Alignment<'a> { │
     #[test]
     fn test_hyperlinks_commit_link_oneline_log() {
         let config = integration_test_utils::make_config_from_args(&[
-            // Use commit-style to ensure test to pass in Github Actions
+            // Use commit-style and commit-regex to ensure test to pass in Github Actions
             "--commit-style",
             "blue",
+            "--commit-regex",
+            "[0-9a-f]{7,40}",
             "--hyperlinks",
             "--hyperlinks-commit-link-format",
             "https://invent.kde.org/utilities/konsole/-/commit/{commit}",
         ]);
         let output = integration_test_utils::run_delta(GIT_LOG_ONELINE, &config);
-        println!("{}", output);
         assert!(output.contains(r"https://invent.kde.org/utilities/konsole/-/commit/fc5f383"));
     }
 
     #[test]
     fn test_hyperlinks_commit_link_oneline_log_color() {
         let config = integration_test_utils::make_config_from_args(&[
-            // Use commit-style to ensure test to pass in Github Actions
+            // Use commit-style and commit-regex to ensure test to pass in Github Actions
             "--commit-style",
             "blue",
+            "--commit-regex",
+            "[0-9a-f]{7,40}",
             "--hyperlinks",
             "--hyperlinks-commit-link-format",
             "https://invent.kde.org/utilities/konsole/-/commit/{commit}",
         ]);
         let output = integration_test_utils::run_delta(GIT_LOG_ONELINE_COLOR, &config);
-        println!("{}", output);
         assert!(output.contains(r"https://invent.kde.org/utilities/konsole/-/commit/fc5f383"));
     }
 
