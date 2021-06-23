@@ -80,7 +80,7 @@ impl Style {
         }
     }
 
-    pub fn to_painted_string(&self) -> ansi_term::ANSIGenericString<str> {
+    pub fn to_painted_string(self) -> ansi_term::ANSIGenericString<'static, str> {
         self.paint(self.to_string())
     }
 }
