@@ -73,7 +73,15 @@ fn format_osc8_hyperlink(url: &str, text: &str) -> String {
 }
 
 lazy_static! {
-    static ref COMMIT_LINE_REGEX: Regex = Regex::new("(.* )([0-9a-f]{40})(.*)").unwrap();
+    // The first group can be empty and needs to end with either a word-boundary or an ANSI escape code.
+    // This ensures all commit characters are consumed (from 7 to 40 chars).
+    static ref COMMIT_LINE_REGEX: Regex = Regex::new(format!(
+        "(.*(?:\\b|{osc}{style}))({commit})({suffix})",
+        osc = "\x1b\\[",
+        style = "[0-9;]*[mK]",
+        commit = "[0-9a-f]{7,40}",
+        suffix = ".*",
+    ).as_str()).unwrap();
 }
 
 fn format_commit_line_captures_with_osc8_commit_hyperlink(

@@ -1608,6 +1608,38 @@ src/align.rs:71: impl<'a> Alignment<'a> { │
         assert!(output.contains(r"https://invent.kde.org/utilities/konsole/-/commit/94907c0f136f46dc46ffae2dc92dca9af7eb7c2e"));
     }
 
+    #[test]
+    fn test_hyperlinks_commit_link_oneline_log() {
+        let config = integration_test_utils::make_config_from_args(&[
+            // Use commit-style and commit-regex to ensure test to pass in Github Actions
+            "--commit-style",
+            "blue",
+            "--commit-regex",
+            "[0-9a-f]{7,40}",
+            "--hyperlinks",
+            "--hyperlinks-commit-link-format",
+            "https://invent.kde.org/utilities/konsole/-/commit/{commit}",
+        ]);
+        let output = integration_test_utils::run_delta(GIT_LOG_ONELINE, &config);
+        assert!(output.contains(r"https://invent.kde.org/utilities/konsole/-/commit/fc5f383"));
+    }
+
+    #[test]
+    fn test_hyperlinks_commit_link_oneline_log_color() {
+        let config = integration_test_utils::make_config_from_args(&[
+            // Use commit-style and commit-regex to ensure test to pass in Github Actions
+            "--commit-style",
+            "blue",
+            "--commit-regex",
+            "[0-9a-f]{7,40}",
+            "--hyperlinks",
+            "--hyperlinks-commit-link-format",
+            "https://invent.kde.org/utilities/konsole/-/commit/{commit}",
+        ]);
+        let output = integration_test_utils::run_delta(GIT_LOG_ONELINE_COLOR, &config);
+        assert!(output.contains(r"https://invent.kde.org/utilities/konsole/-/commit/fc5f383"));
+    }
+
     const GIT_DIFF_SINGLE_HUNK: &str = "\
 commit 94907c0f136f46dc46ffae2dc92dca9af7eb7c2e
 Author: Dan Davison <dandavison7@gmail.com>
@@ -2222,5 +2254,13 @@ new mode 100755
 diff --git a/src/delta.rs b/src/delta.rs
 old mode 100755
 new mode 100644
+";
+
+    const GIT_LOG_ONELINE: &str = "
+fc5f383 Bump git2 from 0.13.18 to 0.13.20 (#612)
+";
+
+    const GIT_LOG_ONELINE_COLOR: &str = "
+[1;33mfc5f383[m Bump git2 from 0.13.18 to 0.13.20 (#612)
 ";
 }
