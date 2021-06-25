@@ -92,7 +92,14 @@ pub fn get_repeated_file_path_from_diff_line(line: &str) -> Option<String> {
 }
 
 fn _parse_file_path(s: &str, git_diff_name: bool) -> String {
-    match s {
+    // It appears that, if the file name contains a space, git appends a tab
+    // character in the diff metadata lines, e.g.
+    // $ git diff --no-index "a b" "c d" | cat -A
+    // diff·--git·a/a·b·b/c·d␊
+    // index·d00491f..0cfbf08·100644␊
+    // ---·a/a·b├──┤␊
+    // +++·b/c·d├──┤␊
+    match s.strip_suffix("\t").unwrap_or(s) {
         path if path == "/dev/null" => "/dev/null",
         path if git_diff_name && DIFF_PREFIXES.iter().any(|s| path.starts_with(s)) => &path[2..],
         path if git_diff_name => &path,
