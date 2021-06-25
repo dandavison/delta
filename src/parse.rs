@@ -2,6 +2,7 @@ use lazy_static::lazy_static;
 use regex::Regex;
 use std::borrow::Cow;
 use std::path::Path;
+use unicode_segmentation::UnicodeSegmentation;
 
 use crate::config::Config;
 use crate::features;
@@ -73,18 +74,32 @@ pub fn parse_file_meta_line(
     (path_or_mode, file_event)
 }
 
-/// Given input like "diff --git a/src/main.rs b/src/main.rs"
-/// return (Some("src/main.rs"), Some("src/main.rs"))
-pub fn get_file_paths_from_diff_line(line: &str) -> (Option<String>, Option<String>) {
-    let mut iter = line.split(' ').skip(2);
-    (
-        iter.next().map(|s| _parse_file_path(&s[2..], true)),
-        iter.next().map(|s| _parse_file_path(&s[2..], true)),
-    )
+/// Given input like "diff --git a/src/my file.rs b/src/my file.rs"
+/// return Some("src/my file.rs")
+pub fn get_repeated_file_path_from_diff_line(line: &str) -> Option<String> {
+    if let Some(line) = line.strip_prefix("diff --git ") {
+        let line: Vec<&str> = line.graphemes(true).collect();
+        let midpoint = line.len() / 2;
+        if line[midpoint] == " " {
+            let first_path = _parse_file_path(&line[..midpoint].join(""), true);
+            let second_path = _parse_file_path(&line[midpoint + 1..].join(""), true);
+            if first_path == second_path {
+                return Some(first_path);
+            }
+        }
+    }
+    None
 }
 
 fn _parse_file_path(s: &str, git_diff_name: bool) -> String {
-    match s {
+    // It appears that, if the file name contains a space, git appends a tab
+    // character in the diff metadata lines, e.g.
+    // $ git diff --no-index "a b" "c d" | cat -A
+    // diff·--git·a/a·b·b/c·d␊
+    // index·d00491f..0cfbf08·100644␊
+    // ---·a/a·b├──┤␊
+    // +++·b/c·d├──┤␊
+    match s.strip_suffix("\t").unwrap_or(s) {
         path if path == "/dev/null" => "/dev/null",
         path if git_diff_name && DIFF_PREFIXES.iter().any(|s| path.starts_with(s)) => &path[2..],
         path if git_diff_name => &path,
@@ -256,6 +271,30 @@ fn get_extension(s: &str) -> Option<&str> {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn test_get_repeated_file_path_from_diff_line() {
+        assert_eq!(
+            get_repeated_file_path_from_diff_line("diff --git a/src/main.rs b/src/main.rs"),
+            Some("src/main.rs".to_string())
+        );
+        assert_eq!(
+            get_repeated_file_path_from_diff_line("diff --git a/a b/a"),
+            Some("a".to_string())
+        );
+        assert_eq!(
+            get_repeated_file_path_from_diff_line("diff --git a/a b b/a b"),
+            Some("a b".to_string())
+        );
+        assert_eq!(
+            get_repeated_file_path_from_diff_line("diff --git a/a b/aa"),
+            None
+        );
+        assert_eq!(
+            get_repeated_file_path_from_diff_line("diff --git a/.config/Code - Insiders/User/settings.json b/.config/Code - Insiders/User/settings.json"),
+            Some(".config/Code - Insiders/User/settings.json".to_string())
+        );
+    }
 
     #[test]
     fn test_get_file_extension_from_marker_line() {
