@@ -64,7 +64,7 @@ struct StateMachine<'a> {
     plus_file: String,
     minus_file_event: parse::FileEvent,
     plus_file_event: parse::FileEvent,
-    repeated_file_path_from_diff_line: Option<String>,
+    diff_line: String,
     painter: Painter<'a>,
     config: &'a Config,
 
@@ -95,7 +95,7 @@ impl<'a> StateMachine<'a> {
             plus_file: "".to_string(),
             minus_file_event: parse::FileEvent::NoEvent,
             plus_file_event: parse::FileEvent::NoEvent,
-            repeated_file_path_from_diff_line: None,
+            diff_line: "".to_string(),
             current_file_pair: None,
             handled_file_meta_header_line_file_pair: None,
             painter: Painter::new(writer, config),
@@ -259,8 +259,7 @@ impl<'a> StateMachine<'a> {
         self.painter.paint_buffered_minus_and_plus_lines();
         self.state = State::FileMeta;
         self.handled_file_meta_header_line_file_pair = None;
-        self.repeated_file_path_from_diff_line =
-            parse::get_repeated_file_path_from_diff_line(&self.line);
+        self.diff_line = self.line.clone();
         Ok(false)
     }
 
@@ -279,9 +278,10 @@ impl<'a> StateMachine<'a> {
         // In the case of ModeChange only, the file path is taken from the diff
         // --git line (since that is the only place the file path occurs);
         // otherwise it is taken from the --- / +++ line.
-        self.minus_file = match (&file_event, &self.repeated_file_path_from_diff_line) {
-            (parse::FileEvent::ModeChange(_), Some(file)) => file.clone(),
-            _ => path_or_mode,
+        self.minus_file = if let parse::FileEvent::ModeChange(_) = &file_event {
+            parse::get_repeated_file_path_from_diff_line(&self.diff_line).unwrap_or(path_or_mode)
+        } else {
+            path_or_mode
         };
         self.minus_file_event = file_event;
 
@@ -326,9 +326,10 @@ impl<'a> StateMachine<'a> {
         // In the case of ModeChange only, the file path is taken from the diff
         // --git line (since that is the only place the file path occurs);
         // otherwise it is taken from the --- / +++ line.
-        self.plus_file = match (&file_event, &self.repeated_file_path_from_diff_line) {
-            (parse::FileEvent::ModeChange(_), Some(file)) => file.clone(),
-            _ => path_or_mode,
+        self.plus_file = if let parse::FileEvent::ModeChange(_) = &file_event {
+            parse::get_repeated_file_path_from_diff_line(&self.diff_line).unwrap_or(path_or_mode)
+        } else {
+            path_or_mode
         };
         self.plus_file_event = file_event;
         self.painter
