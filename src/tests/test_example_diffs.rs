@@ -1608,6 +1608,15 @@ src/align.rs:71: impl<'a> Alignment<'a> { │
         assert!(output.contains(r"https://invent.kde.org/utilities/konsole/-/commit/94907c0f136f46dc46ffae2dc92dca9af7eb7c2e"));
     }
 
+    #[test]
+    fn test_filenames_with_spaces() {
+        let config = integration_test_utils::make_config_from_args(&[]);
+        let output =
+            integration_test_utils::run_delta(GIT_DIFF_NO_INDEX_FILENAMES_WITH_SPACES, &config);
+        let output = strip_ansi_codes(&output);
+        assert!(output.contains("a b ⟶   c d\n"));
+    }
+
     const GIT_DIFF_SINGLE_HUNK: &str = "\
 commit 94907c0f136f46dc46ffae2dc92dca9af7eb7c2e
 Author: Dan Davison <dandavison7@gmail.com>
@@ -2222,5 +2231,15 @@ new mode 100755
 diff --git a/src/delta.rs b/src/delta.rs
 old mode 100755
 new mode 100644
+";
+
+    const GIT_DIFF_NO_INDEX_FILENAMES_WITH_SPACES: &str = "
+diff --git a/a b b/c d
+index d00491f..0cfbf08 100644
+--- a/a b	
++++ b/c d	
+@@ -1 +1 @@
+-1
++2
 ";
 }
