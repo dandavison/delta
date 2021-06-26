@@ -91,7 +91,7 @@ fn run_app() -> std::io::Result<i32> {
             config.minus_file.as_ref(),
             config.plus_file.as_ref(),
             &config,
-            &std::env::args().join(" "),
+            &mut writer,
         );
         return Ok(exit_code);
     }
@@ -117,8 +117,9 @@ fn diff(
     minus_file: Option<&PathBuf>,
     plus_file: Option<&PathBuf>,
     config: &config::Config,
-    pager: &str,
+    writer: &mut dyn Write,
 ) -> i32 {
+    use std::io::BufReader;
     let die = || {
         eprintln!(
             "\
@@ -131,14 +132,17 @@ You can also use delta to diff two files: `delta file_A file_B`."
     let diff_command = "git";
     let minus_file = minus_file.unwrap_or_else(die);
     let plus_file = plus_file.unwrap_or_else(die);
-    process::Command::new(PathBuf::from(diff_command))
-        .args(&["-c", &format!("pager.diff={}", pager), "diff", "--no-index"])
+    let mut diff_process = process::Command::new(PathBuf::from(diff_command))
+        .args(&["diff", "--no-index"])
         .args(&[minus_file, plus_file])
+        .stdout(process::Stdio::piped())
         .spawn()
         .unwrap_or_else(|err| {
             eprintln!("Failed to execute the command '{}': {}", diff_command, err);
             process::exit(config.error_exit_code);
-        })
+        });
+
+    let exit_code = diff_process
         .wait()
         .unwrap_or_else(|_| {
             delta_unreachable(&format!("'{}' process not running.", diff_command));
@@ -147,7 +151,22 @@ You can also use delta to diff two files: `delta file_A file_B`."
         .unwrap_or_else(|| {
             eprintln!("'{}' process terminated without exit status.", diff_command);
             process::exit(config.error_exit_code);
-        })
+        });
+
+    if let Err(error) = delta(
+        BufReader::new(diff_process.stdout.unwrap()).byte_lines(),
+        writer,
+        &config,
+    ) {
+        match error.kind() {
+            ErrorKind::BrokenPipe => process::exit(0),
+            _ => {
+                eprintln!("{}", error);
+                process::exit(config.error_exit_code);
+            }
+        }
+    };
+    exit_code
 }
 
 fn show_config(config: &config::Config, writer: &mut dyn Write) -> std::io::Result<()> {
@@ -578,11 +597,12 @@ mod main_tests {
 
     fn _do_diff_test(file_a: &str, file_b: &str, expect_diff: bool) {
         let config = integration_test_utils::make_config_from_args(&[]);
+        let mut writer = Cursor::new(vec![]);
         let exit_code = diff(
             Some(&PathBuf::from(file_a)),
             Some(&PathBuf::from(file_b)),
             &config,
-            "cat",
+            &mut writer,
         );
         assert_eq!(exit_code, if expect_diff { 1 } else { 0 });
     }
