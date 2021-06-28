@@ -97,7 +97,7 @@ git -c delta.line-numbers=false show
   - [Line numbers](#line-numbers)
   - [Side-by-side view](#side-by-side-view)
   - ["Features": named groups of settings](#features-named-groups-of-settings)
-  - [Custom color themes](#custom-color-themes)
+  - [Custom themes](#custom-themes)
   - [diff-highlight and diff-so-fancy emulation](#diff-highlight-and-diff-so-fancy-emulation)
   - [--color-moved support](#--color-moved-support)
   - [Navigation keybindings for large diffs](#navigation-keybindings-for-large-diffs)
@@ -431,7 +431,7 @@ All delta options can go under the `[delta]` section in your git config file. Ho
 
 A "theme" in delta is just a collection of settings grouped together in a named [feature](#features-named-groups-of-settings). One of the available settings is `syntax-theme`: this dictates the colors and styles that are applied to foreground text by the syntax highlighter. Thus the concept of "theme" in delta encompasses not just the foreground syntax-highlighting color theme, but also background colors, decorations such as boxes and under/overlines, etc.
 
-The delta git repo contains a collection of themes created by users. These focus on the visual appearance: colors etc. If you want features like `side-by-side` or `navigate`, you would set that yourself, after selecting the color theme. To use the delta themes, clone the delta repo (or download the [themes.gitconfig](./themes.gitconfig) file) and add the following entry in your gitconfig:
+The delta git repo contains a [collection of themes](./themes.gitconfig) created by users. These focus on the visual appearance: colors etc. If you want features like `side-by-side` or `navigate`, you would set that yourself, after selecting the color theme. To use the delta themes, clone the delta repo (or download the [themes.gitconfig](./themes.gitconfig) file) and add the following entry in your gitconfig:
 
 ```gitconfig
 [include]
