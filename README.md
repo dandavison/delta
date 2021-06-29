@@ -826,10 +826,12 @@ OPTIONS:
             Whether to examine ANSI color escape sequences in raw lines received from Git and handle lines colored in
             certain ways specially. This is on by default: it is how Delta supports Git's --color-moved feature. Set
             this to "false" to disable this behavior [default: true]
+        --pager <pager>
+            Which pager to use. The default pager is `less`. You can also change pager by setting the environment
+            variables DELTA_PAGER, BAT_PAGER, or PAGER (and that is their order of priority). This option overrides all
+            environment variables above
         --paging <paging-mode>
-            Whether to use a pager when displaying output. Options are: auto, always, and never. The default pager is
-            `less`: this can be altered by setting the environment variables DELTA_PAGER, BAT_PAGER, or PAGER (and that
-            is their order of priority) [default: auto]
+            Whether to use a pager when displaying output. Options are: auto, always, and never [default: auto]
         --minus-empty-line-marker-style <minus-empty-line-marker-style>
             Style for removed empty line marker (used only if --minus-style has no background color) [default: normal auto]
         --plus-empty-line-marker-style <plus-empty-line-marker-style>
