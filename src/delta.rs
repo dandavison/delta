@@ -25,6 +25,10 @@ pub enum State {
     HunkMinus(Option<String>), // In hunk; removed line (raw_line)
     HunkPlus(Option<String>), // In hunk; added line (raw_line)
     Unknown,
+    // The following elements are created when a line is wrapped to display it:
+    HunkZeroWrapped,  // Wrapped unchanged line in side-by-side mode
+    HunkMinusWrapped, // Wrapped removed line in side-by-side mode
+    HunkPlusWrapped,  // Wrapped added line in side-by-side mode
 }
 
 #[derive(Debug, PartialEq)]

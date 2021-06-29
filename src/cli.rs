@@ -7,11 +7,24 @@ use structopt::clap::AppSettings::{ColorAlways, ColoredHelp, DeriveDisplayOrder}
 use structopt::{clap, StructOpt};
 use syntect::highlighting::Theme as SyntaxTheme;
 use syntect::parsing::SyntaxSet;
+use unicode_segmentation::UnicodeSegmentation;
 
 use crate::bat_utils::assets::HighlightingAssets;
 use crate::bat_utils::output::PagingMode;
 use crate::git_config::{GitConfig, GitConfigEntry};
 use crate::options;
+
+pub const INLINE_SYMBOL_WIDTH_1: usize = 1;
+
+fn ensure_display_width(arg: &str) -> Result<String, String> {
+    match arg.grapheme_indices(true).count() {
+        INLINE_SYMBOL_WIDTH_1 => Ok(arg.into()),
+        width => Err(format!(
+            "Display width of \"{}\" must be {} but is {}",
+            arg, INLINE_SYMBOL_WIDTH_1, width
+        )),
+    }
+}
 
 #[derive(StructOpt, Clone, Default)]
 #[structopt(
@@ -419,6 +432,12 @@ pub struct Opt {
     /// (underline), 'ol' (overline), or the combination 'ul ol'.
     pub hunk_header_decoration_style: String,
 
+    #[structopt(long = "inline-hint-style", default_value = "blue")]
+    /// Style (foreground, background, attributes) for content added by delta to
+    /// the original diff such as special characters to highlight tabs, and the
+    /// wrap and prefix symbols used in side-by-side mode. See STYLES section.
+    pub inline_hint_style: String,
+
     /// The regular expression used to decide what a word is for the within-line highlight
     /// algorithm. For less fine-grained matching than the default try --word-diff-regex="\S+"
     /// --max-line-distance=1.0 (this is more similar to `git --word-diff`).
@@ -469,6 +488,31 @@ pub struct Opt {
     /// and LINE NUMBERS sections.
     #[structopt(long = "line-numbers-right-style", default_value = "auto")]
     pub line_numbers_right_style: String,
+
+    /// Maximum number of wrapped lines to display in side-by-side mode. Any
+    /// content that still does not fit will be truncated.
+    #[structopt(long = "side-by-side-wrap-max-lines", default_value = "3")]
+    pub side_by_side_wrap_max_lines: usize,
+
+    /// Symbol indicating that a line has been wrapped in side-by-side mode.
+    #[structopt(long = "side-by-side-wrap-symbol", default_value = "↵", parse(try_from_str = ensure_display_width))]
+    pub side_by_side_wrap_symbol: String,
+
+    /// Threshold for right-aligning wrapped content in side-by-side mode. If
+    /// the length of remaining wrapped content, as a percentage of the panel
+    /// width, is less than this quantity then it will be displayed
+    /// right-aligned.
+    #[structopt(long = "side-by-side-wrap-right-percent", default_value = "37.0")]
+    pub side_by_side_wrap_right_percent: f64,
+
+    /// Symbol indicating that a line has been wrapped and that the subsequent
+    /// content is displayed right-aligned.
+    #[structopt(long = "side-by-side-wrap-right-wrap-symbol", default_value = "↴", parse(try_from_str = ensure_display_width))]
+    pub side_by_side_wrap_right_wrap_symbol: String,
+
+    /// Symbol displayed in front of right-aligned wrapped content.
+    #[structopt(long = "side-by-side-wrap-right-prefix-symbol", default_value = "…", parse(try_from_str = ensure_display_width))]
+    pub side_by_side_wrap_right_prefix_symbol: String,
 
     #[structopt(long = "file-modified-label", default_value = "")]
     /// Text to display in front of a modified file path.

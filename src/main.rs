@@ -2,6 +2,7 @@ extern crate bitflags;
 
 #[macro_use]
 extern crate error_chain;
+extern crate static_assertions;
 
 mod align;
 mod ansi;
@@ -24,7 +25,7 @@ mod parse;
 mod parse_style;
 mod sample_diff;
 mod style;
-mod syntect_color;
+mod syntect_utils;
 mod tests;
 
 use std::io::{self, ErrorKind, Read, Write};

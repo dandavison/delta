@@ -27,6 +27,7 @@ use crate::config::Config;
 use crate::delta;
 use crate::draw;
 use crate::features;
+use crate::paint::BgFillWidth;
 use crate::paint::Painter;
 use crate::style::DecorationStyle;
 
@@ -159,7 +160,7 @@ fn write_to_output_buffer(
             &mut None,
             None,
             None,
-            Some(false),
+            BgFillWidth::No,
         );
         painter.output_buffer.pop(); // trim newline
     }

@@ -8,6 +8,7 @@ use syntect::highlighting::Style as SyntectStyle;
 use syntect::highlighting::Theme as SyntaxTheme;
 use syntect::parsing::SyntaxSet;
 
+use crate::ansi;
 use crate::bat_utils::output::PagingMode;
 use crate::cli;
 use crate::color;
@@ -15,8 +16,10 @@ use crate::delta::State;
 use crate::env;
 use crate::features::navigate;
 use crate::features::side_by_side;
+use crate::features::side_by_side_wrap;
 use crate::git_config::GitConfigEntry;
 use crate::style::{self, Style};
+use crate::syntect_utils::FromDeltaStyle;
 
 pub struct Config {
     pub available_terminal_width: usize,
@@ -43,6 +46,7 @@ pub struct Config {
     pub hyperlinks: bool,
     pub hyperlinks_commit_link_format: Option<String>,
     pub hyperlinks_file_link_format: String,
+    pub inline_hint_style: Style,
     pub inspect_raw_lines: cli::InspectRawLines,
     pub keep_plus_minus_markers: bool,
     pub line_numbers: bool,
@@ -87,6 +91,7 @@ pub struct Config {
     pub true_color: bool,
     pub truncation_symbol: String,
     pub whitespace_error_style: Style,
+    pub wrap_config: side_by_side_wrap::WrapConfig,
     pub zero_style: Style,
 }
 
@@ -159,11 +164,18 @@ impl From<cli::Opt> for Config {
             process::exit(1);
         });
 
-        let side_by_side_data = side_by_side::SideBySideData::new(
+        let side_by_side_data = side_by_side::SideBySideData::new_sbs(
             &opt.computed.decorations_width,
             &opt.computed.available_terminal_width,
         );
 
+        let inline_hint_style = Style::from_str(
+            &opt.inline_hint_style,
+            None,
+            None,
+            opt.computed.true_color,
+            false,
+        );
         let git_minus_style = match opt.git_config_entries.get("color.diff.old") {
             Some(GitConfigEntry::Style(s)) => Style::from_git_str(s),
             _ => *style::GIT_DEFAULT_MINUS_STYLE,
@@ -225,6 +237,7 @@ impl From<cli::Opt> for Config {
             hyperlinks_commit_link_format: opt.hyperlinks_commit_link_format,
             hyperlinks_file_link_format: opt.hyperlinks_file_link_format,
             inspect_raw_lines: opt.computed.inspect_raw_lines,
+            inline_hint_style,
             keep_plus_minus_markers: opt.keep_plus_minus_markers,
             line_numbers: opt.line_numbers,
             line_numbers_left_format: opt.line_numbers_left_format,
@@ -237,7 +250,11 @@ impl From<cli::Opt> for Config {
             line_buffer_size: opt.line_buffer_size,
             max_line_distance: opt.max_line_distance,
             max_line_distance_for_naively_paired_lines,
-            max_line_length: opt.max_line_length,
+            max_line_length: if opt.side_by_side_wrap_max_lines == 0 {
+                0
+            } else {
+                opt.max_line_length
+            },
             minus_emph_style,
             minus_empty_line_marker_style,
             minus_file: opt.minus_file,
@@ -266,7 +283,20 @@ impl From<cli::Opt> for Config {
             tab_width: opt.tab_width,
             tokenization_regex,
             true_color: opt.computed.true_color,
-            truncation_symbol: "→".to_string(),
+            truncation_symbol: format!("{}→{}", ansi::ANSI_SGR_REVERSE, ansi::ANSI_SGR_RESET),
+            wrap_config: side_by_side_wrap::WrapConfig {
+                wrap_symbol: opt.side_by_side_wrap_symbol,
+                wrap_right_wrap_symbol: opt.side_by_side_wrap_right_wrap_symbol,
+                wrap_right_prefix_symbol: opt.side_by_side_wrap_right_prefix_symbol,
+                // TODO, support multi-character symbols, and thus store
+                // right_align_symbol_len here?
+                use_wrap_right_permille: {
+                    let percent = opt.side_by_side_wrap_right_percent.clamp(0.0, 100.0);
+                    (percent * 10.0).round() as usize
+                },
+                max_lines: opt.side_by_side_wrap_max_lines,
+                inline_hint_syntect_style: SyntectStyle::from_delta_style(inline_hint_style),
+            },
             whitespace_error_style,
             zero_style,
         }

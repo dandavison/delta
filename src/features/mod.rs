@@ -87,6 +87,7 @@ pub mod line_numbers;
 pub mod navigate;
 pub mod raw;
 pub mod side_by_side;
+pub mod side_by_side_wrap;
 
 #[cfg(test)]
 pub mod tests {

@@ -12,6 +12,9 @@ use crate::delta::State;
 use crate::edits;
 use crate::features::line_numbers;
 use crate::features::side_by_side;
+use crate::features::side_by_side::available_line_width;
+use crate::features::side_by_side::LeftRight;
+use crate::features::side_by_side_wrap;
 use crate::paint::superimpose_style_sections::superimpose_style_sections;
 use crate::style::Style;
 
@@ -24,6 +27,26 @@ pub struct Painter<'a> {
     pub config: &'a config::Config,
     pub output_buffer: String,
     pub line_numbers_data: line_numbers::LineNumbersData<'a>,
+}
+
+#[derive(Debug, PartialEq, Clone, Copy)]
+pub enum BgFillMethod {
+    // fill the background with ANSI spaces if possible,
+    // but might fallback to Spaces (e.g. in the left side-by-side panel)
+    TryAnsiSequence,
+    Spaces,
+}
+
+#[derive(Debug, PartialEq, Clone, Copy)]
+pub enum BgFillWidth {
+    CfgDefault(BgFillMethod),
+    No,
+}
+
+impl Default for BgFillWidth {
+    fn default() -> Self {
+        BgFillWidth::CfgDefault(BgFillMethod::TryAnsiSequence)
+    }
 }
 
 impl<'a> Painter<'a> {
@@ -88,6 +111,7 @@ impl<'a> Painter<'a> {
             // in effect in which case we replace it with the appropriate marker).
             // TODO: Things should, but do not, work if this leading space is omitted at this stage.
             // See comment in align::Alignment::new.
+            // Note that a wrapped line also has a leading character added to remain compatible.
             line.next();
             format!(" {}\n", self.expand_tabs(line))
         } else {
@@ -140,18 +164,94 @@ impl<'a> Painter<'a> {
             Self::get_diff_style_sections(&self.minus_lines, &self.plus_lines, self.config);
 
         if self.config.side_by_side {
-            side_by_side::paint_minus_and_plus_lines_side_by_side(
+            let syntax_left_right = LeftRight::new(
                 minus_line_syntax_style_sections,
-                minus_line_diff_style_sections,
-                self.minus_lines.iter().map(|(_, state)| state).collect(),
                 plus_line_syntax_style_sections,
+            );
+            let diff_left_right = LeftRight::new(
+                minus_line_diff_style_sections,
                 plus_line_diff_style_sections,
-                self.plus_lines.iter().map(|(_, state)| state).collect(),
+            );
+
+            let states_left_right = LeftRight::new(
+                self.minus_lines
+                    .iter()
+                    .map(|(_, state)| state.clone())
+                    .collect(),
+                self.plus_lines
+                    .iter()
+                    .map(|(_, state)| state.clone())
+                    .collect(),
+            );
+
+            let bg_fill_left_right = LeftRight::new(
+                // Using an ANSI sequence to fill the left panel would not work.
+                BgFillWidth::CfgDefault(BgFillMethod::Spaces),
+                // If the right panel extends beyond the edge of the panel and thus is
+                // truncated do not use ANSI sequences as these would be shown after
+                // the truncation symbol. And to be consistent, use spaces for the entire
+                // block.
+
+                // TODO, see "background extending" patch
+                /*
+
+                let avail_width = available_line_width(&self.config, &self.line_numbers_data);
+                let right_panel_too_long = self
+                    .plus_lines
+                    .iter()
+                    .any(|(line, _)| side_by_side::line_is_too_long(&line, avail_width.right));
+
+                        if right_panel_too_long {
+                        // BgFillWidth::CfgDefault(BgFillMethod::Spaces)
+                        BgFillWidth::CfgDefault(BgFillMethod::TryAnsiSequence)
+                    } else {
+                        BgFillWidth::CfgDefault(BgFillMethod::TryAnsiSequence)
+                    }, */
+                BgFillWidth::CfgDefault(BgFillMethod::TryAnsiSequence),
+            );
+
+            // Only set `should_wrap` to true if wrapping is wanted and lines which are
+            // too long are found.
+            // If so, remember the calculated line width and which of the lines are too
+            // long for later re-use.
+            let (should_wrap, line_width, long_lines) = {
+                let line_width = available_line_width(&self.config, &self.line_numbers_data);
+
+                let lines = LeftRight::new(&self.minus_lines, &self.plus_lines);
+
+                let (should_wrap, long_lines) = side_by_side::has_long_lines(&lines, &line_width);
+
+                (should_wrap, line_width, long_lines)
+            };
+
+            let (line_alignment, line_states, syntax_left_right, diff_left_right) = if should_wrap {
+                // Calculated for syntect::highlighting::style::Style and delta::Style
+                side_by_side_wrap::wrap_plusminus_block(
+                    &self.config,
+                    syntax_left_right,
+                    diff_left_right,
+                    &line_alignment,
+                    &line_width,
+                    &long_lines,
+                )
+            } else {
+                (
+                    line_alignment,
+                    states_left_right,
+                    syntax_left_right,
+                    diff_left_right,
+                )
+            };
+
+            side_by_side::paint_minus_and_plus_lines_side_by_side(
+                syntax_left_right,
+                diff_left_right,
+                line_states,
                 line_alignment,
                 &mut self.output_buffer,
                 self.config,
                 &mut Some(&mut self.line_numbers_data),
-                None,
+                bg_fill_left_right,
             );
         } else {
             if !self.minus_lines.is_empty() {
@@ -168,7 +268,7 @@ impl<'a> Painter<'a> {
                         None
                     },
                     Some(self.config.minus_empty_line_marker_style),
-                    None,
+                    BgFillWidth::default(),
                 );
             }
             if !self.plus_lines.is_empty() {
@@ -185,7 +285,7 @@ impl<'a> Painter<'a> {
                         None
                     },
                     Some(self.config.plus_empty_line_marker_style),
-                    None,
+                    BgFillWidth::default(),
                 );
             }
         }
@@ -210,15 +310,16 @@ impl<'a> Painter<'a> {
         let diff_style_sections = vec![(self.config.zero_style, lines[0].0.as_str())]; // TODO: compute style from state
 
         if self.config.side_by_side {
+            // `lines[0].0` so the line has the '\n' already added (as in the +- case)
             side_by_side::paint_zero_lines_side_by_side(
+                &lines[0].0,
                 syntax_style_sections,
                 vec![diff_style_sections],
-                &State::HunkZero,
                 &mut self.output_buffer,
                 self.config,
                 &mut Some(&mut self.line_numbers_data),
                 painted_prefix,
-                None,
+                BgFillWidth::CfgDefault(BgFillMethod::Spaces),
             );
         } else {
             Painter::paint_lines(
@@ -230,7 +331,7 @@ impl<'a> Painter<'a> {
                 &mut Some(&mut self.line_numbers_data),
                 painted_prefix,
                 None,
-                None,
+                BgFillWidth::CfgDefault(BgFillMethod::Spaces),
             );
         }
     }
@@ -247,7 +348,7 @@ impl<'a> Painter<'a> {
         line_numbers_data: &mut Option<&mut line_numbers::LineNumbersData>,
         painted_prefix: Option<ansi_term::ANSIString>,
         empty_line_style: Option<Style>, // a style with background color to highlight an empty line
-        background_color_extends_to_terminal_width: Option<bool>,
+        background_color_extends_to_terminal_width: BgFillWidth,
     ) {
         // There's some unfortunate hackery going on here for two reasons:
         //
@@ -270,15 +371,23 @@ impl<'a> Painter<'a> {
                 painted_prefix.clone(),
                 config,
             );
-            let (should_right_fill_background_color, fill_style) =
+            let (bg_fill_mode, fill_style) =
                 Painter::get_should_right_fill_background_color_and_fill_style(
                     diff_sections,
                     state,
                     background_color_extends_to_terminal_width,
                     config,
                 );
-            if should_right_fill_background_color {
+
+            if let Some(BgFillMethod::TryAnsiSequence) = bg_fill_mode {
                 Painter::right_fill_background_color(&mut line, fill_style);
+            } else if let Some(BgFillMethod::Spaces) = bg_fill_mode {
+                let text_width = ansi::measure_text_width(&line);
+                line.push_str(
+                    &fill_style
+                        .paint(" ".repeat(config.available_terminal_width - text_width))
+                        .to_string(),
+                );
             } else if line_is_empty {
                 if let Some(empty_line_style) = empty_line_style {
                     Painter::mark_empty_line(
@@ -288,6 +397,7 @@ impl<'a> Painter<'a> {
                     );
                 }
             };
+
             output_buffer.push_str(&line);
             output_buffer.push('\n');
         }
@@ -298,13 +408,15 @@ impl<'a> Painter<'a> {
     pub fn get_should_right_fill_background_color_and_fill_style(
         diff_sections: &[(Style, &str)],
         state: &State,
-        background_color_extends_to_terminal_width: Option<bool>,
+        background_color_extends_to_terminal_width: BgFillWidth,
         config: &config::Config,
-    ) -> (bool, Style) {
+    ) -> (Option<BgFillMethod>, Style) {
         // style:          for right fill if line contains no emph sections
         // non_emph_style: for right fill if line contains emph sections
         let (style, non_emph_style) = match state {
-            State::HunkMinus(None) => (config.minus_style, config.minus_non_emph_style),
+            State::HunkMinus(None) | State::HunkMinusWrapped => {
+                (config.minus_style, config.minus_non_emph_style)
+            }
             State::HunkMinus(Some(raw_line)) => {
                 // TODO: This is the second time we are parsing the ANSI sequences
                 if let Some(ansi_term_style) = ansi::parse_first_style(raw_line) {
@@ -317,8 +429,10 @@ impl<'a> Painter<'a> {
                     (config.minus_style, config.minus_non_emph_style)
                 }
             }
-            State::HunkZero => (config.zero_style, config.zero_style),
-            State::HunkPlus(None) => (config.plus_style, config.plus_non_emph_style),
+            State::HunkZero | State::HunkZeroWrapped => (config.zero_style, config.zero_style),
+            State::HunkPlus(None) | State::HunkPlusWrapped => {
+                (config.plus_style, config.plus_non_emph_style)
+            }
             State::HunkPlus(Some(raw_line)) => {
                 // TODO: This is the second time we are parsing the ANSI sequences
                 if let Some(ansi_term_style) = ansi::parse_first_style(raw_line) {
@@ -338,10 +452,20 @@ impl<'a> Painter<'a> {
         } else {
             style
         };
-        let should_right_fill_background_color = fill_style.get_background_color().is_some()
-            && background_color_extends_to_terminal_width
-                .unwrap_or(config.background_color_extends_to_terminal_width);
-        (should_right_fill_background_color, fill_style)
+
+        match (
+            fill_style.get_background_color().is_some(),
+            background_color_extends_to_terminal_width,
+        ) {
+            (false, _) | (_, BgFillWidth::No) => (None, fill_style),
+            (_, BgFillWidth::CfgDefault(bgmode)) => {
+                if config.background_color_extends_to_terminal_width {
+                    (Some(bgmode), fill_style)
+                } else {
+                    (None, fill_style)
+                }
+            }
+        }
     }
 
     /// Emit line with ANSI sequences that extend the background color to the terminal width.
