@@ -117,7 +117,10 @@ fn get_painted_file_with_line_number(
         )
     }
     let file_with_line_number = ansi_term::ANSIStrings(&file_with_line_number).to_string();
-    if config.hyperlinks {
+    if config.hyperlinks
+        && (config.hunk_header_style_include_file_path
+            || config.hunk_header_style_include_line_number)
+    {
         features::hyperlinks::format_osc8_file_hyperlink(
             plus_file,
             Some(plus_line_number),
