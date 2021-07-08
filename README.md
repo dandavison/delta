@@ -222,39 +222,39 @@ Note that the package is often called `git-delta`, but the executable installed 
     <td><code>pacman -S git-delta</code></td>
   </tr>
   <tr>
-    <td>Cargo</td>
+    <td><a href="https://crates.io/crates/git-delta">Cargo</a></td>
     <td><code>cargo install git-delta</code></td>
   </tr>
   <tr>
-    <td>Fedora</td>
+    <td><a href="https://src.fedoraproject.org/rpms/rust-git-delta">Fedora</a></td>
     <td><code>dnf install git-delta</code></td>
   </tr>
   <tr>
-    <td>FreeBSD</td>
+    <td><a href="https://pkgs.org/download/git-delta">FreeBSD</a></td>
     <td><code>pkg install git-delta</code></td>
   </tr>
   <tr>
-    <td>Gentoo</td>
+    <td><a href="https://packages.gentoo.org/packages/dev-util/git-delta">Gentoo</a></td>
     <td><code>emerge dev-util/git-delta</code></td>
   </tr>
   <tr>
-    <td>Homebrew</td>
+    <td><a href="https://formulae.brew.sh/formula/git-delta">Homebrew</a></td>
     <td><code>brew install git-delta</code></td>
   </tr>
   <tr>
-    <td>MacPorts</td>
+    <td><a href="https://ports.macports.org/port/git-delta/summary">MacPorts</a></td>
     <td><code>port install git-delta</code></td>
   </tr>
   <tr>
-    <td>Nix</td>
-    <td><code>nix-env -iA nixpkgs.gitAndTools.delta</code>
+    <td><a href="https://search.nixos.org/packages?show=delta&query=delta">Nix</a></td>
+    <td><code>nix-env -iA nixpkgs.delta</code>
   </tr>
   <tr>
-    <td>openSUSE Tumbleweed</td>
+    <td><a href="https://software.opensuse.org/package/git-delta">openSUSE Tumbleweed</a></td>
     <td><code>zypper install git-delta</code>
   </tr>
   <tr>
-    <td>Void Linux</td>
+    <td><a href="https://github.com/void-linux/void-packages/tree/master/srcpkgs/delta">Void Linux</a></td>
     <td><code>xbps-install -S delta</code>
   </tr>
   <tr>
