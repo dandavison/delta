@@ -202,7 +202,9 @@ In addition, delta handles traditional unified diff output.
 ## Installation
 
 You can download an executable for your system:
-[Linux](https://github.com/dandavison/delta/releases/download/0.8.2/delta-0.8.2-x86_64-unknown-linux-gnu.tar.gz)
+[Linux (glibc)](https://github.com/dandavison/delta/releases/download/0.8.2/delta-0.8.2-x86_64-unknown-linux-gnu.tar.gz)
+|
+[Linux (musl)](https://github.com/dandavison/delta/releases/download/0.8.2/delta-0.8.2-x86_64-unknown-linux-musl.tar.gz)
 |
 [MacOS](https://github.com/dandavison/delta/releases/download/0.8.2/delta-0.8.2-x86_64-apple-darwin.tar.gz)
 |
