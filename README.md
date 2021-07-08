@@ -201,7 +201,14 @@ In addition, delta handles traditional unified diff output.
 
 ## Installation
 
-You can download an executable for your system: [Linux](https://github.com/dandavison/delta/releases/download/0.8.2/delta-0.8.2-x86_64-unknown-linux-gnu.tar.gz) | [MacOS](https://github.com/dandavison/delta/releases/download/0.8.2/delta-0.8.2-x86_64-apple-darwin.tar.gz) | [Windows](https://github.com/dandavison/delta/releases/download/0.8.2/delta-0.8.2-x86_64-pc-windows-msvc.zip) | [All](https://github.com/dandavison/delta/releases)
+You can download an executable for your system:
+[Linux](https://github.com/dandavison/delta/releases/download/0.8.2/delta-0.8.2-x86_64-unknown-linux-gnu.tar.gz)
+|
+[MacOS](https://github.com/dandavison/delta/releases/download/0.8.2/delta-0.8.2-x86_64-apple-darwin.tar.gz)
+|
+[Windows](https://github.com/dandavison/delta/releases/download/0.8.2/delta-0.8.2-x86_64-pc-windows-msvc.zip)
+|
+[All](https://github.com/dandavison/delta/releases)
 
 Alternatively you can install delta using a package manager: see [repology.org/git-delta](https://repology.org/project/git-delta/versions).
 
