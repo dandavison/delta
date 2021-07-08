@@ -207,7 +207,7 @@ Alternatively, delta is available in the following package managers:
 
 <table>
   <tr>
-    <td>Arch Linux AUR<br>
+    <td>Arch Linux<br>
         (<a href="https://archlinux.org/packages/community/x86_64/git-delta/">Archlinux [community] repository</a>)</td>
     <td><code>sudo pacman -S git-delta</code>
   </tr>
