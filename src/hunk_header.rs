@@ -117,10 +117,7 @@ fn get_painted_file_with_line_number(
         )
     }
     let file_with_line_number = ansi_term::ANSIStrings(&file_with_line_number).to_string();
-    if config.hyperlinks
-        && (config.hunk_header_style_include_file_path
-            || config.hunk_header_style_include_line_number)
-    {
+    if config.hyperlinks && !file_with_line_number.is_empty() {
         features::hyperlinks::format_osc8_file_hyperlink(
             plus_file,
             Some(plus_line_number),
@@ -165,5 +162,59 @@ fn write_to_output_buffer(
             Some(false),
         );
         painter.output_buffer.pop(); // trim newline
+    }
+}
+
+#[cfg(test)]
+pub mod tests {
+    use super::*;
+    use crate::tests::integration_test_utils::integration_test_utils;
+
+    #[test]
+    fn test_get_painted_file_with_line_number_default() {
+        let cfg = integration_test_utils::make_config_from_args(&[]);
+
+        let result = get_painted_file_with_line_number(&vec![(3, 4)], "some-file", &cfg);
+
+        assert_eq!(result, "\u{1b}[34m3\u{1b}[0m");
+    }
+
+    #[test]
+    fn test_get_painted_file_with_line_number_hyperlinks() {
+        let cfg = integration_test_utils::make_config_from_args(&["--features", "hyperlinks"]);
+
+        let result = get_painted_file_with_line_number(&vec![(3, 4)], "some-file", &cfg);
+
+        assert_eq!(result, "some-file");
+    }
+
+    #[test]
+    fn test_get_painted_file_with_line_number_empty() {
+        let cfg = integration_test_utils::make_config_from_args(&[
+            "--hunk-header-style",
+            "syntax bold",
+            "--hunk-header-decoration-style",
+            "omit",
+        ]);
+
+        let result = get_painted_file_with_line_number(&vec![(3, 4)], "some-file", &cfg);
+
+        assert_eq!(result, "");
+    }
+
+    #[test]
+    fn test_get_painted_file_with_line_number_empty_hyperlinks() {
+        let cfg = integration_test_utils::make_config_from_args(&[
+            "--hunk-header-style",
+            "syntax bold",
+            "--hunk-header-decoration-style",
+            "omit",
+            "--features",
+            "hyperlinks",
+        ]);
+
+        let result = get_painted_file_with_line_number(&vec![(3, 4)], "some-file", &cfg);
+
+        assert_eq!(result, "");
     }
 }
