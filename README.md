@@ -201,9 +201,11 @@ In addition, delta handles traditional unified diff output.
 
 ## Installation
 
-You can download an executable for your system: [Linux](https://github.com/dandavison/delta/releases/download/0.8.2/delta-0.8.2-x86_64-unknown-linux-gnu.tar.gz) | [MacOS (recent versions)](https://github.com/dandavison/delta/releases/download/0.8.2/delta-0.8.2-x86_64-apple-darwin.tar.gz) | [Windows](https://github.com/dandavison/delta/releases/download/0.8.2/delta-0.8.2-x86_64-pc-windows-msvc.zip) | [All](https://github.com/dandavison/delta/releases)
+You can download an executable for your system: [Linux](https://github.com/dandavison/delta/releases/download/0.8.2/delta-0.8.2-x86_64-unknown-linux-gnu.tar.gz) | [MacOS](https://github.com/dandavison/delta/releases/download/0.8.2/delta-0.8.2-x86_64-apple-darwin.tar.gz) | [Windows](https://github.com/dandavison/delta/releases/download/0.8.2/delta-0.8.2-x86_64-pc-windows-msvc.zip) | [All](https://github.com/dandavison/delta/releases)
 
-Alternatively, delta is available in the following package managers:
+Alternatively you can install delta using a package manager: see [repology.org/git-delta](https://repology.org/project/git-delta/versions).
+
+Note that the package is often called `git-delta`, but the executable installed is called `delta`. Here is a quick sumary for selected package managers:
 
 <table>
   <tr>
@@ -267,8 +269,6 @@ Alternatively, delta is available in the following package managers:
 </table>
 
 Users of older MacOS versions (e.g. 10.11 El Capitan) should install using Homebrew, Cargo, or MacPorts: the binaries on the release page will not work.
-
-See [repology.org/git-delta](https://repology.org/project/git-delta/versions) for the current version in each package repository.
 
 Behind the scenes, delta uses [`less`](https://www.greenwoodsoftware.com/less/) for paging.
 It's important to have a reasonably recent version of less installed.
