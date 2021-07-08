@@ -208,21 +208,8 @@ Alternatively, delta is available in the following package managers:
 <table>
   <tr>
     <td>Arch Linux AUR<br>
-        (<a href="https://aur.archlinux.org/packages/git-delta">build from source</a>)</td>
-    <td><code>yay -S git-delta</code>
-        <br>or<br>
-        <code>git clone https://aur.archlinux.org/git-delta.git</code><br>
-        <code>cd git-delta</code><br>
-        <code>makepkg -csri</code></td>
-  </tr>
-  <tr>
-    <td>Arch Linux AUR<br>
-        (<a href="https://aur.archlinux.org/packages/git-delta-bin">binary, no compilation required</a>)</td>
-    <td><code>yay -S git-delta-bin</code>
-        <br>or<br>
-        <code>git clone https://aur.archlinux.org/git-delta-bin.git</code><br>
-        <code>cd git-delta-bin</code><br>
-        <code>makepkg -si</code></td>
+        (<a href="https://archlinux.org/packages/community/x86_64/git-delta/">Archlinux [community] repository</a>)</td>
+    <td><code>sudo pacman -S git-delta</code>
   </tr>
   <tr>
     <td>Cargo</td>
