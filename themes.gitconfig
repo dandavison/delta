@@ -196,3 +196,38 @@
     whitespace-error-style = "#280050" reverse
     zero-style = syntax
     syntax-theme = Nord
+
+[delta "mantis-shrimp"]
+    #author: https://github.com/2kabhishek
+    dark = true
+    side-by-side = true
+    navigate = true
+    keep-plus-minus-markers = true
+    hyperlinks = true
+    file-added-label = [+]
+    file-copied-label = [==]
+    file-modified-label = [*]
+    file-removed-label = [-]
+    file-renamed-label = [->]
+    file-style = omit
+    zero-style = syntax
+    syntax-theme = Monokai Extended
+    commit-decoration-style ="#ff5500" box
+    commit-style = "#FFD21A" bold italic
+    hunk-header-decoration-style = "#1688f0" box ul
+    hunk-header-file-style = "#FFD21A" ul bold "#640BFF"
+    hunk-header-line-number-style = "#FFD21A" box bold
+    hunk-header-style = file line-number syntax bold italic
+    line-numbers = true
+    line-numbers-left-format = "{nm:>1}|"
+    line-numbers-left-style = "#1688f0"
+    line-numbers-minus-style = red bold
+    line-numbers-plus-style = green bold
+    line-numbers-right-format = "{np:>1}|"
+    line-numbers-right-style = "#1688f0"
+    line-numbers-zero-style = "#aaaaaa" italic
+    minus-emph-style = syntax bold "#b80000"
+    minus-style = syntax "#5d001e"
+    plus-emph-style = syntax bold "#007800"
+    plus-style = syntax "#004433"
+    whitespace-error-style = "#280050"
