@@ -215,11 +215,6 @@ Alternatively, delta is available in the following package managers:
     <td><code>cargo install git-delta</code></td>
   </tr>
   <tr>
-    <td>Debian / Ubuntu</td>
-    <td><br>.deb files are on the <a href="https://github.com/dandavison/delta/releases">releases</a> page and at <a href="https://github.com/barnumbirr/delta-debian/releases">barnumbirr/delta-debian</a><br>
-    <code>dpkg -i file.deb</code>. **IMPORTANT** If you are using Ubuntu <= 19.10 or are mixing apt sources, read <a href="https://github.com/dandavison/delta/issues/504">https://github.com/dandavison/delta/issues/504</a>, be extremely cautious, and try the versions linked against musl.</td>
-  </tr>
-  <tr>
     <td>Fedora</td>
     <td><code>dnf install git-delta</code></td>
   </tr>
@@ -258,6 +253,16 @@ Alternatively, delta is available in the following package managers:
   <tr>
     <td>Windows (<a href="https://scoop.sh/">Scoop</a>)</td>
     <td><code>scoop install delta</code></td>
+  </tr>
+  <tr>
+    <td>Debian / Ubuntu</td>
+    <td>
+      <code>dpkg -i file.deb</code>
+      <br>
+      .deb files are on the <a href="https://github.com/dandavison/delta/releases">releases</a> page.
+      <br>
+      <sup><b>IMPORTANT</b>: If you are using Ubuntu <= 19.10 or are mixing apt sources, read <a href="https://github.com/dandavison/delta/issues/504">#504</a>, be extremely cautious, and try the versions linked against musl.</sup>
+    </td>
   </tr>
 </table>
 
