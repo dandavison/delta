@@ -131,43 +131,48 @@ fn _make_process_from_less_path(
     quit_if_one_screen: bool,
     config: &config::Config,
 ) -> Option<Command> {
-    let mut p = Command::new(&less_path);
-    if args.is_empty() || replace_arguments_to_less {
-        p.args(vec!["--RAW-CONTROL-CHARS"]);
+    if let Ok(less_path) = grep_cli::resolve_binary(less_path) {
+        let mut p = Command::new(&less_path);
+        if args.is_empty() || replace_arguments_to_less {
+            p.args(vec!["--RAW-CONTROL-CHARS"]);
 
-        // Passing '--no-init' fixes a bug with '--quit-if-one-screen' in older
-        // versions of 'less'. Unfortunately, it also breaks mouse-wheel support.
-        //
-        // See: http://www.greenwoodsoftware.com/less/news.530.html
-        //
-        // For newer versions (530 or 558 on Windows), we omit '--no-init' as it
-        // is not needed anymore.
-        match retrieve_less_version() {
-            None => {
-                p.arg("--no-init");
+            // Passing '--no-init' fixes a bug with '--quit-if-one-screen' in older
+            // versions of 'less'. Unfortunately, it also breaks mouse-wheel support.
+            //
+            // See: http://www.greenwoodsoftware.com/less/news.530.html
+            //
+            // For newer versions (530 or 558 on Windows), we omit '--no-init' as it
+            // is not needed anymore.
+            match retrieve_less_version() {
+                None => {
+                    p.arg("--no-init");
+                }
+                Some(version) if (version < 530 || (cfg!(windows) && version < 558)) => {
+                    p.arg("--no-init");
+                }
+                _ => {}
             }
-            Some(version) if (version < 530 || (cfg!(windows) && version < 558)) => {
-                p.arg("--no-init");
-            }
-            _ => {}
-        }
 
-        if quit_if_one_screen {
-            p.arg("--quit-if-one-screen");
+            if quit_if_one_screen {
+                p.arg("--quit-if-one-screen");
+            }
+        } else {
+            p.args(args);
         }
+        p.env("LESSCHARSET", "UTF-8");
+        if config.navigate {
+            if let Ok(hist_file) = navigate::copy_less_hist_file_and_append_navigate_regexp(config)
+            {
+                p.env("LESSHISTFILE", hist_file);
+                if config.show_themes {
+                    p.arg("+n");
+                }
+            }
+        }
+        Some(p)
     } else {
-        p.args(args);
+        None
     }
-    p.env("LESSCHARSET", "UTF-8");
-    if config.navigate {
-        if let Ok(hist_file) = navigate::copy_less_hist_file_and_append_navigate_regexp(config) {
-            p.env("LESSHISTFILE", hist_file);
-            if config.show_themes {
-                p.arg("+n");
-            }
-        }
-    }
-    Some(p)
 }
 
 fn _make_process_from_pager_path(pager_path: PathBuf, args: &[String]) -> Option<Command> {
@@ -181,9 +186,13 @@ delta is not an appropriate value for $PAGER \
         );
         std::process::exit(1);
     }
-    let mut p = Command::new(&pager_path);
-    p.args(args);
-    Some(p)
+    if let Ok(pager_path) = grep_cli::resolve_binary(pager_path) {
+        let mut p = Command::new(&pager_path);
+        p.args(args);
+        Some(p)
+    } else {
+        None
+    }
 }
 
 impl Drop for OutputType {

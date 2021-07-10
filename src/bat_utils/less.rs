@@ -1,8 +1,12 @@
 use std::process::Command;
 
 pub fn retrieve_less_version() -> Option<usize> {
-    let cmd = Command::new("less").arg("--version").output().ok()?;
-    parse_less_version(&cmd.stdout)
+    if let Ok(less_path) = grep_cli::resolve_binary("less") {
+        let cmd = Command::new(less_path).arg("--version").output().ok()?;
+        parse_less_version(&cmd.stdout)
+    } else {
+        None
+    }
 }
 
 fn parse_less_version(output: &[u8]) -> Option<usize> {

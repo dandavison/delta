@@ -132,7 +132,11 @@ You can also use delta to diff two files: `delta file_A file_B`."
     let diff_command = "git";
     let minus_file = minus_file.unwrap_or_else(die);
     let plus_file = plus_file.unwrap_or_else(die);
-    let mut diff_process = process::Command::new(PathBuf::from(diff_command))
+    let diff_command_path = match grep_cli::resolve_binary(PathBuf::from(diff_command)) {
+        Ok(path) => path,
+        Err(_) => return config.error_exit_code,
+    };
+    let mut diff_process = process::Command::new(diff_command_path)
         .args(&["diff", "--no-index"])
         .args(&[minus_file, plus_file])
         .stdout(process::Stdio::piped())
