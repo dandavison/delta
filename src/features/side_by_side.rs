@@ -460,9 +460,7 @@ fn right_fill_right_panel_line(
 pub mod tests {
     use crate::ansi::strip_ansi_codes;
     use crate::features::line_numbers::tests::*;
-    use crate::tests::integration_test_utils::integration_test_utils::{
-        make_config_from_args, run_delta,
-    };
+    use crate::tests::integration_test_utils::{make_config_from_args, run_delta};
 
     #[test]
     fn test_two_minus_lines() {

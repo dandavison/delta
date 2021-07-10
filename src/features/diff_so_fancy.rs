@@ -48,7 +48,7 @@ pub fn make_feature() -> Vec<(String, OptionValueFunction)> {
 pub mod tests {
     use std::fs::remove_file;
 
-    use crate::tests::integration_test_utils::integration_test_utils;
+    use crate::tests::integration_test_utils;
 
     #[test]
     fn test_diff_so_fancy_defaults() {

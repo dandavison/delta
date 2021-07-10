@@ -95,7 +95,7 @@ pub mod tests {
 
     use crate::cli;
     use crate::features::make_builtin_features;
-    use crate::tests::integration_test_utils::integration_test_utils::make_options_from_args_and_git_config;
+    use crate::tests::integration_test_utils::make_options_from_args_and_git_config;
 
     #[test]
     fn test_builtin_features_have_flags_and_these_set_features() {

@@ -123,7 +123,7 @@ mod tests {
 
     use super::*;
     use crate::color;
-    use crate::tests::integration_test_utils::integration_test_utils;
+    use crate::tests::integration_test_utils;
 
     #[test]
     fn test_syntax_theme_selection() {

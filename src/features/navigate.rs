@@ -123,7 +123,7 @@ fn get_less_hist_file() -> Option<PathBuf> {
 mod tests {
     use std::fs::remove_file;
 
-    use crate::tests::integration_test_utils::integration_test_utils;
+    use crate::tests::integration_test_utils;
 
     #[test]
     fn test_navigate_with_overriden_key_in_main_section() {

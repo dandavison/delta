@@ -139,7 +139,7 @@ pub mod tests {
     use std::fs::remove_file;
 
     use crate::options::get::get_themes;
-    use crate::tests::integration_test_utils::integration_test_utils;
+    use crate::tests::integration_test_utils;
 
     // TODO: the followig tests are collapsed into one since they all set the same env var and thus
     // could affect each other if allowed to run concurrently.

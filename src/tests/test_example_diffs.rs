@@ -5,7 +5,7 @@ mod tests {
     use crate::delta::State;
     use crate::style;
     use crate::tests::ansi_test_utils::ansi_test_utils;
-    use crate::tests::integration_test_utils::integration_test_utils;
+    use crate::tests::integration_test_utils;
     use crate::tests::test_utils::test_utils;
 
     #[test]

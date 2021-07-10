@@ -619,7 +619,7 @@ pub mod tests {
 
     use crate::bat_utils::output::PagingMode;
     use crate::cli;
-    use crate::tests::integration_test_utils::integration_test_utils;
+    use crate::tests::integration_test_utils;
 
     #[test]
     fn test_options_can_be_set_in_git_config() {

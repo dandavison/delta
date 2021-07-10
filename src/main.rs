@@ -516,7 +516,7 @@ mod main_tests {
     use std::io::{Cursor, Seek, SeekFrom};
 
     use crate::ansi;
-    use crate::tests::integration_test_utils::integration_test_utils;
+    use crate::tests::integration_test_utils;
 
     #[test]
     fn test_show_config() {
