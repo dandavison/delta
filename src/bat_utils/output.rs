@@ -77,78 +77,35 @@ impl OutputType {
         let pagerflags =
             shell_words::split(&pager).chain_err(|| "Could not parse pager command.")?;
 
-        match pagerflags.split_first() {
+        Ok(match pagerflags.split_first() {
             Some((pager_name, args)) => {
                 let pager_path = PathBuf::from(pager_name);
 
                 let is_less = pager_path.file_stem() == Some(&OsString::from("less"));
 
-                let mut process = if is_less {
-                    let mut p = Command::new(&pager_path);
-                    if args.is_empty() || replace_arguments_to_less {
-                        p.args(vec!["--RAW-CONTROL-CHARS"]);
-
-                        // Passing '--no-init' fixes a bug with '--quit-if-one-screen' in older
-                        // versions of 'less'. Unfortunately, it also breaks mouse-wheel support.
-                        //
-                        // See: http://www.greenwoodsoftware.com/less/news.530.html
-                        //
-                        // For newer versions (530 or 558 on Windows), we omit '--no-init' as it
-                        // is not needed anymore.
-                        match retrieve_less_version() {
-                            None => {
-                                p.arg("--no-init");
-                            }
-                            Some(version)
-                                if (version < 530 || (cfg!(windows) && version < 558)) =>
-                            {
-                                p.arg("--no-init");
-                            }
-                            _ => {}
-                        }
-
-                        if quit_if_one_screen {
-                            p.arg("--quit-if-one-screen");
-                        }
-                    } else {
-                        p.args(args);
-                    }
-                    p.env("LESSCHARSET", "UTF-8");
-                    p
+                let process = if is_less {
+                    _make_process_from_less_path(
+                        pager_path,
+                        args,
+                        replace_arguments_to_less,
+                        quit_if_one_screen,
+                        config,
+                    )
                 } else {
-                    if pager_path.file_stem() == Some(&OsString::from("delta")) {
-                        eprintln!(
-                            "\
-It looks like you have set delta as the value of $PAGER. \
-This would result in a non-terminating recursion. \
-delta is not an appropriate value for $PAGER \
-(but it is an appropriate value for $GIT_PAGER)."
-                        );
-                        std::process::exit(1);
-                    }
-                    let mut p = Command::new(&pager_path);
-                    p.args(args);
-                    p
+                    _make_process_from_pager_path(pager_path, args)
                 };
-                if is_less && config.navigate {
-                    if let Ok(hist_file) =
-                        navigate::copy_less_hist_file_and_append_navigate_regexp(config)
-                    {
-                        process.env("LESSHISTFILE", hist_file);
-                        if config.show_themes {
-                            process.arg("+n");
-                        }
-                    }
+                if let Some(mut process) = process {
+                    process
+                        .stdin(Stdio::piped())
+                        .spawn()
+                        .map(OutputType::Pager)
+                        .unwrap_or_else(|_| OutputType::stdout())
+                } else {
+                    OutputType::stdout()
                 }
-                Ok(process
-                    .env("LESSANSIENDCHARS", "mK")
-                    .stdin(Stdio::piped())
-                    .spawn()
-                    .map(OutputType::Pager)
-                    .unwrap_or_else(|_| OutputType::stdout()))
             }
-            None => Ok(OutputType::stdout()),
-        }
+            None => OutputType::stdout(),
+        })
     }
 
     fn stdout() -> Self {
@@ -163,6 +120,78 @@ delta is not an appropriate value for $PAGER \
                 .chain_err(|| "Could not open stdin for pager")?,
             OutputType::Stdout(ref mut handle) => handle,
         })
+    }
+}
+
+fn _make_process_from_less_path(
+    less_path: PathBuf,
+    args: &[String],
+    replace_arguments_to_less: bool,
+    quit_if_one_screen: bool,
+    config: &config::Config,
+) -> Option<Command> {
+    if let Ok(less_path) = grep_cli::resolve_binary(less_path) {
+        let mut p = Command::new(&less_path);
+        if args.is_empty() || replace_arguments_to_less {
+            p.args(vec!["--RAW-CONTROL-CHARS"]);
+
+            // Passing '--no-init' fixes a bug with '--quit-if-one-screen' in older
+            // versions of 'less'. Unfortunately, it also breaks mouse-wheel support.
+            //
+            // See: http://www.greenwoodsoftware.com/less/news.530.html
+            //
+            // For newer versions (530 or 558 on Windows), we omit '--no-init' as it
+            // is not needed anymore.
+            match retrieve_less_version() {
+                None => {
+                    p.arg("--no-init");
+                }
+                Some(version) if (version < 530 || (cfg!(windows) && version < 558)) => {
+                    p.arg("--no-init");
+                }
+                _ => {}
+            }
+
+            if quit_if_one_screen {
+                p.arg("--quit-if-one-screen");
+            }
+        } else {
+            p.args(args);
+        }
+        p.env("LESSCHARSET", "UTF-8");
+        p.env("LESSANSIENDCHARS", "mK");
+        if config.navigate {
+            if let Ok(hist_file) = navigate::copy_less_hist_file_and_append_navigate_regexp(config)
+            {
+                p.env("LESSHISTFILE", hist_file);
+                if config.show_themes {
+                    p.arg("+n");
+                }
+            }
+        }
+        Some(p)
+    } else {
+        None
+    }
+}
+
+fn _make_process_from_pager_path(pager_path: PathBuf, args: &[String]) -> Option<Command> {
+    if pager_path.file_stem() == Some(&OsString::from("delta")) {
+        eprintln!(
+            "\
+It looks like you have set delta as the value of $PAGER. \
+This would result in a non-terminating recursion. \
+delta is not an appropriate value for $PAGER \
+(but it is an appropriate value for $GIT_PAGER)."
+        );
+        std::process::exit(1);
+    }
+    if let Ok(pager_path) = grep_cli::resolve_binary(pager_path) {
+        let mut p = Command::new(&pager_path);
+        p.args(args);
+        Some(p)
+    } else {
+        None
     }
 }
 
