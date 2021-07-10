@@ -96,7 +96,6 @@ impl OutputType {
                 };
                 if let Some(mut process) = process {
                     process
-                        .env("LESSANSIENDCHARS", "mK")
                         .stdin(Stdio::piped())
                         .spawn()
                         .map(OutputType::Pager)
@@ -160,6 +159,7 @@ fn _make_process_from_less_path(
             p.args(args);
         }
         p.env("LESSCHARSET", "UTF-8");
+        p.env("LESSANSIENDCHARS", "mK");
         if config.navigate {
             if let Ok(hist_file) = navigate::copy_less_hist_file_and_append_navigate_regexp(config)
             {
