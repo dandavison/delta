@@ -168,7 +168,7 @@ fn write_to_output_buffer(
 #[cfg(test)]
 pub mod tests {
     use super::*;
-    use crate::tests::integration_test_utils::integration_test_utils;
+    use crate::tests::integration_test_utils;
 
     #[test]
     fn test_get_painted_file_with_line_number_default() {
