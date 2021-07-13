@@ -258,6 +258,10 @@ Note that the package is often called `git-delta`, but the executable installed 
     <td><code>xbps-install -S delta</code>
   </tr>
   <tr>
+    <td>Ubuntu</td>
+    <td><code>sudo apt install delta</code>
+  </tr>
+  <tr>
     <td>Windows (<a href="https://chocolatey.org/packages/delta">Chocolatey</a>)</td>
     <td><code>choco install delta</code></td>
   </tr>
