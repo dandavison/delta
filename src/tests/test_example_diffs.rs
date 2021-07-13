@@ -1462,14 +1462,7 @@ src/align.rs:71: impl<'a> Alignment<'a> { │
                     .to_string()
             );
         } else {
-            let style = style::Style::from_str(empty_line_marker_style, None, None, true, false);
-            assert_eq!(
-                line,
-                &style
-                    .ansi_term_style
-                    .paint(ansi::ANSI_CSI_CLEAR_TO_BOL)
-                    .to_string()
-            );
+            assert_eq!(line, "");
         }
     }
 

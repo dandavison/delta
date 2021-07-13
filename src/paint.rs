@@ -381,9 +381,9 @@ impl<'a> Painter<'a> {
         painted_prefix: Option<ansi_term::ANSIString>,
         config: &config::Config,
     ) -> (String, bool) {
-        let output_line_numbers = config.line_numbers && line_numbers_data.is_some();
-        let mut handled_prefix = false;
         let mut ansi_strings = Vec::new();
+
+        let output_line_numbers = config.line_numbers && line_numbers_data.is_some();
         if output_line_numbers {
             ansi_strings.extend(line_numbers::format_and_paint_line_numbers(
                 line_numbers_data.as_mut().unwrap(),
@@ -407,27 +407,40 @@ impl<'a> Painter<'a> {
             }
             _ => {}
         }
-        let mut is_empty = true;
-        for (section_style, mut text) in superimpose_style_sections(
+
+        let superimposed = superimpose_style_sections(
             syntax_sections,
             diff_sections,
             config.true_color,
             config.null_syntect_style,
-        ) {
-            if !handled_prefix {
-                if let Some(painted_prefix) = painted_prefix.clone() {
-                    ansi_strings.push(painted_prefix);
+        );
+
+        let mut handled_prefix = false;
+        for (section_style, text) in &superimposed {
+            let text = if handled_prefix {
+                &text
+            } else {
+                // Remove what was originally the +/- prefix, see `prepare()`, after
+                // (if requested) re-inserting it with proper styling.
+                if let Some(ref painted_prefix) = painted_prefix {
+                    ansi_strings.push(painted_prefix.clone());
                 }
+
                 if !text.is_empty() {
-                    text.remove(0);
+                    &text[1..]
+                } else {
+                    &text
                 }
-                handled_prefix = true;
-            }
+            };
+
             if !text.is_empty() {
                 ansi_strings.push(section_style.paint(text));
-                is_empty = false;
             }
+            handled_prefix = true;
         }
+
+        // Only if syntax is empty (implies diff empty) can a line actually be empty.
+        let is_empty = syntax_sections.is_empty();
         (ansi_term::ANSIStrings(&ansi_strings).to_string(), is_empty)
     }
 
