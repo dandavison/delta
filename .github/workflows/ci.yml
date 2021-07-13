@@ -14,13 +14,7 @@ jobs:
     strategy:
       matrix:
         job:
-          - { os: macos-latest,   target: x86_64-apple-darwin,         use-cross: false }
           - { os: windows-latest, target: x86_64-pc-windows-msvc,      use-cross: false }
-          - { os: ubuntu-latest , target: x86_64-unknown-linux-gnu,    use-cross: false }
-          - { os: ubuntu-latest,  target: x86_64-unknown-linux-musl,   use-cross: true }
-          - { os: ubuntu-latest,  target: i686-unknown-linux-gnu,      use-cross: true }
-          - { os: ubuntu-latest,  target: arm-unknown-linux-gnueabihf, use-cross: true }
-          - { os: ubuntu-latest,  target: aarch64-unknown-linux-gnu,   use-cross: true }
     steps:
       - name: Checkout repository
         uses: actions/checkout@v2
@@ -37,39 +31,6 @@ jobs:
           command: test
           use-cross: ${{ matrix.job.use-cross }}
           args: --target ${{ matrix.job.target }} --verbose -- --nocapture
-
-  integration_tests:
-    name: Integration tests
-    runs-on: ${{ matrix.os }}
-    strategy:
-      matrix:
-        os: [macos-latest, ubuntu-latest]
-        include:
-          - os: macos-latest
-            target: x86_64-apple-darwin
-          - os: ubuntu-latest
-            target: x86_64-unknown-linux-gnu
-    steps:
-      - name: Checkout repository
-        uses: actions/checkout@v2
-      - name: Install Rust
-        uses: actions-rs/toolchain@v1
-        with:
-          toolchain: stable
-          profile: minimal
-          override: true
-      - name: Build for release
-        uses: actions-rs/cargo@v1
-        with:
-          command: build
-          args: --target ${{ matrix.target }} --release
-      - name: End to end tests
-        run: |
-          DELTA_BIN=target/${{ matrix.target }}/release/delta
-          ./tests/test_raw_output_matches_git_on_full_repo_history $DELTA_BIN
-          ./tests/test_deprecated_options $DELTA_BIN > /dev/null
-      - name: Run executable
-        run: cargo run --release --target ${{ matrix.target }} -- < /dev/null
 
   rustfmt:
     name: Rustfmt
