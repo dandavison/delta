@@ -188,10 +188,8 @@ impl<'a> StateMachine<'a> {
         // Strip the neglected CR.
         // (CR-LF is unfortunately split by git because it adds ansi escapes between them.
         //  Thus byte_lines library can't remove the CR properly.)
-        if let Some(c) = self.line.bytes().nth_back(0) {
-            if c == b'\r' {
-                self.line.truncate(self.line.len() - 1);
-            }
+        if let Some(b'\r') = self.line.bytes().nth_back(0) {
+            self.line.truncate(self.line.len() - 1);
         }
     }
 
