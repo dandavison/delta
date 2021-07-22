@@ -184,6 +184,15 @@ impl<'a> StateMachine<'a> {
             .to_string()
         };
         self.line = ansi::strip_ansi_codes(&self.raw_line);
+
+        // Strip the neglected CR.
+        // (CR-LF is unfortunately split by git because it adds ansi escapes between them.
+        //  Thus byte_lines library can't remove the CR properly.)
+        if let Some(c) = self.line.bytes().nth_back(0) {
+            if c == b'\r' {
+                self.line.truncate(self.line.len() - 1);
+            }
+        }
     }
 
     /// Should a handle_* function be called on this element?
