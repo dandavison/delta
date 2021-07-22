@@ -297,6 +297,16 @@ commit 94907c0f136f46dc46ffae2dc92dca9af7eb7c2e
     }
 
     #[test]
+    fn test_orphan_carriage_return_is_stripped() {
+        let config = integration_test_utils::make_config_from_args(&[]);
+        let output = integration_test_utils::run_delta(
+            GIT_DIFF_SINGLE_HUNK_WITH_SEQUENCE_OF_CR_ESCAPE_SEQUENCES_LF,
+            &config,
+        );
+        assert!(output.bytes().all(|b: u8| b != b'\r'));
+    }
+
+    #[test]
     fn test_commit_decoration_style_omit() {
         _do_test_commit_style_no_decoration(&[
             "--commit-style",
@@ -1706,6 +1716,20 @@ Date:   Thu May 14 11:13:17 2020 -0400
  [m
  #[derive(Debug, Clone, Copy, PartialEq)][m
  #[allow(dead_code)][m
+";
+
+    const GIT_DIFF_SINGLE_HUNK_WITH_SEQUENCE_OF_CR_ESCAPE_SEQUENCES_LF: &str = "\
+[1mdiff --git a/src/main.rs b/src/main.rs[m
+[1mindex f346a8c..e443b63 100644[m
+[1m--- a/src/main.rs[m
+[1m+++ b/src/main.rs[m
+[36m@@ -1,5 +1,4 @@[m
+[31m-deleted line[m\r
+[31m-[m\r
+ fn main() {[m\r
+     println!(\"existing line\");[m\r
+[32m+[m[32m    println!(\"added line\");[m[41m\r[m
+ }[m\r
 ";
 
     const DIFF_IN_DIFF: &str = "\
