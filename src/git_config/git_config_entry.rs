@@ -23,7 +23,7 @@ lazy_static! {
     static ref GITHUB_REMOTE_URL: Regex = Regex::new(
         r"(?x)
         ^
-        (?:https://|git@) # Support both HTTPS and SSH URLs
+        (?:https://|git@)? # Support both HTTPS and SSH URLs, SSH URLs optionally omitting the git@
         github\.com
         [:/]              # This separator differs between SSH and HTTPS URLs
         ([^/]+)           # Capture the user/org name
@@ -62,6 +62,8 @@ mod tests {
             "https://github.com/dandavison/delta",
             "git@github.com:dandavison/delta.git",
             "git@github.com:dandavison/delta",
+            "github.com:dandavison/delta.git",
+            "github.com:dandavison/delta",
         ];
         for url in urls {
             let parsed = GitRemoteRepo::from_str(url);
