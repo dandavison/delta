@@ -107,7 +107,7 @@ jobs:
         uses: actions-rs/cargo@v1
         with:
           command: clippy
-          args: -- -D warnings --allow needless_borrow
+          args: -- -D warnings --allow clippy::needless_borrow
 
   coverage:
     name: Code coverage

@@ -99,7 +99,7 @@ fn _parse_file_path(s: &str, git_diff_name: bool) -> String {
     // index·d00491f..0cfbf08·100644␊
     // ---·a/a·b├──┤␊
     // +++·b/c·d├──┤␊
-    match s.strip_suffix("\t").unwrap_or(s) {
+    match s.strip_suffix('\t').unwrap_or(s) {
         path if path == "/dev/null" => "/dev/null",
         path if git_diff_name && DIFF_PREFIXES.iter().any(|s| path.starts_with(s)) => &path[2..],
         path if git_diff_name => &path,
