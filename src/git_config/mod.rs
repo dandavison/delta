@@ -2,14 +2,14 @@ mod git_config_entry;
 
 pub use git_config_entry::{GitConfigEntry, GitRemoteRepo};
 
-use regex::Regex;
+use std::borrow::Cow;
 use std::collections::HashMap;
 use std::env;
 #[cfg(test)]
 use std::path::Path;
 use std::process;
 
-use lazy_static::lazy_static;
+use git_config_env::ConfigParametersIter;
 
 pub struct GitConfig {
     pub config: git2::Config,
@@ -79,39 +79,10 @@ fn parse_config_from_env_var() -> HashMap<String, String> {
     }
 }
 
-lazy_static! {
-    static ref GIT_CONFIG_PARAMETERS_REGEX: Regex = Regex::new(
-        r"(?x)
-        (?:                               # Non-capturing group containing union
-            '(delta\.[a-z-]+)=([^']+)'    # Git <2.31.0 format
-        |
-            '(delta\.[a-z-]+)'='([^']+)'  # Git ≥2.31.0 format
-        )
-        "
-    )
-    .unwrap();
-}
-
 fn parse_config_from_env_var_value(s: &str) -> HashMap<String, String> {
-    GIT_CONFIG_PARAMETERS_REGEX
-        .captures_iter(s)
-        .map(|captures| {
-            let (i, j) = match (
-                captures.get(1),
-                captures.get(2),
-                captures.get(3),
-                captures.get(4),
-            ) {
-                (Some(_), Some(_), None, None) => (1, 2),
-                (None, None, Some(_), Some(_)) => (3, 4),
-                _ => (0, 0),
-            };
-            if (i, j) == (0, 0) {
-                ("".to_string(), "".to_string())
-            } else {
-                (captures[i].to_string(), captures[j].to_string())
-            }
-        })
+    ConfigParametersIter::new(s)
+        .filter(|(k, _)| k.starts_with("delta."))
+        .map(|(k, v)| (k.to_string(), v.unwrap_or(Cow::Borrowed("")).to_string()))
         .collect()
 }
 
