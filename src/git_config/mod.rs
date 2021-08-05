@@ -82,7 +82,7 @@ fn parse_config_from_env_var() -> HashMap<String, String> {
 fn parse_config_from_env_var_value(s: &str) -> HashMap<String, String> {
     ConfigParametersIter::new(s)
         .filter(|(k, _)| k.starts_with("delta."))
-        .map(|(k, v)| (k.to_string(), v.unwrap_or(Cow::Borrowed("")).to_string()))
+        .map(|(k, v)| (k.into_owned(), v.map(Cow::into_owned).unwrap_or_default()))
         .collect()
 }
 
