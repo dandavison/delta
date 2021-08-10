@@ -33,6 +33,7 @@ pub struct Config {
     pub file_modified_label: String,
     pub file_removed_label: String,
     pub file_renamed_label: String,
+    pub hunk_label: String,
     pub file_style: Style,
     pub git_config_entries: HashMap<String, GitConfigEntry>,
     pub hunk_header_file_style: Style,
@@ -178,6 +179,7 @@ impl From<cli::Opt> for Config {
         let file_modified_label = opt.file_modified_label;
         let file_removed_label = opt.file_removed_label;
         let file_renamed_label = opt.file_renamed_label;
+        let hunk_label = opt.hunk_label;
 
         let navigate_regexp = if opt.navigate || opt.show_themes {
             Some(navigate::make_navigate_regexp(
@@ -186,6 +188,7 @@ impl From<cli::Opt> for Config {
                 &file_added_label,
                 &file_removed_label,
                 &file_renamed_label,
+                &hunk_label,
             ))
         } else {
             None
@@ -208,6 +211,7 @@ impl From<cli::Opt> for Config {
             file_modified_label,
             file_removed_label,
             file_renamed_label,
+            hunk_label,
             file_style,
             git_config_entries: opt.git_config_entries,
             hunk_header_file_style,

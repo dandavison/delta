@@ -136,6 +136,7 @@ pub fn set_options(
             file_modified_label,
             file_removed_label,
             file_renamed_label,
+            hunk_label,
             file_style,
             hunk_header_decoration_style,
             hunk_header_file_style,
