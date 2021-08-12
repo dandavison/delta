@@ -53,7 +53,9 @@ pub mod errors {
 }
 
 #[cfg(not(tarpaulin_include))]
-/// `Ok` of the `Result` contains with the exit code value
+// An Ok result contains the desired process exit code. Note that 1 is used to
+// report that two files differ when delta is called with two positional
+// arguments and without standard input; 2 is used to report a real problem.
 fn run_app() -> std::io::Result<i32> {
     let assets = HighlightingAssets::new();
     let opt = cli::Opt::from_args_and_git_config(&mut git_config::GitConfig::try_create(), assets);
@@ -120,31 +122,38 @@ fn diff(
     writer: &mut dyn Write,
 ) -> i32 {
     use std::io::BufReader;
-    let die = || {
+    if minus_file.is_none() || plus_file.is_none() {
         eprintln!(
             "\
 The main way to use delta is to configure it as the pager for git: \
 see https://github.com/dandavison/delta#configuration. \
 You can also use delta to diff two files: `delta file_A file_B`."
         );
-        process::exit(config.error_exit_code);
-    };
+        return config.error_exit_code;
+    }
+    let minus_file = minus_file.unwrap();
+    let plus_file = plus_file.unwrap();
+
     let diff_command = "git";
-    let minus_file = minus_file.unwrap_or_else(die);
-    let plus_file = plus_file.unwrap_or_else(die);
     let diff_command_path = match grep_cli::resolve_binary(PathBuf::from(diff_command)) {
         Ok(path) => path,
-        Err(_) => return config.error_exit_code,
+        Err(err) => {
+            eprintln!("Failed to resolve command '{}': {}", diff_command, err);
+            return config.error_exit_code;
+        }
     };
-    let mut diff_process = process::Command::new(diff_command_path)
+
+    let diff_process = process::Command::new(diff_command_path)
         .args(&["diff", "--no-index"])
         .args(&[minus_file, plus_file])
         .stdout(process::Stdio::piped())
-        .spawn()
-        .unwrap_or_else(|err| {
-            eprintln!("Failed to execute the command '{}': {}", diff_command, err);
-            process::exit(config.error_exit_code);
-        });
+        .spawn();
+
+    if let Err(err) = diff_process {
+        eprintln!("Failed to execute the command '{}': {}", diff_command, err);
+        return config.error_exit_code;
+    }
+    let mut diff_process = diff_process.unwrap();
 
     let exit_code = diff_process
         .wait()
@@ -154,7 +163,7 @@ You can also use delta to diff two files: `delta file_A file_B`."
         .code()
         .unwrap_or_else(|| {
             eprintln!("'{}' process terminated without exit status.", diff_command);
-            process::exit(config.error_exit_code);
+            config.error_exit_code
         });
 
     if let Err(error) = delta(
@@ -163,10 +172,10 @@ You can also use delta to diff two files: `delta file_A file_B`."
         &config,
     ) {
         match error.kind() {
-            ErrorKind::BrokenPipe => process::exit(0),
+            ErrorKind::BrokenPipe => return 0,
             _ => {
                 eprintln!("{}", error);
-                process::exit(config.error_exit_code);
+                return config.error_exit_code;
             }
         }
     };
