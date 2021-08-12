@@ -43,11 +43,11 @@ pub fn make_navigate_regexp(
     } else {
         format!(
             "^(commit|{}|{}|{}|{}|{})",
-            hunk_label,
-            file_modified_label,
             file_added_label,
             file_removed_label,
             file_renamed_label,
+            file_modified_label,
+            hunk_label,
         )
     }
 }
