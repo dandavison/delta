@@ -109,6 +109,10 @@ fn run_app() -> std::io::Result<i32> {
 
 #[cfg(not(tarpaulin_include))]
 fn main() -> std::io::Result<()> {
+    // Ignore ctrl-c (SIGINT) to avoid leaving an orphaned pager process.
+    // See https://github.com/dandavison/delta/issues/681
+    ctrlc::set_handler(|| {})
+        .unwrap_or_else(|err| eprintln!("Failed to set ctrl-c handler: {}", err));
     let exit_code = run_app()?;
     // when you call process::exit, no destructors are called, so we want to do it only once, here
     process::exit(exit_code);
