@@ -93,7 +93,7 @@ pub fn set_options(
     set_widths(opt, git_config, arg_matches, &option_names);
 
     // Set light, dark, and syntax-theme.
-    set_true_color(opt);
+    set_true_color(opt, git_config, arg_matches, &option_names);
     set__light__dark__syntax_theme__options(opt, git_config, arg_matches, &option_names);
     theme::set__is_light_mode__syntax_theme__syntax_set(opt, assets);
 
@@ -556,14 +556,31 @@ fn set_widths(
         background_color_extends_to_terminal_width;
 }
 
-fn set_true_color(opt: &mut cli::Opt) {
+fn set_true_color(
+    opt: &mut cli::Opt,
+    git_config: &mut Option<GitConfig>,
+    arg_matches: &clap::ArgMatches,
+    option_names: &HashMap<&str, &str>,
+) {
     if opt.true_color == "auto" {
         // It's equal to its default, so the user might be using the deprecated
         // --24-bit-color option.
         if let Some(_24_bit_color) = opt._24_bit_color.as_ref() {
             opt.true_color = _24_bit_color.clone();
+        } else {
+            let empty_builtin_features = HashMap::new();
+            set_options!(
+                [true_color],
+                opt,
+                &empty_builtin_features,
+                git_config,
+                arg_matches,
+                option_names,
+                false
+            );
         }
     }
+
     opt.computed.true_color = match opt.true_color.as_ref() {
         "always" => true,
         "never" => false,
