@@ -496,3 +496,25 @@ pub fn delta_unreachable(message: &str) -> ! {
     );
     process::exit(error_exit_code);
 }
+
+#[cfg(test)]
+pub mod tests {
+    use crate::tests::integration_test_utils;
+    use std::fs::remove_file;
+
+    #[test]
+    fn test_get_true_color_from_config() {
+        let git_config_contents = r#"
+[delta]
+    true-color = never
+"#;
+        let git_config_path = "delta__test_get_true_color_from_config.gitconfig";
+        let config = integration_test_utils::make_config_from_args_and_git_config(
+            &[],
+            Some(git_config_contents.as_bytes()),
+            Some(git_config_path),
+        );
+        assert!(!config.true_color);
+        remove_file(git_config_path).unwrap();
+    }
+}
