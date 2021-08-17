@@ -637,7 +637,6 @@ pub struct ComputedValues {
     pub inspect_raw_lines: InspectRawLines,
     pub is_light_mode: bool,
     pub paging_mode: PagingMode,
-    pub syntax_dummy_theme: SyntaxTheme,
     pub syntax_set: SyntaxSet,
     pub syntax_theme: Option<SyntaxTheme>,
     pub true_color: bool,
