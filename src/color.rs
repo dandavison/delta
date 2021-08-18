@@ -90,7 +90,7 @@ pub fn ansi_16_color_name_to_number(name: &str) -> Option<u8> {
 fn ansi_16_color_number_to_name(n: u8) -> Option<&'static str> {
     for (k, _n) in &*ANSI_16_COLORS {
         if *_n == n {
-            return Some(&*k);
+            return Some(*k);
         }
     }
     None

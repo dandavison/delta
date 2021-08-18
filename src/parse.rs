@@ -102,7 +102,7 @@ fn _parse_file_path(s: &str, git_diff_name: bool) -> String {
     match s.strip_suffix('\t').unwrap_or(s) {
         path if path == "/dev/null" => "/dev/null",
         path if git_diff_name && DIFF_PREFIXES.iter().any(|s| path.starts_with(s)) => &path[2..],
-        path if git_diff_name => &path,
+        path if git_diff_name => path,
         path => path.split('\t').next().unwrap_or(""),
     }
     .to_string()
@@ -142,7 +142,7 @@ pub fn get_file_extension_from_file_meta_line_file_path(path: &str) -> Option<&s
     if path.is_empty() || path == "/dev/null" {
         None
     } else {
-        get_extension(&path).map(|ex| ex.trim())
+        get_extension(path).map(|ex| ex.trim())
     }
 }
 

@@ -173,7 +173,7 @@ You can also use delta to diff two files: `delta file_A file_B`."
     if let Err(error) = delta(
         BufReader::new(diff_process.stdout.unwrap()).byte_lines(),
         writer,
-        &config,
+        config,
     ) {
         match error.kind() {
             ErrorKind::BrokenPipe => return 0,
@@ -363,7 +363,7 @@ fn show_themes(dark: bool, light: bool, computed_theme_is_light: bool) -> std::i
 
     for theme in &get_themes(git_config::GitConfig::try_create()) {
         let opt =
-            cli::Opt::from_iter_and_git_config(&["", "", "--features", &theme], &mut git_config);
+            cli::Opt::from_iter_and_git_config(&["", "", "--features", theme], &mut git_config);
         let is_dark_theme = opt.dark;
         let is_light_theme = opt.light;
         let config = config::Config::from(opt);
