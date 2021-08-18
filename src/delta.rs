@@ -112,7 +112,7 @@ impl<'a> StateMachine<'a> {
             let line = &self.line;
 
             if self.source == Source::Unknown {
-                self.source = detect_source(&line);
+                self.source = detect_source(line);
             }
 
             let mut handled_line = if self.config.commit_regex.is_match(line) {
@@ -174,7 +174,7 @@ impl<'a> StateMachine<'a> {
 
     fn ingest_line(&mut self, raw_line_bytes: &[u8]) {
         // TODO: retain raw_line as Cow
-        self.raw_line = String::from_utf8_lossy(&raw_line_bytes).to_string();
+        self.raw_line = String::from_utf8_lossy(raw_line_bytes).to_string();
         if self.config.max_line_length > 0 && self.raw_line.len() > self.config.max_line_length {
             self.raw_line = ansi::truncate_str(
                 &self.raw_line,

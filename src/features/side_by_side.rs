@@ -190,8 +190,8 @@ fn paint_left_panel_minus_line<'a>(
 ) -> String {
     let (mut panel_line, panel_line_is_empty) = paint_minus_or_plus_panel_line(
         line_index,
-        &syntax_style_sections,
-        &diff_style_sections,
+        syntax_style_sections,
+        diff_style_sections,
         state,
         line_numbers_data,
         PanelSide::Left,
@@ -224,8 +224,8 @@ fn paint_right_panel_plus_line<'a>(
 ) -> String {
     let (mut panel_line, panel_line_is_empty) = paint_minus_or_plus_panel_line(
         line_index,
-        &syntax_style_sections,
-        &diff_style_sections,
+        syntax_style_sections,
+        diff_style_sections,
         state,
         line_numbers_data,
         PanelSide::Right,
@@ -384,13 +384,13 @@ fn right_pad_left_panel_line(
         };
     };
     // Pad with (maybe painted) spaces to the panel width.
-    let text_width = ansi::measure_text_width(&panel_line);
+    let text_width = ansi::measure_text_width(panel_line);
     let panel_width = config.side_by_side_data.left_panel.width;
     if text_width < panel_width {
         let fill_style = get_right_fill_style_for_left_panel(
             panel_line_is_empty,
             line_index,
-            &diff_style_sections,
+            diff_style_sections,
             state,
             background_color_extends_to_terminal_width,
             config,
@@ -420,7 +420,7 @@ fn right_fill_right_panel_line(
     config: &Config,
 ) {
     *panel_line = ansi::truncate_str(
-        &panel_line,
+        panel_line,
         config.side_by_side_data.right_panel.width,
         &config.truncation_symbol,
     )

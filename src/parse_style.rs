@@ -19,7 +19,7 @@ impl Style {
         is_emph: bool,
     ) -> Self {
         let (ansi_term_style, is_omitted, is_raw, is_syntax_highlighted) =
-            parse_ansi_term_style(&style_string, default, true_color);
+            parse_ansi_term_style(style_string, default, true_color);
         let decoration_style =
             DecorationStyle::from_str(decoration_style_string.unwrap_or(""), true_color);
         Self {
@@ -132,7 +132,7 @@ bitflags! {
 impl DecorationStyle {
     pub fn from_str(style_string: &str, true_color: bool) -> Self {
         let (special_attributes, style_string) =
-            extract_special_decoration_attributes(&style_string);
+            extract_special_decoration_attributes(style_string);
         let (style, is_omitted, is_raw, is_syntax_highlighted) =
             parse_ansi_term_style(&style_string, None, true_color);
         if is_raw {

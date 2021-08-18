@@ -148,7 +148,7 @@ fn write_to_output_buffer(
             &lines,
             &delta::State::HunkHeader,
             &mut painter.highlighter,
-            &painter.config,
+            painter.config,
         );
         Painter::paint_lines(
             syntax_style_sections,

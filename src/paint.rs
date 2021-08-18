@@ -69,7 +69,7 @@ impl<'a> Painter<'a> {
 
     pub fn set_highlighter(&mut self) {
         if let Some(ref syntax_theme) = self.config.syntax_theme {
-            self.highlighter = HighlightLines::new(self.syntax, &syntax_theme)
+            self.highlighter = HighlightLines::new(self.syntax, syntax_theme)
         };
     }
 
@@ -205,7 +205,7 @@ impl<'a> Painter<'a> {
             &lines,
             &state,
             &mut self.highlighter,
-            &self.config,
+            self.config,
         );
         let diff_style_sections = vec![(self.config.zero_style, lines[0].0.as_str())]; // TODO: compute style from state
 
@@ -496,11 +496,11 @@ impl<'a> Painter<'a> {
     ) {
         let (minus_lines, minus_styles): (Vec<&str>, Vec<Style>) = minus_lines
             .iter()
-            .map(|(s, t)| (s.as_str(), *config.get_style(&t)))
+            .map(|(s, t)| (s.as_str(), *config.get_style(t)))
             .unzip();
         let (plus_lines, plus_styles): (Vec<&str>, Vec<Style>) = plus_lines
             .iter()
-            .map(|(s, t)| (s.as_str(), *config.get_style(&t)))
+            .map(|(s, t)| (s.as_str(), *config.get_style(t)))
             .unzip();
         let mut diff_sections = edits::infer_edits(
             minus_lines,

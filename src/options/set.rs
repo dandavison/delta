@@ -221,7 +221,7 @@ fn set__light__dark__syntax_theme__options(
         }
     };
     let empty_builtin_features = HashMap::new();
-    validate_light_and_dark(&opt);
+    validate_light_and_dark(opt);
     if !(opt.light || opt.dark) {
         set_options!(
             [dark, light],
@@ -233,7 +233,7 @@ fn set__light__dark__syntax_theme__options(
             false
         );
     }
-    validate_light_and_dark(&opt);
+    validate_light_and_dark(opt);
     set_options!(
         [syntax_theme],
         opt,
@@ -304,7 +304,7 @@ fn gather_features(
     // Gather features from command line.
     if let Some(git_config) = git_config {
         for feature in split_feature_string(&opt.features.to_lowercase()) {
-            gather_features_recursively(feature, &mut features, &builtin_features, opt, git_config);
+            gather_features_recursively(feature, &mut features, builtin_features, opt, git_config);
         }
     } else {
         for feature in split_feature_string(&opt.features.to_lowercase()) {
@@ -315,33 +315,28 @@ fn gather_features(
     // Gather builtin feature flags supplied on command line.
     // TODO: Iterate over programatically-obtained names of builtin features.
     if opt.raw {
-        gather_builtin_features_recursively("raw", &mut features, &builtin_features, opt);
+        gather_builtin_features_recursively("raw", &mut features, builtin_features, opt);
     }
     if opt.color_only {
-        gather_builtin_features_recursively("color-only", &mut features, &builtin_features, opt);
+        gather_builtin_features_recursively("color-only", &mut features, builtin_features, opt);
     }
     if opt.diff_highlight {
-        gather_builtin_features_recursively(
-            "diff-highlight",
-            &mut features,
-            &builtin_features,
-            opt,
-        );
+        gather_builtin_features_recursively("diff-highlight", &mut features, builtin_features, opt);
     }
     if opt.diff_so_fancy {
-        gather_builtin_features_recursively("diff-so-fancy", &mut features, &builtin_features, opt);
+        gather_builtin_features_recursively("diff-so-fancy", &mut features, builtin_features, opt);
     }
     if opt.hyperlinks {
-        gather_builtin_features_recursively("hyperlinks", &mut features, &builtin_features, opt);
+        gather_builtin_features_recursively("hyperlinks", &mut features, builtin_features, opt);
     }
     if opt.line_numbers {
-        gather_builtin_features_recursively("line-numbers", &mut features, &builtin_features, opt);
+        gather_builtin_features_recursively("line-numbers", &mut features, builtin_features, opt);
     }
     if opt.navigate {
-        gather_builtin_features_recursively("navigate", &mut features, &builtin_features, opt);
+        gather_builtin_features_recursively("navigate", &mut features, builtin_features, opt);
     }
     if opt.side_by_side {
-        gather_builtin_features_recursively("side-by-side", &mut features, &builtin_features, opt);
+        gather_builtin_features_recursively("side-by-side", &mut features, builtin_features, opt);
     }
 
     if let Some(git_config) = git_config {
@@ -352,7 +347,7 @@ fn gather_features(
                     gather_features_recursively(
                         feature,
                         &mut features,
-                        &builtin_features,
+                        builtin_features,
                         opt,
                         git_config,
                     )
@@ -363,7 +358,7 @@ fn gather_features(
         gather_builtin_features_from_flags_in_gitconfig(
             "delta",
             &mut features,
-            &builtin_features,
+            builtin_features,
             opt,
             git_config,
         );
