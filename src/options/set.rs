@@ -321,12 +321,7 @@ fn gather_features(
         gather_builtin_features_recursively("color-only", &mut features, builtin_features, opt);
     }
     if opt.diff_highlight {
-        gather_builtin_features_recursively(
-            "diff-highlight",
-            &mut features,
-            builtin_features,
-            opt,
-        );
+        gather_builtin_features_recursively("diff-highlight", &mut features, builtin_features, opt);
     }
     if opt.diff_so_fancy {
         gather_builtin_features_recursively("diff-so-fancy", &mut features, builtin_features, opt);
