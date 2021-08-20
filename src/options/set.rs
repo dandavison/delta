@@ -574,8 +574,13 @@ fn set_git_config_entries(opt: &mut cli::Opt, git_config: &mut GitConfig) {
 
     // Strings
     for key in &["remote.origin.url"] {
-        if let Some(string) = git_config.get::<String>(key) {
-            if let Ok(repo) = GitRemoteRepo::from_str(&string) {
+        // We use libgit2 Repository::find_remote() instead of using the value
+        // of remote.origin.url directly, in order that "insteadOf" replacements
+        // are honored.
+        // See https://git-scm.com/docs/git-config#Documentation/git-config.txt-urlltbasegtinsteadOf
+        // and #693
+        if let Some(url) = get_remote_url(git_config) {
+            if let Ok(repo) = GitRemoteRepo::from_str(&url) {
                 opt.git_config_entries
                     .insert(key.to_string(), GitConfigEntry::GitRemote(repo));
             }
@@ -590,6 +595,18 @@ fn set_git_config_entries(opt: &mut cli::Opt, git_config: &mut GitConfig) {
             );
         }
     }
+}
+
+fn get_remote_url(git_config: &GitConfig) -> Option<String> {
+    Some(
+        git_config
+            .repo
+            .as_ref()?
+            .find_remote("origin")
+            .ok()?
+            .url()?
+            .to_owned(),
+    )
 }
 
 #[cfg(test)]
