@@ -102,7 +102,7 @@ pub mod tests {
         let builtin_features = make_builtin_features();
         let mut args = vec!["delta".to_string()];
         args.extend(builtin_features.keys().map(|s| format!("--{}", s)));
-        let opt = cli::Opt::from_iter_and_git_config(args, &mut None);
+        let opt = cli::Opt::from_iter_and_git_config(args, None);
         let features: HashSet<&str> = opt.features.split_whitespace().collect();
         for feature in builtin_features.keys() {
             assert!(features.contains(feature.as_str()))

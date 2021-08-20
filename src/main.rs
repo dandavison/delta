@@ -58,7 +58,7 @@ pub mod errors {
 // arguments and without standard input; 2 is used to report a real problem.
 fn run_app() -> std::io::Result<i32> {
     let assets = HighlightingAssets::new();
-    let opt = cli::Opt::from_args_and_git_config(&mut git_config::GitConfig::try_create(), assets);
+    let opt = cli::Opt::from_args_and_git_config(git_config::GitConfig::try_create(), assets);
 
     if opt.list_languages {
         list_languages()?;
@@ -351,19 +351,17 @@ fn show_themes(dark: bool, light: bool, computed_theme_is_light: bool) -> std::i
         }
     };
 
-    let mut git_config = git_config::GitConfig::try_create();
-    let opt = cli::Opt::from_iter_and_git_config(
-        &["", "", "--navigate", "--show-themes"],
-        &mut git_config,
-    );
+    let git_config = git_config::GitConfig::try_create();
+    let opt =
+        cli::Opt::from_iter_and_git_config(&["", "", "--navigate", "--show-themes"], git_config);
     let mut output_type =
         OutputType::from_mode(PagingMode::Always, None, &config::Config::from(opt)).unwrap();
     let title_style = ansi_term::Style::new().bold();
     let writer = output_type.handle().unwrap();
 
     for theme in &get_themes(git_config::GitConfig::try_create()) {
-        let opt =
-            cli::Opt::from_iter_and_git_config(&["", "", "--features", theme], &mut git_config);
+        let git_config = git_config::GitConfig::try_create();
+        let opt = cli::Opt::from_iter_and_git_config(&["", "", "--features", theme], git_config);
         let is_dark_theme = opt.dark;
         let is_light_theme = opt.light;
         let config = config::Config::from(opt);
