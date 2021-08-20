@@ -90,12 +90,8 @@ pub fn set_options(
     let features = gather_features(opt, &builtin_features, git_config);
     opt.features = features.join(" ");
 
-    set_widths(opt, git_config, arg_matches, &option_names);
-
     // Set light, dark, and syntax-theme.
-    set_true_color(opt);
     set__light__dark__syntax_theme__options(opt, git_config, arg_matches, &option_names);
-    theme::set__is_light_mode__syntax_theme__syntax_set(opt, assets);
 
     // HACK: make minus-line styles have syntax-highlighting iff side-by-side.
     if features.contains(&"side-by-side".to_string()) {
@@ -192,6 +188,10 @@ pub fn set_options(
         true
     );
 
+    // Setting ComputedValues
+    set_widths(opt);
+    set_true_color(opt);
+    theme::set__is_light_mode__syntax_theme__syntax_set(opt, assets);
     opt.computed.inspect_raw_lines =
         cli::InspectRawLines::from_str(&opt.inspect_raw_lines).unwrap();
     opt.computed.paging_mode = parse_paging_mode(&opt.paging_mode);
@@ -509,27 +509,9 @@ fn parse_paging_mode(paging_mode_string: &str) -> PagingMode {
     }
 }
 
-fn set_widths(
-    opt: &mut cli::Opt,
-    git_config: &mut Option<GitConfig>,
-    arg_matches: &clap::ArgMatches,
-    option_names: &HashMap<&str, &str>,
-) {
+fn set_widths(opt: &mut cli::Opt) {
     // Allow one character in case e.g. `less --status-column` is in effect. See #41 and #10.
     opt.computed.available_terminal_width = (Term::stdout().size().1 - 1) as usize;
-
-    let empty_builtin_features = HashMap::new();
-    if opt.width.is_none() {
-        set_options!(
-            [width],
-            opt,
-            &empty_builtin_features,
-            git_config,
-            arg_matches,
-            option_names,
-            false
-        );
-    }
 
     let (decorations_width, background_color_extends_to_terminal_width) = match opt.width.as_deref()
     {
@@ -559,6 +541,7 @@ fn set_true_color(opt: &mut cli::Opt) {
             opt.true_color = _24_bit_color.clone();
         }
     }
+
     opt.computed.true_color = match opt.true_color.as_ref() {
         "always" => true,
         "never" => false,
@@ -721,6 +704,7 @@ pub mod tests {
         assert_eq!(opt.side_by_side, true);
         assert_eq!(opt.syntax_theme, Some("xxxyyyzzz".to_string()));
         assert_eq!(opt.tab_width, 77);
+        assert_eq!(opt.true_color, "never");
         assert_eq!(opt.whitespace_error_style, "black black");
         assert_eq!(opt.width, Some("77".to_string()));
         assert_eq!(opt.tokenization_regex, "xxxyyyzzz");

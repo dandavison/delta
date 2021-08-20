@@ -496,3 +496,37 @@ pub fn delta_unreachable(message: &str) -> ! {
     );
     process::exit(error_exit_code);
 }
+
+#[cfg(test)]
+pub mod tests {
+    use crate::bat_utils::output::PagingMode;
+    use crate::cli;
+    use crate::tests::integration_test_utils;
+    use std::fs::remove_file;
+
+    #[test]
+    fn test_get_computed_values_from_config() {
+        let git_config_contents = b"
+[delta]
+    true-color = never
+    width = 100
+    inspect-raw-lines = true
+    paging = never
+    syntax-theme = None
+";
+        let git_config_path = "delta__test_get_true_color_from_config.gitconfig";
+        let config = integration_test_utils::make_config_from_args_and_git_config(
+            &[],
+            Some(git_config_contents),
+            Some(git_config_path),
+        );
+        assert_eq!(config.true_color, false);
+        assert_eq!(config.decorations_width, cli::Width::Fixed(100));
+        assert_eq!(config.background_color_extends_to_terminal_width, true);
+        assert_eq!(config.inspect_raw_lines, cli::InspectRawLines::True);
+        assert_eq!(config.paging_mode, PagingMode::Never);
+        assert!(config.syntax_theme.is_none());
+        // syntax_set doesn't depend on gitconfig.
+        remove_file(git_config_path).unwrap();
+    }
+}
