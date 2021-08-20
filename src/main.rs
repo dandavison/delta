@@ -389,7 +389,6 @@ fn show_themes(dark: bool, light: bool, computed_theme_is_light: bool) -> std::i
 
 #[cfg(not(tarpaulin_include))]
 fn show_syntax_themes() -> std::io::Result<()> {
-    let mut opt = cli::Opt::from_args();
     let assets = HighlightingAssets::new();
     let mut output_type = OutputType::from_mode(
         PagingMode::QuitIfOneScreen,
@@ -398,7 +397,6 @@ fn show_syntax_themes() -> std::io::Result<()> {
     )
     .unwrap();
     let mut writer = output_type.handle().unwrap();
-    opt.computed.syntax_set = assets.syntax_set;
 
     let stdin_data = if !atty::is(atty::Stream::Stdin) {
         let mut buf = Vec::new();
@@ -412,9 +410,16 @@ fn show_syntax_themes() -> std::io::Result<()> {
         None
     };
 
+    let make_opt = || {
+        let mut opt = cli::Opt::from_args();
+        opt.computed.syntax_set = assets.syntax_set.clone();
+        opt
+    };
+    let opt = make_opt();
+
     if !(opt.dark || opt.light) {
-        _show_syntax_themes(opt.clone(), false, &mut writer, stdin_data.as_ref())?;
-        _show_syntax_themes(opt, true, &mut writer, stdin_data.as_ref())?;
+        _show_syntax_themes(opt, false, &mut writer, stdin_data.as_ref())?;
+        _show_syntax_themes(make_opt(), true, &mut writer, stdin_data.as_ref())?;
     } else if opt.light {
         _show_syntax_themes(opt, true, &mut writer, stdin_data.as_ref())?;
     } else {
