@@ -1,11 +1,12 @@
 use std::borrow::Cow;
+use std::str::FromStr;
 
 use lazy_static::lazy_static;
 use regex::{Captures, Regex};
 
 use crate::config::Config;
 use crate::features::OptionValueFunction;
-use crate::git_config::{GitConfigEntry, GitRemoteRepo};
+use crate::git_config::{GitConfig, GitConfigEntry, GitRemoteRepo};
 
 pub fn make_feature() -> Vec<(String, OptionValueFunction)> {
     builtin_feature!([
@@ -28,14 +29,28 @@ pub fn format_commit_line_with_osc8_commit_hyperlink<'a>(
             format_osc8_hyperlink(&commit_link_format.replace("{commit}", commit), commit)
         })
     } else if let Some(GitConfigEntry::GitRemote(GitRemoteRepo::GitHubRepo(repo))) =
-        config.git_config_entries.get("remote.origin.url")
+        config.git_config.as_ref().and_then(get_remote_url)
     {
         COMMIT_LINE_REGEX.replace(line, |captures: &Captures| {
-            format_commit_line_captures_with_osc8_commit_hyperlink(captures, repo)
+            format_commit_line_captures_with_osc8_commit_hyperlink(captures, &repo)
         })
     } else {
         Cow::from(line)
     }
+}
+
+fn get_remote_url(git_config: &GitConfig) -> Option<GitConfigEntry> {
+    git_config
+        .repo
+        .as_ref()?
+        .find_remote("origin")
+        .ok()?
+        .url()
+        .and_then(|url| {
+            GitRemoteRepo::from_str(url)
+                .ok()
+                .map(GitConfigEntry::GitRemote)
+        })
 }
 
 /// Create a file hyperlink to `path`, displaying `text`.
