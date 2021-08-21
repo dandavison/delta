@@ -630,6 +630,9 @@ pub struct Opt {
     pub computed: ComputedValues,
 
     #[structopt(skip)]
+    pub git_config: Option<GitConfig>,
+
+    #[structopt(skip)]
     pub git_config_entries: HashMap<String, GitConfigEntry>,
 }
 
@@ -701,6 +704,7 @@ impl Opt {
         let mut opt = Opt::from_clap(&arg_matches);
         options::rewrite::apply_rewrite_rules(&mut opt, &arg_matches);
         options::set::set_options(&mut opt, &mut git_config, &arg_matches, assets);
+        opt.git_config = git_config;
         opt
     }
 

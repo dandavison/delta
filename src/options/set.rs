@@ -13,7 +13,7 @@ use crate::config;
 use crate::env;
 use crate::errors::*;
 use crate::features;
-use crate::git_config::{GitConfig, GitConfigEntry, GitRemoteRepo};
+use crate::git_config::{GitConfig, GitConfigEntry};
 use crate::options::option_value::{OptionValue, ProvenancedOptionValue};
 use crate::options::theme;
 
@@ -564,21 +564,10 @@ fn is_truecolor_terminal() -> bool {
 }
 
 fn set_git_config_entries(opt: &mut cli::Opt, git_config: &mut GitConfig) {
-    // Styles
     for key in &["color.diff.old", "color.diff.new"] {
         if let Some(style_string) = git_config.get::<String>(key) {
             opt.git_config_entries
                 .insert(key.to_string(), GitConfigEntry::Style(style_string));
-        }
-    }
-
-    // Strings
-    for key in &["remote.origin.url"] {
-        if let Some(string) = git_config.get::<String>(key) {
-            if let Ok(repo) = GitRemoteRepo::from_str(&string) {
-                opt.git_config_entries
-                    .insert(key.to_string(), GitConfigEntry::GitRemote(repo));
-            }
         }
     }
 

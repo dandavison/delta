@@ -15,7 +15,7 @@ use crate::delta::State;
 use crate::env;
 use crate::features::navigate;
 use crate::features::side_by_side;
-use crate::git_config::GitConfigEntry;
+use crate::git_config::{GitConfig, GitConfigEntry};
 use crate::style::{self, Style};
 
 pub struct Config {
@@ -35,6 +35,7 @@ pub struct Config {
     pub file_renamed_label: String,
     pub hunk_label: String,
     pub file_style: Style,
+    pub git_config: Option<GitConfig>,
     pub git_config_entries: HashMap<String, GitConfigEntry>,
     pub hunk_header_file_style: Style,
     pub hunk_header_line_number_style: Style,
@@ -213,6 +214,7 @@ impl From<cli::Opt> for Config {
             file_renamed_label,
             hunk_label,
             file_style,
+            git_config: opt.git_config,
             git_config_entries: opt.git_config_entries,
             hunk_header_file_style,
             hunk_header_line_number_style,
