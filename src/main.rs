@@ -159,19 +159,8 @@ You can also use delta to diff two files: `delta file_A file_B`."
     }
     let mut diff_process = diff_process.unwrap();
 
-    let exit_code = diff_process
-        .wait()
-        .unwrap_or_else(|_| {
-            delta_unreachable(&format!("'{}' process not running.", diff_command));
-        })
-        .code()
-        .unwrap_or_else(|| {
-            eprintln!("'{}' process terminated without exit status.", diff_command);
-            config.error_exit_code
-        });
-
     if let Err(error) = delta(
-        BufReader::new(diff_process.stdout.unwrap()).byte_lines(),
+        BufReader::new(diff_process.stdout.take().unwrap()).byte_lines(),
         writer,
         config,
     ) {
@@ -183,7 +172,20 @@ You can also use delta to diff two files: `delta file_A file_B`."
             }
         }
     };
-    exit_code
+
+    // Return the exit code from the `git diff` processl, so that the exit code
+    // contract of `delta file_A file_B` is the same as that of `diff file_A
+    // file_B` (i.e. 0 if same, 1 if different, 2 if error).
+    diff_process
+        .wait()
+        .unwrap_or_else(|_| {
+            delta_unreachable(&format!("'{}' process not running.", diff_command));
+        })
+        .code()
+        .unwrap_or_else(|| {
+            eprintln!("'{}' process terminated without exit status.", diff_command);
+            config.error_exit_code
+        })
 }
 
 fn show_config(config: &config::Config, writer: &mut dyn Write) -> std::io::Result<()> {
