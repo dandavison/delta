@@ -38,14 +38,14 @@ fn _make_options_from_args_and_git_config(
     let mut args: Vec<&str> = itertools::chain(&["/dev/null", "/dev/null"], args)
         .map(|s| *s)
         .collect();
-    let mut git_config = match (git_config_contents, git_config_path) {
+    let git_config = match (git_config_contents, git_config_path) {
         (Some(contents), Some(path)) => Some(make_git_config(contents, path, honor_env_var)),
         _ => {
             args.push("--no-gitconfig");
             None
         }
     };
-    cli::Opt::from_iter_and_git_config(args, &mut git_config)
+    cli::Opt::from_iter_and_git_config(args, git_config)
 }
 
 pub fn make_options_from_args(args: &[&str]) -> cli::Opt {

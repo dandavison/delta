@@ -13,7 +13,7 @@ use crate::bat_utils::output::PagingMode;
 use crate::git_config::{GitConfig, GitConfigEntry};
 use crate::options;
 
-#[derive(StructOpt, Clone, Default)]
+#[derive(StructOpt, Default)]
 #[structopt(
     name = "delta",
     about = "A viewer for git and diff output",
@@ -678,13 +678,13 @@ impl Default for PagingMode {
 
 impl Opt {
     pub fn from_args_and_git_config(
-        git_config: &mut Option<GitConfig>,
+        git_config: Option<GitConfig>,
         assets: HighlightingAssets,
     ) -> Self {
         Self::from_clap_and_git_config(Self::clap().get_matches(), git_config, assets)
     }
 
-    pub fn from_iter_and_git_config<I>(iter: I, git_config: &mut Option<GitConfig>) -> Self
+    pub fn from_iter_and_git_config<I>(iter: I, git_config: Option<GitConfig>) -> Self
     where
         I: IntoIterator,
         I::Item: Into<OsString> + Clone,
@@ -695,12 +695,12 @@ impl Opt {
 
     fn from_clap_and_git_config(
         arg_matches: clap::ArgMatches,
-        git_config: &mut Option<GitConfig>,
+        mut git_config: Option<GitConfig>,
         assets: HighlightingAssets,
     ) -> Self {
         let mut opt = Opt::from_clap(&arg_matches);
         options::rewrite::apply_rewrite_rules(&mut opt, &arg_matches);
-        options::set::set_options(&mut opt, git_config, &arg_matches, assets);
+        options::set::set_options(&mut opt, &mut git_config, &arg_matches, assets);
         opt
     }
 
