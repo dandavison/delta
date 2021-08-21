@@ -490,6 +490,10 @@ pub struct Opt {
     /// Text to display in front of a renamed file path.
     pub file_renamed_label: String,
 
+    #[structopt(long = "hunk-label", default_value = "")]
+    /// Text to display in front of a hunk header.
+    pub hunk_label: String,
+
     #[structopt(long = "max-line-length", default_value = "512")]
     /// Truncate lines longer than this. To prevent any truncation, set to zero. Note that
     /// syntax-highlighting very long lines (e.g. minified .js) will be very slow if they are not

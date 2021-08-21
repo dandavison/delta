@@ -19,6 +19,12 @@ pub fn make_feature() -> Vec<(String, OptionValueFunction)> {
             String,
             None,
             _opt => "Δ"
+        ),
+        (
+            "hunk-label",
+            String,
+            None,
+            _opt => "δ"
         )
     ])
 }
@@ -30,13 +36,18 @@ pub fn make_navigate_regexp(
     file_added_label: &str,
     file_removed_label: &str,
     file_renamed_label: &str,
+    hunk_label: &str,
 ) -> String {
     if show_themes {
         "^Theme:".to_string()
     } else {
         format!(
-            "^(commit|{}|{}|{}|{})",
-            file_modified_label, file_added_label, file_removed_label, file_renamed_label,
+            "^(commit|{}|{}|{}|{}|{})",
+            regex::escape(file_added_label),
+            regex::escape(file_removed_label),
+            regex::escape(file_renamed_label),
+            regex::escape(file_modified_label),
+            regex::escape(hunk_label),
         )
     }
 }
