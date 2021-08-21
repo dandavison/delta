@@ -126,10 +126,10 @@ fn strip_ansi_codes_from_strings_iterator<'a>(
 
 #[cfg(test)]
 mod tests {
-
+    // Note that src/ansi/console_tests.rs contains additional test coverage for this module.
     use super::{
         ansi_preserving_slice, measure_text_width, parse_first_style,
-        string_starts_with_ansi_style_sequence, strip_ansi_codes,
+        string_starts_with_ansi_style_sequence, strip_ansi_codes, truncate_str,
     };
 
     #[test]
@@ -205,5 +205,14 @@ mod tests {
             ansi_preserving_slice("\x1b[1;36m-\x1b[m\x1b[1;36m2222·2222·2222·2222\x1b[m\n", 1),
             "\x1b[1;36m\x1b[m\x1b[1;36m2222·2222·2222·2222\x1b[m\n"
         )
+    }
+
+    #[test]
+    fn test_truncate_str() {
+        assert_eq!(truncate_str("1", 1, ""), "1");
+        assert_eq!(truncate_str("12", 1, ""), "1");
+        assert_eq!(truncate_str("123", 2, "s"), "1s");
+        assert_eq!(truncate_str("123", 2, "→"), "1→");
+        assert_eq!(truncate_str("12ݶ", 1, "ݶ"), "ݶ");
     }
 }
