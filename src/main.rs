@@ -469,7 +469,11 @@ index f38589a..0f1bb83 100644
         .filter(|(t, _)| is_light_syntax_theme(t) == is_light_mode)
         .map(|(t, _)| t)
     {
-        writeln!(writer, "\n\nTheme: {}\n", title_style.paint(syntax_theme))?;
+        writeln!(
+            writer,
+            "\n\nSyntax theme: {}\n",
+            title_style.paint(syntax_theme)
+        )?;
         config.syntax_theme = Some(assets.theme_set.themes[syntax_theme.as_str()].clone());
         if let Err(error) = delta(ByteLines::new(BufReader::new(&input[0..])), writer, &config) {
             match error.kind() {
@@ -496,11 +500,11 @@ pub fn _list_syntax_themes_for_humans(writer: &mut dyn Write) -> std::io::Result
     let assets = HighlightingAssets::new();
     let themes = &assets.theme_set.themes;
 
-    writeln!(writer, "Light themes:")?;
+    writeln!(writer, "Light syntax themes:")?;
     for (theme, _) in themes.iter().filter(|(t, _)| is_light_syntax_theme(*t)) {
         writeln!(writer, "    {}", theme)?;
     }
-    writeln!(writer, "\nDark themes:")?;
+    writeln!(writer, "\nDark syntax themes:")?;
     for (theme, _) in themes.iter().filter(|(t, _)| !is_light_syntax_theme(*t)) {
         writeln!(writer, "    {}", theme)?;
     }
@@ -564,7 +568,7 @@ mod main_tests {
         writer.seek(SeekFrom::Start(0)).unwrap();
         writer.read_to_string(&mut s).unwrap();
         let s = ansi::strip_ansi_codes(&s);
-        assert!(s.contains("\nTheme: gruvbox-light\n"));
+        assert!(s.contains("\nSyntax theme: gruvbox-light\n"));
         println!("{}", s);
         assert!(s.contains("\nfn print_cube(num: f64) {\n"));
     }
@@ -576,9 +580,9 @@ mod main_tests {
         let mut s = String::new();
         writer.seek(SeekFrom::Start(0)).unwrap();
         writer.read_to_string(&mut s).unwrap();
-        assert!(s.contains("Light themes:\n"));
+        assert!(s.contains("Light syntax themes:\n"));
         assert!(s.contains("    GitHub\n"));
-        assert!(s.contains("Dark themes:\n"));
+        assert!(s.contains("Dark syntax themes:\n"));
         assert!(s.contains("    Dracula\n"));
     }
 
