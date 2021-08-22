@@ -496,8 +496,7 @@ pub struct Opt {
 
     #[structopt(long = "max-line-length", default_value = "512")]
     /// Truncate lines longer than this. To prevent any truncation, set to zero. Note that
-    /// syntax-highlighting very long lines (e.g. minified .js) will be very slow if they are not
-    /// truncated.
+    /// delta will be slow on very long lines (e.g. minified .js) if truncation is disabled.
     pub max_line_length: usize,
 
     /// The width of underline/overline decorations. Use --width=variable to extend decorations and
