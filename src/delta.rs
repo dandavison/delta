@@ -140,10 +140,11 @@ impl<'a> StateMachine<'a> {
             } else if line.starts_with("@@") {
                 self.handle_hunk_header_line()?
             } else if self.source == Source::DiffUnified && line.starts_with("Only in ")
-                || line.starts_with("Submodule ")
                 || line.starts_with("Binary files ")
             {
-                self.handle_additional_file_meta_cases()?
+                self.handle_additional_cases(Some(State::FileMeta))?
+            } else if line.starts_with("Submodule ") {
+                self.handle_additional_cases(None)?
             } else if self.state.is_in_hunk() {
                 // A true hunk line should start with one of: '+', '-', ' '. However, handle_hunk_line
                 // handles all lines until the state transitions away from the hunk states.
@@ -381,10 +382,10 @@ impl<'a> StateMachine<'a> {
         _write_generic_file_meta_header_line(&line, &line, &mut self.painter, self.config)
     }
 
-    fn handle_additional_file_meta_cases(&mut self) -> std::io::Result<bool> {
+    fn handle_additional_cases(&mut self, to_state: Option<State>) -> std::io::Result<bool> {
         let mut handled_line = false;
 
-        // Additional FileMeta cases:
+        // Additional cases:
         //
         // 1. When comparing directories with diff -u, if filenames match between the
         //    directories, the files themselves will be compared. However, if an equivalent
@@ -398,7 +399,9 @@ impl<'a> StateMachine<'a> {
         // proposal for more robust parsing logic.
 
         self.painter.paint_buffered_minus_and_plus_lines();
-        self.state = State::FileMeta;
+        if let Some(state) = to_state {
+            self.state = state;
+        }
         if self.should_handle() {
             self.painter.emit()?;
             _write_generic_file_meta_header_line(
