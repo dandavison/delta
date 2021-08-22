@@ -133,7 +133,7 @@ pub mod ansi_test_utils {
         let syntax_style_sections = paint::Painter::get_syntax_style_sections_for_lines(
             &lines,
             &state,
-            &mut painter.highlighter,
+            painter.highlighter.as_mut(),
             config,
         );
         let diff_style_sections = vec![vec![(syntax_highlighted_style, lines[0].0.as_str())]];

@@ -147,7 +147,7 @@ fn write_to_output_buffer(
         let syntax_style_sections = Painter::get_syntax_style_sections_for_lines(
             &lines,
             &delta::State::HunkHeader,
-            &mut painter.highlighter,
+            painter.highlighter.as_mut(),
             painter.config,
         );
         Painter::paint_lines(
