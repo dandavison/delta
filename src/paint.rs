@@ -20,7 +20,7 @@ pub struct Painter<'a> {
     pub plus_lines: Vec<(String, State)>,
     pub writer: &'a mut dyn Write,
     pub syntax: &'a SyntaxReference,
-    pub highlighter: HighlightLines<'a>,
+    pub highlighter: Option<HighlightLines<'a>>,
     pub config: &'a config::Config,
     pub output_buffer: String,
     pub line_numbers_data: line_numbers::LineNumbersData<'a>,
@@ -29,8 +29,6 @@ pub struct Painter<'a> {
 impl<'a> Painter<'a> {
     pub fn new(writer: &'a mut dyn Write, config: &'a config::Config) -> Self {
         let default_syntax = Self::get_syntax(&config.syntax_set, None);
-        // TODO: Avoid doing this.
-        let dummy_highlighter = HighlightLines::new(default_syntax, &config.syntax_dummy_theme);
 
         let line_numbers_data = if config.line_numbers {
             line_numbers::LineNumbersData::from_format_strings(
@@ -45,7 +43,7 @@ impl<'a> Painter<'a> {
             plus_lines: Vec::new(),
             output_buffer: String::new(),
             syntax: default_syntax,
-            highlighter: dummy_highlighter,
+            highlighter: None,
             writer,
             config,
             line_numbers_data,
@@ -69,7 +67,7 @@ impl<'a> Painter<'a> {
 
     pub fn set_highlighter(&mut self) {
         if let Some(ref syntax_theme) = self.config.syntax_theme {
-            self.highlighter = HighlightLines::new(self.syntax, syntax_theme)
+            self.highlighter = Some(HighlightLines::new(self.syntax, syntax_theme))
         };
     }
 
@@ -127,13 +125,13 @@ impl<'a> Painter<'a> {
         let minus_line_syntax_style_sections = Self::get_syntax_style_sections_for_lines(
             &self.minus_lines,
             &State::HunkMinus(None),
-            &mut self.highlighter,
+            self.highlighter.as_mut(),
             self.config,
         );
         let plus_line_syntax_style_sections = Self::get_syntax_style_sections_for_lines(
             &self.plus_lines,
             &State::HunkPlus(None),
-            &mut self.highlighter,
+            self.highlighter.as_mut(),
             self.config,
         );
         let (minus_line_diff_style_sections, plus_line_diff_style_sections, line_alignment) =
@@ -204,7 +202,7 @@ impl<'a> Painter<'a> {
         let syntax_style_sections = Painter::get_syntax_style_sections_for_lines(
             &lines,
             &state,
-            &mut self.highlighter,
+            self.highlighter.as_mut(),
             self.config,
         );
         let diff_style_sections = vec![(self.config.zero_style, lines[0].0.as_str())]; // TODO: compute style from state
@@ -477,20 +475,28 @@ impl<'a> Painter<'a> {
     pub fn get_syntax_style_sections_for_lines<'s>(
         lines: &'s [(String, State)],
         state: &State,
-        highlighter: &mut HighlightLines,
+        highlighter: Option<&mut HighlightLines>,
         config: &config::Config,
     ) -> Vec<Vec<(SyntectStyle, &'s str)>> {
-        let fake = !Painter::should_compute_syntax_highlighting(state, config);
         let mut line_sections = Vec::new();
-        for (line, _) in lines.iter() {
-            if fake {
-                line_sections.push(vec![(config.null_syntect_style, line.as_str())])
-            } else {
+        match (
+            highlighter,
+            Painter::should_compute_syntax_highlighting(state, config),
+        ) {
+            (Some(highlighter), true) => {
                 // The first character is a space injected by delta. See comment in
                 // Painter:::prepare.
-                let mut this_line_sections = highlighter.highlight(&line[1..], &config.syntax_set);
-                this_line_sections.insert(0, (config.null_syntect_style, &line[..1]));
-                line_sections.push(this_line_sections);
+                for (line, _) in lines.iter() {
+                    let mut this_line_sections =
+                        highlighter.highlight(&line[1..], &config.syntax_set);
+                    this_line_sections.insert(0, (config.null_syntect_style, &line[..1]));
+                    line_sections.push(this_line_sections);
+                }
+            }
+            _ => {
+                for (line, _) in lines.iter() {
+                    line_sections.push(vec![(config.null_syntect_style, line.as_str())])
+                }
             }
         }
         line_sections
