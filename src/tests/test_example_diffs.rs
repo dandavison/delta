@@ -201,6 +201,16 @@ mod tests {
     }
 
     #[test]
+    fn test_submodule_diff_log() {
+        // See etc/examples/662-submodules
+        // diff.submodule = log
+        let config = integration_test_utils::make_config_from_args(&["--width", "49"]);
+        let output = integration_test_utils::run_delta(SUBMODULE_DIFF_LOG, &config);
+        let output = strip_ansi_codes(&output);
+        assert_eq!(output, SUBMODULE_DIFF_LOG_EXPECTED_OUTPUT);
+    }
+
+    #[test]
     fn test_submodule_contains_untracked_content() {
         let config = integration_test_utils::make_config_from_args(&[]);
         let output =
@@ -1900,6 +1910,62 @@ This is a regular file that contains:
  Some text here
 -Some text with a minus
 +Some text with a plus
+";
+
+    // See etc/examples/662-submodules
+    // diff.submodule = log
+    const SUBMODULE_DIFF_LOG: &str = "\
+commit ccb444baa861fdcb14d411b471a74614ed28776d
+Author: Dan Davison <dandavison7@gmail.com>
+Date:   Sat Aug 21 18:56:34 2021 -0700
+
+    Update all submodules
+
+Submodule submoduleA f4f55af..310b551 (rewind):
+  < Submodule A extra change 2
+  < Submodule A extra change 1
+  < Submodule A initial commit 4
+  < Submodule A initial commit 3
+Submodule submoduleB 0ffa700..0c8b00d:
+  > Submodule B stage change 3
+  > Submodule B stage change 2
+  > Submodule B stage change 1
+Submodule submoduleC 9f3b744...e04f848:
+  > Submodule C stage change 3
+  > Submodule C stage change 2
+  < Submodule C extra change 2
+  > Submodule C stage change 1
+  < Submodule C extra change 1
+";
+
+    const SUBMODULE_DIFF_LOG_EXPECTED_OUTPUT: &str = "\
+commit ccb444baa861fdcb14d411b471a74614ed28776d
+Author: Dan Davison <dandavison7@gmail.com>
+Date:   Sat Aug 21 18:56:34 2021 -0700
+
+    Update all submodules
+
+
+Submodule submoduleA f4f55af..310b551 (rewind):
+─────────────────────────────────────────────────
+  < Submodule A extra change 2
+  < Submodule A extra change 1
+  < Submodule A initial commit 4
+  < Submodule A initial commit 3
+
+Submodule submoduleB 0ffa700..0c8b00d:
+─────────────────────────────────────────────────
+  > Submodule B stage change 3
+  > Submodule B stage change 2
+  > Submodule B stage change 1
+
+Submodule submoduleC 9f3b744...e04f848:
+─────────────────────────────────────────────────
+  > Submodule C stage change 3
+  > Submodule C stage change 2
+  < Submodule C extra change 2
+  > Submodule C stage change 1
+  < Submodule C extra change 1
 ";
 
     const SUBMODULE_CONTAINS_UNTRACKED_CONTENT_INPUT: &str = "\

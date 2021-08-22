@@ -100,6 +100,7 @@ impl Config {
             State::CommitMeta => &self.commit_style,
             State::FileMeta => &self.file_style,
             State::HunkHeader => &self.hunk_header_style,
+            State::Submodule => &self.file_style,
             _ => delta_unreachable("Unreachable code reached in get_style."),
         }
     }

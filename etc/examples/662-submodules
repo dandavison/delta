@@ -1,0 +1,45 @@
+#!/bin/bash
+REPO_ROOT=/tmp/submodule-diff-example
+REPO_DATE_FMT=%H:%M:%S.%N
+mkdir ${REPO_ROOT} && git -C ${REPO_ROOT} init && cd ${REPO_ROOT}
+date +${REPO_DATE_FMT} >> baserepo && git add baserepo && git commit -m "Base repo commit 1"
+
+for sub in A B C; do
+    git init submodule${sub}
+    for iter in $(seq 1 4); do
+        date +${REPO_DATE_FMT} >> submodule${sub}/subcontent
+        git -C submodule${sub} add subcontent && git -C submodule${sub} commit -m "Submodule ${sub} initial commit $iter"
+    done
+    # Add initial submodule, message of "Submodule submoduleX 0000000...xxxxxxx (new submodule)", no individual commits
+    git submodule add ../bogus-url-${sub} submodule${sub} && \
+        git commit -m "Add submodule${sub}" # the diff handling for this is correct in delta
+
+    # Create additional submodule commits
+    for iter in $(seq 1 2); do
+        date +${REPO_DATE_FMT} >> submodule${sub}/subcontent
+        git -C submodule${sub} add subcontent && git -C submodule${sub} commit -m "Submodule ${sub} extra change ${iter}"
+    done
+    git add submodule${sub} && git commit -m "Update submodule${sub}"
+done
+
+git -C submoduleA reset --hard HEAD~4
+git -C submoduleC reset --hard HEAD~2
+
+for sub in B C; do
+    for iter in $(seq 1 3); do
+        date +${REPO_DATE_FMT} >> submodule${sub}/subcontent
+        git -C submodule${sub} add subcontent && git -C submodule${sub} commit -m "Submodule ${sub} stage change ${iter}"
+    done
+done
+
+# Add all submodule updates in single commit to test multiple submodule updates in single commit
+git add submodule[A-C] && git commit -m "Update all submodules"
+
+# submoduleA end state is only removed commits
+# submoduleB end state is only added commits
+# submoduleC is a mixture of removed and added commits (e.g. different branch)
+
+# Manual, inspect superproject history via:
+#    "git -c diff.submodule=short log -p | delta --no-gitconfig"
+#    "git -c diff.submodule=log log -p | delta --no-gitconfig"
+#    "git -c diff.submodule=diff log -p | delta --no-gitconfig"
