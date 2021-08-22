@@ -24,7 +24,7 @@ pub enum State {
     HunkZero, // In hunk; unchanged line
     HunkMinus(Option<String>), // In hunk; removed line (raw_line)
     HunkPlus(Option<String>), // In hunk; added line (raw_line)
-    Submodule,
+    SubmoduleLog, // In a submodule section, with gitconfig diff.submodule = log
     Unknown,
 }
 
@@ -145,7 +145,7 @@ impl<'a> StateMachine<'a> {
             {
                 self.handle_additional_cases(State::FileMeta)?
             } else if line.starts_with("Submodule ") {
-                self.handle_additional_cases(State::Submodule)?
+                self.handle_additional_cases(State::SubmoduleLog)?
             } else if self.state.is_in_hunk() {
                 // A true hunk line should start with one of: '+', '-', ' '. However, handle_hunk_line
                 // handles all lines until the state transitions away from the hunk states.
