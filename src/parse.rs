@@ -268,6 +268,18 @@ fn get_extension(s: &str) -> Option<&str> {
         .or_else(|| path.file_name().and_then(|s| s.to_str()))
 }
 
+lazy_static! {
+    static ref SUBMODULE_SHORT_LINE_REGEX: Regex =
+        Regex::new("^[-+]Subproject commit ([0-9a-f]{40})$").unwrap();
+}
+
+pub fn get_submodule_short_commit(line: &str) -> Option<&str> {
+    match SUBMODULE_SHORT_LINE_REGEX.captures(line) {
+        Some(caps) => Some(caps.get(1).unwrap().as_str()),
+        None => None,
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
