@@ -450,7 +450,7 @@ impl<'a> StateMachine<'a> {
                 self.painter.emit()?;
                 writeln!(
                     self.painter.writer,
-                    "{} ⟶   {}",
+                    "{}..{}",
                     self.config
                         .minus_style
                         .paint(minus_commit.chars().take(7).collect::<String>()),
