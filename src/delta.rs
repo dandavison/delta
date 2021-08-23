@@ -126,7 +126,8 @@ impl<'a> StateMachine<'a> {
                 || self.handle_additional_file_meta_cases()?
                 || self.handle_submodule_log_line()?
                 || self.handle_submodule_short_line()?
-                || self.handle_hunk_line()?;
+                || self.handle_hunk_line()?
+                || self.handle_blame_line()?;
 
             if self.state == State::FileMeta && self.should_handle() && !self.config.color_only {
                 // Skip file metadata lines unless a raw diff style has been requested.
@@ -461,6 +462,24 @@ impl<'a> StateMachine<'a> {
             }
         }
         Ok(true)
+    }
+
+    fn handle_blame_line(&mut self) -> std::io::Result<bool> {
+        let mut handled_line = false;
+        if let Some(blame) = parse::parse_git_blame_line(&self.line) {
+            writeln!(
+                self.painter.writer,
+                "{}: {} {} {}",
+                self.config.commit_style.paint(blame.commit),
+                blame.author,
+                chrono_humanize::HumanTime::from(blame.time),
+                // highlighter.highlight(&line[1..], &config.syntax_set);
+                blame.code,
+            )?;
+
+            handled_line = true
+        }
+        Ok(handled_line)
     }
 
     fn _handle_additional_cases(&mut self, to_state: State) -> std::io::Result<bool> {

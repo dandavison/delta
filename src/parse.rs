@@ -4,6 +4,8 @@ use std::borrow::Cow;
 use std::path::Path;
 use unicode_segmentation::UnicodeSegmentation;
 
+use chrono::{DateTime, FixedOffset};
+
 use crate::config::Config;
 use crate::features;
 
@@ -277,6 +279,77 @@ pub fn get_submodule_short_commit(line: &str) -> Option<&str> {
     match SUBMODULE_SHORT_LINE_REGEX.captures(line) {
         Some(caps) => Some(caps.get(1).unwrap().as_str()),
         None => None,
+    }
+}
+
+pub struct BlameLine<'a> {
+    pub commit: &'a str,
+    pub author: &'a str,
+    pub time: DateTime<FixedOffset>,
+    pub line_number: usize,
+    pub code: &'a str,
+}
+
+// E.g.
+//ea82f2d0 (Dan Davison       2021-08-22 18:20:19 -0700 120)             let mut handled_line = self.handle_commit_meta_header_line()?
+
+lazy_static! {
+    static ref BLAME_LINE_REGEX: Regex = Regex::new(
+        r"(?x)
+^
+(
+    [0-9a-f]{8}    # commit hash
+)
+[\ ]
+\(                 # open (
+(
+    [^\ ].*         # author name
+)
+[\ ]+
+(                  # timestamp
+    [0-9]{4}-[01][0-9]-[0123][0-9] [012][0-9]:[0-5][0-9]:[0-5][0-9] [-+][0-9]{4}
+)
+[\ ]
+(
+    [0-9]+        # line number
+)
+\)                # close )
+[\ ]
+(
+    .*            # code
+)
+"
+    )
+    .unwrap();
+}
+
+pub fn parse_git_blame_line(line: &str) -> Option<BlameLine> {
+    if let Some(caps) = BLAME_LINE_REGEX.captures(line) {
+        let commit = caps.get(1).unwrap().as_str();
+        let author = caps.get(2).unwrap().as_str();
+        let timestamp = caps.get(3).unwrap().as_str();
+        if let Ok(time) = DateTime::parse_from_str(timestamp, "%Y-%m-%d %H:%M:%S %z") {
+            let line_number_str = caps.get(4).unwrap().as_str();
+            if let Ok(line_number) = line_number_str.parse::<usize>() {
+                let code = caps.get(5).unwrap().as_str();
+                Some(BlameLine {
+                    commit,
+                    author,
+                    time,
+                    line_number,
+                    code,
+                })
+            } else {
+                eprintln!("Failed to parse line number: {}", line_number_str);
+                None
+            }
+        } else {
+            eprintln!("Failed to parse timestamp: {}", timestamp);
+            None
+        }
+    } else {
+        eprintln!("Failed to match:\n{}", line);
+        None
     }
 }
 
