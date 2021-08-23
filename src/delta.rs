@@ -117,56 +117,23 @@ impl<'a> StateMachine<'a> {
                 self.source = detect_source(line);
             }
 
-            let mut handled_line = if self.config.commit_regex.is_match(line) {
-                self.handle_commit_meta_header_line()?
-            } else if (self.state == State::CommitMeta || self.state == State::Unknown)
-                && line.starts_with(' ')
-            {
-                self.handle_diff_stat_line()?
-            } else if line.starts_with("diff ") {
-                self.handle_file_meta_diff_line()?
-            } else if (self.state == State::FileMeta || self.source == Source::DiffUnified)
-                && (line.starts_with("--- ")
-                    || line.starts_with("rename from ")
-                    || line.starts_with("copy from ")
-                    || line.starts_with("old mode "))
-            {
-                self.handle_file_meta_minus_line()?
-            } else if (self.state == State::FileMeta || self.source == Source::DiffUnified)
-                && (line.starts_with("+++ ")
-                    || line.starts_with("rename to ")
-                    || line.starts_with("copy to ")
-                    || line.starts_with("new mode "))
-            {
-                self.handle_file_meta_plus_line()?
-            } else if line.starts_with("@@") {
-                self.handle_hunk_header_line()?
-            } else if self.source == Source::DiffUnified && line.starts_with("Only in ")
-                || line.starts_with("Binary files ")
-            {
-                self.handle_additional_cases(State::FileMeta)?
-            } else if line.starts_with("Submodule ") {
-                self.handle_additional_cases(State::SubmoduleLog)?
-            } else if (matches!(self.state, State::HunkHeader(_, _))
-                && line.starts_with("-Subproject commit "))
-                || (matches!(self.state, State::SubmoduleShort(_))
-                    && line.starts_with("+Subproject commit "))
-            {
-                self.handle_submodule_short_line()?
-            } else if self.state.is_in_hunk() {
-                // A true hunk line should start with one of: '+', '-', ' '. However, handle_hunk_line
-                // handles all lines until the state transitions away from the hunk states.
-                self.handle_hunk_line()?
-            } else {
-                false
-            };
+            let mut handled_line = self.handle_commit_meta_header_line()?
+                || self.handle_diff_stat_line()?
+                || self.handle_file_meta_diff_line()?
+                || self.handle_file_meta_minus_line()?
+                || self.handle_file_meta_plus_line()?
+                || self.handle_hunk_header_line()?
+                || self.handle_additional_file_meta_cases()?
+                || self.handle_submodule_log_line()?
+                || self.handle_submodule_short_line()?
+                || self.handle_hunk_line()?;
+
             if self.state == State::FileMeta && self.should_handle() && !self.config.color_only {
-                // The file metadata section is 4 lines. Skip them under non-plain file-styles.
-                // However in the case of color_only mode,
-                // we won't skip because we can't change raw_line structure.
+                // Skip file metadata lines unless a raw diff style has been requested.
                 handled_line = true
             }
             if !handled_line {
+                // Emit unchanged any line that delta does not handle.
                 self.painter.emit()?;
                 writeln!(
                     self.painter.writer,
@@ -208,7 +175,15 @@ impl<'a> StateMachine<'a> {
         !(style.is_raw && style.decoration_style == DecorationStyle::NoDecoration)
     }
 
+    #[inline]
+    fn test_commit_meta_header_line(&self) -> bool {
+        self.config.commit_regex.is_match(&self.line)
+    }
+
     fn handle_commit_meta_header_line(&mut self) -> std::io::Result<bool> {
+        if !self.test_commit_meta_header_line() {
+            return Ok(false);
+        }
         let mut handled_line = false;
         self.painter.paint_buffered_minus_and_plus_lines();
         self.state = State::CommitMeta;
@@ -252,7 +227,16 @@ impl<'a> StateMachine<'a> {
         Ok(())
     }
 
+    #[inline]
+    fn test_diff_stat_line(&self) -> bool {
+        (self.state == State::CommitMeta || self.state == State::Unknown)
+            && self.line.starts_with(' ')
+    }
+
     fn handle_diff_stat_line(&mut self) -> std::io::Result<bool> {
+        if !self.test_diff_stat_line() {
+            return Ok(false);
+        }
         let mut handled_line = false;
         if self.config.relative_paths {
             if let Some(cwd) = self.config.cwd_relative_to_repo_root.as_deref() {
@@ -270,8 +254,16 @@ impl<'a> StateMachine<'a> {
         Ok(handled_line)
     }
 
+    #[inline]
+    fn test_file_meta_diff_line(&self) -> bool {
+        self.line.starts_with("diff ")
+    }
+
     #[allow(clippy::unnecessary_wraps)]
     fn handle_file_meta_diff_line(&mut self) -> std::io::Result<bool> {
+        if !self.test_file_meta_diff_line() {
+            return Ok(false);
+        }
         self.painter.paint_buffered_minus_and_plus_lines();
         self.state = State::FileMeta;
         self.handled_file_meta_header_line_file_pair = None;
@@ -279,7 +271,19 @@ impl<'a> StateMachine<'a> {
         Ok(false)
     }
 
+    #[inline]
+    fn test_file_meta_minus_line(&self) -> bool {
+        (self.state == State::FileMeta || self.source == Source::DiffUnified)
+            && (self.line.starts_with("--- ")
+                || self.line.starts_with("rename from ")
+                || self.line.starts_with("copy from ")
+                || self.line.starts_with("old mode "))
+    }
+
     fn handle_file_meta_minus_line(&mut self) -> std::io::Result<bool> {
+        if !self.test_file_meta_minus_line() {
+            return Ok(false);
+        }
         let mut handled_line = false;
 
         let (path_or_mode, file_event) = parse::parse_file_meta_line(
@@ -328,7 +332,19 @@ impl<'a> StateMachine<'a> {
         Ok(handled_line)
     }
 
+    #[inline]
+    fn test_file_meta_plus_line(&self) -> bool {
+        (self.state == State::FileMeta || self.source == Source::DiffUnified)
+            && (self.line.starts_with("+++ ")
+                || self.line.starts_with("rename to ")
+                || self.line.starts_with("copy to ")
+                || self.line.starts_with("new mode "))
+    }
+
     fn handle_file_meta_plus_line(&mut self) -> std::io::Result<bool> {
+        if !self.test_file_meta_plus_line() {
+            return Ok(false);
+        }
         let mut handled_line = false;
         let (path_or_mode, file_event) = parse::parse_file_meta_line(
             &self.line,
@@ -390,7 +406,64 @@ impl<'a> StateMachine<'a> {
         _write_generic_file_meta_header_line(&line, &line, &mut self.painter, self.config)
     }
 
-    fn handle_additional_cases(&mut self, to_state: State) -> std::io::Result<bool> {
+    #[inline]
+    fn test_additional_file_meta_cases(&self) -> bool {
+        self.source == Source::DiffUnified && self.line.starts_with("Only in ")
+            || self.line.starts_with("Binary files ")
+    }
+
+    fn handle_additional_file_meta_cases(&mut self) -> std::io::Result<bool> {
+        if !self.test_additional_file_meta_cases() {
+            return Ok(false);
+        }
+        self._handle_additional_cases(State::FileMeta)
+    }
+
+    #[inline]
+    fn test_submodule_log(&self) -> bool {
+        self.line.starts_with("Submodule ")
+    }
+
+    fn handle_submodule_log_line(&mut self) -> std::io::Result<bool> {
+        if !self.test_submodule_log() {
+            return Ok(false);
+        }
+        self._handle_additional_cases(State::SubmoduleLog)
+    }
+
+    #[inline]
+    fn test_submodule_short_line(&self) -> bool {
+        matches!(self.state, State::HunkHeader(_, _))
+            && self.line.starts_with("-Subproject commit ")
+            || matches!(self.state, State::SubmoduleShort(_))
+                && self.line.starts_with("+Subproject commit ")
+    }
+
+    fn handle_submodule_short_line(&mut self) -> std::io::Result<bool> {
+        if !self.test_submodule_short_line() {
+            return Ok(false);
+        }
+        if let Some(commit) = parse::get_submodule_short_commit(&self.line) {
+            if let State::HunkHeader(_, _) = self.state {
+                self.state = State::SubmoduleShort(commit.to_owned());
+            } else if let State::SubmoduleShort(minus_commit) = &self.state {
+                self.painter.emit()?;
+                writeln!(
+                    self.painter.writer,
+                    "{} ⟶   {}",
+                    self.config
+                        .minus_style
+                        .paint(minus_commit.chars().take(7).collect::<String>()),
+                    self.config
+                        .plus_style
+                        .paint(commit.chars().take(7).collect::<String>()),
+                )?;
+            }
+        }
+        Ok(true)
+    }
+
+    fn _handle_additional_cases(&mut self, to_state: State) -> std::io::Result<bool> {
         let mut handled_line = false;
 
         // Additional cases:
@@ -422,28 +495,15 @@ impl<'a> StateMachine<'a> {
         Ok(handled_line)
     }
 
-    fn handle_submodule_short_line(&mut self) -> std::io::Result<bool> {
-        if let Some(commit) = parse::get_submodule_short_commit(&self.line) {
-            if let State::HunkHeader(_, _) = self.state {
-                self.state = State::SubmoduleShort(commit.to_owned());
-            } else if let State::SubmoduleShort(minus_commit) = &self.state {
-                self.painter.emit()?;
-                writeln!(
-                    self.painter.writer,
-                    "{} ⟶   {}",
-                    self.config
-                        .minus_style
-                        .paint(minus_commit.chars().take(7).collect::<String>()),
-                    self.config
-                        .plus_style
-                        .paint(commit.chars().take(7).collect::<String>()),
-                )?;
-            }
-        }
-        Ok(true)
+    #[inline]
+    fn test_hunk_header_line(&self) -> bool {
+        self.line.starts_with("@@")
     }
 
     fn handle_hunk_header_line(&mut self) -> std::io::Result<bool> {
+        if !self.test_hunk_header_line() {
+            return Ok(false);
+        }
         self.state = State::HunkHeader(self.line.clone(), self.raw_line.clone());
         Ok(true)
     }
@@ -485,6 +545,11 @@ impl<'a> StateMachine<'a> {
         Ok(true)
     }
 
+    #[inline]
+    fn test_hunk_line(&self) -> bool {
+        self.state.is_in_hunk()
+    }
+
     /// Handle a hunk line, i.e. a minus line, a plus line, or an unchanged line.
     // In the case of a minus or plus line, we store the line in a
     // buffer. When we exit the changed region we process the collected
@@ -492,6 +557,11 @@ impl<'a> StateMachine<'a> {
     // highlighting according to inferred edit operations. In the case of
     // an unchanged line, we paint it immediately.
     fn handle_hunk_line(&mut self) -> std::io::Result<bool> {
+        // A true hunk line should start with one of: '+', '-', ' '. However, handle_hunk_line
+        // handles all lines until the state transitions away from the hunk states.
+        if !self.test_hunk_line() {
+            return Ok(false);
+        }
         // Don't let the line buffers become arbitrarily large -- if we
         // were to allow that, then for a large deleted/added file we
         // would process the entire file before painting anything.
