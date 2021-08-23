@@ -327,10 +327,14 @@ $
 
 #[test]
 fn test_blame_line_regex() {
-    let line = "ea82f2d0 (Dan Davison       2021-08-22 18:20:19 -0700 120)             let mut handled_line = self.handle_commit_meta_header_line()?";
-    let caps = BLAME_LINE_REGEX.captures(line);
-    assert!(caps.is_some());
-    dbg!(parse_git_blame_line(line));
+    for line in &[
+        "ea82f2d0 (Dan Davison       2021-08-22 18:20:19 -0700 120)             let mut handled_line = self.handle_commit_meta_header_line()?",
+        "b2257cfa (Dan Davison  2020-07-18 15:34:43 -0400   1) use std::borrow::Cow;"
+    ] {
+        let caps = BLAME_LINE_REGEX.captures(line);
+        assert!(caps.is_some());
+        dbg!(parse_git_blame_line(line));
+    }
 }
 
 pub fn parse_git_blame_line(line: &str) -> Option<BlameLine> {
