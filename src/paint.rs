@@ -463,7 +463,7 @@ impl<'a> Painter<'a> {
                 config.plus_style.is_syntax_highlighted
                     || config.plus_emph_style.is_syntax_highlighted
             }
-            State::HunkHeader => true,
+            State::HunkHeader(_, _) => true,
             State::HunkMinus(Some(_)) | State::HunkPlus(Some(_)) => false,
             _ => panic!(
                 "should_compute_syntax_highlighting is undefined for state {:?}",

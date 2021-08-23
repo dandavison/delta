@@ -18,9 +18,9 @@ use crate::style::{self, DecorationStyle};
 
 #[derive(Clone, Debug, PartialEq)]
 pub enum State {
-    CommitMeta,                // In commit metadata section
+    CommitMeta,                 // In commit metadata section
     FileMeta, // In diff metadata section, between (possible) commit metadata and first hunk
-    HunkHeader, // In hunk metadata line
+    HunkHeader(String, String), // In hunk metadata line (line, raw_line)
     HunkZero, // In hunk; unchanged line
     HunkMinus(Option<String>), // In hunk; removed line (raw_line)
     HunkPlus(Option<String>), // In hunk; added line (raw_line)
@@ -40,7 +40,7 @@ impl State {
     fn is_in_hunk(&self) -> bool {
         matches!(
             *self,
-            State::HunkHeader | State::HunkZero | State::HunkMinus(_) | State::HunkPlus(_)
+            State::HunkHeader(_, _) | State::HunkZero | State::HunkMinus(_) | State::HunkPlus(_)
         )
     }
 }
@@ -147,7 +147,8 @@ impl<'a> StateMachine<'a> {
                 self.handle_additional_cases(State::FileMeta)?
             } else if line.starts_with("Submodule ") {
                 self.handle_additional_cases(State::SubmoduleLog)?
-            } else if (self.state == State::HunkHeader && line.starts_with("-Subproject commit "))
+            } else if (matches!(self.state, State::HunkHeader(_, _))
+                && line.starts_with("-Subproject commit "))
                 || (matches!(self.state, State::SubmoduleShort(_))
                     && line.starts_with("+Subproject commit "))
             {
@@ -423,7 +424,7 @@ impl<'a> StateMachine<'a> {
 
     fn handle_submodule_short_line(&mut self) -> std::io::Result<bool> {
         if let Some(commit) = parse::get_submodule_short_commit(&self.line) {
-            if let State::HunkHeader = self.state {
+            if let State::HunkHeader(_, _) = self.state {
                 self.state = State::SubmoduleShort(commit.to_owned());
             } else if let State::SubmoduleShort(minus_commit) = &self.state {
                 self.painter.emit()?;
@@ -442,14 +443,18 @@ impl<'a> StateMachine<'a> {
         Ok(true)
     }
 
-    /// Emit the hunk header, with any requested decoration.
     fn handle_hunk_header_line(&mut self) -> std::io::Result<bool> {
+        self.state = State::HunkHeader(self.line.clone(), self.raw_line.clone());
+        Ok(true)
+    }
+
+    /// Emit the hunk header, with any requested decoration.
+    fn emit_hunk_header_line(&mut self, line: &str, raw_line: &str) -> std::io::Result<bool> {
         self.painter.paint_buffered_minus_and_plus_lines();
-        self.state = State::HunkHeader;
         self.painter.set_highlighter();
         self.painter.emit()?;
 
-        let (code_fragment, line_numbers) = parse::parse_hunk_header(&self.line);
+        let (code_fragment, line_numbers) = parse::parse_hunk_header(line);
         if self.config.line_numbers {
             self.painter
                 .line_numbers_data
@@ -457,12 +462,7 @@ impl<'a> StateMachine<'a> {
         }
 
         if self.config.hunk_header_style.is_raw {
-            hunk_header::write_hunk_header_raw(
-                &mut self.painter,
-                &self.line,
-                &self.raw_line,
-                self.config,
-            )?;
+            hunk_header::write_hunk_header_raw(&mut self.painter, line, raw_line, self.config)?;
         } else if self.config.hunk_header_style.is_omitted {
             writeln!(self.painter.writer)?;
         } else {
@@ -476,7 +476,7 @@ impl<'a> StateMachine<'a> {
                 &code_fragment,
                 &line_numbers,
                 &mut self.painter,
-                &self.line,
+                line,
                 &self.plus_file,
                 self.config,
             )?;
@@ -499,6 +499,9 @@ impl<'a> StateMachine<'a> {
             || self.painter.plus_lines.len() > self.config.line_buffer_size
         {
             self.painter.paint_buffered_minus_and_plus_lines();
+        }
+        if let State::HunkHeader(line, raw_line) = &self.state.clone() {
+            self.emit_hunk_header_line(line, raw_line)?;
         }
         self.state = match self.line.chars().next() {
             Some('-') => {

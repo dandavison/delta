@@ -99,7 +99,7 @@ impl Config {
             State::HunkPlus(_) => &self.plus_style,
             State::CommitMeta => &self.commit_style,
             State::FileMeta => &self.file_style,
-            State::HunkHeader => &self.hunk_header_style,
+            State::HunkHeader(_, _) => &self.hunk_header_style,
             State::SubmoduleLog => &self.file_style,
             _ => delta_unreachable("Unreachable code reached in get_style."),
         }

@@ -142,18 +142,18 @@ fn write_to_output_buffer(
     if !line.is_empty() {
         let lines = vec![(
             painter.expand_tabs(line.graphemes(true)),
-            delta::State::HunkHeader,
+            delta::State::HunkHeader("".to_owned(), "".to_owned()),
         )];
         let syntax_style_sections = Painter::get_syntax_style_sections_for_lines(
             &lines,
-            &delta::State::HunkHeader,
+            &delta::State::HunkHeader("".to_owned(), "".to_owned()),
             painter.highlighter.as_mut(),
             painter.config,
         );
         Painter::paint_lines(
             syntax_style_sections,
             vec![vec![(config.hunk_header_style, &lines[0].0)]], // TODO: compute style from state
-            [delta::State::HunkHeader].iter(),
+            [delta::State::HunkHeader("".to_owned(), "".to_owned())].iter(),
             &mut painter.output_buffer,
             config,
             &mut None,
