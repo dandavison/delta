@@ -7,6 +7,7 @@ mod align;
 mod ansi;
 #[cfg(not(tarpaulin_include))]
 mod bat_utils;
+mod blame;
 mod cli;
 mod color;
 mod config;

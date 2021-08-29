@@ -1,4 +1,5 @@
 use std::borrow::Cow;
+use std::collections::HashMap;
 use std::io::BufRead;
 use std::io::Write;
 
@@ -6,7 +7,9 @@ use bytelines::ByteLines;
 use unicode_segmentation::UnicodeSegmentation;
 
 use crate::ansi;
+use crate::blame;
 use crate::cli;
+use crate::color;
 use crate::config::Config;
 use crate::draw;
 use crate::features;
@@ -14,7 +17,7 @@ use crate::format;
 use crate::hunk_header;
 use crate::paint::Painter;
 use crate::parse;
-use crate::style::{self, DecorationStyle};
+use crate::style::{self, DecorationStyle, Style};
 
 #[derive(Clone, Debug, PartialEq)]
 pub enum State {
@@ -26,6 +29,7 @@ pub enum State {
     HunkPlus(Option<String>), // In hunk; added line (raw_line)
     SubmoduleLog, // In a submodule section, with gitconfig diff.submodule = log
     SubmoduleShort(String), // In a submodule section, with gitconfig diff.submodule = short
+    Blame(String), // In a line of `git blame` output.
     Unknown,
 }
 
@@ -77,6 +81,7 @@ struct StateMachine<'a> {
     // avoid emitting the file meta header line twice (#245).
     current_file_pair: Option<(String, String)>,
     handled_file_meta_header_line_file_pair: Option<(String, String)>,
+    blame_commit_colors: HashMap<String, String>,
 }
 
 pub fn delta<I>(lines: ByteLines<I>, writer: &mut dyn Write, config: &Config) -> std::io::Result<()>
@@ -102,6 +107,7 @@ impl<'a> StateMachine<'a> {
             handled_file_meta_header_line_file_pair: None,
             painter: Painter::new(writer, config),
             config,
+            blame_commit_colors: HashMap::new(),
         }
     }
 
@@ -126,7 +132,8 @@ impl<'a> StateMachine<'a> {
                 || self.handle_additional_file_meta_cases()?
                 || self.handle_submodule_log_line()?
                 || self.handle_submodule_short_line()?
-                || self.handle_hunk_line()?;
+                || self.handle_hunk_line()?
+                || self.handle_blame_line()?;
 
             if self.state == State::FileMeta && self.should_handle() && !self.config.color_only {
                 // Skip file metadata lines unless a raw diff style has been requested.
@@ -463,6 +470,70 @@ impl<'a> StateMachine<'a> {
         Ok(true)
     }
 
+    /// If this is a line of git blame output then render it accordingly. If
+    /// this is the first blame line, then set the syntax-highlighter language
+    /// according to delta.default-language.
+    fn handle_blame_line(&mut self) -> std::io::Result<bool> {
+        let mut handled_line = false;
+        self.painter.emit()?;
+        if matches!(self.state, State::Unknown | State::Blame(_)) {
+            if let Some(blame) =
+                blame::parse_git_blame_line(&self.line, &self.config.blame_timestamp_format)
+            {
+                // Determine color for this line
+                let color = if let Some(color) = self.blame_commit_colors.get(blame.commit) {
+                    color
+                } else {
+                    let n_commits = self.blame_commit_colors.len();
+                    let n_colors = self.config.blame_palette.as_ref().map(|v| v.len()).unwrap();
+                    let new_color = self
+                        .config
+                        .blame_palette
+                        .as_ref()
+                        .map(|v| &v[(n_commits + 1) % n_colors])
+                        .unwrap();
+                    self.blame_commit_colors
+                        .insert(blame.commit.to_owned(), new_color.to_owned());
+                    new_color
+                };
+                let mut style = Style::from_colors(None, color::parse_color(color, true));
+                style.is_syntax_highlighted = true;
+
+                // Construct commit metadata, paint, and emit
+                let format_data = format::parse_line_number_format(
+                    &self.config.blame_format,
+                    &*blame::BLAME_PLACEHOLDER_REGEX,
+                );
+                write!(
+                    self.painter.writer,
+                    "{}",
+                    style.paint(blame::format_blame_metadata(
+                        &format_data,
+                        &blame,
+                        self.config
+                    ))
+                )?;
+
+                // Emit syntax-highlighted code
+                if matches!(self.state, State::Unknown) {
+                    if let Some(lang) = self.config.default_language.as_ref() {
+                        self.painter.set_syntax(Some(lang));
+                        self.painter.set_highlighter();
+                    }
+                    self.state = State::Blame(blame.commit.to_owned());
+                }
+                self.painter.syntax_highlight_and_paint_line(
+                    blame.code,
+                    style,
+                    self.state.clone(),
+                    true,
+                );
+                handled_line = true
+            }
+        }
+        Ok(handled_line)
+    }
+
     fn _handle_additional_cases(&mut self, to_state: State) -> std::io::Result<bool> {
         let mut handled_line = false;
 
@@ -635,7 +706,7 @@ impl<'a> StateMachine<'a> {
 
 /// If output is going to a tty, emit hyperlinks if requested.
 // Although raw output should basically be emitted unaltered, we do this.
-fn format_raw_line<'a>(line: &'a str, config: &Config) -> Cow<'a, str> {
+pub fn format_raw_line<'a>(line: &'a str, config: &Config) -> Cow<'a, str> {
     if config.hyperlinks && atty::is(atty::Stream::Stdout) {
         features::hyperlinks::format_commit_line_with_osc8_commit_hyperlink(line, config)
     } else {
