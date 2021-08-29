@@ -2,9 +2,68 @@ use chrono::{DateTime, FixedOffset};
 use lazy_static::lazy_static;
 use regex::Regex;
 
+use crate::color;
 use crate::config;
-use crate::delta;
+use crate::delta::{self, State, StateMachine};
 use crate::format;
+use crate::style::Style;
+
+impl<'a> StateMachine<'a> {
+    /// If this is a line of git blame output then render it accordingly. If
+    /// this is the first blame line, then set the syntax-highlighter language
+    /// according to delta.default-language.
+    pub fn handle_blame_line(&mut self) -> std::io::Result<bool> {
+        let mut handled_line = false;
+        self.painter.emit()?;
+        if matches!(self.state, State::Unknown | State::Blame(_)) {
+            if let Some(blame) =
+                parse_git_blame_line(&self.line, &self.config.blame_timestamp_format)
+            {
+                // Determine color for this line
+                let color = if let Some(color) = self.blame_commit_colors.get(blame.commit) {
+                    color
+                } else {
+                    let n_commits = self.blame_commit_colors.len();
+                    let n_colors = self.config.blame_palette.len();
+                    let new_color = &self.config.blame_palette[(n_commits + 1) % n_colors];
+                    self.blame_commit_colors
+                        .insert(blame.commit.to_owned(), new_color.to_owned());
+                    new_color
+                };
+                let mut style = Style::from_colors(None, color::parse_color(color, true));
+                style.is_syntax_highlighted = true;
+
+                // Construct commit metadata, paint, and emit
+                let format_data = format::parse_line_number_format(
+                    &self.config.blame_format,
+                    &*BLAME_PLACEHOLDER_REGEX,
+                );
+                write!(
+                    self.painter.writer,
+                    "{}",
+                    style.paint(format_blame_metadata(&format_data, &blame, self.config))
+                )?;
+
+                // Emit syntax-highlighted code
+                if matches!(self.state, State::Unknown) {
+                    if let Some(lang) = self.config.default_language.as_ref() {
+                        self.painter.set_syntax(Some(lang));
+                        self.painter.set_highlighter();
+                    }
+                    self.state = State::Blame(blame.commit.to_owned());
+                }
+                self.painter.syntax_highlight_and_paint_line(
+                    blame.code,
+                    style,
+                    self.state.clone(),
+                    true,
+                );
+                handled_line = true
+            }
+        }
+        Ok(handled_line)
+    }
+}
 
 #[derive(Debug)]
 pub struct BlameLine<'a> {

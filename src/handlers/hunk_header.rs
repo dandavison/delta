@@ -21,14 +21,113 @@
 
 use std::fmt::Write as FmtWrite;
 
+use lazy_static::lazy_static;
+use regex::Regex;
+
+use super::draw;
 use crate::config::Config;
-use crate::delta;
-use crate::draw;
+use crate::delta::{self, State, StateMachine};
 use crate::features;
 use crate::paint::Painter;
 use crate::style::{DecorationStyle, Style};
 
-pub fn write_hunk_header_raw(
+impl<'a> StateMachine<'a> {
+    #[inline]
+    fn test_hunk_header_line(&self) -> bool {
+        self.line.starts_with("@@")
+    }
+
+    pub fn handle_hunk_header_line(&mut self) -> std::io::Result<bool> {
+        if !self.test_hunk_header_line() {
+            return Ok(false);
+        }
+        self.state = State::HunkHeader(self.line.clone(), self.raw_line.clone());
+        Ok(true)
+    }
+
+    /// Emit the hunk header, with any requested decoration.
+    pub fn emit_hunk_header_line(&mut self, line: &str, raw_line: &str) -> std::io::Result<bool> {
+        self.painter.paint_buffered_minus_and_plus_lines();
+        self.painter.set_highlighter();
+        self.painter.emit()?;
+
+        let (code_fragment, line_numbers) = parse_hunk_header(line);
+        if self.config.line_numbers {
+            self.painter
+                .line_numbers_data
+                .initialize_hunk(&line_numbers, self.plus_file.to_string());
+        }
+
+        if self.config.hunk_header_style.is_raw {
+            write_hunk_header_raw(&mut self.painter, line, raw_line, self.config)?;
+        } else if self.config.hunk_header_style.is_omitted {
+            writeln!(self.painter.writer)?;
+        } else {
+            // Add a blank line below the hunk-header-line for readability, unless
+            // color_only mode is active.
+            if !self.config.color_only {
+                writeln!(self.painter.writer)?;
+            }
+
+            write_hunk_header(
+                &code_fragment,
+                &line_numbers,
+                &mut self.painter,
+                line,
+                &self.plus_file,
+                self.config,
+            )?;
+        };
+        self.painter.set_highlighter();
+        Ok(true)
+    }
+}
+
+lazy_static! {
+    static ref HUNK_HEADER_REGEX: Regex = Regex::new(r"@+ ([^@]+)@+(.*\s?)").unwrap();
+}
+
+// Parse unified diff hunk header format. See
+// https://www.gnu.org/software/diffutils/manual/html_node/Detailed-Unified.html
+// https://www.artima.com/weblogs/viewpost.jsp?thread=164293
+lazy_static! {
+    static ref HUNK_HEADER_FILE_COORDINATE_REGEX: Regex = Regex::new(
+        r"(?x)
+[-+]
+(\d+)            # 1. Hunk start line number
+(?:              # Start optional hunk length section (non-capturing)
+  ,              #   Literal comma
+  (\d+)          #   2. Optional hunk length (defaults to 1)
+)?"
+    )
+    .unwrap();
+}
+
+/// Given input like
+/// "@@ -74,15 +74,14 @@ pub fn delta("
+/// Return " pub fn delta(" and a vector of (line_number, hunk_length) tuples.
+fn parse_hunk_header(line: &str) -> (String, Vec<(usize, usize)>) {
+    let caps = HUNK_HEADER_REGEX.captures(line).unwrap();
+    let file_coordinates = &caps[1];
+    let line_numbers_and_hunk_lengths = HUNK_HEADER_FILE_COORDINATE_REGEX
+        .captures_iter(file_coordinates)
+        .map(|caps| {
+            (
+                caps[1].parse::<usize>().unwrap(),
+                caps.get(2)
+                    .map(|m| m.as_str())
+                    // Per the specs linked above, if the hunk length is absent then it is 1.
+                    .unwrap_or("1")
+                    .parse::<usize>()
+                    .unwrap(),
+            )
+        })
+        .collect();
+    let code_fragment = &caps[2];
+    (code_fragment.to_string(), line_numbers_and_hunk_lengths)
+}
+
+fn write_hunk_header_raw(
     painter: &mut Painter,
     line: &str,
     raw_line: &str,
@@ -50,7 +149,7 @@ pub fn write_hunk_header_raw(
     Ok(())
 }
 
-pub fn write_hunk_header(
+fn write_hunk_header(
     code_fragment: &str,
     line_numbers: &[(usize, usize)],
     painter: &mut Painter,
@@ -158,6 +257,56 @@ pub mod tests {
     use super::*;
     use crate::tests::integration_test_utils;
 
+    #[test]
+    fn test_parse_hunk_header() {
+        let parsed = parse_hunk_header("@@ -74,15 +75,14 @@ pub fn delta(\n");
+        let code_fragment = parsed.0;
+        let line_numbers_and_hunk_lengths = parsed.1;
+        assert_eq!(code_fragment, " pub fn delta(\n");
+        assert_eq!(line_numbers_and_hunk_lengths[0], (74, 15),);
+        assert_eq!(line_numbers_and_hunk_lengths[1], (75, 14),);
+    }
+
+    #[test]
+    fn test_parse_hunk_header_with_omitted_hunk_lengths() {
+        let parsed = parse_hunk_header("@@ -74 +75,2 @@ pub fn delta(\n");
+        let code_fragment = parsed.0;
+        let line_numbers_and_hunk_lengths = parsed.1;
+        assert_eq!(code_fragment, " pub fn delta(\n");
+        assert_eq!(line_numbers_and_hunk_lengths[0], (74, 1),);
+        assert_eq!(line_numbers_and_hunk_lengths[1], (75, 2),);
+    }
+
+    #[test]
+    fn test_parse_hunk_header_added_file() {
+        let parsed = parse_hunk_header("@@ -1,22 +0,0 @@");
+        let code_fragment = parsed.0;
+        let line_numbers_and_hunk_lengths = parsed.1;
+        assert_eq!(code_fragment, "",);
+        assert_eq!(line_numbers_and_hunk_lengths[0], (1, 22),);
+        assert_eq!(line_numbers_and_hunk_lengths[1], (0, 0),);
+    }
+
+    #[test]
+    fn test_parse_hunk_header_deleted_file() {
+        let parsed = parse_hunk_header("@@ -0,0 +1,3 @@");
+        let code_fragment = parsed.0;
+        let line_numbers_and_hunk_lengths = parsed.1;
+        assert_eq!(code_fragment, "",);
+        assert_eq!(line_numbers_and_hunk_lengths[0], (0, 0),);
+        assert_eq!(line_numbers_and_hunk_lengths[1], (1, 3),);
+    }
+
+    #[test]
+    fn test_parse_hunk_header_merge() {
+        let parsed = parse_hunk_header("@@@ -293,11 -358,15 +358,16 @@@ dependencies =");
+        let code_fragment = parsed.0;
+        let line_numbers_and_hunk_lengths = parsed.1;
+        assert_eq!(code_fragment, " dependencies =");
+        assert_eq!(line_numbers_and_hunk_lengths[0], (293, 11),);
+        assert_eq!(line_numbers_and_hunk_lengths[1], (358, 15),);
+        assert_eq!(line_numbers_and_hunk_lengths[2], (358, 16),);
+    }
     #[test]
     fn test_get_painted_file_with_line_number_default() {
         let cfg = integration_test_utils::make_config_from_args(&[]);
