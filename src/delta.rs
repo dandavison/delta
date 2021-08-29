@@ -138,7 +138,7 @@ impl<'a> StateMachine<'a> {
                 writeln!(
                     self.painter.writer,
                     "{}",
-                    format::format_raw_line(&self.raw_line, self.config)
+                    format_raw_line(&self.raw_line, self.config)
                 )?;
             }
         }
@@ -630,6 +630,16 @@ impl<'a> StateMachine<'a> {
         };
         self.painter.emit()?;
         Ok(true)
+    }
+}
+
+/// If output is going to a tty, emit hyperlinks if requested.
+// Although raw output should basically be emitted unaltered, we do this.
+fn format_raw_line<'a>(line: &'a str, config: &Config) -> Cow<'a, str> {
+    if config.hyperlinks && atty::is(atty::Stream::Stdout) {
+        features::hyperlinks::format_commit_line_with_osc8_commit_hyperlink(line, config)
+    } else {
+        Cow::from(line)
     }
 }
 
