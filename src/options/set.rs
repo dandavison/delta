@@ -125,6 +125,7 @@ pub fn set_options(
             commit_decoration_style,
             commit_regex,
             commit_style,
+            default_language,
             diff_stat_align_width,
             file_added_label,
             file_copied_label,
@@ -599,6 +600,7 @@ pub mod tests {
     commit-decoration-style = black black
     commit-style = black black
     dark = false
+    default-language = rs
     diff-highlight = true
     diff-so-fancy = true
     features = xxxyyyzzz
@@ -656,6 +658,7 @@ pub mod tests {
         assert_eq!(opt.commit_decoration_style, "black black");
         assert_eq!(opt.commit_style, "black black");
         assert_eq!(opt.dark, false);
+        assert_eq!(opt.default_language, Some("rs".to_owned()));
         // TODO: should set_options not be called on any feature flags?
         // assert_eq!(opt.diff_highlight, true);
         // assert_eq!(opt.diff_so_fancy, true);

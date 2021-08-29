@@ -419,6 +419,12 @@ pub struct Opt {
     /// (underline), 'ol' (overline), or the combination 'ul ol'.
     pub hunk_header_decoration_style: String,
 
+    // Default language used for syntax highlighting when this cannot be
+    // inferred from a filename. It will typically make sense to set this in
+    // per-repository git config ().git/config)
+    #[structopt(long = "default-language")]
+    pub default_language: Option<String>,
+
     /// The regular expression used to decide what a word is for the within-line highlight
     /// algorithm. For less fine-grained matching than the default try --word-diff-regex="\S+"
     /// --max-line-distance=1.0 (this is more similar to `git --word-diff`).
