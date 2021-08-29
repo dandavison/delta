@@ -291,6 +291,35 @@ impl<'a> Painter<'a> {
         }
     }
 
+    /// Write painted line to the output buffer, with syntax-highlighting and `style` superimposed.
+    pub fn syntax_highlight_and_paint_line(
+        &mut self,
+        line: &str,
+        style: Style,
+        state: State,
+        background_color_extends_to_terminal_width: bool,
+    ) {
+        let lines = vec![(self.expand_tabs(line.graphemes(true)), state.clone())];
+        let syntax_style_sections = Painter::get_syntax_style_sections_for_lines(
+            &lines,
+            &state,
+            self.highlighter.as_mut(),
+            self.config,
+        );
+        let diff_style_sections = vec![vec![(style, lines[0].0.as_str())]]; // TODO: compute style from state
+        Painter::paint_lines(
+            syntax_style_sections,
+            diff_style_sections,
+            [state].iter(),
+            &mut self.output_buffer,
+            self.config,
+            &mut None,
+            None,
+            None,
+            Some(background_color_extends_to_terminal_width),
+        );
+    }
+
     /// Determine whether the terminal should fill the line rightwards with a background color, and
     /// the style for doing so.
     pub fn get_should_right_fill_background_color_and_fill_style(
