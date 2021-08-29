@@ -8,6 +8,7 @@ use crate::delta::State;
 use crate::features::hyperlinks;
 use crate::features::side_by_side;
 use crate::features::OptionValueFunction;
+use crate::format;
 use crate::style::Style;
 
 pub fn make_feature() -> Vec<(String, OptionValueFunction)> {
@@ -134,28 +135,13 @@ pub fn format_and_paint_line_numbers<'a>(
 }
 
 lazy_static! {
-    static ref LINE_NUMBERS_PLACEHOLDER_REGEX: Regex = Regex::new(
-        r"(?x)
-\{
-(nm|np)         # 1: Literal nm or np
-(?:             # Start optional format spec (non-capturing)
-  :             #     Literal colon
-  (?:           #     Start optional fill/alignment spec (non-capturing)
-    ([^<^>])?   #         2: Optional fill character (ignored)
-    ([<^>])     #         3: Alignment spec
-  )?            #
-  (\d+)         #     4: Width
-)?              #
-\}
-"
-    )
-    .unwrap();
+    static ref LINE_NUMBERS_PLACEHOLDER_REGEX: Regex = format::make_placeholder_regex(&["nm", "np"]);
 }
 
 #[derive(Default)]
 pub struct LineNumbersData<'a> {
-    pub left_format_data: LineNumberFormatData<'a>,
-    pub right_format_data: LineNumberFormatData<'a>,
+    pub left_format_data: format::FormatStringData<'a>,
+    pub right_format_data: format::FormatStringData<'a>,
     pub hunk_minus_line_number: usize,
     pub hunk_plus_line_number: usize,
     pub hunk_max_line_number_width: usize,
@@ -164,22 +150,17 @@ pub struct LineNumbersData<'a> {
 
 // Although it's probably unusual, a single format string can contain multiple placeholders. E.g.
 // line-numbers-right-format = "{nm} {np}|"
-pub type LineNumberFormatData<'a> = Vec<LineNumberPlaceholderData<'a>>;
-
-#[derive(Debug, Default, PartialEq)]
-pub struct LineNumberPlaceholderData<'a> {
-    pub prefix: &'a str,
-    pub placeholder: Option<&'a str>,
-    pub alignment_spec: Option<&'a str>,
-    pub width: Option<usize>,
-    pub suffix: &'a str,
-}
-
 impl<'a> LineNumbersData<'a> {
     pub fn from_format_strings(left_format: &'a str, right_format: &'a str) -> LineNumbersData<'a> {
         Self {
-            left_format_data: parse_line_number_format(left_format),
-            right_format_data: parse_line_number_format(right_format),
+            left_format_data: format::parse_line_number_format(
+                left_format,
+                &*LINE_NUMBERS_PLACEHOLDER_REGEX,
+            ),
+            right_format_data: format::parse_line_number_format(
+                right_format,
+                &*LINE_NUMBERS_PLACEHOLDER_REGEX,
+            ),
             hunk_minus_line_number: 0,
             hunk_plus_line_number: 0,
             hunk_max_line_number_width: 0,
@@ -200,41 +181,9 @@ impl<'a> LineNumbersData<'a> {
     }
 }
 
-fn parse_line_number_format(format_string: &str) -> LineNumberFormatData {
-    let mut format_data = Vec::new();
-    let mut offset = 0;
-
-    for captures in LINE_NUMBERS_PLACEHOLDER_REGEX.captures_iter(format_string) {
-        let _match = captures.get(0).unwrap();
-        format_data.push(LineNumberPlaceholderData {
-            prefix: &format_string[offset.._match.start()],
-            placeholder: captures.get(1).map(|m| m.as_str()),
-            alignment_spec: captures.get(3).map(|m| m.as_str()),
-            width: captures.get(4).map(|m| {
-                m.as_str()
-                    .parse()
-                    .unwrap_or_else(|_| panic!("Invalid width in format string: {}", format_string))
-            }),
-            suffix: &format_string[_match.end()..],
-        });
-        offset = _match.end();
-    }
-    if offset == 0 {
-        // No placeholders
-        format_data.push(LineNumberPlaceholderData {
-            prefix: &format_string[..0],
-            placeholder: None,
-            alignment_spec: None,
-            width: None,
-            suffix: &format_string[0..],
-        })
-    }
-    format_data
-}
-
 #[allow(clippy::too_many_arguments)]
 fn format_and_paint_line_number_field<'a>(
-    format_data: &[LineNumberPlaceholderData<'a>],
+    format_data: &[format::FormatStringPlaceholderData<'a>],
     style: &Style,
     minus_number: Option<usize>,
     plus_number: Option<usize>,
@@ -288,22 +237,14 @@ fn format_line_number(
     plus_file: Option<&str>,
     config: &config::Config,
 ) -> String {
-    let format_n = |n| match alignment {
-        "<" => format!("{0:<1$}", n, width),
-        "^" => format!("{0:^1$}", n, width),
-        ">" => format!("{0:>1$}", n, width),
-        _ => unreachable!(),
-    };
+    let pad = |n| format::pad(n, width, alignment);
     match (line_number, config.hyperlinks, plus_file) {
-        (None, _, _) => format_n(""),
-        (Some(n), true, Some(file)) => hyperlinks::format_osc8_file_hyperlink(
-            file,
-            line_number,
-            &format_n(&n.to_string()),
-            config,
-        )
-        .to_string(),
-        (Some(n), _, _) => format_n(&n.to_string()),
+        (None, _, _) => pad(""),
+        (Some(n), true, Some(file)) => {
+            hyperlinks::format_osc8_file_hyperlink(file, line_number, &pad(&n.to_string()), config)
+                .to_string()
+        }
+        (Some(n), _, _) => pad(&n.to_string()),
     }
 }
 
@@ -319,8 +260,8 @@ pub mod tests {
     #[test]
     fn test_line_number_format_regex_1() {
         assert_eq!(
-            parse_line_number_format("{nm}"),
-            vec![LineNumberPlaceholderData {
+            format::parse_line_number_format("{nm}", &LINE_NUMBERS_PLACEHOLDER_REGEX),
+            vec![format::FormatStringPlaceholderData {
                 prefix: "",
                 placeholder: Some("nm"),
                 alignment_spec: None,
@@ -333,8 +274,8 @@ pub mod tests {
     #[test]
     fn test_line_number_format_regex_2() {
         assert_eq!(
-            parse_line_number_format("{np:4}"),
-            vec![LineNumberPlaceholderData {
+            format::parse_line_number_format("{np:4}", &LINE_NUMBERS_PLACEHOLDER_REGEX),
+            vec![format::FormatStringPlaceholderData {
                 prefix: "",
                 placeholder: Some("np"),
                 alignment_spec: None,
@@ -347,8 +288,8 @@ pub mod tests {
     #[test]
     fn test_line_number_format_regex_3() {
         assert_eq!(
-            parse_line_number_format("{np:>4}"),
-            vec![LineNumberPlaceholderData {
+            format::parse_line_number_format("{np:>4}", &LINE_NUMBERS_PLACEHOLDER_REGEX),
+            vec![format::FormatStringPlaceholderData {
                 prefix: "",
                 placeholder: Some("np"),
                 alignment_spec: Some(">"),
@@ -361,8 +302,8 @@ pub mod tests {
     #[test]
     fn test_line_number_format_regex_4() {
         assert_eq!(
-            parse_line_number_format("{np:_>4}"),
-            vec![LineNumberPlaceholderData {
+            format::parse_line_number_format("{np:_>4}", &LINE_NUMBERS_PLACEHOLDER_REGEX),
+            vec![format::FormatStringPlaceholderData {
                 prefix: "",
                 placeholder: Some("np"),
                 alignment_spec: Some(">"),
@@ -375,8 +316,8 @@ pub mod tests {
     #[test]
     fn test_line_number_format_regex_5() {
         assert_eq!(
-            parse_line_number_format("__{np:_>4}@@"),
-            vec![LineNumberPlaceholderData {
+            format::parse_line_number_format("__{np:_>4}@@", &LINE_NUMBERS_PLACEHOLDER_REGEX),
+            vec![format::FormatStringPlaceholderData {
                 prefix: "__",
                 placeholder: Some("np"),
                 alignment_spec: Some(">"),
@@ -389,16 +330,19 @@ pub mod tests {
     #[test]
     fn test_line_number_format_regex_6() {
         assert_eq!(
-            parse_line_number_format("__{nm:<3}@@---{np:_>4}**"),
+            format::parse_line_number_format(
+                "__{nm:<3}@@---{np:_>4}**",
+                &LINE_NUMBERS_PLACEHOLDER_REGEX
+            ),
             vec![
-                LineNumberPlaceholderData {
+                format::FormatStringPlaceholderData {
                     prefix: "__",
                     placeholder: Some("nm"),
                     alignment_spec: Some("<"),
                     width: Some(3),
                     suffix: "@@---{np:_>4}**",
                 },
-                LineNumberPlaceholderData {
+                format::FormatStringPlaceholderData {
                     prefix: "@@---",
                     placeholder: Some("np"),
                     alignment_spec: Some(">"),
@@ -412,8 +356,8 @@ pub mod tests {
     #[test]
     fn test_line_number_format_regex_7() {
         assert_eq!(
-            parse_line_number_format("__@@---**"),
-            vec![LineNumberPlaceholderData {
+            format::parse_line_number_format("__@@---**", &LINE_NUMBERS_PLACEHOLDER_REGEX),
+            vec![format::FormatStringPlaceholderData {
                 prefix: "",
                 placeholder: None,
                 alignment_spec: None,
