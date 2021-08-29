@@ -1,25 +1,16 @@
-use lazy_static::lazy_static;
-use regex::Regex;
 use std::borrow::Cow;
 use std::path::Path;
+
 use unicode_segmentation::UnicodeSegmentation;
 
+use super::draw;
 use crate::config::Config;
+use crate::delta::{Source, State, StateMachine};
 use crate::features;
+use crate::paint::Painter;
 
 // https://git-scm.com/docs/git-config#Documentation/git-config.txt-diffmnemonicPrefix
 const DIFF_PREFIXES: [&str; 6] = ["a/", "b/", "c/", "i/", "o/", "w/"];
-
-#[allow(clippy::tabs_in_doc_comments)]
-/// Given input like
-/// "--- one.rs	2019-11-20 06:16:08.000000000 +0100"
-/// Return "rs"
-pub fn get_file_extension_from_marker_line(line: &str) -> Option<&str> {
-    line.split('\t')
-        .next()
-        .and_then(|column| column.split(' ').nth(1))
-        .and_then(|file| file.split('.').last())
-}
 
 #[derive(Debug, PartialEq)]
 pub enum FileEvent {
@@ -30,7 +21,204 @@ pub enum FileEvent {
     NoEvent,
 }
 
-pub fn parse_file_meta_line(
+impl<'a> StateMachine<'a> {
+    #[inline]
+    fn test_file_meta_minus_line(&self) -> bool {
+        (self.state == State::FileMeta || self.source == Source::DiffUnified)
+            && (self.line.starts_with("--- ")
+                || self.line.starts_with("rename from ")
+                || self.line.starts_with("copy from ")
+                || self.line.starts_with("old mode "))
+    }
+
+    pub fn handle_file_meta_minus_line(&mut self) -> std::io::Result<bool> {
+        if !self.test_file_meta_minus_line() {
+            return Ok(false);
+        }
+        let mut handled_line = false;
+
+        let (path_or_mode, file_event) = parse_file_meta_line(
+            &self.line,
+            self.source == Source::GitDiff,
+            if self.config.relative_paths {
+                self.config.cwd_relative_to_repo_root.as_deref()
+            } else {
+                None
+            },
+        );
+        // In the case of ModeChange only, the file path is taken from the diff
+        // --git line (since that is the only place the file path occurs);
+        // otherwise it is taken from the --- / +++ line.
+        self.minus_file = if let FileEvent::ModeChange(_) = &file_event {
+            get_repeated_file_path_from_diff_line(&self.diff_line).unwrap_or(path_or_mode)
+        } else {
+            path_or_mode
+        };
+        self.minus_file_event = file_event;
+
+        if self.source == Source::DiffUnified {
+            self.state = State::FileMeta;
+            self.painter
+                .set_syntax(get_file_extension_from_marker_line(&self.line));
+        } else {
+            self.painter
+                .set_syntax(get_file_extension_from_file_meta_line_file_path(
+                    &self.minus_file,
+                ));
+        }
+
+        // In color_only mode, raw_line's structure shouldn't be changed.
+        // So it needs to avoid fn _handle_file_meta_header_line
+        // (it connects the plus_file and minus_file),
+        // and to call fn handle_generic_file_meta_header_line directly.
+        if self.config.color_only {
+            write_generic_file_meta_header_line(
+                &self.line,
+                &self.raw_line,
+                &mut self.painter,
+                self.config,
+            )?;
+            handled_line = true;
+        }
+        Ok(handled_line)
+    }
+
+    #[inline]
+    fn test_file_meta_plus_line(&self) -> bool {
+        (self.state == State::FileMeta || self.source == Source::DiffUnified)
+            && (self.line.starts_with("+++ ")
+                || self.line.starts_with("rename to ")
+                || self.line.starts_with("copy to ")
+                || self.line.starts_with("new mode "))
+    }
+
+    pub fn handle_file_meta_plus_line(&mut self) -> std::io::Result<bool> {
+        if !self.test_file_meta_plus_line() {
+            return Ok(false);
+        }
+        let mut handled_line = false;
+        let (path_or_mode, file_event) = parse_file_meta_line(
+            &self.line,
+            self.source == Source::GitDiff,
+            if self.config.relative_paths {
+                self.config.cwd_relative_to_repo_root.as_deref()
+            } else {
+                None
+            },
+        );
+        // In the case of ModeChange only, the file path is taken from the diff
+        // --git line (since that is the only place the file path occurs);
+        // otherwise it is taken from the --- / +++ line.
+        self.plus_file = if let FileEvent::ModeChange(_) = &file_event {
+            get_repeated_file_path_from_diff_line(&self.diff_line).unwrap_or(path_or_mode)
+        } else {
+            path_or_mode
+        };
+        self.plus_file_event = file_event;
+        self.painter
+            .set_syntax(get_file_extension_from_file_meta_line_file_path(
+                &self.plus_file,
+            ));
+        self.current_file_pair = Some((self.minus_file.clone(), self.plus_file.clone()));
+
+        // In color_only mode, raw_line's structure shouldn't be changed.
+        // So it needs to avoid fn _handle_file_meta_header_line
+        // (it connects the plus_file and minus_file),
+        // and to call fn handle_generic_file_meta_header_line directly.
+        if self.config.color_only {
+            write_generic_file_meta_header_line(
+                &self.line,
+                &self.raw_line,
+                &mut self.painter,
+                self.config,
+            )?;
+            handled_line = true
+        } else if self.should_handle()
+            && self.handled_file_meta_header_line_file_pair != self.current_file_pair
+        {
+            self.painter.emit()?;
+            self._handle_file_meta_header_line(self.source == Source::DiffUnified)?;
+            self.handled_file_meta_header_line_file_pair = self.current_file_pair.clone()
+        }
+        Ok(handled_line)
+    }
+
+    /// Construct file change line from minus and plus file and write with FileMeta styling.
+    fn _handle_file_meta_header_line(&mut self, comparing: bool) -> std::io::Result<()> {
+        let line = get_file_change_description_from_file_paths(
+            &self.minus_file,
+            &self.plus_file,
+            comparing,
+            &self.minus_file_event,
+            &self.plus_file_event,
+            self.config,
+        );
+        // FIXME: no support for 'raw'
+        write_generic_file_meta_header_line(&line, &line, &mut self.painter, self.config)
+    }
+}
+
+/// Write `line` with FileMeta styling.
+pub fn write_generic_file_meta_header_line(
+    line: &str,
+    raw_line: &str,
+    painter: &mut Painter,
+    config: &Config,
+) -> std::io::Result<()> {
+    // If file_style is "omit", we'll skip the process and print nothing.
+    // However in the case of color_only mode,
+    // we won't skip because we can't change raw_line structure.
+    if config.file_style.is_omitted && !config.color_only {
+        return Ok(());
+    }
+    let (mut draw_fn, pad, decoration_ansi_term_style) =
+        draw::get_draw_function(config.file_style.decoration_style);
+    // Prints the new line below file-meta-line.
+    // However in the case of color_only mode,
+    // we won't print it because we can't change raw_line structure.
+    if !config.color_only {
+        writeln!(painter.writer)?;
+    }
+    draw_fn(
+        painter.writer,
+        &format!("{}{}", line, if pad { " " } else { "" }),
+        &format!("{}{}", raw_line, if pad { " " } else { "" }),
+        &config.decorations_width,
+        config.file_style,
+        decoration_ansi_term_style,
+    )?;
+    Ok(())
+}
+
+#[allow(clippy::tabs_in_doc_comments)]
+/// Given input like
+/// "--- one.rs	2019-11-20 06:16:08.000000000 +0100"
+/// Return "rs"
+fn get_file_extension_from_marker_line(line: &str) -> Option<&str> {
+    line.split('\t')
+        .next()
+        .and_then(|column| column.split(' ').nth(1))
+        .and_then(|file| file.split('.').last())
+}
+
+fn get_file_extension_from_file_meta_line_file_path(path: &str) -> Option<&str> {
+    if path.is_empty() || path == "/dev/null" {
+        None
+    } else {
+        get_extension(path).map(|ex| ex.trim())
+    }
+}
+
+/// Attempt to parse input as a file path and return extension as a &str.
+fn get_extension(s: &str) -> Option<&str> {
+    let path = Path::new(s);
+    path.extension()
+        .and_then(|e| e.to_str())
+        // E.g. 'Makefile' is the file name and also the extension
+        .or_else(|| path.file_name().and_then(|s| s.to_str()))
+}
+
+fn parse_file_meta_line(
     line: &str,
     git_diff_name: bool,
     relative_path_base: Option<&str>,
@@ -76,7 +264,7 @@ pub fn parse_file_meta_line(
 
 /// Given input like "diff --git a/src/my file.rs b/src/my file.rs"
 /// return Some("src/my file.rs")
-pub fn get_repeated_file_path_from_diff_line(line: &str) -> Option<String> {
+fn get_repeated_file_path_from_diff_line(line: &str) -> Option<String> {
     if let Some(line) = line.strip_prefix("diff --git ") {
         let line: Vec<&str> = line.graphemes(true).collect();
         let midpoint = line.len() / 2;
@@ -106,44 +294,6 @@ fn _parse_file_path(s: &str, git_diff_name: bool) -> String {
         path => path.split('\t').next().unwrap_or(""),
     }
     .to_string()
-}
-
-// A regex to capture the path, and the content from the pipe onwards, in lines
-// like these:
-// " src/delta.rs  | 14 ++++++++++----"
-// " src/config.rs |  2 ++"
-lazy_static! {
-    static ref DIFF_STAT_LINE_REGEX: Regex =
-        Regex::new(r" ([^\| ][^\|]+[^\| ]) +(\| +[0-9]+ .+)").unwrap();
-}
-
-pub fn relativize_path_in_diff_stat_line(
-    line: &str,
-    cwd_relative_to_repo_root: &str,
-    diff_stat_align_width: usize,
-) -> Option<String> {
-    if let Some(caps) = DIFF_STAT_LINE_REGEX.captures(line) {
-        let path_relative_to_repo_root = caps.get(1).unwrap().as_str();
-        if let Some(relative_path) =
-            pathdiff::diff_paths(path_relative_to_repo_root, cwd_relative_to_repo_root)
-        {
-            if let Some(relative_path) = relative_path.to_str() {
-                let suffix = caps.get(2).unwrap().as_str();
-                let pad_width = diff_stat_align_width.saturating_sub(relative_path.len());
-                let padding = " ".repeat(pad_width);
-                return Some(format!(" {}{}{}", relative_path, padding, suffix));
-            }
-        }
-    }
-    None
-}
-
-pub fn get_file_extension_from_file_meta_line_file_path(path: &str) -> Option<&str> {
-    if path.is_empty() || path == "/dev/null" {
-        None
-    } else {
-        get_extension(path).map(|ex| ex.trim())
-    }
 }
 
 pub fn get_file_change_description_from_file_paths(
@@ -215,98 +365,9 @@ pub fn get_file_change_description_from_file_paths(
     }
 }
 
-lazy_static! {
-    static ref HUNK_HEADER_REGEX: Regex = Regex::new(r"@+ ([^@]+)@+(.*\s?)").unwrap();
-}
-
-// Parse unified diff hunk header format. See
-// https://www.gnu.org/software/diffutils/manual/html_node/Detailed-Unified.html
-// https://www.artima.com/weblogs/viewpost.jsp?thread=164293
-lazy_static! {
-    static ref HUNK_HEADER_FILE_COORDINATE_REGEX: Regex = Regex::new(
-        r"(?x)
-[-+]
-(\d+)            # 1. Hunk start line number
-(?:              # Start optional hunk length section (non-capturing)
-  ,              #   Literal comma
-  (\d+)          #   2. Optional hunk length (defaults to 1)
-)?"
-    )
-    .unwrap();
-}
-
-/// Given input like
-/// "@@ -74,15 +74,14 @@ pub fn delta("
-/// Return " pub fn delta(" and a vector of (line_number, hunk_length) tuples.
-pub fn parse_hunk_header(line: &str) -> (String, Vec<(usize, usize)>) {
-    let caps = HUNK_HEADER_REGEX.captures(line).unwrap();
-    let file_coordinates = &caps[1];
-    let line_numbers_and_hunk_lengths = HUNK_HEADER_FILE_COORDINATE_REGEX
-        .captures_iter(file_coordinates)
-        .map(|caps| {
-            (
-                caps[1].parse::<usize>().unwrap(),
-                caps.get(2)
-                    .map(|m| m.as_str())
-                    // Per the specs linked above, if the hunk length is absent then it is 1.
-                    .unwrap_or("1")
-                    .parse::<usize>()
-                    .unwrap(),
-            )
-        })
-        .collect();
-    let code_fragment = &caps[2];
-    (code_fragment.to_string(), line_numbers_and_hunk_lengths)
-}
-
-/// Attempt to parse input as a file path and return extension as a &str.
-fn get_extension(s: &str) -> Option<&str> {
-    let path = Path::new(s);
-    path.extension()
-        .and_then(|e| e.to_str())
-        // E.g. 'Makefile' is the file name and also the extension
-        .or_else(|| path.file_name().and_then(|s| s.to_str()))
-}
-
-lazy_static! {
-    static ref SUBMODULE_SHORT_LINE_REGEX: Regex =
-        Regex::new("^[-+]Subproject commit ([0-9a-f]{40})$").unwrap();
-}
-
-pub fn get_submodule_short_commit(line: &str) -> Option<&str> {
-    match SUBMODULE_SHORT_LINE_REGEX.captures(line) {
-        Some(caps) => Some(caps.get(1).unwrap().as_str()),
-        None => None,
-    }
-}
-
 #[cfg(test)]
 mod tests {
     use super::*;
-
-    #[test]
-    fn test_get_repeated_file_path_from_diff_line() {
-        assert_eq!(
-            get_repeated_file_path_from_diff_line("diff --git a/src/main.rs b/src/main.rs"),
-            Some("src/main.rs".to_string())
-        );
-        assert_eq!(
-            get_repeated_file_path_from_diff_line("diff --git a/a b/a"),
-            Some("a".to_string())
-        );
-        assert_eq!(
-            get_repeated_file_path_from_diff_line("diff --git a/a b b/a b"),
-            Some("a b".to_string())
-        );
-        assert_eq!(
-            get_repeated_file_path_from_diff_line("diff --git a/a b/aa"),
-            None
-        );
-        assert_eq!(
-            get_repeated_file_path_from_diff_line("diff --git a/.config/Code - Insiders/User/settings.json b/.config/Code - Insiders/User/settings.json"),
-            Some(".config/Code - Insiders/User/settings.json".to_string())
-        );
-    }
 
     #[test]
     fn test_get_file_extension_from_marker_line() {
@@ -450,87 +511,26 @@ mod tests {
     }
 
     #[test]
-    fn test_parse_hunk_header() {
-        let parsed = parse_hunk_header("@@ -74,15 +75,14 @@ pub fn delta(\n");
-        let code_fragment = parsed.0;
-        let line_numbers_and_hunk_lengths = parsed.1;
-        assert_eq!(code_fragment, " pub fn delta(\n");
-        assert_eq!(line_numbers_and_hunk_lengths[0], (74, 15),);
-        assert_eq!(line_numbers_and_hunk_lengths[1], (75, 14),);
-    }
-
-    #[test]
-    fn test_parse_hunk_header_with_omitted_hunk_lengths() {
-        let parsed = parse_hunk_header("@@ -74 +75,2 @@ pub fn delta(\n");
-        let code_fragment = parsed.0;
-        let line_numbers_and_hunk_lengths = parsed.1;
-        assert_eq!(code_fragment, " pub fn delta(\n");
-        assert_eq!(line_numbers_and_hunk_lengths[0], (74, 1),);
-        assert_eq!(line_numbers_and_hunk_lengths[1], (75, 2),);
-    }
-
-    #[test]
-    fn test_parse_hunk_header_added_file() {
-        let parsed = parse_hunk_header("@@ -1,22 +0,0 @@");
-        let code_fragment = parsed.0;
-        let line_numbers_and_hunk_lengths = parsed.1;
-        assert_eq!(code_fragment, "",);
-        assert_eq!(line_numbers_and_hunk_lengths[0], (1, 22),);
-        assert_eq!(line_numbers_and_hunk_lengths[1], (0, 0),);
-    }
-
-    #[test]
-    fn test_parse_hunk_header_deleted_file() {
-        let parsed = parse_hunk_header("@@ -0,0 +1,3 @@");
-        let code_fragment = parsed.0;
-        let line_numbers_and_hunk_lengths = parsed.1;
-        assert_eq!(code_fragment, "",);
-        assert_eq!(line_numbers_and_hunk_lengths[0], (0, 0),);
-        assert_eq!(line_numbers_and_hunk_lengths[1], (1, 3),);
-    }
-
-    #[test]
-    fn test_parse_hunk_header_merge() {
-        let parsed = parse_hunk_header("@@@ -293,11 -358,15 +358,16 @@@ dependencies =");
-        let code_fragment = parsed.0;
-        let line_numbers_and_hunk_lengths = parsed.1;
-        assert_eq!(code_fragment, " dependencies =");
-        assert_eq!(line_numbers_and_hunk_lengths[0], (293, 11),);
-        assert_eq!(line_numbers_and_hunk_lengths[1], (358, 15),);
-        assert_eq!(line_numbers_and_hunk_lengths[2], (358, 16),);
-    }
-
-    #[test]
-    fn test_relative_path() {
-        for (path, cwd_relative_to_repo_root, expected) in &[
-            ("file.rs", "", "file.rs"),
-            ("file.rs", "a/", "../file.rs"),
-            ("a/file.rs", "a/", "file.rs"),
-            ("a/b/file.rs", "a", "b/file.rs"),
-            ("c/d/file.rs", "a/b/", "../../c/d/file.rs"),
-        ] {
-            assert_eq!(
-                pathdiff::diff_paths(path, cwd_relative_to_repo_root),
-                Some(expected.into())
-            )
-        }
-    }
-
-    #[test]
-    fn test_diff_stat_line_regex_1() {
-        let caps = DIFF_STAT_LINE_REGEX.captures(" src/delta.rs  | 14 ++++++++++----");
-        assert!(caps.is_some());
-        let caps = caps.unwrap();
-        assert_eq!(caps.get(1).unwrap().as_str(), "src/delta.rs");
-        assert_eq!(caps.get(2).unwrap().as_str(), "| 14 ++++++++++----");
-    }
-
-    #[test]
-    fn test_diff_stat_line_regex_2() {
-        let caps = DIFF_STAT_LINE_REGEX.captures(" src/config.rs |  2 ++");
-        assert!(caps.is_some());
-        let caps = caps.unwrap();
-        assert_eq!(caps.get(1).unwrap().as_str(), "src/config.rs");
-        assert_eq!(caps.get(2).unwrap().as_str(), "|  2 ++");
+    fn test_get_repeated_file_path_from_diff_line() {
+        assert_eq!(
+            get_repeated_file_path_from_diff_line("diff --git a/src/main.rs b/src/main.rs"),
+            Some("src/main.rs".to_string())
+        );
+        assert_eq!(
+            get_repeated_file_path_from_diff_line("diff --git a/a b/a"),
+            Some("a".to_string())
+        );
+        assert_eq!(
+            get_repeated_file_path_from_diff_line("diff --git a/a b b/a b"),
+            Some("a b".to_string())
+        );
+        assert_eq!(
+            get_repeated_file_path_from_diff_line("diff --git a/a b/aa"),
+            None
+        );
+        assert_eq!(
+        get_repeated_file_path_from_diff_line("diff --git a/.config/Code - Insiders/User/settings.json b/.config/Code - Insiders/User/settings.json"),
+        Some(".config/Code - Insiders/User/settings.json".to_string())
+    );
     }
 }
