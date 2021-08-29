@@ -485,13 +485,8 @@ impl<'a> StateMachine<'a> {
                     color
                 } else {
                     let n_commits = self.blame_commit_colors.len();
-                    let n_colors = self.config.blame_palette.as_ref().map(|v| v.len()).unwrap();
-                    let new_color = self
-                        .config
-                        .blame_palette
-                        .as_ref()
-                        .map(|v| &v[(n_commits + 1) % n_colors])
-                        .unwrap();
+                    let n_colors = self.config.blame_palette.len();
+                    let new_color = &self.config.blame_palette[(n_commits + 1) % n_colors];
                     self.blame_commit_colors
                         .insert(blame.commit.to_owned(), new_color.to_owned());
                     new_color

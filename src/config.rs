@@ -22,7 +22,7 @@ pub struct Config {
     pub available_terminal_width: usize,
     pub background_color_extends_to_terminal_width: bool,
     pub blame_format: String,
-    pub blame_palette: Option<Vec<String>>,
+    pub blame_palette: Vec<String>,
     pub blame_timestamp_format: String,
     pub commit_style: Style,
     pub color_only: bool,
@@ -206,11 +206,11 @@ impl From<cli::Opt> for Config {
                 .computed
                 .background_color_extends_to_terminal_width,
             blame_format: opt.blame_format,
-            blame_palette: opt.blame_palette.map(|s| {
-                s.split_whitespace()
-                    .map(|s| s.to_owned())
-                    .collect::<Vec<String>>()
-            }),
+            blame_palette: opt
+                .blame_palette
+                .split_whitespace()
+                .map(|s| s.to_owned())
+                .collect::<Vec<String>>(),
             blame_timestamp_format: opt.blame_timestamp_format,
             commit_style,
             color_only: opt.color_only,

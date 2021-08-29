@@ -430,8 +430,8 @@ pub struct Opt {
     /// Background colors used for git blame lines (space-separated string).
     /// Lines added by the same commit are painted with the same color; colors
     /// are recycled as needed.
-    #[structopt(long = "blame-palette")]
-    pub blame_palette: Option<String>,
+    #[structopt(long = "blame-palette", default_value = "#FFFFFF #DDDDDD #BBBBBB")]
+    pub blame_palette: String,
 
     /// Format of `git blame` timestamp in raw git output received by delta.
     #[structopt(
