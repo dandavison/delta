@@ -88,7 +88,7 @@ fn format_osc8_hyperlink(url: &str, text: &str) -> String {
 }
 
 lazy_static! {
-    static ref COMMIT_LINE_REGEX: Regex = Regex::new("(.* )([0-9a-f]{40})(.*)").unwrap();
+    static ref COMMIT_LINE_REGEX: Regex = Regex::new("(.* )?([0-9a-f]{8,40})(.*)").unwrap();
 }
 
 fn format_commit_line_captures_with_osc8_commit_hyperlink(
@@ -100,7 +100,7 @@ fn format_commit_line_captures_with_osc8_commit_hyperlink(
         "{prefix}{osc}8;;{url}{st}{commit}{osc}8;;{st}{suffix}",
         url = format_github_commit_url(commit, github_repo),
         commit = commit,
-        prefix = captures.get(1).unwrap().as_str(),
+        prefix = captures.get(1).map(|m| m.as_str()).unwrap_or(""),
         suffix = captures.get(3).unwrap().as_str(),
         osc = "\x1b]",
         st = "\x1b\\"

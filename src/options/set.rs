@@ -121,6 +121,9 @@ pub fn set_options(
 
     set_options!(
         [
+            blame_format,
+            blame_palette,
+            blame_timestamp_format,
             color_only,
             commit_decoration_style,
             commit_regex,
