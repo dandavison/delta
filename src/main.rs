@@ -15,7 +15,6 @@ mod draw;
 mod edits;
 mod env;
 mod features;
-mod format;
 mod git_config;
 mod hunk_header;
 mod options;
