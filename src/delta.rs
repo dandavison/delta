@@ -107,7 +107,7 @@ impl<'a> StateMachine<'a> {
                 self.source = detect_source(line);
             }
 
-            let mut handled_line = self.handle_commit_meta_header_line()?
+            let _ = self.handle_commit_meta_header_line()?
                 || self.handle_diff_stat_line()?
                 || self.handle_file_meta_diff_line()?
                 || self.handle_file_meta_minus_line()?
@@ -117,21 +117,9 @@ impl<'a> StateMachine<'a> {
                 || self.handle_submodule_log_line()?
                 || self.handle_submodule_short_line()?
                 || self.handle_hunk_line()?
-                || self.handle_blame_line()?;
-
-            if self.state == State::FileMeta && self.should_handle() && !self.config.color_only {
-                // Skip file metadata lines unless a raw diff style has been requested.
-                handled_line = true
-            }
-            if !handled_line {
-                // Emit unchanged any line that delta does not handle.
-                self.painter.emit()?;
-                writeln!(
-                    self.painter.writer,
-                    "{}",
-                    format_raw_line(&self.raw_line, self.config)
-                )?;
-            }
+                || self.handle_blame_line()?
+                || self.should_skip()
+                || self.emit_line_unchanged()?;
         }
 
         self.painter.paint_buffered_minus_and_plus_lines();
@@ -160,7 +148,26 @@ impl<'a> StateMachine<'a> {
         }
     }
 
+    /// Skip file metadata lines unless a raw diff style has been requested.
+    fn should_skip(&self) -> bool {
+        self.state == State::FileMeta && self.should_handle() && !self.config.color_only
+    }
+
+    /// Emit unchanged any line that delta does not handle.
+    fn emit_line_unchanged(&mut self) -> std::io::Result<bool> {
+        self.painter.emit()?;
+        writeln!(
+            self.painter.writer,
+            "{}",
+            format_raw_line(&self.raw_line, self.config)
+        )?;
+        let handled_line = true;
+        Ok(handled_line)
+    }
+
     /// Should a handle_* function be called on this element?
+    // TODO: I'm not sure the above description is accurate; I think this
+    // function needs a more accurate name.
     pub fn should_handle(&self) -> bool {
         let style = self.config.get_style(&self.state);
         !(style.is_raw && style.decoration_style == DecorationStyle::NoDecoration)
