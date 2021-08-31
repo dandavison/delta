@@ -118,7 +118,7 @@ impl<'a> StateMachine<'a> {
                 || self.handle_submodule_short_line()?
                 || self.handle_hunk_line()?
                 || self.handle_blame_line()?
-                || self.should_skip()
+                || self.should_skip_line()
                 || self.emit_line_unchanged()?;
         }
 
@@ -149,7 +149,7 @@ impl<'a> StateMachine<'a> {
     }
 
     /// Skip file metadata lines unless a raw diff style has been requested.
-    fn should_skip(&self) -> bool {
+    fn should_skip_line(&self) -> bool {
         self.state == State::FileMeta && self.should_handle() && !self.config.color_only
     }
 
