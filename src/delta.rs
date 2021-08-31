@@ -113,7 +113,7 @@ impl<'a> StateMachine<'a> {
                 || self.handle_file_meta_minus_line()?
                 || self.handle_file_meta_plus_line()?
                 || self.handle_hunk_header_line()?
-                || self.handle_file_meta_misc_lines()?
+                || self.handle_file_meta_misc_line()?
                 || self.handle_submodule_log_line()?
                 || self.handle_submodule_short_line()?
                 || self.handle_hunk_line()?

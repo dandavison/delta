@@ -7,7 +7,7 @@ impl<'a> StateMachine<'a> {
             || self.line.starts_with("Binary files ")
     }
 
-    pub fn handle_file_meta_misc_lines(&mut self) -> std::io::Result<bool> {
+    pub fn handle_file_meta_misc_line(&mut self) -> std::io::Result<bool> {
         if !self.test_file_meta_misc_cases() {
             return Ok(false);
         }
