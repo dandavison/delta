@@ -101,10 +101,9 @@ impl<'a> StateMachine<'a> {
     {
         while let Some(Ok(raw_line_bytes)) = lines.next() {
             self.ingest_line(raw_line_bytes);
-            let line = &self.line;
 
             if self.source == Source::Unknown {
-                self.source = detect_source(line);
+                self.source = detect_source(&self.line);
             }
 
             let _ = self.handle_commit_meta_header_line()?
