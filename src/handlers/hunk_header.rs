@@ -29,7 +29,7 @@ use crate::config::Config;
 use crate::delta::{self, State, StateMachine};
 use crate::features;
 use crate::paint::Painter;
-use crate::style::{DecorationStyle, Style};
+use crate::style::DecorationStyle;
 
 impl<'a> StateMachine<'a> {
     #[inline]
@@ -170,12 +170,7 @@ fn write_hunk_header(
     let file_with_line_number = get_painted_file_with_line_number(line_numbers, plus_file, config);
 
     if !line.is_empty() || !file_with_line_number.is_empty() {
-        write_to_output_buffer(
-            &file_with_line_number,
-            line,
-            config.hunk_header_style,
-            painter,
-        );
+        write_to_output_buffer(&file_with_line_number, line, painter, config);
         draw_fn(
             painter.writer,
             &painter.output_buffer,
@@ -196,11 +191,6 @@ fn get_painted_file_with_line_number(
     config: &Config,
 ) -> String {
     let mut file_with_line_number = Vec::new();
-    let hunk_label;
-    if config.navigate {
-        hunk_label = format!("{} ", config.hunk_label);
-        file_with_line_number.push(config.hunk_header_file_style.paint(&hunk_label));
-    }
     let plus_line_number = line_numbers[line_numbers.len() - 1].0;
     if config.hunk_header_style_include_file_path {
         file_with_line_number.push(config.hunk_header_file_style.paint(plus_file))
@@ -235,16 +225,23 @@ fn get_painted_file_with_line_number(
 fn write_to_output_buffer(
     file_with_line_number: &str,
     line: String,
-    style: Style,
     painter: &mut Painter,
+    config: &Config,
 ) {
+    if config.navigate {
+        let _ = write!(
+            &mut painter.output_buffer,
+            "{} ",
+            config.hunk_header_file_style.paint(&config.hunk_label)
+        );
+    }
     if !file_with_line_number.is_empty() {
         let _ = write!(&mut painter.output_buffer, "{}: ", file_with_line_number);
     }
     if !line.is_empty() {
         painter.syntax_highlight_and_paint_line(
             &line,
-            style,
+            config.hunk_header_style,
             delta::State::HunkHeader("".to_owned(), "".to_owned()),
             false,
         );
