@@ -354,4 +354,19 @@ pub mod tests {
 
         assert_eq!(result, "");
     }
+
+    #[test]
+    fn test_get_painted_file_with_line_number_empty_navigate() {
+        let cfg = integration_test_utils::make_config_from_args(&[
+            "--hunk-header-style",
+            "syntax bold",
+            "--hunk-header-decoration-style",
+            "omit",
+            "--navigate",
+        ]);
+
+        let result = get_painted_file_with_line_number(&vec![(3, 4)], "δ some-file", &cfg);
+
+        assert_eq!(result, "");
+    }
 }
