@@ -79,7 +79,7 @@ pub trait GetOptionValue {
                 return Some(value);
             }
         }
-        for feature in opt.features.to_lowercase().split_whitespace().rev() {
+        for feature in opt.features.split_whitespace().rev() {
             match Self::get_provenanced_value_for_feature(
                 option_name,
                 feature,
@@ -316,6 +316,9 @@ pub mod tests {
     light = true
     dark = true
 
+[delta "Uppercase-Theme"]
+    light = true
+
 [delta "not-a-theme"]
     max-line-distance = 0.6
 "#;
@@ -331,7 +334,12 @@ pub mod tests {
 
         assert_eq!(
             themes,
-            ["dark-theme", "light-and-dark-theme", "light-theme",]
+            [
+                "dark-theme",
+                "light-and-dark-theme",
+                "light-theme",
+                "Uppercase-Theme"
+            ]
         );
 
         remove_file(git_config_path).unwrap();
