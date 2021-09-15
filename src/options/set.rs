@@ -308,11 +308,11 @@ fn gather_features(
 
     // Gather features from command line.
     if let Some(git_config) = git_config {
-        for feature in split_feature_string(&opt.features.to_lowercase()) {
+        for feature in split_feature_string(&opt.features) {
             gather_features_recursively(feature, &mut features, builtin_features, opt, git_config);
         }
     } else {
-        for feature in split_feature_string(&opt.features.to_lowercase()) {
+        for feature in split_feature_string(&opt.features) {
             features.push_front(feature.to_string());
         }
     }
@@ -348,7 +348,7 @@ fn gather_features(
         // Gather features from [delta] section if --features was not passed.
         if opt.features.is_empty() {
             if let Some(feature_string) = git_config.get::<String>("delta.features") {
-                for feature in split_feature_string(&feature_string.to_lowercase()) {
+                for feature in split_feature_string(&feature_string) {
                     gather_features_recursively(
                         feature,
                         &mut features,
