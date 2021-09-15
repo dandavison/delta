@@ -74,7 +74,11 @@ impl<'a> StateMachine<'a> {
                 &line_numbers,
                 &mut self.painter,
                 line,
-                &self.plus_file,
+                if self.plus_file == "/dev/null" {
+                    &self.minus_file
+                } else {
+                    &self.plus_file
+                },
                 self.config,
             )?;
         };
