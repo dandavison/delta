@@ -34,7 +34,7 @@ regex = "1.4.6"
 shell-words = "1.0.0"
 structopt = "0.3.23"
 unicode-segmentation = "1.8.0"
-unicode-width = "0.1.8"
+unicode-width = "0.1.9"
 vte = "0.10.1"
 xdg = "2.2.0"
 
