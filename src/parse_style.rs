@@ -49,7 +49,7 @@ impl Style {
         let mut style = Style::from_str(
             &style_string,
             default,
-            decoration_style_string.as_deref(),
+            decoration_style_string,
             true_color,
             is_emph,
         );
