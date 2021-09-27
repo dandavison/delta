@@ -1,5 +1,5 @@
 <p align="center">
-  <img width=600px src="https://user-images.githubusercontent.com/52205/102416950-ae124300-3ff2-11eb-9d66-40d2aef4888f.png" alt="image" />
+  <img width=400px src="https://user-images.githubusercontent.com/52205/102416950-ae124300-3ff2-11eb-9d66-40d2aef4888f.png" alt="image" />
 </p>
 <p align="center">
   <a href="https://github.com/dandavison/delta/actions">
@@ -12,6 +12,21 @@
     <img src="https://badges.gitter.im/dandavison-delta/community.svg" alt="Gitter">
   </a>
 </p>
+
+## Get Started
+
+[Install](#installation) delta and add this to your `~/.gitconfig`:
+
+```gitconfig
+[pager]
+    diff = delta
+    log = delta
+    reflog = delta
+    show = delta
+
+[interactive]
+    diffFilter = delta --color-only --features=interactive
+```
 
 ## A viewer for git and diff output
 
@@ -37,67 +52,13 @@ Code evolves, and we all spend time studying diffs. Delta aims to make this both
   </tr>
 </table>
 
-#### Delta's main features are:
-
-- Language syntax highlighting with color themes
-- Within-line highlights based on a Levenshtein edit inference algorithm
-- Git style strings (foreground color, background color, font attributes) are supported for >20 stylable elements
-- Side-by-side view
-- Line numbering
-- `diff-highlight` and `diff-so-fancy` emulation modes
-- Stylable box/line decorations to draw attention to commit, file and hunk header sections.
-- Support for Git's `--color-moved` feature.
-- Code can be copied directly from the diff (`-/+` markers are removed by default).
-- `n` and `N` keybindings to move between files in large diffs, and between diffs in `log -p` views (`--navigate`)
-- Commit hashes can be formatted as terminal [hyperlinks](https://gist.github.com/egmontkob/eb114294efbcd5adb1944c9f3cb5feda) to the GitHub/GitLab/Bitbucket page (`--hyperlinks`).
-  File paths can also be formatted as hyperlinks for opening in your OS.
-
-The most convenient way to configure delta is with a `[delta]` section in `~/.gitconfig`. Here's a quick example:
-
-<sub>
-
-```gitconfig
-[pager]
-    diff = delta
-    log = delta
-    reflog = delta
-    show = delta
-
-[interactive]
-    diffFilter = delta --color-only --features=interactive
-
-[delta]
-    features = decorations
-
-[delta "interactive"]
-    keep-plus-minus-markers = false
-
-[delta "decorations"]
-    commit-decoration-style = blue ol
-    commit-style = raw
-    file-style = omit
-    hunk-header-decoration-style = blue box
-    hunk-header-file-style = red
-    hunk-header-line-number-style = "#067a00"
-    hunk-header-style = file line-number syntax
-```
-
-</sub>
-
-Use `delta --help` to see all the available options.
-
-To change your delta options in a one-off git command, use `git -c`. For example
-
-```
-git -c delta.line-numbers=false show
-```
-
 # Contents
 
+- [Features](#features)
 - [Installation](#installation)
 - [Configuration](#configuration)
-  - [Git config files](#git-config-file)
-  - [Environment](#environment)
+  _ [Git config file](#git-config-file)
+  _ [Environment](#environment)
 - [Usage](#usage)
   - [Choosing colors (styles)](#choosing-colors-styles)
   - [Line numbers](#line-numbers)
@@ -152,16 +113,6 @@ Here's what `git show` can look like with git configured to use delta:
 <br>
 <br>
 
-**By default, delta restructures the git output slightly to make the hunk markers human-readable:**
-
-<br>
-<table><tr><td>
-  <img width=650px src="https://user-images.githubusercontent.com/52205/81059276-254cf980-8e9e-11ea-95c3-8b757a4c11b5.png" alt="image" />
-</td></tr></table>
-
-<br>
-<br>
-
 **All the syntax-highlighting color themes that are available with [bat](https://github.com/sharkdp/bat/) are available with delta:**
 
 <br>
@@ -189,6 +140,21 @@ Here's what `git show` can look like with git configured to use delta:
 </table>
 
 <br>
+
+## Features
+
+- Language syntax highlighting with color themes
+- Within-line highlights based on a Levenshtein edit inference algorithm
+- Git style strings (foreground color, background color, font attributes) are supported for >20 stylable elements
+- Side-by-side view
+- Line numbering
+- `diff-highlight` and `diff-so-fancy` emulation modes
+- Stylable box/line decorations to draw attention to commit, file and hunk header sections.
+- Support for Git's `--color-moved` feature.
+- Code can be copied directly from the diff (`-/+` markers are removed by default).
+- `n` and `N` keybindings to move between files in large diffs, and between diffs in `log -p` views (`--navigate`)
+- Commit hashes can be formatted as terminal [hyperlinks](https://gist.github.com/egmontkob/eb114294efbcd5adb1944c9f3cb5feda) to the GitHub/GitLab/Bitbucket page (`--hyperlinks`).
+  File paths can also be formatted as hyperlinks for opening in your OS.
 
 |                                                | delta | git | [diff-so-fancy] /<br>[diff-highlight] | github/gitlab |
 | ---------------------------------------------- | ----- | --- | ------------------------------------- | ------------- |
@@ -293,7 +259,9 @@ On MacOS, install `less` from Homebrew. For Windows, see [Using Delta on Windows
 
 #### Git config file
 
-Set delta to be the pager for git commands in your `.gitconfig`. Delta has many options to alter colors and other details of the output; `delta --help` shows them all. An example is
+The most convenient way to configure delta is with a `[delta]` section in `~/.gitconfig`. Here's an example:
+
+<sub>
 
 ```gitconfig
 [pager]
@@ -302,15 +270,28 @@ Set delta to be the pager for git commands in your `.gitconfig`. Delta has many 
     reflog = delta
     show = delta
 
-[delta]
-    plus-style = "syntax #012800"
-    minus-style = "syntax #340001"
-    syntax-theme = Monokai Extended
-    navigate = true
-
 [interactive]
-    diffFilter = delta --color-only
+    diffFilter = delta --color-only --features=interactive
+
+[delta]
+    features = decorations
+
+[delta "interactive"]
+    keep-plus-minus-markers = false
+
+[delta "decorations"]
+    commit-decoration-style = blue ol
+    commit-style = raw
+    file-style = omit
+    hunk-header-decoration-style = blue box
+    hunk-header-file-style = red
+    hunk-header-line-number-style = "#067a00"
+    hunk-header-style = file line-number syntax
 ```
+
+</sub>
+
+Use `delta --help` to see all the available options.
 
 Note that delta style argument values in ~/.gitconfig should be in double quotes, like `--minus-style="syntax #340001"`. For theme names and other values, do not use quotes as they will be passed on to delta, like `theme = Monokai Extended`.
 
@@ -322,6 +303,12 @@ All git commands that display diff output should now display syntax-highlighted 
 - `git stash show -p`
 - `git reflog -p`
 - `git add -p`
+
+To change your delta options in a one-off git command, use `git -c`. For example
+
+```
+git -c delta.line-numbers=false show
+```
 
 Delta can also be used as a shorthand for diffing two files: the following two commands do the same thing:
 
