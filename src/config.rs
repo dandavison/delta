@@ -623,6 +623,10 @@ pub fn delta_unreachable(message: &str) -> ! {
 }
 
 #[cfg(test)]
+// Usual length of the header returned by `run_delta()`, often `skip()`-ed.
+pub const HEADER_LEN: usize = 7;
+
+#[cfg(test)]
 pub mod tests {
     use crate::bat_utils::output::PagingMode;
     use crate::cli;

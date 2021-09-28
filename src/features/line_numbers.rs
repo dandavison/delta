@@ -493,7 +493,7 @@ pub mod tests {
             "0 4",
         ]);
         let output = run_delta(TWO_MINUS_LINES_DIFF, &config);
-        let mut lines = output.lines().skip(7);
+        let mut lines = output.lines().skip(crate::config::HEADER_LEN);
         let (line_1, line_2) = (lines.next().unwrap(), lines.next().unwrap());
         assert_eq!(strip_ansi_codes(line_1), " 1  ⋮    │a = 1");
         assert_eq!(strip_ansi_codes(line_2), " 2  ⋮    │b = 23456");
@@ -517,7 +517,7 @@ pub mod tests {
             "0 4",
         ]);
         let output = run_delta(TWO_PLUS_LINES_DIFF, &config);
-        let mut lines = output.lines().skip(7);
+        let mut lines = output.lines().skip(crate::config::HEADER_LEN);
         let (line_1, line_2) = (lines.next().unwrap(), lines.next().unwrap());
         assert_eq!(strip_ansi_codes(line_1), "    ⋮ 1  │a = 1");
         assert_eq!(strip_ansi_codes(line_2), "    ⋮ 2  │b = 234567");
@@ -542,7 +542,7 @@ pub mod tests {
         ]);
         let output = run_delta(ONE_MINUS_ONE_PLUS_LINE_DIFF, &config);
         let output = strip_ansi_codes(&output);
-        let mut lines = output.lines().skip(7);
+        let mut lines = output.lines().skip(crate::config::HEADER_LEN);
         assert_eq!(lines.next().unwrap(), " 1  ⋮ 1  │a = 1");
         assert_eq!(lines.next().unwrap(), " 2  ⋮    │b = 2");
         assert_eq!(lines.next().unwrap(), "    ⋮ 2  │bb = 2");
@@ -567,7 +567,7 @@ pub mod tests {
         ]);
         let output = run_delta(ONE_MINUS_ONE_PLUS_LINE_DIFF, &config);
         let output = strip_ansi_codes(&output);
-        let mut lines = output.lines().skip(7);
+        let mut lines = output.lines().skip(crate::config::HEADER_LEN);
         assert_eq!(lines.next().unwrap(), " 1    1  ⋮ 1  │a = 1");
         assert_eq!(lines.next().unwrap(), " 2    2  ⋮    │b = 2");
         assert_eq!(lines.next().unwrap(), "         ⋮ 2  │bb = 2");
@@ -578,7 +578,7 @@ pub mod tests {
         let config = make_config_from_args(&["--line-numbers"]);
         let output = run_delta(FIVE_DIGIT_LINE_NUMBER_DIFF, &config);
         let output = strip_ansi_codes(&output);
-        let mut lines = output.lines().skip(7);
+        let mut lines = output.lines().skip(crate::config::HEADER_LEN);
         assert_eq!(lines.next().unwrap(), "10000⋮10000│a = 1");
         assert_eq!(lines.next().unwrap(), "10001⋮     │b = 2");
         assert_eq!(lines.next().unwrap(), "     ⋮10001│bb = 2");
@@ -589,7 +589,7 @@ pub mod tests {
         let config = make_config_from_args(&["--line-numbers"]);
         let output = run_delta(UNEQUAL_DIGIT_DIFF, &config);
         let output = strip_ansi_codes(&output);
-        let mut lines = output.lines().skip(7);
+        let mut lines = output.lines().skip(crate::config::HEADER_LEN);
         assert_eq!(lines.next().unwrap(), "10000⋮9999 │a = 1");
         assert_eq!(lines.next().unwrap(), "10001⋮     │b = 2");
         assert_eq!(lines.next().unwrap(), "     ⋮10000│bb = 2");

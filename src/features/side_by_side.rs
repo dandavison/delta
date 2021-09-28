@@ -489,7 +489,7 @@ pub mod tests {
     fn test_two_minus_lines() {
         let config = make_config_from_args(&["--side-by-side", "--width", "40"]);
         let output = run_delta(TWO_MINUS_LINES_DIFF, &config);
-        let mut lines = output.lines().skip(7);
+        let mut lines = output.lines().skip(crate::config::HEADER_LEN);
         let (line_1, line_2) = (lines.next().unwrap(), lines.next().unwrap());
         assert_eq!("│ 1  │a = 1         │    │", strip_ansi_codes(line_1));
         assert_eq!("│ 2  │b = 23456     │    │", strip_ansi_codes(line_2));
@@ -507,7 +507,7 @@ pub mod tests {
         ]);
         config.truncation_symbol = ">".into();
         let output = run_delta(TWO_MINUS_LINES_DIFF, &config);
-        let mut lines = output.lines().skip(7);
+        let mut lines = output.lines().skip(crate::config::HEADER_LEN);
         let (line_1, line_2) = (lines.next().unwrap(), lines.next().unwrap());
         assert_eq!("│ 1  │a = 1   │    │", strip_ansi_codes(line_1));
         assert_eq!("│ 2  │b = 234>│    │", strip_ansi_codes(line_2));
@@ -517,7 +517,7 @@ pub mod tests {
     fn test_two_plus_lines() {
         let config = make_config_from_args(&["--side-by-side", "--width", "40"]);
         let output = run_delta(TWO_PLUS_LINES_DIFF, &config);
-        let mut lines = output.lines().skip(7);
+        let mut lines = output.lines().skip(crate::config::HEADER_LEN);
         let (line_1, line_2) = (lines.next().unwrap(), lines.next().unwrap());
         let sac = strip_ansi_codes; // alias to help with `cargo fmt`-ing:
         assert_eq!("│    │              │ 1  │a = 1         ", sac(line_1));
@@ -537,7 +537,7 @@ pub mod tests {
         config.truncation_symbol = ">".into();
 
         let output = run_delta(TWO_PLUS_LINES_DIFF, &config);
-        let mut lines = output.lines().skip(7);
+        let mut lines = output.lines().skip(crate::config::HEADER_LEN);
         let (line_1, line_2) = (lines.next().unwrap(), lines.next().unwrap());
         assert_eq!("│    │         │ 1  │a = 1    ", strip_ansi_codes(line_1));
         assert_eq!("│    │         │ 2  │b = 2345>", strip_ansi_codes(line_2));
@@ -547,7 +547,7 @@ pub mod tests {
     fn test_two_plus_lines_exact_fit() {
         let config = make_config_from_args(&["--side-by-side", "--width", "32"]);
         let output = run_delta(TWO_PLUS_LINES_DIFF, &config);
-        let mut lines = output.lines().skip(7);
+        let mut lines = output.lines().skip(crate::config::HEADER_LEN);
         let (line_1, line_2) = (lines.next().unwrap(), lines.next().unwrap());
         assert_eq!("│    │          │ 1  │a = 1     ", strip_ansi_codes(line_1));
         assert_eq!("│    │          │ 2  │b = 234567", strip_ansi_codes(line_2));
@@ -558,7 +558,7 @@ pub mod tests {
         let config = make_config_from_args(&["--side-by-side", "--width", "40"]);
         let output = run_delta(ONE_MINUS_ONE_PLUS_LINE_DIFF, &config);
         let output = strip_ansi_codes(&output);
-        let mut lines = output.lines().skip(7);
+        let mut lines = output.lines().skip(crate::config::HEADER_LEN);
         let mut lnu = move || lines.next().unwrap(); // for cargo fmt
         assert_eq!("│ 1  │a = 1         │ 1  │a = 1", lnu());
         assert_eq!("│ 2  │b = 2         │ 2  │bb = 2        ", lnu());

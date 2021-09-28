@@ -915,7 +915,7 @@ index 223ca50..e69de29 100644
 
         let output = run_delta(HUNK_ZERO_DIFF, &config);
         let output = strip_ansi_codes(&output);
-        let lines: Vec<_> = output.lines().skip(7).collect();
+        let lines: Vec<_> = output.lines().skip(crate::config::HEADER_LEN).collect();
         let expected = vec![
             "│L│abcdefghijklm+   │RRRR│abcdefghijklm+",
             "│L│nopqrstuvwxzy+   │RRRR│nopqrstuvwxzy+",
@@ -942,7 +942,7 @@ index 223ca50..e69de29 100644
 
         let output = run_delta(HUNK_ZERO_LARGE_LINENUMBERS_DIFF, &config);
         let output = strip_ansi_codes(&output);
-        let lines: Vec<_> = output.lines().skip(7).collect();
+        let lines: Vec<_> = output.lines().skip(crate::config::HEADER_LEN).collect();
         let expected = vec![
             "│LLL│abcde+                   │WW   10   +- 101999 WW│abcde+",
             "│LLL│fghij+                   │WW        +-        WW│fghij+",
@@ -966,7 +966,7 @@ index 223ca50..e69de29 100644
 
         let output = run_delta(HUNK_MP_DIFF, &config);
         let output = strip_ansi_codes(&output);
-        let lines: Vec<_> = output.lines().skip(7).collect();
+        let lines: Vec<_> = output.lines().skip(crate::config::HEADER_LEN).collect();
         let expected = vec![
             "│ 4  │ abcdefghijklmn+│ 15 │ abcdefghijklmn+",
             "│    │ opqrstuvwxzy 0+│    │ opqrstuvwxzy 0+",
@@ -996,7 +996,7 @@ index 223ca50..e69de29 100644
                 &config,
             );
             let output = strip_ansi_codes(&output);
-            let lines: Vec<_> = output.lines().skip(7).collect();
+            let lines: Vec<_> = output.lines().skip(crate::config::HEADER_LEN).collect();
             let expected = vec![
                 "│ 1  │.........1.........2<│ 1  │.........1.........2+",
                 "│    │                >....│    │.........3.........4+",
@@ -1014,7 +1014,7 @@ index 223ca50..e69de29 100644
                 &config,
             );
             let output = strip_ansi_codes(&output);
-            let lines: Vec<_> = output.lines().skip(7).collect();
+            let lines: Vec<_> = output.lines().skip(crate::config::HEADER_LEN).collect();
             let expected = vec![
                 "│ 1  │.........1.........2+│ 1  │.........1.........2<",
                 "│    │.........3.........4+│    │                >....",
@@ -1038,7 +1038,7 @@ index 223ca50..e69de29 100644
                 &config,
             );
             let output = strip_ansi_codes(&output);
-            let lines: Vec<_> = output.lines().skip(7).collect();
+            let lines: Vec<_> = output.lines().skip(crate::config::HEADER_LEN).collect();
             let expected = vec![
                 "│ 1  │.........1.........2....│ 1  │.........1.........2...+",
                 "│    │                        │    │......3.........4......+",
@@ -1056,7 +1056,7 @@ index 223ca50..e69de29 100644
                 &config,
             );
             let output = strip_ansi_codes(&output);
-            let lines: Vec<_> = output.lines().skip(7).collect();
+            let lines: Vec<_> = output.lines().skip(crate::config::HEADER_LEN).collect();
             let expected = vec![
                 "│ 1  │.........1.........2...+│ 1  │.........1.........2....",
                 "│    │......3.........4......+│    │",
@@ -1087,7 +1087,7 @@ index 223ca50..e69de29 100644
                 &config,
             );
             let output = strip_ansi_codes(&output);
-            let lines: Vec<_> = output.lines().skip(7).collect();
+            let lines: Vec<_> = output.lines().skip(crate::config::HEADER_LEN).collect();
             let expected = vec![
                 "│ 1  │.........1.........2....      │ 1  │.........1.........2.........+",
                 "│    │                              │    │3.........4.........5........+",
@@ -1106,7 +1106,7 @@ index 223ca50..e69de29 100644
                 &config,
             );
             let output = strip_ansi_codes(&output);
-            let lines: Vec<_> = output.lines().skip(7).collect();
+            let lines: Vec<_> = output.lines().skip(crate::config::HEADER_LEN).collect();
             let expected = vec![
                 "│ 1  │.........1.........2....      │ 1  │.........1.........2.........+",
                 "│    │                              │    │3.........4.........5........>",
