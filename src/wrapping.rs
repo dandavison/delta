@@ -11,7 +11,7 @@ use crate::features::side_by_side::available_line_width;
 use crate::features::side_by_side::line_is_too_long;
 use crate::features::side_by_side::LineSegments;
 use crate::features::side_by_side::{Left, Right};
-use crate::plusminus::*;
+use crate::minusplus::*;
 use crate::style::Style;
 
 /// See [`wrap_line`] for documentation.
@@ -288,31 +288,31 @@ where
 /// a specific line was longer than `line_width`. Return an adjusted `alignment`
 /// with regard to the added wrapped lines.
 #[allow(clippy::comparison_chain, clippy::type_complexity)]
-pub fn wrap_plusminus_block<'c: 'a, 'a>(
+pub fn wrap_minusplus_block<'c: 'a, 'a>(
     config: &'c Config,
-    syntax: PlusMinus<Vec<LineSegments<'a, SyntectStyle>>>,
-    diff: PlusMinus<Vec<LineSegments<'a, Style>>>,
+    syntax: MinusPlus<Vec<LineSegments<'a, SyntectStyle>>>,
+    diff: MinusPlus<Vec<LineSegments<'a, Style>>>,
     alignment: &[(Option<usize>, Option<usize>)],
     line_width: &SideBySideLineWidth,
-    wrapinfo: &'a PlusMinus<Vec<bool>>,
+    wrapinfo: &'a MinusPlus<Vec<bool>>,
 ) -> (
     Vec<(Option<usize>, Option<usize>)>,
-    PlusMinus<Vec<State>>,
-    PlusMinus<Vec<LineSegments<'a, SyntectStyle>>>,
-    PlusMinus<Vec<LineSegments<'a, Style>>>,
+    MinusPlus<Vec<State>>,
+    MinusPlus<Vec<LineSegments<'a, SyntectStyle>>>,
+    MinusPlus<Vec<LineSegments<'a, Style>>>,
 ) {
     let mut new_alignment = Vec::new();
-    let mut new_states = PlusMinus::<Vec<State>>::default();
-    let mut new_wrapped_syntax = PlusMinus::default();
-    let mut new_wrapped_diff = PlusMinus::default();
+    let mut new_states = MinusPlus::<Vec<State>>::default();
+    let mut new_wrapped_syntax = MinusPlus::default();
+    let mut new_wrapped_diff = MinusPlus::default();
 
     // Turn all these into pairs of iterators so they can be advanced according
     // to the alignment and independently.
-    let mut syntax = PlusMinus::new(syntax.minus.into_iter(), syntax.plus.into_iter());
-    let mut diff = PlusMinus::new(diff.minus.into_iter(), diff.plus.into_iter());
-    let mut wrapinfo = PlusMinus::new(wrapinfo[Left].iter(), wrapinfo[Right].iter());
+    let mut syntax = MinusPlus::new(syntax.minus.into_iter(), syntax.plus.into_iter());
+    let mut diff = MinusPlus::new(diff.minus.into_iter(), diff.plus.into_iter());
+    let mut wrapinfo = MinusPlus::new(wrapinfo[Left].iter(), wrapinfo[Right].iter());
 
-    let fill_style = PlusMinus::new(&config.minus_style, &config.plus_style);
+    let fill_style = MinusPlus::new(&config.minus_style, &config.plus_style);
 
     // Internal helper function to perform wrapping for both the syntax and the
     // diff highlighting (SyntectStyle and Style).

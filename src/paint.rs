@@ -12,10 +12,10 @@ use crate::delta::State;
 use crate::edits;
 use crate::features::line_numbers;
 use crate::features::side_by_side::{self, available_line_width, LineSegments, PanelSide};
+use crate::minusplus::*;
 use crate::paint::superimpose_style_sections::superimpose_style_sections;
-use crate::plusminus::*;
 use crate::style::Style;
-use crate::wrapping::wrap_plusminus_block;
+use crate::wrapping::wrap_minusplus_block;
 
 pub struct Painter<'a> {
     pub minus_lines: Vec<(String, State)>,
@@ -163,16 +163,16 @@ impl<'a> Painter<'a> {
             Self::get_diff_style_sections(&self.minus_lines, &self.plus_lines, self.config);
 
         if self.config.side_by_side {
-            let syntax_left_right = PlusMinus::new(
+            let syntax_left_right = MinusPlus::new(
                 minus_line_syntax_style_sections,
                 plus_line_syntax_style_sections,
             );
-            let diff_left_right = PlusMinus::new(
+            let diff_left_right = MinusPlus::new(
                 minus_line_diff_style_sections,
                 plus_line_diff_style_sections,
             );
 
-            let states_left_right = PlusMinus::new(
+            let states_left_right = MinusPlus::new(
                 self.minus_lines
                     .iter()
                     .map(|(_, state)| state.clone())
@@ -183,7 +183,7 @@ impl<'a> Painter<'a> {
                     .collect(),
             );
 
-            let bg_fill_left_right = PlusMinus::new(
+            let bg_fill_left_right = MinusPlus::new(
                 // Using an ANSI sequence to fill the left panel would not work.
                 BgShouldFill::With(BgFillMethod::Spaces),
                 // Use what is configured for the right side.
@@ -196,11 +196,11 @@ impl<'a> Painter<'a> {
             // long for later re-use.
             let (should_wrap, line_width, long_lines) = {
                 if self.config.wrap_config.max_lines == 1 {
-                    (false, PlusMinus::default(), PlusMinus::default())
+                    (false, MinusPlus::default(), MinusPlus::default())
                 } else {
                     let line_width = available_line_width(self.config, &self.line_numbers_data);
 
-                    let lines = PlusMinus::new(&self.minus_lines, &self.plus_lines);
+                    let lines = MinusPlus::new(&self.minus_lines, &self.plus_lines);
 
                     let (should_wrap, long_lines) =
                         side_by_side::has_long_lines(&lines, &line_width);
@@ -211,7 +211,7 @@ impl<'a> Painter<'a> {
 
             let (line_alignment, line_states, syntax_left_right, diff_left_right) = if should_wrap {
                 // Calculated for syntect::highlighting::style::Style and delta::Style
-                wrap_plusminus_block(
+                wrap_minusplus_block(
                     self.config,
                     syntax_left_right,
                     diff_left_right,

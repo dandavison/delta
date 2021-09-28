@@ -17,10 +17,10 @@ mod features;
 mod format;
 mod git_config;
 mod handlers;
+mod minusplus;
 mod options;
 mod paint;
 mod parse_style;
-mod plusminus;
 mod style;
 mod wrapping;
 

@@ -8,9 +8,9 @@ use crate::config::Config;
 use crate::delta::State;
 use crate::features::line_numbers;
 use crate::features::OptionValueFunction;
+use crate::minusplus::*;
 use crate::paint::Painter;
 use crate::paint::{BgFillMethod, BgShouldFill};
-use crate::plusminus::*;
 use crate::style::Style;
 use crate::wrapping::wrap_zero_block;
 
@@ -32,9 +32,9 @@ pub fn make_feature() -> Vec<(String, OptionValueFunction)> {
 
 // Aliases for Minus/Plus because Left/Right and PanelSide makes
 // more sense in a side-by-side context.
-pub use crate::plusminus::PlusMinusIndex as PanelSide;
-pub use PlusMinusIndex::Minus as Left;
-pub use PlusMinusIndex::Plus as Right;
+pub use crate::minusplus::MinusPlusIndex as PanelSide;
+pub use MinusPlusIndex::Minus as Left;
+pub use MinusPlusIndex::Plus as Right;
 
 #[derive(Debug)]
 pub struct Panel {
@@ -42,11 +42,12 @@ pub struct Panel {
     pub offset: usize,
 }
 
-type LeftRight<T> = PlusMinus<T>;
+type LeftRight<T> = MinusPlus<T>;
 
 pub type SideBySideData = LeftRight<Panel>;
 
 impl SideBySideData {
+    /// Create a [`LeftRight<Panel>`](LeftRight<Panel>) named [`SideBySideData`].
     pub fn new_sbs(decorations_width: &cli::Width, available_terminal_width: &usize) -> Self {
         let panel_width = match decorations_width {
             cli::Width::Fixed(w) => w / 2,

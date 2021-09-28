@@ -9,7 +9,7 @@ use crate::features::hyperlinks;
 use crate::features::side_by_side::{Left, PanelSide, Right};
 use crate::features::OptionValueFunction;
 use crate::format;
-use crate::plusminus::*;
+use crate::minusplus::*;
 use crate::style::Style;
 
 pub fn make_feature() -> Vec<(String, OptionValueFunction)> {
@@ -141,24 +141,24 @@ lazy_static! {
 
 #[derive(Default, Debug)]
 pub struct LineNumbersData<'a> {
-    pub format_data: PlusMinus<format::FormatStringData<'a>>,
-    pub line_number: PlusMinus<usize>,
+    pub format_data: MinusPlus<format::FormatStringData<'a>>,
+    pub line_number: MinusPlus<usize>,
     pub hunk_max_line_number_width: usize,
     pub plus_file: String,
 }
 
-pub type SideBySideLineWidth = PlusMinus<usize>;
+pub type SideBySideLineWidth = MinusPlus<usize>;
 
 // Although it's probably unusual, a single format string can contain multiple placeholders. E.g.
 // line-numbers-right-format = "{nm} {np}|"
 impl<'a> LineNumbersData<'a> {
     pub fn from_format_strings(left_format: &'a str, right_format: &'a str) -> LineNumbersData<'a> {
         Self {
-            format_data: PlusMinus::new(
+            format_data: MinusPlus::new(
                 format::parse_line_number_format(left_format, &*LINE_NUMBERS_PLACEHOLDER_REGEX),
                 format::parse_line_number_format(right_format, &*LINE_NUMBERS_PLACEHOLDER_REGEX),
             ),
-            line_number: PlusMinus::new(0, 0),
+            line_number: MinusPlus::new(0, 0),
             hunk_max_line_number_width: 0,
             plus_file: "".to_string(),
         }
@@ -169,7 +169,7 @@ impl<'a> LineNumbersData<'a> {
         // Typically, line_numbers has length 2: an entry for the minus file, and one for the plus
         // file. In the case of merge commits, it may be longer.
         self.line_number =
-            PlusMinus::new(line_numbers[0].0, line_numbers[line_numbers.len() - 1].0);
+            MinusPlus::new(line_numbers[0].0, line_numbers[line_numbers.len() - 1].0);
         let hunk_max_line_number = line_numbers.iter().map(|(n, d)| n + d).max().unwrap();
         self.hunk_max_line_number_width =
             1 + (hunk_max_line_number as f64).log10().floor() as usize;
@@ -196,7 +196,7 @@ impl<'a> LineNumbersData<'a> {
                 })
                 .unwrap_or(0)
         };
-        PlusMinus::new(
+        MinusPlus::new(
             format_data_width(&self.format_data[Left]),
             format_data_width(&self.format_data[Right]),
         )
@@ -452,23 +452,23 @@ pub mod tests {
     fn test_line_numbers_data() {
         let mut data = LineNumbersData::from_format_strings("", "");
         data.initialize_hunk(&[(10, 11), (10000, 100001)], "a".into());
-        assert_eq!(data.formatted_width(), PlusMinus::new(0, 0));
+        assert_eq!(data.formatted_width(), MinusPlus::new(0, 0));
 
         let mut data = LineNumbersData::from_format_strings("│", "│+│");
         data.initialize_hunk(&[(10, 11), (10000, 100001)], "a".into());
-        assert_eq!(data.formatted_width(), PlusMinus::new(1, 3));
+        assert_eq!(data.formatted_width(), MinusPlus::new(1, 3));
 
         let mut data = LineNumbersData::from_format_strings("│{nm:^3}│", "│{np:^3}│");
         data.initialize_hunk(&[(10, 11), (10000, 100001)], "a".into());
-        assert_eq!(data.formatted_width(), PlusMinus::new(8, 8));
+        assert_eq!(data.formatted_width(), MinusPlus::new(8, 8));
 
         let mut data = LineNumbersData::from_format_strings("│{nm:^3}│ │{np:<12}│ │{nm}│", "");
         data.initialize_hunk(&[(10, 11), (10000, 100001)], "a".into());
-        assert_eq!(data.formatted_width(), PlusMinus::new(32, 0));
+        assert_eq!(data.formatted_width(), MinusPlus::new(32, 0));
 
         let mut data = LineNumbersData::from_format_strings("│{np:^3}│ │{nm:<12}│ │{np}│", "");
         data.initialize_hunk(&[(10, 11), (10000, 100001)], "a".into());
-        assert_eq!(data.formatted_width(), PlusMinus::new(32, 0));
+        assert_eq!(data.formatted_width(), MinusPlus::new(32, 0));
     }
 
     fn _get_capture<'a>(i: usize, j: usize, caps: &'a Vec<Captures>) -> &'a str {
