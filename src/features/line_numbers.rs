@@ -8,7 +8,7 @@ use crate::delta::State;
 use crate::features::hyperlinks;
 use crate::features::side_by_side::{Left, PanelSide, Right};
 use crate::features::OptionValueFunction;
-use crate::format;
+use crate::format::{self, Align, Placeholder};
 use crate::minusplus::*;
 use crate::style::Style;
 
@@ -61,14 +61,11 @@ pub fn make_feature() -> Vec<(String, OptionValueFunction)> {
     ])
 }
 
-/// Return a vec of `ansi_term::ANSIGenericString`s representing the left and right fields of the
-/// two-column line number display.
-pub fn format_and_paint_line_numbers<'a>(
+pub fn linenumbers_and_styles<'a>(
     line_numbers_data: &'a mut LineNumbersData,
     state: &State,
-    side_by_side_panel: Option<PanelSide>,
     config: &'a config::Config,
-) -> Vec<ansi_term::ANSIGenericString<'a, str>> {
+) -> Option<(MinusPlus<Option<usize>>, MinusPlus<Style>)> {
     let nr_left = line_numbers_data.line_number[Left];
     let nr_right = line_numbers_data.line_number[Right];
     let (minus_style, zero_style, plus_style) = (
@@ -93,9 +90,23 @@ pub fn format_and_paint_line_numbers<'a>(
             ((None, Some(nr_right)), (minus_style, plus_style))
         }
         State::HunkPlusWrapped => ((None, None), (minus_style, plus_style)),
-        _ => return Vec::new(),
+        _ => return None,
     };
+    Some((
+        MinusPlus::new(minus_number, plus_number),
+        MinusPlus::new(minus_style, plus_style),
+    ))
+}
 
+/// Return a vec of `ansi_term::ANSIGenericString`s representing the left and right fields of the
+/// two-column line number display.
+pub fn format_and_paint_line_numbers<'a>(
+    line_numbers_data: &'a LineNumbersData,
+    side_by_side_panel: Option<PanelSide>,
+    styles: MinusPlus<Style>,
+    line_numbers: MinusPlus<Option<usize>>,
+    config: &'a config::Config,
+) -> Vec<ansi_term::ANSIGenericString<'a, str>> {
     let mut formatted_numbers = Vec::new();
 
     let (emit_left, emit_right) = match (config.side_by_side, side_by_side_panel) {
@@ -107,28 +118,22 @@ pub fn format_and_paint_line_numbers<'a>(
 
     if emit_left {
         formatted_numbers.extend(format_and_paint_line_number_field(
-            &line_numbers_data.format_data[Left],
+            line_numbers_data,
+            Minus,
             &config.line_numbers_left_style,
-            minus_number,
-            plus_number,
-            line_numbers_data.hunk_max_line_number_width,
-            &minus_style,
-            &plus_style,
-            &line_numbers_data.plus_file,
+            &styles,
+            &line_numbers,
             config,
         ));
     }
 
     if emit_right {
         formatted_numbers.extend(format_and_paint_line_number_field(
-            &line_numbers_data.format_data[Right],
+            line_numbers_data,
+            Plus,
             &config.line_numbers_right_style,
-            minus_number,
-            plus_number,
-            line_numbers_data.hunk_max_line_number_width,
-            &minus_style,
-            &plus_style,
-            &line_numbers_data.plus_file,
+            &styles,
+            &line_numbers,
             config,
         ));
     }
@@ -205,45 +210,48 @@ impl<'a> LineNumbersData<'a> {
 
 #[allow(clippy::too_many_arguments)]
 fn format_and_paint_line_number_field<'a>(
-    format_data: &'a [format::FormatStringPlaceholderData<'a>],
+    line_numbers_data: &'a LineNumbersData,
+    side: MinusPlusIndex,
     style: &Style,
-    minus_number: Option<usize>,
-    plus_number: Option<usize>,
-    min_field_width: usize,
-    minus_number_style: &Style,
-    plus_number_style: &Style,
-    plus_file: &str,
+    styles: &MinusPlus<Style>,
+    line_numbers: &MinusPlus<Option<usize>>,
     config: &config::Config,
 ) -> Vec<ansi_term::ANSIGenericString<'a, str>> {
+    let min_field_width = line_numbers_data.hunk_max_line_number_width;
+
+    let format_data = &line_numbers_data.format_data[side];
+    let plus_file = &line_numbers_data.plus_file;
+
     let mut ansi_strings = Vec::new();
     let mut suffix = "";
     for placeholder in format_data {
         ansi_strings.push(style.paint(placeholder.prefix.as_str()));
 
-        let alignment_spec = placeholder.alignment_spec.unwrap_or("^");
         let width = if let Some(placeholder_width) = placeholder.width {
             max(placeholder_width, min_field_width)
         } else {
             min_field_width
         };
 
+        let alignment_spec = placeholder
+            .alignment_spec
+            .as_ref()
+            .unwrap_or(&Align::Center);
         match placeholder.placeholder {
-            Some("nm") => ansi_strings.push(minus_number_style.paint(format_line_number(
-                minus_number,
-                alignment_spec,
-                width,
-                None,
-                config,
-            ))),
-            Some("np") => ansi_strings.push(plus_number_style.paint(format_line_number(
-                plus_number,
-                alignment_spec,
-                width,
-                Some(plus_file),
-                config,
-            ))),
+            Some(Placeholder::NumberMinus) => ansi_strings.push(styles[Minus].paint(
+                format_line_number(line_numbers[Minus], alignment_spec, width, None, config),
+            )),
+            Some(Placeholder::NumberPlus) => {
+                ansi_strings.push(styles[Plus].paint(format_line_number(
+                    line_numbers[Plus],
+                    alignment_spec,
+                    width,
+                    Some(plus_file),
+                    config,
+                )))
+            }
             None => {}
-            Some(_) => unreachable!(),
+            _ => unreachable!("Invalid placeholder"),
         }
         suffix = placeholder.suffix.as_str();
     }
@@ -254,7 +262,7 @@ fn format_and_paint_line_number_field<'a>(
 /// Return line number formatted according to `alignment` and `width`.
 fn format_line_number(
     line_number: Option<usize>,
-    alignment: &str,
+    alignment: &Align,
     width: usize,
     plus_file: Option<&str>,
     config: &config::Config,
@@ -285,7 +293,7 @@ pub mod tests {
             format::parse_line_number_format("{nm}", &LINE_NUMBERS_PLACEHOLDER_REGEX),
             vec![format::FormatStringPlaceholderData {
                 prefix: "".into(),
-                placeholder: Some("nm"),
+                placeholder: Some(Placeholder::NumberMinus),
                 alignment_spec: None,
                 width: None,
                 suffix: "".into(),
@@ -301,7 +309,7 @@ pub mod tests {
             format::parse_line_number_format("{np:4}", &LINE_NUMBERS_PLACEHOLDER_REGEX),
             vec![format::FormatStringPlaceholderData {
                 prefix: "".into(),
-                placeholder: Some("np"),
+                placeholder: Some(Placeholder::NumberPlus),
                 alignment_spec: None,
                 width: Some(4),
                 suffix: "".into(),
@@ -317,8 +325,8 @@ pub mod tests {
             format::parse_line_number_format("{np:>4}", &LINE_NUMBERS_PLACEHOLDER_REGEX),
             vec![format::FormatStringPlaceholderData {
                 prefix: "".into(),
-                placeholder: Some("np"),
-                alignment_spec: Some(">"),
+                placeholder: Some(Placeholder::NumberPlus),
+                alignment_spec: Some(Align::Right),
                 width: Some(4),
                 suffix: "".into(),
                 prefix_len: 0,
@@ -333,8 +341,8 @@ pub mod tests {
             format::parse_line_number_format("{np:_>4}", &LINE_NUMBERS_PLACEHOLDER_REGEX),
             vec![format::FormatStringPlaceholderData {
                 prefix: "".into(),
-                placeholder: Some("np"),
-                alignment_spec: Some(">"),
+                placeholder: Some(Placeholder::NumberPlus),
+                alignment_spec: Some(Align::Right),
                 width: Some(4),
                 suffix: "".into(),
                 prefix_len: 0,
@@ -349,8 +357,8 @@ pub mod tests {
             format::parse_line_number_format("__{np:_>4}@@", &LINE_NUMBERS_PLACEHOLDER_REGEX),
             vec![format::FormatStringPlaceholderData {
                 prefix: "__".into(),
-                placeholder: Some("np"),
-                alignment_spec: Some(">"),
+                placeholder: Some(Placeholder::NumberPlus),
+                alignment_spec: Some(Align::Right),
                 width: Some(4),
                 suffix: "@@".into(),
                 prefix_len: 2,
@@ -369,8 +377,8 @@ pub mod tests {
             vec![
                 format::FormatStringPlaceholderData {
                     prefix: "__".into(),
-                    placeholder: Some("nm"),
-                    alignment_spec: Some("<"),
+                    placeholder: Some(Placeholder::NumberMinus),
+                    alignment_spec: Some(Align::Left),
                     width: Some(3),
                     suffix: "@@---{np:_>4}**".into(),
                     prefix_len: 2,
@@ -378,8 +386,8 @@ pub mod tests {
                 },
                 format::FormatStringPlaceholderData {
                     prefix: "@@---".into(),
-                    placeholder: Some("np"),
-                    alignment_spec: Some(">"),
+                    placeholder: Some(Placeholder::NumberPlus),
+                    alignment_spec: Some(Align::Right),
                     width: Some(4),
                     suffix: "**".into(),
                     prefix_len: 5,
@@ -417,7 +425,7 @@ pub mod tests {
             vec![format::FormatStringPlaceholderData {
                 prefix: long.into(),
                 prefix_len: long.len(),
-                placeholder: Some("nm"),
+                placeholder: Some(Placeholder::NumberMinus),
                 alignment_spec: None,
                 width: None,
                 suffix: long.into(),

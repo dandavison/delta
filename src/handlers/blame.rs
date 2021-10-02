@@ -5,7 +5,7 @@ use regex::Regex;
 use crate::color;
 use crate::config;
 use crate::delta::{self, State, StateMachine};
-use crate::format;
+use crate::format::{self, Placeholder};
 use crate::paint::BgShouldFill;
 use crate::style::Style;
 
@@ -150,18 +150,23 @@ pub fn format_blame_metadata(
     for placeholder in format_data {
         s.push_str(placeholder.prefix.as_str());
 
-        let alignment_spec = placeholder.alignment_spec.unwrap_or("<");
+        let alignment_spec = placeholder
+            .alignment_spec
+            .as_ref()
+            .unwrap_or(&format::Align::Left);
         let width = placeholder.width.unwrap_or(15);
 
         let pad = |s| format::pad(s, width, alignment_spec);
         match placeholder.placeholder {
-            Some("timestamp") => s.push_str(&pad(
-                &chrono_humanize::HumanTime::from(blame.time).to_string()
+            Some(Placeholder::Str("timestamp")) => s.push_str(&pad(
+                &chrono_humanize::HumanTime::from(blame.time).to_string(),
             )),
-            Some("author") => s.push_str(&pad(blame.author)),
-            Some("commit") => s.push_str(&pad(&delta::format_raw_line(blame.commit, config))),
+            Some(Placeholder::Str("author")) => s.push_str(&pad(blame.author)),
+            Some(Placeholder::Str("commit")) => {
+                s.push_str(&pad(&delta::format_raw_line(blame.commit, config)))
+            }
             None => {}
-            Some(_) => unreachable!(),
+            _ => unreachable!("Unexpected `git blame` input"),
         }
         suffix = placeholder.suffix.as_str();
     }
