@@ -524,12 +524,19 @@ impl<'a> Painter<'a> {
 
         let output_line_numbers = config.line_numbers && line_numbers_data.is_some();
         if output_line_numbers {
-            ansi_strings.extend(line_numbers::format_and_paint_line_numbers(
+            if let Some((line_numbers, styles)) = line_numbers::linenumbers_and_styles(
                 line_numbers_data.as_mut().unwrap(),
                 state,
-                side_by_side_panel,
                 config,
-            ))
+            ) {
+                ansi_strings.extend(line_numbers::format_and_paint_line_numbers(
+                    line_numbers_data.as_ref().unwrap(),
+                    side_by_side_panel,
+                    styles,
+                    line_numbers,
+                    config,
+                ))
+            }
         }
         match state {
             State::HunkMinus(Some(raw_line)) | State::HunkPlus(Some(raw_line)) => {
