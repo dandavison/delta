@@ -1,4 +1,5 @@
 use std::collections::{HashMap, HashSet, VecDeque};
+use std::convert::TryInto;
 use std::process;
 use std::result::Result;
 use std::str::FromStr;
@@ -12,6 +13,7 @@ use crate::cli;
 use crate::config;
 use crate::env;
 use crate::errors::*;
+use crate::fatal;
 use crate::features;
 use crate::git_config::{GitConfig, GitConfigEntry};
 use crate::options::option_value::{OptionValue, ProvenancedOptionValue};
@@ -521,18 +523,67 @@ fn parse_paging_mode(paging_mode_string: &str) -> PagingMode {
     }
 }
 
+fn parse_width_specifier(width_arg: &str, terminal_width: usize) -> Result<usize, String> {
+    let width_arg = width_arg.trim();
+
+    let parse = |width: &str, must_be_negative, subexpression| -> Result<isize, String> {
+        let remove_spaces = |s: &str| s.chars().filter(|c| c != &' ').collect::<String>();
+        match remove_spaces(width).parse() {
+            Ok(val) if must_be_negative && val > 0 => Err(()),
+            Err(_) => Err(()),
+            Ok(ok) => Ok(ok),
+        }
+        .map_err(|_| {
+            let pos = if must_be_negative { " negative" } else { "n" };
+            let subexpr = if subexpression {
+                format!(" (from {:?})", width_arg)
+            } else {
+                "".into()
+            };
+            format!(
+                "{:?}{subexpr} is not a{pos} integer",
+                width,
+                subexpr = subexpr,
+                pos = pos
+            )
+        })
+    };
+
+    let width = match width_arg.find('-') {
+        None => parse(width_arg, false, false)?.try_into().unwrap(),
+        Some(index) if index == 0 => (terminal_width as isize + parse(width_arg, true, false)?)
+            .try_into()
+            .map_err(|_| {
+                format!(
+                    "the current terminal width of {} minus {} is negative",
+                    terminal_width,
+                    &width_arg[1..].trim(),
+                )
+            })?,
+        Some(index) => {
+            let a = parse(&width_arg[0..index], false, true)?;
+            let b = parse(&width_arg[index..], true, true)?;
+            (a + b)
+                .try_into()
+                .map_err(|_| format!("expression {:?} is not positive", width_arg))?
+        }
+    };
+
+    Ok(width)
+}
+
 fn set_widths(opt: &mut cli::Opt) {
-    // Allow one character in case e.g. `less --status-column` is in effect. See #41 and #10.
-    opt.computed.available_terminal_width = (Term::stdout().size().1 - 1) as usize;
+    // If one extra character for e.g. `less --status-column` is required use "-1"
+    // as an argument, also see #41, #10, #115 and #727.
+
+    opt.computed.available_terminal_width = Term::stdout().size().1 as usize;
 
     let (decorations_width, background_color_extends_to_terminal_width) = match opt.width.as_deref()
     {
         Some("variable") => (cli::Width::Variable, false),
         Some(width) => {
-            let width = width.parse().unwrap_or_else(|_| {
-                eprintln!("Could not parse width as a positive integer: {:?}", width);
-                process::exit(1);
-            });
+            let width = parse_width_specifier(width, opt.computed.available_terminal_width)
+                .unwrap_or_else(|err| fatal(format!("Invalid value for width: {}", err)));
             (cli::Width::Fixed(width), true)
         }
         None => (
@@ -738,5 +789,41 @@ pub mod tests {
         assert_eq!(opt.computed.decorations_width, cli::Width::Variable);
 
         remove_file(git_config_path).unwrap();
+    }
+
+    #[test]
+    fn test_parse_width_specifier() {
+        use super::parse_width_specifier;
+        let term_width = 12;
+
+        let assert_failure_containing = |x, errmsg| {
+            assert!(parse_width_specifier(x, term_width)
+                .unwrap_err()
+                .contains(errmsg));
+        };
+
+        assert_failure_containing("", "is not an integer");
+        assert_failure_containing("foo", "is not an integer");
+        assert_failure_containing("123foo", "is not an integer");
+        assert_failure_containing("+12bar", "is not an integer");
+        assert_failure_containing("-456bar", "is not a negative integer");
+
+        assert_failure_containing("-13", "minus 13 is negative");
+        assert_failure_containing(" -   13 ", "minus 13 is negative");
+        assert_failure_containing("12-13", "expression");
+        assert_failure_containing(" 12   -   13  ", "expression \"12   -   13\" is not");
+        assert_failure_containing("12+foo", "is not an integer");
+        assert_failure_containing(
+            "  12 -  bar  ",
+            "\"-  bar\" (from \"12 -  bar\") is not a negative integer",
+        );
+
+        assert_eq!(parse_width_specifier("1", term_width).unwrap(), 1);
+        assert_eq!(parse_width_specifier(" 1 ", term_width).unwrap(), 1);
+        assert_eq!(parse_width_specifier("-2", term_width).unwrap(), 10);
+        assert_eq!(parse_width_specifier(" - 2", term_width).unwrap(), 10);
+        assert_eq!(parse_width_specifier("-12", term_width).unwrap(), 0);
+        assert_eq!(parse_width_specifier(" - 12 ", term_width).unwrap(), 0);
+        assert_eq!(parse_width_specifier(" 2 - 2 ", term_width).unwrap(), 0);
     }
 }
