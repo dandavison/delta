@@ -24,7 +24,7 @@ pub fn make_feature() -> Vec<(String, OptionValueFunction)> {
             "hunk-label",
             String,
             None,
-            _opt => "δ"
+            _opt => "•"
         )
     ])
 }
