@@ -13,6 +13,7 @@ use crate::cli;
 use crate::color;
 use crate::delta::State;
 use crate::env;
+use crate::fatal;
 use crate::features::navigate;
 use crate::features::side_by_side;
 use crate::git_config::{GitConfig, GitConfigEntry};
@@ -193,10 +194,7 @@ impl From<cli::Opt> for Config {
             // Note that "default" is not documented
             Some("ansi") | Some("default") | None => BgFillMethod::TryAnsiSequence,
             Some("spaces") => BgFillMethod::Spaces,
-            _ => {
-                eprintln!("Invalid option for line-fill-method: Expected \"ansi\" or \"spaces\".");
-                process::exit(1);
-            }
+            _ => fatal("Invalid option for line-fill-method: Expected \"ansi\" or \"spaces\"."),
         };
 
         let navigate_regexp = if opt.navigate || opt.show_themes {
