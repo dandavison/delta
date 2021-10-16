@@ -1,5 +1,3 @@
-use std::ops::{Index, IndexMut};
-
 use itertools::Itertools;
 use syntect::highlighting::Style as SyntectStyle;
 
@@ -28,41 +26,21 @@ pub fn make_feature() -> Vec<(String, OptionValueFunction)> {
     ])
 }
 
+// Aliases for Minus/Plus because Left/Right and PanelSide makes
+// more sense in a side-by-side context.
+pub use crate::plusminus::PlusMinusIndex as PanelSide;
+pub use PlusMinusIndex::Minus as Left;
+pub use PlusMinusIndex::Plus as Right;
+
+#[derive(Debug)]
 pub struct Panel {
     pub width: usize,
     pub offset: usize,
 }
 
-// Same as plusminus::PlusMinusIndex but with Left/Right instead
-// of Minus/Plus enum names. Only used in a side-by-side context.
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub enum PanelSide {
-    Left,
-    Right,
-}
+type LeftRight<T> = PlusMinus<T>;
 
-use PanelSide::*;
-
-impl<T> Index<PanelSide> for PlusMinus<T> {
-    type Output = T;
-    fn index(&self, side: PanelSide) -> &Self::Output {
-        match side {
-            PanelSide::Left => &self.minus,
-            PanelSide::Right => &self.plus,
-        }
-    }
-}
-
-impl<T> IndexMut<PanelSide> for PlusMinus<T> {
-    fn index_mut(&mut self, side: PanelSide) -> &mut Self::Output {
-        match side {
-            PanelSide::Left => &mut self.minus,
-            PanelSide::Right => &mut self.plus,
-        }
-    }
-}
-
-pub type SideBySideData = PlusMinus<Panel>;
+pub type SideBySideData = LeftRight<Panel>;
 
 impl SideBySideData {
     pub fn new_sbs(decorations_width: &cli::Width, available_terminal_width: &usize) -> Self {

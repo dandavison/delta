@@ -6,7 +6,7 @@ use regex::Regex;
 use crate::config;
 use crate::delta::State;
 use crate::features::hyperlinks;
-use crate::features::side_by_side::PanelSide;
+use crate::features::side_by_side::{Left, PanelSide, Right};
 use crate::features::OptionValueFunction;
 use crate::format;
 use crate::plusminus::*;
@@ -69,8 +69,8 @@ pub fn format_and_paint_line_numbers<'a>(
     side_by_side_panel: Option<PanelSide>,
     config: &'a config::Config,
 ) -> Vec<ansi_term::ANSIGenericString<'a, str>> {
-    let nr_left = line_numbers_data.line_number[Minus];
-    let nr_right = line_numbers_data.line_number[Plus];
+    let nr_left = line_numbers_data.line_number[Left];
+    let nr_right = line_numbers_data.line_number[Right];
     let (minus_style, zero_style, plus_style) = (
         config.line_numbers_minus_style,
         config.line_numbers_zero_style,
@@ -78,16 +78,16 @@ pub fn format_and_paint_line_numbers<'a>(
     );
     let ((minus_number, plus_number), (minus_style, plus_style)) = match state {
         State::HunkMinus(_) => {
-            line_numbers_data.line_number[Minus] += 1;
+            line_numbers_data.line_number[Left] += 1;
             ((Some(nr_left), None), (minus_style, plus_style))
         }
         State::HunkZero => {
-            line_numbers_data.line_number[Minus] += 1;
-            line_numbers_data.line_number[Plus] += 1;
+            line_numbers_data.line_number[Left] += 1;
+            line_numbers_data.line_number[Right] += 1;
             ((Some(nr_left), Some(nr_right)), (zero_style, zero_style))
         }
         State::HunkPlus(_) => {
-            line_numbers_data.line_number[Plus] += 1;
+            line_numbers_data.line_number[Right] += 1;
             ((None, Some(nr_right)), (minus_style, plus_style))
         }
         _ => return Vec::new(),
@@ -97,14 +97,14 @@ pub fn format_and_paint_line_numbers<'a>(
 
     let (emit_left, emit_right) = match (config.side_by_side, side_by_side_panel) {
         (false, _) => (true, true),
-        (true, Some(PanelSide::Left)) => (true, false),
-        (true, Some(PanelSide::Right)) => (false, true),
+        (true, Some(Left)) => (true, false),
+        (true, Some(Right)) => (false, true),
         (true, None) => unreachable!(),
     };
 
     if emit_left {
         formatted_numbers.extend(format_and_paint_line_number_field(
-            &line_numbers_data.format_data[PanelSide::Left],
+            &line_numbers_data.format_data[Left],
             &config.line_numbers_left_style,
             minus_number,
             plus_number,
@@ -118,7 +118,7 @@ pub fn format_and_paint_line_numbers<'a>(
 
     if emit_right {
         formatted_numbers.extend(format_and_paint_line_number_field(
-            &line_numbers_data.format_data[PanelSide::Right],
+            &line_numbers_data.format_data[Right],
             &config.line_numbers_right_style,
             minus_number,
             plus_number,
