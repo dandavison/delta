@@ -15,7 +15,7 @@ pub fn show_syntax_themes() -> std::io::Result<()> {
     let mut output_type = OutputType::from_mode(
         PagingMode::QuitIfOneScreen,
         None,
-        &config::Config::from(cli::Opt::default()),
+        &config::Config::from(cli::Opt::from_args()),
     )
     .unwrap();
     let mut writer = output_type.handle().unwrap();

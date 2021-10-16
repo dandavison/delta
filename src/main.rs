@@ -17,13 +17,16 @@ mod features;
 mod format;
 mod git_config;
 mod handlers;
+mod minusplus;
 mod options;
 mod paint;
 mod parse_style;
-mod plusminus;
 mod style;
+mod wrapping;
+
 mod subcommands;
-mod syntect_color;
+mod syntect_utils;
+
 mod tests;
 
 use std::io::{self, ErrorKind};
@@ -34,6 +37,19 @@ use bytelines::ByteLinesReader;
 use crate::bat_utils::assets::{list_languages, HighlightingAssets};
 use crate::bat_utils::output::OutputType;
 use crate::delta::delta;
+
+pub fn fatal<T>(errmsg: T) -> !
+where
+    T: AsRef<str> + std::fmt::Display,
+{
+    #[cfg(not(test))]
+    {
+        eprintln!("{}", errmsg);
+        process::exit(2);
+    }
+    #[cfg(test)]
+    panic!("{}\n", errmsg);
+}
 
 pub mod errors {
     error_chain! {

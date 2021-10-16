@@ -7,7 +7,7 @@ use lazy_static::lazy_static;
 use syntect::highlighting::Color as SyntectColor;
 
 use crate::bat_utils::terminal::to_ansi_color;
-use crate::syntect_color;
+use crate::syntect_utils;
 
 pub fn parse_color(s: &str, true_color: bool) -> Option<Color> {
     if s == "normal" {
@@ -22,8 +22,8 @@ pub fn parse_color(s: &str, true_color: bool) -> Option<Color> {
     } else {
         s.parse::<u8>()
             .ok()
-            .and_then(syntect_color::syntect_color_from_ansi_number)
-            .or_else(|| syntect_color::syntect_color_from_ansi_name(s))
+            .and_then(syntect_utils::syntect_color_from_ansi_number)
+            .or_else(|| syntect_utils::syntect_color_from_ansi_name(s))
             .unwrap_or_else(die)
     };
     to_ansi_color(syntect_color, true_color)
