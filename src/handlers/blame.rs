@@ -148,7 +148,7 @@ pub fn format_blame_metadata(
     let mut s = String::new();
     let mut suffix = "";
     for placeholder in format_data {
-        s.push_str(placeholder.prefix);
+        s.push_str(placeholder.prefix.as_str());
 
         let alignment_spec = placeholder.alignment_spec.unwrap_or("<");
         let width = placeholder.width.unwrap_or(15);
@@ -163,7 +163,7 @@ pub fn format_blame_metadata(
             None => {}
             Some(_) => unreachable!(),
         }
-        suffix = placeholder.suffix;
+        suffix = placeholder.suffix.as_str();
     }
     s.push_str(suffix);
     s
