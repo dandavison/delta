@@ -205,7 +205,7 @@ impl<'a> LineNumbersData<'a> {
 
 #[allow(clippy::too_many_arguments)]
 fn format_and_paint_line_number_field<'a>(
-    format_data: &[format::FormatStringPlaceholderData<'a>],
+    format_data: &'a [format::FormatStringPlaceholderData<'a>],
     style: &Style,
     minus_number: Option<usize>,
     plus_number: Option<usize>,
@@ -218,7 +218,7 @@ fn format_and_paint_line_number_field<'a>(
     let mut ansi_strings = Vec::new();
     let mut suffix = "";
     for placeholder in format_data {
-        ansi_strings.push(style.paint(placeholder.prefix));
+        ansi_strings.push(style.paint(placeholder.prefix.as_str()));
 
         let alignment_spec = placeholder.alignment_spec.unwrap_or("^");
         let width = if let Some(placeholder_width) = placeholder.width {
@@ -245,7 +245,7 @@ fn format_and_paint_line_number_field<'a>(
             None => {}
             Some(_) => unreachable!(),
         }
-        suffix = placeholder.suffix;
+        suffix = placeholder.suffix.as_str();
     }
     ansi_strings.push(style.paint(suffix));
     ansi_strings
@@ -284,11 +284,11 @@ pub mod tests {
         assert_eq!(
             format::parse_line_number_format("{nm}", &LINE_NUMBERS_PLACEHOLDER_REGEX),
             vec![format::FormatStringPlaceholderData {
-                prefix: "",
+                prefix: "".into(),
                 placeholder: Some("nm"),
                 alignment_spec: None,
                 width: None,
-                suffix: "",
+                suffix: "".into(),
                 prefix_len: 0,
                 suffix_len: 0,
             }]
@@ -300,11 +300,11 @@ pub mod tests {
         assert_eq!(
             format::parse_line_number_format("{np:4}", &LINE_NUMBERS_PLACEHOLDER_REGEX),
             vec![format::FormatStringPlaceholderData {
-                prefix: "",
+                prefix: "".into(),
                 placeholder: Some("np"),
                 alignment_spec: None,
                 width: Some(4),
-                suffix: "",
+                suffix: "".into(),
                 prefix_len: 0,
                 suffix_len: 0,
             }]
@@ -316,11 +316,11 @@ pub mod tests {
         assert_eq!(
             format::parse_line_number_format("{np:>4}", &LINE_NUMBERS_PLACEHOLDER_REGEX),
             vec![format::FormatStringPlaceholderData {
-                prefix: "",
+                prefix: "".into(),
                 placeholder: Some("np"),
                 alignment_spec: Some(">"),
                 width: Some(4),
-                suffix: "",
+                suffix: "".into(),
                 prefix_len: 0,
                 suffix_len: 0,
             }]
@@ -332,11 +332,11 @@ pub mod tests {
         assert_eq!(
             format::parse_line_number_format("{np:_>4}", &LINE_NUMBERS_PLACEHOLDER_REGEX),
             vec![format::FormatStringPlaceholderData {
-                prefix: "",
+                prefix: "".into(),
                 placeholder: Some("np"),
                 alignment_spec: Some(">"),
                 width: Some(4),
-                suffix: "",
+                suffix: "".into(),
                 prefix_len: 0,
                 suffix_len: 0,
             }]
@@ -348,11 +348,11 @@ pub mod tests {
         assert_eq!(
             format::parse_line_number_format("__{np:_>4}@@", &LINE_NUMBERS_PLACEHOLDER_REGEX),
             vec![format::FormatStringPlaceholderData {
-                prefix: "__",
+                prefix: "__".into(),
                 placeholder: Some("np"),
                 alignment_spec: Some(">"),
                 width: Some(4),
-                suffix: "@@",
+                suffix: "@@".into(),
                 prefix_len: 2,
                 suffix_len: 2,
             }]
@@ -368,20 +368,20 @@ pub mod tests {
             ),
             vec![
                 format::FormatStringPlaceholderData {
-                    prefix: "__",
+                    prefix: "__".into(),
                     placeholder: Some("nm"),
                     alignment_spec: Some("<"),
                     width: Some(3),
-                    suffix: "@@---{np:_>4}**",
+                    suffix: "@@---{np:_>4}**".into(),
                     prefix_len: 2,
                     suffix_len: 15,
                 },
                 format::FormatStringPlaceholderData {
-                    prefix: "@@---",
+                    prefix: "@@---".into(),
                     placeholder: Some("np"),
                     alignment_spec: Some(">"),
                     width: Some(4),
-                    suffix: "**",
+                    suffix: "**".into(),
                     prefix_len: 5,
                     suffix_len: 2,
                 }
@@ -394,13 +394,34 @@ pub mod tests {
         assert_eq!(
             format::parse_line_number_format("__@@---**", &LINE_NUMBERS_PLACEHOLDER_REGEX),
             vec![format::FormatStringPlaceholderData {
-                prefix: "",
+                prefix: "".into(),
                 placeholder: None,
                 alignment_spec: None,
                 width: None,
-                suffix: "__@@---**",
+                suffix: "__@@---**".into(),
                 prefix_len: 0,
                 suffix_len: 9,
+            },]
+        )
+    }
+
+    #[test]
+    fn test_line_number_format_long() {
+        let long = "line number format which is too large for SSO";
+        assert!(long.len() > std::mem::size_of::<smol_str::SmolStr>());
+        assert_eq!(
+            format::parse_line_number_format(
+                &format!("{long}{{nm}}{long}", long = long),
+                &LINE_NUMBERS_PLACEHOLDER_REGEX
+            ),
+            vec![format::FormatStringPlaceholderData {
+                prefix: long.into(),
+                prefix_len: long.len(),
+                placeholder: Some("nm"),
+                alignment_spec: None,
+                width: None,
+                suffix: long.into(),
+                suffix_len: long.len(),
             },]
         )
     }
