@@ -1,5 +1,4 @@
 use std::collections::HashMap;
-use std::process;
 use std::str::FromStr;
 
 use ansi_term::Color;
@@ -7,6 +6,7 @@ use lazy_static::lazy_static;
 use syntect::highlighting::Color as SyntectColor;
 
 use crate::bat_utils::terminal::to_ansi_color;
+use crate::fatal;
 use crate::syntect_utils;
 
 pub fn parse_color(s: &str, true_color: bool) -> Option<Color> {
@@ -14,8 +14,7 @@ pub fn parse_color(s: &str, true_color: bool) -> Option<Color> {
         return None;
     }
     let die = || {
-        eprintln!("Invalid color or style attribute: {}", s);
-        process::exit(1);
+        fatal(format!("Invalid color or style attribute: {}", s));
     };
     let syntect_color = if s.starts_with('#') {
         SyntectColor::from_str(s).unwrap_or_else(|_| die())

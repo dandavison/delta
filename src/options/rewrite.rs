@@ -2,12 +2,11 @@
 /// 1. Express deprecated usages in the new non-deprecated form
 /// 2. Implement options such as --raw which are defined to be equivalent to some set of
 ///    other options.
-use std::process;
-
 use structopt::clap;
 
 use crate::cli;
 use crate::config::user_supplied_option;
+use crate::fatal;
 
 pub fn apply_rewrite_rules(opt: &mut cli::Opt, arg_matches: &clap::ArgMatches) {
     rewrite_style_strings_to_honor_deprecated_minus_plus_options(opt);
@@ -102,10 +101,9 @@ fn rewrite_options_to_implement_deprecated_hunk_style_option(opt: &mut cli::Opt)
         // apparently been left at its default value.
         let hunk_header_decoration_default = "blue box";
         if opt.hunk_header_decoration_style != hunk_header_decoration_default {
-            eprintln!(
-                "Deprecated option --hunk-style cannot be used with --hunk-header-decoration-style. \
-                 Use --hunk-header-decoration-style.");
-            process::exit(1);
+            fatal(
+                  "Deprecated option --hunk-style cannot be used with --hunk-header-decoration-style. \
+                   Use --hunk-header-decoration-style.");
         }
         match opt.deprecated_hunk_style.as_deref().map(str::to_lowercase) {
             Some(attr) if attr == "plain" => opt.hunk_header_decoration_style = "".to_string(),
@@ -163,25 +161,23 @@ fn _get_rewritten_minus_plus_style_string(
             )))
         }
         (_, (_, Some(_))) => {
-            eprintln!(
+            fatal(format!(
                 "--{name}-color cannot be used with --{name}-style. \
                  Use --{name}-style=\"fg bg attr1 attr2 ...\" to set \
                  foreground color, background color, and style attributes. \
                  --{name}-color can only be used to set the background color. \
                  (It is still available for backwards-compatibility.)",
                 name = element_name,
-            );
-            process::exit(1);
+            ));
         }
         (_, (Some(_), None)) => {
-            eprintln!(
+            fatal(format!(
                 "Deprecated option --highlight-removed cannot be used with \
                  --{name}-style. Use --{name}-style=\"fg bg attr1 attr2 ...\" \
                  to set foreground color, background color, and style \
                  attributes.",
                 name = element_name,
-            );
-            process::exit(1);
+            ));
         }
     }
 }

@@ -1,6 +1,5 @@
 use std::collections::{HashMap, HashSet, VecDeque};
 use std::convert::TryInto;
-use std::process;
 use std::result::Result;
 use std::str::FromStr;
 
@@ -230,8 +229,7 @@ fn set__light__dark__syntax_theme__options(
 ) {
     let validate_light_and_dark = |opt: &cli::Opt| {
         if opt.light && opt.dark {
-            eprintln!("--light and --dark cannot be used together.");
-            process::exit(1);
+            fatal("--light and --dark cannot be used together.");
         }
     };
     let empty_builtin_features = HashMap::new();
@@ -498,11 +496,10 @@ impl FromStr for cli::InspectRawLines {
             "true" => Ok(Self::True),
             "false" => Ok(Self::False),
             _ => {
-                eprintln!(
+                fatal(format!(
                     r#"Invalid value for inspect-raw-lines option: {}. Valid values are "true", and "false"."#,
                     s
-                );
-                process::exit(1);
+                ));
             }
         }
     }
@@ -514,11 +511,10 @@ fn parse_paging_mode(paging_mode_string: &str) -> PagingMode {
         "never" => PagingMode::Never,
         "auto" => PagingMode::QuitIfOneScreen,
         _ => {
-            eprintln!(
+            fatal(format!(
                 "Invalid value for --paging option: {} (valid values are \"always\", \"never\", and \"auto\")",
                 paging_mode_string
-            );
-            process::exit(1);
+            ));
         }
     }
 }
@@ -610,11 +606,10 @@ fn set_true_color(opt: &mut cli::Opt) {
         "never" => false,
         "auto" => is_truecolor_terminal(),
         _ => {
-            eprintln!(
+            fatal(format!(
                 "Invalid value for --true-color option: {} (valid values are \"always\", \"never\", and \"auto\")",
                 opt.true_color
-            );
-            process::exit(1);
+            ));
         }
     };
 }

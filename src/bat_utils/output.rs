@@ -10,6 +10,7 @@ use std::process::{Child, Command, Stdio};
 use super::less::retrieve_less_version;
 
 use crate::config;
+use crate::fatal;
 use crate::features::navigate;
 
 #[derive(Debug, Clone, Copy, PartialEq)]
@@ -177,14 +178,13 @@ fn _make_process_from_less_path(
 
 fn _make_process_from_pager_path(pager_path: PathBuf, args: &[String]) -> Option<Command> {
     if pager_path.file_stem() == Some(&OsString::from("delta")) {
-        eprintln!(
+        fatal(
             "\
 It looks like you have set delta as the value of $PAGER. \
 This would result in a non-terminating recursion. \
 delta is not an appropriate value for $PAGER \
-(but it is an appropriate value for $GIT_PAGER)."
+(but it is an appropriate value for $GIT_PAGER).",
         );
-        std::process::exit(1);
     }
     if let Ok(pager_path) = grep_cli::resolve_binary(pager_path) {
         let mut p = Command::new(&pager_path);
