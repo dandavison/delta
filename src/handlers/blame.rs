@@ -109,30 +109,25 @@ $
 }
 
 pub fn parse_git_blame_line<'a>(line: &'a str, timestamp_format: &str) -> Option<BlameLine<'a>> {
-    if let Some(caps) = BLAME_LINE_REGEX.captures(line) {
-        let commit = caps.get(1).unwrap().as_str();
-        let author = caps.get(2).unwrap().as_str();
-        let timestamp = caps.get(3).unwrap().as_str();
-        if let Ok(time) = DateTime::parse_from_str(timestamp, timestamp_format) {
-            let line_number_str = caps.get(4).unwrap().as_str();
-            if let Ok(line_number) = line_number_str.parse::<usize>() {
-                let code = caps.get(5).unwrap().as_str();
-                Some(BlameLine {
-                    commit,
-                    author,
-                    time,
-                    line_number,
-                    code,
-                })
-            } else {
-                None
-            }
-        } else {
-            None
-        }
-    } else {
-        None
-    }
+    let caps = BLAME_LINE_REGEX.captures(line)?;
+
+    let commit = caps.get(1).unwrap().as_str();
+    let author = caps.get(2).unwrap().as_str();
+    let timestamp = caps.get(3).unwrap().as_str();
+
+    let time = DateTime::parse_from_str(timestamp, timestamp_format).ok()?;
+
+    let line_number = caps.get(4).unwrap().as_str().parse::<usize>().ok()?;
+
+    let code = caps.get(5).unwrap().as_str();
+
+    Some(BlameLine {
+        commit,
+        author,
+        time,
+        line_number,
+        code,
+    })
 }
 
 lazy_static! {

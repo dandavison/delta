@@ -46,20 +46,16 @@ pub fn relativize_path_in_diff_stat_line(
     cwd_relative_to_repo_root: &str,
     diff_stat_align_width: usize,
 ) -> Option<String> {
-    if let Some(caps) = DIFF_STAT_LINE_REGEX.captures(line) {
-        let path_relative_to_repo_root = caps.get(1).unwrap().as_str();
-        if let Some(relative_path) =
-            pathdiff::diff_paths(path_relative_to_repo_root, cwd_relative_to_repo_root)
-        {
-            if let Some(relative_path) = relative_path.to_str() {
-                let suffix = caps.get(2).unwrap().as_str();
-                let pad_width = diff_stat_align_width.saturating_sub(relative_path.len());
-                let padding = " ".repeat(pad_width);
-                return Some(format!(" {}{}{}", relative_path, padding, suffix));
-            }
-        }
-    }
-    None
+    let caps = DIFF_STAT_LINE_REGEX.captures(line)?;
+    let path_relative_to_repo_root = caps.get(1).unwrap().as_str();
+
+    let relative_path =
+        pathdiff::diff_paths(path_relative_to_repo_root, cwd_relative_to_repo_root)?;
+    let relative_path = relative_path.to_str()?;
+    let suffix = caps.get(2).unwrap().as_str();
+    let pad_width = diff_stat_align_width.saturating_sub(relative_path.len());
+    let padding = " ".repeat(pad_width);
+    Some(format!(" {}{}{}", relative_path, padding, suffix))
 }
 
 #[cfg(test)]
