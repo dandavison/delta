@@ -16,8 +16,9 @@ use crate::delta::State;
 use crate::env;
 use crate::fatal;
 use crate::features::navigate;
-use crate::features::side_by_side;
+use crate::features::side_by_side::{self, LeftRight};
 use crate::git_config::{GitConfig, GitConfigEntry};
+use crate::minusplus::MinusPlus;
 use crate::paint::BgFillMethod;
 use crate::style::{self, Style};
 use crate::syntect_utils::FromDeltaStyle;
@@ -88,12 +89,9 @@ pub struct Config {
     pub keep_plus_minus_markers: bool,
     pub line_fill_method: BgFillMethod,
     pub line_numbers: bool,
-    pub line_numbers_left_format: String,
-    pub line_numbers_left_style: Style,
-    pub line_numbers_minus_style: Style,
-    pub line_numbers_plus_style: Style,
-    pub line_numbers_right_format: String,
-    pub line_numbers_right_style: Style,
+    pub line_numbers_format: LeftRight<String>,
+    pub line_numbers_style_leftright: LeftRight<Style>,
+    pub line_numbers_style_minusplus: MinusPlus<Style>,
     pub line_numbers_zero_style: Style,
     pub line_buffer_size: usize,
     pub max_line_distance: f64,
@@ -307,12 +305,18 @@ impl From<cli::Opt> for Config {
                 line_fill_method
             },
             line_numbers: opt.line_numbers,
-            line_numbers_left_format: opt.line_numbers_left_format,
-            line_numbers_left_style,
-            line_numbers_minus_style,
-            line_numbers_plus_style,
-            line_numbers_right_format: opt.line_numbers_right_format,
-            line_numbers_right_style,
+            line_numbers_format: LeftRight::new(
+                opt.line_numbers_left_format,
+                opt.line_numbers_right_format,
+            ),
+            line_numbers_style_leftright: LeftRight::new(
+                line_numbers_left_style,
+                line_numbers_right_style,
+            ),
+            line_numbers_style_minusplus: MinusPlus::new(
+                line_numbers_minus_style,
+                line_numbers_plus_style,
+            ),
             line_numbers_zero_style,
             line_buffer_size: opt.line_buffer_size,
             max_line_distance: opt.max_line_distance,

@@ -69,9 +69,9 @@ pub fn linenumbers_and_styles<'a>(
     let nr_left = line_numbers_data.line_number[Left];
     let nr_right = line_numbers_data.line_number[Right];
     let (minus_style, zero_style, plus_style) = (
-        config.line_numbers_minus_style,
+        config.line_numbers_style_minusplus[Minus],
         config.line_numbers_zero_style,
-        config.line_numbers_plus_style,
+        config.line_numbers_style_minusplus[Plus],
     );
     let ((minus_number, plus_number), (minus_style, plus_style)) = match state {
         State::HunkMinus(_) => {
@@ -120,7 +120,6 @@ pub fn format_and_paint_line_numbers<'a>(
         formatted_numbers.extend(format_and_paint_line_number_field(
             line_numbers_data,
             Minus,
-            &config.line_numbers_left_style,
             &styles,
             &line_numbers,
             config,
@@ -131,7 +130,6 @@ pub fn format_and_paint_line_numbers<'a>(
         formatted_numbers.extend(format_and_paint_line_number_field(
             line_numbers_data,
             Plus,
-            &config.line_numbers_right_style,
             &styles,
             &line_numbers,
             config,
@@ -157,11 +155,11 @@ pub type SideBySideLineWidth = MinusPlus<usize>;
 // Although it's probably unusual, a single format string can contain multiple placeholders. E.g.
 // line-numbers-right-format = "{nm} {np}|"
 impl<'a> LineNumbersData<'a> {
-    pub fn from_format_strings(left_format: &'a str, right_format: &'a str) -> LineNumbersData<'a> {
+    pub fn from_format_strings(format: &'a MinusPlus<String>) -> LineNumbersData<'a> {
         Self {
             format_data: MinusPlus::new(
-                format::parse_line_number_format(left_format, &*LINE_NUMBERS_PLACEHOLDER_REGEX),
-                format::parse_line_number_format(right_format, &*LINE_NUMBERS_PLACEHOLDER_REGEX),
+                format::parse_line_number_format(&format[Left], &*LINE_NUMBERS_PLACEHOLDER_REGEX),
+                format::parse_line_number_format(&format[Right], &*LINE_NUMBERS_PLACEHOLDER_REGEX),
             ),
             line_number: MinusPlus::new(0, 0),
             hunk_max_line_number_width: 0,
@@ -212,7 +210,6 @@ impl<'a> LineNumbersData<'a> {
 fn format_and_paint_line_number_field<'a>(
     line_numbers_data: &'a LineNumbersData,
     side: MinusPlusIndex,
-    style: &Style,
     styles: &MinusPlus<Style>,
     line_numbers: &MinusPlus<Option<usize>>,
     config: &config::Config,
@@ -221,6 +218,7 @@ fn format_and_paint_line_number_field<'a>(
 
     let format_data = &line_numbers_data.format_data[side];
     let plus_file = &line_numbers_data.plus_file;
+    let style = &config.line_numbers_style_leftright[side];
 
     let mut ansi_strings = Vec::new();
     let mut suffix = "";
@@ -479,23 +477,32 @@ pub mod tests {
 
     #[test]
     fn test_line_numbers_data() {
-        let mut data = LineNumbersData::from_format_strings("", "");
+        let format = MinusPlus::new("".into(), "".into());
+        let mut data = LineNumbersData::from_format_strings(&format);
         data.initialize_hunk(&[(10, 11), (10000, 100001)], "a".into());
         assert_eq!(data.formatted_width(), MinusPlus::new(0, 0));
 
-        let mut data = LineNumbersData::from_format_strings("│", "│+│");
+        let format = MinusPlus::new("│".into(), "│+│".into());
+        let mut data = LineNumbersData::from_format_strings(&format);
+
         data.initialize_hunk(&[(10, 11), (10000, 100001)], "a".into());
         assert_eq!(data.formatted_width(), MinusPlus::new(1, 3));
 
-        let mut data = LineNumbersData::from_format_strings("│{nm:^3}│", "│{np:^3}│");
+        let format = MinusPlus::new("│{nm:^3}│".into(), "│{np:^3}│".into());
+        let mut data = LineNumbersData::from_format_strings(&format);
+
         data.initialize_hunk(&[(10, 11), (10000, 100001)], "a".into());
         assert_eq!(data.formatted_width(), MinusPlus::new(8, 8));
 
-        let mut data = LineNumbersData::from_format_strings("│{nm:^3}│ │{np:<12}│ │{nm}│", "");
+        let format = MinusPlus::new("│{nm:^3}│ │{np:<12}│ │{nm}│".into(), "".into());
+        let mut data = LineNumbersData::from_format_strings(&format);
+
         data.initialize_hunk(&[(10, 11), (10000, 100001)], "a".into());
         assert_eq!(data.formatted_width(), MinusPlus::new(32, 0));
 
-        let mut data = LineNumbersData::from_format_strings("│{np:^3}│ │{nm:<12}│ │{np}│", "");
+        let format = MinusPlus::new("│{np:^3}│ │{nm:<12}│ │{np}│".into(), "".into());
+        let mut data = LineNumbersData::from_format_strings(&format);
+
         data.initialize_hunk(&[(10, 11), (10000, 100001)], "a".into());
         assert_eq!(data.formatted_width(), MinusPlus::new(32, 0));
     }

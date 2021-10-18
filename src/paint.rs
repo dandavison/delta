@@ -55,10 +55,7 @@ impl<'a> Painter<'a> {
         let default_syntax = Self::get_syntax(&config.syntax_set, None);
 
         let line_numbers_data = if config.line_numbers {
-            line_numbers::LineNumbersData::from_format_strings(
-                &config.line_numbers_left_format,
-                &config.line_numbers_right_format,
-            )
+            line_numbers::LineNumbersData::from_format_strings(&config.line_numbers_format)
         } else {
             line_numbers::LineNumbersData::default()
         };
