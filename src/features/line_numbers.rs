@@ -281,14 +281,21 @@ pub mod tests {
     use regex::Captures;
 
     use crate::ansi::strip_ansi_codes;
+    use crate::format::FormatStringData;
     use crate::tests::integration_test_utils::{make_config_from_args, run_delta};
 
     use super::*;
 
+    pub fn parse_line_number_format_with_default_regex<'a>(
+        format_string: &'a str,
+    ) -> FormatStringData<'a> {
+        format::parse_line_number_format(format_string, &LINE_NUMBERS_PLACEHOLDER_REGEX)
+    }
+
     #[test]
     fn test_line_number_format_regex_1() {
         assert_eq!(
-            format::parse_line_number_format("{nm}", &LINE_NUMBERS_PLACEHOLDER_REGEX),
+            parse_line_number_format_with_default_regex("{nm}"),
             vec![format::FormatStringPlaceholderData {
                 prefix: "".into(),
                 placeholder: Some(Placeholder::NumberMinus),
@@ -304,7 +311,7 @@ pub mod tests {
     #[test]
     fn test_line_number_format_regex_2() {
         assert_eq!(
-            format::parse_line_number_format("{np:4}", &LINE_NUMBERS_PLACEHOLDER_REGEX),
+            parse_line_number_format_with_default_regex("{np:4}"),
             vec![format::FormatStringPlaceholderData {
                 prefix: "".into(),
                 placeholder: Some(Placeholder::NumberPlus),
@@ -320,7 +327,7 @@ pub mod tests {
     #[test]
     fn test_line_number_format_regex_3() {
         assert_eq!(
-            format::parse_line_number_format("{np:>4}", &LINE_NUMBERS_PLACEHOLDER_REGEX),
+            parse_line_number_format_with_default_regex("{np:>4}"),
             vec![format::FormatStringPlaceholderData {
                 prefix: "".into(),
                 placeholder: Some(Placeholder::NumberPlus),
@@ -336,7 +343,7 @@ pub mod tests {
     #[test]
     fn test_line_number_format_regex_4() {
         assert_eq!(
-            format::parse_line_number_format("{np:_>4}", &LINE_NUMBERS_PLACEHOLDER_REGEX),
+            parse_line_number_format_with_default_regex("{np:_>4}"),
             vec![format::FormatStringPlaceholderData {
                 prefix: "".into(),
                 placeholder: Some(Placeholder::NumberPlus),
@@ -352,7 +359,7 @@ pub mod tests {
     #[test]
     fn test_line_number_format_regex_5() {
         assert_eq!(
-            format::parse_line_number_format("__{np:_>4}@@", &LINE_NUMBERS_PLACEHOLDER_REGEX),
+            parse_line_number_format_with_default_regex("__{np:_>4}@@"),
             vec![format::FormatStringPlaceholderData {
                 prefix: "__".into(),
                 placeholder: Some(Placeholder::NumberPlus),
@@ -368,10 +375,7 @@ pub mod tests {
     #[test]
     fn test_line_number_format_regex_6() {
         assert_eq!(
-            format::parse_line_number_format(
-                "__{nm:<3}@@---{np:_>4}**",
-                &LINE_NUMBERS_PLACEHOLDER_REGEX
-            ),
+            parse_line_number_format_with_default_regex("__{nm:<3}@@---{np:_>4}**"),
             vec![
                 format::FormatStringPlaceholderData {
                     prefix: "__".into(),
@@ -398,7 +402,7 @@ pub mod tests {
     #[test]
     fn test_line_number_format_regex_7() {
         assert_eq!(
-            format::parse_line_number_format("__@@---**", &LINE_NUMBERS_PLACEHOLDER_REGEX),
+            parse_line_number_format_with_default_regex("__@@---**",),
             vec![format::FormatStringPlaceholderData {
                 prefix: "".into(),
                 placeholder: None,
@@ -434,43 +438,39 @@ pub mod tests {
 
     #[test]
     fn test_line_number_placeholder_width_one() {
-        use format::parse_line_number_format;
-
-        let data = parse_line_number_format("", &LINE_NUMBERS_PLACEHOLDER_REGEX);
+        let data = parse_line_number_format_with_default_regex("");
         assert_eq!(data[0].width(0), (0, 0));
 
-        let data = parse_line_number_format("", &LINE_NUMBERS_PLACEHOLDER_REGEX);
+        let data = parse_line_number_format_with_default_regex("");
         assert_eq!(data[0].width(4), (0, 0));
 
-        let data = parse_line_number_format("│+│", &LINE_NUMBERS_PLACEHOLDER_REGEX);
+        let data = parse_line_number_format_with_default_regex("│+│");
         assert_eq!(data[0].width(4), (0, 3));
 
-        let data = parse_line_number_format("{np}", &LINE_NUMBERS_PLACEHOLDER_REGEX);
+        let data = parse_line_number_format_with_default_regex("{np}");
         assert_eq!(data[0].width(4), (4, 0));
 
-        let data = parse_line_number_format("│{np}│", &LINE_NUMBERS_PLACEHOLDER_REGEX);
+        let data = parse_line_number_format_with_default_regex("│{np}│");
         assert_eq!(data[0].width(4), (5, 1));
 
-        let data = parse_line_number_format("│{np:2}│", &LINE_NUMBERS_PLACEHOLDER_REGEX);
+        let data = parse_line_number_format_with_default_regex("│{np:2}│");
         assert_eq!(data[0].width(4), (5, 1));
 
-        let data = parse_line_number_format("│{np:6}│", &LINE_NUMBERS_PLACEHOLDER_REGEX);
+        let data = parse_line_number_format_with_default_regex("│{np:6}│");
         assert_eq!(data[0].width(4), (7, 1));
     }
 
     #[test]
     fn test_line_number_placeholder_width_two() {
-        use format::parse_line_number_format;
-
-        let data = parse_line_number_format("│{nm}│{np}│", &LINE_NUMBERS_PLACEHOLDER_REGEX);
+        let data = parse_line_number_format_with_default_regex("│{nm}│{np}│");
         assert_eq!(data[0].width(1), (2, 6));
         assert_eq!(data[1].width(1), (2, 1));
 
-        let data = parse_line_number_format("│{nm:_>5}│{np:1}│", &LINE_NUMBERS_PLACEHOLDER_REGEX);
+        let data = parse_line_number_format_with_default_regex("│{nm:_>5}│{np:1}│");
         assert_eq!(data[0].width(1), (6, 8));
         assert_eq!(data[1].width(1), (2, 1));
 
-        let data = parse_line_number_format("│{nm}│{np:5}│", &LINE_NUMBERS_PLACEHOLDER_REGEX);
+        let data = parse_line_number_format_with_default_regex("│{nm}│{np:5}│");
         assert_eq!(data[0].width(7), (8, 8));
         assert_eq!(data[1].width(7), (8, 1));
     }
