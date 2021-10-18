@@ -100,7 +100,7 @@ pub fn show_config(config: &config::Config, writer: &mut dyn Write) -> std::io::
         writer,
         "    max-line-distance             = {max_line_distance}
     max-line-length               = {max_line_length}
-    line-fill-method        = {line_fill_method}
+    line-fill-method              = {line_fill_method}
     navigate                      = {navigate}
     navigate-regexp               = {navigate_regexp}
     pager                         = {pager}

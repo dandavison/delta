@@ -45,6 +45,8 @@ where
     #[cfg(not(test))]
     {
         eprintln!("{}", errmsg);
+        // As in Config::error_exit_code: use 2 for error
+        // because diff uses 0 and 1 for non-error.
         process::exit(2);
     }
     #[cfg(test)]

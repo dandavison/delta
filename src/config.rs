@@ -1,6 +1,5 @@
 use std::collections::HashMap;
 use std::path::PathBuf;
-use std::process;
 
 use regex::Regex;
 use structopt::clap;
@@ -185,23 +184,21 @@ impl From<cli::Opt> for Config {
                 .unwrap_or(0.0);
 
         let commit_regex = Regex::new(&opt.commit_regex).unwrap_or_else(|_| {
-            eprintln!(
+            fatal(format!(
                 "Invalid commit-regex: {}. \
                  The value must be a valid Rust regular expression. \
                  See https://docs.rs/regex.",
                 opt.commit_regex
-            );
-            process::exit(1);
+            ));
         });
 
         let tokenization_regex = Regex::new(&opt.tokenization_regex).unwrap_or_else(|_| {
-            eprintln!(
+            fatal(format!(
                 "Invalid word-diff-regex: {}. \
                  The value must be a valid Rust regular expression. \
                  See https://docs.rs/regex.",
                 opt.tokenization_regex
-            );
-            process::exit(1);
+            ));
         });
 
         let side_by_side_data = side_by_side::SideBySideData::new_sbs(
@@ -613,13 +610,11 @@ pub fn user_supplied_option(option: &str, arg_matches: &clap::ArgMatches) -> boo
 }
 
 pub fn delta_unreachable(message: &str) -> ! {
-    let error_exit_code = 2; // This is also stored in Config.
-    eprintln!(
+    fatal(format!(
         "{} This should not be possible. \
          Please report the bug at https://github.com/dandavison/delta/issues.",
         message
-    );
-    process::exit(error_exit_code);
+    ));
 }
 
 #[cfg(test)]

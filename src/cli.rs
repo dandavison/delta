@@ -443,7 +443,7 @@ pub struct Opt {
 
     /// Default language used for syntax highlighting when this cannot be
     /// inferred from a filename. It will typically make sense to set this in
-    /// per-repository git config ().git/config)
+    /// per-repository git config (.git/config)
     #[structopt(long = "default-language")]
     pub default_language: Option<String>,
 

@@ -7,7 +7,8 @@ use std::collections::HashMap;
 use std::env;
 #[cfg(test)]
 use std::path::Path;
-use std::process;
+
+use crate::fatal;
 
 use lazy_static::lazy_static;
 
@@ -31,8 +32,7 @@ impl GitConfig {
         match config {
             Some(mut config) => {
                 let config = config.snapshot().unwrap_or_else(|err| {
-                    eprintln!("Failed to read git config: {}", err);
-                    process::exit(1)
+                    fatal(format!("Failed to read git config: {}", err));
                 });
                 Some(Self {
                     config,
