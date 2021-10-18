@@ -16,12 +16,13 @@ use crate::delta::State;
 use crate::env;
 use crate::fatal;
 use crate::features::navigate;
-use crate::features::side_by_side::{self, LeftRight};
+use crate::features::side_by_side::{self, ansifill, LeftRight};
 use crate::git_config::{GitConfig, GitConfigEntry};
 use crate::minusplus::MinusPlus;
 use crate::paint::BgFillMethod;
 use crate::style::{self, Style};
 use crate::syntect_utils::FromDeltaStyle;
+use crate::tests::TESTING;
 use crate::wrapping::WrapConfig;
 
 pub const INLINE_SYMBOL_WIDTH_1: usize = 1;
@@ -199,11 +200,6 @@ impl From<cli::Opt> for Config {
             ));
         });
 
-        let side_by_side_data = side_by_side::SideBySideData::new_sbs(
-            &opt.computed.decorations_width,
-            &opt.computed.available_terminal_width,
-        );
-
         let inline_hint_style = Style::from_str(
             &opt.inline_hint_style,
             None,
@@ -233,6 +229,16 @@ impl From<cli::Opt> for Config {
             Some("spaces") => BgFillMethod::Spaces,
             _ => fatal("Invalid option for line-fill-method: Expected \"ansi\" or \"spaces\"."),
         };
+
+        let side_by_side_data = side_by_side::SideBySideData::new_sbs(
+            &opt.computed.decorations_width,
+            &opt.computed.available_terminal_width,
+        );
+        let side_by_side_data = ansifill::UseFullPanelWidth::sbs_odd_fix(
+            &opt.computed.decorations_width,
+            &line_fill_method,
+            side_by_side_data,
+        );
 
         let navigate_regexp = if opt.navigate || opt.show_themes {
             Some(navigate::make_navigate_regexp(
@@ -295,11 +301,10 @@ impl From<cli::Opt> for Config {
             inspect_raw_lines: opt.computed.inspect_raw_lines,
             inline_hint_style,
             keep_plus_minus_markers: opt.keep_plus_minus_markers,
-            line_fill_method: if opt.side_by_side {
-                // Panels in side-by-side always sum up to an even number, if the terminal has
-                // an odd width then extending the background color with an ANSI sequence
-                // would indicate the wrong width and extend beyond truncated or wrapped content,
-                // thus spaces are used here by default.
+            line_fill_method: if !opt.computed.stdout_is_term && !TESTING {
+                // Don't write ANSI sequences (which rely on the width of the
+                // current terminal) into a file. Also see UseFullPanelWidth.
+                // But when testing always use given value.
                 BgFillMethod::Spaces
             } else {
                 line_fill_method

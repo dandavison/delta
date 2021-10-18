@@ -4,6 +4,8 @@ use regex::Regex;
 use smol_str::SmolStr;
 use unicode_segmentation::UnicodeSegmentation;
 
+use crate::features::side_by_side::ansifill::ODD_PAD_CHAR;
+
 #[derive(Debug, PartialEq)]
 pub enum Placeholder<'a> {
     NumberMinus,
@@ -99,13 +101,26 @@ pub fn make_placeholder_regex(labels: &[&str]) -> Regex {
 pub fn parse_line_number_format<'a>(
     format_string: &'a str,
     placeholder_regex: &Regex,
+    mut prefix_with_space: bool,
 ) -> FormatStringData<'a> {
     let mut format_data = Vec::new();
     let mut offset = 0;
 
+    let mut expand_first_prefix = |prefix: SmolStr| {
+        // Only prefix the first placeholder with a space, also see `UseFullPanelWidth`
+        if prefix_with_space {
+            let prefix = SmolStr::new(format!("{}{}", ODD_PAD_CHAR, prefix));
+            prefix_with_space = false;
+            prefix
+        } else {
+            prefix
+        }
+    };
+
     for captures in placeholder_regex.captures_iter(format_string) {
         let match_ = captures.get(0).unwrap();
         let prefix = SmolStr::new(&format_string[offset..match_.start()]);
+        let prefix = expand_first_prefix(prefix);
         let prefix_len = prefix.graphemes(true).count();
         let suffix = SmolStr::new(&format_string[match_.end()..]);
         let suffix_len = suffix.graphemes(true).count();
@@ -125,10 +140,13 @@ pub fn parse_line_number_format<'a>(
         offset = match_.end();
     }
     if offset == 0 {
+        let prefix = SmolStr::new("");
+        let prefix = expand_first_prefix(prefix);
+        let prefix_len = prefix.graphemes(true).count();
         // No placeholders
         format_data.push(FormatStringPlaceholderData {
-            prefix: SmolStr::new(""),
-            prefix_len: 0,
+            prefix,
+            prefix_len,
             placeholder: None,
             alignment_spec: None,
             width: None,

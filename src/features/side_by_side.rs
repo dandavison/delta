@@ -39,7 +39,6 @@ pub use MinusPlusIndex::Plus as Right;
 #[derive(Debug)]
 pub struct Panel {
     pub width: usize,
-    pub offset: usize,
 }
 
 pub type LeftRight<T> = MinusPlus<T>;
@@ -53,16 +52,7 @@ impl SideBySideData {
             cli::Width::Fixed(w) => w / 2,
             _ => available_terminal_width / 2,
         };
-        SideBySideData::new(
-            Panel {
-                width: panel_width,
-                offset: 0,
-            },
-            Panel {
-                width: panel_width,
-                offset: 0,
-            },
-        )
+        SideBySideData::new(Panel { width: panel_width }, Panel { width: panel_width })
     }
 }
 
@@ -480,6 +470,61 @@ fn pad_panel_line_to_width<'a>(
     }
 }
 
+pub mod ansifill {
+    use super::SideBySideData;
+    use crate::config::Config;
+    use crate::paint::BgFillMethod;
+
+    pub const ODD_PAD_CHAR: char = ' ';
+
+    // Panels in side-by-side mode always sum up to an even number, so when the terminal
+    // has an odd width an extra column is left over.
+    // If the background color is extended with an ANSI sequence (which only knows "fill
+    // this row until the end") instead of spaces (see `BgFillMethod`), then the coloring
+    // extends into that column. This becomes noticeable when the displayed content reaches
+    // the right side of the right panel to be truncated or wrapped.
+    // However using an ANSI sequence instead of spaces is generally preferable because
+    // small changes to the terminal width are less noticeable.
+
+    /// The solution in this case is to add `ODD_PAD_CHAR` before the first line number in
+    /// the right panel and increasing its width by one, thus using the full terminal width
+    /// with the two panels.
+    /// This also means line numbers can not be disabled in side-by-side mode plus ANSI, as
+    /// this leaves no place for this fix.
+    #[derive(Clone, Debug)]
+    pub struct UseFullPanelWidth(pub bool);
+    impl UseFullPanelWidth {
+        pub fn new(config: &Config) -> Self {
+            Self(
+                config.side_by_side
+                    && Self::is_odd_with_ansi(&config.decorations_width, &config.line_fill_method),
+            )
+        }
+        pub fn sbs_odd_fix(
+            width: &crate::cli::Width,
+            method: &BgFillMethod,
+            sbs_data: SideBySideData,
+        ) -> SideBySideData {
+            if Self::is_odd_with_ansi(width, method) {
+                Self::adapt_sbs_data(sbs_data)
+            } else {
+                sbs_data
+            }
+        }
+        pub fn pad_width(&self) -> bool {
+            self.0
+        }
+        fn is_odd_with_ansi(width: &crate::cli::Width, method: &BgFillMethod) -> bool {
+            method == &BgFillMethod::TryAnsiSequence
+                && matches!(&width, crate::cli::Width::Fixed(width) if width % 2 == 1)
+        }
+        fn adapt_sbs_data(mut sbs_data: SideBySideData) -> SideBySideData {
+            sbs_data[super::Right].width += 1;
+            sbs_data
+        }
+    }
+}
+
 #[cfg(test)]
 pub mod tests {
     use crate::ansi::strip_ansi_codes;
@@ -516,7 +561,12 @@ pub mod tests {
 
     #[test]
     fn test_two_plus_lines() {
-        let config = make_config_from_args(&["--side-by-side", "--width", "40"]);
+        let config = make_config_from_args(&[
+            "--side-by-side",
+            "--width",
+            "41",
+            "--line-fill-method=spaces",
+        ]);
         let output = run_delta(TWO_PLUS_LINES_DIFF, &config);
         let mut lines = output.lines().skip(crate::config::HEADER_LEN);
         let (line_1, line_2) = (lines.next().unwrap(), lines.next().unwrap());
@@ -546,17 +596,24 @@ pub mod tests {
 
     #[test]
     fn test_two_plus_lines_exact_fit() {
-        let config = make_config_from_args(&["--side-by-side", "--width", "32"]);
+        let config =
+            make_config_from_args(&["--side-by-side", "--width", "33", "--line-fill-method=ansi"]);
         let output = run_delta(TWO_PLUS_LINES_DIFF, &config);
         let mut lines = output.lines().skip(crate::config::HEADER_LEN);
         let (line_1, line_2) = (lines.next().unwrap(), lines.next().unwrap());
-        assert_eq!("│    │          │ 1  │a = 1     ", strip_ansi_codes(line_1));
-        assert_eq!("│    │          │ 2  │b = 234567", strip_ansi_codes(line_2));
+        let sac = strip_ansi_codes; // alias to help with `cargo fmt`-ing:
+        assert_eq!("│    │           │ 1  │a = 1", sac(line_1));
+        assert_eq!("│    │           │ 2  │b = 234567", sac(line_2));
     }
 
     #[test]
     fn test_one_minus_one_plus_line() {
-        let config = make_config_from_args(&["--side-by-side", "--width", "40"]);
+        let config = make_config_from_args(&[
+            "--side-by-side",
+            "--width",
+            "40",
+            "--line-fill-method=spaces",
+        ]);
         let output = run_delta(ONE_MINUS_ONE_PLUS_LINE_DIFF, &config);
         let output = strip_ansi_codes(&output);
         let mut lines = output.lines().skip(crate::config::HEADER_LEN);

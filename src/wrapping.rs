@@ -910,6 +910,8 @@ index 223ca50..e69de29 100644
             "│RRRR│",
             "--width",
             "40",
+            "--line-fill-method",
+            "spaces",
         ]));
         config.truncation_symbol = ">".into();
 
@@ -937,6 +939,8 @@ index 223ca50..e69de29 100644
             "│WW {nm} +- {np:2} WW│",
             "--width",
             "60",
+            "--line-fill-method",
+            "ansi",
         ]));
         config.truncation_symbol = ">".into();
 
@@ -949,13 +953,14 @@ index 223ca50..e69de29 100644
             "│LLL│klmno+                   │WW        +-        WW│klmno+",
             "│LLL│pqrst+                   │WW        +-        WW│pqrst+",
             "│LLL│uvwxzy 0123456789 012345>│WW        +-        WW│uvwxz>",
-            "│LLL│a = 1                    │WW        +- 102000 WW│a = 2 ",
+            "│LLL│a = 1                    │WW        +- 102000 WW│a = 2",
         ];
         assert_eq!(lines, expected);
     }
 
     #[test]
     fn test_wrap_with_keep_markers() {
+        use crate::features::side_by_side::ansifill::ODD_PAD_CHAR;
         let mut config = make_config_from_args(&default_wrap_cfg_plus(&[
             "--side-by-side",
             "--keep-plus-minus-markers",
@@ -968,25 +973,29 @@ index 223ca50..e69de29 100644
         let output = strip_ansi_codes(&output);
         let lines: Vec<_> = output.lines().skip(crate::config::HEADER_LEN).collect();
         let expected = vec![
-            "│ 4  │ abcdefghijklmn+│ 15 │ abcdefghijklmn+",
-            "│    │ opqrstuvwxzy 0+│    │ opqrstuvwxzy 0+",
-            "│    │ 123456789 0123+│    │ 123456789 0123+",
-            "│    │ 456789 0123456+│    │ 456789 0123456+",
-            "│    │ 789 0123456789>│    │ 789 0123456789>",
-            "│ 5  │-a = 0123456789+│ 16 │+b = 0123456789+",
-            "│    │  0123456789 01+│    │  0123456789 01+",
-            "│    │ 23456789 01234+│    │ 23456789 01234+",
-            "│    │ 56789 01234567+│    │ 56789 01234567+",
-            "│    │ 89             │    │ 89             ",
+            "│ 4  │ abcdefghijklmn+ │ 15 │ abcdefghijklmn+",
+            "│    │ opqrstuvwxzy 0+ │    │ opqrstuvwxzy 0+",
+            "│    │ 123456789 0123+ │    │ 123456789 0123+",
+            "│    │ 456789 0123456+ │    │ 456789 0123456+",
+            "│    │ 789 0123456789> │    │ 789 0123456789>",
+            "│ 5  │-a = 0123456789+ │ 16 │+b = 0123456789+",
+            "│    │  0123456789 01+ │    │  0123456789 01+",
+            "│    │ 23456789 01234+ │    │ 23456789 01234+",
+            "│    │ 56789 01234567+ │    │ 56789 01234567+",
+            "│    │ 89              │    │ 89",
+            // this is place where ^ ODD_PAD_CHAR is inserted due to the odd 45 width
         ];
         assert_eq!(lines, expected);
+
+        for line in lines {
+            assert_eq!(line.chars().nth(22), Some(ODD_PAD_CHAR));
+        }
     }
 
     #[test]
-    fn test_aligment_2_lines_vs_3_lines() {
+    fn test_alignment_2_lines_vs_3_lines() {
         let config =
             make_config_from_args(&default_wrap_cfg_plus(&["--side-by-side", "--width", "55"]));
-
         {
             let output = run_delta(
                 &format!(
@@ -998,9 +1007,10 @@ index 223ca50..e69de29 100644
             let output = strip_ansi_codes(&output);
             let lines: Vec<_> = output.lines().skip(crate::config::HEADER_LEN).collect();
             let expected = vec![
-                "│ 1  │.........1.........2<│ 1  │.........1.........2+",
-                "│    │                >....│    │.........3.........4+",
-                "│    │                     │    │.........5.........6 ",
+                "│ 1  │.........1.........2< │ 1  │.........1.........2+",
+                "│    │                >.... │    │.........3.........4+",
+                "│    │                      │    │.........5.........6",
+                // place where ODD_PAD_CHAR ^ is inserted due to the odd 55 width
             ];
             assert_eq!(lines, expected);
         }
@@ -1016,18 +1026,23 @@ index 223ca50..e69de29 100644
             let output = strip_ansi_codes(&output);
             let lines: Vec<_> = output.lines().skip(crate::config::HEADER_LEN).collect();
             let expected = vec![
-                "│ 1  │.........1.........2+│ 1  │.........1.........2<",
-                "│    │.........3.........4+│    │                >....",
-                "│    │.........5.........6 │    │",
+                "│ 1  │.........1.........2+ │ 1  │.........1.........2<",
+                "│    │.........3.........4+ │    │                >....",
+                "│    │.........5.........6  │    │",
             ];
             assert_eq!(lines, expected);
         }
     }
 
     #[test]
-    fn test_aligment_1_line_vs_3_lines() {
-        let config =
-            make_config_from_args(&default_wrap_cfg_plus(&["--side-by-side", "--width", "60"]));
+    fn test_alignment_1_line_vs_3_lines() {
+        let config = make_config_from_args(&default_wrap_cfg_plus(&[
+            "--side-by-side",
+            "--width",
+            "61",
+            "--line-fill-method",
+            "spaces",
+        ]));
 
         {
             let output = run_delta(
@@ -1075,6 +1090,8 @@ index 223ca50..e69de29 100644
             "--side-by-side",
             "--width",
             "72",
+            "--line-fill-method",
+            "spaces",
         ]));
         config.truncation_symbol = ">".into();
 

@@ -6,6 +6,7 @@ use regex::Regex;
 use crate::config;
 use crate::delta::State;
 use crate::features::hyperlinks;
+use crate::features::side_by_side::ansifill;
 use crate::features::side_by_side::{Left, PanelSide, Right};
 use crate::features::OptionValueFunction;
 use crate::format::{self, Align, Placeholder};
@@ -155,11 +156,23 @@ pub type SideBySideLineWidth = MinusPlus<usize>;
 // Although it's probably unusual, a single format string can contain multiple placeholders. E.g.
 // line-numbers-right-format = "{nm} {np}|"
 impl<'a> LineNumbersData<'a> {
-    pub fn from_format_strings(format: &'a MinusPlus<String>) -> LineNumbersData<'a> {
+    pub fn from_format_strings(
+        format: &'a MinusPlus<String>,
+        use_full_width: ansifill::UseFullPanelWidth,
+    ) -> LineNumbersData<'a> {
+        let insert_center_space_on_odd_width = use_full_width.pad_width();
         Self {
             format_data: MinusPlus::new(
-                format::parse_line_number_format(&format[Left], &*LINE_NUMBERS_PLACEHOLDER_REGEX),
-                format::parse_line_number_format(&format[Right], &*LINE_NUMBERS_PLACEHOLDER_REGEX),
+                format::parse_line_number_format(
+                    &format[Left],
+                    &*LINE_NUMBERS_PLACEHOLDER_REGEX,
+                    false,
+                ),
+                format::parse_line_number_format(
+                    &format[Right],
+                    &*LINE_NUMBERS_PLACEHOLDER_REGEX,
+                    insert_center_space_on_odd_width,
+                ),
             ),
             line_number: MinusPlus::new(0, 0),
             hunk_max_line_number_width: 0,
@@ -281,6 +294,7 @@ pub mod tests {
     use regex::Captures;
 
     use crate::ansi::strip_ansi_codes;
+    use crate::features::side_by_side::ansifill::ODD_PAD_CHAR;
     use crate::format::FormatStringData;
     use crate::tests::integration_test_utils::{make_config_from_args, run_delta};
 
@@ -289,7 +303,7 @@ pub mod tests {
     pub fn parse_line_number_format_with_default_regex<'a>(
         format_string: &'a str,
     ) -> FormatStringData<'a> {
-        format::parse_line_number_format(format_string, &LINE_NUMBERS_PLACEHOLDER_REGEX)
+        format::parse_line_number_format(format_string, &LINE_NUMBERS_PLACEHOLDER_REGEX, false)
     }
 
     #[test]
@@ -416,14 +430,75 @@ pub mod tests {
     }
 
     #[test]
+    fn test_line_number_format_odd_width_one() {
+        assert_eq!(
+            format::parse_line_number_format("|{nm:<4}|", &LINE_NUMBERS_PLACEHOLDER_REGEX, true),
+            vec![format::FormatStringPlaceholderData {
+                prefix: format!("{}|", ODD_PAD_CHAR).into(),
+                placeholder: Some(Placeholder::NumberMinus),
+                alignment_spec: Some(Align::Left),
+                width: Some(4),
+                suffix: "|".into(),
+                prefix_len: 2,
+                suffix_len: 1,
+            }]
+        );
+    }
+    #[test]
+    fn test_line_number_format_odd_width_two() {
+        assert_eq!(
+            format::parse_line_number_format(
+                "|{nm:<4}+{np:<4}|",
+                &LINE_NUMBERS_PLACEHOLDER_REGEX,
+                true
+            ),
+            vec![
+                format::FormatStringPlaceholderData {
+                    prefix: format!("{}|", ODD_PAD_CHAR).into(),
+                    placeholder: Some(Placeholder::NumberMinus),
+                    alignment_spec: Some(Align::Left),
+                    width: Some(4),
+                    suffix: "+{np:<4}|".into(),
+                    prefix_len: 2,
+                    suffix_len: 9,
+                },
+                format::FormatStringPlaceholderData {
+                    prefix: "+".into(),
+                    placeholder: Some(Placeholder::NumberPlus),
+                    alignment_spec: Some(Align::Left),
+                    width: Some(4),
+                    suffix: "|".into(),
+                    prefix_len: 1,
+                    suffix_len: 1,
+                }
+            ]
+        );
+    }
+    #[test]
+    fn test_line_number_format_odd_width_none() {
+        assert_eq!(
+            format::parse_line_number_format("|++|", &LINE_NUMBERS_PLACEHOLDER_REGEX, true),
+            vec![format::FormatStringPlaceholderData {
+                prefix: format!("{}", ODD_PAD_CHAR).into(),
+                placeholder: None,
+                alignment_spec: None,
+                width: None,
+                suffix: "|++|".into(),
+                prefix_len: 1,
+                suffix_len: 4,
+            }]
+        );
+    }
+
+    #[test]
     fn test_line_number_format_long() {
         let long = "line number format which is too large for SSO";
         assert!(long.len() > std::mem::size_of::<smol_str::SmolStr>());
         assert_eq!(
-            format::parse_line_number_format(
-                &format!("{long}{{nm}}{long}", long = long),
-                &LINE_NUMBERS_PLACEHOLDER_REGEX
-            ),
+            parse_line_number_format_with_default_regex(&format!(
+                "{long}{{nm}}{long}",
+                long = long
+            ),),
             vec![format::FormatStringPlaceholderData {
                 prefix: long.into(),
                 prefix_len: long.len(),
@@ -477,31 +552,33 @@ pub mod tests {
 
     #[test]
     fn test_line_numbers_data() {
+        use crate::features::side_by_side::ansifill;
+        let w = ansifill::UseFullPanelWidth(false);
         let format = MinusPlus::new("".into(), "".into());
-        let mut data = LineNumbersData::from_format_strings(&format);
+        let mut data = LineNumbersData::from_format_strings(&format, w.clone());
         data.initialize_hunk(&[(10, 11), (10000, 100001)], "a".into());
         assert_eq!(data.formatted_width(), MinusPlus::new(0, 0));
 
         let format = MinusPlus::new("│".into(), "│+│".into());
-        let mut data = LineNumbersData::from_format_strings(&format);
+        let mut data = LineNumbersData::from_format_strings(&format, w.clone());
 
         data.initialize_hunk(&[(10, 11), (10000, 100001)], "a".into());
         assert_eq!(data.formatted_width(), MinusPlus::new(1, 3));
 
         let format = MinusPlus::new("│{nm:^3}│".into(), "│{np:^3}│".into());
-        let mut data = LineNumbersData::from_format_strings(&format);
+        let mut data = LineNumbersData::from_format_strings(&format, w.clone());
 
         data.initialize_hunk(&[(10, 11), (10000, 100001)], "a".into());
         assert_eq!(data.formatted_width(), MinusPlus::new(8, 8));
 
         let format = MinusPlus::new("│{nm:^3}│ │{np:<12}│ │{nm}│".into(), "".into());
-        let mut data = LineNumbersData::from_format_strings(&format);
+        let mut data = LineNumbersData::from_format_strings(&format, w.clone());
 
         data.initialize_hunk(&[(10, 11), (10000, 100001)], "a".into());
         assert_eq!(data.formatted_width(), MinusPlus::new(32, 0));
 
         let format = MinusPlus::new("│{np:^3}│ │{nm:<12}│ │{np}│".into(), "".into());
-        let mut data = LineNumbersData::from_format_strings(&format);
+        let mut data = LineNumbersData::from_format_strings(&format, w.clone());
 
         data.initialize_hunk(&[(10, 11), (10000, 100001)], "a".into());
         assert_eq!(data.formatted_width(), MinusPlus::new(32, 0));
