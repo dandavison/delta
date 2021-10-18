@@ -11,6 +11,7 @@ use crate::config::{self, delta_unreachable};
 use crate::delta::State;
 use crate::edits;
 use crate::features::line_numbers;
+use crate::features::side_by_side::ansifill;
 use crate::features::side_by_side::{self, available_line_width, LineSegments, PanelSide};
 use crate::minusplus::*;
 use crate::paint::superimpose_style_sections::superimpose_style_sections;
@@ -32,7 +33,8 @@ pub struct Painter<'a> {
 #[derive(Debug, PartialEq, Clone, Copy)]
 pub enum BgFillMethod {
     // Fill the background with ANSI spaces if possible,
-    // but might fallback to Spaces (e.g. in the left side-by-side panel)
+    // but might fallback to Spaces (e.g. in the left side-by-side panel),
+    // also see `UseFullPanelWidth`
     TryAnsiSequence,
     Spaces,
 }
@@ -54,9 +56,19 @@ impl<'a> Painter<'a> {
     pub fn new(writer: &'a mut dyn Write, config: &'a config::Config) -> Self {
         let default_syntax = Self::get_syntax(&config.syntax_set, None);
 
+        let panel_width_fix = ansifill::UseFullPanelWidth::new(config);
+
         let line_numbers_data = if config.line_numbers {
-            line_numbers::LineNumbersData::from_format_strings(&config.line_numbers_format)
+            line_numbers::LineNumbersData::from_format_strings(
+                &config.line_numbers_format,
+                panel_width_fix,
+            )
         } else {
+            // See `UseFullPanelWidth` for details why, but this can't happen at the time
+            // of writing because side-by-side automatically activates line numbers.
+            debug_assert!(
+                !config.side_by_side && config.line_fill_method == BgFillMethod::TryAnsiSequence
+            );
             line_numbers::LineNumbersData::default()
         };
         Self {

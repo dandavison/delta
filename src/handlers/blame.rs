@@ -38,6 +38,7 @@ impl<'a> StateMachine<'a> {
                 let format_data = format::parse_line_number_format(
                     &self.config.blame_format,
                     &*BLAME_PLACEHOLDER_REGEX,
+                    false,
                 );
                 write!(
                     self.painter.writer,

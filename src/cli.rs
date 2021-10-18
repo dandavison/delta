@@ -561,7 +561,8 @@ pub struct Opt {
     pub max_line_length: usize,
 
     /// How to extend the background color to the end of the line in side-by-side mode. Can
-    /// be ansi (default) or spaces. Has no effect if --width=variable is given.
+    /// be ansi (default) or spaces (default if output is not to a terminal). Has no effect
+    /// if --width=variable is given.
     #[structopt(long = "line-fill-method")]
     pub line_fill_method: Option<String>,
 
