@@ -42,7 +42,7 @@ pub struct Panel {
     pub offset: usize,
 }
 
-type LeftRight<T> = MinusPlus<T>;
+pub type LeftRight<T> = MinusPlus<T>;
 
 pub type SideBySideData = LeftRight<Panel>;
 
