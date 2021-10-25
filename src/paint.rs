@@ -781,6 +781,52 @@ fn is_whitespace_error(sections: &[(Style, &str)]) -> bool {
     false
 }
 
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::tests::integration_test_utils;
+
+    fn test_expand_tabs(config_args: &[&str], input: &str) -> String {
+        let mut unused_buf = Vec::<u8>::new();
+        let cfg = integration_test_utils::make_config_from_args(config_args);
+        let painter = Painter::new(&mut unused_buf, &cfg);
+        let iter = input.graphemes(true);
+        // Since expand_tabs() returns its expansion, it's simpler to look at that than the buffer
+        // the painter is writing to.
+        painter.expand_tabs(iter)
+    }
+
+    #[test]
+    fn no_tabs() {
+        let result = test_expand_tabs(&[], "junk");
+        assert_eq!(result, "junk");
+    }
+
+    #[test]
+    fn just_a_tab() {
+        let result = test_expand_tabs(&[], "\t");
+        assert_eq!(result, "    ");
+    }
+
+    #[test]
+    fn no_expansion_leading() {
+        let result = test_expand_tabs(&["--tabs=0"], "\tjunk");
+        assert_eq!(result, "\tjunk");
+    }
+
+    #[test]
+    fn leading_tab() {
+        let result = test_expand_tabs(&[], "\tjunk");
+        assert_eq!(result, "    junk");
+    }
+
+    #[test]
+    fn leading_tab8() {
+        let result = test_expand_tabs(&["--tabs=8"], "\tjunk");
+        assert_eq!(result, "        junk");
+    }
+}
+
 mod superimpose_style_sections {
     use syntect::highlighting::Style as SyntectStyle;
 
