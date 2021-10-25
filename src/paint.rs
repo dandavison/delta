@@ -5,6 +5,7 @@ use syntect::easy::HighlightLines;
 use syntect::highlighting::Style as SyntectStyle;
 use syntect::parsing::{SyntaxReference, SyntaxSet};
 use unicode_segmentation::UnicodeSegmentation;
+use unicode_width::UnicodeWidthStr;
 
 use crate::ansi;
 use crate::config::{self, delta_unreachable};
@@ -147,9 +148,28 @@ impl<'a> Painter<'a> {
         I: Iterator<Item = &'b str>,
     {
         if self.config.tab_width > 0 {
-            let tab_replacement = " ".repeat(self.config.tab_width);
-            line.map(|s| if s == "\t" { &tab_replacement } else { s })
-                .collect::<String>()
+            // XXX with_capacity()?  We don't know the length of the line, though the caller might.
+            // Obviously we wouldn't know the length of the result, but we could do what bat does
+            // and simply allocate twice the capacity of the original.  For now, just do it the
+            // slow way.
+            let mut buf = String::new();
+            let mut cum_width: usize = 0;
+
+            for mut s in line {
+                while let Some(index) = s.find('\t') {
+                    let chunk = &s[0..index];
+                    buf.push_str(chunk);
+                    cum_width += UnicodeWidthStr::width(chunk);
+                    let num_spaces = self.config.tab_width - (cum_width % self.config.tab_width);
+                    buf.push_str(&*" ".repeat(num_spaces));
+                    cum_width += num_spaces;
+
+                    s = &s[index + 1..s.len()];
+                }
+                cum_width += UnicodeWidthStr::width(s);
+                buf.push_str(s);
+            }
+            buf
         } else {
             line.collect::<String>()
         }
@@ -815,6 +835,12 @@ mod tests {
     }
 
     #[test]
+    fn no_expansion_embedded() {
+        let result = test_expand_tabs(&["--tabs=0"], "12\tjunk");
+        assert_eq!(result, "12\tjunk");
+    }
+
+    #[test]
     fn leading_tab() {
         let result = test_expand_tabs(&[], "\tjunk");
         assert_eq!(result, "    junk");
@@ -824,6 +850,33 @@ mod tests {
     fn leading_tab8() {
         let result = test_expand_tabs(&["--tabs=8"], "\tjunk");
         assert_eq!(result, "        junk");
+    }
+
+    #[test]
+    fn embedded_tab() {
+        // XXX Maybe someone thinks the tab-is-always-X-spaces behavior is correct, instead of
+        // tab-gets-you-to-the-next-tabstop?  Will that need to be configurable?
+        let result = test_expand_tabs(&[], "12\tjunk");
+        assert_eq!(result, "12  junk");
+    }
+
+    #[test]
+    fn embedded_tab_one_space() {
+        let result = test_expand_tabs(&[], "123\tjunk");
+        assert_eq!(result, "123 junk");
+    }
+
+    #[test]
+    fn embedded_tab_next_tabstop() {
+        let result = test_expand_tabs(&[], "1234\tjunk");
+        assert_eq!(result, "1234    junk");
+    }
+
+    // XXX Need to test double-width, zero-width(?), and combining characters.
+    #[test]
+    fn embedded_tab_double_width() {
+        let result = test_expand_tabs(&[], "\u{2329}\tjunk");
+        assert_eq!(result, "\u{2329}  junk");
     }
 }
 
