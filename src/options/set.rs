@@ -202,7 +202,7 @@ pub fn set_options(
     );
 
     // Setting ComputedValues
-    set_widths(opt);
+    set_widths_and_isatty(opt);
     set_true_color(opt);
     theme::set__is_light_mode__syntax_theme__syntax_set(opt, assets);
     opt.computed.inspect_raw_lines =
@@ -568,11 +568,13 @@ fn parse_width_specifier(width_arg: &str, terminal_width: usize) -> Result<usize
     Ok(width)
 }
 
-fn set_widths(opt: &mut cli::Opt) {
+fn set_widths_and_isatty(opt: &mut cli::Opt) {
+    let term_stdout = Term::stdout();
+    opt.computed.stdout_is_term = term_stdout.is_term();
+
     // If one extra character for e.g. `less --status-column` is required use "-1"
     // as an argument, also see #41, #10, #115 and #727.
-
-    opt.computed.available_terminal_width = Term::stdout().size().1 as usize;
+    opt.computed.available_terminal_width = term_stdout.size().1 as usize;
 
     let (decorations_width, background_color_extends_to_terminal_width) = match opt.width.as_deref()
     {

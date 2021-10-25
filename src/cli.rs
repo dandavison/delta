@@ -706,6 +706,7 @@ pub struct Opt {
 #[derive(Default, Clone, Debug)]
 pub struct ComputedValues {
     pub available_terminal_width: usize,
+    pub stdout_is_term: bool,
     pub background_color_extends_to_terminal_width: bool,
     pub decorations_width: Width,
     pub inspect_raw_lines: InspectRawLines,
