@@ -390,7 +390,9 @@ To disable the line numbers in side-by-side view, but keep a vertical delimiter 
     line-numbers-right-format = "│ "
 ```
 
-Wide lines in the left or right panel are currently truncated. If the truncation is a problem, one approach is to set the width of Delta's output to be larger than your terminal (e.g. `delta --width 250`) and ensure that `less` doesn't wrap long lines (e.g. `export LESS=-RS`); then one can scroll right to view the full content. (Another approach is to decrease font size in your terminal.)
+Long lines are wrapped if they do not fit in side-by-side mode.
+For control over the details of line wrapping, see `--wrap-max-lines`, `--wrap-left-symbol`, `--wrap-right-symbol`, `--wrap-right-percent`, `--wrap-right-prefix-symbol`, `--inline-hint-style`.
+Line wrapping was implemented by @th1000s.
 
 ### "Features": named groups of settings
 
