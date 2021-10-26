@@ -872,11 +872,28 @@ mod tests {
         assert_eq!(result, "1234    junk");
     }
 
-    // XXX Need to test double-width, zero-width(?), and combining characters.
     #[test]
     fn embedded_tab_double_width() {
         let result = test_expand_tabs(&[], "\u{2329}\tjunk");
         assert_eq!(result, "\u{2329}  junk");
+    }
+
+    #[test]
+    fn embedded_tab_combining() {
+        let result = test_expand_tabs(&[], "o\u{0300}\tjunk");
+        assert_eq!(result, "o\u{0300}   junk");
+    }
+
+    #[test]
+    #[ignore]
+    fn embedded_tab_zwj() {
+        // These represent: the emoji for "woman", a zero-width joiner, and the emoji for
+        // "microscope".  Both emoji are wide characters.  Together, they represent the emoji for
+        // "woman scientist", and would be combined into a single character, also wide.  But the
+        // unicode-width crate doesn't handle that, even though a terminal emulator might.  The
+        // test is ignored until this changes, if it ever does.
+        let result = test_expand_tabs(&[], "\u{01f469}\u{200d}\u{01f52c}\tjunk");
+        assert_eq!(result, "\u{01f469}\u{200d}\u{01f52c}  junk");
     }
 }
 
