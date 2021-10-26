@@ -159,14 +159,14 @@ impl<'a> Painter<'a> {
                 while let Some(index) = s.find('\t') {
                     let chunk = &s[0..index];
                     buf.push_str(chunk);
-                    cum_width += UnicodeWidthStr::width(chunk);
+                    cum_width += chunk.width();
                     let num_spaces = self.config.tab_width - (cum_width % self.config.tab_width);
                     buf.push_str(&*" ".repeat(num_spaces));
                     cum_width += num_spaces;
 
                     s = &s[index + 1..s.len()];
                 }
-                cum_width += UnicodeWidthStr::width(s);
+                cum_width += s.width();
                 buf.push_str(s);
             }
             buf
