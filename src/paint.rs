@@ -468,6 +468,7 @@ impl<'a> Painter<'a> {
                     (config.plus_style, config.plus_non_emph_style)
                 }
             }
+            State::Blame(_) => (diff_sections[0].0, diff_sections[0].0),
             _ => (config.null_style, config.null_style),
         };
         let fill_style = if style_sections_contain_more_than_one_style(diff_sections) {
@@ -621,6 +622,7 @@ impl<'a> Painter<'a> {
             }
             State::HunkHeader(_, _) => true,
             State::HunkMinus(Some(_)) | State::HunkPlus(Some(_)) => false,
+            State::Blame(_) => true,
             _ => panic!(
                 "should_compute_syntax_highlighting is undefined for state {:?}",
                 state

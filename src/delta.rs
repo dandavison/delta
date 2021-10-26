@@ -22,6 +22,7 @@ pub enum State {
     HunkPlus(Option<String>), // In hunk; added line (raw_line)
     SubmoduleLog, // In a submodule section, with gitconfig diff.submodule = log
     SubmoduleShort(String), // In a submodule section, with gitconfig diff.submodule = short
+    Blame(String), // In a line of `git blame` output.
     Unknown,
     // The following elements are created when a line is wrapped to display it:
     HunkZeroWrapped,  // Wrapped unchanged line
@@ -119,6 +120,7 @@ impl<'a> StateMachine<'a> {
                 || self.handle_submodule_log_line()?
                 || self.handle_submodule_short_line()?
                 || self.handle_hunk_line()?
+                || self.handle_blame_line()?
                 || self.should_skip_line()
                 || self.emit_line_unchanged()?;
         }
