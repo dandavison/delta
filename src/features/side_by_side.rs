@@ -197,15 +197,6 @@ pub fn paint_zero_lines_side_by_side<'a>(
                 config,
             );
             output_buffer.push_str(&panel_line);
-
-            if *panel_side == Left && state != State::HunkZeroWrapped {
-                // TODO: Avoid doing the superimpose_style_sections work twice.
-                // HACK: These are getting incremented twice, so knock them back down once.
-                if let Some(d) = line_numbers_data.as_mut() {
-                    d.line_number[Left] -= 1;
-                    d.line_number[Right] -= 1;
-                }
-            }
         }
         output_buffer.push('\n');
     }
@@ -386,21 +377,6 @@ fn paint_minus_or_plus_panel_line<'a>(
         config,
     );
 
-    // Knock back down spuriously incremented line numbers. See comment above.
-    match (state, &state_for_line_numbers_field) {
-        (s, t) if s == t => {}
-        (State::HunkPlus(_), State::HunkMinus(_)) => {
-            if let Some(d) = line_numbers_data.as_mut() {
-                d.line_number[Left] -= 1;
-            }
-        }
-        (State::HunkMinus(_), State::HunkPlus(_)) => {
-            if let Some(d) = line_numbers_data.as_mut() {
-                d.line_number[Right] -= 1;
-            }
-        }
-        _ => unreachable!(),
-    }
     (line, line_is_empty)
 }
 
