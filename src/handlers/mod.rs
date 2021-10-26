@@ -1,6 +1,5 @@
 /// This module contains functions handling input lines encountered during the
 /// main `StateMachine::consume()` loop.
-pub mod blame;
 pub mod commit_meta;
 pub mod diff_stat;
 pub mod draw;
