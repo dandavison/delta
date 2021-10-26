@@ -147,11 +147,9 @@ pub fn parse_line_number_format<'a>(
         format_data.push(FormatStringPlaceholderData {
             prefix,
             prefix_len,
-            placeholder: None,
-            alignment_spec: None,
-            width: None,
             suffix: SmolStr::new(format_string),
             suffix_len: format_string.graphemes(true).count(),
+            ..Default::default()
         })
     }
 

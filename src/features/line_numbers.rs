@@ -6,7 +6,7 @@ use regex::Regex;
 use crate::config;
 use crate::delta::State;
 use crate::features::hyperlinks;
-use crate::features::side_by_side::ansifill;
+use crate::features::side_by_side::ansifill::{self, ODD_PAD_CHAR};
 use crate::features::side_by_side::{Left, PanelSide, Right};
 use crate::features::OptionValueFunction;
 use crate::format::{self, Align, Placeholder};
@@ -175,9 +175,7 @@ impl<'a> LineNumbersData<'a> {
                     insert_center_space_on_odd_width,
                 ),
             ),
-            line_number: MinusPlus::new(0, 0),
-            hunk_max_line_number_width: 0,
-            plus_file: "".to_string(),
+            ..Self::default()
         }
     }
 
@@ -191,6 +189,24 @@ impl<'a> LineNumbersData<'a> {
         self.hunk_max_line_number_width =
             1 + (hunk_max_line_number as f64).log10().floor() as usize;
         self.plus_file = plus_file;
+    }
+
+    pub fn empty_for_sbs(use_full_width: ansifill::UseFullPanelWidth) -> LineNumbersData<'a> {
+        let insert_center_space_on_odd_width = use_full_width.pad_width();
+        Self {
+            format_data: if insert_center_space_on_odd_width {
+                let format_left = vec![format::FormatStringPlaceholderData::default()];
+                let format_right = vec![format::FormatStringPlaceholderData {
+                    prefix: format!("{}", ODD_PAD_CHAR).into(),
+                    prefix_len: 1,
+                    ..Default::default()
+                }];
+                MinusPlus::new(format_left, format_right)
+            } else {
+                MinusPlus::default()
+            },
+            ..Self::default()
+        }
     }
 
     pub fn formatted_width(&self) -> SideBySideLineWidth {

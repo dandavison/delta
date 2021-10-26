@@ -465,8 +465,8 @@ pub mod ansifill {
     /// The solution in this case is to add `ODD_PAD_CHAR` before the first line number in
     /// the right panel and increasing its width by one, thus using the full terminal width
     /// with the two panels.
-    /// This also means line numbers can not be disabled in side-by-side mode plus ANSI, as
-    /// this leaves no place for this fix.
+    /// This also means line numbers can not be disabled in side-by-side mode, but they may
+    /// not actually paint numbers.
     #[derive(Clone, Debug)]
     pub struct UseFullPanelWidth(pub bool);
     impl UseFullPanelWidth {
