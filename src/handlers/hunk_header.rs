@@ -55,6 +55,8 @@ impl<'a> StateMachine<'a> {
         if self.config.line_numbers {
             self.painter
                 .line_numbers_data
+                .as_mut()
+                .unwrap()
                 .initialize_hunk(&line_numbers, self.plus_file.to_string());
         }
 

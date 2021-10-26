@@ -26,7 +26,10 @@ pub struct Painter<'a> {
     pub highlighter: Option<HighlightLines<'a>>,
     pub config: &'a config::Config,
     pub output_buffer: String,
-    pub line_numbers_data: line_numbers::LineNumbersData<'a>,
+    // If config.line_numbers is true, then the following is always Some().
+    // In side-by-side mode it is always Some (but possibly an empty one), even
+    // if config.line_numbers is false. See `UseFullPanelWidth` as well.
+    pub line_numbers_data: Option<line_numbers::LineNumbersData<'a>>,
 }
 
 // How the background of a line is filled up to the end
@@ -59,17 +62,19 @@ impl<'a> Painter<'a> {
         let panel_width_fix = ansifill::UseFullPanelWidth::new(config);
 
         let line_numbers_data = if config.line_numbers {
-            line_numbers::LineNumbersData::from_format_strings(
+            Some(line_numbers::LineNumbersData::from_format_strings(
                 &config.line_numbers_format,
                 panel_width_fix,
-            )
+            ))
+        } else if config.side_by_side {
+            // If line numbers are disabled in side-by-side then the data is still used
+            // for width calculaction and to pad odd width to even, see `UseFullPanelWidth`
+            // for details.
+            Some(line_numbers::LineNumbersData::empty_for_sbs(
+                panel_width_fix,
+            ))
         } else {
-            // See `UseFullPanelWidth` for details why, but this can't happen at the time
-            // of writing because side-by-side automatically activates line numbers.
-            debug_assert!(
-                !config.side_by_side && config.line_fill_method == BgFillMethod::TryAnsiSequence
-            );
-            line_numbers::LineNumbersData::default()
+            None
         };
         Self {
             minus_lines: Vec::new(),
@@ -192,6 +197,10 @@ impl<'a> Painter<'a> {
                     .collect(),
             );
 
+            let line_numbers_data = self.line_numbers_data.as_mut().unwrap_or_else(|| {
+                delta_unreachable("side-by-side requires Some(line_numbers_data)")
+            });
+
             let bg_fill_left_right = MinusPlus::new(
                 // Using an ANSI sequence to fill the left panel would not work.
                 BgShouldFill::With(BgFillMethod::Spaces),
@@ -207,7 +216,7 @@ impl<'a> Painter<'a> {
                 if self.config.wrap_config.max_lines == 1 {
                     (false, MinusPlus::default(), MinusPlus::default())
                 } else {
-                    let line_width = available_line_width(self.config, &self.line_numbers_data);
+                    let line_width = available_line_width(self.config, line_numbers_data);
 
                     let lines = MinusPlus::new(&self.minus_lines, &self.plus_lines);
 
@@ -244,10 +253,12 @@ impl<'a> Painter<'a> {
                 line_alignment,
                 &mut self.output_buffer,
                 self.config,
-                &mut Some(&mut self.line_numbers_data),
+                &mut Some(line_numbers_data),
                 bg_fill_left_right,
             );
         } else {
+            // Unified mode:
+
             if !self.minus_lines.is_empty() {
                 Painter::paint_lines(
                     minus_line_syntax_style_sections,
@@ -255,7 +266,7 @@ impl<'a> Painter<'a> {
                     self.minus_lines.iter().map(|(_, state)| state),
                     &mut self.output_buffer,
                     self.config,
-                    &mut Some(&mut self.line_numbers_data),
+                    &mut self.line_numbers_data.as_mut(),
                     if self.config.keep_plus_minus_markers {
                         Some(self.config.minus_style.paint("-"))
                     } else {
@@ -272,7 +283,7 @@ impl<'a> Painter<'a> {
                     self.plus_lines.iter().map(|(_, state)| state),
                     &mut self.output_buffer,
                     self.config,
-                    &mut Some(&mut self.line_numbers_data),
+                    &mut self.line_numbers_data.as_mut(),
                     if self.config.keep_plus_minus_markers {
                         Some(self.config.plus_style.paint("+"))
                     } else {
@@ -311,7 +322,7 @@ impl<'a> Painter<'a> {
                 vec![diff_style_sections],
                 &mut self.output_buffer,
                 self.config,
-                &mut Some(&mut self.line_numbers_data),
+                &mut self.line_numbers_data.as_mut(),
                 painted_prefix,
                 BgShouldFill::With(BgFillMethod::Spaces),
             );
@@ -322,7 +333,7 @@ impl<'a> Painter<'a> {
                 [state].iter(),
                 &mut self.output_buffer,
                 self.config,
-                &mut Some(&mut self.line_numbers_data),
+                &mut self.line_numbers_data.as_mut(),
                 painted_prefix,
                 None,
                 BgShouldFill::With(BgFillMethod::Spaces),
@@ -530,7 +541,7 @@ impl<'a> Painter<'a> {
     ) -> (String, bool) {
         let mut ansi_strings = Vec::new();
 
-        let output_line_numbers = config.line_numbers && line_numbers_data.is_some();
+        let output_line_numbers = line_numbers_data.is_some();
         if output_line_numbers {
             // Unified diff lines are printed in one go, but side-by-side lines
             // are printed in two parts, so do not increment line numbers when the
