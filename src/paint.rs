@@ -532,10 +532,15 @@ impl<'a> Painter<'a> {
 
         let output_line_numbers = config.line_numbers && line_numbers_data.is_some();
         if output_line_numbers {
+            // Unified diff lines are printed in one go, but side-by-side lines
+            // are printed in two parts, so do not increment line numbers when the
+            // first (left) part is printed.
+            let increment = !matches!(side_by_side_panel, Some(side_by_side::Left));
             if let Some((line_numbers, styles)) = line_numbers::linenumbers_and_styles(
                 line_numbers_data.as_mut().unwrap(),
                 state,
                 config,
+                increment,
             ) {
                 ansi_strings.extend(line_numbers::format_and_paint_line_numbers(
                     line_numbers_data.as_ref().unwrap(),
