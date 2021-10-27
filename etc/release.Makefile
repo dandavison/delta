@@ -44,7 +44,7 @@ $(CREATE_GITHUB_RELEASE_SENTINEL):
 	git push
 	git push --tags
 	@echo \# Draft and edit release notes in Github
-	gren release "$$DELTA_NEW_VERSION"
+	gren release -d -t "$$DELTA_NEW_VERSION".."$$DELTA_OLD_VERSION"
 	@echo \# Wait for assets to appear at https://github.com/dandavison/delta/releases
 	touch $(CREATE_GITHUB_RELEASE_SENTINEL)
 
