@@ -1,5 +1,4 @@
 use std::borrow::Cow;
-use std::collections::HashMap;
 use std::io::BufRead;
 use std::io::Write;
 
@@ -68,7 +67,6 @@ pub struct StateMachine<'a> {
     // avoid emitting the file meta header line twice (#245).
     pub current_file_pair: Option<(String, String)>,
     pub handled_file_meta_header_line_file_pair: Option<(String, String)>,
-    pub blame_commit_colors: HashMap<String, String>,
 }
 
 pub fn delta<I>(lines: ByteLines<I>, writer: &mut dyn Write, config: &Config) -> std::io::Result<()>
@@ -94,7 +92,6 @@ impl<'a> StateMachine<'a> {
             handled_file_meta_header_line_file_pair: None,
             painter: Painter::new(writer, config),
             config,
-            blame_commit_colors: HashMap::new(),
         }
     }
 

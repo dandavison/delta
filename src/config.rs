@@ -57,9 +57,6 @@ fn adapt_wrap_max_lines_argument(arg: String) -> usize {
 pub struct Config {
     pub available_terminal_width: usize,
     pub background_color_extends_to_terminal_width: bool,
-    pub blame_format: String,
-    pub blame_palette: Vec<String>,
-    pub blame_timestamp_format: String,
     pub commit_style: Style,
     pub color_only: bool,
     pub commit_regex: Regex,
@@ -260,13 +257,6 @@ impl From<cli::Opt> for Config {
             background_color_extends_to_terminal_width: opt
                 .computed
                 .background_color_extends_to_terminal_width,
-            blame_format: opt.blame_format,
-            blame_palette: opt
-                .blame_palette
-                .split_whitespace()
-                .map(|s| s.to_owned())
-                .collect::<Vec<String>>(),
-            blame_timestamp_format: opt.blame_timestamp_format,
             commit_style,
             color_only: opt.color_only,
             commit_regex,
