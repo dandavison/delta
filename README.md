@@ -174,13 +174,13 @@ In addition, delta handles traditional unified diff output.
 ## Installation
 
 You can download an executable for your system:
-[Linux (glibc)](https://github.com/dandavison/delta/releases/download/0.8.3/delta-0.8.3-x86_64-unknown-linux-gnu.tar.gz)
+[Linux (glibc)](https://github.com/dandavison/delta/releases/download/0.9.0/delta-0.9.0-x86_64-unknown-linux-gnu.tar.gz)
 |
-[Linux (musl)](https://github.com/dandavison/delta/releases/download/0.8.3/delta-0.8.3-x86_64-unknown-linux-musl.tar.gz)
+[Linux (musl)](https://github.com/dandavison/delta/releases/download/0.9.0/delta-0.9.0-x86_64-unknown-linux-musl.tar.gz)
 |
-[MacOS](https://github.com/dandavison/delta/releases/download/0.8.3/delta-0.8.3-x86_64-apple-darwin.tar.gz)
+[MacOS](https://github.com/dandavison/delta/releases/download/0.9.0/delta-0.9.0-x86_64-apple-darwin.tar.gz)
 |
-[Windows](https://github.com/dandavison/delta/releases/download/0.8.3/delta-0.8.3-x86_64-pc-windows-msvc.zip)
+[Windows](https://github.com/dandavison/delta/releases/download/0.9.0/delta-0.9.0-x86_64-pc-windows-msvc.zip)
 |
 [All](https://github.com/dandavison/delta/releases)
 
@@ -620,7 +620,7 @@ and use the executable found at `./target/release/delta`.
 ## Full --help output
 
 ```
-delta 0.8.3
+delta 0.9.0
 A viewer for git and diff output
 
 USAGE:
@@ -751,6 +751,13 @@ OPTIONS:
             Style (foreground, background, attributes) for the hunk-header decoration. See STYLES section. The style
             string should contain one of the special attributes 'box', 'ul' (underline), 'ol' (overline), or the
             combination 'ul ol' [default: blue box]
+        --default-language <default-language>
+            Default language used for syntax highlighting when this cannot be inferred from a filename. It will
+            typically make sense to set this in per-repository git config (.git/config)
+        --inline-hint-style <inline-hint-style>
+            Style (foreground, background, attributes) for content added by delta to the original diff such as special
+            characters to highlight tabs, and the symbols used to indicate wrapped lines. See STYLES section [default:
+            blue]
         --word-diff-regex <tokenization-regex>
             The regular expression used to decide what a word is for the within-line highlight algorithm. For less fine-
             grained matching than the default try --word-diff-regex="\S+" --max-line-distance=1.0 (this is more
@@ -781,6 +788,23 @@ OPTIONS:
         --line-numbers-right-style <line-numbers-right-style>
             Style (foreground, background, attributes) for the right column of line numbers. See STYLES and LINE NUMBERS
             sections [default: auto]
+        --wrap-max-lines <wrap-max-lines>
+            How often a line should be wrapped if it does not fit. Zero means to never wrap. Any content which does not
+            fit will be truncated. A value of "unlimited" means a line will be wrapped as many times as required
+            [default: 2]
+        --wrap-left-symbol <wrap-left-symbol>
+            Symbol added to the end of a line indicating that the content has been wrapped onto the next line and
+            continues left-aligned [default: ↵]
+        --wrap-right-symbol <wrap-right-symbol>
+            Symbol added to the end of a line indicating that the content has been wrapped onto the next line and
+            continues right-aligned [default: ↴]
+        --wrap-right-percent <wrap-right-percent>
+            Threshold for right-aligning wrapped content. If the length of the remaining wrapped content, as a
+            percentage of width, is less than this quantity it will be right-aligned. Otherwise it will be left-aligned
+            [default: 37.0]
+        --wrap-right-prefix-symbol <wrap-right-prefix-symbol>
+            Symbol displayed in front of right-aligned wrapped content [default: …]
+
         --file-modified-label <file-modified-label>
             Text to display in front of a modified file path [default: ]
 
@@ -796,12 +820,20 @@ OPTIONS:
         --file-renamed-label <file-renamed-label>
             Text to display in front of a renamed file path [default: renamed:]
 
+        --hunk-label <hunk-label>
+            Text to display in front of a hunk header [default: ]
+
         --max-line-length <max-line-length>
-            Truncate lines longer than this. To prevent any truncation, set to zero. Note that syntax-highlighting very
-            long lines (e.g. minified .js) will be very slow if they are not truncated [default: 512]
+            Truncate lines longer than this. To prevent any truncation, set to zero. Note that delta will be slow on
+            very long lines (e.g. minified .js) if truncation is disabled. When wrapping lines it is automatically set
+            to fit at least all visible characters [default: 512]
+        --line-fill-method <line-fill-method>
+            How to extend the background color to the end of the line in side-by-side mode. Can be ansi (default) or
+            spaces (default if output is not to a terminal). Has no effect if --width=variable is given
     -w, --width <width>
-            The width of underline/overline decorations. Use --width=variable to extend decorations and background
-            colors to the end of the text only. Otherwise background colors extend to the full terminal width
+            The width of underline/overline decorations. Examples: "72" (exactly 72 characters), Use --width=variable to
+            extend decorations and background colors to the end of the text only. Otherwise background colors extend to
+            the full terminal width
         --diff-stat-align-width <diff-stat-align-width>
             Width allocated for file paths in a diff stat section. If a relativized file path exceeds this width then
             the diff stat will be misaligned [default: 48]
