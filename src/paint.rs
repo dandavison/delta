@@ -148,10 +148,7 @@ impl<'a> Painter<'a> {
         I: Iterator<Item = &'b str>,
     {
         if self.config.tab_width > 0 {
-            // XXX with_capacity()?  We don't know the length of the line, though the caller might.
-            // Obviously we wouldn't know the length of the result, but we could do what bat does
-            // and simply allocate twice the capacity of the original.  For now, just do it the
-            // slow way.
+            // We could use with_capacity(), but any performance increase is negligible.
             let mut buf = String::new();
             let mut cum_width: usize = 0;
 
@@ -854,8 +851,6 @@ mod tests {
 
     #[test]
     fn embedded_tab() {
-        // XXX Maybe someone thinks the tab-is-always-X-spaces behavior is correct, instead of
-        // tab-gets-you-to-the-next-tabstop?  Will that need to be configurable?
         let result = test_expand_tabs(&[], "12\tjunk");
         assert_eq!(result, "12  junk");
     }
