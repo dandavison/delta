@@ -391,6 +391,11 @@ To disable the line numbers in side-by-side view, but keep a vertical delimiter 
 ```
 
 Long lines are wrapped if they do not fit in side-by-side mode.
+In the image below, the long deleted line in the left panel overflows by a small amount, and the wrapped content is right-aligned in the next line.
+In contrast, the long replacement line in the right panel overflows by almost an entire line, and so the wrapped content is left aligned in the next line. The arrow markers and ellipsis explain when and how text has been wrapped.
+
+<table><tr><td><img width=600px src="https://user-images.githubusercontent.com/52205/139064537-f8479504-16d3-429a-b4f6-d0122438adaa.png" alt="image" /></td></tr></table>
+
 For control over the details of line wrapping, see `--wrap-max-lines`, `--wrap-left-symbol`, `--wrap-right-symbol`, `--wrap-right-percent`, `--wrap-right-prefix-symbol`, `--inline-hint-style`.
 Line wrapping was implemented by @th1000s.
 
