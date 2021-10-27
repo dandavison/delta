@@ -23,9 +23,9 @@ pub fn measure_text_width(s: &str) -> usize {
     let mut width = 0;
     let tab_width = 8; // We could get this from the terminal, but it should always be 8.
 
-    for chunk in strip_ansi_codes(s).split_inclusive("\t") {
+    for chunk in strip_ansi_codes(s).split_inclusive('\t') {
         width += chunk.width(); // tabs have width 0, so no need to separate it out.
-        if chunk.ends_with("\t") {
+        if chunk.ends_with('\t') {
             width += tab_width - (width % tab_width);
         }
     }
