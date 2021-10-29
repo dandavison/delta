@@ -8,7 +8,7 @@ edition = "2018"
 homepage = "https://github.com/dandavison/delta"
 license = "MIT"
 repository = "https://github.com/dandavison/delta"
-version = "0.9.1"
+version = "0.9.2"
 
 [[bin]]
 name = "delta"
