@@ -38,14 +38,11 @@ $(BUMP_VERSION_SENTINEL):
 CREATE_GITHUB_RELEASE_SENTINEL=.make-sentinels/create-github-release
 create-github-release: $(CREATE_GITHUB_RELEASE_SENTINEL) check-environment
 $(CREATE_GITHUB_RELEASE_SENTINEL):
-	which gren > /dev/null
 	@echo \# Creating release tag
 	git tag "$$DELTA_NEW_VERSION"
 	git push
 	git push --tags
-	@echo \# Draft and edit release notes in Github
-	gren release -d -t "$$DELTA_NEW_VERSION".."$$DELTA_OLD_VERSION"
-	@echo \# Wait for assets to appear at https://github.com/dandavison/delta/releases
+	@echo \# See https://github.com/dandavison/delta/releases
 	touch $(CREATE_GITHUB_RELEASE_SENTINEL)
 
 
