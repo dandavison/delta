@@ -25,7 +25,7 @@ impl<'a> StateMachine<'a> {
     }
 
     pub fn handle_submodule_short_line(&mut self) -> std::io::Result<bool> {
-        if !self.test_submodule_short_line() {
+        if !self.test_submodule_short_line() || self.config.color_only {
             return Ok(false);
         }
         if let Some(commit) = get_submodule_short_commit(&self.line) {
