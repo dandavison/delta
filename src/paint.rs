@@ -109,8 +109,7 @@ impl<'p> Painter<'p> {
         };
     }
 
-    /// Replace initial -/+ character with ' ', expand tabs as spaces, and optionally terminate with
-    /// newline.
+    /// Remove initial -/+ character, expand tabs as spaces, and terminate with newline.
     // Terminating with newline character is necessary for many of the sublime syntax definitions to
     // highlight correctly.
     // See https://docs.rs/syntect/3.2.0/syntect/parsing/struct.SyntaxSetBuilder.html#method.add_from_folder
@@ -118,15 +117,11 @@ impl<'p> Painter<'p> {
         if !line.is_empty() {
             let mut line = line.graphemes(true);
 
-            // The first column contains a -/+/space character, added by git. We substitute it for
-            // a space now, so that it is not present during syntax highlighting. When emitting the
-            // line in Painter::paint_line, we drop the space (unless --keep-plus-minus-markers is
-            // in effect in which case we replace it with the appropriate marker).
-            // TODO: Things should, but do not, work if this leading space is omitted at this stage.
-            // See comment in align::Alignment::new.
-            // Note that a wrapped line also has a leading character added to remain compatible.
+            // The first column contains a -/+/space character, added by git. We remove it now so that
+            // it is not present during syntax highlighting or wrapping. If --keep-plus-minus-markers is
+            // in effect this character is re-inserted in Painter::paint_line.
             line.next();
-            format!(" {}\n", self.expand_tabs(line))
+            format!("{}\n", self.expand_tabs(line))
         } else {
             "\n".to_string()
         }
@@ -301,10 +296,12 @@ impl<'p> Painter<'p> {
     pub fn paint_zero_line(&mut self, line: &str) {
         let state = State::HunkZero;
         let painted_prefix = if self.config.keep_plus_minus_markers && !line.is_empty() {
+            // A zero line here still contains the " " prefix, so use it.
             Some(self.config.zero_style.paint(&line[..1]))
         } else {
             None
         };
+
         let lines = vec![(self.prepare(line), state.clone())];
         let syntax_style_sections = Painter::get_syntax_style_sections_for_lines(
             &lines,
@@ -567,11 +564,7 @@ impl<'p> Painter<'p> {
                 // This line has been identified as one which should be emitted unchanged,
                 // including any ANSI escape sequences that it has.
                 return (
-                    format!(
-                        "{}{}",
-                        ansi_term::ANSIStrings(&ansi_strings).to_string(),
-                        raw_line
-                    ),
+                    format!("{}{}", ansi_term::ANSIStrings(&ansi_strings), raw_line),
                     false,
                 );
             }
@@ -587,24 +580,15 @@ impl<'p> Painter<'p> {
 
         let mut handled_prefix = false;
         for (section_style, text) in &superimposed {
-            let text = if handled_prefix {
-                &text
-            } else {
-                // Remove what was originally the +/- prefix, see `prepare()`, after
-                // (if requested) re-inserting it with proper styling.
+            // If requested re-insert the +/- prefix with proper styling.
+            if !handled_prefix {
                 if let Some(ref painted_prefix) = painted_prefix {
                     ansi_strings.push(painted_prefix.clone());
                 }
-
-                if !text.is_empty() {
-                    &text[1..]
-                } else {
-                    &text
-                }
-            };
+            }
 
             if !text.is_empty() {
-                ansi_strings.push(section_style.paint(text));
+                ansi_strings.push(section_style.paint(text.as_str()));
             }
             handled_prefix = true;
         }
@@ -656,13 +640,8 @@ impl<'p> Painter<'p> {
             Painter::should_compute_syntax_highlighting(state, config),
         ) {
             (Some(highlighter), true) => {
-                // The first character is a space injected by delta. See comment in
-                // Painter:::prepare.
                 for (line, _) in lines.iter() {
-                    let mut this_line_sections =
-                        highlighter.highlight(&line[1..], &config.syntax_set);
-                    this_line_sections.insert(0, (config.null_syntect_style, &line[..1]));
-                    line_sections.push(this_line_sections);
+                    line_sections.push(highlighter.highlight(line, &config.syntax_set));
                 }
             }
             _ => {
@@ -774,16 +753,14 @@ fn style_sections_contain_more_than_one_style(sections: &[(Style, &str)]) -> boo
 }
 
 /// True iff the line represented by `sections` constitutes a whitespace error.
-// Note that a space is always present as the first character in the line (it was put there as a
-// replacement for the leading +/- marker; see paint::prepare()). A line is a whitespace error iff,
-// beyond the initial space character, (a) there are more characters and (b) they are all
-// whitespace characters.
-// TODO: Git recognizes blank lines at end of file (blank-at-eof) as a whitespace error but delta
-// does not yet.
+// A line is a whitespace error iff it is non-empty and contains only whitespace
+// characters.
+// TODO: Git recognizes blank lines at end of file (blank-at-eof)
+// as a whitespace error but delta does not yet.
 // https://git-scm.com/docs/git-config#Documentation/git-config.txt-corewhitespace
 fn is_whitespace_error(sections: &[(Style, &str)]) -> bool {
     let mut any_chars = false;
-    for c in sections.iter().flat_map(|(_, s)| s.chars()).skip(1) {
+    for c in sections.iter().flat_map(|(_, s)| s.chars()) {
         if c == '\n' {
             return any_chars;
         } else if c != ' ' && c != '\t' {

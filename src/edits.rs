@@ -30,8 +30,7 @@ pub fn infer_edits<'a, EditOperation>(
     Vec<(Option<usize>, Option<usize>)>, // line alignment
 )
 where
-    EditOperation: Copy,
-    EditOperation: PartialEq,
+    EditOperation: Copy + PartialEq + std::fmt::Debug,
 {
     let mut annotated_minus_lines = Vec::<Vec<(EditOperation, &str)>>::new();
     let mut annotated_plus_lines = Vec::<Vec<(EditOperation, &str)>>::new();
@@ -95,7 +94,9 @@ where
 /// Split line into tokens for alignment. The alignment algorithm aligns sequences of substrings;
 /// not individual characters.
 fn tokenize<'a>(line: &'a str, regex: &Regex) -> Vec<&'a str> {
-    let mut tokens = Vec::new();
+    // Starting with "", see comment in Alignment::new(). Historical note: Replacing the '+/-'
+    // prefix with a space implicitly generated this.
+    let mut tokens = vec![""];
     let mut offset = 0;
     for m in regex.find_iter(line) {
         if offset == 0 && m.start() > 0 {
@@ -136,8 +137,7 @@ fn annotate<'a, Annotation>(
     plus_line: &'a str,
 ) -> (Vec<(Annotation, &'a str)>, Vec<(Annotation, &'a str)>, f64)
 where
-    Annotation: Copy,
-    Annotation: PartialEq,
+    Annotation: Copy + PartialEq + std::fmt::Debug,
 {
     let mut annotated_minus_line = Vec::new();
     let mut annotated_plus_line = Vec::new();
@@ -467,7 +467,10 @@ mod tests {
     fn assert_tokenize(text: &str, expected_tokens: &[&str]) {
         let actual_tokens = tokenize(text, &*DEFAULT_TOKENIZATION_REGEXP);
         assert_eq!(text, expected_tokens.iter().join(""));
-        assert_eq!(actual_tokens, expected_tokens);
+        // tokenize() guarantees that the first element of the token stream is "".
+        // See comment in Alignment::new()
+        assert_eq!(actual_tokens[0], "");
+        assert_eq!(&actual_tokens[1..], expected_tokens);
     }
 
     #[test]
@@ -476,8 +479,8 @@ mod tests {
             vec!["aaa"],
             vec!["aba"],
             (
-                vec![vec![(Deletion, "aaa")]],
-                vec![vec![(Insertion, "aba")]],
+                vec![vec![(MinusNoop, ""), (Deletion, "aaa")]],
+                vec![vec![(PlusNoop, ""), (Insertion, "aba")]],
             ),
         )
     }
@@ -488,8 +491,12 @@ mod tests {
             vec!["aaa ccc"],
             vec!["aba ccc"],
             (
-                vec![vec![(Deletion, "aaa"), (MinusNoop, " ccc")]],
-                vec![vec![(Insertion, "aba"), (PlusNoop, " ccc")]],
+                vec![vec![
+                    (MinusNoop, ""),
+                    (Deletion, "aaa"),
+                    (MinusNoop, " ccc"),
+                ]],
+                vec![vec![(PlusNoop, ""), (Insertion, "aba"), (PlusNoop, " ccc")]],
             ),
         )
     }
@@ -500,8 +507,8 @@ mod tests {
             vec!["áaa"],
             vec!["ááb"],
             (
-                vec![vec![(Deletion, "áaa")]],
-                vec![vec![(Insertion, "ááb")]],
+                vec![vec![(MinusNoop, ""), (Deletion, "áaa")]],
+                vec![vec![(PlusNoop, ""), (Insertion, "ááb")]],
             ),
         )
     }

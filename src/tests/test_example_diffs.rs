@@ -972,11 +972,10 @@ src/align.rs
         if args.contains(&"--max-line-length") {
             return;
         }
-        for n in 0..input_lines.len() {
-            let input_line = input_lines[n];
+        for (n, input_line) in input_lines.into_iter().enumerate() {
             // If config.line_numbers is enabled,
             // we should remove line_numbers decoration while checking.
-            let output_line = if config.line_numbers && n > 11 && n < input_lines.len() {
+            let output_line = if config.line_numbers && n > 11 {
                 &output_lines[n][14..]
             } else {
                 output_lines[n]
@@ -1532,7 +1531,7 @@ src/align.rs:71: impl<'a> Alignment<'a> { │
     }
 
     #[test]
-    fn test_color_only() {
+    fn test_color_only_mode() {
         let config = integration_test_utils::make_config_from_args(&["--color-only"]);
         let output = integration_test_utils::run_delta(GIT_DIFF_SINGLE_HUNK, &config);
         ansi_test_utils::assert_line_has_syntax_highlighted_substring(

@@ -17,13 +17,14 @@ use Operation::*;
 
 /// Needleman-Wunsch / Wagner-Fischer table for computation of edit distance and associated
 /// alignment.
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 struct Cell {
     parent: usize,
     operation: Operation,
     cost: usize,
 }
 
+#[derive(Debug)]
 pub struct Alignment<'a> {
     pub x: Vec<&'a str>,
     pub y: Vec<&'a str>,
@@ -34,9 +35,8 @@ pub struct Alignment<'a> {
 impl<'a> Alignment<'a> {
     /// Fill table for Levenshtein distance / alignment computation
     pub fn new(x: Vec<&'a str>, y: Vec<&'a str>) -> Self {
-        // TODO: Something about the alignment algorithm requires that the first two items in the
-        // token stream are ["", " "]. In practice this means that the line must have a leading
-        // space, and that the tokenization regex cooperates.
+        // TODO: Something downstream of the alignment algorithm requires that the first token in
+        // both x and y is "", so this is explicitly inserted in `tokenize()`.
         let dim = [y.len() + 1, x.len() + 1];
         let table = vec![
             Cell {

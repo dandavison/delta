@@ -166,7 +166,7 @@ fn write_hunk_header(
     let (mut draw_fn, _, decoration_ansi_term_style) =
         draw::get_draw_function(config.hunk_header_style.decoration_style);
     let line = if config.color_only {
-        format!(" {}", &line)
+        line.to_string()
     } else if !code_fragment.is_empty() {
         format!("{} ", code_fragment)
     } else {
@@ -242,7 +242,14 @@ fn write_to_output_buffer(
         );
     }
     if !file_with_line_number.is_empty() {
-        let _ = write!(&mut painter.output_buffer, "{}: ", file_with_line_number);
+        // The code fragment in "line" adds whitespace, but if only a line number is printed
+        // then the trailing space must be added.
+        let space = if line.is_empty() { " " } else { "" };
+        let _ = write!(
+            &mut painter.output_buffer,
+            "{}:{}",
+            file_with_line_number, space
+        );
     }
     if !line.is_empty() {
         painter.syntax_highlight_and_paint_line(
