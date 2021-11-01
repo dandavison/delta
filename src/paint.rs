@@ -18,18 +18,18 @@ use crate::paint::superimpose_style_sections::superimpose_style_sections;
 use crate::style::Style;
 use crate::wrapping::wrap_minusplus_block;
 
-pub struct Painter<'a> {
+pub struct Painter<'p> {
     pub minus_lines: Vec<(String, State)>,
     pub plus_lines: Vec<(String, State)>,
-    pub writer: &'a mut dyn Write,
-    pub syntax: &'a SyntaxReference,
-    pub highlighter: Option<HighlightLines<'a>>,
-    pub config: &'a config::Config,
+    pub writer: &'p mut dyn Write,
+    pub syntax: &'p SyntaxReference,
+    pub highlighter: Option<HighlightLines<'p>>,
+    pub config: &'p config::Config,
     pub output_buffer: String,
     // If config.line_numbers is true, then the following is always Some().
     // In side-by-side mode it is always Some (but possibly an empty one), even
     // if config.line_numbers is false. See `UseFullPanelWidth` as well.
-    pub line_numbers_data: Option<line_numbers::LineNumbersData<'a>>,
+    pub line_numbers_data: Option<line_numbers::LineNumbersData<'p>>,
 }
 
 // How the background of a line is filled up to the end
@@ -55,8 +55,8 @@ impl Default for BgShouldFill {
     }
 }
 
-impl<'a> Painter<'a> {
-    pub fn new(writer: &'a mut dyn Write, config: &'a config::Config) -> Self {
+impl<'p> Painter<'p> {
+    pub fn new(writer: &'p mut dyn Write, config: &'p config::Config) -> Self {
         let default_syntax = Self::get_syntax(&config.syntax_set, None);
 
         let panel_width_fix = ansifill::UseFullPanelWidth::new(config);
@@ -92,7 +92,7 @@ impl<'a> Painter<'a> {
         self.syntax = Painter::get_syntax(&self.config.syntax_set, extension);
     }
 
-    fn get_syntax(syntax_set: &'a SyntaxSet, extension: Option<&str>) -> &'a SyntaxReference {
+    fn get_syntax<'a>(syntax_set: &'a SyntaxSet, extension: Option<&str>) -> &'a SyntaxReference {
         if let Some(extension) = extension {
             if let Some(syntax) = syntax_set.find_syntax_by_extension(extension) {
                 return syntax;
@@ -147,9 +147,9 @@ impl<'a> Painter<'a> {
 
     /// Expand tabs as spaces.
     /// tab_width = 0 is documented to mean do not replace tabs.
-    pub fn expand_tabs<'b, I>(&self, line: I) -> String
+    pub fn expand_tabs<'a, I>(&self, line: I) -> String
     where
-        I: Iterator<Item = &'b str>,
+        I: Iterator<Item = &'a str>,
     {
         if self.config.tab_width > 0 {
             let tab_replacement = " ".repeat(self.config.tab_width);
@@ -344,10 +344,10 @@ impl<'a> Painter<'a> {
     /// Superimpose background styles and foreground syntax
     /// highlighting styles, and write colored lines to output buffer.
     #[allow(clippy::too_many_arguments)]
-    pub fn paint_lines<'b>(
-        syntax_style_sections: Vec<LineSegments<'b, SyntectStyle>>,
-        diff_style_sections: Vec<LineSegments<'b, Style>>,
-        states: impl Iterator<Item = &'b State>,
+    pub fn paint_lines<'a>(
+        syntax_style_sections: Vec<LineSegments<'a, SyntectStyle>>,
+        diff_style_sections: Vec<LineSegments<'a, Style>>,
+        states: impl Iterator<Item = &'a State>,
         output_buffer: &mut String,
         config: &config::Config,
         line_numbers_data: &mut Option<&mut line_numbers::LineNumbersData>,
@@ -644,12 +644,12 @@ impl<'a> Painter<'a> {
         }
     }
 
-    pub fn get_syntax_style_sections_for_lines<'s>(
-        lines: &'s [(String, State)],
+    pub fn get_syntax_style_sections_for_lines<'a>(
+        lines: &'a [(String, State)],
         state: &State,
         highlighter: Option<&mut HighlightLines>,
         config: &config::Config,
-    ) -> Vec<LineSegments<'s, SyntectStyle>> {
+    ) -> Vec<LineSegments<'a, SyntectStyle>> {
         let mut line_sections = Vec::new();
         match (
             highlighter,
@@ -676,13 +676,13 @@ impl<'a> Painter<'a> {
 
     /// Set background styles to represent diff for minus and plus lines in buffer.
     #[allow(clippy::type_complexity)]
-    fn get_diff_style_sections<'b>(
-        minus_lines: &'b [(String, State)],
-        plus_lines: &'b [(String, State)],
+    fn get_diff_style_sections<'a>(
+        minus_lines: &'a [(String, State)],
+        plus_lines: &'a [(String, State)],
         config: &config::Config,
     ) -> (
-        Vec<LineSegments<'b, Style>>,
-        Vec<LineSegments<'b, Style>>,
+        Vec<LineSegments<'a, Style>>,
+        Vec<LineSegments<'a, Style>>,
         Vec<(Option<usize>, Option<usize>)>,
     ) {
         let (minus_lines, minus_styles): (Vec<&str>, Vec<Style>) = minus_lines
