@@ -25,7 +25,7 @@
     show = delta
 
 [interactive]
-    diffFilter = delta --color-only --features=interactive
+    diffFilter = delta --color-only
 ```
 
 ## A syntax-highlighting pager for git and diff output
