@@ -62,7 +62,8 @@ pub fn available_line_width(
 ) -> line_numbers::SideBySideLineWidth {
     let linennumbers_width = data.formatted_width();
 
-    // The width can be reduced by the line numbers and/or a possibly kept 1-wide "+/-/ " prefix.
+    // The width can be reduced by the line numbers and/or
+    // a possibly added/restored 1-wide "+/-/ " prefix.
     let line_width = |side: PanelSide| {
         config.side_by_side_data[side]
             .width
@@ -76,15 +77,15 @@ pub fn available_line_width(
 pub fn line_is_too_long(line: &str, line_width: usize) -> bool {
     let line_sum = line.graphemes(true).count();
 
-    // `line_sum` is too large, because both a leading "+/-/ " and a trailing
-    // newline are present, counted, but are never printed. So allow two more
-    // characters.
-    line_sum > line_width + 2
+    debug_assert!(line.ends_with('\n'));
+    // `line_sum` is too large because a trailing newline is present,
+    // so allow one more character.
+    line_sum > line_width + 1
 }
 
 /// Return whether any of the input lines is too long, and a data
-/// structure indicating which are too long. This avoids
-/// calculating the length again later.
+/// structure indicating which of the input lines are too long. This avoids
+/// recalculating the length later.
 pub fn has_long_lines(
     lines: &LeftRight<&Vec<(String, State)>>,
     line_width: &line_numbers::SideBySideLineWidth,
@@ -325,8 +326,7 @@ fn get_right_fill_style_for_panel<'a>(
 // wish to display the right panel, with its line number container, but without any line number
 // (and without any line contents). We do this by passing (HunkMinus, Right) to `paint_line`, since
 // what this will do is set the line number pair in that function to `(Some(minus_number), None)`,
-// and then only emit the right field (which has a None number, i.e. blank). However, it will also
-// increment the minus line number, so we need to knock that back down.
+// and then only emit the right field (which has a None number, i.e. blank).
 #[allow(clippy::too_many_arguments)]
 fn paint_minus_or_plus_panel_line<'a>(
     line_index: Option<usize>,

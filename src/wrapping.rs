@@ -29,6 +29,12 @@ pub struct WrapConfig {
     pub inline_hint_syntect_style: SyntectStyle,
 }
 
+#[derive(PartialEq)]
+enum Stop {
+    StackEmpty,
+    LineLimit,
+}
+
 /// Wrap the given `line` if it is longer than `line_width`. Wrap to at most
 /// [Config::WrapConfig::max_lines](WrapConfig::max_lines) lines,
 /// then truncate again - but never truncate if it is `0`. Place
@@ -40,9 +46,6 @@ pub struct WrapConfig {
 /// on the next line [right_prefix_symbol](WrapConfig::right_prefix_symbol).
 /// The inserted characters will follow the
 /// [inline_hint_syntect_style](WrapConfig::inline_hint_syntect_style).
-///
-/// The input `line` is expected to start with an (ultimately not printed) `+`, `-` or ` ` prefix.
-/// The prefix `_` is also added to the start of wrapped lines.
 pub fn wrap_line<'a, I, S>(
     config: &'a Config,
     line: I,
@@ -59,18 +62,6 @@ where
 
     let wrap_config = &config.wrap_config;
 
-    // Symbol which:
-    //  - represents the additional "+/-/ " prefix on the unwrapped input line, its
-    //    length is added to the line_width.
-    //  - can be more prominent than a space because syntax highlighting has already
-    //    been done.
-    //  - is added at the beginning of wrapped lines so the wrapped lines also have
-    //    a prefix (which is not printed).
-    const LINEPREFIX: &str = "_";
-    assert_eq!(LINEPREFIX.len(), INLINE_SYMBOL_WIDTH_1); // (args are const, optimized out)
-
-    let max_len = line_width + LINEPREFIX.len();
-
     // The current line being assembled from the input to fit exactly into the given width.
     // A somewhat leaky abstraction as the fields are also accessed directly.
     struct CurrLine<'a, S: Default> {
@@ -80,8 +71,8 @@ where
     impl<'a, S: Default> CurrLine<'a, S> {
         fn reset() -> Self {
             CurrLine {
-                line_segments: vec![(S::default(), LINEPREFIX)],
-                len: LINEPREFIX.len(),
+                line_segments: Vec::new(),
+                len: 0,
             }
         }
         fn push_and_set_len(&mut self, text: (S, &'a str), len: usize) {
@@ -89,24 +80,14 @@ where
             self.len = len;
         }
         fn has_text(&self) -> bool {
-            self.len > LINEPREFIX.len()
+            self.len > 0
         }
         fn text_len(&self) -> usize {
-            if self.len > LINEPREFIX.len() {
-                self.len - LINEPREFIX.len()
-            } else {
-                debug_assert!(false, "push or reset first");
-                0
-            }
+            self.len
         }
     }
 
-    // The first `push_and_set_len` will include the "+/-/ " prefix, subsequent
-    // `reset()` add `LINEPREFIX`. Thus each line starts with a prefix.
-    let mut curr_line: CurrLine<S> = CurrLine {
-        line_segments: Vec::new(),
-        len: 0,
-    };
+    let mut curr_line = CurrLine::reset();
 
     // Determine the background (diff) and color (syntax) of an inserted symbol.
     let symbol_style = match inline_hint_style {
@@ -116,18 +97,22 @@ where
 
     let mut stack = line.into_iter().rev().collect::<Vec<_>>();
 
-    let line_limit_reached = |result: &Vec<_>| {
-        // If only the wrap symbol and no extra text fits, then wrapping is not possible.
-        let max_lines = if line_width <= INLINE_SYMBOL_WIDTH_1 {
-            1
-        } else {
-            wrap_config.max_lines
-        };
-
-        max_lines > 0 && result.len() + 1 >= max_lines
+    // If only the wrap symbol and no extra text fits, then wrapping is not possible.
+    let max_lines = if line_width <= INLINE_SYMBOL_WIDTH_1 {
+        1
+    } else {
+        wrap_config.max_lines
     };
 
-    while !stack.is_empty() && !line_limit_reached(&result) && max_len > LINEPREFIX.len() {
+    let line_limit_reached = |result: &Vec<_>| max_lines > 0 && result.len() + 1 >= max_lines;
+
+    let stop = loop {
+        if stack.is_empty() {
+            break Stop::StackEmpty;
+        } else if line_limit_reached(&result) {
+            break Stop::LineLimit;
+        }
+
         let (style, text, graphemes) = stack
             .pop()
             .map(|(style, text)| (style, text, text.grapheme_indices(true).collect::<Vec<_>>()))
@@ -135,10 +120,10 @@ where
 
         let new_len = curr_line.len + graphemes.len();
 
-        let must_split = if new_len < max_len {
+        let must_split = if new_len < line_width {
             curr_line.push_and_set_len((style, text), new_len);
             false
-        } else if new_len == max_len {
+        } else if new_len == line_width {
             match stack.last() {
                 // Perfect fit, no need to make space for a `wrap_symbol`.
                 None => {
@@ -156,7 +141,7 @@ where
                 }
                 _ => true,
             }
-        } else if new_len == max_len + 1 && stack.is_empty() {
+        } else if new_len == line_width + 1 && stack.is_empty() {
             // If the one overhanging char is '\n' then keep it on the current line.
             if text.ends_with('\n') {
                 // Do not count the included '\n': - 1
@@ -172,7 +157,7 @@ where
         // Text must be split, one part (or just `wrap_symbol`) is added to the
         // current line, the other is pushed onto the stack.
         if must_split {
-            let grapheme_split_pos = graphemes.len() - (new_len - max_len) - 1;
+            let grapheme_split_pos = graphemes.len() - (new_len - line_width) - 1;
 
             // The length does not matter anymore and `curr_line` will be reset
             // at the end, so move the line segments out.
@@ -193,18 +178,17 @@ where
 
             curr_line = CurrLine::reset();
         }
-    }
+    };
 
     // Right-align wrapped line:
     // Done if wrapping adds exactly one line and this line is less than the given
     // permille wide. Also change the wrap symbol at the end of the previous (first) line.
     if result.len() == 1 && curr_line.has_text() {
-        let current_permille = (curr_line.text_len() * 1000) / max_len;
+        let current_permille = (curr_line.text_len() * 1000) / line_width;
 
-        let pad_len = max_len.saturating_sub(curr_line.text_len() + INLINE_SYMBOL_WIDTH_1);
+        let pad_len = line_width.saturating_sub(curr_line.text_len());
 
-        if wrap_config.use_wrap_right_permille > current_permille && pad_len > INLINE_SYMBOL_WIDTH_1
-        {
+        if wrap_config.use_wrap_right_permille > current_permille && pad_len > 0 {
             // The inserted spaces, which align a line to the right, point into this string.
             const SPACES: &str = "                                                                ";
 
@@ -215,7 +199,7 @@ where
                 _ => unreachable!("wrap result must not be empty"),
             }
 
-            let mut right_aligned_line = vec![(S::default(), LINEPREFIX)];
+            let mut right_aligned_line = Vec::new();
 
             for _ in 0..(pad_len / SPACES.len()) {
                 right_aligned_line.push((*fill_style, SPACES));
@@ -228,17 +212,20 @@ where
 
             right_aligned_line.push((symbol_style, &wrap_config.right_prefix_symbol));
 
-            // skip LINEPREFIX which `CurrLine::reset()` adds
-            right_aligned_line.extend(curr_line.line_segments.into_iter().skip(1));
+            right_aligned_line.extend(curr_line.line_segments.into_iter());
 
             curr_line.line_segments = right_aligned_line;
 
-            // curr_line.len not updated, as only 0 / 1 / > 1 is required now
+            // curr_line.len not updated, as only 0 / >0 for `has_text()` is required.
         }
     }
 
-    if curr_line.len > 0 {
+    if curr_line.has_text() {
         result.push(curr_line.line_segments);
+    }
+
+    if stop == Stop::LineLimit && result.len() != max_lines {
+        result.push(Vec::new());
     }
 
     // Anything that is left will be added to the (last) line. If this is too long it will
@@ -641,60 +628,83 @@ mod tests {
         let cfg = mk_wrap_cfg(&TEST_WRAP_CFG);
 
         {
-            // Empty input without a "+/-/ "-prefix usually does not happen
+            let line = vec![(*SY, "0")];
+            let lines = wrap_test(&cfg, line, 6);
+            assert_eq!(lines, vec![vec![(*SY, "0")]]);
+        }
+        {
+            let line = vec![(*S1, "012"), (*S2, "34")];
+            let lines = wrap_test(&cfg, line, 6);
+            assert_eq!(lines, vec![vec![(*S1, "012"), (*S2, "34")]]);
+        }
+        {
+            let line = vec![(*S1, "012"), (*S2, "345")];
+            let lines = wrap_test(&cfg, line, 6);
+            assert_eq!(lines, vec![vec![(*S1, "012"), (*S2, "345")]]);
+        }
+        {
+            // Empty input usually does not happen
             let line = vec![(*S1, "")];
             let lines = wrap_test(&cfg, line, 6);
             assert!(lines.is_empty());
         }
-
         {
-            let line = vec![(*SY, "_0")];
+            // Partially empty should not happen either
+            let line = vec![(*S1, ""), (*S2, "0")];
             let lines = wrap_test(&cfg, line, 6);
-            assert_eq!(lines, vec![vec![(*SY, "_0")]]);
+            assert_eq!(lines, vec![vec![(*S1, ""), (*S2, "0")]]);
         }
-
         {
-            let line = vec![(*S1, "_")];
+            let line = vec![(*S1, "0"), (*S2, "")];
             let lines = wrap_test(&cfg, line, 6);
-            assert_eq!(lines, vec![vec![(*S1, "_")]]);
+            assert_eq!(lines, vec![vec![(*S1, "0"), (*S2, "")]]);
         }
-
         {
-            let line = vec![(*S1, "_"), (*S2, "0")];
+            let line = vec![
+                (*S1, "0"),
+                (*S2, ""),
+                (*S1, ""),
+                (*S2, ""),
+                (*S1, ""),
+                (*S2, ""),
+                (*S1, ""),
+                (*S2, ""),
+                (*S1, ""),
+                (*S2, ""),
+            ];
             let lines = wrap_test(&cfg, line, 6);
-            assert_eq!(lines, vec![vec![(*S1, "_"), (*S2, "0")]]);
-        }
-
-        {
-            let line = vec![(*S1, "_012"), (*S2, "34")];
-            let lines = wrap_test(&cfg, line, 6);
-            assert_eq!(lines, vec![vec![(*S1, "_012"), (*S2, "34")]]);
-        }
-
-        {
-            let line = vec![(*S1, "_012"), (*S2, "345")];
-            let lines = wrap_test(&cfg, line, 6);
-            assert_eq!(lines, vec![vec![(*S1, "_012"), (*S2, "345")]]);
+            assert_eq!(
+                lines,
+                vec![vec![
+                    (*S1, "0"),
+                    (*S2, ""),
+                    (*S1, ""),
+                    (*S2, ""),
+                    (*S1, ""),
+                    (*S2, ""),
+                    (*S1, ""),
+                    (*S2, ""),
+                    (*S1, ""),
+                    (*S2, "")
+                ]]
+            );
         }
     }
 
     #[test]
-    fn test_wrap_line_align_right() {
+    fn test_wrap_line_align_right_1() {
         let cfg = mk_wrap_cfg(&TEST_WRAP_CFG);
 
-        let line = vec![(*S1, "_0123456789ab")];
+        let line = vec![(*S1, "0123456789ab")];
         let lines = wrap_test(&cfg, line, 11);
         assert_eq!(lines.len(), 2);
         assert_eq!(lines[0].last().unwrap().1, WR);
-        assert_eq!(
-            lines[1],
-            vec![(*SD, "_"), (*SD, "         "), (*SD, ">"), (*S1, "ab")]
-        );
+        assert_eq!(lines[1], [(*SD, "         "), (*SD, ">"), (*S1, "ab")]);
     }
 
     #[test]
     fn test_wrap_line_align_right_2() {
-        let line = vec![(*S1, "_012"), (*S2, "3456")];
+        let line = vec![(*S1, "012"), (*S2, "3456")];
 
         {
             // Right align lines on the second line
@@ -704,8 +714,8 @@ mod tests {
             assert_eq!(
                 lines,
                 vec![
-                    vec![(*S1, "_012"), (*S2, "34"), (*SD, WR)],
-                    vec![(*SD, "_"), (*SD, "    "), (*SD, RA), (*S2, "56")]
+                    vec![(*S1, "012"), (*S2, "34"), (*SD, WR)],
+                    vec![(*SD, "    "), (*SD, RA), (*S2, "56")]
                 ]
             );
         }
@@ -719,10 +729,7 @@ mod tests {
             let lines = wrap_test(&cfg_no_align_right, line, 6);
             assert_eq!(
                 lines,
-                vec![
-                    vec![(*S1, "_012"), (*S2, "34"), (*SD, W)],
-                    vec![(*SD, "_"), (*S2, "56")]
-                ]
+                vec![vec![(*S1, "012"), (*S2, "34"), (*SD, W)], vec![(*S2, "56")]]
             );
         }
     }
@@ -730,7 +737,7 @@ mod tests {
     #[test]
     fn test_wrap_line_newlines<'a>() {
         fn mk_input(len: usize) -> LineSegments<'static, Style> {
-            const IN: &str = "_0123456789abcdefZ";
+            const IN: &str = "0123456789abcdefZ";
             let v = &[*S1, *S2];
             let s1s2 = v.iter().cycle();
             let text: Vec<_> = IN.matches(|_| true).take(len + 1).collect();
@@ -745,7 +752,6 @@ mod tests {
             line
         }
         fn mk_expected<'a>(
-            prepend: Option<(Style, &'a str)>,
             vec: &LineSegments<'a, Style>,
             from: usize,
             to: usize,
@@ -755,22 +761,19 @@ mod tests {
             if let Some(val) = append {
                 result.push(val);
             }
-            if let Some(val) = prepend {
-                result.insert(0, val);
-            }
             result
         }
 
         let cfg = mk_wrap_cfg(&TEST_WRAP_CFG);
 
         {
-            let line = vec![(*S1, "_012"), (*S2, "345\n")];
+            let line = vec![(*S1, "012"), (*S2, "345\n")];
             let lines = wrap_test(&cfg, line, 6);
-            assert_eq!(lines, vec![vec![(*S1, "_012"), (*S2, "345\n")]]);
+            assert_eq!(lines, vec![vec![(*S1, "012"), (*S2, "345\n")]]);
         }
 
         {
-            for i in 0..=6 {
+            for i in 0..=5 {
                 let line = mk_input(i);
                 let lines = wrap_test(&cfg, line, 6);
                 assert_eq!(lines, vec![mk_input(i)]);
@@ -785,27 +788,28 @@ mod tests {
             let line = mk_input_nl(9);
             let lines = wrap_test(&cfg, line, 3);
             let expected = mk_input_nl(9);
-            let line1 = mk_expected(None, &expected, 0, 3, Some((*SD, &W)));
-            let line2 = mk_expected(Some((*SD, "_")), &expected, 3, 5, Some((*SD, &W)));
-            let line3 = mk_expected(Some((*SD, "_")), &expected, 5, 7, Some((*SD, &W)));
-            let line4 = mk_expected(Some((*SD, "_")), &expected, 7, 11, None);
-            assert_eq!(lines, vec![line1, line2, line3, line4]);
+            let line1 = mk_expected(&expected, 0, 2, Some((*SD, &W)));
+            let line2 = mk_expected(&expected, 2, 4, Some((*SD, &W)));
+            let line3 = mk_expected(&expected, 4, 6, Some((*SD, &W)));
+            let line4 = mk_expected(&expected, 6, 8, Some((*SD, &W)));
+            let line5 = mk_expected(&expected, 8, 11, None);
+            assert_eq!(lines, vec![line1, line2, line3, line4, line5]);
         }
 
         {
             let line = mk_input_nl(10);
             let lines = wrap_test(&cfg, line, 3);
             let expected = mk_input_nl(10);
-            let line1 = mk_expected(None, &expected, 0, 3, Some((*SD, &W)));
-            let line2 = mk_expected(Some((*SD, "_")), &expected, 3, 5, Some((*SD, &W)));
-            let line3 = mk_expected(Some((*SD, "_")), &expected, 5, 7, Some((*SD, &W)));
-            let line4 = mk_expected(Some((*SD, "_")), &expected, 7, 9, Some((*SD, &W)));
-            let line5 = mk_expected(Some((*SD, "_")), &expected, 9, 11, Some((*S2, "\n")));
+            let line1 = mk_expected(&expected, 0, 2, Some((*SD, &W)));
+            let line2 = mk_expected(&expected, 2, 4, Some((*SD, &W)));
+            let line3 = mk_expected(&expected, 4, 6, Some((*SD, &W)));
+            let line4 = mk_expected(&expected, 6, 8, Some((*SD, &W)));
+            let line5 = mk_expected(&expected, 8, 11, Some((*S2, "\n")));
             assert_eq!(lines, vec![line1, line2, line3, line4, line5]);
         }
 
         {
-            let line = vec![(*S1, "_abc"), (*S2, "01230123012301230123"), (*S1, "ZZZZZ")];
+            let line = vec![(*S1, "abc"), (*S2, "01230123012301230123"), (*S1, "ZZZZZ")];
 
             let wcfg1 = mk_wrap_cfg(&WrapConfig {
                 max_lines: 1,
@@ -838,26 +842,26 @@ mod tests {
 
         // from UnicodeSegmentation documentation and the linked
         // Unicode Standard Annex #29
-        let line = vec![(*S1, "_abc"), (*S2, "mnö̲"), (*S1, "xyz")];
+        let line = vec![(*S1, "abc"), (*S2, "mnö̲"), (*S1, "xyz")];
         let lines = wrap_test(&cfg, line, 4);
         assert_eq!(
             lines,
             vec![
-                vec![(*S1, "_abc"), (*SD, &W)],
-                vec![(*SD, "_"), (*S2, "mnö̲"), (*SD, &W)],
-                vec![(*SD, "_"), (*S1, "xyz")]
+                vec![(*S1, "abc"), (*SD, &W)],
+                vec![(*S2, "mnö̲"), (*SD, &W)],
+                vec![(*S1, "xyz")]
             ]
         );
 
         // Not working: Tailored grapheme clusters: क्षि  = क् + षि
-        let line = vec![(*S1, "_abc"), (*S2, "deநி"), (*S1, "ghij")];
+        let line = vec![(*S1, "abc"), (*S2, "deநி"), (*S1, "ghij")];
         let lines = wrap_test(&cfg, line, 4);
         assert_eq!(
             lines,
             vec![
-                vec![(*S1, "_abc"), (*SD, &W)],
-                vec![(*SD, "_"), (*S2, "deநி"), (*SD, &W)],
-                vec![(*SD, "_"), (*S1, "ghij")]
+                vec![(*S1, "abc"), (*SD, &W)],
+                vec![(*S2, "deநி"), (*SD, &W)],
+                vec![(*S1, "ghij")]
             ]
         );
     }
