@@ -20,9 +20,9 @@
 ```gitconfig
 [pager]
     diff = delta
+    show = delta
     log = delta
     reflog = delta
-    show = delta
 
 [interactive]
     diffFilter = delta --color-only
@@ -146,7 +146,7 @@ Here's what `git show` can look like with git configured to use delta:
 - Language syntax highlighting with color themes
 - Within-line highlights based on a Levenshtein edit inference algorithm
 - Git style strings (foreground color, background color, font attributes) are supported for >20 stylable elements
-- Side-by-side view
+- Side-by-side view with line-wrapping
 - Line numbering
 - `diff-highlight` and `diff-so-fancy` emulation modes
 - Stylable box/line decorations to draw attention to commit, file and hunk header sections.
