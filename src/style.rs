@@ -6,7 +6,7 @@ use lazy_static::lazy_static;
 use crate::ansi;
 use crate::color;
 
-#[derive(Clone, Copy, Debug, PartialEq, Default)]
+#[derive(Clone, Copy, PartialEq, Default)]
 pub struct Style {
     pub ansi_term_style: ansi_term::Style,
     pub is_emph: bool,
@@ -14,6 +14,42 @@ pub struct Style {
     pub is_raw: bool,
     pub is_syntax_highlighted: bool,
     pub decoration_style: DecorationStyle,
+}
+
+// More compact debug output, replace false/empty with lowercase and true with uppercase.
+impl fmt::Debug for Style {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        let ansi = if self.ansi_term_style.is_plain() {
+            "<a".into()
+        } else {
+            format!("ansi_term_style: {:?}, <", self.ansi_term_style)
+        };
+
+        let deco = if self.decoration_style == DecorationStyle::NoDecoration {
+            "d>".into()
+        } else {
+            format!(">, decoration_style: {:?}", self.decoration_style)
+        };
+
+        let is_set = |c: char, set: bool| -> String {
+            if set {
+                c.to_uppercase().to_string()
+            } else {
+                c.to_lowercase().to_string()
+            }
+        };
+
+        write!(
+            f,
+            "Style {{ {}{}{}{}{}{} }}",
+            ansi,
+            is_set('e', self.is_emph),
+            is_set('o', self.is_omitted),
+            is_set('r', self.is_raw),
+            is_set('s', self.is_syntax_highlighted),
+            deco
+        )
+    }
 }
 
 #[derive(Clone, Copy, Debug, PartialEq)]
@@ -317,5 +353,29 @@ pub mod tests {
             plus_line_from_unconfigured_git,
             [].iter()
         ));
+    }
+
+    #[test]
+    fn test_style_compact_debug_fmt() {
+        let mut s = Style::new();
+        assert_eq!(format!("{:?}", s), "Style { <aeorsd> }");
+        s.is_emph = true;
+        assert_eq!(format!("{:?}", s), "Style { <aEorsd> }");
+        s.ansi_term_style = ansi_term::Style::new().bold();
+        assert_eq!(
+            format!("{:?}", s),
+            "Style { ansi_term_style: Style { bold }, <Eorsd> }"
+        );
+        s.decoration_style = DecorationStyle::Underline(s.ansi_term_style.clone());
+        assert_eq!(
+            format!("{:?}", s),
+            "Style { ansi_term_style: Style { bold }, <Eors>, \
+                  decoration_style: Underline(Style { bold }) }"
+        );
+        s.ansi_term_style = ansi_term::Style::default();
+        assert_eq!(
+            format!("{:?}", s),
+            "Style { <aEors>, decoration_style: Underline(Style { bold }) }"
+        );
     }
 }
