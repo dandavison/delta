@@ -22,6 +22,7 @@ mod options;
 mod paint;
 mod parse_style;
 mod style;
+mod utils;
 mod wrapping;
 
 mod subcommands;
