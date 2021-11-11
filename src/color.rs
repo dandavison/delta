@@ -162,3 +162,9 @@ const DARK_THEME_PLUS_COLOR_256: Color = Color::Fixed(22);
 const DARK_THEME_PLUS_EMPH_COLOR: Color = Color::RGB(0x00, 0x60, 0x00);
 
 const DARK_THEME_PLUS_EMPH_COLOR_256: Color = Color::Fixed(28);
+
+// blame
+
+pub const LIGHT_THEME_BLAME_PALETTE: &[&str] = &["#FFFFFF", "#DDDDDD", "#BBBBBB"];
+
+pub const DARK_THEME_BLAME_PALETTE: &[&str] = &["#000000", "#222222", "#444444"];

@@ -22,6 +22,7 @@
     diff = delta
     show = delta
     log = delta
+    blame = delta
     reflog = delta
 
 [interactive]
@@ -63,11 +64,13 @@ Code evolves, and we all spend time studying diffs. Delta aims to make this both
   - [Choosing colors (styles)](#choosing-colors-styles)
   - [Line numbers](#line-numbers)
   - [Side-by-side view](#side-by-side-view)
+  - [git blame](#git-blame)
   - ["Features": named groups of settings](#features-named-groups-of-settings)
   - [Custom themes](#custom-themes)
   - [diff-highlight and diff-so-fancy emulation](#diff-highlight-and-diff-so-fancy-emulation)
   - [--color-moved support](#--color-moved-support)
   - [Navigation keybindings for large diffs](#navigation-keybindings-for-large-diffs)
+  - [Git blame](#git-blame-1)
   - [24 bit color (truecolor)](#24-bit-color-truecolor)
   - [Using Delta with GNU Screen](#using-delta-with-gnu-screen)
   - [Using Delta on Windows](#using-delta-on-windows)
@@ -152,6 +155,7 @@ Here's what `git show` can look like with git configured to use delta:
 - `diff-highlight` and `diff-so-fancy` emulation modes
 - Stylable box/line decorations to draw attention to commit, file and hunk header sections.
 - Support for Git's `--color-moved` feature.
+- Customizable `git blame` with syntax highlighting (`--hyperlinks` formats commits as links to GitHub/GitLab/Bitbucket etc)
 - Code can be copied directly from the diff (`-/+` markers are removed by default).
 - `n` and `N` keybindings to move between files in large diffs, and between diffs in `log -p` views (`--navigate`)
 - Commit hashes can be formatted as terminal [hyperlinks](https://gist.github.com/egmontkob/eb114294efbcd5adb1944c9f3cb5feda) to the GitHub/GitLab/Bitbucket page (`--hyperlinks`).
@@ -407,6 +411,10 @@ In contrast, the long replacement line in the right panel overflows by almost an
 For control over the details of line wrapping, see `--wrap-max-lines`, `--wrap-left-symbol`, `--wrap-right-symbol`, `--wrap-right-percent`, `--wrap-right-prefix-symbol`, `--inline-hint-style`.
 Line wrapping was implemented by @th1000s.
 
+### git blame
+
+Set delta as the pager for `blame` in the `[pager]` section of your gitconfig. See the example at the [top of the page](#get-started).
+
 ### "Features": named groups of settings
 
 All delta options can go under the `[delta]` section in your git config file. However, you can also use named "features" to keep things organized: these are sections in git config like `[delta "my-feature"]`. Here's an example using two custom features:
@@ -492,6 +500,12 @@ In order to support this feature, Delta has to look at the raw colors it receive
 ### Navigation keybindings for large diffs
 
 Use the `navigate` feature to activate navigation keybindings. In this mode, pressing `n` will jump forward to the next file in the diff, and `N` will jump backwards. If you are viewing multiple commits (e.g. via `git log -p`) then navigation will also visit commit boundaries.
+
+### Git blame
+
+Delta will render `git blame` output in its own way, if you have `pager.blame = delta` set in your `gitconfig`. Example:
+
+<table><tr><td><img width=300px src="https://user-images.githubusercontent.com/52205/140330813-91b198af-c396-4c5e-9a30-26ee35b78e7e.png" alt="image" /></td></tr></table>
 
 ### 24 bit color (truecolor)
 
