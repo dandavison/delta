@@ -23,6 +23,7 @@
     show = delta
     log = delta
     reflog = delta
+    blame = delta  # see default-language to enable `git blame` syntax highlighting
 
 [interactive]
     diffFilter = delta --color-only
@@ -152,6 +153,7 @@ Here's what `git show` can look like with git configured to use delta:
 - `diff-highlight` and `diff-so-fancy` emulation modes
 - Stylable box/line decorations to draw attention to commit, file and hunk header sections.
 - Support for Git's `--color-moved` feature.
+- Customizable `git blame` with syntax highlighting (`--hyperlinks` formats commits as links to GitHub/GitLab/Bitbucket etc)
 - Code can be copied directly from the diff (`-/+` markers are removed by default).
 - `n` and `N` keybindings to move between files in large diffs, and between diffs in `log -p` views (`--navigate`)
 - Commit hashes can be formatted as terminal [hyperlinks](https://gist.github.com/egmontkob/eb114294efbcd5adb1944c9f3cb5feda) to the GitHub/GitLab/Bitbucket page (`--hyperlinks`).
@@ -400,6 +402,28 @@ In contrast, the long replacement line in the right panel overflows by almost an
 For control over the details of line wrapping, see `--wrap-max-lines`, `--wrap-left-symbol`, `--wrap-right-symbol`, `--wrap-right-percent`, `--wrap-right-prefix-symbol`, `--inline-hint-style`.
 Line wrapping was implemented by @th1000s.
 
+### git blame
+
+Set delta as the pager for `git blame`, along with the standard diff-generating git operations:
+
+```gitconfig
+[pager]
+    diff = delta
+    show = delta
+    log = delta
+    reflog = delta
+    blame = delta  # see default-language to enable `git blame` syntax highlighting
+```
+
+However, in order to activate syntax highlighting of `git blame` output, you must tell delta which language the file is written in by using the `default-language` option.
+If you are working in a repository that mostly contains files in a single language, the most convenient way to do this is by editing the _repository-specific_ git config file, i.e. the one at `/path/to/repo/.git/config`, as opposed to the one in your home directory:
+Add an entry like this, but using
+
+```gitconfig
+[delta]
+    default-language = rs  # substitute the language file extension you want here!
+```
+
 ### "Features": named groups of settings
 
 All delta options can go under the `[delta]` section in your git config file. However, you can also use named "features" to keep things organized: these are sections in git config like `[delta "my-feature"]`. Here's an example using two custom features:
@@ -485,6 +509,12 @@ In order to support this feature, Delta has to look at the raw colors it receive
 ### Navigation keybindings for large diffs
 
 Use the `navigate` feature to activate navigation keybindings. In this mode, pressing `n` will jump forward to the next file in the diff, and `N` will jump backwards. If you are viewing multiple commits (e.g. via `git log -p`) then navigation will also visit commit boundaries.
+
+### Git blame
+
+Delta will render `git blame` output in its own way, if you have `pager.blame = delta` set in your `gitconfig`. Example:
+
+<table><tr><td><img width=300px src="https://user-images.githubusercontent.com/52205/140330813-91b198af-c396-4c5e-9a30-26ee35b78e7e.png" alt="image" /></td></tr></table>
 
 ### 24 bit color (truecolor)
 
