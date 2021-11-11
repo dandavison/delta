@@ -1,7 +1,10 @@
+use std::collections::HashSet;
+
 use sysinfo::{Pid, ProcessExt, SystemExt};
 
 #[cfg(test)]
 const SKIP_ARGS: usize = 1;
+
 #[cfg(not(test))]
 const SKIP_ARGS: usize = 2;
 
@@ -21,13 +24,36 @@ fn guess_filename_extension_from_args(args: &[String]) -> Option<String> {
     None
 }
 
+// Given `command --aa val -bc -d val e f` return
+// ({"--aa"}, {"-b", "-c", "-d"})
+pub fn get_command_options(args: &[String]) -> Option<(HashSet<String>, HashSet<String>)> {
+    let mut longs = HashSet::new();
+    let mut shorts = HashSet::new();
+
+    for s in args.iter() {
+        if s == "--" {
+            break;
+        } else if s.starts_with("--") {
+            longs.insert(s.to_owned());
+        } else if let Some(suffix) = s.strip_prefix('-') {
+            shorts.extend(suffix.chars().map(|c| format!("-{}", c)));
+        }
+    }
+
+    Some((longs, shorts))
+}
+
 pub fn parent_filename_extension() -> Option<String> {
     process_parent_cmd_args(guess_filename_extension_from_args)
 }
 
-fn process_parent_cmd_args<F>(f: F) -> Option<String>
+pub fn parent_command_options() -> Option<(HashSet<String>, HashSet<String>)> {
+    process_parent_cmd_args(get_command_options)
+}
+
+fn process_parent_cmd_args<F, T>(f: F) -> Option<T>
 where
-    F: Fn(&[String]) -> Option<String>,
+    F: Fn(&[String]) -> Option<T>,
 {
     let mut info = sysinfo::System::new();
 
@@ -87,5 +113,64 @@ mod tests {
             Some(args[0].clone())
         });
         assert!(parent_arg0.is_some());
+    }
+
+    #[test]
+    fn test_get_command_options() {
+        fn make_string_vec(args: &[&str]) -> Vec<String> {
+            args.iter().map(|&x| x.to_owned()).collect::<Vec<String>>()
+        }
+        fn make_hash_sets(arg1: &[&str], arg2: &[&str]) -> (HashSet<String>, HashSet<String>) {
+            let f = |strs: &[&str]| strs.iter().map(|&s| s.to_owned()).collect();
+            (f(arg1), f(arg2))
+        }
+
+        let args = make_string_vec(&["grep", "hello.txt"]);
+        assert_eq!(get_command_options(&args), Some(make_hash_sets(&[], &[])));
+
+        let args = make_string_vec(&["grep", "--", "--not.an.argument"]);
+        assert_eq!(get_command_options(&args), Some(make_hash_sets(&[], &[])));
+
+        let args = make_string_vec(&[
+            "grep",
+            "-ab",
+            "--function-context",
+            "-n",
+            "--show-function",
+            "-W",
+            "--",
+            "hello.txt",
+        ]);
+        assert_eq!(
+            get_command_options(&args),
+            Some(make_hash_sets(
+                &["--function-context", "--show-function"],
+                &["-a", "-b", "-n", "-W"]
+            ))
+        );
+
+        let args = make_string_vec(&[
+            "grep",
+            "val",
+            "-ab",
+            "val",
+            "--function-context",
+            "val",
+            "-n",
+            "val",
+            "--show-function",
+            "val",
+            "-W",
+            "val",
+            "--",
+            "hello.txt",
+        ]);
+        assert_eq!(
+            get_command_options(&args),
+            Some(make_hash_sets(
+                &["--function-context", "--show-function"],
+                &["-a", "-b", "-n", "-W"]
+            ))
+        );
     }
 }
