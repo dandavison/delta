@@ -13,7 +13,7 @@ use crate::style::DecorationStyle;
 
 #[derive(Clone, Debug, PartialEq)]
 pub enum State {
-    CommitMeta,                 // In commit metadata section
+    CommitMeta,                    // In commit metadata section
     FileMeta, // In diff metadata section, between (possible) commit metadata and first hunk
     HunkHeader(String, String), // In hunk metadata line (line, raw_line)
     HunkZero, // In hunk; unchanged line
