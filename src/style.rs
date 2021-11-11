@@ -127,6 +127,22 @@ impl Style {
     }
 }
 
+/// Interpret `color_string` as a color specifier and return it painted accordingly.
+pub fn paint_color_string(
+    color_string: &str,
+    true_color: bool,
+) -> ansi_term::ANSIGenericString<str> {
+    if let Some(color) = color::parse_color(color_string, true_color) {
+        let style = ansi_term::Style {
+            background: Some(color),
+            ..ansi_term::Style::default()
+        };
+        style.paint(color_string)
+    } else {
+        ansi_term::ANSIGenericString::from(color_string)
+    }
+}
+
 impl fmt::Display for Style {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         if self.is_raw {

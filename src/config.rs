@@ -57,6 +57,9 @@ fn adapt_wrap_max_lines_argument(arg: String) -> usize {
 pub struct Config {
     pub available_terminal_width: usize,
     pub background_color_extends_to_terminal_width: bool,
+    pub blame_format: String,
+    pub blame_palette: Vec<String>,
+    pub blame_timestamp_format: String,
     pub color_only: bool,
     pub commit_regex: Regex,
     pub commit_style: Style,
@@ -213,6 +216,8 @@ impl From<cli::Opt> for Config {
             _ => *style::GIT_DEFAULT_PLUS_STYLE,
         };
 
+        let blame_palette = make_blame_palette(opt.blame_palette, opt.computed.is_light_mode);
+
         let file_added_label = opt.file_added_label;
         let file_copied_label = opt.file_copied_label;
         let file_modified_label = opt.file_modified_label;
@@ -257,6 +262,9 @@ impl From<cli::Opt> for Config {
             background_color_extends_to_terminal_width: opt
                 .computed
                 .background_color_extends_to_terminal_width,
+            blame_format: opt.blame_format,
+            blame_palette,
+            blame_timestamp_format: opt.blame_timestamp_format,
             commit_style,
             color_only: opt.color_only,
             commit_regex,
@@ -601,6 +609,23 @@ fn make_commit_file_hunk_header_styles(opt: &cli::Opt) -> (Style, Style, Style, 
             false,
         ),
     )
+}
+
+fn make_blame_palette(blame_palette: Option<String>, is_light_mode: bool) -> Vec<String> {
+    match (blame_palette, is_light_mode) {
+        (Some(string), _) => string
+            .split_whitespace()
+            .map(|s| s.to_owned())
+            .collect::<Vec<String>>(),
+        (None, true) => color::LIGHT_THEME_BLAME_PALETTE
+            .iter()
+            .map(|s| s.to_string())
+            .collect::<Vec<String>>(),
+        (None, false) => color::DARK_THEME_BLAME_PALETTE
+            .iter()
+            .map(|s| s.to_string())
+            .collect::<Vec<String>>(),
+    }
 }
 
 /// Did the user supply `option` on the command line?

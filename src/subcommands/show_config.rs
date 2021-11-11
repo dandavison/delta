@@ -1,11 +1,14 @@
 use std::io::Write;
 
+use itertools::Itertools;
+
 use crate::bat_utils::output::PagingMode;
 use crate::cli;
 use crate::config;
 use crate::features::side_by_side::{Left, Right};
 use crate::minusplus::*;
 use crate::paint::BgFillMethod;
+use crate::style;
 
 pub fn show_config(config: &config::Config, writer: &mut dyn Write) -> std::io::Result<()> {
     // styles first
@@ -23,7 +26,13 @@ pub fn show_config(config: &config::Config, writer: &mut dyn Write) -> std::io::
     plus-non-emph-style           = {plus_non_emph_style}
     plus-emph-style               = {plus_emph_style}
     plus-empty-line-marker-style  = {plus_empty_line_marker_style}
-    whitespace-error-style        = {whitespace_error_style}",
+    whitespace-error-style        = {whitespace_error_style}
+    blame-palette                 = {blame_palette}",
+        blame_palette = config
+            .blame_palette
+            .iter()
+            .map(|s| style::paint_color_string(s, config.true_color))
+            .join(" "),
         commit_style = config.commit_style.to_painted_string(),
         file_style = config.file_style.to_painted_string(),
         hunk_header_style = config.hunk_header_style.to_painted_string(),

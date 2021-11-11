@@ -420,6 +420,27 @@ pub struct Opt {
     /// (underline), 'ol' (overline), or the combination 'ul ol'.
     pub hunk_header_decoration_style: String,
 
+    /// Format string for git blame commit metadata. Available placeholders are
+    /// "{timestamp}", "{author}", and "{commit}".
+    #[structopt(
+        long = "blame-format",
+        default_value = "{timestamp:<15} {author:<15.14} {commit:<8} │ "
+    )]
+    pub blame_format: String,
+
+    /// Background colors used for git blame lines (space-separated string).
+    /// Lines added by the same commit are painted with the same color; colors
+    /// are recycled as needed.
+    #[structopt(long = "blame-palette")]
+    pub blame_palette: Option<String>,
+
+    /// Format of `git blame` timestamp in raw git output received by delta.
+    #[structopt(
+        long = "blame-timestamp-format",
+        default_value = "%Y-%m-%d %H:%M:%S %z"
+    )]
+    pub blame_timestamp_format: String,
+
     /// Default language used for syntax highlighting when this cannot be
     /// inferred from a filename. It will typically make sense to set this in
     /// per-repository git config (.git/config)
