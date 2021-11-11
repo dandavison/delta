@@ -327,8 +327,6 @@ fn _extract_special_decoration_attributes(
 mod tests {
     use super::*;
 
-    use ansi_term;
-
     #[test]
     fn test_parse_ansi_term_style() {
         assert_eq!(
