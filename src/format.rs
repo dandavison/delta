@@ -55,6 +55,7 @@ pub struct FormatStringPlaceholderData<'a> {
     pub placeholder: Option<Placeholder<'a>>,
     pub alignment_spec: Option<Align>,
     pub width: Option<usize>,
+    pub precision: Option<usize>,
     pub suffix: SmolStr,
     pub suffix_len: usize,
 }
@@ -90,6 +91,9 @@ pub fn make_placeholder_regex(labels: &[&str]) -> Regex {
         ([<^>])     #         3: Alignment spec
       )?            #
       (\d+)         #     4: Width
+      (?:           #     Start optional precision (non-capturing)
+        \.(\d+)     #         5: Precision
+      )?            #
     )?              #
     \}}
     ",
@@ -134,6 +138,11 @@ pub fn parse_line_number_format<'a>(
                     .parse()
                     .unwrap_or_else(|_| panic!("Invalid width in format string: {}", format_string))
             }),
+            precision: captures.get(5).map(|m| {
+                m.as_str().parse().unwrap_or_else(|_| {
+                    panic!("Invalid precision in format string: {}", format_string)
+                })
+            }),
             suffix,
             suffix_len,
         });
@@ -156,10 +165,42 @@ pub fn parse_line_number_format<'a>(
     format_data
 }
 
-pub fn pad(s: &str, width: usize, alignment: &Align) -> String {
-    match alignment {
-        Align::Left => format!("{0:<1$}", s, width),
-        Align::Center => format!("{0:^1$}", s, width),
-        Align::Right => format!("{0:>1$}", s, width),
+// Note that in this case of a string `s`, `precision` means "max width".
+// See https://doc.rust-lang.org/std/fmt/index.html
+pub fn pad(s: &str, width: usize, alignment: &Align, precision: Option<usize>) -> String {
+    match precision {
+        None => match alignment {
+            Align::Left => format!("{0:<1$}", s, width),
+            Align::Center => format!("{0:^1$}", s, width),
+            Align::Right => format!("{0:>1$}", s, width),
+        },
+        Some(precision) => match alignment {
+            Align::Left => format!("{0:<1$.2$}", s, width, precision),
+            Align::Center => format!("{0:^1$.2$}", s, width, precision),
+            Align::Right => format!("{0:>1$.2$}", s, width, precision),
+        },
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_placeholder_regex() {
+        let regex = make_placeholder_regex(&["placeholder"]);
+        assert_eq!(
+            parse_line_number_format("prefix {placeholder:<15.14} suffix", &regex, false),
+            vec![FormatStringPlaceholderData {
+                prefix: "prefix ".into(),
+                placeholder: Some(Placeholder::Str("placeholder")),
+                alignment_spec: Some(Align::Left),
+                width: Some(15),
+                precision: Some(14),
+                suffix: " suffix".into(),
+                prefix_len: 7,
+                suffix_len: 7,
+            }]
+        );
     }
 }

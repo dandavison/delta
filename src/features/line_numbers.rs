@@ -266,14 +266,22 @@ fn format_and_paint_line_number_field<'a>(
             .as_ref()
             .unwrap_or(&Align::Center);
         match placeholder.placeholder {
-            Some(Placeholder::NumberMinus) => ansi_strings.push(styles[Minus].paint(
-                format_line_number(line_numbers[Minus], alignment_spec, width, None, config),
-            )),
+            Some(Placeholder::NumberMinus) => {
+                ansi_strings.push(styles[Minus].paint(format_line_number(
+                    line_numbers[Minus],
+                    alignment_spec,
+                    width,
+                    placeholder.precision,
+                    None,
+                    config,
+                )))
+            }
             Some(Placeholder::NumberPlus) => {
                 ansi_strings.push(styles[Plus].paint(format_line_number(
                     line_numbers[Plus],
                     alignment_spec,
                     width,
+                    placeholder.precision,
                     Some(plus_file),
                     config,
                 )))
@@ -292,10 +300,11 @@ fn format_line_number(
     line_number: Option<usize>,
     alignment: &Align,
     width: usize,
+    precision: Option<usize>,
     plus_file: Option<&str>,
     config: &config::Config,
 ) -> String {
-    let pad = |n| format::pad(n, width, alignment);
+    let pad = |n| format::pad(n, width, alignment, precision);
     match (line_number, config.hyperlinks, plus_file) {
         (None, _, _) => pad(""),
         (Some(n), true, Some(file)) => {
@@ -332,6 +341,7 @@ pub mod tests {
                 placeholder: Some(Placeholder::NumberMinus),
                 alignment_spec: None,
                 width: None,
+                precision: None,
                 suffix: "".into(),
                 prefix_len: 0,
                 suffix_len: 0,
@@ -348,6 +358,7 @@ pub mod tests {
                 placeholder: Some(Placeholder::NumberPlus),
                 alignment_spec: None,
                 width: Some(4),
+                precision: None,
                 suffix: "".into(),
                 prefix_len: 0,
                 suffix_len: 0,
@@ -364,6 +375,7 @@ pub mod tests {
                 placeholder: Some(Placeholder::NumberPlus),
                 alignment_spec: Some(Align::Right),
                 width: Some(4),
+                precision: None,
                 suffix: "".into(),
                 prefix_len: 0,
                 suffix_len: 0,
@@ -380,6 +392,7 @@ pub mod tests {
                 placeholder: Some(Placeholder::NumberPlus),
                 alignment_spec: Some(Align::Right),
                 width: Some(4),
+                precision: None,
                 suffix: "".into(),
                 prefix_len: 0,
                 suffix_len: 0,
@@ -396,6 +409,7 @@ pub mod tests {
                 placeholder: Some(Placeholder::NumberPlus),
                 alignment_spec: Some(Align::Right),
                 width: Some(4),
+                precision: None,
                 suffix: "@@".into(),
                 prefix_len: 2,
                 suffix_len: 2,
@@ -413,6 +427,7 @@ pub mod tests {
                     placeholder: Some(Placeholder::NumberMinus),
                     alignment_spec: Some(Align::Left),
                     width: Some(3),
+                    precision: None,
                     suffix: "@@---{np:_>4}**".into(),
                     prefix_len: 2,
                     suffix_len: 15,
@@ -422,6 +437,7 @@ pub mod tests {
                     placeholder: Some(Placeholder::NumberPlus),
                     alignment_spec: Some(Align::Right),
                     width: Some(4),
+                    precision: None,
                     suffix: "**".into(),
                     prefix_len: 5,
                     suffix_len: 2,
@@ -439,6 +455,7 @@ pub mod tests {
                 placeholder: None,
                 alignment_spec: None,
                 width: None,
+                precision: None,
                 suffix: "__@@---**".into(),
                 prefix_len: 0,
                 suffix_len: 9,
@@ -455,12 +472,14 @@ pub mod tests {
                 placeholder: Some(Placeholder::NumberMinus),
                 alignment_spec: Some(Align::Left),
                 width: Some(4),
+                precision: None,
                 suffix: "|".into(),
                 prefix_len: 2,
                 suffix_len: 1,
             }]
         );
     }
+
     #[test]
     fn test_line_number_format_odd_width_two() {
         assert_eq!(
@@ -475,6 +494,7 @@ pub mod tests {
                     placeholder: Some(Placeholder::NumberMinus),
                     alignment_spec: Some(Align::Left),
                     width: Some(4),
+                    precision: None,
                     suffix: "+{np:<4}|".into(),
                     prefix_len: 2,
                     suffix_len: 9,
@@ -484,6 +504,7 @@ pub mod tests {
                     placeholder: Some(Placeholder::NumberPlus),
                     alignment_spec: Some(Align::Left),
                     width: Some(4),
+                    precision: None,
                     suffix: "|".into(),
                     prefix_len: 1,
                     suffix_len: 1,
@@ -500,6 +521,7 @@ pub mod tests {
                 placeholder: None,
                 alignment_spec: None,
                 width: None,
+                precision: None,
                 suffix: "|++|".into(),
                 prefix_len: 1,
                 suffix_len: 4,
@@ -522,6 +544,7 @@ pub mod tests {
                 placeholder: Some(Placeholder::NumberMinus),
                 alignment_spec: None,
                 width: None,
+                precision: None,
                 suffix: long.into(),
                 suffix_len: long.len(),
             },]
