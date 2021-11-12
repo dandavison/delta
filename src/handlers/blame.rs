@@ -11,6 +11,7 @@ use crate::delta::{self, State, StateMachine};
 use crate::format::{self, Placeholder};
 use crate::paint::BgShouldFill;
 use crate::style::Style;
+use crate::utils;
 
 impl<'a> StateMachine<'a> {
     /// If this is a line of git blame output then render it accordingly. If
@@ -72,7 +73,10 @@ impl<'a> StateMachine<'a> {
 
                 // Emit syntax-highlighted code
                 if matches!(self.state, State::Unknown) {
-                    if let Some(lang) = self.config.default_language.as_ref() {
+                    if let Some(lang) = utils::parent_filename_extension()
+                        .as_ref()
+                        .or_else(|| self.config.default_language.as_ref())
+                    {
                         self.painter.set_syntax(Some(lang));
                         self.painter.set_highlighter();
                     }
