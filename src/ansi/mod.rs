@@ -3,6 +3,7 @@ mod iterator;
 
 use std::borrow::Cow;
 
+use ansi_term::Style;
 use itertools::Itertools;
 use unicode_segmentation::UnicodeSegmentation;
 use unicode_width::UnicodeWidthStr;
@@ -64,6 +65,20 @@ pub fn truncate_str<'a, 'b>(s: &'a str, display_width: usize, tail: &'b str) -> 
     Cow::from(format!("{}{}", result, result_tail))
 }
 
+pub fn parse_style_sections(s: &str) -> Vec<(ansi_term::Style, &str)> {
+    let mut sections = Vec::new();
+    let mut curr_style = Style::default();
+    for element in AnsiElementIterator::new(s) {
+        match element {
+            Element::Text(start, end) => sections.push((curr_style, &s[start..end])),
+            Element::Csi(style, _, _) => curr_style = style,
+            _ => {}
+        }
+    }
+    sections
+}
+
+// Return the first CSI element, if any, as an `ansi_term::Style`.
 pub fn parse_first_style(s: &str) -> Option<ansi_term::Style> {
     AnsiElementIterator::new(s).find_map(|el| match el {
         Element::Csi(style, _, _) => Some(style),
