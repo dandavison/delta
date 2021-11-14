@@ -22,6 +22,8 @@ pub fn parse_styles(opt: &cli::Opt) -> HashMap<String, Style> {
     make_hunk_styles(opt, &mut styles);
     make_commit_file_hunk_header_styles(opt, &mut styles);
     make_line_number_styles(opt, &mut styles);
+    make_grep_styles(opt, &mut styles);
+
     styles.insert(
         "inline-hint-style",
         style_from_str(&opt.inline_hint_style, None, None, opt.computed.true_color),
@@ -279,6 +281,51 @@ fn make_commit_file_hunk_header_styles(opt: &cli::Opt, styles: &mut HashMap<&str
             )
         ),
     ]);
+}
+
+fn make_grep_styles(opt: &cli::Opt, styles: &mut HashMap<&str, StyleReference>) {
+    styles.extend([
+        (
+            "grep-match-line-style",
+            if let Some(s) = &opt.grep_match_line_style {
+                style_from_str(s, None, None, opt.computed.true_color)
+            } else {
+                StyleReference::Reference("zero-style".to_owned())
+            },
+        ),
+        (
+            "grep-match-word-style",
+            if let Some(s) = &opt.grep_match_word_style {
+                style_from_str(s, None, None, opt.computed.true_color)
+            } else {
+                StyleReference::Reference("plus-emph-style".to_owned())
+            },
+        ),
+        (
+            "grep-context-line-style",
+            if let Some(s) = &opt.grep_context_line_style {
+                style_from_str(s, None, None, opt.computed.true_color)
+            } else {
+                StyleReference::Reference("zero-style".to_owned())
+            },
+        ),
+        (
+            "grep-file-style",
+            if let Some(s) = &opt.grep_file_style {
+                style_from_str(s, None, None, opt.computed.true_color)
+            } else {
+                StyleReference::Reference("hunk-header-file-style".to_owned())
+            },
+        ),
+        (
+            "grep-line-number-style",
+            if let Some(s) = &opt.grep_line_number_style {
+                style_from_str(s, None, None, opt.computed.true_color)
+            } else {
+                StyleReference::Reference("hunk-header-line-number-style".to_owned())
+            },
+        ),
+    ])
 }
 
 fn style_from_str(

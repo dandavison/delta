@@ -1,5 +1,36 @@
+use std::borrow::Cow;
 use std::collections::{HashMap, HashSet};
+use std::path::Path;
 use sysinfo::{Pid, Process, ProcessExt, SystemExt};
+
+use lazy_static::lazy_static;
+
+#[derive(Clone, Debug, PartialEq)]
+pub enum CallingProcess {
+    GitGrep((HashSet<String>, HashSet<String>)),
+    OtherGrep, // rg, grep, ag, ack, etc
+}
+
+pub fn calling_process() -> Option<Cow<'static, CallingProcess>> {
+    #[cfg(not(test))]
+    {
+        CACHED_CALLING_PROCESS
+            .as_ref()
+            .map(|proc| Cow::Borrowed(proc))
+    }
+    #[cfg(test)]
+    {
+        determine_calling_process().map(|proc| Cow::Owned(proc))
+    }
+}
+
+lazy_static! {
+    static ref CACHED_CALLING_PROCESS: Option<CallingProcess> = determine_calling_process();
+}
+
+fn determine_calling_process() -> Option<CallingProcess> {
+    calling_process_cmdline(ProcInfo::new(), describe_calling_process)
+}
 
 // Return value of `extract_args(args: &[String]) -> ProcessArgs<T>` function which is
 // passed to `calling_process_cmdline()`.
@@ -17,45 +48,8 @@ pub fn git_blame_filename_extension() -> Option<String> {
     calling_process_cmdline(ProcInfo::new(), blame::guess_git_blame_filename_extension)
 }
 
-pub fn git_grep_command_options() -> Option<(HashSet<String>, HashSet<String>)> {
-    calling_process_cmdline(ProcInfo::new(), grep::get_grep_options)
-}
-
 mod blame {
     use super::*;
-
-    // Skip all arguments starting with '-' from `args_it`. Also skip all arguments listed in
-    // `skip_this_plus_parameter` plus their respective next argument.
-    // Keep all arguments once a '--' is encountered.
-    // (Note that some arguments work with and without '=': '--foo' 'bar' / '--foo=bar')
-    fn skip_uninteresting_args<'a, 'b, ArgsI, SkipI>(
-        mut args_it: ArgsI,
-        skip_this_plus_parameter: SkipI,
-    ) -> Vec<&'a str>
-    where
-        ArgsI: Iterator<Item = &'a str>,
-        SkipI: Iterator<Item = &'b str>,
-    {
-        let arg_follows_space: HashSet<&'b str> = skip_this_plus_parameter.into_iter().collect();
-
-        let mut result = Vec::new();
-        loop {
-            match args_it.next() {
-                None => break result,
-                Some("--") => {
-                    result.extend(args_it);
-                    break result;
-                }
-                Some(arg) if arg_follows_space.contains(arg) => {
-                    let _skip_parameter = args_it.next();
-                }
-                Some(arg) if !arg.starts_with('-') => {
-                    result.push(arg);
-                }
-                Some(_) => { /* skip: --these -and --also=this */ }
-            }
-        }
-    }
 
     pub fn guess_git_blame_filename_extension(args: &[String]) -> ProcessArgs<String> {
         let all_args = args.iter().map(|s| s.as_str());
@@ -77,34 +71,99 @@ mod blame {
             _ => ProcessArgs::OtherProcess,
         }
     }
-} // mod blame
+}
 
-mod grep {
-    use super::*;
+pub fn describe_calling_process(args: &[String]) -> ProcessArgs<CallingProcess> {
+    let mut args = args.iter().map(|s| s.as_str());
 
-    // Given `... grep --aa val -bc -d val e f -- ...` return
-    // ({"--aa"}, {"-b", "-c", "-d"})
-    pub fn get_grep_options(args: &[String]) -> ProcessArgs<(HashSet<String>, HashSet<String>)> {
-        let mut args = args.iter().map(|s| s.as_str()).skip_while(|s| *s != "grep");
-        match args.next() {
-            None => ProcessArgs::OtherProcess,
-            _ => {
-                let mut longs = HashSet::new();
-                let mut shorts = HashSet::new();
-
-                for s in args {
-                    if s == "--" {
-                        break;
-                    } else if s.starts_with("--") {
-                        longs.insert(s.split('=').next().unwrap().to_owned());
-                    } else if let Some(suffix) = s.strip_prefix('-') {
-                        shorts.extend(suffix.chars().map(|c| format!("-{}", c)));
+    match args.next() {
+        Some(command) => match Path::new(command).file_stem() {
+            Some(s) if s.to_str() == Some("git") => {
+                let mut args = args.skip_while(|s| *s != "grep");
+                match args.next() {
+                    Some(_) => {
+                        ProcessArgs::Args(CallingProcess::GitGrep(parse_command_option_keys(args)))
+                    }
+                    None => {
+                        // It's git, but not git grep. Don't look at any
+                        // more processes and return not-a-grep-command.
+                        ProcessArgs::ArgError
                     }
                 }
-                ProcessArgs::Args((longs, shorts))
             }
+            Some(s) => match s.to_str() {
+                Some("rg") | Some("grep") | Some("ack") | Some("ag") | Some("pt")
+                | Some("sift") | Some("ucg") => ProcessArgs::Args(CallingProcess::OtherGrep),
+                _ => {
+                    // It's not git, and it's not another grep tool. Keep
+                    // looking at other processes.
+                    ProcessArgs::OtherProcess
+                }
+            },
+            _ => {
+                // Could not parse file stem (not expected); keep looking at
+                // other processes.
+                ProcessArgs::OtherProcess
+            }
+        },
+        _ => {
+            // Empty arguments (not expected); keep looking.
+            ProcessArgs::OtherProcess
         }
     }
+}
+
+// Skip all arguments starting with '-' from `args_it`. Also skip all arguments listed in
+// `skip_this_plus_parameter` plus their respective next argument.
+// Keep all arguments once a '--' is encountered.
+// (Note that some arguments work with and without '=': '--foo' 'bar' / '--foo=bar')
+fn skip_uninteresting_args<'a, 'b, ArgsI, SkipI>(
+    mut args_it: ArgsI,
+    skip_this_plus_parameter: SkipI,
+) -> Vec<&'a str>
+where
+    ArgsI: Iterator<Item = &'a str>,
+    SkipI: Iterator<Item = &'b str>,
+{
+    let arg_follows_space: HashSet<&'b str> = skip_this_plus_parameter.into_iter().collect();
+
+    let mut result = Vec::new();
+    loop {
+        match args_it.next() {
+            None => break result,
+            Some("--") => {
+                result.extend(args_it);
+                break result;
+            }
+            Some(arg) if arg_follows_space.contains(arg) => {
+                let _skip_parameter = args_it.next();
+            }
+            Some(arg) if !arg.starts_with('-') => {
+                result.push(arg);
+            }
+            Some(_) => { /* skip: --these -and --also=this */ }
+        }
+    }
+}
+
+// Given `--aa val -bc -d val e f -- ...` return
+// ({"--aa"}, {"-b", "-c", "-d"})
+fn parse_command_option_keys<'a>(
+    args: impl Iterator<Item = &'a str>,
+) -> (HashSet<String>, HashSet<String>) {
+    let mut longs = HashSet::new();
+    let mut shorts = HashSet::new();
+
+    for s in args {
+        if s == "--" {
+            break;
+        } else if s.starts_with("--") {
+            longs.insert(s.split('=').next().unwrap().to_owned());
+        } else if let Some(suffix) = s.strip_prefix('-') {
+            shorts.extend(suffix.chars().map(|c| format!("-{}", c)));
+        }
+    }
+    (longs, shorts)
 }
 
 struct ProcInfo {
@@ -222,7 +281,7 @@ trait ProcessInterface {
                 _ => None,
             })
             .min_by_key(|(distance, _)| *distance)
-            .map(|(_, ext)| ext);
+            .map(|(_, result)| result);
 
         cmdline_of_closest_matching_process
     }
@@ -257,7 +316,7 @@ where
     {
         if let Some(args) = tests::cfg::WithArgs::get() {
             match extract_args(&args) {
-                ProcessArgs::Args(ext) => return Some(ext),
+                ProcessArgs::Args(result) => return Some(result),
                 _ => return None,
             }
         }
@@ -268,7 +327,7 @@ where
     let parent = info.parent_process(my_pid)?;
 
     match extract_args(parent.cmd()) {
-        ProcessArgs::Args(ext) => return Some(ext),
+        ProcessArgs::Args(result) => return Some(result),
         ProcessArgs::ArgError => return None,
 
         // 2) The parent process was something else, this can happen if git output is piped into delta, e.g.
@@ -277,8 +336,8 @@ where
         ProcessArgs::OtherProcess => {
             let sibling = info.naive_sibling_process(my_pid);
             if let Some(proc) = sibling {
-                if let ProcessArgs::Args(ext) = extract_args(proc.cmd()) {
-                    return Some(ext);
+                if let ProcessArgs::Args(result) = extract_args(proc.cmd()) {
+                    return Some(result);
                 }
             }
             // else try the fallback
@@ -588,10 +647,10 @@ pub mod tests {
     }
 
     #[test]
-    fn test_get_grep_options() {
+    fn test_describe_calling_process_grep() {
         let no_processes = MockProcInfo::with(&[]);
         assert_eq!(
-            calling_process_cmdline(no_processes, grep::get_grep_options),
+            calling_process_cmdline(no_processes, describe_calling_process),
             None
         );
 
@@ -601,9 +660,26 @@ pub mod tests {
             (4, 100, "delta", Some(3)),
         ]);
         assert_eq!(
-            calling_process_cmdline(parent, grep::get_grep_options),
-            Some(([].into(), [].into()))
+            calling_process_cmdline(parent, describe_calling_process),
+            Some(CallingProcess::GitGrep(([].into(), [].into())))
         );
+
+        for other_grep_command in &[
+            "/usr/local/bin/rg pattern hello.txt",
+            "grep pattern hello.txt",
+            "/usr/bin/grep pattern hello.txt",
+            "ack.exe pattern hello.txt",
+        ] {
+            let parent = MockProcInfo::with(&[
+                (2, 100, "-shell", None),
+                (3, 100, other_grep_command, Some(2)),
+                (4, 100, "delta", Some(3)),
+            ]);
+            assert_eq!(
+                calling_process_cmdline(parent, describe_calling_process),
+                Some(CallingProcess::OtherGrep)
+            );
+        }
 
         fn set(arg1: &[&str]) -> HashSet<String> {
             arg1.iter().map(|&s| s.to_owned()).collect()
@@ -612,10 +688,10 @@ pub mod tests {
         let git_grep_command =
             "git grep -ab --function-context -n --show-function -W --foo=val pattern hello.txt";
 
-        let expected_result = Some((
+        let expected_result = Some(CallingProcess::GitGrep((
             set(&["--function-context", "--show-function", "--foo"]),
             set(&["-a", "-b", "-n", "-W"]),
-        ));
+        )));
 
         let parent = MockProcInfo::with(&[
             (2, 100, "-shell", None),
@@ -623,7 +699,7 @@ pub mod tests {
             (4, 100, "delta", Some(3)),
         ]);
         assert_eq!(
-            calling_process_cmdline(parent, grep::get_grep_options),
+            calling_process_cmdline(parent, describe_calling_process),
             expected_result
         );
 
@@ -634,14 +710,14 @@ pub mod tests {
             (5, 100, "delta", Some(4)),
         ]);
         assert_eq!(
-            calling_process_cmdline(grandparent, grep::get_grep_options),
+            calling_process_cmdline(grandparent, describe_calling_process),
             expected_result
         );
     }
 
     #[test]
     fn test_process_calling_cmdline() {
-        // Github runs CI tests for arm under qemu where where sysinfo can not find the parent processr.
+        // Github runs CI tests for arm under qemu where where sysinfo can not find the parent process.
         if std::env::vars().any(|(key, _)| key == "CROSS_RUNNER" || key == "QEMU_LD_PREFIX") {
             return;
         }
@@ -665,7 +741,7 @@ pub mod tests {
             }
         }
 
-        // Tests that caller is something like "cargo test" or "tarpaulin"
+        // Tests that caller is something like "cargo test" or "cargo tarpaulin"
         let find_test = |args: &[String]| find_calling_process(args, &["test", "tarpaulin"]);
         assert_eq!(calling_process_cmdline(info, find_test), Some(()));
 

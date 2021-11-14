@@ -445,6 +445,40 @@ pub struct Opt {
     )]
     pub blame_timestamp_format: String,
 
+    #[structopt(long = "grep-match-line-style")]
+    /// Style (foreground, background, attributes) for matching lines of code in
+    /// grep output. See STYLES section. Defaults to plus-style.
+    pub grep_match_line_style: Option<String>,
+
+    #[structopt(long = "grep-match-word-style")]
+    /// Style (foreground, background, attributes) for the specific matching
+    /// substrings within a matching line of code in grep output. See STYLES
+    /// section. Defaults to plus-style.
+    pub grep_match_word_style: Option<String>,
+
+    #[structopt(long = "grep-context-line-style")]
+    /// Style (foreground, background, attributes) for non-matching lines of
+    /// code in grep output. See STYLES section. Defaults to zero-style.
+    pub grep_context_line_style: Option<String>,
+
+    #[structopt(long = "grep-file-style")]
+    /// Style (foreground, background, attributes) for file paths in grep
+    /// output. See STYLES section. Defaults to hunk-header-file-path-style.
+    pub grep_file_style: Option<String>,
+
+    #[structopt(long = "grep-line-number-style")]
+    /// Style (foreground, background, attributes) for line numbers in grep
+    /// output. See STYLES section. Defaults to hunk-header-line-number-style.
+    pub grep_line_number_style: Option<String>,
+
+    #[structopt(long = "grep-separator-symbol", default_value = ":")]
+    /// Symbol used in grep output to separate file path (and line number) from
+    /// the line of file contents. Defaults to ":" for both match and context
+    /// lines, since many terminal emulators recognize constructs like
+    /// "/path/to/file:7:". However, standard grep output uses "-" for context
+    /// lines: set this option to "keep" to keep the original separator symbols.
+    pub grep_separator_symbol: String,
+
     /// Default language used for syntax highlighting when this cannot be
     /// inferred from a filename. It will typically make sense to set this in
     /// per-repository git config (.git/config)
