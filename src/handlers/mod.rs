@@ -7,8 +7,10 @@ pub mod draw;
 pub mod file_meta;
 pub mod file_meta_diff;
 pub mod file_meta_misc;
+pub mod grep;
 pub mod hunk;
 pub mod hunk_header;
+mod ripgrep_json;
 pub mod submodule;
 
 use crate::delta::{State, StateMachine};

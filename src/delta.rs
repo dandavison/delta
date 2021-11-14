@@ -23,6 +23,7 @@ pub enum State {
     SubmoduleLog, // In a submodule section, with gitconfig diff.submodule = log
     SubmoduleShort(String), // In a submodule section, with gitconfig diff.submodule = short
     Blame(String, Option<String>), // In a line of `git blame` output (commit, repeat_blame_line).
+    Grep(String, Option<String>), // In a line of `git grep` output (file, repeat_grep_line).
     Unknown,
     // The following elements are created when a line is wrapped to display it:
     HunkZeroWrapped,  // Wrapped unchanged line
@@ -121,6 +122,7 @@ impl<'a> StateMachine<'a> {
                 || self.handle_submodule_short_line()?
                 || self.handle_hunk_line()?
                 || self.handle_blame_line()?
+                || self.handle_grep_line()?
                 || self.should_skip_line()
                 || self.emit_line_unchanged()?;
         }
@@ -133,7 +135,13 @@ impl<'a> StateMachine<'a> {
     fn ingest_line(&mut self, raw_line_bytes: &[u8]) {
         // TODO: retain raw_line as Cow
         self.raw_line = String::from_utf8_lossy(raw_line_bytes).to_string();
-        if self.config.max_line_length > 0 && self.raw_line.len() > self.config.max_line_length {
+        if self.config.max_line_length > 0
+            && self.raw_line.len() > self.config.max_line_length
+            // We must not truncate ripgrep --json output
+            // TODO: An alternative might be to truncate `line` but retain
+            // `raw_line` untruncated?
+            && !self.raw_line.starts_with('{')
+        {
             self.raw_line = ansi::truncate_str(
                 &self.raw_line,
                 self.config.max_line_length,
