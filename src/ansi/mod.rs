@@ -207,20 +207,32 @@ mod tests {
     #[test]
     fn test_ansi_preserving_slice() {
         assert_eq!(ansi_preserving_slice("", 0), "");
-        assert_eq!(ansi_preserving_slice("a", 0), "a");
-        assert_eq!(ansi_preserving_slice("a", 1), "");
+        assert_eq!(ansi_preserving_slice("0", 0), "0");
+        assert_eq!(ansi_preserving_slice("0", 1), "");
+
+        let raw_string = "\x1b[1;35m0123456789\x1b[0m";
         assert_eq!(
-            ansi_preserving_slice("\x1b[1;35m-2222.2222.2222.2222\x1b[0m", 1),
-            "\x1b[1;35m2222.2222.2222.2222\x1b[0m"
+            ansi_preserving_slice(raw_string, 1),
+            "\x1b[1;35m123456789\x1b[0m"
         );
+
+        let raw_string = "\x1b[1;35m0123456789\x1b[0m"
         assert_eq!(
-            ansi_preserving_slice("\x1b[1;35m-2222.2222.2222.2222\x1b[0m", 15),
-            "\x1b[1;35m.2222\x1b[0m"
+            ansi_preserving_slice(raw_string, 7),
+            "\x1b[1;35m789\x1b[0m"
         );
+
+        let raw_string = "\x1b[1;36m0\x1b[m\x1b[1;36m123456789\x1b[m\n";
         assert_eq!(
-            ansi_preserving_slice("\x1b[1;36m-\x1b[m\x1b[1;36m2222·2222·2222·2222\x1b[m\n", 1),
-            "\x1b[1;36m\x1b[m\x1b[1;36m2222·2222·2222·2222\x1b[m\n"
-        )
+            ansi_preserving_slice(raw_string, 1),
+            "\x1b[1;36m\x1b[m\x1b[1;36m123456789\x1b[m\n"
+        );
+
+        let raw_string = "\x1b[1;36m012345\x1b[m\x1b[1;36m6789\x1b[m\n";
+        assert_eq!(
+            ansi_preserving_slice(raw_string, 3),
+            "\x1b[1;36m345\x1b[m\x1b[1;36m6789\x1b[m\n"
+        );
     }
 
     #[test]
