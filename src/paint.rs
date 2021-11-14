@@ -7,9 +7,10 @@ use syntect::parsing::{SyntaxReference, SyntaxSet};
 use unicode_segmentation::UnicodeSegmentation;
 
 use crate::ansi;
-use crate::config::{self, delta_unreachable};
+use crate::config::{self, delta_unreachable, Config};
 use crate::delta::State;
 use crate::edits;
+use crate::features::hyperlinks;
 use crate::features::line_numbers;
 use crate::features::side_by_side::ansifill;
 use crate::features::side_by_side::{self, available_line_width, LineSegments, PanelSide};
@@ -746,6 +747,61 @@ impl<'p> Painter<'p> {
                 }
             }
         }
+    }
+}
+
+pub fn paint_file_path_with_line_number(
+    line_number: Option<usize>,
+    plus_file: &str,
+    pad_line_number: bool,
+    separator: &str,
+    terminate_with_separator: bool,
+    file_style: Option<Style>,        // None means do not include file path
+    line_number_style: Option<Style>, // None means do not include line number
+    config: &Config,
+) -> String {
+    let mut file_with_line_number = Vec::new();
+    if let Some(file_style) = file_style {
+        file_with_line_number.push(file_style.paint(plus_file))
+    };
+    if let Some(line_number) = line_number {
+        if let Some(line_number_style) = line_number_style {
+            if !file_with_line_number.is_empty() {
+                file_with_line_number.push(ansi_term::ANSIString::from(separator));
+            }
+            file_with_line_number.push(line_number_style.paint(format!("{}", line_number)))
+        }
+    }
+    if terminate_with_separator {
+        file_with_line_number.push(ansi_term::ANSIGenericString::from(separator));
+    }
+    if pad_line_number {
+        // If requested we pad line numbers to a width of at least
+        // 3, so that we do not see any misalignment up to line
+        // number 999. However, see
+        // https://github.com/BurntSushi/ripgrep/issues/795 for
+        // discussion about aligning grep output.
+        match line_number {
+            Some(n) if n < 10 => {
+                file_with_line_number.push(ansi_term::ANSIGenericString::from("  "))
+            }
+            Some(n) if n < 100 => {
+                file_with_line_number.push(ansi_term::ANSIGenericString::from(" "))
+            }
+            _ => {}
+        }
+    }
+    let file_with_line_number = ansi_term::ANSIStrings(&file_with_line_number).to_string();
+    if config.hyperlinks && !file_with_line_number.is_empty() {
+        hyperlinks::format_osc8_file_hyperlink(
+            plus_file,
+            line_number,
+            &file_with_line_number,
+            config,
+        )
+        .into()
+    } else {
+        file_with_line_number
     }
 }
 
