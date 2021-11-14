@@ -10,6 +10,7 @@ use crate::config::delta_unreachable;
 use crate::delta::{self, State, StateMachine};
 use crate::format::{self, Placeholder};
 use crate::paint::BgShouldFill;
+use crate::paint::StyleSectionSpecifier;
 use crate::style::Style;
 use crate::utils;
 
@@ -84,7 +85,7 @@ impl<'a> StateMachine<'a> {
                 self.state = State::Blame(blame.commit.to_owned(), repeat_blame_line.to_owned());
                 self.painter.syntax_highlight_and_paint_line(
                     &format!("{}\n", blame.code),
-                    style,
+                    StyleSectionSpecifier::Style(style),
                     self.state.clone(),
                     BgShouldFill::default(),
                 );

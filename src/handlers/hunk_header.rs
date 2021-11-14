@@ -28,7 +28,7 @@ use super::draw;
 use crate::config::Config;
 use crate::delta::{self, State, StateMachine};
 use crate::features;
-use crate::paint::{BgShouldFill, Painter};
+use crate::paint::{BgShouldFill, Painter, StyleSectionSpecifier};
 use crate::style::DecorationStyle;
 
 impl<'a> StateMachine<'a> {
@@ -254,7 +254,7 @@ fn write_to_output_buffer(
     if !line.is_empty() {
         painter.syntax_highlight_and_paint_line(
             &line,
-            config.hunk_header_style,
+            StyleSectionSpecifier::Style(config.hunk_header_style),
             delta::State::HunkHeader("".to_owned(), "".to_owned()),
             BgShouldFill::No,
         );
