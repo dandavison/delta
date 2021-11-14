@@ -23,7 +23,7 @@
     show = delta
     log = delta
     reflog = delta
-    blame = delta  # see default-language to enable `git blame` syntax highlighting
+    blame = delta
 
 [interactive]
     diffFilter = delta --color-only
@@ -404,25 +404,7 @@ Line wrapping was implemented by @th1000s.
 
 ### git blame
 
-Set delta as the pager for `git blame`, along with the standard diff-generating git operations:
-
-```gitconfig
-[pager]
-    diff = delta
-    show = delta
-    log = delta
-    reflog = delta
-    blame = delta  # see default-language to enable `git blame` syntax highlighting
-```
-
-However, in order to activate syntax highlighting of `git blame` output, you must tell delta which language the file is written in by using the `default-language` option.
-If you are working in a repository that mostly contains files in a single language, the most convenient way to do this is by editing the _repository-specific_ git config file, i.e. the one at `/path/to/repo/.git/config`, as opposed to the one in your home directory:
-Add an entry like this, but using
-
-```gitconfig
-[delta]
-    default-language = rs  # substitute the language file extension you want here!
-```
+Set delta as the pager for `blame` in the `[pager]` section of your gitconfig. See the example at the [top of the page](#get-started).
 
 ### "Features": named groups of settings
 
