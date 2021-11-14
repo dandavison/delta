@@ -441,6 +441,21 @@ pub struct Opt {
     )]
     pub blame_timestamp_format: String,
 
+    #[structopt(long = "grep-match-style")]
+    /// Style (foreground, background, attributes) for grep matches. See STYLES
+    /// section. Defaults to plus-style.
+    pub grep_match_style: Option<String>,
+
+    #[structopt(long = "grep-match-file-style")]
+    /// Style (foreground, background, attributes) for grep match file paths. See STYLES
+    /// section. Defaults to hunk-header-file-path-style.
+    pub grep_match_file_style: Option<String>,
+
+    #[structopt(long = "grep-match-line-number-style")]
+    /// Style (foreground, background, attributes) for grep match line numbers. See STYLES
+    /// section. Defaults to hunk-header-line-number-style.
+    pub grep_match_line_number_style: Option<String>,
+
     /// Default language used for syntax highlighting when this cannot be
     /// inferred from a filename. It will typically make sense to set this in
     /// per-repository git config (.git/config)

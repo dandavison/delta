@@ -23,6 +23,7 @@
     show = delta
     log = delta
     blame = delta
+    grep = delta
     reflog = delta
 
 [interactive]
@@ -64,6 +65,7 @@ Code evolves, and we all spend time studying diffs. Delta aims to make this both
   - [Choosing colors (styles)](#choosing-colors-styles)
   - [Line numbers](#line-numbers)
   - [Side-by-side view](#side-by-side-view)
+  - [grep](#grep)
   - [git blame](#git-blame)
   - ["Features": named groups of settings](#features-named-groups-of-settings)
   - [Custom themes](#custom-themes)
@@ -152,6 +154,7 @@ Here's what `git show` can look like with git configured to use delta:
 - Git style strings (foreground color, background color, font attributes) are supported for >20 stylable elements
 - Side-by-side view with line-wrapping
 - Line numbering
+- Handles grep output with file paths from `rg`, `git grep`, `grep`, etc
 - `diff-highlight` and `diff-so-fancy` emulation modes
 - Stylable box/line decorations to draw attention to commit, file and hunk header sections.
 - Support for Git's `--color-moved` feature.
@@ -403,6 +406,13 @@ In contrast, the long replacement line in the right panel overflows by almost an
 
 For control over the details of line wrapping, see `--wrap-max-lines`, `--wrap-left-symbol`, `--wrap-right-symbol`, `--wrap-right-percent`, `--wrap-right-prefix-symbol`, `--inline-hint-style`.
 Line wrapping was implemented by @th1000s.
+
+### grep
+
+To use with `git grep`, set delta as the pager for `grep` in the `[pager]` section of your gitconfig. See the example at the [top of the page](#get-started).
+Output from other grep tools can be piped to delta: use `rg -Hn --color=always`, `grep -Hn --color=always`, etc.
+Grep matches are styled with `grep-match-style`, `grep-match-style`, and `grep-match-line-number-style`.
+Note that `git grep` can display the "function context" for matches and that delta handles this output specially: see the `-p` and `-W` options of `git grep`.
 
 ### git blame
 

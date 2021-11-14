@@ -58,6 +58,7 @@ impl Default for BgShouldFill {
 
 pub enum StyleSectionSpecifier<'l> {
     Style(Style),
+    StyleSections(LineSegments<'l, Style>),
 }
 
 impl<'p> Painter<'p> {
@@ -411,6 +412,9 @@ impl<'p> Painter<'p> {
     }
 
     /// Write painted line to the output buffer, with syntax-highlighting and `style` superimposed.
+    // Note that, if passing `style_sections` as
+    // `StyleSectionSpecifier::StyleSections`, then tabs must already have been
+    // expanded in the text.
     pub fn syntax_highlight_and_paint_line(
         &mut self,
         line: &str,
@@ -427,6 +431,7 @@ impl<'p> Painter<'p> {
         );
         let diff_style_sections = match style_sections {
             StyleSectionSpecifier::Style(style) => vec![vec![(style, lines[0].0.as_str())]],
+            StyleSectionSpecifier::StyleSections(style_sections) => vec![style_sections],
         };
         Painter::paint_lines(
             syntax_style_sections,
@@ -630,6 +635,7 @@ impl<'p> Painter<'p> {
             State::HunkHeader(_, _) => true,
             State::HunkMinus(Some(_)) | State::HunkPlus(Some(_)) => false,
             State::Blame(_, _) => true,
+            State::Grep(_, _) => true,
             _ => panic!(
                 "should_compute_syntax_highlighting is undefined for state {:?}",
                 state

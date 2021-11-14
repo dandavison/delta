@@ -210,7 +210,7 @@ fn get_file_extension_from_file_meta_line_file_path(path: &str) -> Option<&str> 
 }
 
 /// Attempt to parse input as a file path and return extension as a &str.
-fn get_extension(s: &str) -> Option<&str> {
+pub fn get_extension(s: &str) -> Option<&str> {
     let path = Path::new(s);
     path.extension()
         .and_then(|e| e.to_str())

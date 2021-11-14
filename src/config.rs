@@ -78,6 +78,9 @@ pub struct Config {
     pub git_config: Option<GitConfig>,
     pub git_minus_style: Style,
     pub git_plus_style: Style,
+    pub grep_match_file_style: Style,
+    pub grep_match_line_number_style: Style,
+    pub grep_match_style: Style,
     pub hunk_header_file_style: Style,
     pub hunk_header_line_number_style: Style,
     pub hunk_header_style_include_file_path: bool,
@@ -216,6 +219,22 @@ impl From<cli::Opt> for Config {
             _ => *style::GIT_DEFAULT_PLUS_STYLE,
         };
 
+        let grep_match_style = if let Some(s) = opt.grep_match_style {
+            Style::from_str(&s, None, None, opt.computed.true_color, false)
+        } else {
+            plus_emph_style
+        };
+        let grep_match_file_style = if let Some(s) = opt.grep_match_file_style {
+            Style::from_str(&s, None, None, opt.computed.true_color, false)
+        } else {
+            hunk_header_file_style
+        };
+        let grep_match_line_number_style = if let Some(s) = opt.grep_match_line_number_style {
+            Style::from_str(&s, None, None, opt.computed.true_color, false)
+        } else {
+            hunk_header_line_number_style
+        };
+
         let blame_palette = make_blame_palette(opt.blame_palette, opt.computed.is_light_mode);
 
         let file_added_label = opt.file_added_label;
@@ -282,6 +301,9 @@ impl From<cli::Opt> for Config {
             file_style,
             git_config: opt.git_config,
             git_config_entries: opt.git_config_entries,
+            grep_match_file_style,
+            grep_match_line_number_style,
+            grep_match_style,
             hunk_header_file_style,
             hunk_header_line_number_style,
             hunk_header_style,

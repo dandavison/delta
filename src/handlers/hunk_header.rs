@@ -154,7 +154,7 @@ fn write_hunk_header_raw(
     Ok(())
 }
 
-fn write_hunk_header(
+pub fn write_hunk_header(
     code_fragment: &str,
     line_numbers: &[(usize, usize)],
     painter: &mut Painter,
