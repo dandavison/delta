@@ -123,6 +123,21 @@ pub fn ansi_preserving_slice(s: &str, start: usize) -> String {
         .join("")
 }
 
+/// Return the byte index in `s` of the i-th text byte in `s`. I.e. `i` counts
+/// bytes in non-ANSI-escape-sequence content only.
+pub fn ansi_preserving_index(s: &str, i: usize) -> Option<usize> {
+    let mut index = 0;
+    for element in AnsiElementIterator::new(s) {
+        if let Element::Text(a, b) = element {
+            index += b - a;
+            if index > i {
+                return Some(b - (index - i));
+            }
+        }
+    }
+    None
+}
+
 fn ansi_strings_iterator(s: &str) -> impl Iterator<Item = (&str, bool)> {
     AnsiElementIterator::new(s).map(move |el| match el {
         Element::Csi(_, i, j) => (&s[i..j], true),
@@ -142,6 +157,8 @@ fn strip_ansi_codes_from_strings_iterator<'a>(
 
 #[cfg(test)]
 mod tests {
+    use crate::ansi::ansi_preserving_index;
+
     // Note that src/ansi/console_tests.rs contains additional test coverage for this module.
     use super::{
         ansi_preserving_slice, measure_text_width, parse_first_style,
@@ -205,34 +222,43 @@ mod tests {
     }
 
     #[test]
-    fn test_ansi_preserving_slice() {
+    fn test_ansi_preserving_slice_and_index() {
         assert_eq!(ansi_preserving_slice("", 0), "");
+        assert_eq!(ansi_preserving_index("", 0), None);
+
         assert_eq!(ansi_preserving_slice("0", 0), "0");
+        assert_eq!(ansi_preserving_index("0", 0), Some(0));
+
         assert_eq!(ansi_preserving_slice("0", 1), "");
+        assert_eq!(ansi_preserving_index("0", 1), None);
 
         let raw_string = "\x1b[1;35m0123456789\x1b[0m";
         assert_eq!(
             ansi_preserving_slice(raw_string, 1),
             "\x1b[1;35m123456789\x1b[0m"
         );
-
-        let raw_string = "\x1b[1;35m0123456789\x1b[0m"
-        assert_eq!(
-            ansi_preserving_slice(raw_string, 7),
-            "\x1b[1;35m789\x1b[0m"
-        );
+        assert_eq!(ansi_preserving_slice(raw_string, 7), "\x1b[1;35m789\x1b[0m");
+        assert_eq!(ansi_preserving_index(raw_string, 0), Some(7));
+        assert_eq!(ansi_preserving_index(raw_string, 1), Some(8));
+        assert_eq!(ansi_preserving_index(raw_string, 7), Some(14));
 
         let raw_string = "\x1b[1;36m0\x1b[m\x1b[1;36m123456789\x1b[m\n";
         assert_eq!(
             ansi_preserving_slice(raw_string, 1),
             "\x1b[1;36m\x1b[m\x1b[1;36m123456789\x1b[m\n"
         );
+        assert_eq!(ansi_preserving_index(raw_string, 0), Some(7));
+        assert_eq!(ansi_preserving_index(raw_string, 1), Some(18));
+        assert_eq!(ansi_preserving_index(raw_string, 7), Some(24));
 
         let raw_string = "\x1b[1;36m012345\x1b[m\x1b[1;36m6789\x1b[m\n";
         assert_eq!(
             ansi_preserving_slice(raw_string, 3),
             "\x1b[1;36m345\x1b[m\x1b[1;36m6789\x1b[m\n"
         );
+        assert_eq!(ansi_preserving_index(raw_string, 0), Some(7));
+        assert_eq!(ansi_preserving_index(raw_string, 1), Some(8));
+        assert_eq!(ansi_preserving_index(raw_string, 7), Some(24));
     }
 
     #[test]
