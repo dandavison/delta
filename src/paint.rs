@@ -55,6 +55,10 @@ impl Default for BgShouldFill {
     }
 }
 
+pub enum StyleSectionSpecifier<'l> {
+    Style(Style),
+}
+
 impl<'p> Painter<'p> {
     pub fn new(writer: &'p mut dyn Write, config: &'p config::Config) -> Self {
         let default_syntax = Self::get_syntax(&config.syntax_set, None);
@@ -409,7 +413,7 @@ impl<'p> Painter<'p> {
     pub fn syntax_highlight_and_paint_line(
         &mut self,
         line: &str,
-        style: Style,
+        style_sections: StyleSectionSpecifier,
         state: State,
         background_color_extends_to_terminal_width: BgShouldFill,
     ) {
@@ -420,7 +424,9 @@ impl<'p> Painter<'p> {
             self.highlighter.as_mut(),
             self.config,
         );
-        let diff_style_sections = vec![vec![(style, lines[0].0.as_str())]]; // TODO: compute style from state
+        let diff_style_sections = match style_sections {
+            StyleSectionSpecifier::Style(style) => vec![vec![(style, lines[0].0.as_str())]],
+        };
         Painter::paint_lines(
             syntax_style_sections,
             diff_style_sections,
