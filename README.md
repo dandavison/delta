@@ -22,8 +22,8 @@
     diff = delta
     show = delta
     log = delta
-    reflog = delta
     blame = delta
+    reflog = delta
 
 [interactive]
     diffFilter = delta --color-only
@@ -64,11 +64,13 @@ Code evolves, and we all spend time studying diffs. Delta aims to make this both
   - [Choosing colors (styles)](#choosing-colors-styles)
   - [Line numbers](#line-numbers)
   - [Side-by-side view](#side-by-side-view)
+  - [git blame](#git-blame)
   - ["Features": named groups of settings](#features-named-groups-of-settings)
   - [Custom themes](#custom-themes)
   - [diff-highlight and diff-so-fancy emulation](#diff-highlight-and-diff-so-fancy-emulation)
   - [--color-moved support](#--color-moved-support)
   - [Navigation keybindings for large diffs](#navigation-keybindings-for-large-diffs)
+  - [Git blame](#git-blame-1)
   - [24 bit color (truecolor)](#24-bit-color-truecolor)
   - [Using Delta with GNU Screen](#using-delta-with-gnu-screen)
   - [Using Delta on Windows](#using-delta-on-windows)
