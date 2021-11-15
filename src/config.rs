@@ -9,7 +9,6 @@ use syntect::parsing::SyntaxSet;
 use unicode_segmentation::UnicodeSegmentation;
 
 use crate::ansi;
-use crate::bat_utils::output::PagingMode;
 use crate::cli;
 use crate::color;
 use crate::delta::State;
@@ -21,8 +20,9 @@ use crate::git_config::{GitConfig, GitConfigEntry};
 use crate::minusplus::MinusPlus;
 use crate::paint::BgFillMethod;
 use crate::style::{self, Style};
-use crate::syntect_utils::FromDeltaStyle;
 use crate::tests::TESTING;
+use crate::utils::bat::output::PagingMode;
+use crate::utils::syntect::FromDeltaStyle;
 use crate::wrapping::WrapConfig;
 
 pub const INLINE_SYMBOL_WIDTH_1: usize = 1;
@@ -647,9 +647,9 @@ pub const HEADER_LEN: usize = 7;
 
 #[cfg(test)]
 pub mod tests {
-    use crate::bat_utils::output::PagingMode;
     use crate::cli;
     use crate::tests::integration_test_utils;
+    use crate::utils::bat::output::PagingMode;
     use std::fs::remove_file;
 
     #[test]

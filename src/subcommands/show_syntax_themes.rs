@@ -2,12 +2,12 @@ use std::io::{self, ErrorKind, Read, Write};
 
 use structopt::StructOpt;
 
-use crate::bat_utils::assets::HighlightingAssets;
-use crate::bat_utils::output::{OutputType, PagingMode};
 use crate::cli;
 use crate::config;
 use crate::delta;
 use crate::options::theme::is_light_syntax_theme;
+use crate::utils::bat::assets::HighlightingAssets;
+use crate::utils::bat::output::{OutputType, PagingMode};
 
 #[cfg(not(tarpaulin_include))]
 pub fn show_syntax_themes() -> std::io::Result<()> {

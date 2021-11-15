@@ -6,8 +6,6 @@ use std::str::FromStr;
 use console::Term;
 use structopt::clap;
 
-use crate::bat_utils::assets::HighlightingAssets;
-use crate::bat_utils::output::PagingMode;
 use crate::cli;
 use crate::config;
 use crate::env;
@@ -17,6 +15,8 @@ use crate::features;
 use crate::git_config::{GitConfig, GitConfigEntry};
 use crate::options::option_value::{OptionValue, ProvenancedOptionValue};
 use crate::options::theme;
+use crate::utils::bat::assets::HighlightingAssets;
+use crate::utils::bat::output::PagingMode;
 
 macro_rules! set_options {
     ([$( $field_ident:ident ),* ],
@@ -644,9 +644,9 @@ fn set_git_config_entries(opt: &mut cli::Opt, git_config: &mut GitConfig) {
 pub mod tests {
     use std::fs::remove_file;
 
-    use crate::bat_utils::output::PagingMode;
     use crate::cli;
     use crate::tests::integration_test_utils;
+    use crate::utils::bat::output::PagingMode;
 
     #[test]
     fn test_options_can_be_set_in_git_config() {

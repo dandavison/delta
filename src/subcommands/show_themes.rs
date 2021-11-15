@@ -1,11 +1,11 @@
 use std::io::{self, ErrorKind, Read};
 
-use crate::bat_utils::output::{OutputType, PagingMode};
 use crate::cli;
 use crate::config;
 use crate::delta;
 use crate::git_config;
 use crate::options::get::get_themes;
+use crate::utils::bat::output::{OutputType, PagingMode};
 
 pub fn show_themes(dark: bool, light: bool, computed_theme_is_light: bool) -> std::io::Result<()> {
     use std::io::BufReader;

@@ -5,8 +5,6 @@ extern crate error_chain;
 
 mod align;
 mod ansi;
-#[cfg(not(tarpaulin_include))]
-mod bat_utils;
 mod cli;
 mod color;
 mod config;
@@ -26,7 +24,6 @@ mod utils;
 mod wrapping;
 
 mod subcommands;
-mod syntect_utils;
 
 mod tests;
 
@@ -35,9 +32,9 @@ use std::process;
 
 use bytelines::ByteLinesReader;
 
-use crate::bat_utils::assets::{list_languages, HighlightingAssets};
-use crate::bat_utils::output::OutputType;
 use crate::delta::delta;
+use crate::utils::bat::assets::{list_languages, HighlightingAssets};
+use crate::utils::bat::output::OutputType;
 
 pub fn fatal<T>(errmsg: T) -> !
 where

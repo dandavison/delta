@@ -2,13 +2,13 @@ use std::io::Write;
 
 use itertools::Itertools;
 
-use crate::bat_utils::output::PagingMode;
 use crate::cli;
 use crate::config;
 use crate::features::side_by_side::{Left, Right};
 use crate::minusplus::*;
 use crate::paint::BgFillMethod;
 use crate::style;
+use crate::utils::bat::output::PagingMode;
 
 pub fn show_config(config: &config::Config, writer: &mut dyn Write) -> std::io::Result<()> {
     // styles first

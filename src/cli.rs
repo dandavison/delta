@@ -8,10 +8,10 @@ use structopt::{clap, StructOpt};
 use syntect::highlighting::Theme as SyntaxTheme;
 use syntect::parsing::SyntaxSet;
 
-use crate::bat_utils::assets::HighlightingAssets;
-use crate::bat_utils::output::PagingMode;
 use crate::git_config::{GitConfig, GitConfigEntry};
 use crate::options;
+use crate::utils::bat::assets::HighlightingAssets;
+use crate::utils::bat::output::PagingMode;
 
 // No Default trait as this ignores `default_value = ..`
 #[derive(StructOpt)]

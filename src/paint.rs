@@ -777,8 +777,8 @@ fn is_whitespace_error(sections: &[(Style, &str)]) -> bool {
 mod superimpose_style_sections {
     use syntect::highlighting::Style as SyntectStyle;
 
-    use crate::bat_utils::terminal::to_ansi_color;
     use crate::style::Style;
+    use crate::utils::bat::terminal::to_ansi_color;
 
     pub fn superimpose_style_sections(
         sections_1: &[(SyntectStyle, &str)],
