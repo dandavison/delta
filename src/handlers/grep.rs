@@ -376,5 +376,14 @@ mod tests {
                 code: "            if self.source == Source::Unknown {",
             })
         );
+        assert_eq!(
+            parse_grep_line("etc/examples/119-within-line-edits:4:repo=$(mktemp -d)"),
+            Some(GrepLine {
+                file: "etc/examples/119-within-line-edits",
+                line_number: Some(4),
+                line_type: LineType::Match,
+                code: "repo=$(mktemp -d)",
+            })
+        );
     }
 }
