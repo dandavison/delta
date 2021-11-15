@@ -47,6 +47,13 @@ version = "4.6.0"
 default-features = false
 features = ["parsing", "assets", "yaml-load", "dump-load", "regex-onig"]
 
+[dependencies.sysinfo]
+# 0.20.* requires rustc 1.54
+version = "0.19.2"
+# no default features to disable the use of threads
+default-features = false
+features = []
+
 [dependencies.error-chain]
 version = "0.12.4"
 default-features = false
