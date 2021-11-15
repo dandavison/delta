@@ -516,9 +516,9 @@ If despite having those settings you still only get a limited set of colors, you
 
 - If available for your OS, get a different package of Screen. Otherwise
 - Build your own binary :
-    * Download and extract a release tarball from https://ftp.gnu.org/gnu/screen/
-    * `cd` into the newly extracted folder
-    * Follow the instructions in the `INSTALL` file, and when running the `./configure` command apply the `--enable-colors256` flag.
+  - Download and extract a release tarball from https://ftp.gnu.org/gnu/screen/
+  - `cd` into the newly extracted folder
+  - Follow the instructions in the `INSTALL` file, and when running the `./configure` command apply the `--enable-colors256` flag.
 
 ### Using Delta on Windows
 
