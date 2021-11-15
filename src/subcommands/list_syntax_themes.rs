@@ -2,8 +2,8 @@ use std::io::{self, Write};
 
 use itertools::Itertools;
 
-use crate::bat_utils::assets::HighlightingAssets;
 use crate::options::theme::is_light_syntax_theme;
+use crate::utils::bat::assets::HighlightingAssets;
 
 #[cfg(not(tarpaulin_include))]
 pub fn list_syntax_themes() -> std::io::Result<()> {

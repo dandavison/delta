@@ -1,5 +1,5 @@
 // Based on code from https://github.com/sharkdp/bat a1b9334a44a2c652f52dddaa83dbacba57372468
-// See src/bat_utils/LICENSE
+// See src/utils/bat/LICENSE
 
 use std::fs::File;
 use std::io::{self, BufReader, Write};
@@ -11,8 +11,8 @@ use syntect::dumps::{from_binary, from_reader};
 use syntect::highlighting::ThemeSet;
 use syntect::parsing::SyntaxSet;
 
-use crate::bat_utils::dirs::PROJECT_DIRS;
 use crate::errors::*;
+use crate::utils::bat::dirs::PROJECT_DIRS;
 
 pub struct HighlightingAssets {
     pub syntax_set: SyntaxSet,
@@ -25,11 +25,11 @@ impl HighlightingAssets {
     }
 
     fn get_integrated_syntaxset() -> SyntaxSet {
-        from_binary(include_bytes!("../../etc/assets/syntaxes.bin"))
+        from_binary(include_bytes!("../../../etc/assets/syntaxes.bin"))
     }
 
     fn get_integrated_themeset() -> ThemeSet {
-        from_binary(include_bytes!("../../etc/assets/themes.bin"))
+        from_binary(include_bytes!("../../../etc/assets/themes.bin"))
     }
 
     fn from_cache() -> Result<Self> {

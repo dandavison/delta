@@ -8,9 +8,9 @@
 /// default is selected.
 use syntect::highlighting::ThemeSet;
 
-use crate::bat_utils::assets::HighlightingAssets;
 use crate::cli;
 use crate::env;
+use crate::utils::bat::assets::HighlightingAssets;
 
 #[allow(non_snake_case)]
 pub fn set__is_light_mode__syntax_theme__syntax_set(
