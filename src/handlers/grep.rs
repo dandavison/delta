@@ -202,7 +202,7 @@ pub struct GrepLine<'a> {
     pub code: &'a str,
 }
 
-#[derive(Debug, PartialEq)]
+#[derive(Clone, Copy, Debug, PartialEq)]
 pub enum LineType {
     ContextHeader,
     Match,
@@ -214,12 +214,28 @@ lazy_static! {
     static ref GREP_LINE_REGEX: Regex = Regex::new(
         r"(?x)
 ^
-([^\ ].*?\.[^-.=: ]+)    # 1. file name (TODO: it must have an extension)
+(                        # 1. file name
+    [^\ ]                    # a file name cannot start with whitespace
+    .*?                      # anything, non-greedily
+    [^\ ]                    # a file name cannot end with whitespace
+)    
 (?:
-    [-=:]([0-9]+)        # 2. optional line number
-)?
-([-=:])                  # 3. line-type marker
-(.*)                     # 4. code (i.e. line contents)
+    (                    
+        :                # 2. match marker
+        (?:([0-9]+)?:)   # 3. optional line number followed by second match marker
+    )
+    |
+    (
+        -                # 4. nomatch marker
+        (?:([0-9]+)?-)   # 5. optional line number followed by second nomatch marker
+    )
+    |
+    (
+        =                # 6. match marker
+        (?:([0-9]+)?=)   # 7. optional line number followed by second header marker
+    )
+)
+(.*)                     # 8. code (i.e. line contents)
 $
 "
     )
@@ -229,14 +245,28 @@ $
 pub fn parse_grep_line(line: &str) -> Option<GrepLine> {
     let caps = GREP_LINE_REGEX.captures(line)?;
     let file = caps.get(1).unwrap().as_str();
-    let line_number = caps.get(2).map(|m| m.as_str().parse().ok()).flatten();
-    let line_type = caps.get(3).map(|m| m.as_str()).try_into().ok()?;
-    let code = caps.get(4).unwrap().as_str();
+    let (line_type, line_number) = &[
+        (2, LineType::Match),
+        (4, LineType::NoMatch),
+        (6, LineType::ContextHeader),
+    ]
+    .iter()
+    .find_map(|(i, line_type)| {
+        if caps.get(*i).is_some() {
+            let line_number: Option<usize> =
+                caps.get(i + 1).map(|m| m.as_str().parse().ok()).flatten();
+            Some((*line_type, line_number))
+        } else {
+            None
+        }
+    })
+    .unwrap(); // The regex matches so one of the three alternatrives must have matched
+    let code = caps.get(8).unwrap().as_str();
 
     Some(GrepLine {
         file,
-        line_number,
-        line_type,
+        line_number: *line_number,
+        line_type: *line_type,
         code,
     })
 }
