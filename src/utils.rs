@@ -295,6 +295,10 @@ mod tests {
         assert!(parent.is_some());
 
         // Tests that caller is something like "cargo test"
-        assert!(parent.unwrap().cmd().iter().any(|a| a == "test"));
+        assert!(parent
+            .unwrap()
+            .cmd()
+            .iter()
+            .any(|a| a == "test" || a == "tarpaulin"));
     }
 }
