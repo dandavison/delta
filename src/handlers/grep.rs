@@ -73,7 +73,7 @@ impl<'a> StateMachine<'a> {
                                     &grep.line_type,
                                     output_config.add_navigate_marker_to_matches
                                 ) {
-                                    (LineType::Hit, true) => "• ",
+                                    (LineType::Match, true) => "• ",
                                     (_, true) => "  ",
                                     _ => "",
                                 }
@@ -95,7 +95,7 @@ impl<'a> StateMachine<'a> {
                         )?;
 
                         // Emit code line
-                        let code_style_sections = if matches!(&grep.line_type, LineType::Hit) {
+                        let code_style_sections = if matches!(&grep.line_type, LineType::Match) {
                             // HACK: We need tabs expanded, and we need the &str
                             // passed to `get_code_style_sections` to live long
                             // enough.
@@ -205,8 +205,8 @@ pub struct GrepLine<'a> {
 #[derive(Debug, PartialEq)]
 pub enum LineType {
     ContextHeader,
-    Hit,
-    NoHit,
+    Match,
+    NoMatch,
 }
 
 // See tests for example grep lines
@@ -245,9 +245,9 @@ impl TryFrom<Option<&str>> for LineType {
     type Error = ();
     fn try_from(from: Option<&str>) -> Result<Self, Self::Error> {
         match from {
+            Some(marker) if marker == ":" => Ok(LineType::Match),
+            Some(marker) if marker == "-" => Ok(LineType::NoMatch),
             Some(marker) if marker == "=" => Ok(LineType::ContextHeader),
-            Some(marker) if marker == ":" => Ok(LineType::Hit),
-            Some(marker) if marker == "-" => Ok(LineType::NoHit),
             _ => Err(()),
         }
     }
@@ -265,7 +265,7 @@ mod tests {
             Some(GrepLine {
                 file: "src/config.rs",
                 line_number: None,
-                line_type: LineType::Hit,
+                line_type: LineType::Match,
                 code: "use crate::minusplus::MinusPlus;",
             })
         );
@@ -276,7 +276,7 @@ mod tests {
             Some(GrepLine {
                 file: "src/config.rs",
                 line_number: Some(21),
-                line_type: LineType::Hit,
+                line_type: LineType::Match,
                 code: "use crate::minusplus::MinusPlus;",
             })
         );
@@ -296,7 +296,7 @@ mod tests {
             Some(GrepLine {
                 file: "src/config.rs",
                 line_number: None,
-                line_type: LineType::NoHit,
+                line_type: LineType::NoMatch,
                 code: "    pub available_terminal_width: usize,",
             })
         );
@@ -307,7 +307,7 @@ mod tests {
             Some(GrepLine {
                 file: "src/config.rs",
                 line_number: None,
-                line_type: LineType::Hit,
+                line_type: LineType::Match,
                 code: "    pub line_numbers_style_minusplus: MinusPlus<Style>,",
             })
         );
@@ -327,7 +327,7 @@ mod tests {
             Some(GrepLine {
                 file: "src/config.rs",
                 line_number: Some(58),
-                line_type: LineType::NoHit,
+                line_type: LineType::NoMatch,
                 code: "    pub available_terminal_width: usize,",
             })
         );
@@ -338,7 +338,7 @@ mod tests {
             Some(GrepLine {
                 file: "src/config.rs",
                 line_number: Some(95),
-                line_type: LineType::Hit,
+                line_type: LineType::Match,
                 code: "    pub line_numbers_style_minusplus: MinusPlus<Style>,",
             })
         );
@@ -354,7 +354,7 @@ mod tests {
             Some(GrepLine {
                 file: "src/con-fig.rs",
                 line_number: None,
-                line_type: LineType::Hit,
+                line_type: LineType::Match,
                 code: "use crate::minusplus::MinusPlus;",
             })
         );
@@ -363,7 +363,7 @@ mod tests {
             Some(GrepLine {
                 file: "src/con-fig.rs",
                 line_number: None,
-                line_type: LineType::NoHit,
+                line_type: LineType::NoMatch,
                 code: "use crate::minusplus::MinusPlus;",
             })
         );
@@ -372,7 +372,7 @@ mod tests {
             Some(GrepLine {
                 file: "de-lta.rs",
                 line_number: None,
-                line_type: LineType::NoHit,
+                line_type: LineType::NoMatch,
                 code: "            if self.source == Source::Unknown {",
             })
         );
