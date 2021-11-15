@@ -58,7 +58,7 @@ Code evolves, and we all spend time studying diffs. Delta aims to make this both
 - [Installation](#installation)
 - [Configuration](#configuration)
   - [Git config file](#git-config-file)
-  - [Environment](#environment)
+  - [How delta works](#how-delta-works)
 - [Usage](#usage)
   - [Choosing colors (styles)](#choosing-colors-styles)
   - [Line numbers](#line-numbers)
