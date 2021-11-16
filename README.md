@@ -64,13 +64,12 @@ Code evolves, and we all spend time studying diffs. Delta aims to make this both
   - [Choosing colors (styles)](#choosing-colors-styles)
   - [Line numbers](#line-numbers)
   - [Side-by-side view](#side-by-side-view)
-  - [git blame](#git-blame)
   - ["Features": named groups of settings](#features-named-groups-of-settings)
   - [Custom themes](#custom-themes)
   - [diff-highlight and diff-so-fancy emulation](#diff-highlight-and-diff-so-fancy-emulation)
   - [--color-moved support](#--color-moved-support)
   - [Navigation keybindings for large diffs](#navigation-keybindings-for-large-diffs)
-  - [Git blame](#git-blame-1)
+  - [Git blame](#git-blame)
   - [24 bit color (truecolor)](#24-bit-color-truecolor)
   - [Using Delta with GNU Screen](#using-delta-with-gnu-screen)
   - [Using Delta on Windows](#using-delta-on-windows)
@@ -411,10 +410,6 @@ In contrast, the long replacement line in the right panel overflows by almost an
 For control over the details of line wrapping, see `--wrap-max-lines`, `--wrap-left-symbol`, `--wrap-right-symbol`, `--wrap-right-percent`, `--wrap-right-prefix-symbol`, `--inline-hint-style`.
 Line wrapping was implemented by @th1000s.
 
-### git blame
-
-Set delta as the pager for `blame` in the `[pager]` section of your gitconfig. See the example at the [top of the page](#get-started).
-
 ### "Features": named groups of settings
 
 All delta options can go under the `[delta]` section in your git config file. However, you can also use named "features" to keep things organized: these are sections in git config like `[delta "my-feature"]`. Here's an example using two custom features:
@@ -503,9 +498,9 @@ Use the `navigate` feature to activate navigation keybindings. In this mode, pre
 
 ### Git blame
 
-Delta will render `git blame` output in its own way, if you have `pager.blame = delta` set in your `gitconfig`. Example:
+Set delta as the pager for `blame` in the `[pager]` section of your gitconfig. See the example at the [top of the page](#get-started).
 
-<table><tr><td><img width=300px src="https://user-images.githubusercontent.com/52205/140330813-91b198af-c396-4c5e-9a30-26ee35b78e7e.png" alt="image" /></td></tr></table>
+<table><tr><td><img width=600px src="https://user-images.githubusercontent.com/52205/141891376-1fdb87dc-1d9c-4ad6-9d72-eeb19a8aeb0b.png" alt="image" /></td></tr></table>
 
 ### 24 bit color (truecolor)
 
