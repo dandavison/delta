@@ -258,12 +258,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "doc-comment"
-version = "0.3.3"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "fea41bba32d969b513997752735605054bc0dfa92b4c56bf1189f2e174be7a10"
-
-[[package]]
 name = "either"
 version = "1.6.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -906,13 +900,12 @@ dependencies = [
 
 [[package]]
 name = "sysinfo"
-version = "0.19.2"
+version = "0.21.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "9e7de153d0438a648bb71e06e300e54fc641685e96af96d49b843f43172d341c"
+checksum = "fb6c2c4a6ca462f07ca89841a2618dca6e405304d19ae238997e64915d89f513"
 dependencies = [
  "cfg-if 1.0.0",
  "core-foundation-sys",
- "doc-comment",
  "libc",
  "ntapi",
  "once_cell",
