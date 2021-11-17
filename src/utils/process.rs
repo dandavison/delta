@@ -14,7 +14,7 @@ pub enum ProcessArgs<T> {
 }
 
 pub fn git_blame_filename_extension() -> Option<String> {
-    calling_process_cmdline(blame::guess_git_blame_filename_extension)
+    calling_process_cmdline(ProcInfo::new(), blame::guess_git_blame_filename_extension)
 }
 
 mod blame {
@@ -54,43 +54,177 @@ mod blame {
     }
 
     pub fn guess_git_blame_filename_extension(args: &[String]) -> ProcessArgs<String> {
-        {
-            let mut it = args.iter();
-            match (it.next(), it.next()) {
-                // git blame or git -C/-c etc. and then (maybe) blame
-                (Some(git), Some(blame))
-                    if git.contains("git") && (blame == "blame" || blame.starts_with('-')) => {}
-                _ => return ProcessArgs::OtherProcess,
-            }
-        }
-
-        let args = args.iter().skip(2).map(|s| s.as_str());
+        let all_args = args.iter().map(|s| s.as_str());
 
         // See git(1) and git-blame(1). Some arguments separate their parameter with space or '=', e.g.
         // --date 2015 or --date=2015.
         let git_blame_options_with_parameter =
             "-C -c -L --since --ignore-rev --ignore-revs-file --contents --reverse --date";
 
-        match skip_uninteresting_args(args, git_blame_options_with_parameter.split(' '))
-            .last()
-            .and_then(|&s| s.split('.').last())
-            .map(str::to_owned)
-        {
-            Some(ext) => ProcessArgs::Args(ext),
-            None => ProcessArgs::ArgError,
+        let selected_args =
+            skip_uninteresting_args(all_args, git_blame_options_with_parameter.split(' '));
+
+        match selected_args.as_slice() {
+            [_git, "blame", .., last_arg] => match last_arg.split('.').last() {
+                Some(arg) => ProcessArgs::Args(arg.to_string()),
+                None => ProcessArgs::ArgError,
+            },
+            [_git, "blame"] => ProcessArgs::ArgError,
+            _ => ProcessArgs::OtherProcess,
         }
     }
 } // mod blame
 
-fn calling_process_cmdline<F, T>(extract_args: F) -> Option<T>
+struct ProcInfo {
+    info: sysinfo::System,
+}
+impl ProcInfo {
+    fn new() -> Self {
+        ProcInfo {
+            info: sysinfo::System::new(),
+        }
+    }
+}
+
+trait ProcActions {
+    fn cmd(&self) -> &[String];
+    fn parent(&self) -> Option<Pid>;
+    fn start_time(&self) -> u64;
+}
+
+impl<T> ProcActions for T
 where
+    T: ProcessExt,
+{
+    fn cmd(&self) -> &[String] {
+        ProcessExt::cmd(self)
+    }
+    fn parent(&self) -> Option<Pid> {
+        ProcessExt::parent(self)
+    }
+    fn start_time(&self) -> u64 {
+        ProcessExt::start_time(self)
+    }
+}
+
+trait ProcessInterface {
+    type Out: ProcActions;
+
+    fn my_pid(&self) -> Pid;
+
+    fn process(&self, pid: Pid) -> Option<&Self::Out>;
+    fn processes(&self) -> &HashMap<Pid, Self::Out>;
+
+    fn refresh_process(&mut self, pid: Pid) -> bool;
+    fn refresh_processes(&mut self);
+
+    fn parent_process(&mut self, pid: Pid) -> Option<&Self::Out> {
+        self.refresh_process(pid).then(|| ())?;
+        let parent_pid = self.process(pid)?.parent()?;
+        self.refresh_process(parent_pid).then(|| ())?;
+        self.process(parent_pid)
+    }
+    fn naive_sibling_process(&mut self, pid: Pid) -> Option<&Self::Out> {
+        let sibling_pid = pid - 1;
+        self.refresh_process(sibling_pid).then(|| ())?;
+        self.process(sibling_pid)
+    }
+    fn find_sibling_process<F, T>(&mut self, pid: Pid, extract_args: F) -> Option<T>
+    where
+        F: Fn(&[String]) -> ProcessArgs<T>,
+        Self: Sized,
+    {
+        self.refresh_processes();
+
+        let this_start_time = self.process(pid)?.start_time();
+
+        /*
+
+        $ start_blame_of.sh src/main.rs | delta
+
+        \_ /usr/bin/some-terminal-emulator
+        |   \_ common_git_and_delta_ancestor
+        |       \_ /bin/sh /opt/git/start_blame_of.sh src/main.rs
+        |       |   \_ /bin/sh /opt/some/wrapper git blame src/main.rs
+        |       |       \_ /usr/bin/git blame src/main.rs
+        |       \_ /bin/sh /opt/some/wrapper delta
+        |           \_ delta
+
+        Walk up the process tree of delta and of every matching other process, counting the steps
+        along the way.
+        Find the common ancestor processes, calculate the distance, and select the one with the shortest.
+
+        */
+
+        let mut pid_distances = HashMap::<Pid, usize>::new();
+        let mut collect_parent_pids = |pid, distance| {
+            pid_distances.insert(pid, distance);
+        };
+
+        iter_parents(self, pid, &mut collect_parent_pids);
+
+        let process_start_time_difference_less_than_3s = |a, b| (a as i64 - b as i64).abs() < 3;
+
+        let cmdline_of_closest_matching_process = self
+            .processes()
+            .iter()
+            .filter(|(_, proc)| {
+                process_start_time_difference_less_than_3s(this_start_time, proc.start_time())
+            })
+            .filter_map(|(&pid, proc)| match extract_args(proc.cmd()) {
+                ProcessArgs::Args(args) => {
+                    let mut length_of_process_chain = usize::MAX;
+
+                    let mut sum_distance = |pid, distance| {
+                        if length_of_process_chain == usize::MAX {
+                            if let Some(distance_to_first_common_parent) = pid_distances.get(&pid) {
+                                length_of_process_chain =
+                                    distance_to_first_common_parent + distance;
+                            }
+                        }
+                    };
+                    iter_parents(self, pid, &mut sum_distance);
+
+                    Some((length_of_process_chain, args))
+                }
+                _ => None,
+            })
+            .min_by_key(|(distance, _)| *distance)
+            .map(|(_, ext)| ext);
+
+        cmdline_of_closest_matching_process
+    }
+}
+
+impl ProcessInterface for ProcInfo {
+    type Out = Process;
+
+    fn my_pid(&self) -> Pid {
+        std::process::id() as Pid
+    }
+    fn refresh_process(&mut self, pid: Pid) -> bool {
+        self.info.refresh_process(pid)
+    }
+    fn process(&self, pid: Pid) -> Option<&Self::Out> {
+        self.info.process(pid)
+    }
+    fn processes(&self) -> &HashMap<Pid, Self::Out> {
+        self.info.processes()
+    }
+    fn refresh_processes(&mut self) {
+        self.info.refresh_processes()
+    }
+}
+
+fn calling_process_cmdline<P, F, T>(mut info: P, extract_args: F) -> Option<T>
+where
+    P: ProcessInterface,
     F: Fn(&[String]) -> ProcessArgs<T>,
 {
-    let mut info = sysinfo::System::new();
-    let my_pid = std::process::id() as Pid;
+    let my_pid = info.my_pid();
 
     // 1) Try the parent process. If delta is set as the pager in git, then git is the parent process.
-    let parent = parent_process(&mut info, my_pid)?;
+    let parent = info.parent_process(my_pid)?;
 
     match extract_args(parent.cmd()) {
         ProcessArgs::Args(ext) => return Some(ext),
@@ -100,7 +234,7 @@ where
         // `git blame foo.txt | delta`. When the shell sets up the pipe it creates the two processes, the pids
         // are usually consecutive, so check if the process with `my_pid - 1` matches.
         ProcessArgs::OtherProcess => {
-            let sibling = naive_sibling_process(&mut info, my_pid);
+            let sibling = info.naive_sibling_process(my_pid);
             if let Some(proc) = sibling {
                 if let ProcessArgs::Args(ext) = extract_args(proc.cmd()) {
                     return Some(ext);
@@ -135,31 +269,19 @@ where
     567  |       \_ less --RAW-CONTROL-CHARS --quit-if-one-screen
 
     */
-    find_sibling_process(&mut info, my_pid, extract_args)
-}
-
-fn parent_process(info: &mut sysinfo::System, my_pid: Pid) -> Option<&Process> {
-    info.refresh_process(my_pid).then(|| ())?;
-
-    let parent_pid = info.process(my_pid)?.parent()?;
-    info.refresh_process(parent_pid).then(|| ())?;
-    info.process(parent_pid)
-}
-
-fn naive_sibling_process(info: &mut sysinfo::System, my_pid: Pid) -> Option<&Process> {
-    let sibling_pid = my_pid - 1;
-    info.refresh_process(sibling_pid).then(|| ())?;
-    info.process(sibling_pid)
+    info.find_sibling_process(my_pid, extract_args)
 }
 
 // Walk up the process tree, calling `f` with the pid and the distance to `starting_pid`.
 // Prerequisite: `info.refresh_processes()` has been called.
-fn iter_parents<F>(info: &sysinfo::System, starting_pid: Pid, f: F)
+fn iter_parents<P, F>(info: &P, starting_pid: Pid, f: F)
 where
+    P: ProcessInterface,
     F: FnMut(Pid, usize),
 {
-    fn inner_iter_parents<F>(info: &sysinfo::System, pid: Pid, mut f: F, distance: usize)
+    fn inner_iter_parents<P, F>(info: &P, pid: Pid, mut f: F, distance: usize)
     where
+        P: ProcessInterface,
         F: FnMut(Pid, usize),
     {
         if let Some(proc) = info.process(pid) {
@@ -172,70 +294,6 @@ where
     inner_iter_parents(info, starting_pid, f, 1)
 }
 
-fn find_sibling_process<F, T>(info: &mut sysinfo::System, my_pid: Pid, extract_args: F) -> Option<T>
-where
-    F: Fn(&[String]) -> ProcessArgs<T>,
-{
-    info.refresh_processes();
-
-    let this_start_time = info.process(my_pid)?.start_time();
-
-    /*
-
-    $ start_blame_of.sh src/main.rs | delta
-
-    \_ /usr/bin/some-terminal-emulator
-    |   \_ common_git_and_delta_ancestor
-    |       \_ /bin/sh /opt/git/start_blame_of.sh src/main.rs
-    |       |   \_ /bin/sh /opt/some/wrapper git blame src/main.rs
-    |       |       \_ /usr/bin/git blame src/main.rs
-    |       \_ /bin/sh /opt/some/wrapper delta
-    |           \_ delta
-
-    Walk up the process tree of delta and of every matching other process, counting the steps
-    along the way.
-    Find the common ancestor processes, calculate the distance, and select the one with the shortest.
-
-    */
-
-    let mut pid_distances = HashMap::<Pid, usize>::new();
-    let mut collect_parent_pids = |pid, distance| {
-        pid_distances.insert(pid, distance);
-    };
-
-    iter_parents(info, my_pid, &mut collect_parent_pids);
-
-    let process_start_time_difference_less_than_3s = |a, b| (a as i64 - b as i64).abs() < 3;
-
-    let cmdline_of_closest_matching_process = info
-        .processes()
-        .iter()
-        .filter(|(_, proc)| {
-            process_start_time_difference_less_than_3s(this_start_time, proc.start_time())
-        })
-        .filter_map(|(&pid, proc)| match extract_args(proc.cmd()) {
-            ProcessArgs::Args(args) => {
-                let mut length_of_process_chain = usize::MAX;
-
-                let mut sum_distance = |pid, distance| {
-                    if length_of_process_chain == usize::MAX {
-                        if let Some(distance_to_first_common_parent) = pid_distances.get(&pid) {
-                            length_of_process_chain = distance_to_first_common_parent + distance;
-                        }
-                    }
-                };
-                iter_parents(info, pid, &mut sum_distance);
-
-                Some((length_of_process_chain, args))
-            }
-            _ => None,
-        })
-        .min_by_key(|(distance, _)| *distance)
-        .map(|(_, ext)| ext);
-
-    cmdline_of_closest_matching_process
-}
-
 #[cfg(test)]
 mod tests {
     use super::blame::*;
@@ -245,7 +303,6 @@ mod tests {
 
     #[test]
     fn test_guess_git_blame_filename_extension() {
-        use ProcessArgs::ArgError;
         use ProcessArgs::Args;
 
         fn make_string_vec(args: &[&str]) -> Vec<String> {
@@ -291,7 +348,10 @@ mod tests {
         );
 
         let args = make_string_vec(&["git", "blame", "--help.txt"]);
-        assert_eq!(guess_git_blame_filename_extension(&args), ArgError);
+        assert_eq!(
+            guess_git_blame_filename_extension(&args),
+            ProcessArgs::ArgError
+        );
 
         let args = make_string_vec(&["git", "-c", "a=b", "blame", "main.rs"]);
         assert_eq!(guess_git_blame_filename_extension(&args), Args("rs".into()));
@@ -306,6 +366,104 @@ mod tests {
         assert_eq!(guess_git_blame_filename_extension(&args), Args("".into()));
     }
 
+    #[derive(Debug, Default)]
+    struct FakeProc {
+        pid: Pid,
+        start_time: u64,
+        cmd: Vec<String>,
+        ppid: Option<Pid>,
+    }
+    impl FakeProc {
+        fn new(pid: Pid, start_time: u64, cmd: Vec<String>, ppid: Option<Pid>) -> Self {
+            FakeProc {
+                pid,
+                start_time,
+                cmd,
+                ppid,
+            }
+        }
+    }
+
+    impl ProcActions for FakeProc {
+        fn cmd(&self) -> &[String] {
+            &self.cmd
+        }
+        fn parent(&self) -> Option<Pid> {
+            self.ppid
+        }
+        fn start_time(&self) -> u64 {
+            self.start_time
+        }
+    }
+
+    #[derive(Debug, Default)]
+    struct MockProcInfo {
+        delta_pid: Pid,
+        info: HashMap<Pid, FakeProc>,
+    }
+    impl MockProcInfo {
+        fn with(processes: &[(Pid, u64, &str, Option<Pid>)]) -> Self {
+            MockProcInfo {
+                delta_pid: processes.last().map(|p| p.0).unwrap_or(1),
+                info: processes
+                    .into_iter()
+                    .map(|(pid, start_time, cmd, ppid)| {
+                        let cmd_vec = cmd.split(' ').map(str::to_owned).collect();
+                        (*pid, FakeProc::new(*pid, *start_time, cmd_vec, *ppid))
+                    })
+                    .collect(),
+            }
+        }
+    }
+
+    impl ProcessInterface for MockProcInfo {
+        type Out = FakeProc;
+
+        fn my_pid(&self) -> Pid {
+            self.delta_pid
+        }
+        fn process(&self, pid: Pid) -> Option<&Self::Out> {
+            self.info.get(&pid)
+        }
+        fn processes(&self) -> &HashMap<Pid, Self::Out> {
+            &self.info
+        }
+        fn refresh_processes(&mut self) {}
+        fn refresh_process(&mut self, _pid: Pid) -> bool {
+            true
+        }
+    }
+
+    #[test]
+    fn test_blame_process_info_with_parent() {
+        let no_processes = MockProcInfo::with(&[]);
+        assert_eq!(
+            calling_process_cmdline(no_processes, blame::guess_git_blame_filename_extension),
+            None
+        );
+
+        let parent = MockProcInfo::with(&[
+            (2, 100, "-shell", None),
+            (3, 100, "git blame hello.txt", Some(2)),
+            (4, 100, "delta", Some(3)),
+        ]);
+        assert_eq!(
+            calling_process_cmdline(parent, blame::guess_git_blame_filename_extension),
+            Some("txt".into())
+        );
+
+        let grandparent = MockProcInfo::with(&[
+            (2, 100, "-shell", None),
+            (3, 100, "git blame src/main.rs", Some(2)),
+            (4, 100, "call_delta.sh", Some(3)),
+            (5, 100, "delta", Some(4)),
+        ]);
+        assert_eq!(
+            calling_process_cmdline(grandparent, blame::guess_git_blame_filename_extension),
+            Some("rs".into())
+        );
+    }
+
     #[test]
     fn test_calling_process_cmdline() {
         // Github runs CI tests for arm under qemu where where sysinfo can not find the parent processr.
@@ -313,7 +471,7 @@ mod tests {
             return;
         }
 
-        let mut info = sysinfo::System::new();
+        let mut info = ProcInfo::new();
         info.refresh_processes();
         let mut ppid_distance = Vec::new();
 
@@ -334,7 +492,7 @@ mod tests {
 
         // Tests that caller is something like "cargo test" or "tarpaulin"
         let find_test = |args: &[String]| find_calling_process(args, &["test", "tarpaulin"]);
-        assert_eq!(calling_process_cmdline(find_test), Some(()));
+        assert_eq!(calling_process_cmdline(info, find_test), Some(()));
 
         let nonsense = ppid_distance
             .iter()
@@ -342,6 +500,6 @@ mod tests {
             .join("Y40ii4RihK6lHiK4BDsGSx");
 
         let find_nothing = |args: &[String]| find_calling_process(args, &[&nonsense]);
-        assert_eq!(calling_process_cmdline(find_nothing), None);
+        assert_eq!(calling_process_cmdline(ProcInfo::new(), find_nothing), None);
     }
 }
