@@ -304,16 +304,21 @@ pub fn get_file_change_description_from_file_paths(
     plus_file_event: &FileEvent,
     config: &Config,
 ) -> String {
+    let format_label = |label: &str| {
+        if !label.is_empty() {
+            format!("{} ", label)
+        } else {
+            "".to_string()
+        }
+    };
     if comparing {
-        format!("comparing: {} ⟶   {}", minus_file, plus_file)
+        format!(
+            "{}{} ⟶   {}",
+            format_label(&config.file_modified_label),
+            minus_file,
+            plus_file
+        )
     } else {
-        let format_label = |label: &str| {
-            if !label.is_empty() {
-                format!("{} ", label)
-            } else {
-                "".to_string()
-            }
-        };
         let format_file = |file| {
             if config.hyperlinks {
                 features::hyperlinks::format_osc8_file_hyperlink(file, None, file, config)
@@ -356,7 +361,7 @@ pub fn get_file_change_description_from_file_paths(
                 format_label(match file_event {
                     FileEvent::Rename => &config.file_renamed_label,
                     FileEvent::Copy => &config.file_copied_label,
-                    _ => "",
+                    _ => &config.file_modified_label,
                 }),
                 format_file(minus_file),
                 format_file(plus_file)
