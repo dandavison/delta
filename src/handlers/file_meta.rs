@@ -313,9 +313,10 @@ pub fn get_file_change_description_from_file_paths(
     };
     if comparing {
         format!(
-            "{}{} ⟶   {}",
+            "{}{} {} {}",
             format_label(&config.file_modified_label),
             minus_file,
+            config.right_arrow,
             plus_file
         )
     } else {
@@ -337,7 +338,10 @@ pub fn get_file_change_description_from_file_paths(
                 // https://medium.com/@tahteche/how-git-treats-changes-in-file-permissions-f71874ca239d
                 ("100644", "100755") => format!("{}: mode +x", plus_file),
                 ("100755", "100644") => format!("{}: mode -x", plus_file),
-                _ => format!("{}: {} ⟶   {}", plus_file, old_mode, new_mode),
+                _ => format!(
+                    "{}: {} {} {}",
+                    plus_file, old_mode, config.right_arrow, new_mode
+                ),
             },
             (minus_file, plus_file, _, _) if minus_file == plus_file => format!(
                 "{}{}",
@@ -357,13 +361,14 @@ pub fn get_file_change_description_from_file_paths(
             // minus_file_event == plus_file_event, except in the ModeChange
             // case above.
             (minus_file, plus_file, file_event, _) => format!(
-                "{}{} ⟶   {}",
+                "{}{} {} {}",
                 format_label(match file_event {
                     FileEvent::Rename => &config.file_renamed_label,
                     FileEvent::Copy => &config.file_copied_label,
                     _ => &config.file_modified_label,
                 }),
                 format_file(minus_file),
+                config.right_arrow,
                 format_file(plus_file)
             ),
         }
