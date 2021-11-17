@@ -54,12 +54,14 @@ pub fn show_config(config: &config::Config, writer: &mut dyn Write) -> std::io::
     file-added-label              = {file_added_label}
     file-modified-label           = {file_modified_label}
     file-removed-label            = {file_removed_label}
-    file-renamed-label            = {file_renamed_label}",
+    file-renamed-label            = {file_renamed_label}
+    right-arrow                   = {right_arrow}",
         true_color = config.true_color,
         file_added_label = format_option_value(&config.file_added_label),
         file_modified_label = format_option_value(&config.file_modified_label),
         file_removed_label = format_option_value(&config.file_removed_label),
         file_renamed_label = format_option_value(&config.file_renamed_label),
+        right_arrow = format_option_value(&config.right_arrow),
     )?;
     writeln!(
         writer,

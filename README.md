@@ -863,6 +863,9 @@ OPTIONS:
         --file-renamed-label <file-renamed-label>
             Text to display in front of a renamed file path [default: renamed:]
 
+        --right-arrow <right-arrow>
+            Text to display with a changed value such as a diff heading, a rename, or a chmod [default: ⟶  ]
+
         --hunk-label <hunk-label>
             Text to display in front of a hunk header [default: ]
 

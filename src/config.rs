@@ -73,6 +73,7 @@ pub struct Config {
     pub file_modified_label: String,
     pub file_removed_label: String,
     pub file_renamed_label: String,
+    pub right_arrow: String,
     pub file_style: Style,
     pub git_config_entries: HashMap<String, GitConfigEntry>,
     pub git_config: Option<GitConfig>,
@@ -223,6 +224,7 @@ impl From<cli::Opt> for Config {
         let file_modified_label = opt.file_modified_label;
         let file_removed_label = opt.file_removed_label;
         let file_renamed_label = opt.file_renamed_label;
+        let right_arrow = opt.right_arrow;
         let hunk_label = opt.hunk_label;
 
         let line_fill_method = match opt.line_fill_method.as_deref() {
@@ -278,6 +280,7 @@ impl From<cli::Opt> for Config {
             file_modified_label,
             file_removed_label,
             file_renamed_label,
+            right_arrow,
             hunk_label,
             file_style,
             git_config: opt.git_config,

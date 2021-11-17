@@ -550,6 +550,10 @@ pub struct Opt {
     /// Text to display in front of a renamed file path.
     pub file_renamed_label: String,
 
+    #[structopt(long = "right-arrow", default_value = "⟶  ")]
+    /// Text to display with a changed value such as a diff heading, a rename, or a chmod.
+    pub right_arrow: String,
+
     #[structopt(long = "hunk-label", default_value = "")]
     /// Text to display in front of a hunk header.
     pub hunk_label: String,
