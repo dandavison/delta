@@ -110,7 +110,8 @@ mod tests {
 
     #[test]
     fn test_diff_unified_two_files() {
-        let config = integration_test_utils::make_config_from_args(&[]);
+        let config =
+            integration_test_utils::make_config_from_args(&["--file-modified-label", "comparing:"]);
         let output = integration_test_utils::run_delta(DIFF_UNIFIED_TWO_FILES, &config);
         let output = strip_ansi_codes(&output);
         let mut lines = output.lines();
@@ -125,16 +126,14 @@ mod tests {
 
     #[test]
     fn test_diff_unified_two_directories() {
-        let config = integration_test_utils::make_config_from_args(&["--width", "80"]);
+        let config =
+            integration_test_utils::make_config_from_args(&["--width", "80", "--navigate"]);
         let output = integration_test_utils::run_delta(DIFF_UNIFIED_TWO_DIRECTORIES, &config);
         let output = strip_ansi_codes(&output);
         let mut lines = output.lines();
 
         // Header
-        assert_eq!(
-            lines.nth(1).unwrap(),
-            "comparing: a/different ⟶   b/different"
-        );
+        assert_eq!(lines.nth(1).unwrap(), "Δ a/different ⟶   b/different");
         // Change
         assert_eq!(lines.nth(7).unwrap(), "This is different from b");
         // File uniqueness
@@ -144,7 +143,7 @@ mod tests {
         // Next hunk
         assert_eq!(
             lines.nth(4).unwrap(),
-            "comparing: a/more_difference ⟶   b/more_difference"
+            "Δ a/more_difference ⟶   b/more_difference"
         );
     }
 
