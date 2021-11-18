@@ -132,10 +132,7 @@ pub fn show_config(config: &config::Config, writer: &mut dyn Write) -> std::io::
             BgFillMethod::Spaces => "spaces",
         },
         navigate = config.navigate,
-        navigate_regexp = match &config.navigate_regexp {
-            None => "".to_string(),
-            Some(s) => s.to_string(),
-        },
+        navigate_regexp = format_option_value(&config.navigate_regexp),
         pager = config.pager.clone().unwrap_or_else(|| "none".to_string()),
         paging_mode = match config.paging_mode {
             PagingMode::Always => "always",

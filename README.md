@@ -848,6 +848,9 @@ OPTIONS:
         --wrap-right-prefix-symbol <wrap-right-prefix-symbol>
             Symbol displayed in front of right-aligned wrapped content [default: …]
 
+        --navigate-regexp <navigate-regexp>
+            A regexp to use in the less pager when navigating (auto-generated when empty) [default: ]
+
         --file-modified-label <file-modified-label>
             Text to display in front of a modified file path [default: ]
 
