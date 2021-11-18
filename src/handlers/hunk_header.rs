@@ -234,7 +234,7 @@ fn write_to_output_buffer(
     painter: &mut Painter,
     config: &Config,
 ) {
-    if config.navigate {
+    if !config.hunk_label.is_empty() {
         let _ = write!(
             &mut painter.output_buffer,
             "{} ",
