@@ -41,13 +41,20 @@ pub fn make_navigate_regexp(
     if show_themes {
         "^Theme:".to_string()
     } else {
+        let optional_regexp = |find: &str| {
+            if !find.is_empty() {
+                format!("|{}", regex::escape(find))
+            } else {
+                "".to_string()
+            }
+        };
         format!(
-            "^(commit|{}|{}|{}|{}|{})",
-            regex::escape(file_added_label),
-            regex::escape(file_removed_label),
-            regex::escape(file_renamed_label),
-            regex::escape(file_modified_label),
-            regex::escape(hunk_label),
+            "^(commit{}{}{}{}{})",
+            optional_regexp(file_added_label),
+            optional_regexp(file_removed_label),
+            optional_regexp(file_renamed_label),
+            optional_regexp(file_modified_label),
+            optional_regexp(hunk_label),
         )
     }
 }
