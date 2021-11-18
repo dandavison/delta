@@ -17,6 +17,10 @@ pub fn git_blame_filename_extension() -> Option<String> {
     calling_process_cmdline(ProcInfo::new(), blame::guess_git_blame_filename_extension)
 }
 
+pub fn git_grep_command_options() -> Option<(HashSet<String>, HashSet<String>)> {
+    calling_process_cmdline(ProcInfo::new(), grep::get_grep_options)
+}
+
 mod blame {
     use super::*;
 
@@ -74,6 +78,34 @@ mod blame {
         }
     }
 } // mod blame
+
+mod grep {
+    use super::*;
+
+    // Given `... grep --aa val -bc -d val e f -- ...` return
+    // ({"--aa"}, {"-b", "-c", "-d"})
+    pub fn get_grep_options(args: &[String]) -> ProcessArgs<(HashSet<String>, HashSet<String>)> {
+        let mut args = args.iter().map(|s| s.as_str()).skip_while(|s| *s != "grep");
+        match args.next() {
+            None => ProcessArgs::OtherProcess,
+            _ => {
+                let mut longs = HashSet::new();
+                let mut shorts = HashSet::new();
+
+                for s in args {
+                    if s == "--" {
+                        break;
+                    } else if s.starts_with("--") {
+                        longs.insert(s.split('=').next().unwrap().to_owned());
+                    } else if let Some(suffix) = s.strip_prefix('-') {
+                        shorts.extend(suffix.chars().map(|c| format!("-{}", c)));
+                    }
+                }
+                ProcessArgs::Args((longs, shorts))
+            }
+        }
+    }
+}
 
 struct ProcInfo {
     info: sysinfo::System,
@@ -461,6 +493,58 @@ mod tests {
         assert_eq!(
             calling_process_cmdline(grandparent, blame::guess_git_blame_filename_extension),
             Some("rs".into())
+        );
+    }
+
+    #[test]
+    fn test_get_grep_options() {
+        let no_processes = MockProcInfo::with(&[]);
+        assert_eq!(
+            calling_process_cmdline(no_processes, grep::get_grep_options),
+            None
+        );
+
+        let parent = MockProcInfo::with(&[
+            (2, 100, "-shell", None),
+            (3, 100, "git grep pattern hello.txt", Some(2)),
+            (4, 100, "delta", Some(3)),
+        ]);
+        assert_eq!(
+            calling_process_cmdline(parent, grep::get_grep_options),
+            Some(([].into(), [].into()))
+        );
+
+        fn set(arg1: &[&str]) -> HashSet<String> {
+            arg1.iter().map(|&s| s.to_owned()).collect()
+        }
+
+        let git_grep_command =
+            "git grep -ab --function-context -n --show-function -W --foo=val pattern hello.txt";
+
+        let expected_result = Some((
+            set(&["--function-context", "--show-function", "--foo"]),
+            set(&["-a", "-b", "-n", "-W"]),
+        ));
+
+        let parent = MockProcInfo::with(&[
+            (2, 100, "-shell", None),
+            (3, 100, git_grep_command, Some(2)),
+            (4, 100, "delta", Some(3)),
+        ]);
+        assert_eq!(
+            calling_process_cmdline(parent, grep::get_grep_options),
+            expected_result
+        );
+
+        let grandparent = MockProcInfo::with(&[
+            (2, 100, "-shell", None),
+            (3, 100, git_grep_command, Some(2)),
+            (4, 100, "call_delta.sh", Some(3)),
+            (5, 100, "delta", Some(4)),
+        ]);
+        assert_eq!(
+            calling_process_cmdline(grandparent, grep::get_grep_options),
+            expected_result
         );
     }
 
