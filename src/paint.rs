@@ -691,14 +691,15 @@ impl<'p> Painter<'p> {
         } else {
             None
         };
-        Self::update_styles(&mut diff_sections.0, None, minus_non_emph_style);
+        let mut lines_style_sections = MinusPlus::new(&mut diff_sections.0, &mut diff_sections.1);
+        Self::update_styles(lines_style_sections[Minus], None, minus_non_emph_style);
         let plus_non_emph_style = if config.plus_non_emph_style != config.plus_emph_style {
             Some(config.plus_non_emph_style)
         } else {
             None
         };
         Self::update_styles(
-            &mut diff_sections.1,
+            lines_style_sections[Plus],
             Some(config.whitespace_error_style),
             plus_non_emph_style,
         );
@@ -714,29 +715,27 @@ impl<'p> Painter<'p> {
     /// 2. If the line constitutes a whitespace error, then the whitespace error style
     ///    should be applied to the added material.
     fn update_styles(
-        style_sections: &mut Vec<LineSegments<'_, Style>>,
+        lines_style_sections: &mut Vec<LineSegments<'_, Style>>,
         whitespace_error_style: Option<Style>,
         non_emph_style: Option<Style>,
     ) {
-        for line_sections in style_sections {
+        for style_sections in lines_style_sections {
             let line_has_emph_and_non_emph_sections =
-                style_sections_contain_more_than_one_style(line_sections);
+                style_sections_contain_more_than_one_style(style_sections);
             let should_update_non_emph_styles =
                 non_emph_style.is_some() && line_has_emph_and_non_emph_sections;
             let is_whitespace_error =
-                whitespace_error_style.is_some() && is_whitespace_error(line_sections);
-            for section in line_sections.iter_mut() {
+                whitespace_error_style.is_some() && is_whitespace_error(style_sections);
+            for (style, _) in style_sections.iter_mut() {
                 // If the line as a whole constitutes a whitespace error then highlight this
                 // section if either (a) it is an emph section, or (b) the line lacks any
                 // emph/non-emph distinction.
-                if is_whitespace_error
-                    && (section.0.is_emph || !line_has_emph_and_non_emph_sections)
-                {
-                    *section = (whitespace_error_style.unwrap(), section.1);
+                if is_whitespace_error && (style.is_emph || !line_has_emph_and_non_emph_sections) {
+                    *style = whitespace_error_style.unwrap();
                 }
                 // Otherwise, update the style if this is a non-emph section that needs updating.
-                else if should_update_non_emph_styles && !section.0.is_emph {
-                    *section = (non_emph_style.unwrap(), section.1);
+                else if should_update_non_emph_styles && !style.is_emph {
+                    *style = non_emph_style.unwrap();
                 }
             }
         }
