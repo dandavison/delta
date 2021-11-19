@@ -625,11 +625,27 @@ impl<'p> Painter<'p> {
             None
         };
         let mut lines_style_sections = MinusPlus::new(&mut diff_sections.0, &mut diff_sections.1);
+        // PERF: avoid heap allocations here?
+        let mut lines_have_homolog: MinusPlus<Vec<bool>> = MinusPlus::new(
+            diff_sections
+                .2
+                .iter()
+                .filter(|(m, _)| m.is_some())
+                .map(|(_, p)| p.is_some())
+                .collect(),
+            diff_sections
+                .2
+                .iter()
+                .filter(|(_, p)| p.is_some())
+                .map(|(m, _)| m.is_some())
+                .collect(),
+        );
         Self::update_styles(
             minus_lines_and_states,
             lines_style_sections[Minus],
             None,
             minus_non_emph_style,
+            &mut lines_have_homolog[Minus],
             config,
         );
         let plus_non_emph_style = if config.plus_non_emph_style != config.plus_emph_style {
@@ -642,6 +658,7 @@ impl<'p> Painter<'p> {
             lines_style_sections[Plus],
             Some(config.whitespace_error_style),
             plus_non_emph_style,
+            &mut lines_have_homolog[Plus],
             config,
         );
         diff_sections
@@ -664,9 +681,14 @@ impl<'p> Painter<'p> {
         lines_style_sections: &mut Vec<LineSections<'a, Style>>,
         whitespace_error_style: Option<Style>,
         non_emph_style: Option<Style>,
+        lines_have_homolog: &mut Vec<bool>,
         config: &config::Config,
     ) {
-        for ((_, state), style_sections) in lines_and_states.iter().zip(lines_style_sections) {
+        for (((_, state), style_sections), line_has_homolog) in lines_and_states
+            .iter()
+            .zip(lines_style_sections)
+            .zip(lines_have_homolog)
+        {
             match state {
                 State::HunkMinus(Some(raw_line)) | State::HunkPlus(Some(raw_line)) => {
                     *style_sections = parse_style_sections(raw_line, config);
@@ -676,14 +698,16 @@ impl<'p> Painter<'p> {
             };
             let line_has_emph_and_non_emph_sections =
                 style_sections_contain_more_than_one_style(style_sections);
-            let should_update_non_emph_styles =
-                non_emph_style.is_some() && line_has_emph_and_non_emph_sections;
+            let should_update_non_emph_styles = non_emph_style.is_some() && *line_has_homolog;
             let is_whitespace_error =
                 whitespace_error_style.is_some() && is_whitespace_error(style_sections);
             for (style, _) in style_sections.iter_mut() {
                 // If the line as a whole constitutes a whitespace error then highlight this
                 // section if either (a) it is an emph section, or (b) the line lacks any
                 // emph/non-emph distinction.
+
+                // TODO: is this logic correct now, after introducing
+                // line_has_homolog for non_emph style?
                 if is_whitespace_error && (style.is_emph || !line_has_emph_and_non_emph_sections) {
                     *style = whitespace_error_style.unwrap();
                 }
