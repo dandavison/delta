@@ -19,7 +19,8 @@ use crate::features::side_by_side::{self, ansifill, LeftRight};
 use crate::git_config::{GitConfig, GitConfigEntry};
 use crate::minusplus::MinusPlus;
 use crate::paint::BgFillMethod;
-use crate::style::{self, Style};
+use crate::parse_styles;
+use crate::style::Style;
 use crate::tests::TESTING;
 use crate::utils::bat::output::PagingMode;
 use crate::utils::syntect::FromDeltaStyle;
@@ -149,34 +150,7 @@ impl Config {
 
 impl From<cli::Opt> for Config {
     fn from(opt: cli::Opt) -> Self {
-        let (
-            minus_style,
-            minus_emph_style,
-            minus_non_emph_style,
-            minus_empty_line_marker_style,
-            zero_style,
-            plus_style,
-            plus_emph_style,
-            plus_non_emph_style,
-            plus_empty_line_marker_style,
-            whitespace_error_style,
-        ) = make_hunk_styles(&opt);
-
-        let (
-            commit_style,
-            file_style,
-            hunk_header_style,
-            hunk_header_file_style,
-            hunk_header_line_number_style,
-        ) = make_commit_file_hunk_header_styles(&opt);
-
-        let (
-            line_numbers_minus_style,
-            line_numbers_zero_style,
-            line_numbers_plus_style,
-            line_numbers_left_style,
-            line_numbers_right_style,
-        ) = make_line_number_styles(&opt);
+        let styles = parse_styles::parse_styles(&opt);
 
         let max_line_distance_for_naively_paired_lines =
             env::get_env_var("DELTA_EXPERIMENTAL_MAX_LINE_DISTANCE_FOR_NAIVELY_PAIRED_LINES")
@@ -200,22 +174,6 @@ impl From<cli::Opt> for Config {
                 opt.tokenization_regex
             ));
         });
-
-        let inline_hint_style = Style::from_str(
-            &opt.inline_hint_style,
-            None,
-            None,
-            opt.computed.true_color,
-            false,
-        );
-        let git_minus_style = match opt.git_config_entries.get("color.diff.old") {
-            Some(GitConfigEntry::Style(s)) => Style::from_git_str(s),
-            _ => *style::GIT_DEFAULT_MINUS_STYLE,
-        };
-        let git_plus_style = match opt.git_config_entries.get("color.diff.new") {
-            Some(GitConfigEntry::Style(s)) => Style::from_git_str(s),
-            _ => *style::GIT_DEFAULT_PLUS_STYLE,
-        };
 
         let blame_palette = make_blame_palette(opt.blame_palette, opt.computed.is_light_mode);
 
@@ -267,7 +225,7 @@ impl From<cli::Opt> for Config {
             blame_format: opt.blame_format,
             blame_palette,
             blame_timestamp_format: opt.blame_timestamp_format,
-            commit_style,
+            commit_style: styles["commit-style"],
             color_only: opt.color_only,
             commit_regex,
             cwd_relative_to_repo_root: std::env::var("GIT_PREFIX").ok(),
@@ -282,12 +240,12 @@ impl From<cli::Opt> for Config {
             file_renamed_label,
             right_arrow,
             hunk_label,
-            file_style,
+            file_style: styles["file-style"],
             git_config: opt.git_config,
             git_config_entries: opt.git_config_entries,
-            hunk_header_file_style,
-            hunk_header_line_number_style,
-            hunk_header_style,
+            hunk_header_file_style: styles["hunk-header-file-style"],
+            hunk_header_line_number_style: styles["hunk-header-line-number-style"],
+            hunk_header_style: styles["hunk-header-style"],
             hunk_header_style_include_file_path: opt
                 .hunk_header_style
                 .split(' ')
@@ -300,7 +258,7 @@ impl From<cli::Opt> for Config {
             hyperlinks_commit_link_format: opt.hyperlinks_commit_link_format,
             hyperlinks_file_link_format: opt.hyperlinks_file_link_format,
             inspect_raw_lines: opt.computed.inspect_raw_lines,
-            inline_hint_style,
+            inline_hint_style: styles["inline-hint-style"],
             keep_plus_minus_markers: opt.keep_plus_minus_markers,
             line_fill_method: if !opt.computed.stdout_is_term && !TESTING {
                 // Don't write ANSI sequences (which rely on the width of the
@@ -316,14 +274,14 @@ impl From<cli::Opt> for Config {
                 opt.line_numbers_right_format,
             ),
             line_numbers_style_leftright: LeftRight::new(
-                line_numbers_left_style,
-                line_numbers_right_style,
+                styles["line-numbers-left-style"],
+                styles["line-numbers-right-style"],
             ),
             line_numbers_style_minusplus: MinusPlus::new(
-                line_numbers_minus_style,
-                line_numbers_plus_style,
+                styles["line-numbers-minus-style"],
+                styles["line-numbers-plus-style"],
             ),
-            line_numbers_zero_style,
+            line_numbers_zero_style: styles["line-numbers-zero-style"],
             line_buffer_size: opt.line_buffer_size,
             max_line_distance: opt.max_line_distance,
             max_line_distance_for_naively_paired_lines,
@@ -344,24 +302,24 @@ impl From<cli::Opt> for Config {
                     )
                 }
             },
-            minus_emph_style,
-            minus_empty_line_marker_style,
+            minus_emph_style: styles["minus-emph-style"],
+            minus_empty_line_marker_style: styles["minus-empty-line-marker-style"],
             minus_file: opt.minus_file,
-            minus_non_emph_style,
-            minus_style,
+            minus_non_emph_style: styles["minus-non-emph-style"],
+            minus_style: styles["minus-style"],
             navigate: opt.navigate,
             navigate_regexp,
             null_style: Style::new(),
             null_syntect_style: SyntectStyle::default(),
             pager: opt.pager,
             paging_mode: opt.computed.paging_mode,
-            plus_emph_style,
-            plus_empty_line_marker_style,
+            plus_emph_style: styles["plus-emph-style"],
+            plus_empty_line_marker_style: styles["plus-empty-line-marker-style"],
             plus_file: opt.plus_file,
-            plus_non_emph_style,
-            plus_style,
-            git_minus_style,
-            git_plus_style,
+            plus_non_emph_style: styles["plus-non-emph-style"],
+            plus_style: styles["plus-style"],
+            git_minus_style: styles["git-minus-style"],
+            git_plus_style: styles["git-plus-style"],
             relative_paths: opt.relative_paths,
             show_themes: opt.show_themes,
             side_by_side: opt.side_by_side,
@@ -397,221 +355,14 @@ impl From<cli::Opt> for Config {
                     }
                 },
                 max_lines: wrap_max_lines_plus1,
-                inline_hint_syntect_style: SyntectStyle::from_delta_style(inline_hint_style),
+                inline_hint_syntect_style: SyntectStyle::from_delta_style(
+                    styles["inline-hint-style"],
+                ),
             },
-            whitespace_error_style,
-            zero_style,
+            whitespace_error_style: styles["whitespace-error-style"],
+            zero_style: styles["zero-style"],
         }
     }
-}
-
-fn make_hunk_styles(
-    opt: &cli::Opt,
-) -> (
-    Style,
-    Style,
-    Style,
-    Style,
-    Style,
-    Style,
-    Style,
-    Style,
-    Style,
-    Style,
-) {
-    let is_light_mode = opt.computed.is_light_mode;
-    let true_color = opt.computed.true_color;
-    let minus_style = Style::from_str(
-        &opt.minus_style,
-        Some(Style::from_colors(
-            None,
-            Some(color::get_minus_background_color_default(
-                is_light_mode,
-                true_color,
-            )),
-        )),
-        None,
-        true_color,
-        false,
-    );
-
-    let minus_emph_style = Style::from_str(
-        &opt.minus_emph_style,
-        Some(Style::from_colors(
-            None,
-            Some(color::get_minus_emph_background_color_default(
-                is_light_mode,
-                true_color,
-            )),
-        )),
-        None,
-        true_color,
-        true,
-    );
-
-    let minus_non_emph_style = Style::from_str(
-        &opt.minus_non_emph_style,
-        Some(minus_style),
-        None,
-        true_color,
-        false,
-    );
-
-    // The style used to highlight a removed empty line when otherwise it would be invisible due to
-    // lack of background color in minus-style.
-    let minus_empty_line_marker_style = Style::from_str(
-        &opt.minus_empty_line_marker_style,
-        Some(Style::from_colors(
-            None,
-            Some(color::get_minus_background_color_default(
-                is_light_mode,
-                true_color,
-            )),
-        )),
-        None,
-        true_color,
-        false,
-    );
-
-    let zero_style = Style::from_str(&opt.zero_style, None, None, true_color, false);
-
-    let plus_style = Style::from_str(
-        &opt.plus_style,
-        Some(Style::from_colors(
-            None,
-            Some(color::get_plus_background_color_default(
-                is_light_mode,
-                true_color,
-            )),
-        )),
-        None,
-        true_color,
-        false,
-    );
-
-    let plus_emph_style = Style::from_str(
-        &opt.plus_emph_style,
-        Some(Style::from_colors(
-            None,
-            Some(color::get_plus_emph_background_color_default(
-                is_light_mode,
-                true_color,
-            )),
-        )),
-        None,
-        true_color,
-        true,
-    );
-
-    let plus_non_emph_style = Style::from_str(
-        &opt.plus_non_emph_style,
-        Some(plus_style),
-        None,
-        true_color,
-        false,
-    );
-
-    // The style used to highlight an added empty line when otherwise it would be invisible due to
-    // lack of background color in plus-style.
-    let plus_empty_line_marker_style = Style::from_str(
-        &opt.plus_empty_line_marker_style,
-        Some(Style::from_colors(
-            None,
-            Some(color::get_plus_background_color_default(
-                is_light_mode,
-                true_color,
-            )),
-        )),
-        None,
-        true_color,
-        false,
-    );
-
-    let whitespace_error_style =
-        Style::from_str(&opt.whitespace_error_style, None, None, true_color, false);
-
-    (
-        minus_style,
-        minus_emph_style,
-        minus_non_emph_style,
-        minus_empty_line_marker_style,
-        zero_style,
-        plus_style,
-        plus_emph_style,
-        plus_non_emph_style,
-        plus_empty_line_marker_style,
-        whitespace_error_style,
-    )
-}
-
-fn make_line_number_styles(opt: &cli::Opt) -> (Style, Style, Style, Style, Style) {
-    let true_color = opt.computed.true_color;
-    let line_numbers_left_style =
-        Style::from_str(&opt.line_numbers_left_style, None, None, true_color, false);
-
-    let line_numbers_minus_style =
-        Style::from_str(&opt.line_numbers_minus_style, None, None, true_color, false);
-
-    let line_numbers_zero_style =
-        Style::from_str(&opt.line_numbers_zero_style, None, None, true_color, false);
-
-    let line_numbers_plus_style =
-        Style::from_str(&opt.line_numbers_plus_style, None, None, true_color, false);
-
-    let line_numbers_right_style =
-        Style::from_str(&opt.line_numbers_right_style, None, None, true_color, false);
-
-    (
-        line_numbers_minus_style,
-        line_numbers_zero_style,
-        line_numbers_plus_style,
-        line_numbers_left_style,
-        line_numbers_right_style,
-    )
-}
-
-fn make_commit_file_hunk_header_styles(opt: &cli::Opt) -> (Style, Style, Style, Style, Style) {
-    let true_color = opt.computed.true_color;
-    (
-        Style::from_str_with_handling_of_special_decoration_attributes_and_respecting_deprecated_foreground_color_arg(
-            &opt.commit_style,
-            None,
-            Some(&opt.commit_decoration_style),
-            opt.deprecated_commit_color.as_deref(),
-            true_color,
-            false,
-        ),
-        Style::from_str_with_handling_of_special_decoration_attributes_and_respecting_deprecated_foreground_color_arg(
-            &opt.file_style,
-            None,
-            Some(&opt.file_decoration_style),
-            opt.deprecated_file_color.as_deref(),
-            true_color,
-            false,
-        ),
-        Style::from_str_with_handling_of_special_decoration_attributes_and_respecting_deprecated_foreground_color_arg(
-            &opt.hunk_header_style,
-            None,
-            Some(&opt.hunk_header_decoration_style),
-            opt.deprecated_hunk_color.as_deref(),
-            true_color,
-            false,
-        ),
-        Style::from_str_with_handling_of_special_decoration_attributes(
-            &opt.hunk_header_file_style,
-            None,
-            None,
-            true_color,
-            false,
-        ),
-        Style::from_str_with_handling_of_special_decoration_attributes(
-            &opt.hunk_header_line_number_style,
-            None,
-            None,
-            true_color,
-            false,
-        ),
-    )
 }
 
 fn make_blame_palette(blame_palette: Option<String>, is_light_mode: bool) -> Vec<String> {

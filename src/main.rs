@@ -19,6 +19,7 @@ mod minusplus;
 mod options;
 mod paint;
 mod parse_style;
+mod parse_styles;
 mod style;
 mod utils;
 mod wrapping;

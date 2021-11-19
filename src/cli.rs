@@ -334,9 +334,9 @@ pub struct Opt {
     /// STYLES section.
     pub minus_emph_style: String,
 
-    #[structopt(long = "minus-non-emph-style", default_value = "auto auto")]
+    #[structopt(long = "minus-non-emph-style", default_value = "minus-style")]
     /// Style (foreground, background, attributes) for non-emphasized sections of removed lines
-    /// that have an emphasized section. Defaults to --minus-style. See STYLES section.
+    /// that have an emphasized section. See STYLES section.
     pub minus_non_emph_style: String,
 
     #[structopt(long = "plus-emph-style", default_value = "syntax auto")]
@@ -344,9 +344,9 @@ pub struct Opt {
     /// STYLES section.
     pub plus_emph_style: String,
 
-    #[structopt(long = "plus-non-emph-style", default_value = "auto auto")]
+    #[structopt(long = "plus-non-emph-style", default_value = "plus-style")]
     /// Style (foreground, background, attributes) for non-emphasized sections of added lines that
-    /// have an emphasized section. Defaults to --plus-style. See STYLES section.
+    /// have an emphasized section. See STYLES section.
     pub plus_non_emph_style: String,
 
     #[structopt(long = "commit-style", default_value = "raw")]
