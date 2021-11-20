@@ -15,7 +15,6 @@ impl Style {
         default: Option<Self>,
         decoration_style_string: Option<&str>,
         true_color: bool,
-        is_emph: bool,
     ) -> Self {
         let (ansi_term_style, is_omitted, is_raw, is_syntax_highlighted) =
             parse_ansi_term_style(style_string, default, true_color);
@@ -23,7 +22,7 @@ impl Style {
             DecorationStyle::from_str(decoration_style_string.unwrap_or(""), true_color);
         Self {
             ansi_term_style,
-            is_emph,
+            is_emph: false,
             is_omitted,
             is_raw,
             is_syntax_highlighted,
@@ -32,7 +31,7 @@ impl Style {
     }
 
     pub fn from_git_str(git_style_string: &str) -> Self {
-        Self::from_str(git_style_string, None, None, true, false)
+        Self::from_str(git_style_string, None, None, true)
     }
 
     /// Construct Style but interpreting 'ul', 'box', etc as applying to the decoration style.
@@ -41,17 +40,11 @@ impl Style {
         default: Option<Self>,
         decoration_style_string: Option<&str>,
         true_color: bool,
-        is_emph: bool,
     ) -> Self {
         let (special_attributes_from_style_string, style_string) =
             extract_special_decoration_attributes_from_non_decoration_style_string(style_string);
-        let mut style = Style::from_str(
-            &style_string,
-            default,
-            decoration_style_string,
-            true_color,
-            is_emph,
-        );
+        let mut style =
+            Style::from_str(&style_string, default, decoration_style_string, true_color);
         // TODO: box in this context resulted in box-with-underline for commit and file
         style.decoration_style = DecorationStyle::apply_special_decoration_attributes(
             &mut style,
@@ -68,14 +61,12 @@ impl Style {
         decoration_style_string: Option<&str>,
         deprecated_foreground_color_arg: Option<&str>,
         true_color: bool,
-        is_emph: bool,
     ) -> Self {
         let mut style = Self::from_str_with_handling_of_special_decoration_attributes(
             style_string,
             default,
             decoration_style_string,
             true_color,
-            is_emph,
         );
         if let Some(s) = deprecated_foreground_color_arg {
             // The deprecated --{commit,file,hunk}-color args functioned to set the decoration
@@ -530,7 +521,6 @@ mod tests {
             None,
             Some("ol red box bold green ul"),
             true,
-            false,
         );
         let red_green_bold = ansi_term::Style {
             foreground: Some(ansi_term::Color::Red),
@@ -550,7 +540,7 @@ mod tests {
 
     #[test]
     fn test_style_from_str_raw_with_box() {
-        let actual_style = Style::from_str("raw", None, Some("box"), true, false);
+        let actual_style = Style::from_str("raw", None, Some("box"), true);
         let empty_ansi_term_style = ansi_term::Style::new();
         assert_eq!(
             actual_style,
@@ -565,7 +555,7 @@ mod tests {
 
     #[test]
     fn test_style_from_str_decoration_style_only() {
-        let actual_style = Style::from_str("", None, Some("ol red box bold green ul"), true, false);
+        let actual_style = Style::from_str("", None, Some("ol red box bold green ul"), true);
         let red_green_bold = ansi_term::Style {
             foreground: Some(ansi_term::Color::Red),
             background: Some(ansi_term::Color::Green),
@@ -588,7 +578,6 @@ mod tests {
             None,
             Some("ol red box bold green ul"),
             true,
-            false,
         );
         let expected_decoration_style = DecorationStyle::BoxWithUnderOverline(ansi_term::Style {
             foreground: Some(ansi_term::Color::Red),
@@ -612,7 +601,6 @@ mod tests {
             None,
             Some("box"),
             true,
-            false,
         );
         let empty_ansi_term_style = ansi_term::Style::new();
         assert_eq!(
@@ -636,7 +624,7 @@ mod tests {
             ..ansi_term::Style::new()
         });
         let actual_style = Style::from_str_with_handling_of_special_decoration_attributes_and_respecting_deprecated_foreground_color_arg(
-                "", None, Some("ol red box bold green ul"), None, true, false
+                "", None, Some("ol red box bold green ul"), None, true
             );
         assert_eq!(
             actual_style,
@@ -656,7 +644,6 @@ mod tests {
             Some("box"),
             None,
             true,
-            false,
         );
         let empty_ansi_term_style = ansi_term::Style::new();
         assert_eq!(
