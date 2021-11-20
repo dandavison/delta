@@ -2,7 +2,6 @@ use std::collections::{HashMap, HashSet};
 
 use crate::cli;
 use crate::color;
-#[cfg(not(test))]
 use crate::fatal;
 use crate::git_config::GitConfigEntry;
 use crate::style::{self, Style};
@@ -47,10 +46,13 @@ pub fn parse_styles(opt: &cli::Opt) -> HashMap<String, Style> {
             _ => *style::GIT_DEFAULT_PLUS_STYLE,
         }),
     );
-    resolve_style_references(styles)
+    resolve_style_references(styles, opt)
 }
 
-fn resolve_style_references(edges: HashMap<&str, StyleReference>) -> HashMap<String, Style> {
+fn resolve_style_references(
+    edges: HashMap<&str, StyleReference>,
+    opt: &cli::Opt,
+) -> HashMap<String, Style> {
     let mut resolved_styles = HashMap::new();
 
     for starting_node in edges.keys() {
@@ -69,12 +71,27 @@ fn resolve_style_references(edges: HashMap<&str, StyleReference>) -> HashMap<Str
                     .map(|(a, b)| (a.to_string(), *b))
                     .collect();
             }
-            match &edges[&node] {
-                StyleReference::Style(style) => {
+            match &edges.get(&node) {
+                Some(StyleReference::Reference(child_node)) => node = child_node,
+                Some(StyleReference::Style(style)) => {
                     resolved_styles.extend(visited.iter().map(|node| (node.to_string(), *style)));
                     break;
                 }
-                StyleReference::Reference(child_node) => node = child_node,
+                None => {
+                    if let Some(git_config) = &opt.git_config {
+                        match git_config.get::<String>(&format!("delta.{}", node)) {
+                            Some(s) => {
+                                let style = Style::from_git_str(&s);
+                                resolved_styles
+                                    .extend(visited.iter().map(|node| (node.to_string(), style)));
+                                break;
+                            }
+                            _ => fatal(format!("Style not found: {}", node)),
+                        }
+                    } else {
+                        fatal(format!("Style not found: {}", node));
+                    }
+                }
             }
         }
     }
@@ -347,6 +364,12 @@ fn style_from_str_with_handling_of_special_decoration_attributes_and_respecting_
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::tests::integration_test_utils;
+
+    fn resolve_style_references(edges: HashMap<&str, StyleReference>) -> HashMap<String, Style> {
+        let opt = integration_test_utils::make_options_from_args(&[]);
+        super::resolve_style_references(edges, &opt)
+    }
 
     #[test]
     fn test_resolve_style_references_1() {
