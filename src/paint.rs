@@ -385,32 +385,21 @@ impl<'p> Painter<'p> {
         background_color_extends_to_terminal_width: BgShouldFill,
         config: &config::Config,
     ) -> (Option<BgFillMethod>, Style) {
-        // style:          for right fill if line contains no emph sections
-        // non_emph_style: for right fill if line contains emph sections
-        let (style, non_emph_style) = match state {
-            State::HunkMinus(None) | State::HunkMinusWrapped => {
-                (config.minus_style, config.minus_non_emph_style)
-            }
-            State::HunkZero | State::HunkZeroWrapped => (config.zero_style, config.zero_style),
-            State::HunkPlus(None) | State::HunkPlusWrapped => {
-                (config.plus_style, config.plus_non_emph_style)
-            }
+        let non_emph_style = match state {
+            State::HunkMinus(None) | State::HunkMinusWrapped => config.minus_non_emph_style,
+            State::HunkZero | State::HunkZeroWrapped => config.zero_style,
+            State::HunkPlus(None) | State::HunkPlusWrapped => config.plus_non_emph_style,
             State::HunkMinus(Some(_)) | State::HunkPlus(Some(_)) => {
-                let style = if !diff_sections.is_empty() {
+                if !diff_sections.is_empty() {
                     diff_sections[diff_sections.len() - 1].0
                 } else {
                     config.null_style
-                };
-                (style, style)
+                }
             }
-            State::Blame(_, _) => (diff_sections[0].0, diff_sections[0].0),
-            _ => (config.null_style, config.null_style),
+            State::Blame(_, _) => diff_sections[0].0,
+            _ => config.null_style,
         };
-        let fill_style = if style_sections_contain_more_than_one_style(diff_sections) {
-            non_emph_style // line contains an emph section
-        } else {
-            style
-        };
+        let fill_style = non_emph_style;
 
         match (
             fill_style.get_background_color().is_some(),
