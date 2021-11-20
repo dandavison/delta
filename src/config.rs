@@ -106,7 +106,7 @@ pub struct Config {
     pub minus_file: Option<PathBuf>,
     pub minus_non_emph_style: Style,
     pub minus_style: Style,
-    pub navigate_regexp: String,
+    pub navigate_regex: String,
     pub navigate: bool,
     pub null_style: Style,
     pub null_syntect_style: SyntectStyle,
@@ -244,9 +244,8 @@ impl From<cli::Opt> for Config {
             side_by_side_data,
         );
 
-        let navigate_regexp = if (opt.navigate || opt.show_themes) && opt.navigate_regexp.is_empty()
-        {
-            navigate::make_navigate_regexp(
+        let navigate_regex = if (opt.navigate || opt.show_themes) && opt.navigate_regex.is_empty() {
+            navigate::make_navigate_regex(
                 opt.show_themes,
                 &file_modified_label,
                 &file_added_label,
@@ -255,7 +254,7 @@ impl From<cli::Opt> for Config {
                 &hunk_label,
             )
         } else {
-            opt.navigate_regexp
+            opt.navigate_regex
         };
 
         let wrap_max_lines_plus1 = adapt_wrap_max_lines_argument(opt.wrap_max_lines);
@@ -351,7 +350,7 @@ impl From<cli::Opt> for Config {
             minus_non_emph_style,
             minus_style,
             navigate: opt.navigate,
-            navigate_regexp,
+            navigate_regex,
             null_style: Style::new(),
             null_syntect_style: SyntectStyle::default(),
             pager: opt.pager,

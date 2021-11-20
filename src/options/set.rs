@@ -161,7 +161,7 @@ pub fn set_options(
             minus_non_emph_style,
             minus_non_emph_style,
             navigate,
-            navigate_regexp,
+            navigate_regex,
             line_fill_method,
             line_numbers,
             line_numbers_left_format,
@@ -690,7 +690,7 @@ pub mod tests {
     minus-non-emph-style = black black
     minus-style = black black
     navigate = true
-    navigate-regexp = xxxyyyzzz
+    navigate-regex = xxxyyyzzz
     paging = never
     plus-emph-style = black black
     plus-empty-line-marker-style = black black
@@ -751,7 +751,7 @@ pub mod tests {
         assert_eq!(opt.minus_non_emph_style, "black black");
         assert_eq!(opt.minus_style, "black black");
         assert_eq!(opt.navigate, true);
-        assert_eq!(opt.navigate_regexp, "xxxyyyzzz");
+        assert_eq!(opt.navigate_regex, "xxxyyyzzz");
         assert_eq!(opt.paging_mode, "never");
         assert_eq!(opt.plus_emph_style, "black black");
         assert_eq!(opt.plus_empty_line_marker_style, "black black");

@@ -117,7 +117,7 @@ pub fn show_config(config: &config::Config, writer: &mut dyn Write) -> std::io::
     max-line-length               = {max_line_length}
     line-fill-method              = {line_fill_method}
     navigate                      = {navigate}
-    navigate-regexp               = {navigate_regexp}
+    navigate-regex                = {navigate_regex}
     pager                         = {pager}
     paging                        = {paging_mode}
     side-by-side                  = {side_by_side}
@@ -132,7 +132,7 @@ pub fn show_config(config: &config::Config, writer: &mut dyn Write) -> std::io::
             BgFillMethod::Spaces => "spaces",
         },
         navigate = config.navigate,
-        navigate_regexp = format_option_value(&config.navigate_regexp),
+        navigate_regex = format_option_value(&config.navigate_regex),
         pager = config.pager.clone().unwrap_or_else(|| "none".to_string()),
         paging_mode = match config.paging_mode {
             PagingMode::Always => "always",
