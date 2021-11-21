@@ -636,6 +636,7 @@ impl<'p> Painter<'p> {
             State::HunkHeader(_, _) => true,
             State::HunkMinus(Some(_)) | State::HunkPlus(Some(_)) => false,
             State::Blame(_, _) => true,
+            State::GitShowFile => true,
             State::Grep => true,
             State::Unknown
             | State::CommitMeta
