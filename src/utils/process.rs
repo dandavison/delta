@@ -7,8 +7,9 @@ use lazy_static::lazy_static;
 
 #[derive(Clone, Debug, PartialEq)]
 pub enum CallingProcess {
-    GitGrep((HashSet<String>, HashSet<String>)),
-    OtherGrep, // rg, grep, ag, ack, etc
+    GitShow(String),                             // (extension)
+    GitGrep((HashSet<String>, HashSet<String>)), // ((long_options, short_options))
+    OtherGrep,                                   // rg, grep, ag, ack, etc
 }
 
 pub fn calling_process() -> Option<Cow<'static, CallingProcess>> {
@@ -79,14 +80,23 @@ pub fn describe_calling_process(args: &[String]) -> ProcessArgs<CallingProcess> 
     match args.next() {
         Some(command) => match Path::new(command).file_stem() {
             Some(s) if s.to_str() == Some("git") => {
-                let mut args = args.skip_while(|s| *s != "grep");
+                let mut args = args.skip_while(|s| *s != "grep" && *s != "show");
                 match args.next() {
-                    Some(_) => {
+                    Some("grep") => {
                         ProcessArgs::Args(CallingProcess::GitGrep(parse_command_option_keys(args)))
                     }
-                    None => {
-                        // It's git, but not git grep. Don't look at any
-                        // more processes and return not-a-grep-command.
+                    Some("show") => {
+                        if let Some(extension) = get_git_show_file_extension(args) {
+                            ProcessArgs::Args(CallingProcess::GitShow(extension.to_string()))
+                        } else {
+                            // It's git show, but we failed to determine the
+                            // file extension. Don't look at any more processes.
+                            ProcessArgs::ArgError
+                        }
+                    }
+                    _ => {
+                        // It's git, but not a subcommand that we parse. Don't
+                        // look at any more processes.
                         ProcessArgs::ArgError
                     }
                 }
@@ -110,6 +120,18 @@ pub fn describe_calling_process(args: &[String]) -> ProcessArgs<CallingProcess> 
             // Empty arguments (not expected); keep looking.
             ProcessArgs::OtherProcess
         }
+    }
+}
+
+fn get_git_show_file_extension<'a>(args: impl Iterator<Item = &'a str>) -> Option<&'a str> {
+    if let Some(last_arg) = skip_uninteresting_args(args, "".split(' ')).last() {
+        // E.g. "HEAD~1:Makefile" or "775c3b8:./src/delta.rs"
+        match last_arg.split_once(':') {
+            Some((_, suffix)) => suffix.split('.').last(),
+            None => None,
+        }
+    } else {
+        None
     }
 }
 
@@ -713,6 +735,28 @@ pub mod tests {
             calling_process_cmdline(grandparent, describe_calling_process),
             expected_result
         );
+    }
+
+    #[test]
+    fn test_describe_calling_process_git_show() {
+        for (command, expected_extension) in [
+            ("/usr/local/bin/git show 775c3b84:./src/hello.rs", "rs"),
+            ("/usr/local/bin/git show HEAD~1:Makefile", "Makefile"),
+            (
+                "git -c x.y=z show --abbrev-commit 775c3b84:./src/hello.bye.R",
+                "R",
+            ),
+        ] {
+            let parent = MockProcInfo::with(&[
+                (2, 100, "-shell", None),
+                (3, 100, command, Some(2)),
+                (4, 100, "delta", Some(3)),
+            ]);
+            assert_eq!(
+                calling_process_cmdline(parent, describe_calling_process),
+                Some(CallingProcess::GitShow(expected_extension.to_string())),
+            );
+        }
     }
 
     #[test]
