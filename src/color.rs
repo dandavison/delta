@@ -22,6 +22,7 @@ pub fn parse_color(s: &str, true_color: bool) -> Option<Color> {
             .ok()
             .and_then(utils::syntect::syntect_color_from_ansi_number)
             .or_else(|| utils::syntect::syntect_color_from_ansi_name(s))
+            .or_else(|| utils::syntect::syntect_color_from_name(s))
             .unwrap_or_else(die)
     };
     utils::bat::terminal::to_ansi_color(syntect_color, true_color)

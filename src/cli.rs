@@ -114,15 +114,19 @@ A complete description of the style string syntax follows:
 COLORS
 ------
 
-There are three ways to specify a color (this section applies to foreground and background colors
+There are four ways to specify a color (this section applies to foreground and background colors
 within a style string):
 
-1. RGB hex code
+1. CSS color name
+
+   Any of the 140 color names used in CSS: https://www.w3schools.com/colors/colors_groups.asp
+
+2. RGB hex code
 
    An example of using an RGB hex code is:
    --file-style=\"#0e7c0e\"
 
-2. ANSI color name
+3. ANSI color name
 
    There are 8 ANSI color names:
    black, red, green, yellow, blue, magenta, cyan, white.
@@ -141,7 +145,7 @@ within a style string):
 
    \"purple\" is accepted as a synonym for \"magenta\". Color names and codes are case-insensitive.
 
-3. ANSI color number
+4. ANSI color number
 
    An example of using an ANSI color number is:
    --file-style=28
