@@ -353,7 +353,13 @@ fn make_grep_styles(opt: &cli::Opt, styles: &mut HashMap<&str, StyleReference>) 
         (
             "grep-match-line-style",
             if let Some(s) = &opt.grep_match_line_style {
-                style_from_str(s, None, None, opt.computed.true_color)
+                style_from_str(
+                    s,
+                    None,
+                    None,
+                    opt.computed.true_color,
+                    opt.git_config.as_ref(),
+                )
             } else {
                 StyleReference::Reference("zero-style".to_owned())
             },
@@ -361,7 +367,13 @@ fn make_grep_styles(opt: &cli::Opt, styles: &mut HashMap<&str, StyleReference>) 
         (
             "grep-match-word-style",
             if let Some(s) = &opt.grep_match_word_style {
-                style_from_str(s, None, None, opt.computed.true_color)
+                style_from_str(
+                    s,
+                    None,
+                    None,
+                    opt.computed.true_color,
+                    opt.git_config.as_ref(),
+                )
             } else {
                 StyleReference::Reference("plus-emph-style".to_owned())
             },
@@ -369,7 +381,13 @@ fn make_grep_styles(opt: &cli::Opt, styles: &mut HashMap<&str, StyleReference>) 
         (
             "grep-context-line-style",
             if let Some(s) = &opt.grep_context_line_style {
-                style_from_str(s, None, None, opt.computed.true_color)
+                style_from_str(
+                    s,
+                    None,
+                    None,
+                    opt.computed.true_color,
+                    opt.git_config.as_ref(),
+                )
             } else {
                 StyleReference::Reference("zero-style".to_owned())
             },
@@ -377,7 +395,13 @@ fn make_grep_styles(opt: &cli::Opt, styles: &mut HashMap<&str, StyleReference>) 
         (
             "grep-file-style",
             if let Some(s) = &opt.grep_file_style {
-                style_from_str(s, None, None, opt.computed.true_color)
+                style_from_str(
+                    s,
+                    None,
+                    None,
+                    opt.computed.true_color,
+                    opt.git_config.as_ref(),
+                )
             } else {
                 StyleReference::Reference("hunk-header-file-style".to_owned())
             },
@@ -385,7 +409,13 @@ fn make_grep_styles(opt: &cli::Opt, styles: &mut HashMap<&str, StyleReference>) 
         (
             "grep-line-number-style",
             if let Some(s) = &opt.grep_line_number_style {
-                style_from_str(s, None, None, opt.computed.true_color)
+                style_from_str(
+                    s,
+                    None,
+                    None,
+                    opt.computed.true_color,
+                    opt.git_config.as_ref(),
+                )
             } else {
                 StyleReference::Reference("hunk-header-line-number-style".to_owned())
             },
