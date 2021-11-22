@@ -9,6 +9,15 @@ pub fn syntect_color_from_ansi_name(name: &str) -> Option<Color> {
     color::ansi_16_color_name_to_number(name).and_then(syntect_color_from_ansi_number)
 }
 
+pub fn syntect_color_from_name(name: &str) -> Option<Color> {
+    palette::named::from_str(name).map(|color| Color {
+        r: color.red,
+        g: color.green,
+        b: color.blue,
+        a: 0xFF,
+    })
+}
+
 /// Convert 8-bit ANSI code to #RGBA string with ANSI code in red channel and 0 in alpha channel.
 // See https://github.com/sharkdp/bat/pull/543
 pub fn syntect_color_from_ansi_number(n: u8) -> Option<Color> {
