@@ -3,7 +3,7 @@ use std::collections::{HashMap, HashSet};
 use crate::cli;
 use crate::color;
 use crate::fatal;
-use crate::git_config::GitConfigEntry;
+use crate::git_config::{GitConfig, GitConfigEntry};
 use crate::style::{self, Style};
 
 #[derive(Debug, Clone)]
@@ -26,7 +26,13 @@ pub fn parse_styles(opt: &cli::Opt) -> HashMap<String, Style> {
 
     styles.insert(
         "inline-hint-style",
-        style_from_str(&opt.inline_hint_style, None, None, opt.computed.true_color),
+        style_from_str(
+            &opt.inline_hint_style,
+            None,
+            None,
+            opt.computed.true_color,
+            opt.git_config.as_ref(),
+        ),
     );
     styles.insert(
         "git-minus-style",
@@ -111,6 +117,7 @@ fn make_hunk_styles<'a>(opt: &'a cli::Opt, styles: &'a mut HashMap<&str, StyleRe
         )),
         None,
         true_color,
+        opt.git_config.as_ref(),
     );
 
     let minus_emph_style = style_from_str(
@@ -124,9 +131,16 @@ fn make_hunk_styles<'a>(opt: &'a cli::Opt, styles: &'a mut HashMap<&str, StyleRe
         )),
         None,
         true_color,
+        opt.git_config.as_ref(),
     );
 
-    let minus_non_emph_style = style_from_str(&opt.minus_non_emph_style, None, None, true_color);
+    let minus_non_emph_style = style_from_str(
+        &opt.minus_non_emph_style,
+        None,
+        None,
+        true_color,
+        opt.git_config.as_ref(),
+    );
 
     // The style used to highlight a removed empty line when otherwise it would be invisible due to
     // lack of background color in minus-style.
@@ -141,9 +155,16 @@ fn make_hunk_styles<'a>(opt: &'a cli::Opt, styles: &'a mut HashMap<&str, StyleRe
         )),
         None,
         true_color,
+        opt.git_config.as_ref(),
     );
 
-    let zero_style = style_from_str(&opt.zero_style, None, None, true_color);
+    let zero_style = style_from_str(
+        &opt.zero_style,
+        None,
+        None,
+        true_color,
+        opt.git_config.as_ref(),
+    );
 
     let plus_style = style_from_str(
         &opt.plus_style,
@@ -156,6 +177,7 @@ fn make_hunk_styles<'a>(opt: &'a cli::Opt, styles: &'a mut HashMap<&str, StyleRe
         )),
         None,
         true_color,
+        opt.git_config.as_ref(),
     );
 
     let plus_emph_style = style_from_str(
@@ -169,9 +191,16 @@ fn make_hunk_styles<'a>(opt: &'a cli::Opt, styles: &'a mut HashMap<&str, StyleRe
         )),
         None,
         true_color,
+        opt.git_config.as_ref(),
     );
 
-    let plus_non_emph_style = style_from_str(&opt.plus_non_emph_style, None, None, true_color);
+    let plus_non_emph_style = style_from_str(
+        &opt.plus_non_emph_style,
+        None,
+        None,
+        true_color,
+        opt.git_config.as_ref(),
+    );
 
     // The style used to highlight an added empty line when otherwise it would be invisible due to
     // lack of background color in plus-style.
@@ -186,10 +215,16 @@ fn make_hunk_styles<'a>(opt: &'a cli::Opt, styles: &'a mut HashMap<&str, StyleRe
         )),
         None,
         true_color,
+        opt.git_config.as_ref(),
     );
 
-    let whitespace_error_style =
-        style_from_str(&opt.whitespace_error_style, None, None, true_color);
+    let whitespace_error_style = style_from_str(
+        &opt.whitespace_error_style,
+        None,
+        None,
+        true_color,
+        opt.git_config.as_ref(),
+    );
 
     styles.extend([
         ("minus-style", minus_style),
@@ -210,20 +245,45 @@ fn make_hunk_styles<'a>(opt: &'a cli::Opt, styles: &'a mut HashMap<&str, StyleRe
 
 fn make_line_number_styles(opt: &cli::Opt, styles: &mut HashMap<&str, StyleReference>) {
     let true_color = opt.computed.true_color;
-    let line_numbers_left_style =
-        style_from_str(&opt.line_numbers_left_style, None, None, true_color);
+    let line_numbers_left_style = style_from_str(
+        &opt.line_numbers_left_style,
+        None,
+        None,
+        true_color,
+        opt.git_config.as_ref(),
+    );
 
-    let line_numbers_minus_style =
-        style_from_str(&opt.line_numbers_minus_style, None, None, true_color);
+    let line_numbers_minus_style = style_from_str(
+        &opt.line_numbers_minus_style,
+        None,
+        None,
+        true_color,
+        opt.git_config.as_ref(),
+    );
 
-    let line_numbers_zero_style =
-        style_from_str(&opt.line_numbers_zero_style, None, None, true_color);
+    let line_numbers_zero_style = style_from_str(
+        &opt.line_numbers_zero_style,
+        None,
+        None,
+        true_color,
+        opt.git_config.as_ref(),
+    );
 
-    let line_numbers_plus_style =
-        style_from_str(&opt.line_numbers_plus_style, None, None, true_color);
+    let line_numbers_plus_style = style_from_str(
+        &opt.line_numbers_plus_style,
+        None,
+        None,
+        true_color,
+        opt.git_config.as_ref(),
+    );
 
-    let line_numbers_right_style =
-        style_from_str(&opt.line_numbers_right_style, None, None, true_color);
+    let line_numbers_right_style = style_from_str(
+        &opt.line_numbers_right_style,
+        None,
+        None,
+        true_color,
+        opt.git_config.as_ref(),
+    );
 
     styles.extend([
         ("line-numbers-minus-style", line_numbers_minus_style),
@@ -244,6 +304,7 @@ fn make_commit_file_hunk_header_styles(opt: &cli::Opt, styles: &mut HashMap<&str
                 Some(&opt.commit_decoration_style),
                 opt.deprecated_commit_color.as_deref(),
                 true_color,
+                opt.git_config.as_ref(),
             )
         ),
         ("file-style",
@@ -253,6 +314,7 @@ fn make_commit_file_hunk_header_styles(opt: &cli::Opt, styles: &mut HashMap<&str
                 Some(&opt.file_decoration_style),
                 opt.deprecated_file_color.as_deref(),
                 true_color,
+                opt.git_config.as_ref(),
             )
         ),
         ("hunk-header-style",
@@ -262,6 +324,7 @@ fn make_commit_file_hunk_header_styles(opt: &cli::Opt, styles: &mut HashMap<&str
                 Some(&opt.hunk_header_decoration_style),
                 opt.deprecated_hunk_color.as_deref(),
                 true_color,
+                opt.git_config.as_ref(),
             )
         ),
         ("hunk-header-file-style",
@@ -270,6 +333,7 @@ fn make_commit_file_hunk_header_styles(opt: &cli::Opt, styles: &mut HashMap<&str
                 None,
                 None,
                 true_color,
+                opt.git_config.as_ref(),
             )
         ),
         ("hunk-header-line-number-style",
@@ -278,6 +342,7 @@ fn make_commit_file_hunk_header_styles(opt: &cli::Opt, styles: &mut HashMap<&str
                 None,
                 None,
                 true_color,
+                opt.git_config.as_ref(),
             )
         ),
     ]);
@@ -333,6 +398,7 @@ fn style_from_str(
     default: Option<Style>,
     decoration_style_string: Option<&str>,
     true_color: bool,
+    git_config: Option<&GitConfig>,
 ) -> StyleReference {
     if is_style_reference(style_string) {
         StyleReference::Reference(style_string.to_owned())
@@ -342,6 +408,7 @@ fn style_from_str(
             default,
             decoration_style_string,
             true_color,
+            git_config,
         ))
     }
 }
@@ -351,6 +418,7 @@ fn style_from_str_with_handling_of_special_decoration_attributes(
     default: Option<Style>,
     decoration_style_string: Option<&str>,
     true_color: bool,
+    git_config: Option<&GitConfig>,
 ) -> StyleReference {
     if is_style_reference(style_string) {
         StyleReference::Reference(style_string.to_owned())
@@ -361,6 +429,7 @@ fn style_from_str_with_handling_of_special_decoration_attributes(
                 default,
                 decoration_style_string,
                 true_color,
+                git_config,
             ),
         )
     }
@@ -372,6 +441,7 @@ fn style_from_str_with_handling_of_special_decoration_attributes_and_respecting_
     decoration_style_string: Option<&str>,
     deprecated_foreground_color_arg: Option<&str>,
     true_color: bool,
+    git_config: Option<&GitConfig>,
 ) -> StyleReference {
     if is_style_reference(style_string) {
         StyleReference::Reference(style_string.to_owned())
@@ -382,6 +452,7 @@ fn style_from_str_with_handling_of_special_decoration_attributes_and_respecting_
             decoration_style_string,
             deprecated_foreground_color_arg,
             true_color,
+            git_config,
         ))
     }
 }

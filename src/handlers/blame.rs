@@ -36,7 +36,10 @@ impl<'a> StateMachine<'a> {
             {
                 let is_repeat = previous_commit == Some(blame.commit);
                 let color = self.get_color(blame.commit, previous_commit, is_repeat);
-                let mut style = Style::from_colors(None, color::parse_color(&color, true));
+                let mut style = Style::from_colors(
+                    None,
+                    color::parse_color(&color, true, self.config.git_config.as_ref()),
+                );
                 // TODO: This will often be pointlessly updating a key with the
                 // value it already has. It might be nicer to do this (and
                 // compute the style) in get_color(), but as things stand the
