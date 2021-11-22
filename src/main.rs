@@ -82,22 +82,32 @@ fn run_app() -> std::io::Result<i32> {
     let assets = HighlightingAssets::new();
     let opt = cli::Opt::from_args_and_git_config(git_config::GitConfig::try_create(), assets);
 
-    if opt.list_languages {
-        list_languages()?;
-        return Ok(0);
+    let subcommand_result = if opt.list_languages {
+        Some(list_languages())
     } else if opt.list_syntax_themes {
-        subcommands::list_syntax_themes::list_syntax_themes()?;
-        return Ok(0);
+        Some(subcommands::list_syntax_themes::list_syntax_themes())
     } else if opt.show_syntax_themes {
-        subcommands::show_syntax_themes::show_syntax_themes()?;
-        return Ok(0);
+        Some(subcommands::show_syntax_themes::show_syntax_themes())
     } else if opt.show_themes {
-        subcommands::show_themes::show_themes(opt.dark, opt.light, opt.computed.is_light_mode)?;
-        return Ok(0);
+        Some(subcommands::show_themes::show_themes(
+            opt.dark,
+            opt.light,
+            opt.computed.is_light_mode,
+        ))
     } else if opt.show_colors {
-        subcommands::show_colors::show_colors()?;
+        Some(subcommands::show_colors::show_colors())
+    } else {
+        None
+    };
+    if let Some(result) = subcommand_result {
+        if let Err(error) = result {
+            match error.kind() {
+                ErrorKind::BrokenPipe => {}
+                _ => fatal(format!("{}", error)),
+            }
+        }
         return Ok(0);
-    }
+    };
 
     let _show_config = opt.show_config;
     let config = config::Config::from(opt);
