@@ -157,7 +157,7 @@ dependencies = [
  "libc",
  "num-integer",
  "num-traits",
- "time",
+ "time 0.1.44",
  "winapi",
 ]
 
@@ -374,6 +374,7 @@ dependencies = [
  "lazy_static",
  "palette",
  "pathdiff",
+ "plist",
  "regex",
  "serde",
  "serde_json",
@@ -757,15 +758,15 @@ checksum = "3831453b3449ceb48b6d9c7ad7c96d5ea673e9b470a1dc578c2ce6521230884c"
 
 [[package]]
 name = "plist"
-version = "1.0.1"
+version = "1.3.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "4dc57ccf442c7414b790e8e7b72fb4d776a66c7680129360946d9aaa6f5311e9"
+checksum = "bd39bc6cdc9355ad1dc5eeedefee696bb35c34caf21768741e81826c0bbd7225"
 dependencies = [
  "base64",
- "chrono",
  "indexmap",
  "line-wrap",
  "serde",
+ "time 0.3.5",
  "xml-rs",
 ]
 
@@ -1109,6 +1110,16 @@ dependencies = [
  "libc",
  "wasi 0.10.0+wasi-snapshot-preview1",
  "winapi",
+]
+
+[[package]]
+name = "time"
+version = "0.3.5"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "41effe7cfa8af36f439fac33861b66b049edc6f9a32331e2312660529c1c24ad"
+dependencies = [
+ "itoa",
+ "libc",
 ]
 
 [[package]]
