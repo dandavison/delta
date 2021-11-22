@@ -5,6 +5,7 @@ use lazy_static::lazy_static;
 
 use crate::ansi;
 use crate::color;
+use crate::git_config::GitConfig;
 
 #[derive(Clone, Copy, PartialEq, Default)]
 pub struct Style {
@@ -128,11 +129,12 @@ impl Style {
 }
 
 /// Interpret `color_string` as a color specifier and return it painted accordingly.
-pub fn paint_color_string(
-    color_string: &str,
+pub fn paint_color_string<'a>(
+    color_string: &'a str,
     true_color: bool,
-) -> ansi_term::ANSIGenericString<str> {
-    if let Some(color) = color::parse_color(color_string, true_color) {
+    git_config: Option<&GitConfig>,
+) -> ansi_term::ANSIGenericString<'a, str> {
+    if let Some(color) = color::parse_color(color_string, true_color, git_config) {
         let style = ansi_term::Style {
             background: Some(color),
             ..ansi_term::Style::default()

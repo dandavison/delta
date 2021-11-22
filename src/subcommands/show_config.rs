@@ -31,7 +31,7 @@ pub fn show_config(config: &config::Config, writer: &mut dyn Write) -> std::io::
         blame_palette = config
             .blame_palette
             .iter()
-            .map(|s| style::paint_color_string(s, config.true_color))
+            .map(|s| style::paint_color_string(s, config.true_color, config.git_config.as_ref()))
             .join(" "),
         commit_style = config.commit_style.to_painted_string(),
         file_style = config.file_style.to_painted_string(),

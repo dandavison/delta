@@ -1471,7 +1471,7 @@ src/align.rs:71: impl<'a> Alignment<'a> { │
         let output = integration_test_utils::run_delta(example_diff, &config);
         let line = output.lines().nth(8).unwrap();
         if base_style_has_background_color {
-            let style = style::Style::from_str(base_style, None, None, true);
+            let style = style::Style::from_str(base_style, None, None, true, None);
             assert_eq!(
                 line,
                 &style
