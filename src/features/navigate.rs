@@ -83,7 +83,7 @@ pub fn copy_less_hist_file_and_append_navigate_regex(config: &Config) -> std::io
         std::fs::File::create(&delta_less_hist_file)?,
         "{}\"{}",
         contents,
-        config.navigate_regex,
+        config.navigate_regex.as_ref().unwrap(),
     )?;
     Ok(delta_less_hist_file)
 }

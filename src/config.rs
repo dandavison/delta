@@ -106,7 +106,7 @@ pub struct Config {
     pub minus_file: Option<PathBuf>,
     pub minus_non_emph_style: Style,
     pub minus_style: Style,
-    pub navigate_regex: String,
+    pub navigate_regex: Option<String>,
     pub navigate: bool,
     pub null_style: Style,
     pub null_syntect_style: SyntectStyle,
@@ -244,15 +244,17 @@ impl From<cli::Opt> for Config {
             side_by_side_data,
         );
 
-        let navigate_regex = if (opt.navigate || opt.show_themes) && opt.navigate_regex.is_empty() {
-            navigate::make_navigate_regex(
+        let navigate_regex = if (opt.navigate || opt.show_themes)
+            && (opt.navigate_regex.is_none() || opt.navigate_regex == Some("".to_string()))
+        {
+            Some(navigate::make_navigate_regex(
                 opt.show_themes,
                 &file_modified_label,
                 &file_added_label,
                 &file_removed_label,
                 &file_renamed_label,
                 &hunk_label,
-            )
+            ))
         } else {
             opt.navigate_regex
         };

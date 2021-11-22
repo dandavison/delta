@@ -530,9 +530,9 @@ pub struct Opt {
     #[structopt(long = "wrap-right-prefix-symbol", default_value = "…")]
     pub wrap_right_prefix_symbol: String,
 
-    #[structopt(long = "navigate-regex", default_value = "")]
-    /// A regexp to use in the less pager when navigating (auto-generated when empty)
-    pub navigate_regex: String,
+    #[structopt(long = "navigate-regex")]
+    /// A regexp to use in the less pager when navigating (auto-generated when unspecified)
+    pub navigate_regex: Option<String>,
 
     #[structopt(long = "file-modified-label", default_value = "")]
     /// Text to display in front of a modified file path.

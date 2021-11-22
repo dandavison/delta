@@ -751,7 +751,7 @@ pub mod tests {
         assert_eq!(opt.minus_non_emph_style, "black black");
         assert_eq!(opt.minus_style, "black black");
         assert_eq!(opt.navigate, true);
-        assert_eq!(opt.navigate_regex, "xxxyyyzzz");
+        assert_eq!(opt.navigate_regex, Some("xxxyyyzzz".to_string()));
         assert_eq!(opt.paging_mode, "never");
         assert_eq!(opt.plus_emph_style, "black black");
         assert_eq!(opt.plus_empty_line_marker_style, "black black");
