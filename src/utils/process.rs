@@ -221,6 +221,15 @@ where
     P: ProcessInterface,
     F: Fn(&[String]) -> ProcessArgs<T>,
 {
+    #[cfg(test)]
+    {
+        if let Some(args) = tests::cfg::WithArgs::get() {
+            match extract_args(&args) {
+                ProcessArgs::Args(ext) => return Some(ext),
+                _ => return None,
+            }
+        }
+    }
     let my_pid = info.my_pid();
 
     // 1) Try the parent process. If delta is set as the pager in git, then git is the parent process.
@@ -295,11 +304,61 @@ where
 }
 
 #[cfg(test)]
-mod tests {
+pub mod tests {
     use super::blame::*;
     use super::*;
 
     use itertools::Itertools;
+
+    pub mod cfg {
+        use std::cell::RefCell;
+
+        #[derive(Debug, PartialEq)]
+        enum TlsState<T> {
+            Some(T),
+            None,
+            Invalid,
+        }
+
+        thread_local! {
+            static FAKE_ARGS: RefCell<TlsState<Vec<String>>> = RefCell::new(TlsState::None);
+        }
+
+        pub struct WithArgs {}
+        impl WithArgs {
+            pub fn new(args: &str) -> Self {
+                let string_vec = args.split(' ').map(str::to_owned).collect();
+                assert!(
+                    FAKE_ARGS.with(|a| a.replace(TlsState::Some(string_vec))) != TlsState::Invalid,
+                    "test logic error (in new): wrong WithArgs scope?"
+                );
+                WithArgs {}
+            }
+            pub fn get() -> Option<Vec<String>> {
+                FAKE_ARGS.with(|a| {
+                    let old_value = a.replace_with(|old_value| match old_value {
+                        TlsState::Some(_) => TlsState::Invalid,
+                        TlsState::None => TlsState::None,
+                        TlsState::Invalid => TlsState::Invalid,
+                    });
+
+                    match old_value {
+                        TlsState::Some(args) => Some(args),
+                        TlsState::None => None,
+                        TlsState::Invalid => {
+                            panic!("test logic error (in get): wrong WithArgs scope?")
+                        }
+                    }
+                })
+            }
+        }
+        impl Drop for WithArgs {
+            fn drop(&mut self) {
+                // clears an invalid state
+                FAKE_ARGS.with(|a| a.replace(TlsState::None));
+            }
+        }
+    }
 
     #[test]
     fn test_guess_git_blame_filename_extension() {
@@ -435,7 +494,39 @@ mod tests {
     }
 
     #[test]
-    fn test_blame_process_info_with_parent() {
+    fn test_process_testing() {
+        {
+            let _args = cfg::WithArgs::new(&"git blame hello");
+            assert_eq!(
+                calling_process_cmdline(ProcInfo::new(), blame::guess_git_blame_filename_extension),
+                Some("hello".into())
+            );
+        }
+        {
+            let _args = cfg::WithArgs::new(&"git blame world.txt");
+            assert_eq!(
+                calling_process_cmdline(ProcInfo::new(), blame::guess_git_blame_filename_extension),
+                Some("txt".into())
+            );
+        }
+    }
+
+    #[test]
+    #[should_panic]
+    fn test_process_testing_assert() {
+        {
+            let _args = cfg::WithArgs::new(&"git blame do.not.panic");
+            assert_eq!(
+                calling_process_cmdline(ProcInfo::new(), blame::guess_git_blame_filename_extension),
+                Some("panic".into())
+            );
+
+            calling_process_cmdline(ProcInfo::new(), blame::guess_git_blame_filename_extension);
+        }
+    }
+
+    #[test]
+    fn test_process_blame_info_with_parent() {
         let no_processes = MockProcInfo::with(&[]);
         assert_eq!(
             calling_process_cmdline(no_processes, blame::guess_git_blame_filename_extension),
@@ -465,7 +556,7 @@ mod tests {
     }
 
     #[test]
-    fn test_calling_process_cmdline() {
+    fn test_process_calling_cmdline() {
         // Github runs CI tests for arm under qemu where where sysinfo can not find the parent processr.
         if std::env::vars().any(|(key, _)| key == "CROSS_RUNNER" || key == "QEMU_LD_PREFIX") {
             return;
