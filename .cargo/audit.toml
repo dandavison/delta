@@ -1,4 +1,4 @@
 # See https://github.com/rustsec/rustsec/blob/main/cargo-audit/audit.toml.example
 
 [advisories]
-ignore = ["RUSTSEC-2020-0159", "RUSTSEC-2020-0071"]
+ignore = ["RUSTSEC-2020-0159"]
