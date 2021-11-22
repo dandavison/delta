@@ -7,6 +7,7 @@ mod align;
 mod ansi;
 mod cli;
 mod color;
+mod colors;
 mod config;
 mod delta;
 mod edits;
@@ -92,6 +93,9 @@ fn run_app() -> std::io::Result<i32> {
         return Ok(0);
     } else if opt.show_themes {
         subcommands::show_themes::show_themes(opt.dark, opt.light, opt.computed.is_light_mode)?;
+        return Ok(0);
+    } else if opt.show_colors {
+        subcommands::show_colors::show_colors()?;
         return Ok(0);
     }
 

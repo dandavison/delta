@@ -186,6 +186,7 @@ pub fn set_options(
             plus_non_emph_style,
             raw,
             relative_paths,
+            show_colors,
             show_themes,
             side_by_side,
             wrap_max_lines,

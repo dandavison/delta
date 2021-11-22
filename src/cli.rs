@@ -294,6 +294,11 @@ pub struct Opt {
     #[structopt(long = "show-themes")]
     pub show_themes: bool,
 
+    /// Show available named colors. In addition to named colors, arbitrary
+    /// colors can be specified using RGB hex codes. See COLORS section.
+    #[structopt(long = "show-colors")]
+    pub show_colors: bool,
+
     #[structopt(long = "no-gitconfig")]
     /// Do not take any settings from git config. See GIT CONFIG section.
     pub no_gitconfig: bool,
