@@ -96,6 +96,8 @@ fn run_app() -> std::io::Result<i32> {
         ))
     } else if opt.show_colors {
         Some(subcommands::show_colors::show_colors())
+    } else if opt.parse_ansi {
+        Some(subcommands::parse_ansi::parse_ansi())
     } else {
         None
     };

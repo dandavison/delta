@@ -299,6 +299,12 @@ pub struct Opt {
     #[structopt(long = "show-colors")]
     pub show_colors: bool,
 
+    /// Parse ANSI color escape sequences in input and display them as git style
+    /// strings. Example usage: git show --color=always | delta --parse-ansi
+    /// This can be used to help identify input style strings to use with map-styles.
+    #[structopt(long = "parse-ansi")]
+    pub parse_ansi: bool,
+
     #[structopt(long = "no-gitconfig")]
     /// Do not take any settings from git config. See GIT CONFIG section.
     pub no_gitconfig: bool,
