@@ -1,3 +1,4 @@
+use std::collections::HashMap;
 use std::io::Write;
 
 use itertools::Itertools;
@@ -6,7 +7,6 @@ use syntect::highlighting::Style as SyntectStyle;
 use syntect::parsing::{SyntaxReference, SyntaxSet};
 use unicode_segmentation::UnicodeSegmentation;
 
-use crate::ansi;
 use crate::config::{self, delta_unreachable, Config};
 use crate::delta::State;
 use crate::edits;
@@ -18,6 +18,7 @@ use crate::minusplus::*;
 use crate::paint::superimpose_style_sections::superimpose_style_sections;
 use crate::style::Style;
 use crate::wrapping::wrap_minusplus_block;
+use crate::{ansi, style};
 
 pub struct Painter<'p> {
     pub minus_lines: Vec<(String, State)>,
@@ -134,17 +135,9 @@ impl<'p> Painter<'p> {
         }
     }
 
-    /// Remove the initial +/- character of a line that will be emitted unchanged, including any
-    /// ANSI escape sequences.
-    pub fn prepare_raw_line(&self, line: &str) -> String {
-        ansi::ansi_preserving_slice(
-            &self.expand_tabs(line.graphemes(true)),
-            if self.config.keep_plus_minus_markers {
-                0
-            } else {
-                1
-            },
-        )
+    // Remove initial -/+ character, and expand tabs as spaces, retaining ANSI sequences.
+    pub fn prepare_raw_line(&self, raw_line: &str) -> String {
+        ansi::ansi_preserving_slice(&self.expand_tabs(raw_line.graphemes(true)), 1)
     }
 
     /// Expand tabs as spaces.
@@ -165,13 +158,11 @@ impl<'p> Painter<'p> {
     pub fn paint_buffered_minus_and_plus_lines(&mut self) {
         let minus_line_syntax_style_sections = Self::get_syntax_style_sections_for_lines(
             &self.minus_lines,
-            &State::HunkMinus(None),
             self.highlighter.as_mut(),
             self.config,
         );
         let plus_line_syntax_style_sections = Self::get_syntax_style_sections_for_lines(
             &self.plus_lines,
-            &State::HunkPlus(None),
             self.highlighter.as_mut(),
             self.config,
         );
@@ -312,7 +303,6 @@ impl<'p> Painter<'p> {
         let lines = vec![(self.prepare(line), state.clone())];
         let syntax_style_sections = Painter::get_syntax_style_sections_for_lines(
             &lines,
-            &state,
             self.highlighter.as_mut(),
             self.config,
         );
@@ -426,7 +416,6 @@ impl<'p> Painter<'p> {
         let lines = vec![(self.expand_tabs(line.graphemes(true)), state.clone())];
         let syntax_style_sections = Painter::get_syntax_style_sections_for_lines(
             &lines,
-            &state,
             self.highlighter.as_mut(),
             self.config,
         );
@@ -461,33 +450,17 @@ impl<'p> Painter<'p> {
             State::HunkMinus(None) | State::HunkMinusWrapped => {
                 (config.minus_style, config.minus_non_emph_style)
             }
-            State::HunkMinus(Some(raw_line)) => {
-                // TODO: This is the second time we are parsing the ANSI sequences
-                if let Some(ansi_term_style) = ansi::parse_first_style(raw_line) {
-                    let style = Style {
-                        ansi_term_style,
-                        ..Style::new()
-                    };
-                    (style, style)
-                } else {
-                    (config.minus_style, config.minus_non_emph_style)
-                }
-            }
             State::HunkZero | State::HunkZeroWrapped => (config.zero_style, config.zero_style),
             State::HunkPlus(None) | State::HunkPlusWrapped => {
                 (config.plus_style, config.plus_non_emph_style)
             }
-            State::HunkPlus(Some(raw_line)) => {
-                // TODO: This is the second time we are parsing the ANSI sequences
-                if let Some(ansi_term_style) = ansi::parse_first_style(raw_line) {
-                    let style = Style {
-                        ansi_term_style,
-                        ..Style::new()
-                    };
-                    (style, style)
+            State::HunkMinus(Some(_)) | State::HunkPlus(Some(_)) => {
+                let style = if !diff_sections.is_empty() {
+                    diff_sections[diff_sections.len() - 1].0
                 } else {
-                    (config.plus_style, config.plus_non_emph_style)
-                }
+                    config.null_style
+                };
+                (style, style)
             }
             State::Blame(_, _) => (diff_sections[0].0, diff_sections[0].0),
             _ => (config.null_style, config.null_style),
@@ -573,18 +546,6 @@ impl<'p> Painter<'p> {
                 ))
             }
         }
-        match state {
-            State::HunkMinus(Some(raw_line)) | State::HunkPlus(Some(raw_line)) => {
-                // This line has been identified as one which should be emitted unchanged,
-                // including any ANSI escape sequences that it has.
-                return (
-                    format!("{}{}", ansi_term::ANSIStrings(&ansi_strings), raw_line),
-                    false,
-                );
-            }
-            _ => {}
-        }
-
         let superimposed = superimpose_style_sections(
             syntax_sections,
             diff_sections,
@@ -636,7 +597,12 @@ impl<'p> Painter<'p> {
                     || config.plus_non_emph_style.is_syntax_highlighted
             }
             State::HunkHeader(_, _) => true,
-            State::HunkMinus(Some(_)) | State::HunkPlus(Some(_)) => false,
+            State::HunkMinus(Some(_raw_line)) | State::HunkPlus(Some(_raw_line)) => {
+                // It is possible that the captured raw line contains an ANSI
+                // style that has been mapped (via map-styles) to a delta Style
+                // with syntax-highlighting.
+                true
+            }
             State::Blame(_, _) => true,
             State::GitShowFile => true,
             State::Grep => true,
@@ -658,14 +624,15 @@ impl<'p> Painter<'p> {
 
     pub fn get_syntax_style_sections_for_lines<'a>(
         lines: &'a [(String, State)],
-        state: &State,
         highlighter: Option<&mut HighlightLines>,
         config: &config::Config,
     ) -> Vec<LineSegments<'a, SyntectStyle>> {
         let mut line_sections = Vec::new();
         match (
             highlighter,
-            Painter::should_compute_syntax_highlighting(state, config),
+            lines
+                .iter()
+                .any(|(_, state)| Painter::should_compute_syntax_highlighting(state, config)),
         ) {
             (Some(highlighter), true) => {
                 for (line, _) in lines.iter() {
@@ -684,19 +651,19 @@ impl<'p> Painter<'p> {
     /// Set background styles to represent diff for minus and plus lines in buffer.
     #[allow(clippy::type_complexity)]
     fn get_diff_style_sections<'a>(
-        minus_lines: &'a [(String, State)],
-        plus_lines: &'a [(String, State)],
+        minus_lines_and_states: &'a [(String, State)],
+        plus_lines_and_states: &'a [(String, State)],
         config: &config::Config,
     ) -> (
         Vec<LineSegments<'a, Style>>,
         Vec<LineSegments<'a, Style>>,
         Vec<(Option<usize>, Option<usize>)>,
     ) {
-        let (minus_lines, minus_styles): (Vec<&str>, Vec<Style>) = minus_lines
+        let (minus_lines, minus_styles): (Vec<&str>, Vec<Style>) = minus_lines_and_states
             .iter()
             .map(|(s, t)| (s.as_str(), *config.get_style(t)))
             .unzip();
-        let (plus_lines, plus_styles): (Vec<&str>, Vec<Style>) = plus_lines
+        let (plus_lines, plus_styles): (Vec<&str>, Vec<Style>) = plus_lines_and_states
             .iter()
             .map(|(s, t)| (s.as_str(), *config.get_style(t)))
             .unzip();
@@ -711,23 +678,30 @@ impl<'p> Painter<'p> {
             config.max_line_distance,
             config.max_line_distance_for_naively_paired_lines,
         );
-
         let minus_non_emph_style = if config.minus_non_emph_style != config.minus_emph_style {
             Some(config.minus_non_emph_style)
         } else {
             None
         };
         let mut lines_style_sections = MinusPlus::new(&mut diff_sections.0, &mut diff_sections.1);
-        Self::update_styles(lines_style_sections[Minus], None, minus_non_emph_style);
+        Self::update_styles(
+            minus_lines_and_states,
+            lines_style_sections[Minus],
+            None,
+            minus_non_emph_style,
+            config,
+        );
         let plus_non_emph_style = if config.plus_non_emph_style != config.plus_emph_style {
             Some(config.plus_non_emph_style)
         } else {
             None
         };
         Self::update_styles(
+            plus_lines_and_states,
             lines_style_sections[Plus],
             Some(config.whitespace_error_style),
             plus_non_emph_style,
+            config,
         );
         diff_sections
     }
@@ -740,12 +714,25 @@ impl<'p> Painter<'p> {
     ///    sections.
     /// 2. If the line constitutes a whitespace error, then the whitespace error style
     ///    should be applied to the added material.
-    fn update_styles(
-        lines_style_sections: &mut Vec<LineSegments<'_, Style>>,
+    /// 3. If delta recognized the raw line as one containing ANSI colors that
+    ///    are going to be preserved in the output, then replace delta's
+    ///    computed diff styles with these styles from the raw line. (This is
+    ///    how support for git's --color-moved is implemented.)
+    fn update_styles<'a>(
+        lines_and_states: &'a [(String, State)],
+        lines_style_sections: &mut Vec<LineSegments<'a, Style>>,
         whitespace_error_style: Option<Style>,
         non_emph_style: Option<Style>,
+        config: &config::Config,
     ) {
-        for style_sections in lines_style_sections {
+        for ((_, state), style_sections) in lines_and_states.iter().zip(lines_style_sections) {
+            match state {
+                State::HunkMinus(Some(raw_line)) | State::HunkPlus(Some(raw_line)) => {
+                    *style_sections = parse_style_sections(raw_line, config);
+                    continue;
+                }
+                _ => {}
+            };
             let line_has_emph_and_non_emph_sections =
                 style_sections_contain_more_than_one_style(style_sections);
             let should_update_non_emph_styles =
@@ -766,6 +753,30 @@ impl<'p> Painter<'p> {
             }
         }
     }
+}
+
+// Parse ANSI styles encountered in `raw_line` and apply `styles_map`.
+pub fn parse_style_sections<'a>(
+    raw_line: &'a str,
+    config: &config::Config,
+) -> LineSegments<'a, Style> {
+    let empty_map = HashMap::new();
+    let styles_map = config.styles_map.as_ref().unwrap_or(&empty_map);
+    ansi::parse_style_sections(raw_line)
+        .iter()
+        .map(|(original_style, s)| {
+            match styles_map.get(&style::ansi_term_style_equality_key(*original_style)) {
+                Some(mapped_style) => (*mapped_style, *s),
+                None => (
+                    Style {
+                        ansi_term_style: *original_style,
+                        ..Style::default()
+                    },
+                    *s,
+                ),
+            }
+        })
+        .collect()
 }
 
 #[allow(clippy::too_many_arguments)]
@@ -861,17 +872,25 @@ mod superimpose_style_sections {
     use crate::style::Style;
     use crate::utils::bat::terminal::to_ansi_color;
 
+    // We have two different annotations of the same line:
+    // `syntax_style_sections` contains foreground styles computed by syntect,
+    // and `diff_style_sections` contains styles computed by delta reflecting
+    // within-line edits. The delta styles may assign a foreground color, or
+    // they may indicate that the foreground color comes from syntax
+    // highlighting (the is_syntax_highlighting attribute on style::Style). This
+    // function takes in the two input streams and outputs one stream with a
+    // single style assigned to each character.
     pub fn superimpose_style_sections(
-        sections_1: &[(SyntectStyle, &str)],
-        sections_2: &[(Style, &str)],
+        syntax_style_sections: &[(SyntectStyle, &str)],
+        diff_style_sections: &[(Style, &str)],
         true_color: bool,
         null_syntect_style: SyntectStyle,
     ) -> Vec<(Style, String)> {
         coalesce(
             superimpose(
-                explode(sections_1)
+                explode(syntax_style_sections)
                     .iter()
-                    .zip(explode(sections_2))
+                    .zip(explode(diff_style_sections))
                     .collect::<Vec<(&(SyntectStyle, char), (Style, char))>>(),
             ),
             true_color,

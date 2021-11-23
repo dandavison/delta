@@ -132,7 +132,6 @@ pub mod ansi_test_utils {
         let lines = vec![(line.to_string(), state.clone())];
         let syntax_style_sections = paint::Painter::get_syntax_style_sections_for_lines(
             &lines,
-            &state,
             painter.highlighter.as_mut(),
             config,
         );

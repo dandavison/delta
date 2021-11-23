@@ -429,6 +429,12 @@ pub struct Opt {
     /// (underline), 'ol' (overline), or the combination 'ul ol'.
     pub hunk_header_decoration_style: String,
 
+    #[structopt(long = "map-styles")]
+    /// A string specifying a mapping styles encountered in raw input to desired
+    /// output styles. An example is
+    /// --map-styles='bold purple => red "#eeeeee", bold cyan => syntax "#eeeeee"'
+    pub map_styles: Option<String>,
+
     /// Format string for git blame commit metadata. Available placeholders are
     /// "{timestamp}", "{author}", and "{commit}".
     #[structopt(

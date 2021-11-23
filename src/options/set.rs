@@ -157,6 +157,7 @@ pub fn set_options(
             inspect_raw_lines,
             keep_plus_minus_markers,
             line_buffer_size,
+            map_styles,
             max_line_distance,
             max_line_length,
             // Hack: minus-style must come before minus-*emph-style because the latter default

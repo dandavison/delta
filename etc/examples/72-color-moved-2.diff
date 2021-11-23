@@ -1,0 +1,8 @@
+[1mdiff --git a/file.py b/file.py[m
+[1mindex f07db74..3cb162d 100644[m
+[1m--- a/file.py[m
+[1m+++ b/file.py[m
+[36m@@ -1,2 +1,2 @@[m
+[1;35m-class X: pass[m
+ class Y: pass[m
+[1;36m+[m[1;36mclass X: pass[m
