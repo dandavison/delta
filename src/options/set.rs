@@ -180,6 +180,7 @@ pub fn set_options(
             line_numbers_zero_style,
             pager,
             paging_mode,
+            parse_ansi,
             // Hack: plus-style must come before plus-*emph-style because the latter default
             // dynamically to the value of the former.
             plus_style,
