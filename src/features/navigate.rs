@@ -30,7 +30,7 @@ pub fn make_feature() -> Vec<(String, OptionValueFunction)> {
 }
 
 // Construct the regexp used by less for paging, if --show-themes or --navigate is enabled.
-pub fn make_navigate_regexp(
+pub fn make_navigate_regex(
     show_themes: bool,
     file_modified_label: &str,
     file_added_label: &str,
@@ -41,27 +41,34 @@ pub fn make_navigate_regexp(
     if show_themes {
         "^Theme:".to_string()
     } else {
+        let optional_regexp = |find: &str| {
+            if !find.is_empty() {
+                format!("|{}", regex::escape(find))
+            } else {
+                "".to_string()
+            }
+        };
         format!(
-            "^(commit|{}|{}|{}|{}|{})",
-            regex::escape(file_added_label),
-            regex::escape(file_removed_label),
-            regex::escape(file_renamed_label),
-            regex::escape(file_modified_label),
-            regex::escape(hunk_label),
+            "^(commit{}{}{}{}{})",
+            optional_regexp(file_added_label),
+            optional_regexp(file_removed_label),
+            optional_regexp(file_renamed_label),
+            optional_regexp(file_modified_label),
+            optional_regexp(hunk_label),
         )
     }
 }
 
 // Create a less history file to be used by delta's child less process. This file is initialized
-// with the contents of user's real less hist file, to which the navigate regexp is appended. This
-// has the effect that 'n' or 'N' in delta's less process will search for the navigate regexp,
+// with the contents of user's real less hist file, to which the navigate regex is appended. This
+// has the effect that 'n' or 'N' in delta's less process will search for the navigate regex,
 // without the undesirable aspects of using --pattern, yet without polluting the user's less search
-// history with delta's navigate regexp. See
+// history with delta's navigate regex. See
 // https://github.com/dandavison/delta/issues/237#issuecomment-780654036. Note that with the
 // current implementation, no writes to the delta less history file are propagated back to the real
 // history file so, for example, a (non-navigate) search performed in the delta less process will
 // not be stored in history.
-pub fn copy_less_hist_file_and_append_navigate_regexp(config: &Config) -> std::io::Result<PathBuf> {
+pub fn copy_less_hist_file_and_append_navigate_regex(config: &Config) -> std::io::Result<PathBuf> {
     let delta_less_hist_file = get_delta_less_hist_file()?;
     let initial_contents = ".less-history-file:\n".to_string();
     let mut contents = if let Some(hist_file) = get_less_hist_file() {
@@ -76,7 +83,7 @@ pub fn copy_less_hist_file_and_append_navigate_regexp(config: &Config) -> std::i
         std::fs::File::create(&delta_less_hist_file)?,
         "{}\"{}",
         contents,
-        config.navigate_regexp.as_ref().unwrap(),
+        config.navigate_regex.as_ref().unwrap(),
     )?;
     Ok(delta_less_hist_file)
 }
