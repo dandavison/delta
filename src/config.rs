@@ -20,6 +20,7 @@ use crate::git_config::{GitConfig, GitConfigEntry};
 use crate::minusplus::MinusPlus;
 use crate::paint::BgFillMethod;
 use crate::parse_styles;
+use crate::style;
 use crate::style::Style;
 use crate::tests::TESTING;
 use crate::utils::bat::output::PagingMode;
@@ -105,6 +106,7 @@ pub struct Config {
     pub line_numbers_style_minusplus: MinusPlus<Style>,
     pub line_numbers_zero_style: Style,
     pub line_numbers: bool,
+    pub styles_map: Option<HashMap<style::AnsiTermStyleEqualityKey, Style>>,
     pub max_line_distance_for_naively_paired_lines: f64,
     pub max_line_distance: f64,
     pub max_line_length: usize,
@@ -157,6 +159,7 @@ impl Config {
 impl From<cli::Opt> for Config {
     fn from(opt: cli::Opt) -> Self {
         let styles = parse_styles::parse_styles(&opt);
+        let styles_map = make_styles_map(&opt);
 
         let max_line_distance_for_naively_paired_lines =
             env::get_env_var("DELTA_EXPERIMENTAL_MAX_LINE_DISTANCE_FOR_NAIVELY_PAIRED_LINES")
@@ -297,6 +300,7 @@ impl From<cli::Opt> for Config {
             ),
             line_numbers_zero_style: styles["line-numbers-zero-style"],
             line_buffer_size: opt.line_buffer_size,
+            styles_map,
             max_line_distance: opt.max_line_distance,
             max_line_distance_for_naively_paired_lines,
             max_line_length: match (opt.side_by_side, wrap_max_lines_plus1) {
@@ -393,6 +397,28 @@ fn make_blame_palette(blame_palette: Option<String>, is_light_mode: bool) -> Vec
             .iter()
             .map(|s| s.to_string())
             .collect::<Vec<String>>(),
+    }
+}
+
+fn make_styles_map(opt: &cli::Opt) -> Option<HashMap<style::AnsiTermStyleEqualityKey, Style>> {
+    if let Some(styles_map_str) = &opt.map_styles {
+        let mut styles_map = HashMap::new();
+        for pair_str in styles_map_str.split(',') {
+            let mut style_strs = pair_str.split("=>").map(|s| s.trim());
+            if let (Some(from_str), Some(to_str)) = (style_strs.next(), style_strs.next()) {
+                let key = style::ansi_term_style_equality_key(
+                    Style::from_str(from_str, None, None, true, opt.git_config.as_ref())
+                        .ansi_term_style,
+                );
+                styles_map.insert(
+                    key,
+                    Style::from_str(to_str, None, None, true, opt.git_config.as_ref()),
+                );
+            }
+        }
+        Some(styles_map)
+    } else {
+        None
     }
 }
 

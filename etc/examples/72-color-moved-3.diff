@@ -1,0 +1,14 @@
+[33mcommit fffb6bf94087c432b6e2e29cab97bf1f8987c641[m
+Author: Dan Davison <dandavison7@gmail.com>
+Date:   Tue Nov 23 14:51:46 2021 -0500
+
+    DEBUG
+
+[1mdiff --git a/src/config.rs b/src/config.rs[m
+[1mindex efe6adb..9762222 100644[m
+[1m--- a/src/config.rs[m
+[1m+++ b/src/config.rs[m
+[36m@@ -400,6 +400,7 @@[m [mfn make_blame_palette(blame_palette: Option<String>, is_light_mode: bool) -> Vec[m
+[1;36m+[m[1;36mpub fn user_supplied_option(option: &str, arg_matches: &clap::ArgMatches) -> bool {[m
+[36m@@ -416,29 +433,30 @@[m [mfn make_styles_map(opt: &cli::Opt) -> Option<HashMap<style::AnsiTermStyleEqualit[m
+[1;35m-pub fn user_supplied_option(option: &str, arg_matches: &clap::ArgMatches) -> bool {[m
