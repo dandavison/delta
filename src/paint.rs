@@ -627,11 +627,13 @@ impl<'p> Painter<'p> {
             State::HunkMinus(None) => {
                 config.minus_style.is_syntax_highlighted
                     || config.minus_emph_style.is_syntax_highlighted
+                    || config.minus_non_emph_style.is_syntax_highlighted
             }
             State::HunkZero => config.zero_style.is_syntax_highlighted,
             State::HunkPlus(None) => {
                 config.plus_style.is_syntax_highlighted
                     || config.plus_emph_style.is_syntax_highlighted
+                    || config.plus_non_emph_style.is_syntax_highlighted
             }
             State::HunkHeader(_, _) => true,
             State::HunkMinus(Some(_)) | State::HunkPlus(Some(_)) => false,
