@@ -738,7 +738,7 @@ mod tests {
     fn test_parse_grep_n_match_no_extension() {
         // git grep -n
         let fake_parent_grep_command =
-            "/usr/local/bin/grep --doesnt-matter --nor-this nor_this -- nor_this";
+            "/usr/local/bin/git --doesnt-matter grep --nor-this nor_this -- nor_this";
         {
             let _args = cfg::WithArgs::new(&fake_parent_grep_command);
             assert_eq!(
