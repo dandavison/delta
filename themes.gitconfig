@@ -75,26 +75,27 @@
 
 [delta "hoopoe"]
     # author: https://github.com/dandavison
-    dark-pink-style = normal "#ffc0c0"
-    pink-style = normal "#ffe0e0"
-    green-style = syntax "#d0ffd0"
-    dark-green-style = syntax "#a0efa0"
+    light = true
+    pink = "#ffe0e0"
+    dark-pink = "#ffc0c0"
+    green = "#d0ffd0"
+    dark-green = "#a0efa0"
+    dark-green-2 = "#067a00"
+    minus-style = normal hoopoe.pink
+    minus-emph-style = normal hoopoe.dark-pink
+    minus-non-emph-style = minus-style
+    plus-style = syntax hoopoe.green
+    plus-emph-style = syntax hoopoe.dark-green
+    plus-non-emph-style = plus-style
+    minus-empty-line-marker-style = minus-style
+    plus-empty-line-marker-style = plus-style
     commit-decoration-style = blue ol
     commit-style = raw
     file-style = omit
     hunk-header-decoration-style = blue box
     hunk-header-file-style = red
-    hunk-header-line-number-style = "#067a00"
+    hunk-header-line-number-style = hoopoe.dark-green-2
     hunk-header-style = file line-number syntax
-    light = true
-    minus-emph-style = dark-pink-style
-    minus-empty-line-marker-style = minus-style
-    minus-non-emph-style = minus-style
-    minus-style = pink-style
-    plus-emph-style = dark-green-style
-    plus-empty-line-marker-style = plus-style
-    plus-non-emph-style = plus-style
-    plus-style = green-style
     syntax-theme = GitHub
     zero-style = syntax
 
