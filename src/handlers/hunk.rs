@@ -56,6 +56,8 @@ impl<'a> StateMachine<'a> {
         self.state = match self.line.chars().next() {
             Some('-') => {
                 if let State::HunkPlus(_) = self.state {
+                    // We have just entered a new subhunk; process the previous one
+                    // and flush the line buffers.
                     self.painter.paint_buffered_minus_and_plus_lines();
                 }
                 let state = match self.config.inspect_raw_lines {
@@ -100,6 +102,10 @@ impl<'a> StateMachine<'a> {
                 // The first character here could be e.g. '\' from '\ No newline at end of file'. This
                 // is not a hunk line, but the parser does not have a more accurate state corresponding
                 // to this.
+
+                // We are in a zero (unchanged) line, therefore we have just exited a subhunk (a
+                // sequence of consecutive minus (removed) and/or plus (added) lines). Process that
+                // subhunk and flush the line buffers.
                 self.painter.paint_buffered_minus_and_plus_lines();
                 self.painter
                     .output_buffer

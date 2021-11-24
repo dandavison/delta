@@ -112,6 +112,10 @@ impl<'a> StateMachine<'a> {
                 self.source = detect_source(&self.line);
             }
 
+            // Every method named handle_* must return std::io::Result<bool>.
+            // The bool indicates whether the line has been handled by that
+            // method (in which case no subsequent handlers are permitted to
+            // handle it).
             let _ = self.handle_commit_meta_header_line()?
                 || self.handle_diff_stat_line()?
                 || self.handle_file_meta_diff_line()?
