@@ -944,15 +944,23 @@ mod superimpose_style_sections {
         let mut coalesced: Vec<(Style, String)> = Vec::new();
         let mut style_sections = style_sections.iter();
         if let Some((style_pair, c)) = style_sections.next() {
+            let mut seen_non_white_space = c != &' ' && c != &'\t';
             let mut current_string = c.to_string();
             let mut current_style_pair = style_pair;
             for (style_pair, c) in style_sections {
                 if style_pair != current_style_pair {
-                    let style = make_superimposed_style(*current_style_pair);
+                    let mut style = make_superimposed_style(*current_style_pair);
+                    if style.ansi_term_style.is_underline && !seen_non_white_space {
+                        style.ansi_term_style.is_underline = false;
+                    }
+                    if style.ansi_term_style.is_strikethrough && !seen_non_white_space {
+                        style.ansi_term_style.is_strikethrough = false;
+                    }
                     coalesced.push((style, current_string));
                     current_string = String::new();
                     current_style_pair = style_pair;
                 }
+                seen_non_white_space |= c != &' ' && c != &'\t';
                 current_string.push(*c);
             }
 
