@@ -102,8 +102,10 @@ pub fn describe_calling_process(args: &[String]) -> ProcessArgs<CallingProcess> 
                 }
             }
             Some(s) => match s.to_str() {
-                Some("rg") | Some("grep") | Some("ack") | Some("ag") | Some("pt")
-                | Some("sift") | Some("ucg") => ProcessArgs::Args(CallingProcess::OtherGrep),
+                Some("rg") | Some("grep") | Some("ggrep") | Some("ack") | Some("ag")
+                | Some("pt") | Some("sift") | Some("ucg") => {
+                    ProcessArgs::Args(CallingProcess::OtherGrep)
+                }
                 _ => {
                     // It's not git, and it's not another grep tool. Keep
                     // looking at other processes.
