@@ -102,8 +102,11 @@ pub fn describe_calling_process(args: &[String]) -> ProcessArgs<CallingProcess> 
                 }
             }
             Some(s) => match s.to_str() {
-                Some("rg") | Some("grep") | Some("ack") | Some("ag") | Some("pt")
-                | Some("sift") | Some("ucg") => ProcessArgs::Args(CallingProcess::OtherGrep),
+                // TODO: parse_style_sections is failing to parse ANSI escape sequences emitted by
+                // grep (BSD and GNU), ag, pt. See #794
+                Some("rg") | Some("ack") | Some("sift") => {
+                    ProcessArgs::Args(CallingProcess::OtherGrep)
+                }
                 _ => {
                     // It's not git, and it's not another grep tool. Keep
                     // looking at other processes.
@@ -686,15 +689,15 @@ pub mod tests {
             Some(CallingProcess::GitGrep(([].into(), [].into())))
         );
 
-        for other_grep_command in &[
+        for grep_command in &[
             "/usr/local/bin/rg pattern hello.txt",
-            "grep pattern hello.txt",
-            "/usr/bin/grep pattern hello.txt",
+            "rg pattern hello.txt",
+            "/usr/local/bin/ack pattern hello.txt",
             "ack.exe pattern hello.txt",
         ] {
             let parent = MockProcInfo::with(&[
                 (2, 100, "-shell", None),
-                (3, 100, other_grep_command, Some(2)),
+                (3, 100, grep_command, Some(2)),
                 (4, 100, "delta", Some(3)),
             ]);
             assert_eq!(
