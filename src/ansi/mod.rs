@@ -70,12 +70,37 @@ pub fn parse_style_sections(s: &str) -> Vec<(ansi_term::Style, &str)> {
     let mut curr_style = Style::default();
     for element in AnsiElementIterator::new(s) {
         match element {
-            Element::Text(start, end) => sections.push((curr_style, &s[start..end])),
-            Element::Csi(style, _, _) => curr_style = style,
+            Element::Text(start, end) => {
+                // FIXME: Some ANSI sequences are making it into the text, for example "\x1b[K" in
+                // output from BSD grep and GNU grep.
+                let substring = strip_ansi_prefixes(&s[start..end]);
+                if !substring.is_empty() {
+                    sections.push((curr_style, substring))
+                }
+            }
+            Element::Csi(style, _, _) => {
+                curr_style = style;
+            }
             _ => {}
         }
     }
     sections
+}
+
+fn strip_ansi_prefixes(mut s: &str) -> &str {
+    let prefixes = &["\x1b[K", "\x1b[", "\x1b"];
+    loop {
+        let mut stripped = false;
+        for prefix in prefixes {
+            if let Some(suffix) = s.strip_prefix(prefix) {
+                s = suffix;
+                stripped = true;
+            }
+        }
+        if !stripped {
+            return s;
+        }
+    }
 }
 
 // Return the first CSI element, if any, as an `ansi_term::Style`.
