@@ -54,6 +54,26 @@ pub fn parse_styles(opt: &cli::Opt) -> HashMap<String, Style> {
     resolved_styles
 }
 
+pub fn parse_styles_map(opt: &cli::Opt) -> Option<HashMap<style::AnsiTermStyleEqualityKey, Style>> {
+    if let Some(styles_map_str) = &opt.map_styles {
+        let mut styles_map = HashMap::new();
+        for pair_str in styles_map_str.split(',') {
+            let mut style_strs = pair_str.split("=>").map(|s| s.trim());
+            if let (Some(from_str), Some(to_str)) = (style_strs.next(), style_strs.next()) {
+                let from_style = parse_as_style_or_reference_to_git_config(from_str, opt);
+                let to_style = parse_as_style_or_reference_to_git_config(to_str, opt);
+                styles_map.insert(
+                    style::ansi_term_style_equality_key(from_style.ansi_term_style),
+                    to_style,
+                );
+            }
+        }
+        Some(styles_map)
+    } else {
+        None
+    }
+}
+
 fn resolve_style_references(
     edges: HashMap<&str, StyleReference>,
     opt: &cli::Opt,
@@ -83,24 +103,38 @@ fn resolve_style_references(
                     break;
                 }
                 None => {
-                    if let Some(git_config) = &opt.git_config {
-                        match git_config.get::<String>(&format!("delta.{}", node)) {
-                            Some(s) => {
-                                let style = Style::from_git_str(&s);
-                                resolved_styles
-                                    .extend(visited.iter().map(|node| (node.to_string(), style)));
-                                break;
-                            }
-                            _ => fatal(format!("Style not found: {}", node)),
-                        }
-                    } else {
-                        fatal(format!("Style not found: {}", node));
-                    }
+                    let style = parse_as_reference_to_git_config(node, opt);
+                    resolved_styles.extend(visited.iter().map(|node| (node.to_string(), style)));
                 }
             }
         }
     }
     resolved_styles
+}
+
+fn parse_as_style_or_reference_to_git_config(style_string: &str, opt: &cli::Opt) -> Style {
+    match style_from_str(style_string, None, None, true, opt.git_config.as_ref()) {
+        StyleReference::Reference(style_ref) => parse_as_reference_to_git_config(&style_ref, opt),
+        StyleReference::Style(style) => style,
+    }
+}
+
+fn parse_as_reference_to_git_config(style_string: &str, opt: &cli::Opt) -> Style {
+    if let Some(git_config) = &opt.git_config {
+        let git_config_key = format!("delta.{}", style_string);
+        match git_config.get::<String>(&git_config_key) {
+            Some(s) => Style::from_git_str(&s),
+            _ => fatal(format!(
+                "Style key not found in git config: {}",
+                git_config_key
+            )),
+        }
+    } else {
+        fatal(format!(
+            "Style not found (git config unavailable): {}",
+            style_string
+        ));
+    }
 }
 
 fn make_hunk_styles<'a>(opt: &'a cli::Opt, styles: &'a mut HashMap<&str, StyleReference>) {
