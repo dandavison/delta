@@ -18,13 +18,8 @@
 [Install](#installation) delta and add this to your `~/.gitconfig`:
 
 ```gitconfig
-[pager]
-    diff = delta
-    show = delta
-    log = delta
-    blame = delta
-    grep = delta
-    reflog = delta
+[core]
+    pager = delta
 
 [interactive]
     diffFilter = delta --color-only
