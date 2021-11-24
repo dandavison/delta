@@ -442,10 +442,10 @@ pub struct Opt {
     pub map_styles: Option<String>,
 
     /// Format string for git blame commit metadata. Available placeholders are
-    /// "{timestamp}", "{author}", and "{commit}".
+    /// "{timestamp}", "{author}", "{commit}", and "{line-number}".
     #[structopt(
         long = "blame-format",
-        default_value = "{timestamp:<15} {author:<15.14} {commit:<8} │ "
+        default_value = "{timestamp:<15} {author:<15.14} {commit:<8} {line-number:<5}│ "
     )]
     pub blame_format: String,
 

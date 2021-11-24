@@ -227,7 +227,7 @@ pub fn parse_git_blame_line<'a>(line: &'a str, timestamp_format: &str) -> Option
 
 lazy_static! {
     pub static ref BLAME_PLACEHOLDER_REGEX: Regex =
-        format::make_placeholder_regex(&["timestamp", "author", "commit"]);
+        format::make_placeholder_regex(&["timestamp", "author", "commit", "line-number"]);
 }
 
 pub fn format_blame_metadata(
@@ -254,6 +254,7 @@ pub fn format_blame_metadata(
             )),
             Some(Placeholder::Str("author")) => Some(Cow::from(blame.author)),
             Some(Placeholder::Str("commit")) => Some(delta::format_raw_line(blame.commit, config)),
+            Some(Placeholder::Str("line-number")) => Some(Cow::from(blame.line_number.to_string())),
             None => None,
             _ => unreachable!("Unexpected `git blame` input"),
         };
