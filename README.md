@@ -496,7 +496,14 @@ The `map-styles` option allows us to transform the styles that git emits for col
 Here's an example of using `map-styles` to assign delta styles to the raw color-moved styles output by git.
 This feature allows all of git's color-moved options to be rendered using delta styles, including with syntax highlighting.
 
+```gitconfig
+[delta]
+    map-styles = bold purple => syntax magenta, bold cyan => syntax blue
 ```
+
+It is also possible to reference other styles.
+
+```gitconfig
 [delta]
     features = my-color-moved-theme
 
@@ -548,7 +555,7 @@ If your terminal application does not support 24-bit color, delta will still wor
 
 If you're using tmux, it's worth checking that 24 bit color is working correctly. For example, run a color test script like [this one](https://gist.githubusercontent.com/lifepillar/09a44b8cf0f9397465614e622979107f/raw/24-bit-color.sh), or one of the others listed [here](https://gist.github.com/XVilka/8346728). If you do not see smooth color gradients, see the discussion at [tmux#696](https://github.com/tmux/tmux/issues/696). The short version is you need something like this in your `~/.tmux.conf`:
 
-```
+```Shell
 set -ga terminal-overrides ",xterm-256color:Tc"
 ```
 
@@ -560,7 +567,7 @@ True color output in GNU Screen is currently only possible when using a developm
 
 When working in Screen without true color output, it might be that colors supposed to be different look the same in XTerm compatible terminals. If that is the case, make sure the following settings are included in your `screenrc` file:
 
-```cfg
+```Shell
 term screen-256color
 termcapinfo xterm 'Co#256:AB=\E[48;5;%dm:AF=\E[38;5;%dm'  # ANSI (256-color) patterns - AB: background, AF: foreground
 attrcolor b ".I"                                          # use bright colors for bold text
@@ -662,8 +669,8 @@ The languages and color themes that ship with delta are those that ship with bat
 
 You'll need to [install the rust tools](https://www.rust-lang.org/learn/get-started). Then:
 
-```
-cargo build --release
+```ShellSession
+$ cargo build --release
 ```
 
 and use the executable found at `./target/release/delta`.
