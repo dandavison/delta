@@ -176,13 +176,13 @@ In addition, delta handles traditional unified diff output.
 ## Installation
 
 You can download an executable for your system:
-[Linux (glibc)](https://github.com/dandavison/delta/releases/download/0.9.1/delta-0.9.1-x86_64-unknown-linux-gnu.tar.gz)
+[Linux (glibc)](https://github.com/dandavison/delta/releases/download/0.10.1/delta-0.10.1-x86_64-unknown-linux-gnu.tar.gz)
 |
-[Linux (musl)](https://github.com/dandavison/delta/releases/download/0.9.1/delta-0.9.1-x86_64-unknown-linux-musl.tar.gz)
+[Linux (musl)](https://github.com/dandavison/delta/releases/download/0.10.1/delta-0.10.1-x86_64-unknown-linux-musl.tar.gz)
 |
-[MacOS](https://github.com/dandavison/delta/releases/download/0.9.1/delta-0.9.1-x86_64-apple-darwin.tar.gz)
+[MacOS](https://github.com/dandavison/delta/releases/download/0.10.1/delta-0.10.1-x86_64-apple-darwin.tar.gz)
 |
-[Windows](https://github.com/dandavison/delta/releases/download/0.9.1/delta-0.9.1-x86_64-pc-windows-msvc.zip)
+[Windows](https://github.com/dandavison/delta/releases/download/0.10.1/delta-0.10.1-x86_64-pc-windows-msvc.zip)
 |
 [All](https://github.com/dandavison/delta/releases)
 
@@ -266,11 +266,8 @@ The most convenient way to configure delta is with a `[delta]` section in `~/.gi
 <sub>
 
 ```gitconfig
-[pager]
-    diff = delta
-    log = delta
-    reflog = delta
-    show = delta
+[core]
+    pager = delta
 
 [interactive]
     diffFilter = delta --color-only --features=interactive
@@ -707,7 +704,7 @@ and use the executable found at `./target/release/delta`.
 ## Full --help output
 
 ```
-delta 0.9.1
+delta 0.10.1
 A viewer for git and diff output
 
 USAGE:
@@ -756,6 +753,11 @@ FLAGS:
                                      according to whether delta is in dark or light mode (as set by the user or inferred
                                      from BAT_THEME). To control the themes shown, use --dark or --light, or both, on
                                      the command line together with this option
+        --show-colors                Show available named colors. In addition to named colors, arbitrary colors can be
+                                     specified using RGB hex codes. See COLORS section
+        --parse-ansi                 Parse ANSI color escape sequences in input and display them as git style strings.
+                                     Example usage: git show --color=always | delta --parse-ansi This can be used to
+                                     help identify input style strings to use with map-styles
         --no-gitconfig               Do not take any settings from git config. See GIT CONFIG section
         --raw                        Do not alter the input in any way. This is mainly intended for testing delta
         --color-only                 Do not alter the input structurally in any way, but color and highlight hunk lines
@@ -838,6 +840,38 @@ OPTIONS:
             Style (foreground, background, attributes) for the hunk-header decoration. See STYLES section. The style
             string should contain one of the special attributes 'box', 'ul' (underline), 'ol' (overline), or the
             combination 'ul ol' [default: blue box]
+        --map-styles <map-styles>
+            A string specifying a mapping styles encountered in raw input to desired output styles. An example is --map-
+            styles='bold purple => red "#eeeeee", bold cyan => syntax "#eeeeee"'
+        --blame-format <blame-format>
+            Format string for git blame commit metadata. Available placeholders are "{timestamp}", "{author}", and
+            "{commit}" [default: {timestamp:<15} {author:<15.14} {commit:<8} │ ]
+        --blame-palette <blame-palette>
+            Background colors used for git blame lines (space-separated string). Lines added by the same commit are
+            painted with the same color; colors are recycled as needed
+        --blame-timestamp-format <blame-timestamp-format>
+            Format of `git blame` timestamp in raw git output received by delta [default: %Y-%m-%d %H:%M:%S %z]
+
+        --grep-match-line-style <grep-match-line-style>
+            Style (foreground, background, attributes) for matching lines of code in grep output. See STYLES section.
+            Defaults to plus-style
+        --grep-match-word-style <grep-match-word-style>
+            Style (foreground, background, attributes) for the specific matching substrings within a matching line of
+            code in grep output. See STYLES section. Defaults to plus-style
+        --grep-context-line-style <grep-context-line-style>
+            Style (foreground, background, attributes) for non-matching lines of code in grep output. See STYLES
+            section. Defaults to zero-style
+        --grep-file-style <grep-file-style>
+            Style (foreground, background, attributes) for file paths in grep output. See STYLES section. Defaults to
+            hunk-header-file-path-style
+        --grep-line-number-style <grep-line-number-style>
+            Style (foreground, background, attributes) for line numbers in grep output. See STYLES section. Defaults to
+            hunk-header-line-number-style
+        --grep-separator-symbol <grep-separator-symbol>
+            Symbol used in grep output to separate file path (and line number) from the line of file contents. Defaults
+            to ":" for both match and context lines, since many terminal emulators recognize constructs like
+            "/path/to/file:7:". However, standard grep output uses "-" for context lines: set this option to "keep" to
+            keep the original separator symbols [default: :]
         --default-language <default-language>
             Default language used for syntax highlighting when this cannot be inferred from a filename. It will
             typically make sense to set this in per-repository git config (.git/config)
@@ -1088,15 +1122,19 @@ A complete description of the style string syntax follows:
 COLORS
 ------
 
-There are three ways to specify a color (this section applies to foreground and background colors
+There are four ways to specify a color (this section applies to foreground and background colors
 within a style string):
 
-1. RGB hex code
+1. CSS color name
+
+   Any of the 140 color names used in CSS: https://www.w3schools.com/colors/colors_groups.asp
+
+2. RGB hex code
 
    An example of using an RGB hex code is:
    --file-style="#0e7c0e"
 
-2. ANSI color name
+3. ANSI color name
 
    There are 8 ANSI color names:
    black, red, green, yellow, blue, magenta, cyan, white.
@@ -1115,7 +1153,7 @@ within a style string):
 
    "purple" is accepted as a synonym for "magenta". Color names and codes are case-insensitive.
 
-3. ANSI color number
+4. ANSI color number
 
    An example of using an ANSI color number is:
    --file-style=28
