@@ -13,7 +13,7 @@ use crate::edits;
 use crate::features::hyperlinks;
 use crate::features::line_numbers;
 use crate::features::side_by_side::ansifill;
-use crate::features::side_by_side::{self, available_line_width, LineSegments, PanelSide};
+use crate::features::side_by_side::{self, available_line_width, LineSections, PanelSide};
 use crate::minusplus::*;
 use crate::paint::superimpose_style_sections::superimpose_style_sections;
 use crate::style::Style;
@@ -60,7 +60,7 @@ impl Default for BgShouldFill {
 #[derive(PartialEq, Debug)]
 pub enum StyleSectionSpecifier<'l> {
     Style(Style),
-    StyleSections(LineSegments<'l, Style>),
+    StyleSections(LineSections<'l, Style>),
 }
 
 impl<'p> Painter<'p> {
@@ -339,8 +339,8 @@ impl<'p> Painter<'p> {
     /// highlighting styles, and write colored lines to output buffer.
     #[allow(clippy::too_many_arguments)]
     pub fn paint_lines<'a>(
-        syntax_style_sections: Vec<LineSegments<'a, SyntectStyle>>,
-        diff_style_sections: Vec<LineSegments<'a, Style>>,
+        syntax_style_sections: Vec<LineSections<'a, SyntectStyle>>,
+        diff_style_sections: Vec<LineSections<'a, Style>>,
         states: impl Iterator<Item = &'a State>,
         output_buffer: &mut String,
         config: &config::Config,
@@ -626,7 +626,7 @@ impl<'p> Painter<'p> {
         lines: &'a [(String, State)],
         highlighter: Option<&mut HighlightLines>,
         config: &config::Config,
-    ) -> Vec<LineSegments<'a, SyntectStyle>> {
+    ) -> Vec<LineSections<'a, SyntectStyle>> {
         let mut line_sections = Vec::new();
         match (
             highlighter,
@@ -655,8 +655,8 @@ impl<'p> Painter<'p> {
         plus_lines_and_states: &'a [(String, State)],
         config: &config::Config,
     ) -> (
-        Vec<LineSegments<'a, Style>>,
-        Vec<LineSegments<'a, Style>>,
+        Vec<LineSections<'a, Style>>,
+        Vec<LineSections<'a, Style>>,
         Vec<(Option<usize>, Option<usize>)>,
     ) {
         let (minus_lines, minus_styles): (Vec<&str>, Vec<Style>) = minus_lines_and_states
@@ -720,7 +720,7 @@ impl<'p> Painter<'p> {
     ///    how support for git's --color-moved is implemented.)
     fn update_styles<'a>(
         lines_and_states: &'a [(String, State)],
-        lines_style_sections: &mut Vec<LineSegments<'a, Style>>,
+        lines_style_sections: &mut Vec<LineSections<'a, Style>>,
         whitespace_error_style: Option<Style>,
         non_emph_style: Option<Style>,
         config: &config::Config,
@@ -759,7 +759,7 @@ impl<'p> Painter<'p> {
 pub fn parse_style_sections<'a>(
     raw_line: &'a str,
     config: &config::Config,
-) -> LineSegments<'a, Style> {
+) -> LineSections<'a, Style> {
     let empty_map = HashMap::new();
     let styles_map = config.styles_map.as_ref().unwrap_or(&empty_map);
     ansi::parse_style_sections(raw_line)

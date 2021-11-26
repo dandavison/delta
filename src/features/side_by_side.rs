@@ -14,7 +14,7 @@ use crate::paint::{BgFillMethod, BgShouldFill};
 use crate::style::Style;
 use crate::wrapping::wrap_zero_block;
 
-pub type LineSegments<'a, S> = Vec<(S, &'a str)>;
+pub type LineSections<'a, S> = Vec<(S, &'a str)>;
 
 pub fn make_feature() -> Vec<(String, OptionValueFunction)> {
     builtin_feature!([
@@ -111,8 +111,8 @@ pub fn has_long_lines(
 /// Emit a sequence of minus and plus lines in side-by-side mode.
 #[allow(clippy::too_many_arguments)]
 pub fn paint_minus_and_plus_lines_side_by_side<'a>(
-    syntax_left_right: LeftRight<Vec<LineSegments<'a, SyntectStyle>>>,
-    diff_left_right: LeftRight<Vec<LineSegments<'a, Style>>>,
+    syntax_left_right: LeftRight<Vec<LineSections<'a, SyntectStyle>>>,
+    diff_left_right: LeftRight<Vec<LineSections<'a, Style>>>,
     states_left_right: LeftRight<Vec<State>>,
     line_alignment: Vec<(Option<usize>, Option<usize>)>,
     output_buffer: &mut String,
@@ -152,8 +152,8 @@ pub fn paint_minus_and_plus_lines_side_by_side<'a>(
 #[allow(clippy::too_many_arguments)]
 pub fn paint_zero_lines_side_by_side<'a>(
     raw_line: &str,
-    syntax_style_sections: Vec<LineSegments<'a, SyntectStyle>>,
-    diff_style_sections: Vec<LineSegments<'a, Style>>,
+    syntax_style_sections: Vec<LineSections<'a, SyntectStyle>>,
+    diff_style_sections: Vec<LineSections<'a, Style>>,
     output_buffer: &mut String,
     config: &Config,
     line_numbers_data: &mut Option<&mut line_numbers::LineNumbersData>,
@@ -206,8 +206,8 @@ pub fn paint_zero_lines_side_by_side<'a>(
 #[allow(clippy::too_many_arguments)]
 fn paint_left_panel_minus_line<'a>(
     line_index: Option<usize>,
-    syntax_style_sections: &[LineSegments<'a, SyntectStyle>],
-    diff_style_sections: &[LineSegments<'a, Style>],
+    syntax_style_sections: &[LineSections<'a, SyntectStyle>],
+    diff_style_sections: &[LineSections<'a, Style>],
     state: &'a State,
     line_numbers_data: &mut Option<&mut line_numbers::LineNumbersData>,
     background_color_extends_to_terminal_width: BgShouldFill,
@@ -239,8 +239,8 @@ fn paint_left_panel_minus_line<'a>(
 #[allow(clippy::too_many_arguments)]
 fn paint_right_panel_plus_line<'a>(
     line_index: Option<usize>,
-    syntax_style_sections: &[LineSegments<'a, SyntectStyle>],
-    diff_style_sections: &[LineSegments<'a, Style>],
+    syntax_style_sections: &[LineSections<'a, SyntectStyle>],
+    diff_style_sections: &[LineSections<'a, Style>],
     state: &'a State,
     line_numbers_data: &mut Option<&mut line_numbers::LineNumbersData>,
     background_color_extends_to_terminal_width: BgShouldFill,
@@ -273,7 +273,7 @@ fn paint_right_panel_plus_line<'a>(
 fn get_right_fill_style_for_panel<'a>(
     line_is_empty: bool,
     line_index: Option<usize>,
-    diff_style_sections: &[LineSegments<'a, Style>],
+    diff_style_sections: &[LineSections<'a, Style>],
     state: &State,
     panel_side: PanelSide,
     background_color_extends_to_terminal_width: BgShouldFill,
@@ -330,8 +330,8 @@ fn get_right_fill_style_for_panel<'a>(
 #[allow(clippy::too_many_arguments)]
 fn paint_minus_or_plus_panel_line<'a>(
     line_index: Option<usize>,
-    syntax_style_sections: &[LineSegments<'a, SyntectStyle>],
-    diff_style_sections: &[LineSegments<'a, Style>],
+    syntax_style_sections: &[LineSections<'a, SyntectStyle>],
+    diff_style_sections: &[LineSections<'a, Style>],
     state: &State,
     line_numbers_data: &mut Option<&mut line_numbers::LineNumbersData>,
     panel_side: PanelSide,
@@ -388,7 +388,7 @@ fn pad_panel_line_to_width<'a>(
     panel_line: &mut String,
     panel_line_is_empty: bool,
     line_index: Option<usize>,
-    diff_style_sections: &[LineSegments<'a, Style>],
+    diff_style_sections: &[LineSections<'a, Style>],
     state: &State,
     panel_side: PanelSide,
     background_color_extends_to_terminal_width: BgShouldFill,
