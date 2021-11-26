@@ -5,13 +5,10 @@ use crate::config::INLINE_SYMBOL_WIDTH_1;
 
 use crate::config::Config;
 use crate::delta::State;
-use crate::features::line_numbers;
-use crate::features::line_numbers::SideBySideLineWidth;
-use crate::features::side_by_side::available_line_width;
-use crate::features::side_by_side::line_is_too_long;
-use crate::features::side_by_side::LineSections;
-use crate::features::side_by_side::{Left, Right};
+use crate::features::line_numbers::{self, SideBySideLineWidth};
+use crate::features::side_by_side::{available_line_width, line_is_too_long, Left, Right};
 use crate::minusplus::*;
+use crate::paint::LineSections;
 use crate::style::Style;
 
 /// See [`wrap_line`] for documentation.
@@ -555,7 +552,7 @@ mod tests {
     use super::WrapConfig;
     use crate::ansi::strip_ansi_codes;
     use crate::config::Config;
-    use crate::features::side_by_side::LineSections;
+    use crate::paint::LineSections;
     use crate::style::Style;
     use crate::tests::integration_test_utils::{make_config_from_args, run_delta};
 

@@ -4,17 +4,13 @@ use unicode_segmentation::UnicodeSegmentation;
 
 use crate::ansi;
 use crate::cli;
-use crate::config::Config;
+use crate::config::{self, delta_unreachable, Config};
 use crate::delta::State;
-use crate::features::line_numbers;
-use crate::features::OptionValueFunction;
+use crate::features::{line_numbers, OptionValueFunction};
 use crate::minusplus::*;
-use crate::paint::Painter;
-use crate::paint::{BgFillMethod, BgShouldFill};
+use crate::paint::{BgFillMethod, BgShouldFill, LineSections, Painter};
 use crate::style::Style;
-use crate::wrapping::wrap_zero_block;
-
-pub type LineSections<'a, S> = Vec<(S, &'a str)>;
+use crate::wrapping::{wrap_minusplus_block, wrap_zero_block};
 
 pub fn make_feature() -> Vec<(String, OptionValueFunction)> {
     builtin_feature!([
@@ -35,6 +31,8 @@ pub fn make_feature() -> Vec<(String, OptionValueFunction)> {
 pub use crate::minusplus::MinusPlusIndex as PanelSide;
 pub use MinusPlusIndex::Minus as Left;
 pub use MinusPlusIndex::Plus as Right;
+
+use super::line_numbers::LineNumbersData;
 
 #[derive(Debug)]
 pub struct Panel {
@@ -87,14 +85,14 @@ pub fn line_is_too_long(line: &str, line_width: usize) -> bool {
 /// structure indicating which of the input lines are too long. This avoids
 /// recalculating the length later.
 pub fn has_long_lines(
-    lines: &LeftRight<&Vec<(String, State)>>,
+    lines: &LeftRight<&[(String, State)]>,
     line_width: &line_numbers::SideBySideLineWidth,
 ) -> (bool, LeftRight<Vec<bool>>) {
     let mut wrap_any = LeftRight::default();
     let mut wrapping_lines = LeftRight::default();
 
     let mut check_if_too_long = |side| {
-        let lines_side: &Vec<(String, State)> = lines[side];
+        let lines_side: &[(String, State)] = lines[side];
         wrapping_lines[side] = lines_side
             .iter()
             .map(|(line, _)| line_is_too_long(line, line_width[side]))
@@ -108,41 +106,88 @@ pub fn has_long_lines(
     (wrap_any[Left] || wrap_any[Right], wrapping_lines)
 }
 
-/// Emit a sequence of minus and plus lines in side-by-side mode.
 #[allow(clippy::too_many_arguments)]
-pub fn paint_minus_and_plus_lines_side_by_side<'a>(
-    syntax_left_right: LeftRight<Vec<LineSections<'a, SyntectStyle>>>,
-    diff_left_right: LeftRight<Vec<LineSections<'a, Style>>>,
-    states_left_right: LeftRight<Vec<State>>,
+pub fn paint_minus_and_plus_lines_side_by_side(
+    lines: LeftRight<&[(String, State)]>,
+    syntax_sections: LeftRight<Vec<LineSections<SyntectStyle>>>,
+    diff_sections: LeftRight<Vec<LineSections<Style>>>,
     line_alignment: Vec<(Option<usize>, Option<usize>)>,
+    line_numbers_data: &mut Option<LineNumbersData>,
     output_buffer: &mut String,
-    config: &Config,
-    line_numbers_data: &mut Option<&mut line_numbers::LineNumbersData>,
-    background_color_extends_to_terminal_width: LeftRight<BgShouldFill>,
+    config: &config::Config,
 ) {
+    let line_states = LeftRight::new(
+        lines[Left].iter().map(|(_, state)| state.clone()).collect(),
+        lines[Right]
+            .iter()
+            .map(|(_, state)| state.clone())
+            .collect(),
+    );
+
+    let line_numbers_data = line_numbers_data
+        .as_mut()
+        .unwrap_or_else(|| delta_unreachable("side-by-side requires Some(line_numbers_data)"));
+
+    let bg_should_fill = LeftRight::new(
+        // Using an ANSI sequence to fill the left panel would not work.
+        BgShouldFill::With(BgFillMethod::Spaces),
+        // Use what is configured for the right side.
+        BgShouldFill::With(config.line_fill_method),
+    );
+
+    // Only set `should_wrap` to true if wrapping is wanted and lines which are
+    // too long are found.
+    // If so, remember the calculated line width and which of the lines are too
+    // long for later re-use.
+    let (should_wrap, line_width, long_lines) = {
+        if config.wrap_config.max_lines == 1 {
+            (false, LeftRight::default(), LeftRight::default())
+        } else {
+            let line_width = available_line_width(config, line_numbers_data);
+
+            let (should_wrap, long_lines) = has_long_lines(&lines, &line_width);
+
+            (should_wrap, line_width, long_lines)
+        }
+    };
+
+    let (line_alignment, line_states, syntax_sections, diff_sections) = if should_wrap {
+        // Calculated for syntect::highlighting::style::Style and delta::Style
+        wrap_minusplus_block(
+            config,
+            syntax_sections,
+            diff_sections,
+            &line_alignment,
+            &line_width,
+            &long_lines,
+        )
+    } else {
+        (line_alignment, line_states, syntax_sections, diff_sections)
+    };
+
     for (minus_line_index, plus_line_index) in line_alignment {
         output_buffer.push_str(&paint_left_panel_minus_line(
             minus_line_index,
-            &syntax_left_right[Left],
-            &diff_left_right[Left],
+            &syntax_sections[Left],
+            &diff_sections[Left],
             match minus_line_index {
-                Some(i) => &states_left_right[Left][i],
+                Some(i) => &line_states[Left][i],
                 None => &State::HunkMinus(None),
             },
-            line_numbers_data,
-            background_color_extends_to_terminal_width[Left],
+            &mut Some(line_numbers_data),
+            bg_should_fill[Left],
             config,
         ));
         output_buffer.push_str(&paint_right_panel_plus_line(
             plus_line_index,
-            &syntax_left_right[Right],
-            &diff_left_right[Right],
+            &syntax_sections[Right],
+            &diff_sections[Right],
             match plus_line_index {
-                Some(i) => &states_left_right[Right][i],
+                Some(i) => &line_states[Right][i],
                 None => &State::HunkPlus(None),
             },
-            line_numbers_data,
-            background_color_extends_to_terminal_width[Right],
+            &mut Some(line_numbers_data),
+            bg_should_fill[Right],
             config,
         ));
         output_buffer.push('\n');
