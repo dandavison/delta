@@ -46,31 +46,27 @@ pub enum ProcessArgs<T> {
 }
 
 pub fn git_blame_filename_extension() -> Option<String> {
-    calling_process_cmdline(ProcInfo::new(), blame::guess_git_blame_filename_extension)
+    calling_process_cmdline(ProcInfo::new(), guess_git_blame_filename_extension)
 }
 
-mod blame {
-    use super::*;
+pub fn guess_git_blame_filename_extension(args: &[String]) -> ProcessArgs<String> {
+    let all_args = args.iter().map(|s| s.as_str());
 
-    pub fn guess_git_blame_filename_extension(args: &[String]) -> ProcessArgs<String> {
-        let all_args = args.iter().map(|s| s.as_str());
+    // See git(1) and git-blame(1). Some arguments separate their parameter with space or '=', e.g.
+    // --date 2015 or --date=2015.
+    let git_blame_options_with_parameter =
+        "-C -c -L --since --ignore-rev --ignore-revs-file --contents --reverse --date";
 
-        // See git(1) and git-blame(1). Some arguments separate their parameter with space or '=', e.g.
-        // --date 2015 or --date=2015.
-        let git_blame_options_with_parameter =
-            "-C -c -L --since --ignore-rev --ignore-revs-file --contents --reverse --date";
+    let selected_args =
+        skip_uninteresting_args(all_args, git_blame_options_with_parameter.split(' '));
 
-        let selected_args =
-            skip_uninteresting_args(all_args, git_blame_options_with_parameter.split(' '));
-
-        match selected_args.as_slice() {
-            [_git, "blame", .., last_arg] => match last_arg.split('.').last() {
-                Some(arg) => ProcessArgs::Args(arg.to_string()),
-                None => ProcessArgs::ArgError,
-            },
-            [_git, "blame"] => ProcessArgs::ArgError,
-            _ => ProcessArgs::OtherProcess,
-        }
+    match selected_args.as_slice() {
+        [_git, "blame", .., last_arg] => match last_arg.split('.').last() {
+            Some(arg) => ProcessArgs::Args(arg.to_string()),
+            None => ProcessArgs::ArgError,
+        },
+        [_git, "blame"] => ProcessArgs::ArgError,
+        _ => ProcessArgs::OtherProcess,
     }
 }
 
@@ -339,13 +335,14 @@ where
 {
     #[cfg(test)]
     {
-        if let Some(args) = tests::cfg::WithArgs::get() {
+        if let Some(args) = tests::FakeParentArgs::get() {
             match extract_args(&args) {
                 ProcessArgs::Args(result) => return Some(result),
                 _ => return None,
             }
         }
     }
+
     let my_pid = info.my_pid();
 
     // 1) Try the parent process. If delta is set as the pager in git, then git is the parent process.
@@ -409,6 +406,10 @@ where
         P: ProcessInterface,
         F: FnMut(Pid, usize),
     {
+        // Probably bad input, not a tree:
+        if distance > 2000 {
+            return;
+        }
         if let Some(proc) = info.process(pid) {
             if let Some(pid) = proc.parent() {
                 f(pid, distance);
@@ -421,58 +422,105 @@ where
 
 #[cfg(test)]
 pub mod tests {
-    use super::blame::*;
     use super::*;
 
     use itertools::Itertools;
+    use std::cell::RefCell;
+    use std::rc::Rc;
 
-    pub mod cfg {
-        use std::cell::RefCell;
+    thread_local! {
+        static FAKE_ARGS: RefCell<TlsState<Vec<String>>> = RefCell::new(TlsState::None);
+    }
 
-        #[derive(Debug, PartialEq)]
-        enum TlsState<T> {
-            Some(T),
-            None,
-            Invalid,
+    #[derive(Debug, PartialEq)]
+    enum TlsState<T> {
+        Once(T),
+        Scope(T),
+        With(usize, Rc<Vec<T>>),
+        None,
+        Invalid,
+    }
+
+    // When calling `FakeParentArgs::get()`, it can return `Some(values)` which were set earlier
+    // during in the #[test]. Otherwise returns None.
+    // This value can be valid once: `FakeParentArgs::once(val)`, for the entire scope:
+    // `FakeParentArgs::for_scope(val)`, or can be different values everytime `get()` is called:
+    // `FakeParentArgs::with([val1, val2, val3])`.
+    // It is an error if `once` or `with` values remain unused, or are overused.
+    // Note: The values are stored per-thread, so the expectation is that no thread boundaries are
+    // crossed.
+    pub struct FakeParentArgs {}
+    impl FakeParentArgs {
+        pub fn once(args: &str) -> Self {
+            Self::new(args, |v| TlsState::Once(v), "once")
         }
-
-        thread_local! {
-            static FAKE_ARGS: RefCell<TlsState<Vec<String>>> = RefCell::new(TlsState::None);
+        pub fn for_scope(args: &str) -> Self {
+            Self::new(args, |v| TlsState::Scope(v), "for_scope")
         }
-
-        pub struct WithArgs {}
-        impl WithArgs {
-            pub fn new(args: &str) -> Self {
-                let string_vec = args.split(' ').map(str::to_owned).collect();
-                assert!(
-                    FAKE_ARGS.with(|a| a.replace(TlsState::Some(string_vec))) != TlsState::Invalid,
-                    "test logic error (in new): wrong WithArgs scope?"
-                );
-                WithArgs {}
+        fn new<F>(args: &str, initial: F, from_: &str) -> Self
+        where
+            F: Fn(Vec<String>) -> TlsState<Vec<String>>,
+        {
+            let string_vec = args.split(' ').map(str::to_owned).collect();
+            if FAKE_ARGS.with(|a| a.replace(initial(string_vec))) != TlsState::None {
+                Self::error(from_);
             }
-            pub fn get() -> Option<Vec<String>> {
-                FAKE_ARGS.with(|a| {
-                    let old_value = a.replace_with(|old_value| match old_value {
-                        TlsState::Some(_) => TlsState::Invalid,
-                        TlsState::None => TlsState::None,
-                        TlsState::Invalid => TlsState::Invalid,
-                    });
+            FakeParentArgs {}
+        }
+        pub fn with(args: &[&str]) -> Self {
+            let with = TlsState::With(
+                0,
+                Rc::new(
+                    args.iter()
+                        .map(|a| a.split(' ').map(str::to_owned).collect())
+                        .collect(),
+                ),
+            );
+            if FAKE_ARGS.with(|a| a.replace(with)) != TlsState::None || args.is_empty() {
+                Self::error("with creation");
+            }
+            FakeParentArgs {}
+        }
+        pub fn get() -> Option<Vec<String>> {
+            FAKE_ARGS.with(|a| {
+                let old_value = a.replace_with(|old_value| match old_value {
+                    TlsState::Once(_) => TlsState::Invalid,
+                    TlsState::Scope(args) => TlsState::Scope(args.clone()),
+                    TlsState::With(n, args) => TlsState::With(*n + 1, Rc::clone(args)),
+                    TlsState::None => TlsState::None,
+                    TlsState::Invalid => TlsState::Invalid,
+                });
 
-                    match old_value {
-                        TlsState::Some(args) => Some(args),
-                        TlsState::None => None,
-                        TlsState::Invalid => {
-                            panic!("test logic error (in get): wrong WithArgs scope?")
+                match old_value {
+                    TlsState::Once(args) | TlsState::Scope(args) => Some(args),
+                    TlsState::With(n, args) if n < args.len() => Some(args[n].clone()),
+                    TlsState::None => None,
+                    TlsState::Invalid | TlsState::With(_, _) => Self::error("get"),
+                }
+            })
+        }
+        fn error(where_: &str) -> ! {
+            panic!(
+                "test logic error (in {}): wrong FakeParentArgs scope?",
+                where_
+            );
+        }
+    }
+    impl Drop for FakeParentArgs {
+        fn drop(&mut self) {
+            // Clears an Invalid state and tests if a Once or With value has been used.
+            FAKE_ARGS.with(|a| {
+                let old_value = a.replace(TlsState::None);
+                match old_value {
+                    TlsState::With(n, args) => {
+                        if n != args.len() {
+                            Self::error("drop with")
                         }
                     }
-                })
-            }
-        }
-        impl Drop for WithArgs {
-            fn drop(&mut self) {
-                // clears an invalid state
-                FAKE_ARGS.with(|a| a.replace(TlsState::None));
-            }
+                    TlsState::Once(_) | TlsState::None => Self::error("drop"),
+                    TlsState::Scope(_) | TlsState::Invalid => {}
+                }
+            });
         }
     }
 
@@ -612,16 +660,28 @@ pub mod tests {
     #[test]
     fn test_process_testing() {
         {
-            let _args = cfg::WithArgs::new(&"git blame hello");
+            let _args = FakeParentArgs::once(&"git blame hello");
             assert_eq!(
-                calling_process_cmdline(ProcInfo::new(), blame::guess_git_blame_filename_extension),
+                calling_process_cmdline(ProcInfo::new(), guess_git_blame_filename_extension),
                 Some("hello".into())
             );
         }
         {
-            let _args = cfg::WithArgs::new(&"git blame world.txt");
+            let _args = FakeParentArgs::once(&"git blame world.txt");
             assert_eq!(
-                calling_process_cmdline(ProcInfo::new(), blame::guess_git_blame_filename_extension),
+                calling_process_cmdline(ProcInfo::new(), guess_git_blame_filename_extension),
+                Some("txt".into())
+            );
+        }
+        {
+            let _args = FakeParentArgs::for_scope(&"git blame hello world.txt");
+            assert_eq!(
+                calling_process_cmdline(ProcInfo::new(), guess_git_blame_filename_extension),
+                Some("txt".into())
+            );
+
+            assert_eq!(
+                calling_process_cmdline(ProcInfo::new(), guess_git_blame_filename_extension),
                 Some("txt".into())
             );
         }
@@ -630,22 +690,78 @@ pub mod tests {
     #[test]
     #[should_panic]
     fn test_process_testing_assert() {
-        {
-            let _args = cfg::WithArgs::new(&"git blame do.not.panic");
-            assert_eq!(
-                calling_process_cmdline(ProcInfo::new(), blame::guess_git_blame_filename_extension),
-                Some("panic".into())
-            );
+        let _args = FakeParentArgs::once(&"git blame do.not.panic");
+        assert_eq!(
+            calling_process_cmdline(ProcInfo::new(), guess_git_blame_filename_extension),
+            Some("panic".into())
+        );
 
-            calling_process_cmdline(ProcInfo::new(), blame::guess_git_blame_filename_extension);
-        }
+        calling_process_cmdline(ProcInfo::new(), guess_git_blame_filename_extension);
+    }
+
+    #[test]
+    #[should_panic]
+    fn test_process_testing_assert_never_used() {
+        let _args = FakeParentArgs::once(&"never used");
+
+        // causes a panic while panicing, so can't test:
+        // let _args = FakeParentArgs::for_scope(&"never used");
+        // let _args = FakeParentArgs::once(&"never used");
+    }
+
+    #[test]
+    fn test_process_testing_scope_can_remain_unused() {
+        let _args = FakeParentArgs::for_scope(&"never used");
+    }
+
+    #[test]
+    fn test_process_testing_n_times_panic() {
+        let _args = FakeParentArgs::with(&["git blame once", "git blame twice"]);
+        assert_eq!(
+            calling_process_cmdline(ProcInfo::new(), guess_git_blame_filename_extension),
+            Some("once".into())
+        );
+
+        assert_eq!(
+            calling_process_cmdline(ProcInfo::new(), guess_git_blame_filename_extension),
+            Some("twice".into())
+        );
+    }
+
+    #[test]
+    #[should_panic]
+    fn test_process_testing_n_times_unused() {
+        let _args = FakeParentArgs::with(&["git blame once", "git blame twice"]);
+    }
+
+    #[test]
+    #[should_panic]
+    fn test_process_testing_n_times_underused() {
+        let _args = FakeParentArgs::with(&["git blame once", "git blame twice"]);
+        assert_eq!(
+            calling_process_cmdline(ProcInfo::new(), guess_git_blame_filename_extension),
+            Some("once".into())
+        );
+    }
+
+    #[test]
+    #[should_panic]
+    #[ignore]
+    fn test_process_testing_n_times_overused() {
+        let _args = FakeParentArgs::with(&["git blame once"]);
+        assert_eq!(
+            calling_process_cmdline(ProcInfo::new(), guess_git_blame_filename_extension),
+            Some("once".into())
+        );
+        // ignored: dropping causes a panic while panicing, so can't test
+        calling_process_cmdline(ProcInfo::new(), guess_git_blame_filename_extension);
     }
 
     #[test]
     fn test_process_blame_info_with_parent() {
         let no_processes = MockProcInfo::with(&[]);
         assert_eq!(
-            calling_process_cmdline(no_processes, blame::guess_git_blame_filename_extension),
+            calling_process_cmdline(no_processes, guess_git_blame_filename_extension),
             None
         );
 
@@ -655,7 +771,7 @@ pub mod tests {
             (4, 100, "delta", Some(3)),
         ]);
         assert_eq!(
-            calling_process_cmdline(parent, blame::guess_git_blame_filename_extension),
+            calling_process_cmdline(parent, guess_git_blame_filename_extension),
             Some("txt".into())
         );
 
@@ -666,7 +782,7 @@ pub mod tests {
             (5, 100, "delta", Some(4)),
         ]);
         assert_eq!(
-            calling_process_cmdline(grandparent, blame::guess_git_blame_filename_extension),
+            calling_process_cmdline(grandparent, guess_git_blame_filename_extension),
             Some("rs".into())
         );
     }
