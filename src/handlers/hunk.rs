@@ -3,19 +3,13 @@ use crate::delta::{State, StateMachine};
 use crate::style;
 use unicode_segmentation::UnicodeSegmentation;
 
-impl State {
-    fn is_in_hunk(&self) -> bool {
-        matches!(
-            *self,
-            State::HunkHeader(_, _) | State::HunkZero | State::HunkMinus(_) | State::HunkPlus(_)
-        )
-    }
-}
-
 impl<'a> StateMachine<'a> {
     #[inline]
     fn test_hunk_line(&self) -> bool {
-        self.state.is_in_hunk()
+        matches!(
+            self.state,
+            State::HunkHeader(_, _) | State::HunkZero | State::HunkMinus(_) | State::HunkPlus(_)
+        )
     }
 
     /// Handle a hunk line, i.e. a minus line, a plus line, or an unchanged line.
