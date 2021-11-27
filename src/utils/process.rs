@@ -7,9 +7,16 @@ use lazy_static::lazy_static;
 
 #[derive(Clone, Debug, PartialEq)]
 pub enum CallingProcess {
-    GitShow(String),                             // (extension)
-    GitGrep((HashSet<String>, HashSet<String>)), // ((long_options, short_options))
-    OtherGrep,                                   // rg, grep, ag, ack, etc
+    GitShow(CommandLine, Option<String>), // element 2 is file extension
+    GitGrep(CommandLine),
+    OtherGrep, // rg, grep, ag, ack, etc
+}
+
+#[derive(Clone, Debug, PartialEq)]
+pub struct CommandLine {
+    pub long_options: HashSet<String>,
+    pub short_options: HashSet<String>,
+    last_arg: Option<String>,
 }
 
 pub fn calling_process() -> Option<Cow<'static, CallingProcess>> {
@@ -87,16 +94,21 @@ pub fn describe_calling_process(args: &[String]) -> ProcessArgs<CallingProcess> 
                 let mut args = args.skip_while(|s| *s != "grep" && *s != "show");
                 match args.next() {
                     Some("grep") => {
-                        ProcessArgs::Args(CallingProcess::GitGrep(parse_command_option_keys(args)))
+                        ProcessArgs::Args(CallingProcess::GitGrep(parse_command_line(args)))
                     }
                     Some("show") => {
-                        if let Some(extension) = get_git_show_file_extension(args) {
-                            ProcessArgs::Args(CallingProcess::GitShow(extension.to_string()))
+                        let command_line = parse_command_line(args);
+                        let extension = if let Some(last_arg) = &command_line.last_arg {
+                            match last_arg.split_once(':') {
+                                Some((_, suffix)) => {
+                                    suffix.split('.').last().map(|s| s.to_string())
+                                }
+                                None => None,
+                            }
                         } else {
-                            // It's git show, but we failed to determine the
-                            // file extension. Don't look at any more processes.
-                            ProcessArgs::ArgError
-                        }
+                            None
+                        };
+                        ProcessArgs::Args(CallingProcess::GitShow(command_line, extension))
                     }
                     _ => {
                         // It's git, but not a subcommand that we parse. Don't
@@ -125,18 +137,6 @@ pub fn describe_calling_process(args: &[String]) -> ProcessArgs<CallingProcess> 
             // Empty arguments (not expected); keep looking.
             ProcessArgs::OtherProcess
         }
-    }
-}
-
-fn get_git_show_file_extension<'a>(args: impl Iterator<Item = &'a str>) -> Option<&'a str> {
-    if let Some(last_arg) = skip_uninteresting_args(args, "".split(' ')).last() {
-        // E.g. "HEAD~1:Makefile" or "775c3b8:./src/delta.rs"
-        match last_arg.split_once(':') {
-            Some((_, suffix)) => suffix.split('.').last(),
-            None => None,
-        }
-    } else {
-        None
     }
 }
 
@@ -184,22 +184,28 @@ where
 
 // Given `--aa val -bc -d val e f -- ...` return
 // ({"--aa"}, {"-b", "-c", "-d"})
-fn parse_command_option_keys<'a>(
-    args: impl Iterator<Item = &'a str>,
-) -> (HashSet<String>, HashSet<String>) {
-    let mut longs = HashSet::new();
-    let mut shorts = HashSet::new();
+fn parse_command_line<'a>(args: impl Iterator<Item = &'a str>) -> CommandLine {
+    let mut long_options = HashSet::new();
+    let mut short_options = HashSet::new();
+    let mut last_arg = None;
 
     for s in args {
         if s == "--" {
             break;
         } else if s.starts_with("--") {
-            longs.insert(s.split('=').next().unwrap().to_owned());
+            long_options.insert(s.split('=').next().unwrap().to_owned());
         } else if let Some(suffix) = s.strip_prefix('-') {
-            shorts.extend(suffix.chars().map(|c| format!("-{}", c)));
+            short_options.extend(suffix.chars().map(|c| format!("-{}", c)));
+        } else {
+            last_arg = Some(s);
         }
     }
-    (longs, shorts)
+
+    CommandLine {
+        long_options,
+        short_options,
+        last_arg: last_arg.map(|s| s.to_string()),
+    }
 }
 
 struct ProcInfo {
@@ -437,6 +443,7 @@ where
 
 #[cfg(test)]
 pub mod tests {
+
     use super::*;
 
     use itertools::Itertools;
@@ -672,6 +679,10 @@ pub mod tests {
         }
     }
 
+    fn set(arg1: &[&str]) -> HashSet<String> {
+        arg1.iter().map(|&s| s.to_owned()).collect()
+    }
+
     #[test]
     fn test_process_testing() {
         {
@@ -877,6 +888,11 @@ pub mod tests {
             None
         );
 
+        let empty_command_line = CommandLine {
+            long_options: [].into(),
+            short_options: [].into(),
+            last_arg: Some("hello.txt".to_string()),
+        };
         let parent = MockProcInfo::with(&[
             (2, 100, "-shell", None),
             (3, 100, "git grep pattern hello.txt", Some(2)),
@@ -884,7 +900,7 @@ pub mod tests {
         ]);
         assert_eq!(
             calling_process_cmdline(parent, describe_calling_process),
-            Some(CallingProcess::GitGrep(([].into(), [].into())))
+            Some(CallingProcess::GitGrep(empty_command_line.clone()))
         );
 
         let parent = MockProcInfo::with(&[
@@ -894,7 +910,7 @@ pub mod tests {
         ]);
         assert_eq!(
             calling_process_cmdline(parent, describe_calling_process),
-            Some(CallingProcess::GitGrep(([].into(), [].into())))
+            Some(CallingProcess::GitGrep(empty_command_line.clone()))
         );
 
         for grep_command in &[
@@ -914,17 +930,14 @@ pub mod tests {
             );
         }
 
-        fn set(arg1: &[&str]) -> HashSet<String> {
-            arg1.iter().map(|&s| s.to_owned()).collect()
-        }
-
         let git_grep_command =
             "git grep -ab --function-context -n --show-function -W --foo=val pattern hello.txt";
 
-        let expected_result = Some(CallingProcess::GitGrep((
-            set(&["--function-context", "--show-function", "--foo"]),
-            set(&["-a", "-b", "-n", "-W"]),
-        )));
+        let expected_result = Some(CallingProcess::GitGrep(CommandLine {
+            long_options: set(&["--function-context", "--show-function", "--foo"]),
+            short_options: set(&["-a", "-b", "-n", "-W"]),
+            last_arg: Some("hello.txt".to_string()),
+        }));
 
         let parent = MockProcInfo::with(&[
             (2, 100, "-shell", None),
@@ -951,10 +964,16 @@ pub mod tests {
     #[test]
     fn test_describe_calling_process_git_show() {
         for (command, expected_extension) in [
-            ("/usr/local/bin/git show 775c3b84:./src/hello.rs", "rs"),
-            ("/usr/local/bin/git show HEAD~1:Makefile", "Makefile"),
             (
-                "git -c x.y=z show --abbrev-commit 775c3b84:./src/hello.bye.R",
+                "/usr/local/bin/git show --abbrev-commit -w 775c3b84:./src/hello.rs",
+                "rs",
+            ),
+            (
+                "/usr/local/bin/git show --abbrev-commit -w HEAD~1:Makefile",
+                "Makefile",
+            ),
+            (
+                "git -c x.y=z show --abbrev-commit -w 775c3b84:./src/hello.bye.R",
                 "R",
             ),
         ] {
@@ -963,10 +982,15 @@ pub mod tests {
                 (3, 100, command, Some(2)),
                 (4, 100, "delta", Some(3)),
             ]);
-            assert_eq!(
-                calling_process_cmdline(parent, describe_calling_process),
-                Some(CallingProcess::GitShow(expected_extension.to_string())),
-            );
+            if let Some(CallingProcess::GitShow(cmd_line, ext)) =
+                calling_process_cmdline(parent, describe_calling_process)
+            {
+                assert_eq!(cmd_line.long_options, set(&["--abbrev-commit"]));
+                assert_eq!(cmd_line.short_options, set(&["-w"]));
+                assert_eq!(ext, Some(expected_extension.to_string()));
+            } else {
+                assert!(false);
+            }
         }
     }
 

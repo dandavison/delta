@@ -244,8 +244,9 @@ fn get_code_style_sections<'b>(
 
 fn make_output_config() -> GrepOutputConfig {
     match process::calling_process().as_deref() {
-        Some(process::CallingProcess::GitGrep((longs, shorts)))
-            if shorts.contains("-W") || longs.contains("--function-context") =>
+        Some(process::CallingProcess::GitGrep(command_line))
+            if command_line.short_options.contains("-W")
+                || command_line.long_options.contains("--function-context") =>
         {
             // --function-context is in effect: i.e. the entire function is
             // being displayed. In that case we don't render the first line as a
@@ -261,8 +262,9 @@ fn make_output_config() -> GrepOutputConfig {
                 pad_line_number: true,
             }
         }
-        Some(process::CallingProcess::GitGrep((longs, shorts)))
-            if shorts.contains("-p") || longs.contains("--show-function") =>
+        Some(process::CallingProcess::GitGrep(command_line))
+            if command_line.short_options.contains("-p")
+                || command_line.long_options.contains("--show-function") =>
         {
             // --show-function is in effect, i.e. the function header is being
             // displayed, along with matches within the function. Therefore we
