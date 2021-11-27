@@ -803,6 +803,73 @@ pub mod tests {
     }
 
     #[test]
+    fn test_process_blame_info_with_sibling() {
+        let sibling = MockProcInfo::with(&[
+            (2, 100, "-xterm", None),
+            (3, 100, "-shell", Some(2)),
+            (4, 100, "git blame src/main.rs", Some(3)),
+            (5, 100, "delta", Some(3)),
+        ]);
+        assert_eq!(
+            calling_process_cmdline(sibling, guess_git_blame_filename_extension),
+            Some("rs".into())
+        );
+
+        let indirect_sibling = MockProcInfo::with(&[
+            (2, 100, "-xterm", None),
+            (3, 100, "-shell", Some(2)),
+            (4, 100, "Git.exe blame --correct src/main.abc", Some(3)),
+            (
+                10,
+                100,
+                "Git.exe blame --ignored-child src/main.def",
+                Some(4),
+            ),
+            (5, 100, "delta.sh", Some(3)),
+            (20, 100, "delta", Some(5)),
+        ]);
+        assert_eq!(
+            calling_process_cmdline(indirect_sibling, guess_git_blame_filename_extension),
+            Some("abc".into())
+        );
+
+        let indirect_sibling2 = MockProcInfo::with(&[
+            (2, 100, "-xterm", None),
+            (3, 100, "-shell", Some(2)),
+            (4, 100, "git wrap src/main.abc", Some(3)),
+            (10, 100, "git blame src/main.def", Some(4)),
+            (5, 100, "delta.sh", Some(3)),
+            (20, 100, "delta", Some(5)),
+        ]);
+        assert_eq!(
+            calling_process_cmdline(indirect_sibling2, guess_git_blame_filename_extension),
+            Some("def".into())
+        );
+
+        // 3 blame processes, 2 with matching start times, pick the one with lower
+        // distance but larger start time difference.
+        let indirect_sibling_start_times = MockProcInfo::with(&[
+            (2, 100, "-xterm", None),
+            (3, 100, "-shell", Some(2)),
+            (4, 109, "git wrap src/main.abc", Some(3)),
+            (10, 109, "git blame src/main.def", Some(4)),
+            (20, 100, "git wrap1 src/main.abc", Some(3)),
+            (21, 100, "git wrap2 src/main.def", Some(20)),
+            (22, 101, "git blame src/main.not", Some(21)),
+            (23, 102, "git blame src/main.this", Some(20)),
+            (5, 100, "delta.sh", Some(3)),
+            (20, 100, "delta", Some(5)),
+        ]);
+        assert_eq!(
+            calling_process_cmdline(
+                indirect_sibling_start_times,
+                guess_git_blame_filename_extension
+            ),
+            Some("this".into())
+        );
+    }
+
+    #[test]
     fn test_describe_calling_process_grep() {
         let no_processes = MockProcInfo::with(&[]);
         assert_eq!(
