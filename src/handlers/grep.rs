@@ -406,7 +406,7 @@ pub fn _parse_grep_line<'b>(regex: &Regex, line: &'b str) -> Option<GrepLine<'b>
             None
         }
     })
-    .unwrap(); // The regex matches so one of the three alternatrives must have matched
+    .unwrap(); // The regex matches so one of the three alternatives must have matched
     let code = caps.get(8).unwrap().as_str().into();
 
     Some(GrepLine {
@@ -421,83 +421,73 @@ pub fn _parse_grep_line<'b>(regex: &Regex, line: &'b str) -> Option<GrepLine<'b>
 #[cfg(test)]
 mod tests {
     use crate::handlers::grep::{parse_grep_line, GrepLine, LineType};
-    use crate::utils::process::tests::cfg;
+    use crate::utils::process::tests::FakeParentArgs;
 
     #[test]
     fn test_parse_grep_match() {
         let fake_parent_grep_command = "git --doesnt-matter grep --nor-this nor_this -- nor_this";
-        {
-            let _args = cfg::WithArgs::new(&fake_parent_grep_command);
-            assert_eq!(
-                parse_grep_line("src/co-7-fig.rs:xxx"),
-                Some(GrepLine {
-                    path: "src/co-7-fig.rs".into(),
-                    line_number: None,
-                    line_type: LineType::Match,
-                    code: "xxx".into(),
-                    submatches: None,
-                })
-            );
-        }
-        {
-            let _args = cfg::WithArgs::new(&fake_parent_grep_command);
-            assert_eq!(
-                parse_grep_line("src/config.rs:use crate::minusplus::MinusPlus;"),
-                Some(GrepLine {
-                    path: "src/config.rs".into(),
-                    line_number: None,
-                    line_type: LineType::Match,
-                    code: "use crate::minusplus::MinusPlus;".into(),
-                    submatches: None,
-                })
-            );
-        }
-        {
-            let _args = cfg::WithArgs::new(&fake_parent_grep_command);
-            assert_eq!(
-                parse_grep_line(
-                    "src/config.rs:    pub line_numbers_style_minusplus: MinusPlus<Style>,"
-                ),
-                Some(GrepLine {
-                    path: "src/config.rs".into(),
-                    line_number: None,
-                    line_type: LineType::Match,
-                    code: "    pub line_numbers_style_minusplus: MinusPlus<Style>,".into(),
-                    submatches: None,
-                })
-            );
-        }
-        {
-            let _args = cfg::WithArgs::new(&fake_parent_grep_command);
-            assert_eq!(
-                parse_grep_line("src/con-fig.rs:use crate::minusplus::MinusPlus;"),
-                Some(GrepLine {
-                    path: "src/con-fig.rs".into(),
-                    line_number: None,
-                    line_type: LineType::Match,
-                    code: "use crate::minusplus::MinusPlus;".into(),
-                    submatches: None,
-                })
-            );
-        }
-        {
-            let _args = cfg::WithArgs::new(&fake_parent_grep_command);
-            assert_eq!(
-                parse_grep_line(
-                    "src/con-fig.rs:    pub line_numbers_style_minusplus: MinusPlus<Style>,"
-                ),
-                Some(GrepLine {
-                    path: "src/con-fig.rs".into(),
-                    line_number: None,
-                    line_type: LineType::Match,
-                    code: "    pub line_numbers_style_minusplus: MinusPlus<Style>,".into(),
-                    submatches: None,
-                })
-            );
-        }
-        {
-            let _args = cfg::WithArgs::new(&fake_parent_grep_command);
-            assert_eq!(
+        let _args = FakeParentArgs::for_scope(&fake_parent_grep_command);
+
+        assert_eq!(
+            parse_grep_line("src/co-7-fig.rs:xxx"),
+            Some(GrepLine {
+                path: "src/co-7-fig.rs".into(),
+                line_number: None,
+                line_type: LineType::Match,
+                code: "xxx".into(),
+                submatches: None,
+            })
+        );
+
+        assert_eq!(
+            parse_grep_line("src/config.rs:use crate::minusplus::MinusPlus;"),
+            Some(GrepLine {
+                path: "src/config.rs".into(),
+                line_number: None,
+                line_type: LineType::Match,
+                code: "use crate::minusplus::MinusPlus;".into(),
+                submatches: None,
+            })
+        );
+
+        assert_eq!(
+            parse_grep_line(
+                "src/config.rs:    pub line_numbers_style_minusplus: MinusPlus<Style>,"
+            ),
+            Some(GrepLine {
+                path: "src/config.rs".into(),
+                line_number: None,
+                line_type: LineType::Match,
+                code: "    pub line_numbers_style_minusplus: MinusPlus<Style>,".into(),
+                submatches: None,
+            })
+        );
+
+        assert_eq!(
+            parse_grep_line("src/con-fig.rs:use crate::minusplus::MinusPlus;"),
+            Some(GrepLine {
+                path: "src/con-fig.rs".into(),
+                line_number: None,
+                line_type: LineType::Match,
+                code: "use crate::minusplus::MinusPlus;".into(),
+                submatches: None,
+            })
+        );
+
+        assert_eq!(
+            parse_grep_line(
+                "src/con-fig.rs:    pub line_numbers_style_minusplus: MinusPlus<Style>,"
+            ),
+            Some(GrepLine {
+                path: "src/con-fig.rs".into(),
+                line_number: None,
+                line_type: LineType::Match,
+                code: "    pub line_numbers_style_minusplus: MinusPlus<Style>,".into(),
+                submatches: None,
+            })
+        );
+
+        assert_eq!(
             parse_grep_line(
                 "src/de lta.rs:pub fn delta<I>(lines: ByteLines<I>, writer: &mut dyn Write, config: &Config) -> std::io::Result<()>"
             ),
@@ -509,10 +499,8 @@ mod tests {
                 submatches: None,
             })
         );
-        }
-        {
-            let _args = cfg::WithArgs::new(&fake_parent_grep_command);
-            assert_eq!(
+
+        assert_eq!(
             parse_grep_line(
                 "src/de lta.rs:    pub fn new(writer: &'a mut dyn Write, config: &'a Config) -> Self {"
             ),
@@ -524,82 +512,72 @@ mod tests {
                 submatches: None,
             })
         );
-        }
     }
 
     #[test]
     fn test_parse_grep_n_match() {
         let fake_parent_grep_command =
             "/usr/local/bin/git --doesnt-matter grep --nor-this nor_this -- nor_this";
-        {
-            let _args = cfg::WithArgs::new(&fake_parent_grep_command);
-            assert_eq!(
-                parse_grep_line("src/co-7-fig.rs:7:xxx"),
-                Some(GrepLine {
-                    path: "src/co-7-fig.rs".into(),
-                    line_number: Some(7),
-                    line_type: LineType::Match,
-                    code: "xxx".into(),
-                    submatches: None,
-                })
-            );
-        }
-        {
-            let _args = cfg::WithArgs::new(&fake_parent_grep_command);
-            assert_eq!(
-                parse_grep_line("src/config.rs:21:use crate::minusplus::MinusPlus;"),
-                Some(GrepLine {
-                    path: "src/config.rs".into(),
-                    line_number: Some(21),
-                    line_type: LineType::Match,
-                    code: "use crate::minusplus::MinusPlus;".into(),
-                    submatches: None,
-                })
-            );
-        }
-        {
-            let _args = cfg::WithArgs::new(&fake_parent_grep_command);
-            assert_eq!(
-                parse_grep_line(
-                    "src/config.rs:95:    pub line_numbers_style_minusplus: MinusPlus<Style>,"
-                ),
-                Some(GrepLine {
-                    path: "src/config.rs".into(),
-                    line_number: Some(95),
-                    line_type: LineType::Match,
-                    code: "    pub line_numbers_style_minusplus: MinusPlus<Style>,".into(),
-                    submatches: None,
-                })
-            );
-        }
-        {
-            let _args = cfg::WithArgs::new(&fake_parent_grep_command);
-            assert_eq!(
-                parse_grep_line("Makefile:10:test: unit-test end-to-end-test"),
-                Some(GrepLine {
-                    path: "Makefile".into(),
-                    line_number: Some(10),
-                    line_type: LineType::Match,
-                    code: "test: unit-test end-to-end-test".into(),
-                    submatches: None,
-                })
-            );
-        }
-        {
-            let _args = cfg::WithArgs::new(&fake_parent_grep_command);
-            assert_eq!(
-                parse_grep_line(
-                    "Makefile:16:    ./tests/test_raw_output_matches_git_on_full_repo_history"
-                ),
-                Some(GrepLine {
-                    path: "Makefile".into(),
-                    line_number: Some(16),
-                    line_type: LineType::Match,
-                    code: "    ./tests/test_raw_output_matches_git_on_full_repo_history".into(),
-                    submatches: None,
-                })
-            );
-        }
+        let _args = FakeParentArgs::for_scope(&fake_parent_grep_command);
+
+        assert_eq!(
+            parse_grep_line("src/co-7-fig.rs:7:xxx"),
+            Some(GrepLine {
+                path: "src/co-7-fig.rs".into(),
+                line_number: Some(7),
+                line_type: LineType::Match,
+                code: "xxx".into(),
+                submatches: None,
+            })
+        );
+
+        assert_eq!(
+            parse_grep_line("src/config.rs:21:use crate::minusplus::MinusPlus;"),
+            Some(GrepLine {
+                path: "src/config.rs".into(),
+                line_number: Some(21),
+                line_type: LineType::Match,
+                code: "use crate::minusplus::MinusPlus;".into(),
+                submatches: None,
+            })
+        );
+
+        assert_eq!(
+            parse_grep_line(
+                "src/config.rs:95:    pub line_numbers_style_minusplus: MinusPlus<Style>,"
+            ),
+            Some(GrepLine {
+                path: "src/config.rs".into(),
+                line_number: Some(95),
+                line_type: LineType::Match,
+                code: "    pub line_numbers_style_minusplus: MinusPlus<Style>,".into(),
+                submatches: None,
+            })
+        );
+
+        assert_eq!(
+            parse_grep_line("Makefile:10:test: unit-test end-to-end-test"),
+            Some(GrepLine {
+                path: "Makefile".into(),
+                line_number: Some(10),
+                line_type: LineType::Match,
+                code: "test: unit-test end-to-end-test".into(),
+                submatches: None,
+            })
+        );
+
+        assert_eq!(
+            parse_grep_line(
+                "Makefile:16:    ./tests/test_raw_output_matches_git_on_full_repo_history"
+            ),
+            Some(GrepLine {
+                path: "Makefile".into(),
+                line_number: Some(16),
+                line_type: LineType::Match,
+                code: "    ./tests/test_raw_output_matches_git_on_full_repo_history".into(),
+                submatches: None,
+            })
+        );
     }
 
     #[test]
@@ -609,77 +587,69 @@ mod tests {
         // This fails: we can't parse it currently.
         let fake_parent_grep_command =
             "/usr/local/bin/git --doesnt-matter grep --nor-this nor_this -- nor_this";
-        {
-            let _args = cfg::WithArgs::new(&fake_parent_grep_command);
-            assert_eq!(
-                parse_grep_line("etc/examples/119-within-line-edits:4:repo=$(mktemp -d)"),
-                Some(GrepLine {
-                    path: "etc/examples/119-within-line-edits".into(),
-                    line_number: Some(4),
-                    line_type: LineType::Match,
-                    code: "repo=$(mktemp -d)".into(),
-                    submatches: None,
-                })
-            );
-        }
+        let _args = FakeParentArgs::once(&fake_parent_grep_command);
+
+        assert_eq!(
+            parse_grep_line("etc/examples/119-within-line-edits:4:repo=$(mktemp -d)"),
+            Some(GrepLine {
+                path: "etc/examples/119-within-line-edits".into(),
+                line_number: Some(4),
+                line_type: LineType::Match,
+                code: "repo=$(mktemp -d)".into(),
+                submatches: None,
+            })
+        );
     }
 
     #[test]
     fn test_parse_grep_no_match() {
         let fake_parent_grep_command =
             "/usr/local/bin/git --doesnt-matter grep --nor-this nor_this -- nor_this";
-        {
-            let _args = cfg::WithArgs::new(&fake_parent_grep_command);
-            assert_eq!(
-                parse_grep_line("src/co-7-fig.rs-xxx"),
-                Some(GrepLine {
-                    path: "src/co-7-fig.rs".into(),
-                    line_number: None,
-                    line_type: LineType::Context,
-                    code: "xxx".into(),
-                    submatches: None,
-                })
-            );
-        }
-        {
-            let _args = cfg::WithArgs::new(&fake_parent_grep_command);
-            assert_eq!(
-                parse_grep_line("src/config.rs-    pub available_terminal_width: usize,"),
-                Some(GrepLine {
-                    path: "src/config.rs".into(),
-                    line_number: None,
-                    line_type: LineType::Context,
-                    code: "    pub available_terminal_width: usize,".into(),
-                    submatches: None,
-                })
-            );
-        }
-        {
-            let _args = cfg::WithArgs::new(&fake_parent_grep_command);
-            assert_eq!(
-                parse_grep_line("src/con-fig.rs-use crate::minusplus::MinusPlus;"),
-                Some(GrepLine {
-                    path: "src/con-fig.rs".into(),
-                    line_number: None,
-                    line_type: LineType::Context,
-                    code: "use crate::minusplus::MinusPlus;".into(),
-                    submatches: None,
-                })
-            );
-        }
-        {
-            let _args = cfg::WithArgs::new(&fake_parent_grep_command);
-            assert_eq!(
-                parse_grep_line("de-lta.rs-            if self.source == Source::Unknown {"),
-                Some(GrepLine {
-                    path: "de-lta.rs".into(),
-                    line_number: None,
-                    line_type: LineType::Context,
-                    code: "            if self.source == Source::Unknown {".into(),
-                    submatches: None,
-                })
-            );
-        }
+        let _args = FakeParentArgs::for_scope(&fake_parent_grep_command);
+
+        assert_eq!(
+            parse_grep_line("src/co-7-fig.rs-xxx"),
+            Some(GrepLine {
+                path: "src/co-7-fig.rs".into(),
+                line_number: None,
+                line_type: LineType::Context,
+                code: "xxx".into(),
+                submatches: None,
+            })
+        );
+
+        assert_eq!(
+            parse_grep_line("src/config.rs-    pub available_terminal_width: usize,"),
+            Some(GrepLine {
+                path: "src/config.rs".into(),
+                line_number: None,
+                line_type: LineType::Context,
+                code: "    pub available_terminal_width: usize,".into(),
+                submatches: None,
+            })
+        );
+
+        assert_eq!(
+            parse_grep_line("src/con-fig.rs-use crate::minusplus::MinusPlus;"),
+            Some(GrepLine {
+                path: "src/con-fig.rs".into(),
+                line_number: None,
+                line_type: LineType::Context,
+                code: "use crate::minusplus::MinusPlus;".into(),
+                submatches: None,
+            })
+        );
+
+        assert_eq!(
+            parse_grep_line("de-lta.rs-            if self.source == Source::Unknown {"),
+            Some(GrepLine {
+                path: "de-lta.rs".into(),
+                line_number: None,
+                line_type: LineType::Context,
+                code: "            if self.source == Source::Unknown {".into(),
+                submatches: None,
+            })
+        );
     }
 
     #[test]
@@ -687,51 +657,47 @@ mod tests {
         // git grep -n
         let fake_parent_grep_command =
             "/usr/local/bin/git --doesnt-matter grep --nor-this nor_this -- nor_this";
-        {
-            let _args = cfg::WithArgs::new(&fake_parent_grep_command);
-            assert_eq!(
-                parse_grep_line("src/co-7-fig.rs-7-xxx"),
-                Some(GrepLine {
-                    path: "src/co-7-fig.rs".into(),
-                    line_number: Some(7),
-                    line_type: LineType::Context,
-                    code: "xxx".into(),
-                    submatches: None,
-                })
-            );
-        }
-        {
-            let _args = cfg::WithArgs::new(&fake_parent_grep_command);
-            assert_eq!(
-                parse_grep_line("src/config.rs-58-    pub available_terminal_width: usize,"),
-                Some(GrepLine {
-                    path: "src/config.rs".into(),
-                    line_number: Some(58),
-                    line_type: LineType::Context,
-                    code: "    pub available_terminal_width: usize,".into(),
-                    submatches: None,
-                })
-            );
-        }
+
+        let _args = FakeParentArgs::for_scope(&fake_parent_grep_command);
+        assert_eq!(
+            parse_grep_line("src/co-7-fig.rs-7-xxx"),
+            Some(GrepLine {
+                path: "src/co-7-fig.rs".into(),
+                line_number: Some(7),
+                line_type: LineType::Context,
+                code: "xxx".into(),
+                submatches: None,
+            })
+        );
+
+        assert_eq!(
+            parse_grep_line("src/config.rs-58-    pub available_terminal_width: usize,"),
+            Some(GrepLine {
+                path: "src/config.rs".into(),
+                line_number: Some(58),
+                line_type: LineType::Context,
+                code: "    pub available_terminal_width: usize,".into(),
+                submatches: None,
+            })
+        );
     }
 
     #[test]
     fn test_parse_grep_match_no_extension() {
         let fake_parent_grep_command =
             "/usr/local/bin/git --doesnt-matter grep --nor-this nor_this -- nor_this";
-        {
-            let _args = cfg::WithArgs::new(&fake_parent_grep_command);
-            assert_eq!(
-                parse_grep_line("Makefile:xxx"),
-                Some(GrepLine {
-                    path: "Makefile".into(),
-                    line_number: None,
-                    line_type: LineType::Match,
-                    code: "xxx".into(),
-                    submatches: None,
-                })
-            );
-        }
+        let _args = FakeParentArgs::once(&fake_parent_grep_command);
+
+        assert_eq!(
+            parse_grep_line("Makefile:xxx"),
+            Some(GrepLine {
+                path: "Makefile".into(),
+                line_number: None,
+                line_type: LineType::Match,
+                code: "xxx".into(),
+                submatches: None,
+            })
+        );
     }
 
     #[test]
@@ -739,19 +705,17 @@ mod tests {
         // git grep -n
         let fake_parent_grep_command =
             "/usr/local/bin/git --doesnt-matter grep --nor-this nor_this -- nor_this";
-        {
-            let _args = cfg::WithArgs::new(&fake_parent_grep_command);
-            assert_eq!(
-                parse_grep_line("Makefile:7:xxx"),
-                Some(GrepLine {
-                    path: "Makefile".into(),
-                    line_number: Some(7),
-                    line_type: LineType::Match,
-                    code: "xxx".into(),
-                    submatches: None,
-                })
-            );
-        }
+        let _args = FakeParentArgs::once(&fake_parent_grep_command);
+        assert_eq!(
+            parse_grep_line("Makefile:7:xxx"),
+            Some(GrepLine {
+                path: "Makefile".into(),
+                line_number: Some(7),
+                line_type: LineType::Match,
+                code: "xxx".into(),
+                submatches: None,
+            })
+        );
     }
 
     #[test]
@@ -760,19 +724,18 @@ mod tests {
         // git grep -W
         let fake_parent_grep_command =
             "/usr/local/bin/git --doesnt-matter grep --nor-this nor_this -- nor_this";
-        {
-            let _args = cfg::WithArgs::new(&fake_parent_grep_command);
-            assert_eq!(
-                parse_grep_line("src/config.rs=pub struct Config {"), // match
-                Some(GrepLine {
-                    path: "src/config.rs".into(),
-                    line_number: None,
-                    line_type: LineType::ContextHeader,
-                    code: "pub struct Config {".into(),
-                    submatches: None,
-                })
-            );
-        }
+
+        let _args = FakeParentArgs::once(&fake_parent_grep_command);
+        assert_eq!(
+            parse_grep_line("src/config.rs=pub struct Config {"), // match
+            Some(GrepLine {
+                path: "src/config.rs".into(),
+                line_number: None,
+                line_type: LineType::ContextHeader,
+                code: "pub struct Config {".into(),
+                submatches: None,
+            })
+        );
     }
 
     #[test]
@@ -781,49 +744,44 @@ mod tests {
         // git grep -n -W
         let fake_parent_grep_command =
             "/usr/local/bin/git --doesnt-matter grep --nor-this nor_this -- nor_this";
-        {
-            let _args = cfg::WithArgs::new(&fake_parent_grep_command);
-            assert_eq!(
-                parse_grep_line("src/config.rs=57=pub struct Config {"),
-                Some(GrepLine {
-                    path: "src/config.rs".into(),
-                    line_number: Some(57),
-                    line_type: LineType::ContextHeader,
-                    code: "pub struct Config {".into(),
-                    submatches: None,
-                })
-            );
-        }
+        let _args = FakeParentArgs::once(&fake_parent_grep_command);
+
+        assert_eq!(
+            parse_grep_line("src/config.rs=57=pub struct Config {"),
+            Some(GrepLine {
+                path: "src/config.rs".into(),
+                line_number: Some(57),
+                line_type: LineType::ContextHeader,
+                code: "pub struct Config {".into(),
+                submatches: None,
+            })
+        );
     }
 
     #[test]
     fn test_parse_grep_not_grep_output() {
         let fake_parent_grep_command =
             "/usr/local/bin/git --doesnt-matter grep --nor-this nor_this -- nor_this";
-        {
-            let _args = cfg::WithArgs::new(&fake_parent_grep_command);
-            let not_grep_output = "|       expose it in delta's color output styled with grep:";
-            assert_eq!(parse_grep_line(not_grep_output), None);
-        }
+        let _args = FakeParentArgs::once(&fake_parent_grep_command);
+
+        let not_grep_output = "|       expose it in delta's color output styled with grep:";
+        assert_eq!(parse_grep_line(not_grep_output), None);
     }
 
     #[test]
     fn test_parse_grep_parent_command_is_not_grep_1() {
         let fake_parent_grep_command =
             "/usr/local/bin/notgrep --doesnt-matter --nor-this nor_this -- nor_this";
-        {
-            let _args = cfg::WithArgs::new(&fake_parent_grep_command);
-            let apparently_grep_output = "src/co-7-fig.rs:xxx";
-            assert_eq!(parse_grep_line(apparently_grep_output), None);
-        }
+        let _args = FakeParentArgs::once(&fake_parent_grep_command);
+
+        let apparently_grep_output = "src/co-7-fig.rs:xxx";
+        assert_eq!(parse_grep_line(apparently_grep_output), None);
     }
 
     #[test]
     fn test_parse_grep_parent_command_is_not_grep_2() {
-        {
-            // No fake parent grep command
-            let apparently_grep_output = "src/co-7-fig.rs:xxx";
-            assert_eq!(parse_grep_line(apparently_grep_output), None);
-        }
+        // No fake parent grep command
+        let apparently_grep_output = "src/co-7-fig.rs:xxx";
+        assert_eq!(parse_grep_line(apparently_grep_output), None);
     }
 }
