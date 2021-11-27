@@ -7,10 +7,14 @@ use lazy_static::lazy_static;
 
 #[derive(Clone, Debug, PartialEq)]
 pub enum CallingProcess {
+    GitDiff(CommandLine),
     GitShow(CommandLine, Option<String>), // element 2 is file extension
+    GitLog(CommandLine),
+    GitReflog(CommandLine),
     GitGrep(CommandLine),
     OtherGrep, // rg, grep, ag, ack, etc
 }
+// TODO: Git blame is currently handled differently
 
 #[derive(Clone, Debug, PartialEq)]
 pub struct CommandLine {
@@ -91,10 +95,12 @@ pub fn describe_calling_process(args: &[String]) -> ProcessArgs<CallingProcess> 
     match args.next() {
         Some(command) => match Path::new(command).file_stem() {
             Some(s) if s.to_str().map(|s| is_git_binary(s)).unwrap_or(false) => {
-                let mut args = args.skip_while(|s| *s != "grep" && *s != "show");
+                let mut args = args.skip_while(|s| {
+                    *s != "diff" && *s != "show" && *s != "log" && *s != "reflog" && *s != "grep"
+                });
                 match args.next() {
-                    Some("grep") => {
-                        ProcessArgs::Args(CallingProcess::GitGrep(parse_command_line(args)))
+                    Some("diff") => {
+                        ProcessArgs::Args(CallingProcess::GitDiff(parse_command_line(args)))
                     }
                     Some("show") => {
                         let command_line = parse_command_line(args);
@@ -109,6 +115,15 @@ pub fn describe_calling_process(args: &[String]) -> ProcessArgs<CallingProcess> 
                             None
                         };
                         ProcessArgs::Args(CallingProcess::GitShow(command_line, extension))
+                    }
+                    Some("log") => {
+                        ProcessArgs::Args(CallingProcess::GitLog(parse_command_line(args)))
+                    }
+                    Some("reflog") => {
+                        ProcessArgs::Args(CallingProcess::GitReflog(parse_command_line(args)))
+                    }
+                    Some("grep") => {
+                        ProcessArgs::Args(CallingProcess::GitGrep(parse_command_line(args)))
                     }
                     _ => {
                         // It's git, but not a subcommand that we parse. Don't
