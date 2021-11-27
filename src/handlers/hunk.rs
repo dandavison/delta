@@ -1,7 +1,25 @@
+use lazy_static::lazy_static;
+
 use crate::cli;
 use crate::delta::{State, StateMachine};
 use crate::style;
+use crate::utils::process::{self, CallingProcess};
 use unicode_segmentation::UnicodeSegmentation;
+
+lazy_static! {
+    static ref IS_WORD_DIFF: bool = match process::calling_process().as_deref() {
+        Some(
+            CallingProcess::GitDiff(cmd_line)
+            | CallingProcess::GitShow(cmd_line, _)
+            | CallingProcess::GitLog(cmd_line)
+            | CallingProcess::GitReflog(cmd_line),
+        ) =>
+            cmd_line.long_options.contains("--word-diff")
+                || cmd_line.long_options.contains("--word-diff-regex")
+                || cmd_line.long_options.contains("--color-words"),
+        _ => false,
+    };
+}
 
 impl<'a> StateMachine<'a> {
     #[inline]
@@ -9,7 +27,7 @@ impl<'a> StateMachine<'a> {
         matches!(
             self.state,
             State::HunkHeader(_, _) | State::HunkZero | State::HunkMinus(_) | State::HunkPlus(_)
-        )
+        ) && !&*IS_WORD_DIFF
     }
 
     /// Handle a hunk line, i.e. a minus line, a plus line, or an unchanged line.
