@@ -1,0 +1,12 @@
+[33mcommit 57e5082[m
+Author: Caleb Maclennan <caleb@alerque.com>
+Date:   Sat Nov 27 01:08:54 2021 +0300
+
+    Move verses to correct week file
+
+[33mdiff --git a/foo.md b/foo.md[m
+[33mindex ba489f0..0ad8245 100644[m
+[33m--- a/foo.md[m
+[33m+++ b/foo.md[m
+[35m@@ -20,3 +20,99 @@[m [mfoo bar[m
+[1;36m+[m[1;36mAs I swore in my wrath, 'They shall not enter my rest.'"[m
