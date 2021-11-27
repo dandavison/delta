@@ -28,8 +28,6 @@ bump-version: $(BUMP_VERSION_SENTINEL)
 $(BUMP_VERSION_SENTINEL):
 	@echo Bumping version in Cargo.toml
 	sed -i -E "s,^version = \"$$DELTA_OLD_VERSION\",version = \"$$DELTA_NEW_VERSION\",g" Cargo.toml
-	make build
-	make test
 	git add Cargo.toml Cargo.lock
 	git commit -m "Bump version" || true
 	touch $(BUMP_VERSION_SENTINEL)
