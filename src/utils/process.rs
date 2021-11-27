@@ -61,11 +61,11 @@ pub fn guess_git_blame_filename_extension(args: &[String]) -> ProcessArgs<String
         skip_uninteresting_args(all_args, git_blame_options_with_parameter.split(' '));
 
     match selected_args.as_slice() {
-        [_git, "blame", .., last_arg] => match last_arg.split('.').last() {
+        [git, "blame", .., last_arg] if is_git_binary(git) => match last_arg.split('.').last() {
             Some(arg) => ProcessArgs::Args(arg.to_string()),
             None => ProcessArgs::ArgError,
         },
-        [_git, "blame"] => ProcessArgs::ArgError,
+        [git, "blame"] if is_git_binary(git) => ProcessArgs::ArgError,
         _ => ProcessArgs::OtherProcess,
     }
 }
@@ -73,9 +73,17 @@ pub fn guess_git_blame_filename_extension(args: &[String]) -> ProcessArgs<String
 pub fn describe_calling_process(args: &[String]) -> ProcessArgs<CallingProcess> {
     let mut args = args.iter().map(|s| s.as_str());
 
+    fn is_any_of<'a, I>(cmd: Option<&str>, others: I) -> bool
+    where
+        I: IntoIterator<Item = &'a str>,
+    {
+        cmd.map(|cmd| others.into_iter().any(|o| o.eq_ignore_ascii_case(cmd)))
+            .unwrap_or(false)
+    }
+
     match args.next() {
         Some(command) => match Path::new(command).file_stem() {
-            Some(s) if s.to_str() == Some("git") => {
+            Some(s) if s.to_str().map(|s| is_git_binary(s)).unwrap_or(false) => {
                 let mut args = args.skip_while(|s| *s != "grep" && *s != "show");
                 match args.next() {
                     Some("grep") => {
@@ -97,18 +105,16 @@ pub fn describe_calling_process(args: &[String]) -> ProcessArgs<CallingProcess> 
                     }
                 }
             }
-            Some(s) => match s.to_str() {
-                // TODO: parse_style_sections is failing to parse ANSI escape sequences emitted by
-                // grep (BSD and GNU), ag, pt. See #794
-                Some("rg") | Some("ack") | Some("sift") => {
-                    ProcessArgs::Args(CallingProcess::OtherGrep)
-                }
-                _ => {
-                    // It's not git, and it's not another grep tool. Keep
-                    // looking at other processes.
-                    ProcessArgs::OtherProcess
-                }
-            },
+            // TODO: parse_style_sections is failing to parse ANSI escape sequences emitted by
+            // grep (BSD and GNU), ag, pt. See #794
+            Some(s) if is_any_of(s.to_str(), ["rg", "ack", "sift"]) => {
+                ProcessArgs::Args(CallingProcess::OtherGrep)
+            }
+            Some(_) => {
+                // It's not git, and it's not another grep tool. Keep
+                // looking at other processes.
+                ProcessArgs::OtherProcess
+            }
             _ => {
                 // Could not parse file stem (not expected); keep looking at
                 // other processes.
@@ -132,6 +138,15 @@ fn get_git_show_file_extension<'a>(args: impl Iterator<Item = &'a str>) -> Optio
     } else {
         None
     }
+}
+
+fn is_git_binary(git: &str) -> bool {
+    // Ignore case, for e.g. NTFS or APFS file systems
+    Path::new(git)
+        .file_stem()
+        .and_then(|os_str| os_str.to_str())
+        .map(|s| s.eq_ignore_ascii_case("git"))
+        .unwrap_or(false)
 }
 
 // Skip all arguments starting with '-' from `args_it`. Also skip all arguments listed in
@@ -805,9 +820,19 @@ pub mod tests {
             Some(CallingProcess::GitGrep(([].into(), [].into())))
         );
 
+        let parent = MockProcInfo::with(&[
+            (2, 100, "-shell", None),
+            (3, 100, "Git.exe grep pattern hello.txt", Some(2)),
+            (4, 100, "delta", Some(3)),
+        ]);
+        assert_eq!(
+            calling_process_cmdline(parent, describe_calling_process),
+            Some(CallingProcess::GitGrep(([].into(), [].into())))
+        );
+
         for grep_command in &[
             "/usr/local/bin/rg pattern hello.txt",
-            "rg pattern hello.txt",
+            "RG.exe pattern hello.txt",
             "/usr/local/bin/ack pattern hello.txt",
             "ack.exe pattern hello.txt",
         ] {
