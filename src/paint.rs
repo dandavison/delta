@@ -135,9 +135,13 @@ impl<'p> Painter<'p> {
         }
     }
 
-    // Remove initial -/+ character, and expand tabs as spaces, retaining ANSI sequences.
+    // Remove initial -/+ character, expand tabs as spaces, retaining ANSI sequences. Terminate with
+    // newline character.
     pub fn prepare_raw_line(&self, raw_line: &str) -> String {
-        ansi::ansi_preserving_slice(&self.expand_tabs(raw_line.graphemes(true)), 1)
+        format!(
+            "{}\n",
+            ansi::ansi_preserving_slice(&self.expand_tabs(raw_line.graphemes(true)), 1),
+        )
     }
 
     /// Expand tabs as spaces.
