@@ -415,11 +415,17 @@ impl<'p> Painter<'p> {
                 }
             }
             State::HunkMinus(Some(_)) | State::HunkPlus(Some(_)) => {
-                if !diff_sections.is_empty() {
-                    diff_sections[diff_sections.len() - 1].0
-                } else {
-                    config.null_style
-                }
+                // Consider the following raw line, from git colorMoved:
+                // ␛[1;36m+␛[m␛[1;36mclass·X:·pass␛[m␊ The last style section returned by
+                // parse_style_sections will be a default style associated with the terminal newline
+                // character; we want the last "real" style.
+                diff_sections
+                    .iter()
+                    .rev()
+                    .filter(|(_, s)| s != &"\n")
+                    .map(|(style, _)| *style)
+                    .next()
+                    .unwrap_or(config.null_style)
             }
             State::Blame(_, _) => diff_sections[0].0,
             _ => config.null_style,
