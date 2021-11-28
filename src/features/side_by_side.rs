@@ -6,6 +6,7 @@ use crate::ansi;
 use crate::cli;
 use crate::config::{self, delta_unreachable, Config};
 use crate::delta::State;
+use crate::edits;
 use crate::features::{line_numbers, OptionValueFunction};
 use crate::minusplus::*;
 use crate::paint::{BgFillMethod, BgShouldFill, LineSections, Painter};
@@ -111,6 +112,7 @@ pub fn paint_minus_and_plus_lines_side_by_side(
     lines: LeftRight<&Vec<(String, State)>>,
     syntax_sections: LeftRight<Vec<LineSections<SyntectStyle>>>,
     diff_sections: LeftRight<Vec<LineSections<Style>>>,
+    lines_have_homolog: LeftRight<Vec<bool>>,
     line_alignment: Vec<(Option<usize>, Option<usize>)>,
     line_numbers_data: &mut Option<LineNumbersData>,
     output_buffer: &mut String,
@@ -164,12 +166,18 @@ pub fn paint_minus_and_plus_lines_side_by_side(
     } else {
         (line_alignment, line_states, syntax_sections, diff_sections)
     };
+    let lines_have_homolog = if should_wrap {
+        edits::make_lines_have_homolog(&line_alignment)
+    } else {
+        lines_have_homolog
+    };
 
     for (minus_line_index, plus_line_index) in line_alignment {
         output_buffer.push_str(&paint_left_panel_minus_line(
             minus_line_index,
             &syntax_sections[Left],
             &diff_sections[Left],
+            &lines_have_homolog[Left],
             match minus_line_index {
                 Some(i) => &line_states[Left][i],
                 None => &State::HunkMinus(None),
@@ -182,6 +190,7 @@ pub fn paint_minus_and_plus_lines_side_by_side(
             plus_line_index,
             &syntax_sections[Right],
             &diff_sections[Right],
+            &lines_have_homolog[Right],
             match plus_line_index {
                 Some(i) => &line_states[Right][i],
                 None => &State::HunkPlus(None),
@@ -237,6 +246,7 @@ pub fn paint_zero_lines_side_by_side<'a>(
                 panel_line_is_empty,
                 Some(line_index),
                 &diff_style_sections,
+                None,
                 &state,
                 *panel_side,
                 background_color_extends_to_terminal_width,
@@ -253,6 +263,7 @@ fn paint_left_panel_minus_line<'a>(
     line_index: Option<usize>,
     syntax_style_sections: &[LineSections<'a, SyntectStyle>],
     diff_style_sections: &[LineSections<'a, Style>],
+    lines_have_homolog: &[bool],
     state: &'a State,
     line_numbers_data: &mut Option<&mut line_numbers::LineNumbersData>,
     background_color_extends_to_terminal_width: BgShouldFill,
@@ -272,6 +283,7 @@ fn paint_left_panel_minus_line<'a>(
         panel_line_is_empty,
         line_index,
         diff_style_sections,
+        Some(lines_have_homolog),
         state,
         Left,
         background_color_extends_to_terminal_width,
@@ -286,6 +298,7 @@ fn paint_right_panel_plus_line<'a>(
     line_index: Option<usize>,
     syntax_style_sections: &[LineSections<'a, SyntectStyle>],
     diff_style_sections: &[LineSections<'a, Style>],
+    lines_have_homolog: &[bool],
     state: &'a State,
     line_numbers_data: &mut Option<&mut line_numbers::LineNumbersData>,
     background_color_extends_to_terminal_width: BgShouldFill,
@@ -306,6 +319,7 @@ fn paint_right_panel_plus_line<'a>(
         panel_line_is_empty,
         line_index,
         diff_style_sections,
+        Some(lines_have_homolog),
         state,
         Right,
         background_color_extends_to_terminal_width,
@@ -320,6 +334,7 @@ fn get_right_fill_style_for_panel<'a>(
     line_is_empty: bool,
     line_index: Option<usize>,
     diff_style_sections: &[LineSections<'a, Style>],
+    lines_have_homolog: Option<&[bool]>,
     state: &State,
     panel_side: PanelSide,
     background_color_extends_to_terminal_width: BgShouldFill,
@@ -339,6 +354,7 @@ fn get_right_fill_style_for_panel<'a>(
             let (bg_fill_mode, fill_style) =
                 Painter::get_should_right_fill_background_color_and_fill_style(
                     &diff_style_sections[index],
+                    lines_have_homolog.map(|h| h[index]),
                     state,
                     background_color_extends_to_terminal_width,
                     config,
@@ -435,6 +451,7 @@ fn pad_panel_line_to_width<'a>(
     panel_line_is_empty: bool,
     line_index: Option<usize>,
     diff_style_sections: &[LineSections<'a, Style>],
+    lines_have_homolog: Option<&[bool]>,
     state: &State,
     panel_side: PanelSide,
     background_color_extends_to_terminal_width: BgShouldFill,
@@ -472,6 +489,7 @@ fn pad_panel_line_to_width<'a>(
         panel_line_is_empty,
         line_index,
         diff_style_sections,
+        lines_have_homolog,
         state,
         panel_side,
         background_color_extends_to_terminal_width,

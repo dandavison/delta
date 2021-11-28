@@ -146,6 +146,7 @@ pub mod ansi_test_utils {
             &lines,
             &syntax_style_sections,
             &diff_style_sections,
+            &[false],
             &mut output_buffer,
             config,
             &mut None,
