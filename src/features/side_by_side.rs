@@ -85,7 +85,7 @@ pub fn line_is_too_long(line: &str, line_width: usize) -> bool {
 /// structure indicating which of the input lines are too long. This avoids
 /// recalculating the length later.
 pub fn has_long_lines(
-    lines: &LeftRight<&[(String, State)]>,
+    lines: &LeftRight<&Vec<(String, State)>>,
     line_width: &line_numbers::SideBySideLineWidth,
 ) -> (bool, LeftRight<Vec<bool>>) {
     let mut wrap_any = LeftRight::default();
@@ -108,7 +108,7 @@ pub fn has_long_lines(
 
 #[allow(clippy::too_many_arguments)]
 pub fn paint_minus_and_plus_lines_side_by_side(
-    lines: LeftRight<&[(String, State)]>,
+    lines: LeftRight<&Vec<(String, State)>>,
     syntax_sections: LeftRight<Vec<LineSections<SyntectStyle>>>,
     diff_sections: LeftRight<Vec<LineSections<Style>>>,
     line_alignment: Vec<(Option<usize>, Option<usize>)>,
@@ -315,6 +315,7 @@ fn paint_right_panel_plus_line<'a>(
     panel_line
 }
 
+#[allow(clippy::too_many_arguments)]
 fn get_right_fill_style_for_panel<'a>(
     line_is_empty: bool,
     line_index: Option<usize>,
