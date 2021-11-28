@@ -4,6 +4,7 @@ use unicode_segmentation::UnicodeSegmentation;
 use unicode_width::UnicodeWidthStr;
 
 use crate::align;
+use crate::minusplus::MinusPlus;
 
 /// Infer the edit operations responsible for the differences between a collection of old and new
 /// lines. A "line" is a string. An annotated line is a Vec of (op, &str) pairs, where the &str
@@ -95,6 +96,24 @@ where
     }
 
     (annotated_minus_lines, annotated_plus_lines, line_alignment)
+}
+
+// Return boolean arrays indicating whether each line has a homolog (is "paired").
+pub fn make_lines_have_homolog(
+    line_alignment: &[(Option<usize>, Option<usize>)],
+) -> MinusPlus<Vec<bool>> {
+    MinusPlus::new(
+        line_alignment
+            .iter()
+            .filter(|(m, _)| m.is_some())
+            .map(|(_, p)| p.is_some())
+            .collect(),
+        line_alignment
+            .iter()
+            .filter(|(_, p)| p.is_some())
+            .map(|(m, _)| m.is_some())
+            .collect(),
+    )
 }
 
 /// Split line into tokens for alignment. The alignment algorithm aligns sequences of substrings;

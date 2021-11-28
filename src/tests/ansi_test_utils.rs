@@ -143,9 +143,9 @@ pub mod ansi_test_utils {
             _ => "",
         };
         paint::Painter::paint_lines(
-            syntax_style_sections,
-            diff_style_sections,
-            [state].iter(),
+            &lines,
+            &syntax_style_sections,
+            &diff_style_sections,
             &mut output_buffer,
             config,
             &mut None,
