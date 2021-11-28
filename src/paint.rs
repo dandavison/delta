@@ -190,6 +190,7 @@ impl<'p> Painter<'p> {
                 lines,
                 syntax_style_sections,
                 diff_style_sections,
+                lines_have_homolog,
                 line_alignment,
                 &mut self.line_numbers_data,
                 &mut self.output_buffer,
@@ -202,6 +203,7 @@ impl<'p> Painter<'p> {
                     lines[Minus],
                     &syntax_style_sections[Minus],
                     &diff_style_sections[Minus],
+                    &lines_have_homolog[Minus],
                     &mut self.output_buffer,
                     self.config,
                     &mut self.line_numbers_data.as_mut(),
@@ -219,6 +221,7 @@ impl<'p> Painter<'p> {
                     lines[Plus],
                     &syntax_style_sections[Plus],
                     &diff_style_sections[Plus],
+                    &lines_have_homolog[Plus],
                     &mut self.output_buffer,
                     self.config,
                     &mut self.line_numbers_data.as_mut(),
@@ -270,6 +273,7 @@ impl<'p> Painter<'p> {
                 &lines,
                 &syntax_style_sections,
                 &[diff_style_sections],
+                &[false],
                 &mut self.output_buffer,
                 self.config,
                 &mut self.line_numbers_data.as_mut(),
@@ -287,6 +291,7 @@ impl<'p> Painter<'p> {
         lines: &'a [(String, State)],
         syntax_style_sections: &[LineSections<'a, SyntectStyle>],
         diff_style_sections: &[LineSections<'a, Style>],
+        lines_have_homolog: &[bool],
         output_buffer: &mut String,
         config: &config::Config,
         line_numbers_data: &mut Option<&mut line_numbers::LineNumbersData>,
@@ -301,10 +306,11 @@ impl<'p> Painter<'p> {
         // 2. We must ensure that we fill rightwards with the appropriate
         //    non-emph background color. In that case we don't use the last
         //    style of the line, because this might be emph.
-        for (((_, state), syntax_sections), diff_sections) in lines
+        for ((((_, state), syntax_sections), diff_sections), &line_has_homolog) in lines
             .iter()
             .zip_eq(syntax_style_sections)
             .zip_eq(diff_style_sections)
+            .zip_eq(lines_have_homolog)
         {
             let (mut line, line_is_empty) = Painter::paint_line(
                 syntax_sections,
@@ -318,6 +324,7 @@ impl<'p> Painter<'p> {
             let (bg_fill_mode, fill_style) =
                 Painter::get_should_right_fill_background_color_and_fill_style(
                     diff_sections,
+                    Some(line_has_homolog),
                     state,
                     background_color_extends_to_terminal_width,
                     config,
@@ -372,6 +379,7 @@ impl<'p> Painter<'p> {
             &lines,
             &syntax_style_sections,
             &diff_style_sections,
+            &[false],
             &mut self.output_buffer,
             self.config,
             &mut None,
@@ -385,14 +393,27 @@ impl<'p> Painter<'p> {
     /// the style for doing so.
     pub fn get_should_right_fill_background_color_and_fill_style(
         diff_sections: &[(Style, &str)],
+        line_has_homolog: Option<bool>,
         state: &State,
         background_color_extends_to_terminal_width: BgShouldFill,
         config: &config::Config,
     ) -> (Option<BgFillMethod>, Style) {
-        let non_emph_style = match state {
-            State::HunkMinus(None) | State::HunkMinusWrapped => config.minus_non_emph_style,
+        let fill_style = match state {
+            State::HunkMinus(None) | State::HunkMinusWrapped => {
+                if let Some(true) = line_has_homolog {
+                    config.minus_non_emph_style
+                } else {
+                    config.minus_style
+                }
+            }
             State::HunkZero | State::HunkZeroWrapped => config.zero_style,
-            State::HunkPlus(None) | State::HunkPlusWrapped => config.plus_non_emph_style,
+            State::HunkPlus(None) | State::HunkPlusWrapped => {
+                if let Some(true) = line_has_homolog {
+                    config.plus_non_emph_style
+                } else {
+                    config.plus_style
+                }
+            }
             State::HunkMinus(Some(_)) | State::HunkPlus(Some(_)) => {
                 if !diff_sections.is_empty() {
                     diff_sections[diff_sections.len() - 1].0
@@ -403,7 +424,6 @@ impl<'p> Painter<'p> {
             State::Blame(_, _) => diff_sections[0].0,
             _ => config.null_style,
         };
-        let fill_style = non_emph_style;
 
         match (
             fill_style.get_background_color().is_some(),
