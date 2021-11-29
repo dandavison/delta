@@ -136,12 +136,6 @@ pub mod ansi_test_utils {
             config,
         );
         let diff_style_sections = vec![vec![(syntax_highlighted_style, lines[0].0.as_str())]];
-        let prefix = match (&state, config.keep_plus_minus_markers) {
-            (State::HunkMinus(_), true) => "-",
-            (State::HunkZero, true) => " ",
-            (State::HunkPlus(_), true) => "+",
-            _ => "",
-        };
         paint::Painter::paint_lines(
             &lines,
             &syntax_style_sections,
@@ -150,7 +144,6 @@ pub mod ansi_test_utils {
             &mut output_buffer,
             config,
             &mut None,
-            Some(config.null_style.paint(prefix)),
             None,
             paint::BgShouldFill::default(),
         );

@@ -76,18 +76,18 @@ pub fn linenumbers_and_styles<'a>(
         config.line_numbers_style_minusplus[Plus],
     );
     let ((minus_number, plus_number), (minus_style, plus_style)) = match state {
-        State::HunkMinus(_) => {
+        State::HunkMinus(_, _) => {
             line_numbers_data.line_number[Left] += increment as usize;
             ((Some(nr_left), None), (minus_style, plus_style))
         }
         State::HunkMinusWrapped => ((None, None), (minus_style, plus_style)),
-        State::HunkZero => {
+        State::HunkZero(_) => {
             line_numbers_data.line_number[Left] += increment as usize;
             line_numbers_data.line_number[Right] += increment as usize;
             ((Some(nr_left), Some(nr_right)), (zero_style, zero_style))
         }
         State::HunkZeroWrapped => ((None, None), (zero_style, zero_style)),
-        State::HunkPlus(_) => {
+        State::HunkPlus(_, _) => {
             line_numbers_data.line_number[Right] += increment as usize;
             ((None, Some(nr_right)), (minus_style, plus_style))
         }

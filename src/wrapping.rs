@@ -449,13 +449,13 @@ pub fn wrap_minusplus_block<'c: 'a, 'a>(
         };
 
         if minus_extended > 0 {
-            new_states[Left].push(State::HunkMinus(None));
+            new_states[Left].push(State::HunkMinus(None, None));
             for _ in 1..minus_extended {
                 new_states[Left].push(State::HunkMinusWrapped);
             }
         }
         if plus_extended > 0 {
-            new_states[Right].push(State::HunkPlus(None));
+            new_states[Right].push(State::HunkPlus(None, None));
             for _ in 1..plus_extended {
                 new_states[Right].push(State::HunkPlusWrapped);
             }

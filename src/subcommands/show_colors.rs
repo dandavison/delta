@@ -43,7 +43,7 @@ pub fn show_colors() -> std::io::Result<()> {
                 painter.syntax_highlight_and_paint_line(
                     line,
                     paint::StyleSectionSpecifier::Style(style),
-                    delta::State::HunkZero,
+                    delta::State::HunkZero(None),
                     BgShouldFill::default(),
                 )
             }
@@ -62,7 +62,7 @@ pub fn show_colors() -> std::io::Result<()> {
                 painter.syntax_highlight_and_paint_line(
                     line,
                     paint::StyleSectionSpecifier::Style(style),
-                    delta::State::HunkZero,
+                    delta::State::HunkZero(None),
                     BgShouldFill::default(),
                 )
             }

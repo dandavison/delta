@@ -5,7 +5,7 @@ use unicode_segmentation::UnicodeSegmentation;
 
 use super::draw;
 use crate::config::Config;
-use crate::delta::{Source, State, StateMachine};
+use crate::delta::{DiffType, Source, State, StateMachine};
 use crate::features;
 use crate::paint::Painter;
 
@@ -24,7 +24,7 @@ pub enum FileEvent {
 impl<'a> StateMachine<'a> {
     #[inline]
     fn test_diff_header_minus_line(&self) -> bool {
-        (self.state == State::DiffHeader || self.source == Source::DiffUnified)
+        (matches!(self.state, State::DiffHeader(_)) || self.source == Source::DiffUnified)
             && (self.line.starts_with("--- ")
                 || self.line.starts_with("rename from ")
                 || self.line.starts_with("copy from ")
@@ -57,7 +57,7 @@ impl<'a> StateMachine<'a> {
         self.minus_file_event = file_event;
 
         if self.source == Source::DiffUnified {
-            self.state = State::DiffHeader;
+            self.state = State::DiffHeader(DiffType::Unified);
             self.painter
                 .set_syntax(get_file_extension_from_marker_line(&self.line));
         } else {
@@ -85,7 +85,7 @@ impl<'a> StateMachine<'a> {
 
     #[inline]
     fn test_diff_header_plus_line(&self) -> bool {
-        (self.state == State::DiffHeader || self.source == Source::DiffUnified)
+        (matches!(self.state, State::DiffHeader(_)) || self.source == Source::DiffUnified)
             && (self.line.starts_with("+++ ")
                 || self.line.starts_with("rename to ")
                 || self.line.starts_with("copy to ")

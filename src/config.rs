@@ -145,11 +145,11 @@ pub struct Config {
 impl Config {
     pub fn get_style(&self, state: &State) -> &Style {
         match state {
-            State::HunkMinus(_) => &self.minus_style,
-            State::HunkPlus(_) => &self.plus_style,
+            State::HunkMinus(_, _) => &self.minus_style,
+            State::HunkPlus(_, _) => &self.plus_style,
             State::CommitMeta => &self.commit_style,
-            State::DiffHeader => &self.file_style,
-            State::HunkHeader(_, _) => &self.hunk_header_style,
+            State::DiffHeader(_) => &self.file_style,
+            State::HunkHeader(_, _, _) => &self.hunk_header_style,
             State::SubmoduleLog => &self.file_style,
             _ => delta_unreachable("Unreachable code reached in get_style."),
         }
