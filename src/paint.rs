@@ -568,7 +568,7 @@ impl<'p> Painter<'p> {
             State::Grep => true,
             State::Unknown
             | State::CommitMeta
-            | State::FileMeta
+            | State::DiffHeader
             | State::HunkMinusWrapped
             | State::HunkZeroWrapped
             | State::HunkPlusWrapped

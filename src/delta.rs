@@ -15,16 +15,16 @@ use crate::style::DecorationStyle;
 #[derive(Clone, Debug, PartialEq)]
 pub enum State {
     CommitMeta,                    // In commit metadata section
-    FileMeta, // In diff metadata section, between (possible) commit metadata and first hunk
+    DiffHeader, // In diff header section, between (possible) commit metadata and first hunk
     HunkHeader(String, String), // In hunk metadata line (line, raw_line)
-    HunkZero, // In hunk; unchanged line
+    HunkZero,   // In hunk; unchanged line
     HunkMinus(Option<String>), // In hunk; removed line (raw_line)
     HunkPlus(Option<String>), // In hunk; added line (raw_line)
     SubmoduleLog, // In a submodule section, with gitconfig diff.submodule = log
     SubmoduleShort(String), // In a submodule section, with gitconfig diff.submodule = short
     Blame(String, Option<String>), // In a line of `git blame` output (commit, repeat_blame_line).
     GitShowFile, // In a line of `git show $revision:./path/to/file.ext` output
-    Grep,     // In a line of `git grep` output
+    Grep,       // In a line of `git grep` output
     Unknown,
     // The following elements are created when a line is wrapped to display it:
     HunkZeroWrapped,  // Wrapped unchanged line
@@ -42,10 +42,10 @@ pub enum Source {
 // Possible transitions, with actions on entry:
 //
 //
-// | from \ to   | CommitMeta  | FileMeta    | HunkHeader  | HunkZero    | HunkMinus   | HunkPlus |
+// | from \ to   | CommitMeta  | DiffHeader  | HunkHeader  | HunkZero    | HunkMinus   | HunkPlus |
 // |-------------+-------------+-------------+-------------+-------------+-------------+----------|
 // | CommitMeta  | emit        | emit        |             |             |             |          |
-// | FileMeta    |             | emit        | emit        |             |             |          |
+// | DiffHeader  |             | emit        | emit        |             |             |          |
 // | HunkHeader  |             |             |             | emit        | push        | push     |
 // | HunkZero    | emit        | emit        | emit        | emit        | push        | push     |
 // | HunkMinus   | flush, emit | flush, emit | flush, emit | flush, emit | push        | push     |
@@ -58,8 +58,8 @@ pub struct StateMachine<'a> {
     pub source: Source,
     pub minus_file: String,
     pub plus_file: String,
-    pub minus_file_event: handlers::file_meta::FileEvent,
-    pub plus_file_event: handlers::file_meta::FileEvent,
+    pub minus_file_event: handlers::diff_header::FileEvent,
+    pub plus_file_event: handlers::diff_header::FileEvent,
     pub diff_line: String,
     pub painter: Painter<'a>,
     pub config: &'a Config,
@@ -70,7 +70,7 @@ pub struct StateMachine<'a> {
     // a file is renamed with changes, both are present, and we rely on the following variables to
     // avoid emitting the file meta header line twice (#245).
     pub current_file_pair: Option<(String, String)>,
-    pub handled_file_meta_header_line_file_pair: Option<(String, String)>,
+    pub handled_diff_header_header_line_file_pair: Option<(String, String)>,
     pub blame_commit_colors: HashMap<String, String>,
 }
 
@@ -90,11 +90,11 @@ impl<'a> StateMachine<'a> {
             source: Source::Unknown,
             minus_file: "".to_string(),
             plus_file: "".to_string(),
-            minus_file_event: handlers::file_meta::FileEvent::NoEvent,
-            plus_file_event: handlers::file_meta::FileEvent::NoEvent,
+            minus_file_event: handlers::diff_header::FileEvent::NoEvent,
+            plus_file_event: handlers::diff_header::FileEvent::NoEvent,
             diff_line: "".to_string(),
             current_file_pair: None,
-            handled_file_meta_header_line_file_pair: None,
+            handled_diff_header_header_line_file_pair: None,
             painter: Painter::new(writer, config),
             config,
             blame_commit_colors: HashMap::new(),
@@ -118,11 +118,11 @@ impl<'a> StateMachine<'a> {
             // handle it).
             let _ = self.handle_commit_meta_header_line()?
                 || self.handle_diff_stat_line()?
-                || self.handle_file_meta_diff_line()?
-                || self.handle_file_meta_minus_line()?
-                || self.handle_file_meta_plus_line()?
+                || self.handle_diff_header_diff_line()?
+                || self.handle_diff_header_minus_line()?
+                || self.handle_diff_header_plus_line()?
                 || self.handle_hunk_header_line()?
-                || self.handle_file_meta_misc_line()?
+                || self.handle_diff_header_misc_line()?
                 || self.handle_submodule_log_line()?
                 || self.handle_submodule_short_line()?
                 || self.handle_hunk_line()?
@@ -171,7 +171,7 @@ impl<'a> StateMachine<'a> {
 
     /// Skip file metadata lines unless a raw diff style has been requested.
     fn should_skip_line(&self) -> bool {
-        self.state == State::FileMeta && self.should_handle() && !self.config.color_only
+        self.state == State::DiffHeader && self.should_handle() && !self.config.color_only
     }
 
     /// Emit unchanged any line that delta does not handle.

@@ -2,11 +2,11 @@
 /// main `StateMachine::consume()` loop.
 pub mod blame;
 pub mod commit_meta;
+pub mod diff_header;
+pub mod diff_header_diff;
+pub mod diff_header_misc;
 pub mod diff_stat;
 pub mod draw;
-pub mod file_meta;
-pub mod file_meta_diff;
-pub mod file_meta_misc;
 pub mod git_show_file;
 pub mod grep;
 pub mod hunk;
@@ -37,7 +37,7 @@ impl<'a> StateMachine<'a> {
         self.state = to_state;
         if self.should_handle() {
             self.painter.emit()?;
-            file_meta::write_generic_file_meta_header_line(
+            diff_header::write_generic_diff_header_header_line(
                 &self.line,
                 &self.raw_line,
                 &mut self.painter,

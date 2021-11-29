@@ -138,7 +138,7 @@ mod tests {
         assert_eq!(lines.nth(7).unwrap(), "This is different from b");
         // File uniqueness
         assert_eq!(lines.nth(2).unwrap(), "Only in a/: just_a");
-        // FileMeta divider
+        // DiffHeader divider
         assert!(lines.next().unwrap().starts_with("───────"));
         // Next hunk
         assert_eq!(
