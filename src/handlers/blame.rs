@@ -37,8 +37,13 @@ impl<'a> StateMachine<'a> {
 
                 let mut style =
                     match paint::parse_style_sections(&self.raw_line, self.config).first() {
-                        Some((style, _)) => *style,
+                        Some((style, _)) => {
+                            // Something like `blame.coloring = highlightRecent` is in effect; honor
+                            // the color from git, subject to map-styles.
+                            *style
+                        }
                         None => {
+                            // Compute the color ourselves.
                             let color = self.get_color(blame.commit, previous_commit, is_repeat);
                             // TODO: This will often be pointlessly updating a key with the
                             // value it already has. It might be nicer to do this (and
