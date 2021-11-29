@@ -701,13 +701,14 @@ impl<'p> Painter<'p> {
             .zip_eq(lines_style_sections)
             .zip_eq(lines_have_homolog)
         {
-            match state {
-                State::HunkMinus(Some(raw_line)) | State::HunkPlus(Some(raw_line)) => {
-                    *style_sections = parse_style_sections(raw_line, config);
-                    continue;
-                }
-                _ => {}
-            };
+            if let State::HunkMinus(Some(raw_line)) | State::HunkPlus(Some(raw_line)) = state {
+                // raw_line is captured in handle_hunk_line under certain conditions. If we have
+                // done so, then overwrite the style sections with styles parsed directly from the
+                // raw line. Currently the only reason this is done is to handle a diff.colorMoved
+                // line.
+                *style_sections = parse_style_sections(raw_line, config);
+                continue;
+            }
             let line_has_emph_and_non_emph_sections =
                 style_sections_contain_more_than_one_style(style_sections);
             let should_update_non_emph_styles = non_emph_style.is_some() && *line_has_homolog;
