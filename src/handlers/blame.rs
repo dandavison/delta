@@ -9,8 +9,7 @@ use crate::config;
 use crate::config::delta_unreachable;
 use crate::delta::{self, State, StateMachine};
 use crate::format::{self, Placeholder};
-use crate::paint::BgShouldFill;
-use crate::paint::StyleSectionSpecifier;
+use crate::paint::{self, BgShouldFill, StyleSectionSpecifier};
 use crate::style::Style;
 use crate::utils;
 
@@ -35,17 +34,30 @@ impl<'a> StateMachine<'a> {
                 parse_git_blame_line(&self.line, &self.config.blame_timestamp_format)
             {
                 let is_repeat = previous_commit == Some(blame.commit);
-                let color = self.get_color(blame.commit, previous_commit, is_repeat);
-                let mut style = Style::from_colors(
-                    None,
-                    color::parse_color(&color, true, self.config.git_config.as_ref()),
-                );
-                // TODO: This will often be pointlessly updating a key with the
-                // value it already has. It might be nicer to do this (and
-                // compute the style) in get_color(), but as things stand the
-                // borrow checker won't permit that.
-                self.blame_commit_colors
-                    .insert(blame.commit.to_owned(), color);
+
+                let mut style =
+                    match paint::parse_style_sections(&self.raw_line, self.config).first() {
+                        Some((style, _)) => {
+                            // Something like `blame.coloring = highlightRecent` is in effect; honor
+                            // the color from git, subject to map-styles.
+                            *style
+                        }
+                        None => {
+                            // Compute the color ourselves.
+                            let color = self.get_color(blame.commit, previous_commit, is_repeat);
+                            // TODO: This will often be pointlessly updating a key with the
+                            // value it already has. It might be nicer to do this (and
+                            // compute the style) in get_color(), but as things stand the
+                            // borrow checker won't permit that.
+                            let style = Style::from_colors(
+                                None,
+                                color::parse_color(&color, true, self.config.git_config.as_ref()),
+                            );
+                            self.blame_commit_colors
+                                .insert(blame.commit.to_owned(), color);
+                            style
+                        }
+                    };
 
                 style.is_syntax_highlighted = true;
 
