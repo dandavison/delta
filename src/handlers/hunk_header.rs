@@ -26,7 +26,7 @@ use regex::Regex;
 
 use super::draw;
 use crate::config::Config;
-use crate::delta::{self, State, StateMachine};
+use crate::delta::{self, DiffType, State, StateMachine};
 use crate::paint::{self, BgShouldFill, Painter, StyleSectionSpecifier};
 use crate::style::DecorationStyle;
 
@@ -40,7 +40,15 @@ impl<'a> StateMachine<'a> {
         if !self.test_hunk_header_line() {
             return Ok(false);
         }
-        self.state = State::HunkHeader(self.line.clone(), self.raw_line.clone());
+        let diff_type = match &self.state {
+            State::DiffHeader(DiffType::Combined(_)) => {
+                // https://git-scm.com/docs/git-diff#_combined_diff_format
+                let n_parents = self.line.chars().take_while(|c| c == &'@').count() - 1;
+                DiffType::Combined(n_parents)
+            }
+            _ => DiffType::Unified,
+        };
+        self.state = State::HunkHeader(diff_type, self.line.clone(), self.raw_line.clone());
         Ok(true)
     }
 
@@ -251,7 +259,7 @@ fn write_to_output_buffer(
         painter.syntax_highlight_and_paint_line(
             &line,
             StyleSectionSpecifier::Style(config.hunk_header_style),
-            delta::State::HunkHeader("".to_owned(), "".to_owned()),
+            delta::State::HunkHeader(DiffType::Unified, "".to_owned(), "".to_owned()),
             BgShouldFill::No,
         );
         painter.output_buffer.pop(); // trim newline

@@ -2,7 +2,7 @@
 mod tests {
     use crate::ansi::{self, strip_ansi_codes};
     use crate::cli::InspectRawLines;
-    use crate::delta::State;
+    use crate::delta::{DiffType, State};
     use crate::style;
     use crate::tests::ansi_test_utils::ansi_test_utils;
     use crate::tests::integration_test_utils;
@@ -1384,7 +1384,7 @@ src/align.rs:71: impl<'a> Alignment<'a> { │
             4,
             "impl<'a> Alignment<'a> { ",
             "rs",
-            State::HunkHeader("".to_owned(), "".to_owned()),
+            State::HunkHeader(DiffType::Unified, "".to_owned(), "".to_owned()),
             &config,
         );
         ansi_test_utils::assert_line_has_no_color(&output, 12, "─────────────────────────────┘");
@@ -1539,7 +1539,7 @@ src/align.rs:71: impl<'a> Alignment<'a> { │
             1,
             "        for (i, x_i) in self.x.iter().enumerate() {",
             "rs",
-            State::HunkZero,
+            State::HunkZero(None),
             &config,
         );
     }
