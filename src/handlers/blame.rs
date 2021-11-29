@@ -3,6 +3,7 @@ use lazy_static::lazy_static;
 use regex::Regex;
 use std::borrow::Cow;
 
+use crate::ansi;
 use crate::ansi::measure_text_width;
 use crate::color;
 use crate::config;
@@ -35,17 +36,27 @@ impl<'a> StateMachine<'a> {
                 parse_git_blame_line(&self.line, &self.config.blame_timestamp_format)
             {
                 let is_repeat = previous_commit == Some(blame.commit);
-                let color = self.get_color(blame.commit, previous_commit, is_repeat);
-                let mut style = Style::from_colors(
-                    None,
-                    color::parse_color(&color, true, self.config.git_config.as_ref()),
-                );
-                // TODO: This will often be pointlessly updating a key with the
-                // value it already has. It might be nicer to do this (and
-                // compute the style) in get_color(), but as things stand the
-                // borrow checker won't permit that.
-                self.blame_commit_colors
-                    .insert(blame.commit.to_owned(), color);
+
+                let mut style = match ansi::parse_first_style(&self.raw_line) {
+                    Some(ansi_term_style) => Style {
+                        ansi_term_style,
+                        ..Style::default()
+                    },
+                    None => {
+                        let color = self.get_color(blame.commit, previous_commit, is_repeat);
+                        // TODO: This will often be pointlessly updating a key with the
+                        // value it already has. It might be nicer to do this (and
+                        // compute the style) in get_color(), but as things stand the
+                        // borrow checker won't permit that.
+                        let style = Style::from_colors(
+                            None,
+                            color::parse_color(&color, true, self.config.git_config.as_ref()),
+                        );
+                        self.blame_commit_colors
+                            .insert(blame.commit.to_owned(), color);
+                        style
+                    }
+                };
 
                 style.is_syntax_highlighted = true;
 
