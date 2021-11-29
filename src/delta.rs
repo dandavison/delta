@@ -14,22 +14,28 @@ use crate::style::DecorationStyle;
 
 #[derive(Clone, Debug, PartialEq)]
 pub enum State {
-    CommitMeta,                    // In commit metadata section
-    DiffHeader, // In diff header section, between (possible) commit metadata and first hunk
-    HunkHeader(String, String), // In hunk metadata line (line, raw_line)
-    HunkZero,   // In hunk; unchanged line
-    HunkMinus(Option<String>), // In hunk; removed line (raw_line)
-    HunkPlus(Option<String>), // In hunk; added line (raw_line)
+    CommitMeta,                           // In commit metadata section
+    DiffHeader(DiffType), // In diff metadata section, between (possible) commit metadata and first hunk
+    HunkHeader(DiffType, String, String), // In hunk metadata line (line, raw_line)
+    HunkZero(Option<String>), // In hunk; unchanged line (prefix)
+    HunkMinus(Option<String>, Option<String>), // In hunk; removed line (prefix, raw_line)
+    HunkPlus(Option<String>, Option<String>), // In hunk; added line (prefix, raw_line)
     SubmoduleLog, // In a submodule section, with gitconfig diff.submodule = log
     SubmoduleShort(String), // In a submodule section, with gitconfig diff.submodule = short
     Blame(String, Option<String>), // In a line of `git blame` output (commit, repeat_blame_line).
-    GitShowFile, // In a line of `git show $revision:./path/to/file.ext` output
-    Grep,       // In a line of `git grep` output
+    GitShowFile,  // In a line of `git show $revision:./path/to/file.ext` output
+    Grep,         // In a line of `git grep` output
     Unknown,
     // The following elements are created when a line is wrapped to display it:
     HunkZeroWrapped,  // Wrapped unchanged line
     HunkMinusWrapped, // Wrapped removed line
     HunkPlusWrapped,  // Wrapped added line
+}
+
+#[derive(Clone, Debug, PartialEq)]
+pub enum DiffType {
+    Unified,
+    Combined(usize), // number of parent commits: https://git-scm.com/docs/git-diff#_combined_diff_format
 }
 
 #[derive(Debug, PartialEq)]
@@ -171,7 +177,9 @@ impl<'a> StateMachine<'a> {
 
     /// Skip file metadata lines unless a raw diff style has been requested.
     fn should_skip_line(&self) -> bool {
-        self.state == State::DiffHeader && self.should_handle() && !self.config.color_only
+        matches!(self.state, State::DiffHeader(_))
+            && self.should_handle()
+            && !self.config.color_only
     }
 
     /// Emit unchanged any line that delta does not handle.

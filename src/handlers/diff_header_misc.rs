@@ -1,4 +1,4 @@
-use crate::delta::{Source, State, StateMachine};
+use crate::delta::{DiffType, Source, State, StateMachine};
 
 impl<'a> StateMachine<'a> {
     #[inline]
@@ -11,6 +11,9 @@ impl<'a> StateMachine<'a> {
         if !self.test_diff_header_misc_cases() {
             return Ok(false);
         }
-        self.handle_additional_cases(State::DiffHeader)
+        self.handle_additional_cases(match self.state {
+            State::DiffHeader(_) => self.state.clone(),
+            _ => State::DiffHeader(DiffType::Unified),
+        })
     }
 }
