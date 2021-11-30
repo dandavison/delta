@@ -8,7 +8,7 @@ use bytelines::ByteLines;
 use crate::ansi;
 use crate::config::Config;
 use crate::features;
-use crate::handlers;
+use crate::handlers::{self, merge_conflict};
 use crate::paint::Painter;
 use crate::style::DecorationStyle;
 
@@ -20,6 +20,7 @@ pub enum State {
     HunkZero(Option<String>), // In hunk; unchanged line (prefix)
     HunkMinus(Option<String>, Option<String>), // In hunk; removed line (prefix, raw_line)
     HunkPlus(Option<String>, Option<String>), // In hunk; added line (prefix, raw_line)
+    MergeConflict(merge_conflict::Source),
     SubmoduleLog, // In a submodule section, with gitconfig diff.submodule = log
     SubmoduleShort(String), // In a submodule section, with gitconfig diff.submodule = short
     Blame(String, Option<String>), // In a line of `git blame` output (commit, repeat_blame_line).
@@ -131,6 +132,7 @@ impl<'a> StateMachine<'a> {
                 || self.handle_diff_header_misc_line()?
                 || self.handle_submodule_log_line()?
                 || self.handle_submodule_short_line()?
+                || self.handle_merge_conflict_line()?
                 || self.handle_hunk_line()?
                 || self.handle_git_show_file_line()?
                 || self.handle_blame_line()?

@@ -11,6 +11,7 @@ pub mod git_show_file;
 pub mod grep;
 pub mod hunk;
 pub mod hunk_header;
+pub mod merge_conflict;
 mod ripgrep_json;
 pub mod submodule;
 
