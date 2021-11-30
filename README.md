@@ -25,7 +25,7 @@
     diffFilter = delta --color-only
 
 [diff]
-    colorMoved = true
+    colorMoved = default
 
 [delta]
     navigate = true
