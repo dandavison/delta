@@ -53,7 +53,7 @@ fn write_no_decoration(
 
 /// Write text to stream, surrounded by a box, leaving the cursor just
 /// beyond the bottom right corner.
-fn write_boxed(
+pub fn write_boxed(
     writer: &mut dyn Write,
     text: &str,
     raw_text: &str,
