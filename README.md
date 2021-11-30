@@ -26,7 +26,7 @@
     diffFilter = delta --color-only
 
 [diff]
-	colorMoved = true
+    colorMoved = true
 ```
 
 ## A syntax-highlighting pager for git, diff, and grep output
