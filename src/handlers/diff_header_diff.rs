@@ -1,4 +1,4 @@
-use crate::delta::{DiffType, State, StateMachine};
+use crate::delta::{DiffType, MergeParents, State, StateMachine};
 
 impl<'a> StateMachine<'a> {
     #[inline]
@@ -14,7 +14,8 @@ impl<'a> StateMachine<'a> {
         self.painter.paint_buffered_minus_and_plus_lines();
         self.state =
             if self.line.starts_with("diff --cc ") || self.line.starts_with("diff --combined ") {
-                State::DiffHeader(DiffType::Combined(2)) // We will confirm the number of parents when we see the hunk header
+                // We will determine the number of parents when we see the hunk header.
+                State::DiffHeader(DiffType::Combined(MergeParents::Unknown))
             } else {
                 State::DiffHeader(DiffType::Unified)
             };

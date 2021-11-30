@@ -87,6 +87,7 @@ pub struct Config {
     pub grep_match_line_style: Style,
     pub grep_match_word_style: Style,
     pub grep_separator_symbol: String,
+    pub handle_merge_conflicts: bool,
     pub hunk_header_file_style: Style,
     pub hunk_header_line_number_style: Style,
     pub hunk_header_style_include_file_path: bool,
@@ -110,6 +111,10 @@ pub struct Config {
     pub max_line_distance_for_naively_paired_lines: f64,
     pub max_line_distance: f64,
     pub max_line_length: usize,
+    pub merge_conflict_begin_symbol: String,
+    pub merge_conflict_ours_diff_header_style: Style,
+    pub merge_conflict_theirs_diff_header_style: Style,
+    pub merge_conflict_end_symbol: String,
     pub minus_emph_style: Style,
     pub minus_empty_line_marker_style: Style,
     pub minus_file: Option<PathBuf>,
@@ -260,6 +265,7 @@ impl From<cli::Opt> for Config {
             grep_match_line_style: styles["grep-match-line-style"],
             grep_match_word_style: styles["grep-match-word-style"],
             grep_separator_symbol: opt.grep_separator_symbol,
+            handle_merge_conflicts: !opt.raw,
             hunk_header_file_style: styles["hunk-header-file-style"],
             hunk_header_line_number_style: styles["hunk-header-line-number-style"],
             hunk_header_style: styles["hunk-header-style"],
@@ -320,6 +326,11 @@ impl From<cli::Opt> for Config {
                     )
                 }
             },
+            merge_conflict_begin_symbol: opt.merge_conflict_begin_symbol,
+            merge_conflict_ours_diff_header_style: styles["merge-conflict-ours-diff-header-style"],
+            merge_conflict_theirs_diff_header_style: styles
+                ["merge-conflict-theirs-diff-header-style"],
+            merge_conflict_end_symbol: opt.merge_conflict_end_symbol,
             minus_emph_style: styles["minus-emph-style"],
             minus_empty_line_marker_style: styles["minus-empty-line-marker-style"],
             minus_file: opt.minus_file,

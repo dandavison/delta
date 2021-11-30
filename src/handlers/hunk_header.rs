@@ -25,30 +25,43 @@ use lazy_static::lazy_static;
 use regex::Regex;
 
 use super::draw;
-use crate::config::Config;
-use crate::delta::{self, DiffType, State, StateMachine};
+use crate::config::{delta_unreachable, Config};
+use crate::delta::{self, DiffType, MergeParents, State, StateMachine};
 use crate::paint::{self, BgShouldFill, Painter, StyleSectionSpecifier};
 use crate::style::DecorationStyle;
 
 impl<'a> StateMachine<'a> {
     #[inline]
     fn test_hunk_header_line(&self) -> bool {
-        self.line.starts_with("@@")
+        self.line.starts_with("@@") &&
+        // A hunk header can occur within a merge conflict region, but we don't attempt to handle
+        // that. See #822.
+        !matches!(self.state, State::MergeConflict(_, _))
     }
 
     pub fn handle_hunk_header_line(&mut self) -> std::io::Result<bool> {
+        use DiffType::*;
+        use State::*;
         if !self.test_hunk_header_line() {
             return Ok(false);
         }
         let diff_type = match &self.state {
-            State::DiffHeader(DiffType::Combined(_)) => {
+            DiffHeader(Combined(MergeParents::Unknown)) => {
                 // https://git-scm.com/docs/git-diff#_combined_diff_format
                 let n_parents = self.line.chars().take_while(|c| c == &'@').count() - 1;
-                DiffType::Combined(n_parents)
+                Combined(MergeParents::Number(n_parents))
             }
-            _ => DiffType::Unified,
+            DiffHeader(diff_type)
+            | HunkMinus(diff_type, _)
+            | HunkZero(diff_type)
+            | HunkPlus(diff_type, _) => diff_type.clone(),
+            Unknown => Unified,
+            _ => delta_unreachable(&format!(
+                "Unexpected state in handle_hunk_header: {:?}",
+                self.state
+            )),
         };
-        self.state = State::HunkHeader(diff_type, self.line.clone(), self.raw_line.clone());
+        self.state = HunkHeader(diff_type, self.line.clone(), self.raw_line.clone());
         Ok(true)
     }
 

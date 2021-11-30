@@ -23,6 +23,7 @@ pub fn parse_styles(opt: &cli::Opt) -> HashMap<String, Style> {
     make_commit_file_hunk_header_styles(opt, &mut styles);
     make_line_number_styles(opt, &mut styles);
     make_grep_styles(opt, &mut styles);
+    make_merge_conflict_styles(opt, &mut styles);
 
     styles.insert(
         "inline-hint-style",
@@ -455,6 +456,29 @@ fn make_grep_styles(opt: &cli::Opt, styles: &mut HashMap<&str, StyleReference>) 
             },
         ),
     ])
+}
+
+fn make_merge_conflict_styles(opt: &cli::Opt, styles: &mut HashMap<&str, StyleReference>) {
+    styles.insert(
+        "merge-conflict-ours-diff-header-style",
+        style_from_str_with_handling_of_special_decoration_attributes(
+            &opt.merge_conflict_ours_diff_header_style,
+            None,
+            Some(&opt.merge_conflict_ours_diff_header_decoration_style),
+            opt.computed.true_color,
+            opt.git_config.as_ref(),
+        ),
+    );
+    styles.insert(
+        "merge-conflict-theirs-diff-header-style",
+        style_from_str_with_handling_of_special_decoration_attributes(
+            &opt.merge_conflict_theirs_diff_header_style,
+            None,
+            Some(&opt.merge_conflict_theirs_diff_header_decoration_style),
+            opt.computed.true_color,
+            opt.git_config.as_ref(),
+        ),
+    );
 }
 
 fn style_from_str(

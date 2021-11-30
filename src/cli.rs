@@ -435,6 +435,50 @@ pub struct Opt {
     /// (underline), 'ol' (overline), or the combination 'ul ol'.
     pub hunk_header_decoration_style: String,
 
+    #[structopt(long = "merge-conflict-begin-symbol", default_value = "▼")]
+    /// A string that is repeated to form the line marking the beginning of a merge conflict region.
+    pub merge_conflict_begin_symbol: String,
+
+    #[structopt(long = "merge-conflict-end-symbol", default_value = "▲")]
+    /// A string that is repeated to form the line marking the end of a merge conflict region.
+    pub merge_conflict_end_symbol: String,
+
+    #[structopt(
+        long = "merge-conflict-ours-diff-header-style",
+        default_value = "normal"
+    )]
+    /// Style (foreground, background, attributes) for the header above the diff between the
+    /// ancestral commit and 'our' branch. See STYLES section.
+    pub merge_conflict_ours_diff_header_style: String,
+
+    #[structopt(
+        long = "merge-conflict-ours-diff-header-decoration-style",
+        default_value = "box"
+    )]
+    /// Style (foreground, background, attributes) for the decoration of the header above the diff
+    /// between the ancestral commit and 'our' branch.  See STYLES section. The style string should
+    /// contain one of the special attributes 'box', 'ul' (underline), 'ol' (overline), or the
+    /// combination 'ul ol'.
+    pub merge_conflict_ours_diff_header_decoration_style: String,
+
+    #[structopt(
+        long = "merge-conflict-theirs-diff-header-style",
+        default_value = "normal"
+    )]
+    /// Style (foreground, background, attributes) for the header above the diff between the
+    /// ancestral commit and 'their' branch. See STYLES section.
+    pub merge_conflict_theirs_diff_header_style: String,
+
+    #[structopt(
+        long = "merge-conflict-theirs-diff-header-decoration-style",
+        default_value = "box"
+    )]
+    /// Style (foreground, background, attributes) for the decoration of the header above the diff
+    /// between the ancestral commit and 'their' branch.  See STYLES section. The style string should
+    /// contain one of the special attributes 'box', 'ul' (underline), 'ol' (overline), or the
+    /// combination 'ul ol'.
+    pub merge_conflict_theirs_diff_header_decoration_style: String,
+
     #[structopt(long = "map-styles")]
     /// A string specifying a mapping styles encountered in raw input to desired
     /// output styles. An example is

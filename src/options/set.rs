@@ -162,6 +162,12 @@ pub fn set_options(
             max_line_length,
             // Hack: minus-style must come before minus-*emph-style because the latter default
             // dynamically to the value of the former.
+            merge_conflict_begin_symbol,
+            merge_conflict_end_symbol,
+            merge_conflict_ours_diff_header_decoration_style,
+            merge_conflict_ours_diff_header_style,
+            merge_conflict_theirs_diff_header_decoration_style,
+            merge_conflict_theirs_diff_header_style,
             minus_style,
             minus_emph_style,
             minus_empty_line_marker_style,
