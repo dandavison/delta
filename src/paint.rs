@@ -12,7 +12,7 @@ use crate::config::{self, delta_unreachable, Config};
 use crate::delta::State;
 use crate::edits;
 use crate::features::hyperlinks;
-use crate::features::line_numbers;
+use crate::features::line_numbers::{self, LineNumbersData};
 use crate::features::side_by_side::ansifill;
 use crate::features::side_by_side::{self, PanelSide};
 use crate::minusplus::*;
@@ -169,70 +169,13 @@ impl<'p> Painter<'p> {
     }
 
     pub fn paint_buffered_minus_and_plus_lines(&mut self) {
-        let lines = MinusPlus::new(&self.minus_lines, &self.plus_lines);
-        let syntax_style_sections = MinusPlus::new(
-            Self::get_syntax_style_sections_for_lines(
-                lines[Minus],
-                self.highlighter.as_mut(),
-                self.config,
-            ),
-            Self::get_syntax_style_sections_for_lines(
-                lines[Plus],
-                self.highlighter.as_mut(),
-                self.config,
-            ),
-        );
-        let (mut diff_style_sections, line_alignment) =
-            Self::get_diff_style_sections(&lines, self.config);
-        let lines_have_homolog = edits::make_lines_have_homolog(&line_alignment);
-
-        Self::update_diff_style_sections(
-            &lines,
-            &mut diff_style_sections,
-            &lines_have_homolog,
+        paint_minus_and_plus_lines(
+            MinusPlus::new(&self.minus_lines, &self.plus_lines),
+            &mut self.line_numbers_data,
+            &mut self.highlighter,
+            &mut self.output_buffer,
             self.config,
         );
-
-        if self.config.side_by_side {
-            side_by_side::paint_minus_and_plus_lines_side_by_side(
-                lines,
-                syntax_style_sections,
-                diff_style_sections,
-                lines_have_homolog,
-                line_alignment,
-                &mut self.line_numbers_data,
-                &mut self.output_buffer,
-                self.config,
-            )
-        } else {
-            // Unified diff mode:
-            if !self.minus_lines.is_empty() {
-                Painter::paint_lines(
-                    lines[Minus],
-                    &syntax_style_sections[Minus],
-                    &diff_style_sections[Minus],
-                    &lines_have_homolog[Minus],
-                    &mut self.output_buffer,
-                    self.config,
-                    &mut self.line_numbers_data.as_mut(),
-                    Some(self.config.minus_empty_line_marker_style),
-                    BgShouldFill::default(),
-                );
-            }
-            if !self.plus_lines.is_empty() {
-                Painter::paint_lines(
-                    lines[Plus],
-                    &syntax_style_sections[Plus],
-                    &diff_style_sections[Plus],
-                    &lines_have_homolog[Plus],
-                    &mut self.output_buffer,
-                    self.config,
-                    &mut self.line_numbers_data.as_mut(),
-                    Some(self.config.plus_empty_line_marker_style),
-                    BgShouldFill::default(),
-                );
-            }
-        }
         self.minus_lines.clear();
         self.plus_lines.clear();
     }
@@ -241,11 +184,8 @@ impl<'p> Painter<'p> {
         let line = self.prepare(line, prefix.as_deref());
         let state = State::HunkZero(prefix);
         let lines = vec![(line, state.clone())];
-        let syntax_style_sections = Painter::get_syntax_style_sections_for_lines(
-            &lines,
-            self.highlighter.as_mut(),
-            self.config,
-        );
+        let syntax_style_sections =
+            get_syntax_style_sections_for_lines(&lines, self.highlighter.as_mut(), self.config);
         let diff_style_sections = vec![(self.config.zero_style, lines[0].0.as_str())]; // TODO: compute style from state
 
         if self.config.side_by_side {
@@ -356,11 +296,8 @@ impl<'p> Painter<'p> {
         background_color_extends_to_terminal_width: BgShouldFill,
     ) {
         let lines = vec![(self.expand_tabs(line.graphemes(true)), state)];
-        let syntax_style_sections = Painter::get_syntax_style_sections_for_lines(
-            &lines,
-            self.highlighter.as_mut(),
-            self.config,
-        );
+        let syntax_style_sections =
+            get_syntax_style_sections_for_lines(&lines, self.highlighter.as_mut(), self.config);
         let diff_style_sections = match style_sections {
             StyleSectionSpecifier::Style(style) => vec![vec![(style, lines[0].0.as_str())]],
             StyleSectionSpecifier::StyleSections(style_sections) => vec![style_sections],
@@ -571,68 +508,6 @@ impl<'p> Painter<'p> {
         }
     }
 
-    pub fn get_syntax_style_sections_for_lines<'a>(
-        lines: &'a [(String, State)],
-        highlighter: Option<&mut HighlightLines>,
-        config: &config::Config,
-    ) -> Vec<LineSections<'a, SyntectStyle>> {
-        let mut line_sections = Vec::new();
-        match (
-            highlighter,
-            lines
-                .iter()
-                .any(|(_, state)| Painter::should_compute_syntax_highlighting(state, config)),
-        ) {
-            (Some(highlighter), true) => {
-                for (line, _) in lines.iter() {
-                    line_sections.push(highlighter.highlight(line, &config.syntax_set));
-                }
-            }
-            _ => {
-                for (line, _) in lines.iter() {
-                    line_sections.push(vec![(config.null_syntect_style, line.as_str())])
-                }
-            }
-        }
-        line_sections
-    }
-
-    /// Get background styles to represent diff for minus and plus lines in buffer.
-    #[allow(clippy::type_complexity)]
-    fn get_diff_style_sections<'a>(
-        lines: &MinusPlus<&'a Vec<(String, State)>>,
-        config: &config::Config,
-    ) -> (
-        MinusPlus<Vec<LineSections<'a, Style>>>,
-        Vec<(Option<usize>, Option<usize>)>,
-    ) {
-        let (minus_lines, minus_styles): (Vec<&str>, Vec<Style>) = lines[Minus]
-            .iter()
-            .map(|(s, state)| (s.as_str(), *config.get_style(state)))
-            .unzip();
-        let (plus_lines, plus_styles): (Vec<&str>, Vec<Style>) = lines[Plus]
-            .iter()
-            .map(|(s, state)| (s.as_str(), *config.get_style(state)))
-            .unzip();
-        let (minus_line_diff_style_sections, plus_line_diff_style_sections, line_alignment) =
-            edits::infer_edits(
-                minus_lines,
-                plus_lines,
-                minus_styles,
-                config.minus_emph_style, // FIXME
-                plus_styles,
-                config.plus_emph_style, // FIXME
-                &config.tokenization_regex,
-                config.max_line_distance,
-                config.max_line_distance_for_naively_paired_lines,
-            );
-        let diff_sections = MinusPlus::new(
-            minus_line_diff_style_sections,
-            plus_line_diff_style_sections,
-        );
-        (diff_sections, line_alignment)
-    }
-
     /// There are some rules according to which we update line section styles that were computed
     /// during the initial edit inference pass. This function applies those rules. The rules are
     /// 1. If there are multiple diff styles in the line, then the line must have some
@@ -721,6 +596,129 @@ impl<'p> Painter<'p> {
             }
         }
     }
+}
+
+pub fn paint_minus_and_plus_lines(
+    lines: MinusPlus<&Vec<(String, State)>>,
+    line_numbers_data: &mut Option<LineNumbersData>,
+    highlighter: &mut Option<HighlightLines>,
+    output_buffer: &mut String,
+    config: &config::Config,
+) {
+    let syntax_style_sections = MinusPlus::new(
+        get_syntax_style_sections_for_lines(lines[Minus], highlighter.as_mut(), config),
+        get_syntax_style_sections_for_lines(lines[Plus], highlighter.as_mut(), config),
+    );
+    let (mut diff_style_sections, line_alignment) = get_diff_style_sections(&lines, config);
+    let lines_have_homolog = edits::make_lines_have_homolog(&line_alignment);
+    Painter::update_diff_style_sections(
+        &lines,
+        &mut diff_style_sections,
+        &lines_have_homolog,
+        config,
+    );
+    if config.side_by_side {
+        side_by_side::paint_minus_and_plus_lines_side_by_side(
+            lines,
+            syntax_style_sections,
+            diff_style_sections,
+            lines_have_homolog,
+            line_alignment,
+            line_numbers_data,
+            output_buffer,
+            config,
+        )
+    } else {
+        // Unified diff mode:
+        if !lines[Minus].is_empty() {
+            Painter::paint_lines(
+                lines[Minus],
+                &syntax_style_sections[Minus],
+                &diff_style_sections[Minus],
+                &lines_have_homolog[Minus],
+                output_buffer,
+                config,
+                &mut line_numbers_data.as_mut(),
+                Some(config.minus_empty_line_marker_style),
+                BgShouldFill::default(),
+            );
+        }
+        if !lines[Plus].is_empty() {
+            Painter::paint_lines(
+                lines[Plus],
+                &syntax_style_sections[Plus],
+                &diff_style_sections[Plus],
+                &lines_have_homolog[Plus],
+                output_buffer,
+                config,
+                &mut line_numbers_data.as_mut(),
+                Some(config.plus_empty_line_marker_style),
+                BgShouldFill::default(),
+            );
+        }
+    }
+}
+
+pub fn get_syntax_style_sections_for_lines<'a>(
+    lines: &'a [(String, State)],
+    highlighter: Option<&mut HighlightLines>,
+    config: &config::Config,
+) -> Vec<LineSections<'a, SyntectStyle>> {
+    let mut line_sections = Vec::new();
+    match (
+        highlighter,
+        lines
+            .iter()
+            .any(|(_, state)| Painter::should_compute_syntax_highlighting(state, config)),
+    ) {
+        (Some(highlighter), true) => {
+            for (line, _) in lines.iter() {
+                line_sections.push(highlighter.highlight(line, &config.syntax_set));
+            }
+        }
+        _ => {
+            for (line, _) in lines.iter() {
+                line_sections.push(vec![(config.null_syntect_style, line.as_str())])
+            }
+        }
+    }
+    line_sections
+}
+
+/// Get background styles to represent diff for minus and plus lines in buffer.
+#[allow(clippy::type_complexity)]
+fn get_diff_style_sections<'a>(
+    lines: &MinusPlus<&'a Vec<(String, State)>>,
+    config: &config::Config,
+) -> (
+    MinusPlus<Vec<LineSections<'a, Style>>>,
+    Vec<(Option<usize>, Option<usize>)>,
+) {
+    let (minus_lines, minus_styles): (Vec<&str>, Vec<Style>) = lines[Minus]
+        .iter()
+        .map(|(s, state)| (s.as_str(), *config.get_style(state)))
+        .unzip();
+    let (plus_lines, plus_styles): (Vec<&str>, Vec<Style>) = lines[Plus]
+        .iter()
+        .map(|(s, state)| (s.as_str(), *config.get_style(state)))
+        .unzip();
+    let (minus_line_diff_style_sections, plus_line_diff_style_sections, line_alignment) =
+        edits::infer_edits(
+            minus_lines,
+            plus_lines,
+            minus_styles,
+            config.minus_emph_style, // FIXME
+            plus_styles,
+            config.plus_emph_style, // FIXME
+            &config.tokenization_regex,
+            config.max_line_distance,
+            config.max_line_distance_for_naively_paired_lines,
+        );
+    let diff_sections = MinusPlus::new(
+        minus_line_diff_style_sections,
+        plus_line_diff_style_sections,
+    );
+    (diff_sections, line_alignment)
 }
 
 fn painted_prefix(state: State, config: &config::Config) -> Option<ANSIString> {
