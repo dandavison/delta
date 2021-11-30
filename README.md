@@ -20,12 +20,16 @@
 ```gitconfig
 [core]
     pager = delta
+    navigate = true
 
 [interactive]
     diffFilter = delta --color-only
+
+[diff]
+	colorMoved = true
 ```
 
-## A syntax-highlighting pager for git and diff output
+## A syntax-highlighting pager for git, diff, and grep output
 
 Code evolves, and we all spend time studying diffs. Delta aims to make this both efficient and enjoyable: it allows you to make extensive changes to the layout and styling of diffs, as well as allowing you to stay arbitrarily close to the default git/diff output.
 
