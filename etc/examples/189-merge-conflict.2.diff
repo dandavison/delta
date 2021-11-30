@@ -1,0 +1,100 @@
+[1mdiff --cc src/paint.rs[m
+[1mindex 79b44db1,0f429d5c..00000000[m
+[1m--- a/src/paint.rs[m
+[1m+++ b/src/paint.rs[m
+[36m@@@ -387,30 -457,36 +387,88 @@@[m [mimpl<'p> Painter<'p> [m
+      ) -> (Option<BgFillMethod>, Style) {[m
+          // style:          for right fill if line contains no emph sections[m
+          // non_emph_style: for right fill if line contains emph sections[m
+[32m++<<<<<<< HEAD[m
+[32m +        let (style, non_emph_style) = match state {[m
+[32m +            State::HunkMinus(None) | State::HunkMinusWrapped => {[m
+[32m +                (config.minus_style, config.minus_non_emph_style)[m
+[32m +            }[m
+[32m +            State::HunkZero | State::HunkZeroWrapped => (config.zero_style, config.zero_style),[m
+[32m +            State::HunkPlus(None) | State::HunkPlusWrapped => {[m
+[32m +                (config.plus_style, config.plus_non_emph_style)[m
+[32m +            }[m
+[32m +            State::HunkMinus(Some(_)) | State::HunkPlus(Some(_)) => {[m
+[32m +                let style = if !diff_sections.is_empty() {[m
+[32m +                    diff_sections[diff_sections.len() - 1].0[m
+[32m++||||||| parent of 4d4b19ca (Always use non-emph style for right fill)[m
+[32m++        let (style, non_emph_style) = match state {[m
+[32m++            State::HunkMinus(None) | State::HunkMinusWrapped => {[m
+[32m++                (config.minus_style, config.minus_non_emph_style)[m
+[32m++            }[m
+[32m++            State::HunkMinus(Some(raw_line)) => {[m
+[32m++                // TODO: This is the second time we are parsing the ANSI sequences[m
+[32m++                if let Some(ansi_term_style) = ansi::parse_first_style(raw_line) {[m
+[32m++                    let style = Style {[m
+[32m++                        ansi_term_style,[m
+[32m++                        ..Style::new()[m
+[32m++                    };[m
+[32m++                    (style, style)[m
+[32m++                } else {[m
+[32m++                    (config.minus_style, config.minus_non_emph_style)[m
+[32m++                }[m
+[32m++            }[m
+[32m++            State::HunkZero | State::HunkZeroWrapped => (config.zero_style, config.zero_style),[m
+[32m++            State::HunkPlus(None) | State::HunkPlusWrapped => {[m
+[32m++                (config.plus_style, config.plus_non_emph_style)[m
+[32m++            }[m
+[32m++            State::HunkPlus(Some(raw_line)) => {[m
+[32m++                // TODO: This is the second time we are parsing the ANSI sequences[m
+[32m++                if let Some(ansi_term_style) = ansi::parse_first_style(raw_line) {[m
+[32m++                    let style = Style {[m
+[32m++                        ansi_term_style,[m
+[32m++                        ..Style::new()[m
+[32m++                    };[m
+[32m++                    (style, style)[m
+[32m++=======[m
+[32m+         let non_emph_style = match state {[m
+[32m+             State::HunkMinus(None) | State::HunkMinusWrapped => config.minus_non_emph_style,[m
+[32m+             State::HunkMinus(Some(raw_line)) => {[m
+[32m+                 // TODO: This is the second time we are parsing the ANSI sequences[m
+[32m+                 if let Some(ansi_term_style) = ansi::parse_first_style(raw_line) {[m
+[32m+                     Style {[m
+[32m+                         ansi_term_style,[m
+[32m+                         ..Style::new()[m
+[32m+                     }[m
+[32m+                 } else {[m
+[32m+                     config.minus_non_emph_style[m
+[32m+                 }[m
+[32m+             }[m
+[32m+             State::HunkZero | State::HunkZeroWrapped => config.zero_style,[m
+[32m+             State::HunkPlus(None) | State::HunkPlusWrapped => config.plus_non_emph_style,[m
+[32m+             State::HunkPlus(Some(raw_line)) => {[m
+[32m+                 // TODO: This is the second time we are parsing the ANSI sequences[m
+[32m+                 if let Some(ansi_term_style) = ansi::parse_first_style(raw_line) {[m
+[32m+                     Style {[m
+[32m+                         ansi_term_style,[m
+[32m+                         ..Style::new()[m
+[32m+                     }[m
+[32m++>>>>>>> 4d4b19ca (Always use non-emph style for right fill)[m
+                  } else {[m
+[32m++<<<<<<< HEAD[m
+[32m +                    config.null_style[m
+[32m +                };[m
+[32m +                (style, style)[m
+[32m++||||||| parent of 4d4b19ca (Always use non-emph style for right fill)[m
+[32m++                    (config.plus_style, config.plus_non_emph_style)[m
+[32m++                }[m
+[32m++=======[m
+[32m+                     config.plus_non_emph_style[m
+[32m+                 }[m
+[32m++>>>>>>> 4d4b19ca (Always use non-emph style for right fill)[m
+              }[m
+[31m-             State::Blame(_, _) => (diff_sections[0].0, diff_sections[0].0),[m
+[31m-             _ => (config.null_style, config.null_style),[m
+[31m-         };[m
+[31m-         let fill_style = if style_sections_contain_more_than_one_style(diff_sections) {[m
+[31m-             non_emph_style // line contains an emph section[m
+[31m-         } else {[m
+[31m-             style[m
+[32m+             State::Blame(_, _) => diff_sections[0].0,[m
+[32m+             _ => config.null_style,[m
+          };[m
+[32m+         let fill_style = non_emph_style;[m
+  [m
+          match ([m
+              fill_style.get_background_color().is_some(),[m

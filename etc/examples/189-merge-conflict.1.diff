@@ -1,0 +1,38 @@
+diff --cc src/handlers/merge_conflict.rs
+index 8fc4116b,eb115dde..00000000
+--- a/src/handlers/merge_conflict.rs
++++ b/src/handlers/merge_conflict.rs
+@@@ -88,8 -88,10 +88,20 @@@ fn paint_buffered_merge_conflict_lines
+          .map(|s| (s.to_string(), State::HunkMinus(None, None)))
+          .collect();
+      for plus_lines in &[&lines[Ours], &lines[Theirs]] {
+++<<<<<<< HEAD
+ +        let plus_lines = plus_lines.iter().collect();
+ +        let a = 1;
+++||||||| cf306705
+++        let plus_lines = plus_lines
+++            .iter()
+++            .map(|s| (s.to_string(), State::HunkMinus(None, None)))
+++            .collect();
+++=======
++         let plus_lines = plus_lines
++             .iter()
++             .map(|s| (s.to_string(), State::HunkMinus(None, Some(7))))
++             .collect();
+++>>>>>>> z-189-combined-diff-and-conflicts-merge-conflict-branch-2
+          paint::paint_minus_and_plus_lines(
+              MinusPlus::new(&minus_lines, &plus_lines),
+              line_numbers_data,
+@@@ -97,7 -99,7 +109,12 @@@
+              output_buffer,
+              config,
+          );
+++<<<<<<< HEAD
+ +        let b = 2;
+++||||||| cf306705
+++=======
++         let b = 9;
+++>>>>>>> z-189-combined-diff-and-conflicts-merge-conflict-branch-2
+          output_buffer.push_str("\n\n");
+      }
+      Ok(())
