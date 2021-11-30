@@ -1,0 +1,17 @@
+diff --cc src/handlers/merge_conflict.rs
+index 888eee8b,7ea2e9d3..00000000
+--- a/src/handlers/merge_conflict.rs
++++ b/src/handlers/merge_conflict.rs
+@@@ -5,7 -5,7 +5,12 @@@ use crate::utils::process
+  impl<'a> StateMachine<'a> {
+      pub fn handle_merge_confict_line(&mut self) -> std::io::Result<bool> {
+          self.painter.emit()?;
+++<<<<<<< HEAD
+ +        // hello
+++||||||| e641341d
+++=======
++         // bye
+++>>>>>>> b
+          let mut handled_line = false;
+          if matches!(self.state, State::Unknown) {
+              if let Some(process::CallingProcess::GitShow(_, extension)) =
