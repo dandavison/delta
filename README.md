@@ -20,13 +20,15 @@
 ```gitconfig
 [core]
     pager = delta
-    navigate = true
 
 [interactive]
     diffFilter = delta --color-only
 
 [diff]
     colorMoved = true
+
+[delta]
+    navigate = true
 ```
 
 ## A syntax-highlighting pager for git, diff, and grep output
