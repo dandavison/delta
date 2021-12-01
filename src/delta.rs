@@ -21,7 +21,7 @@ pub enum State {
     HunkZero(DiffType),   // In hunk; unchanged line (prefix)
     HunkMinus(DiffType, Option<String>), // In hunk; removed line (diff_type, raw_line)
     HunkPlus(DiffType, Option<String>), // In hunk; added line (diff_type, raw_line)
-    MergeConflict(merge_conflict::Source),
+    MergeConflict(merge_conflict::MergeConflictCommit),
     SubmoduleLog, // In a submodule section, with gitconfig diff.submodule = log
     SubmoduleShort(String), // In a submodule section, with gitconfig diff.submodule = short
     Blame(String, Option<String>), // In a line of `git blame` output (commit, repeat_blame_line).

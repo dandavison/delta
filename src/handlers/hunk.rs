@@ -129,6 +129,8 @@ impl<'a> StateMachine<'a> {
     }
 }
 
+// Return the new state corresponding to `new_line`, given the previous state. A return value of
+// None means that `new_line` is not recognized as a hunk line.
 fn new_line_state(new_line: &str, prev_state: &State) -> Option<State> {
     use DiffType::*;
     use MergeParents::*;
@@ -140,7 +142,10 @@ fn new_line_state(new_line: &str, prev_state: &State) -> Option<State> {
         | HunkPlus(Unified, _)
         | HunkHeader(Unified, _, _) => Unified,
         HunkHeader(Combined(Number(n)), _, _) => Combined(Number(*n)),
-        HunkMinus(Combined(Prefix(prefix)), _)
+        // The prefixes are specific to the previous line, but the number of merge parents remains
+        // equal to the prefix length.
+        HunkHeader(Combined(Prefix(prefix)), _, _)
+        | HunkMinus(Combined(Prefix(prefix)), _)
         | HunkZero(Combined(Prefix(prefix)))
         | HunkPlus(Combined(Prefix(prefix)), _) => Combined(Number(prefix.len())),
         _ => delta_unreachable(&format!("diff_type: unexpected state: {:?}", prev_state)),

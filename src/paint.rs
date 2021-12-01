@@ -15,7 +15,7 @@ use crate::features::hyperlinks;
 use crate::features::line_numbers::{self, LineNumbersData};
 use crate::features::side_by_side::ansifill;
 use crate::features::side_by_side::{self, PanelSide};
-use crate::handlers::merge_conflict::MergeConflictLines;
+use crate::handlers::merge_conflict;
 use crate::minusplus::*;
 use crate::paint::superimpose_style_sections::superimpose_style_sections;
 use crate::style::Style;
@@ -35,7 +35,8 @@ pub struct Painter<'p> {
     // In side-by-side mode it is always Some (but possibly an empty one), even
     // if config.line_numbers is false. See `UseFullPanelWidth` as well.
     pub line_numbers_data: Option<line_numbers::LineNumbersData<'p>>,
-    pub merge_conflict_lines: MergeConflictLines,
+    pub merge_conflict_lines: merge_conflict::MergeConflictLines,
+    pub merge_conflict_commit_names: merge_conflict::MergeConflictCommitNames,
 }
 
 // How the background of a line is filled up to the end
@@ -97,7 +98,8 @@ impl<'p> Painter<'p> {
             writer,
             config,
             line_numbers_data,
-            merge_conflict_lines: MergeConflictLines::new(),
+            merge_conflict_lines: merge_conflict::MergeConflictLines::new(),
+            merge_conflict_commit_names: merge_conflict::MergeConflictCommitNames::new(),
         }
     }
 
