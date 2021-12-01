@@ -1,7 +1,7 @@
 use std::cmp::min;
 use std::ops::{Index, IndexMut};
 
-use crate::delta::{State, StateMachine};
+use crate::delta::{DiffType, MergeParents, State, StateMachine};
 use crate::minusplus::MinusPlus;
 use crate::paint;
 
@@ -20,14 +20,19 @@ pub struct MergeConflictLines {
 
 impl<'a> StateMachine<'a> {
     pub fn handle_merge_conflict_line(&mut self) -> std::io::Result<bool> {
+        use DiffType::*;
+        use MergeParents::*;
         use Source::*;
         use State::*;
+
         let mut handled_line = false;
         if self.config.color_only || !self.config.handle_merge_conflicts {
             return Ok(handled_line);
         }
 
-        let prefix = Some(self.line[..min(self.line.len(), 2)].to_string()); // FIXME!
+        // TODO: don't allocate on heap at this point
+        let prefix = self.line[..min(self.line.len(), 2)].to_string();
+        let diff_type = Combined(Prefix(prefix));
 
         match self.state {
             // The only transition into a merge conflict is HunkZero => MergeConflict(Ours)
@@ -44,10 +49,10 @@ impl<'a> StateMachine<'a> {
                 } else if self.line.starts_with("++=======") {
                     self.state = MergeConflict(Theirs);
                 } else if self.line.starts_with("++>>>>>>>") {
-                    self.paint_buffered_merge_conflict_lines(prefix)?;
+                    self.paint_buffered_merge_conflict_lines(diff_type)?;
                 } else {
-                    let line = self.painter.prepare(&self.line, prefix.as_deref());
-                    self.painter.merge_conflict_lines[Ours].push((line, HunkPlus(prefix, None)));
+                    let line = self.painter.prepare(&self.line, diff_type.n_parents());
+                    self.painter.merge_conflict_lines[Ours].push((line, HunkPlus(diff_type, None)));
                 }
                 handled_line = true
             }
@@ -55,20 +60,21 @@ impl<'a> StateMachine<'a> {
                 if self.line.starts_with("++=======") {
                     self.state = MergeConflict(Theirs);
                 } else if self.line.starts_with("++>>>>>>>") {
-                    self.paint_buffered_merge_conflict_lines(prefix)?;
+                    self.paint_buffered_merge_conflict_lines(diff_type)?;
                 } else {
-                    let line = self.painter.prepare(&self.line, prefix.as_deref());
+                    let line = self.painter.prepare(&self.line, diff_type.n_parents());
                     self.painter.merge_conflict_lines[Ancestral]
-                        .push((line, HunkMinus(prefix, None)));
+                        .push((line, HunkMinus(diff_type, None)));
                 }
                 handled_line = true
             }
             MergeConflict(Theirs) => {
                 if self.line.starts_with("++>>>>>>>") {
-                    self.paint_buffered_merge_conflict_lines(prefix)?;
+                    self.paint_buffered_merge_conflict_lines(diff_type)?;
                 } else {
-                    let line = self.painter.prepare(&self.line, prefix.as_deref());
-                    self.painter.merge_conflict_lines[Theirs].push((line, HunkPlus(prefix, None)));
+                    let line = self.painter.prepare(&self.line, diff_type.n_parents());
+                    self.painter.merge_conflict_lines[Theirs]
+                        .push((line, HunkPlus(diff_type, None)));
                 }
                 handled_line = true
             }
@@ -78,10 +84,7 @@ impl<'a> StateMachine<'a> {
         Ok(handled_line)
     }
 
-    fn paint_buffered_merge_conflict_lines(
-        &mut self,
-        prefix: Option<String>,
-    ) -> std::io::Result<()> {
+    fn paint_buffered_merge_conflict_lines(&mut self, diff_type: DiffType) -> std::io::Result<()> {
         self.painter.emit()?;
         let lines = &self.painter.merge_conflict_lines;
         for derived_lines in &[&lines[Ours], &lines[Theirs]] {
@@ -95,7 +98,7 @@ impl<'a> StateMachine<'a> {
             self.painter.output_buffer.push_str("\n\n");
         }
         self.painter.merge_conflict_lines.clear();
-        self.state = State::HunkZero(prefix);
+        self.state = State::HunkZero(diff_type);
         Ok(())
     }
 }

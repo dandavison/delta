@@ -6,6 +6,7 @@ use std::io::Write;
 use bytelines::ByteLines;
 
 use crate::ansi;
+use crate::config::delta_unreachable;
 use crate::config::Config;
 use crate::features;
 use crate::handlers::{self, merge_conflict};
@@ -16,10 +17,10 @@ use crate::style::DecorationStyle;
 pub enum State {
     CommitMeta,                           // In commit metadata section
     DiffHeader(DiffType), // In diff metadata section, between (possible) commit metadata and first hunk
-    HunkHeader(DiffType, String, String), // In hunk metadata line (line, raw_line)
-    HunkZero(Option<String>), // In hunk; unchanged line (prefix)
-    HunkMinus(Option<String>, Option<String>), // In hunk; removed line (prefix, raw_line)
-    HunkPlus(Option<String>, Option<String>), // In hunk; added line (prefix, raw_line)
+    HunkHeader(DiffType, String, String), // In hunk metadata line (diff_type, line, raw_line)
+    HunkZero(DiffType),   // In hunk; unchanged line (prefix)
+    HunkMinus(DiffType, Option<String>), // In hunk; removed line (diff_type, raw_line)
+    HunkPlus(DiffType, Option<String>), // In hunk; added line (diff_type, raw_line)
     MergeConflict(merge_conflict::Source),
     SubmoduleLog, // In a submodule section, with gitconfig diff.submodule = log
     SubmoduleShort(String), // In a submodule section, with gitconfig diff.submodule = short
@@ -36,7 +37,27 @@ pub enum State {
 #[derive(Clone, Debug, PartialEq)]
 pub enum DiffType {
     Unified,
-    Combined(usize), // number of parent commits: https://git-scm.com/docs/git-diff#_combined_diff_format
+    Combined(MergeParents), // https://git-scm.com/docs/git-diff#_combined_diff_format
+}
+
+#[derive(Clone, Debug, PartialEq)]
+pub enum MergeParents {
+    Number(usize),  // Number of parent commits == (number of @s in hunk header) - 1
+    Prefix(String), // Hunk line prefix, length == number of parent commits
+    Unknown,
+}
+
+impl DiffType {
+    pub fn n_parents(&self) -> usize {
+        use DiffType::*;
+        use MergeParents::*;
+        match self {
+            Combined(Prefix(prefix)) => prefix.len(),
+            Combined(Number(n_parents)) => *n_parents,
+            Unified => 1,
+            Combined(Unknown) => delta_unreachable("Number of merge parents must be known."),
+        }
+    }
 }
 
 #[derive(Debug, PartialEq)]

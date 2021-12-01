@@ -9,7 +9,7 @@ use syntect::parsing::{SyntaxReference, SyntaxSet};
 use unicode_segmentation::UnicodeSegmentation;
 
 use crate::config::{self, delta_unreachable, Config};
-use crate::delta::State;
+use crate::delta::{DiffType, MergeParents, State};
 use crate::edits;
 use crate::features::hyperlinks;
 use crate::features::line_numbers::{self, LineNumbersData};
@@ -126,18 +126,12 @@ impl<'p> Painter<'p> {
     // Terminating with newline character is necessary for many of the sublime syntax definitions to
     // highlight correctly.
     // See https://docs.rs/syntect/3.2.0/syntect/parsing/struct.SyntaxSetBuilder.html#method.add_from_folder
-    pub fn prepare(&self, line: &str, prefix: Option<&str>) -> String {
+    pub fn prepare(&self, line: &str, prefix_length: usize) -> String {
         if !line.is_empty() {
-            let mut line = line.graphemes(true);
-
-            // The initial columns contain -/+/space characters, added by git. Remove them now so
-            // they are not present during syntax highlighting or wrapping. If
-            // --keep-plus-minus-markers is in effect this prefix is re-inserted in
-            // Painter::paint_line.
-            let prefix_length = prefix.map(|s| s.len()).unwrap_or(1);
-            for _ in 0..prefix_length {
-                line.next();
-            }
+            // The prefix contains -/+/space characters, added by git. We removes them now so they
+            // are not present during syntax highlighting or wrapping. If --keep-plus-minus-markers
+            // is in effect the prefix is re-inserted in Painter::paint_line.
+            let line = line.graphemes(true).skip(prefix_length);
             format!("{}\n", self.expand_tabs(line))
         } else {
             "\n".to_string()
@@ -146,13 +140,10 @@ impl<'p> Painter<'p> {
 
     // Remove initial -/+ characters, expand tabs as spaces, retaining ANSI sequences. Terminate with
     // newline character.
-    pub fn prepare_raw_line(&self, raw_line: &str, prefix: Option<&str>) -> String {
+    pub fn prepare_raw_line(&self, raw_line: &str, prefix_length: usize) -> String {
         format!(
             "{}\n",
-            ansi::ansi_preserving_slice(
-                &self.expand_tabs(raw_line.graphemes(true)),
-                prefix.map(|s| s.len()).unwrap_or(1)
-            ),
+            ansi::ansi_preserving_slice(&self.expand_tabs(raw_line.graphemes(true)), prefix_length),
         )
     }
 
@@ -183,9 +174,9 @@ impl<'p> Painter<'p> {
         self.plus_lines.clear();
     }
 
-    pub fn paint_zero_line(&mut self, line: &str, prefix: Option<String>) {
-        let line = self.prepare(line, prefix.as_deref());
-        let state = State::HunkZero(prefix);
+    pub fn paint_zero_line(&mut self, line: &str, diff_type: DiffType) {
+        let line = self.prepare(line, diff_type.n_parents());
+        let state = State::HunkZero(diff_type);
         let lines = vec![(line, state.clone())];
         let syntax_style_sections =
             get_syntax_style_sections_for_lines(&lines, self.highlighter.as_mut(), self.config);
@@ -727,17 +718,29 @@ fn get_diff_style_sections<'a>(
 
 fn painted_prefix(state: State, config: &config::Config) -> Option<ANSIString> {
     match (state, config.keep_plus_minus_markers) {
-        // If there is Some(prefix) then this is a combined diff. In this case we do not honor
-        // keep_plus_minus_markers -- i.e. always emit the prefix -- because there is currently no
-        // way to distinguish, say, a '+ ' line from a ' +' line, by styles alone.
-        (State::HunkMinus(Some(prefix), _), _) => Some(config.minus_style.paint(prefix)),
-        (State::HunkZero(Some(prefix)), _) => Some(config.zero_style.paint(prefix)),
-        (State::HunkPlus(Some(prefix), _), _) => Some(config.plus_style.paint(prefix)),
+        // For a combined diff we do not honor keep_plus_minus_markers -- i.e. always emit the
+        // prefix -- because there is currently no way to distinguish, say, a '+ ' line from a ' +'
+        // line, by styles alone.
+        (State::HunkMinus(DiffType::Combined(MergeParents::Prefix(prefix)), _), _) => {
+            Some(config.minus_style.paint(prefix))
+        }
+        (State::HunkZero(DiffType::Combined(MergeParents::Prefix(prefix))), _) => {
+            Some(config.zero_style.paint(prefix))
+        }
+        (State::HunkPlus(DiffType::Combined(MergeParents::Prefix(prefix)), _), _) => {
+            Some(config.plus_style.paint(prefix))
+        }
         // But if there is no prefix we honor keep_plus_minus_markers.
         (_, false) => None,
-        (State::HunkMinus(None, _), true) => Some(config.minus_style.paint("-".to_string())),
-        (State::HunkZero(None), true) => Some(config.zero_style.paint(" ".to_string())),
-        (State::HunkPlus(None, _), true) => Some(config.plus_style.paint("+".to_string())),
+        (State::HunkMinus(DiffType::Unified, _), true) => {
+            Some(config.minus_style.paint("-".to_string()))
+        }
+        (State::HunkZero(DiffType::Unified), true) => {
+            Some(config.zero_style.paint(" ".to_string()))
+        }
+        (State::HunkPlus(DiffType::Unified, _), true) => {
+            Some(config.plus_style.paint("+".to_string()))
+        }
         _ => None,
     }
 }

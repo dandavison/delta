@@ -14,6 +14,8 @@ use crate::utils::bat::output::{OutputType, PagingMode};
 pub fn show_colors() -> std::io::Result<()> {
     use itertools::Itertools;
 
+    use crate::delta::DiffType;
+
     let assets = HighlightingAssets::new();
     let opt = cli::Opt::from_args_and_git_config(git_config::GitConfig::try_create(), assets);
     let config = config::Config::from(opt);
@@ -43,7 +45,7 @@ pub fn show_colors() -> std::io::Result<()> {
                 painter.syntax_highlight_and_paint_line(
                     line,
                     paint::StyleSectionSpecifier::Style(style),
-                    delta::State::HunkZero(None),
+                    delta::State::HunkZero(DiffType::Unified),
                     BgShouldFill::default(),
                 )
             }
@@ -62,7 +64,7 @@ pub fn show_colors() -> std::io::Result<()> {
                 painter.syntax_highlight_and_paint_line(
                     line,
                     paint::StyleSectionSpecifier::Style(style),
-                    delta::State::HunkZero(None),
+                    delta::State::HunkZero(DiffType::Unified),
                     BgShouldFill::default(),
                 )
             }

@@ -4,6 +4,7 @@ use unicode_segmentation::UnicodeSegmentation;
 use crate::config::INLINE_SYMBOL_WIDTH_1;
 
 use crate::config::Config;
+use crate::delta::DiffType;
 use crate::delta::State;
 use crate::features::line_numbers::{self, SideBySideLineWidth};
 use crate::features::side_by_side::{available_line_width, line_is_too_long, Left, Right};
@@ -449,13 +450,13 @@ pub fn wrap_minusplus_block<'c: 'a, 'a>(
         };
 
         if minus_extended > 0 {
-            new_states[Left].push(State::HunkMinus(None, None));
+            new_states[Left].push(State::HunkMinus(DiffType::Unified, None));
             for _ in 1..minus_extended {
                 new_states[Left].push(State::HunkMinusWrapped);
             }
         }
         if plus_extended > 0 {
-            new_states[Right].push(State::HunkPlus(None, None));
+            new_states[Right].push(State::HunkPlus(DiffType::Unified, None));
             for _ in 1..plus_extended {
                 new_states[Right].push(State::HunkPlusWrapped);
             }
