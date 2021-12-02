@@ -186,6 +186,14 @@ pub fn paint_minus_and_plus_lines_side_by_side(
             bg_should_fill[Left],
             config,
         ));
+
+        // HACK: The left line number is not getting incremented in `linenumbers_and_styles()`
+        // when the alignment matches a minus with a plus line, so fix that here.
+        // This information should be passed down into `paint_line()` to set `increment` to true.
+        if minus_line_index.is_some() && plus_line_index.is_some() {
+            line_numbers_data.line_number[Left] += 1;
+        }
+
         output_buffer.push_str(&paint_right_panel_plus_line(
             plus_line_index,
             &syntax_sections[Right],

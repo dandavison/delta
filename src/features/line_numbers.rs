@@ -773,6 +773,25 @@ pub mod tests {
         assert_eq!(lines.next().unwrap(), "    ⋮500 │bb = 4");
     }
 
+    #[test]
+    fn test_line_numbers_continue_correctly() {
+        let config = make_config_from_args(&[
+            "--side-by-side",
+            "--width",
+            "40",
+            "--line-fill-method=spaces",
+        ]);
+
+        let output = run_delta(HUNK_PLUS_MINUS_WITH_1_CONTEXT_DIFF, &config);
+        let mut lines = output.lines().skip(crate::config::HEADER_LEN);
+
+        // closure to help with `cargo fmt`-ing:
+        let mut next_line = || strip_ansi_codes(lines.next().unwrap());
+        assert_eq!("│ 1  │same          │ 1  │same", next_line());
+        assert_eq!("│ 2  │a = left      │ 2  │a = right     ", next_line());
+        assert_eq!("│ 3  │also same     │ 3  │also same", next_line());
+    }
+
     pub const TWO_MINUS_LINES_DIFF: &str = "\
 diff --git i/a.py w/a.py
 index 223ca50..e69de29 100644
@@ -841,4 +860,13 @@ index 223ca50..367a6f6 100644
 -b = 2
 +bb = 2
 ";
+
+    const HUNK_PLUS_MINUS_WITH_1_CONTEXT_DIFF: &str = "\
+--- a/a.py
++++ b/b.py
+@@ -1,3 +1,3 @@
+ same
+-a = left
++a = right
+ also same";
 }
