@@ -26,9 +26,7 @@ pub struct CommandLine {
 pub fn calling_process() -> Option<Cow<'static, CallingProcess>> {
     #[cfg(not(test))]
     {
-        CACHED_CALLING_PROCESS
-            .as_ref()
-            .map(|proc| Cow::Borrowed(proc))
+        CACHED_CALLING_PROCESS.as_ref().map(Cow::Borrowed)
     }
     #[cfg(test)]
     {
@@ -94,7 +92,7 @@ pub fn describe_calling_process(args: &[String]) -> ProcessArgs<CallingProcess> 
 
     match args.next() {
         Some(command) => match Path::new(command).file_stem() {
-            Some(s) if s.to_str().map(|s| is_git_binary(s)).unwrap_or(false) => {
+            Some(s) if s.to_str().map(is_git_binary).unwrap_or(false) => {
                 let mut args = args.skip_while(|s| {
                     *s != "diff" && *s != "show" && *s != "log" && *s != "reflog" && *s != "grep"
                 });
