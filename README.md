@@ -24,11 +24,12 @@
 [interactive]
     diffFilter = delta --color-only
 
+[delta]
+    navigate = true
+    
 [diff]
     colorMoved = default
 
-[delta]
-    navigate = true
 ```
 
 ## A syntax-highlighting pager for git, diff, and grep output
