@@ -26,7 +26,7 @@ use regex::Regex;
 
 use super::draw;
 use crate::config::{delta_unreachable, Config};
-use crate::delta::{self, DiffType, MergeParents, State, StateMachine};
+use crate::delta::{self, DiffType, InMergeConflict, MergeParents, State, StateMachine};
 use crate::paint::{self, BgShouldFill, Painter, StyleSectionSpecifier};
 use crate::style::DecorationStyle;
 
@@ -46,10 +46,10 @@ impl<'a> StateMachine<'a> {
             return Ok(false);
         }
         let diff_type = match &self.state {
-            DiffHeader(Combined(MergeParents::Unknown)) => {
+            DiffHeader(Combined(MergeParents::Unknown, InMergeConflict::No)) => {
                 // https://git-scm.com/docs/git-diff#_combined_diff_format
                 let n_parents = self.line.chars().take_while(|c| c == &'@').count() - 1;
-                Combined(MergeParents::Number(n_parents))
+                Combined(MergeParents::Number(n_parents), InMergeConflict::No)
             }
             DiffHeader(diff_type)
             | HunkMinus(diff_type, _)

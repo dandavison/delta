@@ -6,7 +6,7 @@ use unicode_segmentation::UnicodeSegmentation;
 use super::draw;
 use crate::cli;
 use crate::config::{self, delta_unreachable};
-use crate::delta::{DiffType, MergeParents, State, StateMachine};
+use crate::delta::{DiffType, InMergeConflict, MergeParents, State, StateMachine};
 use crate::minusplus::MinusPlus;
 use crate::paint;
 use crate::style::Style;
@@ -40,26 +40,35 @@ impl<'a> StateMachine<'a> {
         }
 
         match self.state.clone() {
-            HunkHeader(Combined(merge_parents), _, _)
-            | HunkMinus(Combined(merge_parents), _)
-            | HunkZero(Combined(merge_parents))
-            | HunkPlus(Combined(merge_parents), _) => {
+            HunkHeader(Combined(merge_parents, InMergeConflict::No), _, _)
+            | HunkMinus(Combined(merge_parents, InMergeConflict::No), _)
+            | HunkZero(Combined(merge_parents, InMergeConflict::No))
+            | HunkPlus(Combined(merge_parents, InMergeConflict::No), _) => {
                 handled_line = self.enter_merge_conflict(&merge_parents)
             }
             MergeConflict(merge_parents, Ours) => {
                 handled_line = self.enter_ancestral(&merge_parents)
                     || self.enter_theirs(&merge_parents)
                     || self.exit_merge_conflict(&merge_parents)?
-                    || self.store_line(Ours, HunkPlus(Combined(merge_parents), None));
+                    || self.store_line(
+                        Ours,
+                        HunkPlus(Combined(merge_parents, InMergeConflict::Yes), None),
+                    );
             }
             MergeConflict(merge_parents, Ancestral) => {
                 handled_line = self.enter_theirs(&merge_parents)
                     || self.exit_merge_conflict(&merge_parents)?
-                    || self.store_line(Ancestral, HunkMinus(Combined(merge_parents), None));
+                    || self.store_line(
+                        Ancestral,
+                        HunkMinus(Combined(merge_parents, InMergeConflict::Yes), None),
+                    );
             }
             MergeConflict(merge_parents, Theirs) => {
                 handled_line = self.exit_merge_conflict(&merge_parents)?
-                    || self.store_line(Theirs, HunkPlus(Combined(merge_parents), None));
+                    || self.store_line(
+                        Theirs,
+                        HunkPlus(Combined(merge_parents, InMergeConflict::Yes), None),
+                    );
             }
             _ => {}
         }
@@ -163,7 +172,7 @@ impl<'a> StateMachine<'a> {
             self.config,
         )?;
         self.painter.merge_conflict_lines.clear();
-        self.state = HunkZero(Combined(merge_parents.clone()));
+        self.state = HunkZero(Combined(merge_parents.clone(), InMergeConflict::No));
         Ok(())
     }
 }
