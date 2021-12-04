@@ -334,6 +334,19 @@ pub mod tests {
         assert_eq!(line_numbers_and_hunk_lengths[1], (358, 15),);
         assert_eq!(line_numbers_and_hunk_lengths[2], (358, 16),);
     }
+
+    #[test]
+    fn test_parse_hunk_header_cthulhu() {
+        let parsed = parse_hunk_header("@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@ -446,6 -446,6 -446,6 -446,6 -446,6 -446,6 -446,6 -446,6 -446,6 -446,6 -446,6 -446,6 -446,6 -446,6 -446,6 -446,6 -446,6 -446,6 -446,6 -446,6 -446,6 -446,6 -444,17 -446,6 -446,6 -446,6 -446,6 -446,6 -446,6 -446,6 -446,6 -446,6 -446,6 -446,6 -446,6 -446,6 -446,6 -446,6 -446,6 -446,6 -446,6 -446,6 -446,6 -446,6 -446,6 -446,6 -446,6 -446,6 -446,6 -446,6 -446,6 -446,6 -446,6 -446,6 -446,6 -446,6 -446,6 -446,6 -446,6 -446,6 -446,6 -446,6 -446,6 -446,6 -446,6 -446,6 +444,17 @@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@ int snd_soc_jack_add_gpios(struct snd_s");
+        let code_fragment = parsed.0;
+        let line_numbers_and_hunk_lengths = parsed.1;
+        assert_eq!(code_fragment, " int snd_soc_jack_add_gpios(struct snd_s");
+        assert_eq!(line_numbers_and_hunk_lengths[0], (446, 6),);
+        assert_eq!(line_numbers_and_hunk_lengths[1], (446, 6),);
+        assert_eq!(line_numbers_and_hunk_lengths[2], (446, 6),);
+        assert_eq!(line_numbers_and_hunk_lengths[65], (446, 6),);
+    }
+
     #[test]
     fn test_paint_file_path_with_line_number_default() {
         let cfg = integration_test_utils::make_config_from_args(&[]);
