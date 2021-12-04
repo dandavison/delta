@@ -190,9 +190,9 @@ impl<'a> StateMachine<'a> {
         }
         if self.config.max_line_length > 0
             && self.raw_line.len() > self.config.max_line_length
-            // We must not truncate ripgrep --json output
-            // TODO: An alternative might be to truncate `line` but retain
-            // `raw_line` untruncated?
+            // Do not truncate long hunk headers
+            && !self.raw_line.starts_with("@@")
+            // Do not truncate ripgrep --json output
             && !self.raw_line.starts_with('{')
         {
             self.raw_line = ansi::truncate_str(
