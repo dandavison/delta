@@ -170,12 +170,12 @@ impl<'a> StateMachine<'a> {
     }
 
     /// Skip file metadata lines unless a raw diff style has been requested.
-    fn should_skip_line(&self) -> bool {
+    pub fn should_skip_line(&self) -> bool {
         self.state == State::DiffHeader && self.should_handle() && !self.config.color_only
     }
 
     /// Emit unchanged any line that delta does not handle.
-    fn emit_line_unchanged(&mut self) -> std::io::Result<bool> {
+    pub fn emit_line_unchanged(&mut self) -> std::io::Result<bool> {
         self.painter.emit()?;
         writeln!(
             self.painter.writer,

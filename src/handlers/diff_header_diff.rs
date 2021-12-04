@@ -15,6 +15,9 @@ impl<'a> StateMachine<'a> {
         self.state = State::DiffHeader;
         self.handled_diff_header_header_line_file_pair = None;
         self.diff_line = self.line.clone();
-        Ok(false)
+        if !self.should_skip_line() {
+            self.emit_line_unchanged()?;
+        }
+        Ok(true)
     }
 }
