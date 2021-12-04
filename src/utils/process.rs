@@ -626,6 +626,7 @@ pub mod tests {
 
     #[derive(Debug, Default)]
     struct FakeProc {
+        #[allow(dead_code)]
         pid: Pid,
         start_time: u64,
         cmd: Vec<String>,
