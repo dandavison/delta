@@ -9,7 +9,7 @@ use syntect::parsing::{SyntaxReference, SyntaxSet};
 use unicode_segmentation::UnicodeSegmentation;
 
 use crate::config::{self, delta_unreachable, Config};
-use crate::delta::{DiffType, MergeParents, State};
+use crate::delta::{DiffType, InMergeConflict, MergeParents, State};
 use crate::edits;
 use crate::features::hyperlinks;
 use crate::features::line_numbers::{self, LineNumbersData};
@@ -722,23 +722,24 @@ fn painted_prefix(state: State, config: &config::Config) -> Option<ANSIString> {
     use DiffType::*;
     use State::*;
     match (state, config.keep_plus_minus_markers) {
-        // For a combined diff we do not honor keep_plus_minus_markers -- i.e. always emit the
-        // prefix -- because there is currently no way to distinguish, say, a '+ ' line from a ' +'
-        // line, by styles alone.
-        (HunkMinus(Combined(MergeParents::Prefix(prefix)), _), _) => {
+        // For a combined diff, unless we are in a merge conflict, we do not honor
+        // keep_plus_minus_markers -- i.e. we always emit the prefix -- because there is currently
+        // no way to distinguish, say, a '+ ' line from a ' +' line, by styles alone. In a merge
+        // conflict we do honor the setting because the way merge conflicts are displayed indicates
+        // from which commit the lines derive.
+        (HunkMinus(Combined(MergeParents::Prefix(prefix), InMergeConflict::No), _), _) => {
             Some(config.minus_style.paint(prefix))
         }
-        (HunkZero(Combined(MergeParents::Prefix(prefix))), _) => {
+        (HunkZero(Combined(MergeParents::Prefix(prefix), InMergeConflict::No)), _) => {
             Some(config.zero_style.paint(prefix))
         }
-        (HunkPlus(Combined(MergeParents::Prefix(prefix)), _), _) => {
+        (HunkPlus(Combined(MergeParents::Prefix(prefix), InMergeConflict::No), _), _) => {
             Some(config.plus_style.paint(prefix))
         }
-        // But if there is no prefix we honor keep_plus_minus_markers.
-        (_, false) => None,
-        (HunkMinus(Unified, _), true) => Some(config.minus_style.paint("-".to_string())),
-        (HunkZero(Unified), true) => Some(config.zero_style.paint(" ".to_string())),
-        (HunkPlus(Unified, _), true) => Some(config.plus_style.paint("+".to_string())),
+        // But otherwise we honor keep_plus_minus_markers
+        (HunkMinus(_, _), true) => Some(config.minus_style.paint("-".to_string())),
+        (HunkZero(_), true) => Some(config.zero_style.paint(" ".to_string())),
+        (HunkPlus(_, _), true) => Some(config.plus_style.paint("+".to_string())),
         _ => None,
     }
 }

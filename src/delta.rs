@@ -37,7 +37,8 @@ pub enum State {
 #[derive(Clone, Debug, PartialEq)]
 pub enum DiffType {
     Unified,
-    Combined(MergeParents), // https://git-scm.com/docs/git-diff#_combined_diff_format
+    // https://git-scm.com/docs/git-diff#_combined_diff_format
+    Combined(MergeParents, InMergeConflict),
 }
 
 #[derive(Clone, Debug, PartialEq)]
@@ -47,15 +48,21 @@ pub enum MergeParents {
     Unknown,
 }
 
+#[derive(Clone, Debug, PartialEq)]
+pub enum InMergeConflict {
+    Yes,
+    No,
+}
+
 impl DiffType {
     pub fn n_parents(&self) -> usize {
         use DiffType::*;
         use MergeParents::*;
         match self {
-            Combined(Prefix(prefix)) => prefix.len(),
-            Combined(Number(n_parents)) => *n_parents,
+            Combined(Prefix(prefix), _) => prefix.len(),
+            Combined(Number(n_parents), _) => *n_parents,
             Unified => 1,
-            Combined(Unknown) => delta_unreachable("Number of merge parents must be known."),
+            Combined(Unknown, _) => delta_unreachable("Number of merge parents must be known."),
         }
     }
 }

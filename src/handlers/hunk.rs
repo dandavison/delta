@@ -4,7 +4,7 @@ use lazy_static::lazy_static;
 
 use crate::cli;
 use crate::config::delta_unreachable;
-use crate::delta::{DiffType, MergeParents, State, StateMachine};
+use crate::delta::{DiffType, InMergeConflict, MergeParents, State, StateMachine};
 use crate::style;
 use crate::utils::process::{self, CallingProcess};
 use unicode_segmentation::UnicodeSegmentation;
@@ -141,22 +141,28 @@ fn new_line_state(new_line: &str, prev_state: &State) -> Option<State> {
         | HunkZero(Unified)
         | HunkPlus(Unified, _)
         | HunkHeader(Unified, _, _) => Unified,
-        HunkHeader(Combined(Number(n)), _, _) => Combined(Number(*n)),
+        HunkHeader(Combined(Number(n), InMergeConflict::No), _, _) => {
+            Combined(Number(*n), InMergeConflict::No)
+        }
         // The prefixes are specific to the previous line, but the number of merge parents remains
         // equal to the prefix length.
-        HunkHeader(Combined(Prefix(prefix)), _, _)
-        | HunkMinus(Combined(Prefix(prefix)), _)
-        | HunkZero(Combined(Prefix(prefix)))
-        | HunkPlus(Combined(Prefix(prefix)), _) => Combined(Number(prefix.len())),
+        HunkHeader(Combined(Prefix(prefix), InMergeConflict::No), _, _) => {
+            Combined(Number(prefix.len()), InMergeConflict::No)
+        }
+        HunkMinus(Combined(Prefix(prefix), in_merge_conflict), _)
+        | HunkZero(Combined(Prefix(prefix), in_merge_conflict))
+        | HunkPlus(Combined(Prefix(prefix), in_merge_conflict), _) => {
+            Combined(Number(prefix.len()), in_merge_conflict.clone())
+        }
         _ => delta_unreachable(&format!(
             "Unexpected state in new_line_state: {:?}",
             prev_state
         )),
     };
 
-    let (prefix_char, prefix) = match diff_type {
-        Unified => (new_line.chars().next(), None),
-        Combined(Number(n_parents)) => {
+    let (prefix_char, prefix, in_merge_conflict) = match diff_type {
+        Unified => (new_line.chars().next(), None, None),
+        Combined(Number(n_parents), in_merge_conflict) => {
             let prefix = &new_line[..min(n_parents, new_line.len())];
             let prefix_char = match prefix.chars().find(|c| c == &'-' || c == &'+') {
                 Some(c) => Some(c),
@@ -165,18 +171,28 @@ fn new_line_state(new_line: &str, prev_state: &State) -> Option<State> {
                     Some(_) => None,
                 },
             };
-            (prefix_char, Some(prefix.to_string()))
+            (
+                prefix_char,
+                Some(prefix.to_string()),
+                Some(in_merge_conflict),
+            )
         }
         _ => delta_unreachable(""),
     };
 
-    match (prefix_char, prefix) {
-        (Some('-'), None) => Some(HunkMinus(Unified, None)),
-        (Some(' '), None) => Some(HunkZero(Unified)),
-        (Some('+'), None) => Some(HunkPlus(Unified, None)),
-        (Some('-'), Some(prefix)) => Some(HunkMinus(Combined(Prefix(prefix)), None)),
-        (Some(' '), Some(prefix)) => Some(HunkZero(Combined(Prefix(prefix)))),
-        (Some('+'), Some(prefix)) => Some(HunkPlus(Combined(Prefix(prefix)), None)),
+    match (prefix_char, prefix, in_merge_conflict) {
+        (Some('-'), None, None) => Some(HunkMinus(Unified, None)),
+        (Some(' '), None, None) => Some(HunkZero(Unified)),
+        (Some('+'), None, None) => Some(HunkPlus(Unified, None)),
+        (Some('-'), Some(prefix), Some(in_merge_conflict)) => {
+            Some(HunkMinus(Combined(Prefix(prefix), in_merge_conflict), None))
+        }
+        (Some(' '), Some(prefix), Some(in_merge_conflict)) => {
+            Some(HunkZero(Combined(Prefix(prefix), in_merge_conflict)))
+        }
+        (Some('+'), Some(prefix), Some(in_merge_conflict)) => {
+            Some(HunkPlus(Combined(Prefix(prefix), in_merge_conflict), None))
+        }
         _ => None,
     }
 }
