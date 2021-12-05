@@ -40,7 +40,7 @@ impl<'a> StateMachine<'a> {
         }
 
         match self.state.clone() {
-            HunkHeader(Combined(merge_parents, InMergeConflict::No), _, _)
+            HunkHeader(Combined(merge_parents, InMergeConflict::No), _, _, _)
             | HunkMinus(Combined(merge_parents, InMergeConflict::No), _)
             | HunkZero(Combined(merge_parents, InMergeConflict::No))
             | HunkPlus(Combined(merge_parents, InMergeConflict::No), _) => {

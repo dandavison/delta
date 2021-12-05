@@ -29,7 +29,7 @@ impl<'a> StateMachine<'a> {
     fn test_hunk_line(&self) -> bool {
         matches!(
             self.state,
-            State::HunkHeader(_, _, _)
+            State::HunkHeader(_, _, _, _)
                 | State::HunkZero(_)
                 | State::HunkMinus(_, _)
                 | State::HunkPlus(_, _)
@@ -59,8 +59,8 @@ impl<'a> StateMachine<'a> {
         {
             self.painter.paint_buffered_minus_and_plus_lines();
         }
-        if let State::HunkHeader(_, line, raw_line) = &self.state.clone() {
-            self.emit_hunk_header_line(line, raw_line)?;
+        if let State::HunkHeader(_, parsed_hunk_header, line, raw_line) = &self.state.clone() {
+            self.emit_hunk_header_line(parsed_hunk_header, line, raw_line)?;
         }
         self.state = match new_line_state(&self.line, &self.state) {
             Some(HunkMinus(diff_type, _)) => {
@@ -140,13 +140,13 @@ fn new_line_state(new_line: &str, prev_state: &State) -> Option<State> {
         HunkMinus(Unified, _)
         | HunkZero(Unified)
         | HunkPlus(Unified, _)
-        | HunkHeader(Unified, _, _) => Unified,
-        HunkHeader(Combined(Number(n), InMergeConflict::No), _, _) => {
+        | HunkHeader(Unified, _, _, _) => Unified,
+        HunkHeader(Combined(Number(n), InMergeConflict::No), _, _, _) => {
             Combined(Number(*n), InMergeConflict::No)
         }
         // The prefixes are specific to the previous line, but the number of merge parents remains
         // equal to the prefix length.
-        HunkHeader(Combined(Prefix(prefix), InMergeConflict::No), _, _) => {
+        HunkHeader(Combined(Prefix(prefix), InMergeConflict::No), _, _, _) => {
             Combined(Number(prefix.len()), InMergeConflict::No)
         }
         HunkMinus(Combined(Prefix(prefix), in_merge_conflict), _)
