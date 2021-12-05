@@ -8,6 +8,7 @@ use crate::ansi;
 use crate::color;
 use crate::git_config::GitConfig;
 
+// PERF: Avoid deriving Copy here?
 #[derive(Clone, Copy, PartialEq, Default)]
 pub struct Style {
     pub ansi_term_style: ansi_term::Style,
