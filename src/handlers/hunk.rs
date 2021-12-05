@@ -154,6 +154,11 @@ fn new_line_state(new_line: &str, prev_state: &State) -> Option<State> {
         | HunkPlus(Combined(Prefix(prefix), in_merge_conflict), _) => {
             Combined(Number(prefix.len()), in_merge_conflict.clone())
         }
+        HunkMinus(Combined(Number(n), in_merge_conflict), _)
+        | HunkZero(Combined(Number(n), in_merge_conflict))
+        | HunkPlus(Combined(Number(n), in_merge_conflict), _) => {
+            Combined(Number(*n), in_merge_conflict.clone())
+        }
         _ => delta_unreachable(&format!(
             "Unexpected state in new_line_state: {:?}",
             prev_state
