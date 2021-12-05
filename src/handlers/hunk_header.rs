@@ -282,6 +282,7 @@ fn write_to_output_buffer(
 #[cfg(test)]
 pub mod tests {
     use super::*;
+    use crate::ansi::strip_ansi_codes;
     use crate::tests::integration_test_utils;
 
     #[test]
@@ -409,4 +410,26 @@ pub mod tests {
 
         assert_eq!(result, "");
     }
+
+    #[test]
+    fn test_not_a_hunk_header_is_handled_gracefully() {
+        let config = integration_test_utils::make_config_from_args(&[]);
+        let output =
+            integration_test_utils::run_delta(GIT_LOG_OUTPUT_WITH_NOT_A_HUNK_HEADER, &config);
+        let output = strip_ansi_codes(&output);
+        assert!(output.contains("@@@2021-12-05"));
+    }
+
+    const GIT_LOG_OUTPUT_WITH_NOT_A_HUNK_HEADER: &str = "\
+@@@2021-12-05
+
+src/config.rs                  |   2 +-
+src/delta.rs                   |   3 ++-
+src/handlers/hunk.rs           |  12 ++++++------
+src/handlers/hunk_header.rs    | 119 +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++------------------------------------------
+src/handlers/merge_conflict.rs |   2 +-
+src/handlers/submodule.rs      |   4 ++--
+src/paint.rs                   |   2 +-
+7 files changed, 90 insertions(+), 54 deletions(-)
+";
 }
