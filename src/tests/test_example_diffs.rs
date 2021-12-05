@@ -3,6 +3,7 @@ mod tests {
     use crate::ansi::{self, strip_ansi_codes};
     use crate::cli::InspectRawLines;
     use crate::delta::{DiffType, State};
+    use crate::handlers::hunk_header::ParsedHunkHeader;
     use crate::style;
     use crate::tests::ansi_test_utils::ansi_test_utils;
     use crate::tests::integration_test_utils;
@@ -1382,7 +1383,12 @@ src/align.rs:71: impl<'a> Alignment<'a> { │
             4,
             "impl<'a> Alignment<'a> { ",
             "rs",
-            State::HunkHeader(DiffType::Unified, "".to_owned(), "".to_owned()),
+            State::HunkHeader(
+                DiffType::Unified,
+                ParsedHunkHeader::default(),
+                "".to_owned(),
+                "".to_owned(),
+            ),
             &config,
         );
         ansi_test_utils::assert_line_has_no_color(&output, 12, "─────────────────────────────┘");

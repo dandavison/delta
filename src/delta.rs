@@ -9,18 +9,19 @@ use crate::ansi;
 use crate::config::delta_unreachable;
 use crate::config::Config;
 use crate::features;
+use crate::handlers::hunk_header::ParsedHunkHeader;
 use crate::handlers::{self, merge_conflict};
 use crate::paint::Painter;
 use crate::style::DecorationStyle;
 
 #[derive(Clone, Debug, PartialEq)]
 pub enum State {
-    CommitMeta,                           // In commit metadata section
+    CommitMeta,                                             // In commit metadata section
     DiffHeader(DiffType), // In diff metadata section, between (possible) commit metadata and first hunk
-    HunkHeader(DiffType, String, String), // In hunk metadata line (diff_type, line, raw_line)
-    HunkZero(DiffType),   // In hunk; unchanged line (prefix)
+    HunkHeader(DiffType, ParsedHunkHeader, String, String), // In hunk metadata line (diff_type, parsed, line, raw_line)
+    HunkZero(DiffType),                                     // In hunk; unchanged line (prefix)
     HunkMinus(DiffType, Option<String>), // In hunk; removed line (diff_type, raw_line)
-    HunkPlus(DiffType, Option<String>), // In hunk; added line (diff_type, raw_line)
+    HunkPlus(DiffType, Option<String>),  // In hunk; added line (diff_type, raw_line)
     MergeConflict(MergeParents, merge_conflict::MergeConflictCommit),
     SubmoduleLog, // In a submodule section, with gitconfig diff.submodule = log
     SubmoduleShort(String), // In a submodule section, with gitconfig diff.submodule = short

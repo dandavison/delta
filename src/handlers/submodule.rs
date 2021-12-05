@@ -18,7 +18,7 @@ impl<'a> StateMachine<'a> {
 
     #[inline]
     fn test_submodule_short_line(&self) -> bool {
-        matches!(self.state, State::HunkHeader(_, _, _))
+        matches!(self.state, State::HunkHeader(_, _, _, _))
             && self.line.starts_with("-Subproject commit ")
             || matches!(self.state, State::SubmoduleShort(_))
                 && self.line.starts_with("+Subproject commit ")
@@ -29,7 +29,7 @@ impl<'a> StateMachine<'a> {
             return Ok(false);
         }
         if let Some(commit) = get_submodule_short_commit(&self.line) {
-            if let State::HunkHeader(_, _, _) = self.state {
+            if let State::HunkHeader(_, _, _, _) = self.state {
                 self.state = State::SubmoduleShort(commit.to_owned());
             } else if let State::SubmoduleShort(minus_commit) = &self.state {
                 self.painter.emit()?;

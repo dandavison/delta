@@ -478,7 +478,7 @@ impl<'p> Painter<'p> {
                     || config.plus_emph_style.is_syntax_highlighted
                     || config.plus_non_emph_style.is_syntax_highlighted
             }
-            State::HunkHeader(_, _, _) => true,
+            State::HunkHeader(_, _, _, _) => true,
             State::HunkMinus(_, Some(_raw_line)) | State::HunkPlus(_, Some(_raw_line)) => {
                 // It is possible that the captured raw line contains an ANSI
                 // style that has been mapped (via map-styles) to a delta Style
