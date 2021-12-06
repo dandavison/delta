@@ -30,7 +30,7 @@ pub fn calling_process() -> Option<Cow<'static, CallingProcess>> {
     }
     #[cfg(test)]
     {
-        determine_calling_process().map(|proc| Cow::Owned(proc))
+        determine_calling_process().map(Cow::Owned)
     }
 }
 
@@ -487,10 +487,10 @@ pub mod tests {
     pub struct FakeParentArgs {}
     impl FakeParentArgs {
         pub fn once(args: &str) -> Self {
-            Self::new(args, |v| TlsState::Once(v), "once")
+            Self::new(args, TlsState::Once, "once")
         }
         pub fn for_scope(args: &str) -> Self {
-            Self::new(args, |v| TlsState::Scope(v), "for_scope")
+            Self::new(args, TlsState::Scope, "for_scope")
         }
         fn new<F>(args: &str, initial: F, from_: &str) -> Self
         where
@@ -665,7 +665,7 @@ pub mod tests {
             MockProcInfo {
                 delta_pid: processes.last().map(|p| p.0).unwrap_or(1),
                 info: processes
-                    .into_iter()
+                    .iter()
                     .map(|(pid, start_time, cmd, ppid)| {
                         let cmd_vec = cmd.split(' ').map(str::to_owned).collect();
                         (*pid, FakeProc::new(*pid, *start_time, cmd_vec, *ppid))
@@ -700,21 +700,21 @@ pub mod tests {
     #[test]
     fn test_process_testing() {
         {
-            let _args = FakeParentArgs::once(&"git blame hello");
+            let _args = FakeParentArgs::once("git blame hello");
             assert_eq!(
                 calling_process_cmdline(ProcInfo::new(), guess_git_blame_filename_extension),
                 Some("hello".into())
             );
         }
         {
-            let _args = FakeParentArgs::once(&"git blame world.txt");
+            let _args = FakeParentArgs::once("git blame world.txt");
             assert_eq!(
                 calling_process_cmdline(ProcInfo::new(), guess_git_blame_filename_extension),
                 Some("txt".into())
             );
         }
         {
-            let _args = FakeParentArgs::for_scope(&"git blame hello world.txt");
+            let _args = FakeParentArgs::for_scope("git blame hello world.txt");
             assert_eq!(
                 calling_process_cmdline(ProcInfo::new(), guess_git_blame_filename_extension),
                 Some("txt".into())
@@ -730,7 +730,7 @@ pub mod tests {
     #[test]
     #[should_panic]
     fn test_process_testing_assert() {
-        let _args = FakeParentArgs::once(&"git blame do.not.panic");
+        let _args = FakeParentArgs::once("git blame do.not.panic");
         assert_eq!(
             calling_process_cmdline(ProcInfo::new(), guess_git_blame_filename_extension),
             Some("panic".into())
@@ -742,7 +742,7 @@ pub mod tests {
     #[test]
     #[should_panic]
     fn test_process_testing_assert_never_used() {
-        let _args = FakeParentArgs::once(&"never used");
+        let _args = FakeParentArgs::once("never used");
 
         // causes a panic while panicing, so can't test:
         // let _args = FakeParentArgs::for_scope(&"never used");
@@ -751,7 +751,7 @@ pub mod tests {
 
     #[test]
     fn test_process_testing_scope_can_remain_unused() {
-        let _args = FakeParentArgs::for_scope(&"never used");
+        let _args = FakeParentArgs::for_scope("never used");
     }
 
     #[test]
@@ -924,7 +924,7 @@ pub mod tests {
         ]);
         assert_eq!(
             calling_process_cmdline(parent, describe_calling_process),
-            Some(CallingProcess::GitGrep(empty_command_line.clone()))
+            Some(CallingProcess::GitGrep(empty_command_line))
         );
 
         for grep_command in &[
@@ -1003,7 +1003,7 @@ pub mod tests {
                 assert_eq!(cmd_line.short_options, set(&["-w"]));
                 assert_eq!(ext, Some(expected_extension.to_string()));
             } else {
-                assert!(false);
+                unreachable!();
             }
         }
     }

@@ -575,9 +575,9 @@ mod tests {
         static ref SD: Style = Style::default();
     }
 
-    const W: &str = &"+"; // wrap
-    const WR: &str = &"<"; // wrap-right
-    const RA: &str = &">"; // right-align
+    const W: &str = "+"; // wrap
+    const WR: &str = "<"; // wrap-right
+    const RA: &str = ">"; // right-align
 
     lazy_static! {
         static ref WRAP_DEFAULT_ARGS: Vec<&'static str> = vec![
@@ -606,7 +606,7 @@ mod tests {
     }
 
     fn mk_wrap_cfg(wrap_cfg: &WrapConfig) -> Config {
-        let mut cfg: Config = Config::from(make_config_from_args(&[]));
+        let mut cfg: Config = make_config_from_args(&[]);
         cfg.wrap_config = wrap_cfg.clone();
         cfg
     }
@@ -617,7 +617,7 @@ mod tests {
         <I as IntoIterator>::IntoIter: DoubleEndedIterator,
         S: Copy + Default + std::fmt::Debug,
     {
-        wrap_line(&cfg, line, line_width, &S::default(), &None)
+        wrap_line(cfg, line, line_width, &S::default(), &None)
     }
 
     #[test]
@@ -732,7 +732,7 @@ mod tests {
     }
 
     #[test]
-    fn test_wrap_line_newlines<'a>() {
+    fn test_wrap_line_newlines() {
         fn mk_input(len: usize) -> LineSections<'static, Style> {
             const IN: &str = "0123456789abcdefZ";
             let v = &[*S1, *S2];
@@ -785,10 +785,10 @@ mod tests {
             let line = mk_input_nl(9);
             let lines = wrap_test(&cfg, line, 3);
             let expected = mk_input_nl(9);
-            let line1 = mk_expected(&expected, 0, 2, Some((*SD, &W)));
-            let line2 = mk_expected(&expected, 2, 4, Some((*SD, &W)));
-            let line3 = mk_expected(&expected, 4, 6, Some((*SD, &W)));
-            let line4 = mk_expected(&expected, 6, 8, Some((*SD, &W)));
+            let line1 = mk_expected(&expected, 0, 2, Some((*SD, W)));
+            let line2 = mk_expected(&expected, 2, 4, Some((*SD, W)));
+            let line3 = mk_expected(&expected, 4, 6, Some((*SD, W)));
+            let line4 = mk_expected(&expected, 6, 8, Some((*SD, W)));
             let line5 = mk_expected(&expected, 8, 11, None);
             assert_eq!(lines, vec![line1, line2, line3, line4, line5]);
         }
@@ -797,10 +797,10 @@ mod tests {
             let line = mk_input_nl(10);
             let lines = wrap_test(&cfg, line, 3);
             let expected = mk_input_nl(10);
-            let line1 = mk_expected(&expected, 0, 2, Some((*SD, &W)));
-            let line2 = mk_expected(&expected, 2, 4, Some((*SD, &W)));
-            let line3 = mk_expected(&expected, 4, 6, Some((*SD, &W)));
-            let line4 = mk_expected(&expected, 6, 8, Some((*SD, &W)));
+            let line1 = mk_expected(&expected, 0, 2, Some((*SD, W)));
+            let line2 = mk_expected(&expected, 2, 4, Some((*SD, W)));
+            let line3 = mk_expected(&expected, 4, 6, Some((*SD, W)));
+            let line4 = mk_expected(&expected, 6, 8, Some((*SD, W)));
             let line5 = mk_expected(&expected, 8, 11, Some((*S2, "\n")));
             assert_eq!(lines, vec![line1, line2, line3, line4, line5]);
         }
@@ -844,8 +844,8 @@ mod tests {
         assert_eq!(
             lines,
             vec![
-                vec![(*S1, "abc"), (*SD, &W)],
-                vec![(*S2, "mnö̲"), (*SD, &W)],
+                vec![(*S1, "abc"), (*SD, W)],
+                vec![(*S2, "mnö̲"), (*SD, W)],
                 vec![(*S1, "xyz")]
             ]
         );
@@ -856,8 +856,8 @@ mod tests {
         assert_eq!(
             lines,
             vec![
-                vec![(*S1, "abc"), (*SD, &W)],
-                vec![(*S2, "deநி"), (*SD, &W)],
+                vec![(*S1, "abc"), (*SD, W)],
+                vec![(*S2, "deநி"), (*SD, W)],
                 vec![(*S1, "ghij")]
             ]
         );
