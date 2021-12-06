@@ -158,6 +158,7 @@ Here's what `git show` can look like with git configured to use delta:
 - Side-by-side view with line-wrapping
 - Line numbering
 - `n` and `N` keybindings to move between files in large diffs, and between diffs in `log -p` views (`--navigate`)
+- Improved merge conflict display
 - Improved `git blame` display (syntax highlighting; `--hyperlinks` formats commits as links to GitHub/GitLab/Bitbucket etc)
 - Syntax-highlights grep output from `rg`, `git grep`, `grep`, etc
 - Support for Git's `--color-moved` feature.
