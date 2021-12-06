@@ -727,6 +727,7 @@ and use the executable found at `./target/release/delta`.
 - [jeffkaufman/icdiff](https://github.com/jeffkaufman/icdiff)
 - [kovidgoyal/kitty-diff](https://sw.kovidgoyal.net/kitty/kittens/diff.html)
 - [mookid/diffr](https://github.com/mookid/diffr)
+- [nkouevda/pdiff](https://github.com/nkouevda/pdiff)
 - [so-fancy/diff-so-fancy](https://github.com/so-fancy/diff-so-fancy)
 
 ## Full --help output
