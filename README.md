@@ -155,18 +155,18 @@ Here's what `git show` can look like with git configured to use delta:
 
 - Language syntax highlighting with color themes
 - Within-line highlights based on a Levenshtein edit inference algorithm
-- Git style strings (foreground color, background color, font attributes) are supported for >20 stylable elements
 - Side-by-side view with line-wrapping
 - Line numbering
-- Handles grep output with file paths from `rg`, `git grep`, `grep`, etc
-- `diff-highlight` and `diff-so-fancy` emulation modes
-- Stylable box/line decorations to draw attention to commit, file and hunk header sections.
-- Support for Git's `--color-moved` feature.
-- Customizable `git blame` with syntax highlighting (`--hyperlinks` formats commits as links to GitHub/GitLab/Bitbucket etc)
-- Code can be copied directly from the diff (`-/+` markers are removed by default).
 - `n` and `N` keybindings to move between files in large diffs, and between diffs in `log -p` views (`--navigate`)
+- Improved `git blame` display (syntax highlighting; `--hyperlinks` formats commits as links to GitHub/GitLab/Bitbucket etc)
+- Syntax-highlights grep output from `rg`, `git grep`, `grep`, etc
+- Support for Git's `--color-moved` feature.
+- Code can be copied directly from the diff (`-/+` markers are removed by default).
+- `diff-highlight` and `diff-so-fancy` emulation modes
 - Commit hashes can be formatted as terminal [hyperlinks](https://gist.github.com/egmontkob/eb114294efbcd5adb1944c9f3cb5feda) to the GitHub/GitLab/Bitbucket page (`--hyperlinks`).
   File paths can also be formatted as hyperlinks for opening in your OS.
+- Stylable box/line decorations to draw attention to commit, file and hunk header sections.
+- Git style strings (foreground color, background color, font attributes) are supported for >20 stylable elements
 
 |                                                | delta | git | [diff-so-fancy] /<br>[diff-highlight] | github/gitlab |
 | ---------------------------------------------- | ----- | --- | ------------------------------------- | ------------- |
