@@ -354,7 +354,7 @@ dependencies = [
 
 [[package]]
 name = "git-delta"
-version = "0.10.3"
+version = "0.11.0"
 dependencies = [
  "ansi_colours",
  "ansi_term 0.12.1",
