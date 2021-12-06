@@ -188,13 +188,13 @@ In addition, delta handles traditional unified diff output.
 ## Installation
 
 You can download an executable for your system:
-[Linux (glibc)](https://github.com/dandavison/delta/releases/download/0.11.0/delta-0.11.0-x86_64-unknown-linux-gnu.tar.gz)
+[Linux (glibc)](https://github.com/dandavison/delta/releases/download/0.11.1/delta-0.11.1-x86_64-unknown-linux-gnu.tar.gz)
 |
-[Linux (musl)](https://github.com/dandavison/delta/releases/download/0.11.0/delta-0.11.0-x86_64-unknown-linux-musl.tar.gz)
+[Linux (musl)](https://github.com/dandavison/delta/releases/download/0.11.1/delta-0.11.1-x86_64-unknown-linux-musl.tar.gz)
 |
-[MacOS](https://github.com/dandavison/delta/releases/download/0.11.0/delta-0.11.0-x86_64-apple-darwin.tar.gz)
+[MacOS](https://github.com/dandavison/delta/releases/download/0.11.1/delta-0.11.1-x86_64-apple-darwin.tar.gz)
 |
-[Windows](https://github.com/dandavison/delta/releases/download/0.11.0/delta-0.11.0-x86_64-pc-windows-msvc.zip)
+[Windows](https://github.com/dandavison/delta/releases/download/0.11.1/delta-0.11.1-x86_64-pc-windows-msvc.zip)
 |
 [All](https://github.com/dandavison/delta/releases)
 
@@ -732,7 +732,7 @@ and use the executable found at `./target/release/delta`.
 ## Full --help output
 
 ```
-delta 0.11.0
+delta 0.11.1
 A viewer for git and diff output
 
 USAGE:
