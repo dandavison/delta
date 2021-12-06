@@ -25,7 +25,7 @@ use lazy_static::lazy_static;
 use regex::Regex;
 
 use super::draw;
-use crate::config::{delta_unreachable, Config};
+use crate::config::Config;
 use crate::delta::{self, DiffType, InMergeConflict, MergeParents, State, StateMachine};
 use crate::paint::{self, BgShouldFill, Painter, StyleSectionSpecifier};
 use crate::style::DecorationStyle;
@@ -63,11 +63,7 @@ impl<'a> StateMachine<'a> {
                 | HunkMinus(diff_type, _)
                 | HunkZero(diff_type)
                 | HunkPlus(diff_type, _) => diff_type.clone(),
-                Unknown => Unified,
-                _ => delta_unreachable(&format!(
-                    "Unexpected state in handle_hunk_header: {:?}",
-                    self.state
-                )),
+                _ => Unified,
             };
             self.state = HunkHeader(
                 diff_type,
