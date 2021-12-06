@@ -7,11 +7,17 @@ use lazy_static::lazy_static;
 
 #[derive(Clone, Debug, PartialEq)]
 pub enum CallingProcess {
+    #[allow(unused)]
     GitDiff(CommandLine),
+    #[allow(unused)]
     GitShow(CommandLine, Option<String>), // element 2 is file extension
+    #[allow(unused)]
     GitLog(CommandLine),
+    #[allow(unused)]
     GitReflog(CommandLine),
+    #[allow(unused)]
     GitGrep(CommandLine),
+    #[allow(unused)]
     OtherGrep, // rg, grep, ag, ack, etc
 }
 // TODO: Git blame is currently handled differently
@@ -35,9 +41,10 @@ pub fn calling_process() -> Option<Cow<'static, CallingProcess>> {
 }
 
 lazy_static! {
-    static ref CACHED_CALLING_PROCESS: Option<CallingProcess> = determine_calling_process();
+    static ref CACHED_CALLING_PROCESS: Option<CallingProcess> = None;
 }
 
+#[allow(unused)]
 fn determine_calling_process() -> Option<CallingProcess> {
     calling_process_cmdline(ProcInfo::new(), describe_calling_process)
 }
@@ -197,6 +204,7 @@ where
 
 // Given `--aa val -bc -d val e f -- ...` return
 // ({"--aa"}, {"-b", "-c", "-d"})
+#[allow(unused)]
 fn parse_command_line<'a>(args: impl Iterator<Item = &'a str>) -> CommandLine {
     let mut long_options = HashSet::new();
     let mut short_options = HashSet::new();
