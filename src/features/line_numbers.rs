@@ -322,7 +322,7 @@ pub mod tests {
     use crate::ansi::strip_ansi_codes;
     use crate::features::side_by_side::ansifill::ODD_PAD_CHAR;
     use crate::format::FormatStringData;
-    use crate::tests::integration_test_utils::{make_config_from_args, run_delta};
+    use crate::tests::integration_test_utils::{make_config_from_args, run_delta, DeltaTest};
 
     use super::*;
 
@@ -630,7 +630,7 @@ pub mod tests {
 
     #[test]
     fn test_two_minus_lines() {
-        let config = make_config_from_args(&[
+        DeltaTest::with(&[
             "--line-numbers",
             "--line-numbers-left-format",
             "{nm:^4}⋮",
@@ -644,17 +644,19 @@ pub mod tests {
             "0 3",
             "--line-numbers-plus-style",
             "0 4",
-        ]);
-        let output = run_delta(TWO_MINUS_LINES_DIFF, &config);
-        let mut lines = output.lines().skip(crate::config::HEADER_LEN);
-        let (line_1, line_2) = (lines.next().unwrap(), lines.next().unwrap());
-        assert_eq!(strip_ansi_codes(line_1), " 1  ⋮    │a = 1");
-        assert_eq!(strip_ansi_codes(line_2), " 2  ⋮    │b = 23456");
+        ])
+        .with_input(TWO_MINUS_LINES_DIFF)
+        .expect(
+            r#"
+             #indent_mark
+              1  ⋮    │a = 1
+              2  ⋮    │b = 23456"#,
+        );
     }
 
     #[test]
     fn test_two_plus_lines() {
-        let config = make_config_from_args(&[
+        DeltaTest::with(&[
             "--line-numbers",
             "--line-numbers-left-format",
             "{nm:^4}⋮",
@@ -668,12 +670,14 @@ pub mod tests {
             "0 3",
             "--line-numbers-plus-style",
             "0 4",
-        ]);
-        let output = run_delta(TWO_PLUS_LINES_DIFF, &config);
-        let mut lines = output.lines().skip(crate::config::HEADER_LEN);
-        let (line_1, line_2) = (lines.next().unwrap(), lines.next().unwrap());
-        assert_eq!(strip_ansi_codes(line_1), "    ⋮ 1  │a = 1");
-        assert_eq!(strip_ansi_codes(line_2), "    ⋮ 2  │b = 234567");
+        ])
+        .with_input(TWO_PLUS_LINES_DIFF)
+        .expect(
+            r#"
+             #indent_mark
+                 ⋮ 1  │a = 1
+                 ⋮ 2  │b = 234567"#,
+        );
     }
 
     #[test]

@@ -551,11 +551,10 @@ mod tests {
 
     use super::wrap_line;
     use super::WrapConfig;
-    use crate::ansi::strip_ansi_codes;
     use crate::config::Config;
     use crate::paint::LineSections;
     use crate::style::Style;
-    use crate::tests::integration_test_utils::{make_config_from_args, run_delta};
+    use crate::tests::integration_test_utils::{make_config_from_args, DeltaTest};
 
     lazy_static! {
         static ref S1: Style = Style {
@@ -904,7 +903,7 @@ index 223ca50..e69de29 100644
 
     #[test]
     fn test_wrap_with_unequal_hunk_zero_width() {
-        let mut config = make_config_from_args(&default_wrap_cfg_plus(&[
+        DeltaTest::with(&default_wrap_cfg_plus(&[
             "--side-by-side",
             "--line-numbers-left-format",
             "│L│",
@@ -914,26 +913,23 @@ index 223ca50..e69de29 100644
             "40",
             "--line-fill-method",
             "spaces",
-        ]));
-        config.truncation_symbol = ">".into();
-
-        let output = run_delta(HUNK_ZERO_DIFF, &config);
-        let output = strip_ansi_codes(&output);
-        let lines: Vec<_> = output.lines().skip(crate::config::HEADER_LEN).collect();
-        let expected = vec![
-            "│L│abcdefghijklm+   │RRRR│abcdefghijklm+",
-            "│L│nopqrstuvwxzy+   │RRRR│nopqrstuvwxzy+",
-            "│L│ 0123456789 0+   │RRRR│ 0123456789 0+",
-            "│L│123456789 012+   │RRRR│123456789 012+",
-            "│L│3456789 01234567>│RRRR│3456789 01234>",
-            "│L│a = 1            │RRRR│a = 2         ",
-        ];
-        assert_eq!(lines, expected);
+        ]))
+        .set_cfg(|cfg| cfg.truncation_symbol = ">".into())
+        .with_input(HUNK_ZERO_DIFF)
+        .expect(
+            r#"
+            │L│abcdefghijklm+   │RRRR│abcdefghijklm+
+            │L│nopqrstuvwxzy+   │RRRR│nopqrstuvwxzy+
+            │L│ 0123456789 0+   │RRRR│ 0123456789 0+
+            │L│123456789 012+   │RRRR│123456789 012+
+            │L│3456789 01234567>│RRRR│3456789 01234>
+            │L│a = 1            │RRRR│a = 2         "#,
+        );
     }
 
     #[test]
     fn test_wrap_with_large_hunk_zero_line_numbers() {
-        let mut config = make_config_from_args(&default_wrap_cfg_plus(&[
+        DeltaTest::with(&default_wrap_cfg_plus(&[
             "--side-by-side",
             "--line-numbers-left-format",
             "│LLL│",
@@ -943,53 +939,49 @@ index 223ca50..e69de29 100644
             "60",
             "--line-fill-method",
             "ansi",
-        ]));
-        config.truncation_symbol = ">".into();
-
-        let output = run_delta(HUNK_ZERO_LARGE_LINENUMBERS_DIFF, &config);
-        let output = strip_ansi_codes(&output);
-        let lines: Vec<_> = output.lines().skip(crate::config::HEADER_LEN).collect();
-        let expected = vec![
-            "│LLL│abcde+                   │WW   10   +- 101999 WW│abcde+",
-            "│LLL│fghij+                   │WW        +-        WW│fghij+",
-            "│LLL│klmno+                   │WW        +-        WW│klmno+",
-            "│LLL│pqrst+                   │WW        +-        WW│pqrst+",
-            "│LLL│uvwxzy 0123456789 012345>│WW        +-        WW│uvwxz>",
-            "│LLL│a = 1                    │WW        +- 102000 WW│a = 2",
-        ];
-        assert_eq!(lines, expected);
+        ]))
+        .set_cfg(|cfg| cfg.truncation_symbol = ">".into())
+        .with_input(HUNK_ZERO_LARGE_LINENUMBERS_DIFF)
+        .expect(
+            r#"
+            │LLL│abcde+                   │WW   10   +- 101999 WW│abcde+
+            │LLL│fghij+                   │WW        +-        WW│fghij+
+            │LLL│klmno+                   │WW        +-        WW│klmno+
+            │LLL│pqrst+                   │WW        +-        WW│pqrst+
+            │LLL│uvwxzy 0123456789 012345>│WW        +-        WW│uvwxz>
+            │LLL│a = 1                    │WW        +- 102000 WW│a = 2"#,
+        );
     }
 
     #[test]
     fn test_wrap_with_keep_markers() {
         use crate::features::side_by_side::ansifill::ODD_PAD_CHAR;
-        let mut config = make_config_from_args(&default_wrap_cfg_plus(&[
+        let t = DeltaTest::with(&default_wrap_cfg_plus(&[
             "--side-by-side",
             "--keep-plus-minus-markers",
             "--width",
             "45",
-        ]));
-        config.truncation_symbol = ">".into();
+        ]))
+        .set_cfg(|cfg| cfg.truncation_symbol = ">".into())
+        .with_input(HUNK_MP_DIFF);
+        let output = t.expect(
+            r#"
+            │ 4  │ abcdefghijklmn+ │ 15 │ abcdefghijklmn+
+            │    │ opqrstuvwxzy 0+ │    │ opqrstuvwxzy 0+
+            │    │ 123456789 0123+ │    │ 123456789 0123+
+            │    │ 456789 0123456+ │    │ 456789 0123456+
+            │    │ 789 0123456789> │    │ 789 0123456789>
+            │ 5  │-a = 0123456789+ │ 16 │+b = 0123456789+
+            │    │  0123456789 01+ │    │  0123456789 01+
+            │    │ 23456789 01234+ │    │ 23456789 01234+
+            │    │ 56789 01234567+ │    │ 56789 01234567+
+            │    │ 89              │    │ 89"#,
+            // this column here is^ where ODD_PAD_CHAR is inserted due to the odd 45 width
+        );
 
-        let output = run_delta(HUNK_MP_DIFF, &config);
-        let output = strip_ansi_codes(&output);
-        let lines: Vec<_> = output.lines().skip(crate::config::HEADER_LEN).collect();
-        let expected = vec![
-            "│ 4  │ abcdefghijklmn+ │ 15 │ abcdefghijklmn+",
-            "│    │ opqrstuvwxzy 0+ │    │ opqrstuvwxzy 0+",
-            "│    │ 123456789 0123+ │    │ 123456789 0123+",
-            "│    │ 456789 0123456+ │    │ 456789 0123456+",
-            "│    │ 789 0123456789> │    │ 789 0123456789>",
-            "│ 5  │-a = 0123456789+ │ 16 │+b = 0123456789+",
-            "│    │  0123456789 01+ │    │  0123456789 01+",
-            "│    │ 23456789 01234+ │    │ 23456789 01234+",
-            "│    │ 56789 01234567+ │    │ 56789 01234567+",
-            "│    │ 89              │    │ 89",
-            // this is place where ^ ODD_PAD_CHAR is inserted due to the odd 45 width
-        ];
-        assert_eq!(lines, expected);
+        assert!(!output.is_empty());
 
-        for line in lines {
+        for line in output.lines().skip(crate::config::HEADER_LEN) {
             assert_eq!(line.chars().nth(22), Some(ODD_PAD_CHAR));
         }
     }
@@ -999,40 +991,36 @@ index 223ca50..e69de29 100644
         let config =
             make_config_from_args(&default_wrap_cfg_plus(&["--side-by-side", "--width", "55"]));
         {
-            let output = run_delta(
+            DeltaTest::with_config_and_input(
+                &config,
                 &format!(
                     "{}-{}+{}",
                     HUNK_ALIGN_DIFF_HEADER, HUNK_ALIGN_DIFF_SHORT, HUNK_ALIGN_DIFF_LONG
                 ),
-                &config,
+            )
+            .expect(
+                r#"
+                │ 1  │.........1.........2< │ 1  │.........1.........2+
+                │    │                >.... │    │.........3.........4+
+                │    │                      │    │.........5.........6"#,
             );
-            let output = strip_ansi_codes(&output);
-            let lines: Vec<_> = output.lines().skip(crate::config::HEADER_LEN).collect();
-            let expected = vec![
-                "│ 1  │.........1.........2< │ 1  │.........1.........2+",
-                "│    │                >.... │    │.........3.........4+",
-                "│    │                      │    │.........5.........6",
-                // place where ODD_PAD_CHAR ^ is inserted due to the odd 55 width
-            ];
-            assert_eq!(lines, expected);
+            // the place where ODD_PAD_CHAR^ is inserted due to the odd 55 width
         }
 
         {
-            let output = run_delta(
+            DeltaTest::with_config_and_input(
+                &config,
                 &format!(
                     "{}-{}+{}",
                     HUNK_ALIGN_DIFF_HEADER, HUNK_ALIGN_DIFF_LONG, HUNK_ALIGN_DIFF_SHORT
                 ),
-                &config,
+            )
+            .expect(
+                r#"
+                │ 1  │.........1.........2+ │ 1  │.........1.........2<
+                │    │.........3.........4+ │    │                >....
+                │    │.........5.........6  │    │"#,
             );
-            let output = strip_ansi_codes(&output);
-            let lines: Vec<_> = output.lines().skip(crate::config::HEADER_LEN).collect();
-            let expected = vec![
-                "│ 1  │.........1.........2+ │ 1  │.........1.........2<",
-                "│    │.........3.........4+ │    │                >....",
-                "│    │.........5.........6  │    │",
-            ];
-            assert_eq!(lines, expected);
         }
     }
 
@@ -1047,39 +1035,35 @@ index 223ca50..e69de29 100644
         ]));
 
         {
-            let output = run_delta(
+            DeltaTest::with_config_and_input(
+                &config,
                 &format!(
                     "{}-{}+{}",
                     HUNK_ALIGN_DIFF_HEADER, HUNK_ALIGN_DIFF_SHORT, HUNK_ALIGN_DIFF_LONG
                 ),
-                &config,
+            )
+            .expect(
+                r#"
+                │ 1  │.........1.........2....│ 1  │.........1.........2...+
+                │    │                        │    │......3.........4......+
+                │    │                        │    │...5.........6          "#,
             );
-            let output = strip_ansi_codes(&output);
-            let lines: Vec<_> = output.lines().skip(crate::config::HEADER_LEN).collect();
-            let expected = vec![
-                "│ 1  │.........1.........2....│ 1  │.........1.........2...+",
-                "│    │                        │    │......3.........4......+",
-                "│    │                        │    │...5.........6          ",
-            ];
-            assert_eq!(lines, expected);
         }
 
         {
-            let output = run_delta(
+            DeltaTest::with_config_and_input(
+                &config,
                 &format!(
                     "{}-{}+{}",
                     HUNK_ALIGN_DIFF_HEADER, HUNK_ALIGN_DIFF_LONG, HUNK_ALIGN_DIFF_SHORT
                 ),
-                &config,
+            )
+            .expect(
+                r#"
+                │ 1  │.........1.........2...+│ 1  │.........1.........2....
+                │    │......3.........4......+│    │
+                │    │...5.........6          │    │"#,
             );
-            let output = strip_ansi_codes(&output);
-            let lines: Vec<_> = output.lines().skip(crate::config::HEADER_LEN).collect();
-            let expected = vec![
-                "│ 1  │.........1.........2...+│ 1  │.........1.........2....",
-                "│    │......3.........4......+│    │",
-                "│    │...5.........6          │    │",
-            ];
-            assert_eq!(lines, expected);
         }
     }
 
@@ -1098,39 +1082,35 @@ index 223ca50..e69de29 100644
         config.truncation_symbol = ">".into();
 
         {
-            let output = run_delta(
+            DeltaTest::with_config_and_input(
+                &config,
                 &format!(
                     "{}-{}+{}",
                     HUNK_ALIGN_DIFF_HEADER, HUNK_ALIGN_DIFF_SHORT, HUNK_ALIGN_DIFF_LONG
                 ),
-                &config,
+            )
+            .expect(
+                r#"
+                │ 1  │.........1.........2....      │ 1  │.........1.........2.........+
+                │    │                              │    │3.........4.........5........+
+                │    │                              │    │.6                            "#,
             );
-            let output = strip_ansi_codes(&output);
-            let lines: Vec<_> = output.lines().skip(crate::config::HEADER_LEN).collect();
-            let expected = vec![
-                "│ 1  │.........1.........2....      │ 1  │.........1.........2.........+",
-                "│    │                              │    │3.........4.........5........+",
-                "│    │                              │    │.6                            ",
-            ];
-            assert_eq!(lines, expected);
         }
 
         {
             config.wrap_config.max_lines = 2;
-            let output = run_delta(
+            DeltaTest::with_config_and_input(
+                &config,
                 &format!(
                     "{}-{}+{}",
                     HUNK_ALIGN_DIFF_HEADER, HUNK_ALIGN_DIFF_SHORT, HUNK_ALIGN_DIFF_LONG
                 ),
-                &config,
+            )
+            .expect(
+                r#"
+                │ 1  │.........1.........2....      │ 1  │.........1.........2.........+
+                │    │                              │    │3.........4.........5........>"#,
             );
-            let output = strip_ansi_codes(&output);
-            let lines: Vec<_> = output.lines().skip(crate::config::HEADER_LEN).collect();
-            let expected = vec![
-                "│ 1  │.........1.........2....      │ 1  │.........1.........2.........+",
-                "│    │                              │    │3.........4.........5........>",
-            ];
-            assert_eq!(lines, expected);
         }
     }
 }
