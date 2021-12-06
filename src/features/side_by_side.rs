@@ -174,41 +174,52 @@ pub fn paint_minus_and_plus_lines_side_by_side(
     };
 
     for (minus_line_index, plus_line_index) in line_alignment {
+        let left_state = match minus_line_index {
+            Some(i) => &line_states[Left][i],
+            None => &State::HunkMinus(DiffType::Unified, None),
+        };
         output_buffer.push_str(&paint_left_panel_minus_line(
             minus_line_index,
             &syntax_sections[Left],
             &diff_sections[Left],
             &lines_have_homolog[Left],
-            match minus_line_index {
-                Some(i) => &line_states[Left][i],
-                None => &State::HunkMinus(DiffType::Unified, None),
-            },
+            left_state,
             &mut Some(line_numbers_data),
             bg_should_fill[Left],
             config,
         ));
 
-        // HACK: The left line number is not getting incremented in `linenumbers_and_styles()`
-        // when the alignment matches a minus with a plus line, so fix that here.
-        // This information should be passed down into `paint_line()` to set `increment` to true.
-        if minus_line_index.is_some() && plus_line_index.is_some() {
-            line_numbers_data.line_number[Left] += 1;
-        }
-
+        let right_state = match plus_line_index {
+            Some(i) => &line_states[Right][i],
+            None => &State::HunkPlus(DiffType::Unified, None),
+        };
         output_buffer.push_str(&paint_right_panel_plus_line(
             plus_line_index,
             &syntax_sections[Right],
             &diff_sections[Right],
             &lines_have_homolog[Right],
-            match plus_line_index {
-                Some(i) => &line_states[Right][i],
-                None => &State::HunkPlus(DiffType::Unified, None),
-            },
+            right_state,
             &mut Some(line_numbers_data),
             bg_should_fill[Right],
             config,
         ));
         output_buffer.push('\n');
+
+        // HACK: The left line number is not getting incremented in `linenumbers_and_styles()`
+        // when the alignment matches a minus with a plus line, so fix that here and take
+        // wrapped lines into account.
+        // Similarly an increment happens when it should not, so undo that.
+        // TODO: Pass this information down into `paint_line()` to set `increment` accordingly.
+        match (left_state, right_state, minus_line_index, plus_line_index) {
+            (State::HunkMinusWrapped, State::HunkPlus(_, _), Some(_), None) => {
+                line_numbers_data.line_number[Left] =
+                    line_numbers_data.line_number[Left].saturating_sub(1)
+            }
+            // Duplicating the logic from `linenumbers_and_styles()` a bit:
+            (State::HunkMinusWrapped | State::HunkPlusWrapped, _, _, _) => {}
+            (_, _, Some(_), Some(_)) => line_numbers_data.line_number[Left] += 1,
+            _ => {}
+        }
     }
 }
 
