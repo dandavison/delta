@@ -76,6 +76,7 @@ Code evolves, and we all spend time studying diffs. Delta aims to make this both
   - [diff-highlight and diff-so-fancy emulation](#diff-highlight-and-diff-so-fancy-emulation)
   - [--color-moved support](#--color-moved-support)
   - [Navigation keybindings for large diffs](#navigation-keybindings-for-large-diffs)
+  - [Merge conflicts](#merge-conflicts)
   - [Git blame](#git-blame)
   - [24 bit color (truecolor)](#24-bit-color-truecolor)
   - [Using Delta with GNU Screen](#using-delta-with-gnu-screen)
@@ -187,13 +188,13 @@ In addition, delta handles traditional unified diff output.
 ## Installation
 
 You can download an executable for your system:
-[Linux (glibc)](https://github.com/dandavison/delta/releases/download/0.10.3/delta-0.10.3-x86_64-unknown-linux-gnu.tar.gz)
+[Linux (glibc)](https://github.com/dandavison/delta/releases/download/0.11.0/delta-0.11.0-x86_64-unknown-linux-gnu.tar.gz)
 |
-[Linux (musl)](https://github.com/dandavison/delta/releases/download/0.10.3/delta-0.10.3-x86_64-unknown-linux-musl.tar.gz)
+[Linux (musl)](https://github.com/dandavison/delta/releases/download/0.11.0/delta-0.11.0-x86_64-unknown-linux-musl.tar.gz)
 |
-[MacOS](https://github.com/dandavison/delta/releases/download/0.10.3/delta-0.10.3-x86_64-apple-darwin.tar.gz)
+[MacOS](https://github.com/dandavison/delta/releases/download/0.11.0/delta-0.11.0-x86_64-apple-darwin.tar.gz)
 |
-[Windows](https://github.com/dandavison/delta/releases/download/0.10.3/delta-0.10.3-x86_64-pc-windows-msvc.zip)
+[Windows](https://github.com/dandavison/delta/releases/download/0.11.0/delta-0.11.0-x86_64-pc-windows-msvc.zip)
 |
 [All](https://github.com/dandavison/delta/releases)
 
@@ -548,6 +549,20 @@ Additionally, we can now use the 140 color names that are standard in CSS. Use `
 
 Use the `navigate` feature to activate navigation keybindings. In this mode, pressing `n` will jump forward to the next file in the diff, and `N` will jump backwards. If you are viewing multiple commits (e.g. via `git log -p`) then navigation will also visit commit boundaries.
 
+### Merge conflicts
+
+Please consider setting
+
+```gitconfig
+[merge]
+    conflictstyle = diff3
+```
+With that setting, when a merge conflict is encountered, delta will display diffs between the ancestral commit and each of the two merge parents:
+
+<table><tr><td><img width=500px src="https://user-images.githubusercontent.com/52205/144783121-bb549100-69d8-41b8-ac62-1704f1f7b43e.png" alt="image" /></td></tr></table>
+
+This display can be customized using `merge-conflict-begin-symbol`, `merge-conflict-end-symbol`, `merge-conflict-ours-diff-header-style`, `merge-conflict-ours-diff-header-decoration-style`, `merge-conflict-theirs-diff-header-style`, `merge-conflict-theirs-diff-header-decoration-style`.
+
 ### Git blame
 
 Set delta as the pager for `blame` in the `[pager]` section of your gitconfig: see the [example gitconfig](#get-started).
@@ -715,7 +730,7 @@ and use the executable found at `./target/release/delta`.
 ## Full --help output
 
 ```
-delta 0.10.3
+delta 0.11.0
 A viewer for git and diff output
 
 USAGE:
@@ -851,6 +866,26 @@ OPTIONS:
             Style (foreground, background, attributes) for the hunk-header decoration. See STYLES section. The style
             string should contain one of the special attributes 'box', 'ul' (underline), 'ol' (overline), or the
             combination 'ul ol' [default: blue box]
+        --merge-conflict-begin-symbol <merge-conflict-begin-symbol>
+            A string that is repeated to form the line marking the beginning of a merge conflict region [default:
+            ▼]
+        --merge-conflict-end-symbol <merge-conflict-end-symbol>
+            A string that is repeated to form the line marking the end of a merge conflict region [default: ▲]
+
+        --merge-conflict-ours-diff-header-style <merge-conflict-ours-diff-header-style>
+            Style (foreground, background, attributes) for the header above the diff between the ancestral commit and
+            'our' branch. See STYLES section [default: normal]
+        --merge-conflict-ours-diff-header-decoration-style <merge-conflict-ours-diff-header-decoration-style>
+            Style (foreground, background, attributes) for the decoration of the header above the diff between the
+            ancestral commit and 'our' branch.  See STYLES section. The style string should contain one of the special
+            attributes 'box', 'ul' (underline), 'ol' (overline), or the combination 'ul ol' [default: box]
+        --merge-conflict-theirs-diff-header-style <merge-conflict-theirs-diff-header-style>
+            Style (foreground, background, attributes) for the header above the diff between the ancestral commit and
+            'their' branch. See STYLES section [default: normal]
+        --merge-conflict-theirs-diff-header-decoration-style <merge-conflict-theirs-diff-header-decoration-style>
+            Style (foreground, background, attributes) for the decoration of the header above the diff between the
+            ancestral commit and 'their' branch.  See STYLES section. The style string should contain one of the special
+            attributes 'box', 'ul' (underline), 'ol' (overline), or the combination 'ul ol' [default: box]
         --map-styles <map-styles>
             A string specifying a mapping styles encountered in raw input to desired output styles. An example is --map-
             styles='bold purple => red "#eeeeee", bold cyan => syntax "#eeeeee"'
