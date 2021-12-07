@@ -33,7 +33,7 @@ impl<'a> StateMachine<'a> {
                 | State::HunkZero(_, _)
                 | State::HunkMinus(_, _)
                 | State::HunkPlus(_, _)
-        ) && !&*IS_WORD_DIFF
+        )
     }
 
     /// Handle a hunk line, i.e. a minus line, a plus line, or an unchanged line.
@@ -95,7 +95,12 @@ impl<'a> StateMachine<'a> {
                 // sequence of consecutive minus (removed) and/or plus (added) lines). Process that
                 // subhunk and flush the line buffers.
                 self.painter.paint_buffered_minus_and_plus_lines();
-                let n_parents = diff_type.n_parents();
+                let n_parents = if *IS_WORD_DIFF {
+                    // HACK: WordDiff should probably be a distinct top-level line state
+                    0
+                } else {
+                    diff_type.n_parents()
+                };
                 let line = self.painter.prepare(&self.line, n_parents);
                 let raw_line = self.maybe_raw_line(n_parents, &[]);
                 let state = State::HunkZero(diff_type, raw_line);
@@ -119,8 +124,10 @@ impl<'a> StateMachine<'a> {
     }
 
     fn maybe_raw_line(&self, n_parents: usize, non_raw_styles: &[style::Style]) -> Option<String> {
-        let emit_raw_line = self.config.inspect_raw_lines == cli::InspectRawLines::True
-            && style::line_has_style_other_than(&self.raw_line, non_raw_styles);
+        // HACK: WordDiff should probably be a distinct top-level line state
+        let emit_raw_line = *IS_WORD_DIFF
+            || self.config.inspect_raw_lines == cli::InspectRawLines::True
+                && style::line_has_style_other_than(&self.raw_line, non_raw_styles);
         if emit_raw_line {
             Some(self.painter.prepare_raw_line(&self.raw_line, n_parents))
         } else {
@@ -135,6 +142,11 @@ fn new_line_state(new_line: &str, prev_state: &State) -> Option<State> {
     use DiffType::*;
     use MergeParents::*;
     use State::*;
+
+    if *IS_WORD_DIFF {
+        // HACK: WordDiff should probably be a distinct top-level line state
+        return Some(HunkZero(Unified, None));
+    }
 
     let diff_type = match prev_state {
         HunkMinus(Unified, _)

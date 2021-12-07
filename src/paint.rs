@@ -180,14 +180,21 @@ impl<'p> Painter<'p> {
         let lines = &[(line.to_string(), state.clone())];
         let syntax_style_sections =
             get_syntax_style_sections_for_lines(lines, self.highlighter.as_mut(), self.config);
-        let diff_style_sections = vec![(self.config.zero_style, lines[0].0.as_str())]; // TODO: compute style from state
-
+        let mut diff_style_sections = vec![vec![(self.config.zero_style, lines[0].0.as_str())]]; // TODO: compute style from state
+        Painter::update_styles(
+            lines,
+            &mut diff_style_sections,
+            None,
+            None,
+            &[false],
+            self.config,
+        );
         if self.config.side_by_side {
             // `lines[0].0` so the line has the '\n' already added (as in the +- case)
             side_by_side::paint_zero_lines_side_by_side(
                 &lines[0].0,
                 syntax_style_sections,
-                vec![diff_style_sections],
+                diff_style_sections,
                 &mut self.output_buffer,
                 self.config,
                 &mut self.line_numbers_data.as_mut(),
@@ -198,7 +205,7 @@ impl<'p> Painter<'p> {
             Painter::paint_lines(
                 lines,
                 &syntax_style_sections,
-                &[diff_style_sections],
+                diff_style_sections.as_slice(),
                 &[false],
                 &mut self.output_buffer,
                 self.config,
@@ -564,7 +571,9 @@ impl<'p> Painter<'p> {
             .zip_eq(lines_style_sections)
             .zip_eq(lines_have_homolog)
         {
-            if let State::HunkMinus(_, Some(raw_line)) | State::HunkPlus(_, Some(raw_line)) = state
+            if let State::HunkMinus(_, Some(raw_line))
+            | State::HunkZero(_, Some(raw_line))
+            | State::HunkPlus(_, Some(raw_line)) = state
             {
                 // raw_line is captured in handle_hunk_line under certain conditions. If we have
                 // done so, then overwrite the style sections with styles parsed directly from the
