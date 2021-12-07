@@ -176,12 +176,10 @@ impl<'p> Painter<'p> {
         self.plus_lines.clear();
     }
 
-    pub fn paint_zero_line(&mut self, line: &str, diff_type: DiffType) {
-        let line = self.prepare(line, diff_type.n_parents());
-        let state = State::HunkZero(diff_type);
-        let lines = vec![(line, state.clone())];
+    pub fn paint_zero_line(&mut self, line: &str, state: State) {
+        let lines = &[(line.to_string(), state.clone())];
         let syntax_style_sections =
-            get_syntax_style_sections_for_lines(&lines, self.highlighter.as_mut(), self.config);
+            get_syntax_style_sections_for_lines(lines, self.highlighter.as_mut(), self.config);
         let diff_style_sections = vec![(self.config.zero_style, lines[0].0.as_str())]; // TODO: compute style from state
 
         if self.config.side_by_side {
@@ -198,7 +196,7 @@ impl<'p> Painter<'p> {
             );
         } else {
             Painter::paint_lines(
-                &lines,
+                lines,
                 &syntax_style_sections,
                 &[diff_style_sections],
                 &[false],
