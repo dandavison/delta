@@ -355,7 +355,7 @@ lazy_static! {
     };
 }
 
-pub fn line_has_style_other_than<'a>(line: &str, styles: impl Iterator<Item = &'a Style>) -> bool {
+pub fn line_has_style_other_than(line: &str, styles: &[Style]) -> bool {
     if !ansi::string_starts_with_ansi_style_sequence(line) {
         return false;
     }
@@ -443,38 +443,35 @@ pub mod tests {
         let plus_line_from_unconfigured_git = "\x1b[32m+\x1b[m\x1b[32m____\x1b[m\n";
 
         // Unstyled lines should test negative, regardless of supplied styles.
-        assert!(!line_has_style_other_than("", [].iter()));
-        assert!(!line_has_style_other_than(
-            "",
-            [*GIT_DEFAULT_MINUS_STYLE].iter()
-        ));
+        assert!(!line_has_style_other_than("", &[]));
+        assert!(!line_has_style_other_than("", &[*GIT_DEFAULT_MINUS_STYLE]));
 
         // Lines from git should test negative when corresponding default is supplied
         assert!(!line_has_style_other_than(
             minus_line_from_unconfigured_git,
-            [*GIT_DEFAULT_MINUS_STYLE].iter()
+            &[*GIT_DEFAULT_MINUS_STYLE]
         ));
         assert!(!line_has_style_other_than(
             plus_line_from_unconfigured_git,
-            [*GIT_DEFAULT_PLUS_STYLE].iter()
+            &[*GIT_DEFAULT_PLUS_STYLE]
         ));
 
         // Styled lines should test positive when unless their style is supplied.
         assert!(line_has_style_other_than(
             minus_line_from_unconfigured_git,
-            [*GIT_DEFAULT_PLUS_STYLE].iter()
+            &[*GIT_DEFAULT_PLUS_STYLE]
         ));
         assert!(line_has_style_other_than(
             minus_line_from_unconfigured_git,
-            [].iter()
+            &[]
         ));
         assert!(line_has_style_other_than(
             plus_line_from_unconfigured_git,
-            [*GIT_DEFAULT_MINUS_STYLE].iter()
+            &[*GIT_DEFAULT_MINUS_STYLE]
         ));
         assert!(line_has_style_other_than(
             plus_line_from_unconfigured_git,
-            [].iter()
+            &[]
         ));
     }
 

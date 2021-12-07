@@ -71,36 +71,22 @@ impl<'a> StateMachine<'a> {
                 }
                 let n_parents = diff_type.n_parents();
                 let line = self.painter.prepare(&self.line, n_parents);
-                let state = match self.config.inspect_raw_lines {
-                    cli::InspectRawLines::True
-                        if style::line_has_style_other_than(
-                            &self.raw_line,
-                            [*style::GIT_DEFAULT_MINUS_STYLE, self.config.git_minus_style].iter(),
-                        ) =>
-                    {
-                        let raw_line = self.painter.prepare_raw_line(&self.raw_line, n_parents);
-                        HunkMinus(diff_type, Some(raw_line))
-                    }
-                    _ => HunkMinus(diff_type, None),
-                };
+                let raw_line = self.maybe_raw_line(
+                    n_parents,
+                    &[*style::GIT_DEFAULT_MINUS_STYLE, self.config.git_minus_style],
+                );
+                let state = HunkMinus(diff_type, raw_line);
                 self.painter.minus_lines.push((line, state.clone()));
                 state
             }
             Some(HunkPlus(diff_type, _)) => {
                 let n_parents = diff_type.n_parents();
                 let line = self.painter.prepare(&self.line, n_parents);
-                let state = match self.config.inspect_raw_lines {
-                    cli::InspectRawLines::True
-                        if style::line_has_style_other_than(
-                            &self.raw_line,
-                            [*style::GIT_DEFAULT_PLUS_STYLE, self.config.git_plus_style].iter(),
-                        ) =>
-                    {
-                        let raw_line = self.painter.prepare_raw_line(&self.raw_line, n_parents);
-                        HunkPlus(diff_type, Some(raw_line))
-                    }
-                    _ => HunkPlus(diff_type, None),
-                };
+                let raw_line = self.maybe_raw_line(
+                    n_parents,
+                    &[*style::GIT_DEFAULT_PLUS_STYLE, self.config.git_plus_style],
+                );
+                let state = HunkPlus(diff_type, raw_line);
                 self.painter.plus_lines.push((line, state.clone()));
                 state
             }
@@ -109,8 +95,11 @@ impl<'a> StateMachine<'a> {
                 // sequence of consecutive minus (removed) and/or plus (added) lines). Process that
                 // subhunk and flush the line buffers.
                 self.painter.paint_buffered_minus_and_plus_lines();
-                self.painter.paint_zero_line(&self.line, diff_type.clone());
-                HunkZero(diff_type)
+                let n_parents = diff_type.n_parents();
+                let line = self.painter.prepare(&self.line, n_parents);
+                let state = State::HunkZero(diff_type);
+                self.painter.paint_zero_line(&line, state.clone());
+                state
             }
             _ => {
                 // The first character here could be e.g. '\' from '\ No newline at end of file'. This
@@ -126,6 +115,16 @@ impl<'a> StateMachine<'a> {
         };
         self.painter.emit()?;
         Ok(true)
+    }
+
+    fn maybe_raw_line(&self, n_parents: usize, non_raw_styles: &[style::Style]) -> Option<String> {
+        let emit_raw_line = self.config.inspect_raw_lines == cli::InspectRawLines::True
+            && style::line_has_style_other_than(&self.raw_line, non_raw_styles);
+        if emit_raw_line {
+            Some(self.painter.prepare_raw_line(&self.raw_line, n_parents))
+        } else {
+            None
+        }
     }
 }
 
