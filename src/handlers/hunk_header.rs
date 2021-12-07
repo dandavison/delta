@@ -61,7 +61,7 @@ impl<'a> StateMachine<'a> {
                 }
                 DiffHeader(diff_type)
                 | HunkMinus(diff_type, _)
-                | HunkZero(diff_type)
+                | HunkZero(diff_type, _)
                 | HunkPlus(diff_type, _) => diff_type.clone(),
                 _ => Unified,
             };

@@ -19,9 +19,9 @@ pub enum State {
     CommitMeta,                                             // In commit metadata section
     DiffHeader(DiffType), // In diff metadata section, between (possible) commit metadata and first hunk
     HunkHeader(DiffType, ParsedHunkHeader, String, String), // In hunk metadata line (diff_type, parsed, line, raw_line)
-    HunkZero(DiffType),                                     // In hunk; unchanged line (prefix)
+    HunkZero(DiffType, Option<String>), // In hunk; unchanged line (prefix, raw_line)
     HunkMinus(DiffType, Option<String>), // In hunk; removed line (diff_type, raw_line)
-    HunkPlus(DiffType, Option<String>),  // In hunk; added line (diff_type, raw_line)
+    HunkPlus(DiffType, Option<String>), // In hunk; added line (diff_type, raw_line)
     MergeConflict(MergeParents, merge_conflict::MergeConflictCommit),
     SubmoduleLog, // In a submodule section, with gitconfig diff.submodule = log
     SubmoduleShort(String), // In a submodule section, with gitconfig diff.submodule = short

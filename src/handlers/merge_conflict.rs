@@ -42,7 +42,7 @@ impl<'a> StateMachine<'a> {
         match self.state.clone() {
             HunkHeader(Combined(merge_parents, InMergeConflict::No), _, _, _)
             | HunkMinus(Combined(merge_parents, InMergeConflict::No), _)
-            | HunkZero(Combined(merge_parents, InMergeConflict::No))
+            | HunkZero(Combined(merge_parents, InMergeConflict::No), _)
             | HunkPlus(Combined(merge_parents, InMergeConflict::No), _) => {
                 handled_line = self.enter_merge_conflict(&merge_parents)
             }
@@ -120,7 +120,7 @@ impl<'a> StateMachine<'a> {
 
     fn store_line(&mut self, commit: MergeConflictCommit, state: State) -> bool {
         use State::*;
-        if let HunkMinus(diff_type, _) | HunkZero(diff_type) | HunkPlus(diff_type, _) = &state {
+        if let HunkMinus(diff_type, _) | HunkZero(diff_type, _) | HunkPlus(diff_type, _) = &state {
             let line = self.painter.prepare(&self.line, diff_type.n_parents());
             self.painter.merge_conflict_lines[commit].push((line, state));
             true
@@ -172,7 +172,7 @@ impl<'a> StateMachine<'a> {
             self.config,
         )?;
         self.painter.merge_conflict_lines.clear();
-        self.state = HunkZero(Combined(merge_parents.clone(), InMergeConflict::No));
+        self.state = HunkZero(Combined(merge_parents.clone(), InMergeConflict::No), None);
         Ok(())
     }
 }
