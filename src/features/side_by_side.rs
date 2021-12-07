@@ -234,7 +234,7 @@ pub fn paint_zero_lines_side_by_side<'a>(
     painted_prefix: Option<ansi_term::ANSIString>,
     background_color_extends_to_terminal_width: BgShouldFill,
 ) {
-    let states = vec![State::HunkZero(DiffType::Unified)];
+    let states = vec![State::HunkZero(DiffType::Unified, None)];
 
     let (states, syntax_style_sections, diff_style_sections) = wrap_zero_block(
         config,
@@ -496,7 +496,7 @@ fn pad_panel_line_to_width<'a>(
                 panel_line,
                 Some(" "),
             ),
-            State::HunkZero(_) => {}
+            State::HunkZero(_, _) => {}
             _ => unreachable!(),
         };
     };

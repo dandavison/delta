@@ -1543,7 +1543,7 @@ src/align.rs:71: impl<'a> Alignment<'a> { │
             1,
             "        for (i, x_i) in self.x.iter().enumerate() {",
             "rs",
-            State::HunkZero(DiffType::Unified),
+            State::HunkZero(DiffType::Unified, None),
             &config,
         );
     }

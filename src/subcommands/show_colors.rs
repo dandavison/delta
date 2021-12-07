@@ -45,7 +45,7 @@ pub fn show_colors() -> std::io::Result<()> {
                 painter.syntax_highlight_and_paint_line(
                     line,
                     paint::StyleSectionSpecifier::Style(style),
-                    delta::State::HunkZero(DiffType::Unified),
+                    delta::State::HunkZero(DiffType::Unified, None),
                     BgShouldFill::default(),
                 )
             }
@@ -64,7 +64,7 @@ pub fn show_colors() -> std::io::Result<()> {
                 painter.syntax_highlight_and_paint_line(
                     line,
                     paint::StyleSectionSpecifier::Style(style),
-                    delta::State::HunkZero(DiffType::Unified),
+                    delta::State::HunkZero(DiffType::Unified, None),
                     BgShouldFill::default(),
                 )
             }

@@ -81,7 +81,7 @@ pub fn linenumbers_and_styles<'a>(
             ((Some(nr_left), None), (minus_style, plus_style))
         }
         State::HunkMinusWrapped => ((None, None), (minus_style, plus_style)),
-        State::HunkZero(_) => {
+        State::HunkZero(_, _) => {
             line_numbers_data.line_number[Left] += increment as usize;
             line_numbers_data.line_number[Right] += increment as usize;
             ((Some(nr_left), Some(nr_right)), (zero_style, zero_style))

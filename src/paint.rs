@@ -326,7 +326,7 @@ impl<'p> Painter<'p> {
                     config.minus_style
                 }
             }
-            State::HunkZero(_) | State::HunkZeroWrapped => config.zero_style,
+            State::HunkZero(_, None) | State::HunkZeroWrapped => config.zero_style,
             State::HunkPlus(_, None) | State::HunkPlusWrapped => {
                 if let Some(true) = line_has_homolog {
                     config.plus_non_emph_style
@@ -334,7 +334,9 @@ impl<'p> Painter<'p> {
                     config.plus_style
                 }
             }
-            State::HunkMinus(_, Some(_)) | State::HunkPlus(_, Some(_)) => {
+            State::HunkMinus(_, Some(_))
+            | State::HunkZero(_, Some(_))
+            | State::HunkPlus(_, Some(_)) => {
                 // Consider the following raw line, from git colorMoved:
                 // ␛[1;36m+␛[m␛[1;36mclass·X:·pass␛[m␊ The last style section returned by
                 // parse_style_sections will be a default style associated with the terminal newline
@@ -470,14 +472,16 @@ impl<'p> Painter<'p> {
                     || config.minus_emph_style.is_syntax_highlighted
                     || config.minus_non_emph_style.is_syntax_highlighted
             }
-            State::HunkZero(_) => config.zero_style.is_syntax_highlighted,
+            State::HunkZero(_, None) => config.zero_style.is_syntax_highlighted,
             State::HunkPlus(_, None) => {
                 config.plus_style.is_syntax_highlighted
                     || config.plus_emph_style.is_syntax_highlighted
                     || config.plus_non_emph_style.is_syntax_highlighted
             }
             State::HunkHeader(_, _, _, _) => true,
-            State::HunkMinus(_, Some(_raw_line)) | State::HunkPlus(_, Some(_raw_line)) => {
+            State::HunkMinus(_, Some(_raw_line))
+            | State::HunkZero(_, Some(_raw_line))
+            | State::HunkPlus(_, Some(_raw_line)) => {
                 // It is possible that the captured raw line contains an ANSI
                 // style that has been mapped (via map-styles) to a delta Style
                 // with syntax-highlighting.
@@ -728,7 +732,7 @@ fn painted_prefix(state: State, config: &config::Config) -> Option<ANSIString> {
         (HunkMinus(Combined(MergeParents::Prefix(prefix), InMergeConflict::No), _), _) => {
             Some(config.minus_style.paint(prefix))
         }
-        (HunkZero(Combined(MergeParents::Prefix(prefix), InMergeConflict::No)), _) => {
+        (HunkZero(Combined(MergeParents::Prefix(prefix), InMergeConflict::No), _), _) => {
             Some(config.zero_style.paint(prefix))
         }
         (HunkPlus(Combined(MergeParents::Prefix(prefix), InMergeConflict::No), _), _) => {
@@ -736,7 +740,7 @@ fn painted_prefix(state: State, config: &config::Config) -> Option<ANSIString> {
         }
         // But otherwise we honor keep_plus_minus_markers
         (HunkMinus(_, _), true) => Some(config.minus_style.paint("-".to_string())),
-        (HunkZero(_), true) => Some(config.zero_style.paint(" ".to_string())),
+        (HunkZero(_, _), true) => Some(config.zero_style.paint(" ".to_string())),
         (HunkPlus(_, _), true) => Some(config.plus_style.paint("+".to_string())),
         _ => None,
     }

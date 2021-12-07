@@ -30,7 +30,7 @@ impl<'a> StateMachine<'a> {
         matches!(
             self.state,
             State::HunkHeader(_, _, _, _)
-                | State::HunkZero(_)
+                | State::HunkZero(_, _)
                 | State::HunkMinus(_, _)
                 | State::HunkPlus(_, _)
         ) && !&*IS_WORD_DIFF
@@ -90,14 +90,15 @@ impl<'a> StateMachine<'a> {
                 self.painter.plus_lines.push((line, state.clone()));
                 state
             }
-            Some(HunkZero(diff_type)) => {
+            Some(HunkZero(diff_type, _)) => {
                 // We are in a zero (unchanged) line, therefore we have just exited a subhunk (a
                 // sequence of consecutive minus (removed) and/or plus (added) lines). Process that
                 // subhunk and flush the line buffers.
                 self.painter.paint_buffered_minus_and_plus_lines();
                 let n_parents = diff_type.n_parents();
                 let line = self.painter.prepare(&self.line, n_parents);
-                let state = State::HunkZero(diff_type);
+                let raw_line = self.maybe_raw_line(n_parents, &[]);
+                let state = State::HunkZero(diff_type, raw_line);
                 self.painter.paint_zero_line(&line, state.clone());
                 state
             }
@@ -110,7 +111,7 @@ impl<'a> StateMachine<'a> {
                     .output_buffer
                     .push_str(&self.painter.expand_tabs(self.raw_line.graphemes(true)));
                 self.painter.output_buffer.push('\n');
-                State::HunkZero(Unified)
+                State::HunkZero(Unified, None)
             }
         };
         self.painter.emit()?;
@@ -137,7 +138,7 @@ fn new_line_state(new_line: &str, prev_state: &State) -> Option<State> {
 
     let diff_type = match prev_state {
         HunkMinus(Unified, _)
-        | HunkZero(Unified)
+        | HunkZero(Unified, _)
         | HunkPlus(Unified, _)
         | HunkHeader(Unified, _, _, _) => Unified,
         HunkHeader(Combined(Number(n), InMergeConflict::No), _, _, _) => {
@@ -149,12 +150,12 @@ fn new_line_state(new_line: &str, prev_state: &State) -> Option<State> {
             Combined(Number(prefix.len()), InMergeConflict::No)
         }
         HunkMinus(Combined(Prefix(prefix), in_merge_conflict), _)
-        | HunkZero(Combined(Prefix(prefix), in_merge_conflict))
+        | HunkZero(Combined(Prefix(prefix), in_merge_conflict), _)
         | HunkPlus(Combined(Prefix(prefix), in_merge_conflict), _) => {
             Combined(Number(prefix.len()), in_merge_conflict.clone())
         }
         HunkMinus(Combined(Number(n), in_merge_conflict), _)
-        | HunkZero(Combined(Number(n), in_merge_conflict))
+        | HunkZero(Combined(Number(n), in_merge_conflict), _)
         | HunkPlus(Combined(Number(n), in_merge_conflict), _) => {
             Combined(Number(*n), in_merge_conflict.clone())
         }
@@ -186,13 +187,13 @@ fn new_line_state(new_line: &str, prev_state: &State) -> Option<State> {
 
     match (prefix_char, prefix, in_merge_conflict) {
         (Some('-'), None, None) => Some(HunkMinus(Unified, None)),
-        (Some(' '), None, None) => Some(HunkZero(Unified)),
+        (Some(' '), None, None) => Some(HunkZero(Unified, None)),
         (Some('+'), None, None) => Some(HunkPlus(Unified, None)),
         (Some('-'), Some(prefix), Some(in_merge_conflict)) => {
             Some(HunkMinus(Combined(Prefix(prefix), in_merge_conflict), None))
         }
         (Some(' '), Some(prefix), Some(in_merge_conflict)) => {
-            Some(HunkZero(Combined(Prefix(prefix), in_merge_conflict)))
+            Some(HunkZero(Combined(Prefix(prefix), in_merge_conflict), None))
         }
         (Some('+'), Some(prefix), Some(in_merge_conflict)) => {
             Some(HunkPlus(Combined(Prefix(prefix), in_merge_conflict), None))
