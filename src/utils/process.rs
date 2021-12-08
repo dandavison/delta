@@ -275,16 +275,11 @@ trait ProcessInterface {
         self.refresh_process(sibling_pid).then(|| ())?;
         self.process(sibling_pid)
     }
-    #[cfg(test)]
-    fn find_sibling_process<F, T>(&mut self, pid: Pid, extract_args: F) -> Option<T>
+    fn find_sibling_in_refreshed_processes<F, T>(&mut self, pid: Pid, extract_args: &F) -> Option<T>
     where
         F: Fn(&[String]) -> ProcessArgs<T>,
         Self: Sized,
     {
-        self.refresh_processes();
-
-        let this_start_time = self.process(pid)?.start_time();
-
         /*
 
         $ start_blame_of.sh src/main.rs | delta
@@ -302,6 +297,8 @@ trait ProcessInterface {
         Find the common ancestor processes, calculate the distance, and select the one with the shortest.
 
         */
+
+        let this_start_time = self.process(pid)?.start_time();
 
         let mut pid_distances = HashMap::<Pid, usize>::new();
         let mut collect_parent_pids = |pid, distance| {
@@ -407,7 +404,8 @@ where
     started, so no command line can be parsed. Same if the data was piped from an input file.
 
     There might also be intermediary scripts in between or piped input with a gap in pids or (rarely)
-    randomized pids, so check all processes for the closest match in the process tree.
+    randomized pids, so check processes for the closest match in the process tree.
+    The size of this process tree can be reduced by only refreshing selected processes.
 
     100 /usr/bin/some-terminal-emulator
     124  \_ -shell
@@ -426,19 +424,31 @@ where
     567  |       \_ less --RAW-CONTROL-CHARS --quit-if-one-screen
 
     */
-    #[cfg(test)]
-    {
-        info.find_sibling_process(my_pid, extract_args)
+
+    let pid_range = my_pid.saturating_sub(10)..my_pid.saturating_add(20);
+    for p in pid_range.clone() {
+        // Processes which were not refreshed do not exist for sysinfo, so by selectively
+        // letting it know about processes the `find_sibling..` function will only
+        // consider these.
+        info.refresh_process(p);
     }
-    #[cfg(not(test))]
-    {
-        None
+
+    match info.find_sibling_in_refreshed_processes(my_pid, &extract_args) {
+        None => {
+            #[cfg(test)]
+            {
+                info.refresh_processes();
+                info.find_sibling_in_refreshed_processes(my_pid, &extract_args)
+            }
+            #[cfg(not(test))]
+            None
+        }
+        some => some,
     }
 }
 
 // Walk up the process tree, calling `f` with the pid and the distance to `starting_pid`.
 // Prerequisite: `info.refresh_processes()` has been called.
-#[cfg(test)]
 fn iter_parents<P, F>(info: &P, starting_pid: Pid, f: F)
 where
     P: ProcessInterface,
