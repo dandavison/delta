@@ -275,6 +275,7 @@ trait ProcessInterface {
         self.refresh_process(sibling_pid).then(|| ())?;
         self.process(sibling_pid)
     }
+    #[cfg(test)]
     fn find_sibling_process<F, T>(&mut self, pid: Pid, extract_args: F) -> Option<T>
     where
         F: Fn(&[String]) -> ProcessArgs<T>,
@@ -425,11 +426,19 @@ where
     567  |       \_ less --RAW-CONTROL-CHARS --quit-if-one-screen
 
     */
-    info.find_sibling_process(my_pid, extract_args)
+    #[cfg(test)]
+    {
+        info.find_sibling_process(my_pid, extract_args)
+    }
+    #[cfg(not(test))]
+    {
+        None
+    }
 }
 
 // Walk up the process tree, calling `f` with the pid and the distance to `starting_pid`.
 // Prerequisite: `info.refresh_processes()` has been called.
+#[cfg(test)]
 fn iter_parents<P, F>(info: &P, starting_pid: Pid, f: F)
 where
     P: ProcessInterface,
