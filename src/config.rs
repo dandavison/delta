@@ -306,7 +306,6 @@ impl From<cli::Opt> for Config {
             ),
             line_numbers_zero_style: styles["line-numbers-zero-style"],
             line_buffer_size: opt.line_buffer_size,
-            styles_map,
             max_line_distance: opt.max_line_distance,
             max_line_distance_for_naively_paired_lines,
             max_line_length: match (opt.side_by_side, wrap_max_lines_plus1) {
@@ -353,6 +352,7 @@ impl From<cli::Opt> for Config {
             show_themes: opt.show_themes,
             side_by_side: opt.side_by_side,
             side_by_side_data,
+            styles_map,
             syntax_dummy_theme: SyntaxTheme::default(),
             syntax_set: opt.computed.syntax_set,
             syntax_theme: opt.computed.syntax_theme,
