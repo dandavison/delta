@@ -10,7 +10,7 @@ use crate::utils::process::{self, CallingProcess};
 use unicode_segmentation::UnicodeSegmentation;
 
 lazy_static! {
-    static ref IS_WORD_DIFF: bool = match process::calling_process().as_deref() {
+    pub static ref IS_WORD_DIFF: bool = match process::calling_process().as_deref() {
         Some(
             CallingProcess::GitDiff(cmd_line)
             | CallingProcess::GitShow(cmd_line, _)

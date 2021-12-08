@@ -17,6 +17,7 @@ use crate::fatal;
 use crate::features::navigate;
 use crate::features::side_by_side::{self, ansifill, LeftRight};
 use crate::git_config::{GitConfig, GitConfigEntry};
+use crate::handlers;
 use crate::minusplus::MinusPlus;
 use crate::paint::BgFillMethod;
 use crate::parse_styles;
@@ -291,7 +292,7 @@ impl From<cli::Opt> for Config {
             } else {
                 line_fill_method
             },
-            line_numbers: opt.line_numbers,
+            line_numbers: opt.line_numbers && !*handlers::hunk::IS_WORD_DIFF,
             line_numbers_format: LeftRight::new(
                 opt.line_numbers_left_format,
                 opt.line_numbers_right_format,
@@ -350,7 +351,7 @@ impl From<cli::Opt> for Config {
             git_plus_style: styles["git-plus-style"],
             relative_paths: opt.relative_paths,
             show_themes: opt.show_themes,
-            side_by_side: opt.side_by_side,
+            side_by_side: opt.side_by_side && !*handlers::hunk::IS_WORD_DIFF,
             side_by_side_data,
             styles_map,
             syntax_dummy_theme: SyntaxTheme::default(),
