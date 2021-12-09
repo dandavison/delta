@@ -1007,9 +1007,10 @@ OPTIONS:
             How to extend the background color to the end of the line in side-by-side mode. Can be ansi (default) or
             spaces (default if output is not to a terminal). Has no effect if --width=variable is given
     -w, --width <width>
-            The width of underline/overline decorations. Examples: "72" (exactly 72 characters), Use --width=variable to
-            extend decorations and background colors to the end of the text only. Otherwise background colors extend to
-            the full terminal width
+            The width of underline/overline decorations. Examples: "72" (exactly 72 characters), "-2" (auto-detected
+            terminal width minus 2). An expression such as "74-2" is also valid (equivalent to 72 but may be useful if
+            the caller has a variable holding the value "74"). Use --width=variable to extend decorations and background
+            colors to the end of the text only. Otherwise background colors extend to the full terminal width
         --diff-stat-align-width <diff-stat-align-width>
             Width allocated for file paths in a diff stat section. If a relativized file path exceeds this width then
             the diff stat will be misaligned [default: 48]
