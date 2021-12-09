@@ -674,8 +674,8 @@ pub struct Opt {
     pub line_fill_method: Option<String>,
 
     /// The width of underline/overline decorations. Examples: "72" (exactly 72 characters),
-    // "-2" (auto-detected terminal width minus 2). An expression such as "74-2" is also valid
-    // (equivalent to 72 but may be useful if the caller has a variable holding the value "74").
+    /// "-2" (auto-detected terminal width minus 2). An expression such as "74-2" is also valid
+    /// (equivalent to 72 but may be useful if the caller has a variable holding the value "74").
     /// Use --width=variable to extend decorations and background colors to the end of the text
     /// only. Otherwise background colors extend to the full terminal width.
     #[structopt(short = "w", long = "width")]
