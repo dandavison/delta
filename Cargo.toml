@@ -54,7 +54,7 @@ features = ["parsing", "assets", "yaml-load", "dump-load", "regex-onig"]
 
 [dependencies.sysinfo]
 git = "https://github.com/GuillaumeGomez/sysinfo"
-branch = "specific-process-update"
+branch = "fixes"
 # no default features to disable the use of threads
 default-features = false
 features = []
