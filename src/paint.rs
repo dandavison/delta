@@ -7,6 +7,7 @@ use syntect::easy::HighlightLines;
 use syntect::highlighting::Style as SyntectStyle;
 use syntect::parsing::{SyntaxReference, SyntaxSet};
 use unicode_segmentation::UnicodeSegmentation;
+use unicode_width::UnicodeWidthStr;
 
 use crate::config::{self, delta_unreachable, Config};
 use crate::delta::{DiffType, InMergeConflict, MergeParents, State};
@@ -156,9 +157,25 @@ impl<'p> Painter<'p> {
         I: Iterator<Item = &'a str>,
     {
         if self.config.tab_width > 0 {
-            let tab_replacement = " ".repeat(self.config.tab_width);
-            line.map(|s| if s == "\t" { &tab_replacement } else { s })
-                .collect::<String>()
+            // We could use with_capacity(), but any performance increase is negligible.
+            let mut buf = String::new();
+            let mut cum_width: usize = 0;
+
+            for mut s in line {
+                while let Some(index) = s.find('\t') {
+                    let chunk = &s[0..index];
+                    buf.push_str(chunk);
+                    cum_width += chunk.width();
+                    let num_spaces = self.config.tab_width - (cum_width % self.config.tab_width);
+                    buf.push_str(&*" ".repeat(num_spaces));
+                    cum_width += num_spaces;
+
+                    s = &s[index + 1..s.len()];
+                }
+                cum_width += s.width();
+                buf.push_str(s);
+            }
+            buf
         } else {
             line.collect::<String>()
         }
@@ -855,6 +872,100 @@ fn is_whitespace_error(sections: &[(Style, &str)]) -> bool {
         }
     }
     false
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::tests::integration_test_utils;
+
+    fn test_expand_tabs(config_args: &[&str], input: &str) -> String {
+        let mut unused_buf = Vec::<u8>::new();
+        let cfg = integration_test_utils::make_config_from_args(config_args);
+        let painter = Painter::new(&mut unused_buf, &cfg);
+        let iter = input.graphemes(true);
+        // Since expand_tabs() returns its expansion, it's simpler to look at that than the buffer
+        // the painter is writing to.
+        painter.expand_tabs(iter)
+    }
+
+    #[test]
+    fn no_tabs() {
+        let result = test_expand_tabs(&[], "junk");
+        assert_eq!(result, "junk");
+    }
+
+    #[test]
+    fn just_a_tab() {
+        let result = test_expand_tabs(&[], "\t");
+        assert_eq!(result, "    ");
+    }
+
+    #[test]
+    fn no_expansion_leading() {
+        let result = test_expand_tabs(&["--tabs=0"], "\tjunk");
+        assert_eq!(result, "\tjunk");
+    }
+
+    #[test]
+    fn no_expansion_embedded() {
+        let result = test_expand_tabs(&["--tabs=0"], "12\tjunk");
+        assert_eq!(result, "12\tjunk");
+    }
+
+    #[test]
+    fn leading_tab() {
+        let result = test_expand_tabs(&[], "\tjunk");
+        assert_eq!(result, "    junk");
+    }
+
+    #[test]
+    fn leading_tab8() {
+        let result = test_expand_tabs(&["--tabs=8"], "\tjunk");
+        assert_eq!(result, "        junk");
+    }
+
+    #[test]
+    fn embedded_tab() {
+        let result = test_expand_tabs(&[], "12\tjunk");
+        assert_eq!(result, "12  junk");
+    }
+
+    #[test]
+    fn embedded_tab_one_space() {
+        let result = test_expand_tabs(&[], "123\tjunk");
+        assert_eq!(result, "123 junk");
+    }
+
+    #[test]
+    fn embedded_tab_next_tabstop() {
+        let result = test_expand_tabs(&[], "1234\tjunk");
+        assert_eq!(result, "1234    junk");
+    }
+
+    #[test]
+    fn embedded_tab_double_width() {
+        let result = test_expand_tabs(&[], "\u{2329}\tjunk");
+        assert_eq!(result, "\u{2329}  junk");
+    }
+
+    #[test]
+    fn embedded_tab_combining() {
+        let result = test_expand_tabs(&[], "o\u{0300}\tjunk");
+        assert_eq!(result, "o\u{0300}   junk");
+    }
+
+    #[test]
+    #[ignore]
+    fn embedded_tab_zwj() {
+        // These represent: the emoji for "woman", a zero-width joiner, and the emoji for
+        // "microscope".  Both emoji are wide characters.  Together, they represent the emoji for
+        // "woman scientist", and would be combined into a single character, also wide.  But the
+        // unicode-width crate doesn't handle that, even though a terminal emulator might.  The
+        // test is ignored until this changes, if it ever does.
+        let result = test_expand_tabs(&[], "\u{01f469}\u{200d}\u{01f52c}\tjunk");
+        assert_eq!(result, "\u{01f469}\u{200d}\u{01f52c}  junk");
+    }
 }
 
 mod superimpose_style_sections {
