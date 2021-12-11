@@ -1,7 +1,7 @@
 use std::borrow::Cow;
 use std::collections::{HashMap, HashSet};
 use std::path::Path;
-use sysinfo::{Pid, Process, ProcessExt, SystemExt};
+use sysinfo::{Pid, Process, ProcessExt, ProcessRefreshKind, SystemExt};
 
 use lazy_static::lazy_static;
 
@@ -347,7 +347,8 @@ impl ProcessInterface for ProcInfo {
         std::process::id() as Pid
     }
     fn refresh_process(&mut self, pid: Pid) -> bool {
-        self.info.refresh_process(pid)
+        self.info
+            .refresh_process_specifics(pid, ProcessRefreshKind::new())
     }
     fn process(&self, pid: Pid) -> Option<&Self::Out> {
         self.info.process(pid)
@@ -356,7 +357,8 @@ impl ProcessInterface for ProcInfo {
         self.info.processes()
     }
     fn refresh_processes(&mut self) {
-        self.info.refresh_processes()
+        self.info
+            .refresh_processes_specifics(ProcessRefreshKind::new())
     }
 }
 
