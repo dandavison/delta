@@ -245,6 +245,28 @@ mod tests {
                 );
         }
 
+        #[test]
+        #[ignore] // FIXME
+        fn test_color_words_map_styles() {
+            DeltaTest::with(&[
+                "--map-styles='red => bold yellow #dddddd, green => bold blue #dddddd'",
+            ])
+            .with_calling_process("git diff --color-words")
+            .with_input(GIT_DIFF_COLOR_WORDS)
+            .explain_ansi()
+            .inspect()
+            .expect_skip(
+                11,
+                r##"
+#indent_mark
+(blue)───(blue)┐(normal)
+(blue)1(normal): (blue)│(normal)
+(blue)───(blue)┘(normal)
+    (bold yellow "#dddddd")aaa(bold blue "#dddddd")bbb(normal)
+"##,
+            );
+        }
+
         const GIT_DIFF_COLOR_WORDS: &str = r#"\
 [33mcommit 6feea4949c20583aaf16eee84f38d34d6a7f1741[m
 Author: Dan Davison <dandavison7@gmail.com>
