@@ -89,7 +89,7 @@ pub fn set_options(
     }
 
     let features = gather_features(opt, &builtin_features, git_config);
-    opt.features = features.join(" ");
+    opt.features = Some(features.join(" "));
 
     // Set light, dark, and syntax-theme.
     set__light__dark__syntax_theme__options(opt, git_config, arg_matches, &option_names);
@@ -324,19 +324,33 @@ fn set__light__dark__syntax_theme__options(
 // [delta "d"]
 //     features = f e
 fn gather_features(
-    opt: &cli::Opt,
+    opt: &mut cli::Opt,
     builtin_features: &HashMap<String, features::BuiltinFeature>,
     git_config: &Option<GitConfig>,
 ) -> Vec<String> {
+    let from_env_var = env::get_env_var("DELTA_FEATURES");
+    let from_args = opt.features.as_deref().unwrap_or("");
+    let input_features: Vec<&str> = match from_env_var.as_deref() {
+        Some(from_env_var) if from_env_var.starts_with('+') => from_env_var[1..]
+            .split_whitespace()
+            .chain(split_feature_string(from_args))
+            .collect(),
+        Some(from_env_var) => {
+            opt.features = Some(from_env_var.to_string());
+            split_feature_string(from_env_var).collect()
+        }
+        None => split_feature_string(from_args).collect(),
+    };
+
     let mut features = VecDeque::new();
 
     // Gather features from command line.
     if let Some(git_config) = git_config {
-        for feature in split_feature_string(&opt.features) {
+        for feature in input_features {
             gather_features_recursively(feature, &mut features, builtin_features, opt, git_config);
         }
     } else {
-        for feature in split_feature_string(&opt.features) {
+        for feature in input_features {
             features.push_front(feature.to_string());
         }
     }
@@ -370,7 +384,7 @@ fn gather_features(
 
     if let Some(git_config) = git_config {
         // Gather features from [delta] section if --features was not passed.
-        if opt.features.is_empty() {
+        if opt.features.is_none() {
             if let Some(feature_string) = git_config.get::<String>("delta.features") {
                 for feature in split_feature_string(&feature_string) {
                     gather_features_recursively(
@@ -739,7 +753,11 @@ pub mod tests {
         // TODO: should set_options not be called on any feature flags?
         // assert_eq!(opt.diff_highlight, true);
         // assert_eq!(opt.diff_so_fancy, true);
-        assert!(opt.features.split_whitespace().any(|s| s == "xxxyyyzzz"));
+        assert!(opt
+            .features
+            .unwrap()
+            .split_whitespace()
+            .any(|s| s == "xxxyyyzzz"));
         assert_eq!(opt.file_added_label, "xxxyyyzzz");
         assert_eq!(opt.file_decoration_style, "black black");
         assert_eq!(opt.file_modified_label, "xxxyyyzzz");
