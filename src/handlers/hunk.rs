@@ -201,3 +201,82 @@ fn new_line_state(new_line: &str, prev_state: &State) -> Option<State> {
         _ => None,
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use crate::tests::integration_test_utils::DeltaTest;
+    use crate::utils::process::tests::FakeParentArgs;
+
+    mod word_diff {
+        use super::*;
+
+        #[test]
+        fn test_word_diff() {
+            let _args = FakeParentArgs::for_scope("git diff --word-diff");
+
+            DeltaTest::with(&[])
+                .with_input(GIT_DIFF_WORD_DIFF)
+                .explain_ansi()
+                .inspect()
+                .expect_skip(
+                    11,
+                    "
+#indent_mark
+(blue)───(blue)┐(normal)
+(blue)1(normal): (blue)│(normal)
+(blue)───(blue)┘(normal)
+    (red)[-aaa-](green){+bbb+}(normal)
+",
+                );
+        }
+
+        #[test]
+        fn test_color_words() {
+            let _args = FakeParentArgs::for_scope("git diff --color-words");
+
+            DeltaTest::with(&[])
+                .with_input(GIT_DIFF_COLOR_WORDS)
+                .explain_ansi()
+                .expect_skip(
+                    11,
+                    "
+#indent_mark
+(blue)───(blue)┐(normal)
+(blue)1(normal): (blue)│(normal)
+(blue)───(blue)┘(normal)
+    (red)aaa(green)bbb(normal)
+",
+                );
+        }
+
+        const GIT_DIFF_COLOR_WORDS: &str = r#"\
+[33mcommit 6feea4949c20583aaf16eee84f38d34d6a7f1741[m
+Author: Dan Davison <dandavison7@gmail.com>
+Date:   Sat Dec 11 17:08:56 2021 -0500
+
+    file v2
+
+[1mdiff --git a/file b/file[m
+[1mindex c005da6..962086f 100644[m
+[1m--- a/file[m
+[1m+++ b/file[m
+[31m@@ -1 +1 @@[m
+    [31maaa[m[32mbbb[m
+"#;
+
+        const GIT_DIFF_WORD_DIFF: &str = r#"\
+[33mcommit 6feea4949c20583aaf16eee84f38d34d6a7f1741[m
+Author: Dan Davison <dandavison7@gmail.com>
+Date:   Sat Dec 11 17:08:56 2021 -0500
+
+    file v2
+
+[1mdiff --git a/file b/file[m
+[1mindex c005da6..962086f 100644[m
+[1m--- a/file[m
+[1m+++ b/file[m
+[31m@@ -1 +1 @@[m
+    [31m[-aaa-][m[32m{+bbb+}[m
+"#;
+    }
+}
