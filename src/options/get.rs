@@ -79,18 +79,20 @@ pub trait GetOptionValue {
                 return Some(value);
             }
         }
-        for feature in opt.features.split_whitespace().rev() {
-            match Self::get_provenanced_value_for_feature(
-                option_name,
-                feature,
-                builtin_features,
-                opt,
-                git_config,
-            ) {
-                Some(GitConfigValue(value)) | Some(DefaultValue(value)) => {
-                    return Some(value.into());
+        if let Some(features) = &opt.features {
+            for feature in features.split_whitespace().rev() {
+                match Self::get_provenanced_value_for_feature(
+                    option_name,
+                    feature,
+                    builtin_features,
+                    opt,
+                    git_config,
+                ) {
+                    Some(GitConfigValue(value)) | Some(DefaultValue(value)) => {
+                        return Some(value.into());
+                    }
+                    None => {}
                 }
-                None => {}
             }
         }
         None
@@ -296,6 +298,44 @@ pub mod tests {
             Some(git_config_path),
         );
         assert_eq!(opt.max_line_distance, 0.7);
+
+        remove_file(git_config_path).unwrap();
+    }
+
+    #[test]
+    #[ignore] // FIXME
+    fn test_delta_features_env_var() {
+        let git_config_contents = b"
+[delta]
+    features = feature-from-gitconfig
+";
+        let git_config_path = "delta__test_delta_features_env_var.gitconfig";
+
+        let opt = integration_test_utils::make_options_from_args_and_git_config(
+            &[],
+            Some(git_config_contents),
+            Some(git_config_path),
+        );
+        assert_eq!(opt.features.unwrap(), "feature-from-gitconfig");
+        assert_eq!(opt.side_by_side, false);
+
+        env::set_var("DELTA_FEATURES", "side-by-side");
+        let opt = integration_test_utils::make_options_from_args_and_git_config(
+            &[],
+            Some(git_config_contents),
+            Some(git_config_path),
+        );
+        assert_eq!(opt.features.unwrap(), "side-by-side");
+        assert_eq!(opt.side_by_side, true);
+
+        env::set_var("DELTA_FEATURES", "+side-by-side");
+        let opt = integration_test_utils::make_options_from_args_and_git_config(
+            &[],
+            Some(git_config_contents),
+            Some(git_config_path),
+        );
+        assert_eq!(opt.features.unwrap(), "side-by-side feature-from-gitconfig");
+        assert_eq!(opt.side_by_side, true);
 
         remove_file(git_config_path).unwrap();
     }

@@ -103,7 +103,12 @@ pub mod tests {
         let mut args = vec!["delta".to_string()];
         args.extend(builtin_features.keys().map(|s| format!("--{}", s)));
         let opt = cli::Opt::from_iter_and_git_config(args, None);
-        let features: HashSet<&str> = opt.features.split_whitespace().collect();
+        let features: HashSet<&str> = opt
+            .features
+            .as_deref()
+            .unwrap_or("")
+            .split_whitespace()
+            .collect();
         for feature in builtin_features.keys() {
             assert!(features.contains(feature.as_str()))
         }
@@ -123,7 +128,8 @@ pub mod tests {
                 Some(git_config_contents),
                 Some(git_config_path)
             )
-            .features,
+            .features
+            .unwrap(),
             "navigate"
         );
 
@@ -145,7 +151,8 @@ pub mod tests {
                 Some(git_config_contents),
                 Some(git_config_path),
             )
-            .features,
+            .features
+            .unwrap(),
             "navigate raw"
         );
         assert_eq!(
@@ -154,7 +161,8 @@ pub mod tests {
                 Some(git_config_contents),
                 Some(git_config_path),
             )
-            .features,
+            .features
+            .unwrap(),
             "navigate raw"
         );
 
@@ -175,7 +183,8 @@ pub mod tests {
                 Some(git_config_contents),
                 Some(git_config_path),
             )
-            .features,
+            .features
+            .unwrap(),
             "my-feature navigate raw"
         );
 
@@ -204,7 +213,8 @@ pub mod tests {
                 Some(git_config_contents),
                 Some(git_config_path),
             )
-            .features,
+            .features
+            .unwrap(),
             "raw diff-so-fancy f e d diff-highlight c b a"
         );
 
@@ -232,7 +242,10 @@ pub mod tests {
             Some(git_config_contents),
             Some(git_config_path),
         );
-        assert_eq!(opt.features, "feature-4 feature-2 feature-3 feature-1");
+        assert_eq!(
+            opt.features.unwrap(),
+            "feature-4 feature-2 feature-3 feature-1"
+        );
 
         remove_file(git_config_path).unwrap();
     }

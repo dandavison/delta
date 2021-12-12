@@ -320,10 +320,10 @@ pub struct Opt {
     pub color_only: bool,
 
     ////////////////////////////////////////////////////////////////////////////////////////////
-    #[structopt(long = "features", default_value = "", env = "DELTA_FEATURES")]
+    #[structopt(long = "features")]
     /// Name of delta features to use (space-separated). A feature is a named collection of delta
     /// options in ~/.gitconfig. See FEATURES section.
-    pub features: String,
+    pub features: Option<String>,
 
     #[structopt(long = "syntax-theme", env = "BAT_THEME")]
     /// The code syntax-highlighting theme to use. Use --show-syntax-themes to demo available
