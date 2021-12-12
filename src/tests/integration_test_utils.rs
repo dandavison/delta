@@ -12,6 +12,7 @@ use crate::cli;
 use crate::config;
 use crate::delta::delta;
 use crate::git_config::GitConfig;
+use crate::utils::process::tests::FakeParentArgs;
 
 pub fn make_options_from_args_and_git_config(
     args: &[&str],
@@ -127,12 +128,14 @@ pub fn lines_match(expected: &str, have: &str, skip: Option<usize>) {
 
 pub struct DeltaTest {
     config: config::Config,
+    calling_process: Option<String>,
 }
 
 impl DeltaTest {
     pub fn with(args: &[&str]) -> Self {
         Self {
             config: make_config_from_args(args),
+            calling_process: None,
         }
     }
 
@@ -144,6 +147,11 @@ impl DeltaTest {
         self
     }
 
+    pub fn with_calling_process(mut self, command: &str) -> Self {
+        self.calling_process = Some(command.to_string());
+        self
+    }
+
     pub fn with_config_and_input(config: &config::Config, input: &str) -> DeltaTestOutput {
         DeltaTestOutput {
             output: run_delta(input, &config),
@@ -152,6 +160,7 @@ impl DeltaTest {
     }
 
     pub fn with_input(&self, input: &str) -> DeltaTestOutput {
+        let _args = FakeParentArgs::for_scope(self.calling_process.as_deref().unwrap_or(""));
         DeltaTest::with_config_and_input(&self.config, input)
     }
 }
