@@ -292,7 +292,7 @@ impl From<cli::Opt> for Config {
             } else {
                 line_fill_method
             },
-            line_numbers: opt.line_numbers && !*handlers::hunk::IS_WORD_DIFF,
+            line_numbers: opt.line_numbers && !handlers::hunk::is_word_diff(),
             line_numbers_format: LeftRight::new(
                 opt.line_numbers_left_format,
                 opt.line_numbers_right_format,
@@ -351,7 +351,7 @@ impl From<cli::Opt> for Config {
             git_plus_style: styles["git-plus-style"],
             relative_paths: opt.relative_paths,
             show_themes: opt.show_themes,
-            side_by_side: opt.side_by_side && !*handlers::hunk::IS_WORD_DIFF,
+            side_by_side: opt.side_by_side && !handlers::hunk::is_word_diff(),
             side_by_side_data,
             styles_map,
             syntax_dummy_theme: SyntaxTheme::default(),

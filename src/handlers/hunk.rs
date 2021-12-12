@@ -9,19 +9,36 @@ use crate::style;
 use crate::utils::process::{self, CallingProcess};
 use unicode_segmentation::UnicodeSegmentation;
 
+// HACK: WordDiff should probably be a distinct top-level line state
+pub fn is_word_diff() -> bool {
+    #[cfg(not(test))]
+    {
+        *CACHED_IS_WORD_DIFF
+    }
+    #[cfg(test)]
+    {
+        compute_is_word_diff()
+    }
+}
+
 lazy_static! {
-    pub static ref IS_WORD_DIFF: bool = match process::calling_process().as_deref() {
+    static ref CACHED_IS_WORD_DIFF: bool = compute_is_word_diff();
+}
+
+fn compute_is_word_diff() -> bool {
+    match process::calling_process().as_deref() {
         Some(
             CallingProcess::GitDiff(cmd_line)
             | CallingProcess::GitShow(cmd_line, _)
             | CallingProcess::GitLog(cmd_line)
             | CallingProcess::GitReflog(cmd_line),
-        ) =>
+        ) => {
             cmd_line.long_options.contains("--word-diff")
                 || cmd_line.long_options.contains("--word-diff-regex")
-                || cmd_line.long_options.contains("--color-words"),
+                || cmd_line.long_options.contains("--color-words")
+        }
         _ => false,
-    };
+    }
 }
 
 impl<'a> StateMachine<'a> {
@@ -95,8 +112,7 @@ impl<'a> StateMachine<'a> {
                 // sequence of consecutive minus (removed) and/or plus (added) lines). Process that
                 // subhunk and flush the line buffers.
                 self.painter.paint_buffered_minus_and_plus_lines();
-                let n_parents = if *IS_WORD_DIFF {
-                    // HACK: WordDiff should probably be a distinct top-level line state
+                let n_parents = if is_word_diff() {
                     0
                 } else {
                     diff_type.n_parents()
@@ -124,8 +140,7 @@ impl<'a> StateMachine<'a> {
     }
 
     fn maybe_raw_line(&self, n_parents: usize, non_raw_styles: &[style::Style]) -> Option<String> {
-        // HACK: WordDiff should probably be a distinct top-level line state
-        let emit_raw_line = *IS_WORD_DIFF
+        let emit_raw_line = is_word_diff()
             || self.config.inspect_raw_lines == cli::InspectRawLines::True
                 && style::line_has_style_other_than(&self.raw_line, non_raw_styles);
         if emit_raw_line {
@@ -143,8 +158,7 @@ fn new_line_state(new_line: &str, prev_state: &State) -> Option<State> {
     use MergeParents::*;
     use State::*;
 
-    if *IS_WORD_DIFF {
-        // HACK: WordDiff should probably be a distinct top-level line state
+    if is_word_diff() {
         return Some(HunkZero(Unified, None));
     }
 
