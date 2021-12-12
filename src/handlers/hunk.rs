@@ -205,19 +205,16 @@ fn new_line_state(new_line: &str, prev_state: &State) -> Option<State> {
 #[cfg(test)]
 mod tests {
     use crate::tests::integration_test_utils::DeltaTest;
-    use crate::utils::process::tests::FakeParentArgs;
 
     mod word_diff {
         use super::*;
 
         #[test]
         fn test_word_diff() {
-            let _args = FakeParentArgs::for_scope("git diff --word-diff");
-
             DeltaTest::with(&[])
+                .with_calling_process("git diff --word-diff")
                 .with_input(GIT_DIFF_WORD_DIFF)
                 .explain_ansi()
-                .inspect()
                 .expect_skip(
                     11,
                     "
@@ -232,9 +229,8 @@ mod tests {
 
         #[test]
         fn test_color_words() {
-            let _args = FakeParentArgs::for_scope("git diff --color-words");
-
             DeltaTest::with(&[])
+                .with_calling_process("git diff --color-words")
                 .with_input(GIT_DIFF_COLOR_WORDS)
                 .explain_ansi()
                 .expect_skip(
