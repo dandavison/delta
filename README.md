@@ -721,14 +721,15 @@ and use the executable found at `./target/release/delta`.
 
 ### Similar projects
 
+- [banga/git-split-diffs](https://github.com/banga/git-split-diffs)
 - [da-x/fancydiff](https://github.com/da-x/fancydiff)
 - [git/diff-highlight](https://github.com/git/git/tree/master/contrib/diff-highlight)
-- [banga/git-split-diffs](https://github.com/banga/git-split-diffs)
 - [jeffkaufman/icdiff](https://github.com/jeffkaufman/icdiff)
 - [kovidgoyal/kitty-diff](https://sw.kovidgoyal.net/kitty/kittens/diff.html)
 - [mookid/diffr](https://github.com/mookid/diffr)
 - [nkouevda/pdiff](https://github.com/nkouevda/pdiff)
 - [so-fancy/diff-so-fancy](https://github.com/so-fancy/diff-so-fancy)
+- [Wilfred/difftastic](https://github.com/Wilfred/difftastic)
 
 ## Full --help output
 
