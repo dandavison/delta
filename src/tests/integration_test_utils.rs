@@ -93,7 +93,7 @@ pub fn get_line_of_code_from_delta(
 //     line1"#;`  // line 2 etc.
 // ignore the first newline and compare the following `lines()` to those produced
 // by `have`, `skip`-ping the first few. The leading spaces of the first line
-// are strippedfrom every following line (and verified) , unless the first line
+// are stripped from every following line (and verified), unless the first line
 // marks the indentation level with `#indent_mark`.
 pub fn lines_match(expected: &str, have: &str, skip: Option<usize>) {
     let mut exp = expected.lines().peekable();
@@ -163,11 +163,7 @@ pub struct DeltaTestOutput {
 
 impl DeltaTestOutput {
     pub fn inspect(self) -> Self {
-        if self.explain_ansi_ {
-            eprintln!("{}", ansi::explain_ansi(&self.output, true));
-        } else {
-            eprintln!("{}", &self.output);
-        }
+        eprintln!("{}", self.format_output());
         self
     }
 
@@ -177,19 +173,21 @@ impl DeltaTestOutput {
     }
 
     pub fn expect_skip(self, skip: usize, expected: &str) -> String {
-        let processed = if self.explain_ansi_ {
-            ansi::explain_ansi(&self.output, false)
-        } else {
-            ansi::strip_ansi_codes(&self.output)
-        };
-
+        let processed = self.format_output();
         lines_match(expected, &processed, Some(skip));
-
         processed
     }
 
     pub fn expect(self, expected: &str) -> String {
         self.expect_skip(crate::config::HEADER_LEN, expected)
+    }
+
+    fn format_output(&self) -> String {
+        if self.explain_ansi_ {
+            ansi::explain_ansi(&self.output, false)
+        } else {
+            ansi::strip_ansi_codes(&self.output)
+        }
     }
 }
 
