@@ -212,13 +212,15 @@ fn write_merge_conflict_bar(
     painter: &mut paint::Painter,
     config: &config::Config,
 ) -> std::io::Result<()> {
-    if let cli::Width::Fixed(width) = config.decorations_width {
-        writeln!(
-            painter.writer,
-            "{}",
-            &s.graphemes(true).cycle().take(width).join("")
-        )?;
-    }
+    let width = match config.decorations_width {
+        cli::Width::Fixed(width) => width,
+        cli::Width::Variable => config.available_terminal_width,
+    };
+    writeln!(
+        painter.writer,
+        "{}",
+        &s.graphemes(true).cycle().take(width).join("")
+    )?;
     Ok(())
 }
 
