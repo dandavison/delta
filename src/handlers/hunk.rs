@@ -175,6 +175,9 @@ fn new_line_state(new_line: &str, prev_state: &State) -> Option<State> {
         return Some(HunkZero(Unified, None));
     }
 
+    // 1. Given the previous line state, compute the new line diff type. These are basically the
+    //    same, except that a string prefix is converted into an integer number of parents (prefix
+    //    length).
     let diff_type = match prev_state {
         HunkMinus(Unified, _)
         | HunkZero(Unified, _)
@@ -204,6 +207,7 @@ fn new_line_state(new_line: &str, prev_state: &State) -> Option<State> {
         )),
     };
 
+    // 2. Given the new diff state, and the new line, compute the new prefix.
     let (prefix_char, prefix, in_merge_conflict) = match diff_type {
         Unified => (new_line.chars().next(), None, None),
         Combined(Number(n_parents), in_merge_conflict) => {
@@ -224,6 +228,8 @@ fn new_line_state(new_line: &str, prev_state: &State) -> Option<State> {
         _ => delta_unreachable(""),
     };
 
+    // 3. Given the new prefix, compute the full new line state...except without its raw_line, which
+    //    is added later. TODO: that is not a sensible design.
     match (prefix_char, prefix, in_merge_conflict) {
         (Some('-'), None, None) => Some(HunkMinus(Unified, None)),
         (Some(' '), None, None) => Some(HunkZero(Unified, None)),
