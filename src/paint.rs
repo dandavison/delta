@@ -124,34 +124,6 @@ impl<'p> Painter<'p> {
         };
     }
 
-    /// Remove initial -/+ character, expand tabs as spaces, and terminate with newline.
-    // Terminating with newline character is necessary for many of the sublime syntax definitions to
-    // highlight correctly.
-    // See https://docs.rs/syntect/3.2.0/syntect/parsing/struct.SyntaxSetBuilder.html#method.add_from_folder
-    pub fn prepare(&self, line: &str, prefix_length: usize) -> String {
-        if !line.is_empty() {
-            // The prefix contains -/+/space characters, added by git. We removes them now so they
-            // are not present during syntax highlighting or wrapping. If --keep-plus-minus-markers
-            // is in effect the prefix is re-inserted in Painter::paint_line.
-            let line = line.graphemes(true).skip(prefix_length);
-            format!("{}\n", expand_tabs(line, self.config.tab_width))
-        } else {
-            "\n".to_string()
-        }
-    }
-
-    // Remove initial -/+ characters, expand tabs as spaces, retaining ANSI sequences. Terminate with
-    // newline character.
-    pub fn prepare_raw_line(&self, raw_line: &str, prefix_length: usize) -> String {
-        format!(
-            "{}\n",
-            ansi::ansi_preserving_slice(
-                &expand_tabs(raw_line.graphemes(true), self.config.tab_width),
-                prefix_length
-            ),
-        )
-    }
-
     pub fn paint_buffered_minus_and_plus_lines(&mut self) {
         paint_minus_and_plus_lines(
             MinusPlus::new(&self.minus_lines, &self.plus_lines),
@@ -595,6 +567,34 @@ impl<'p> Painter<'p> {
             }
         }
     }
+}
+
+/// Remove initial -/+ character, expand tabs as spaces, and terminate with newline.
+// Terminating with newline character is necessary for many of the sublime syntax definitions to
+// highlight correctly.
+// See https://docs.rs/syntect/3.2.0/syntect/parsing/struct.SyntaxSetBuilder.html#method.add_from_folder
+pub fn prepare(line: &str, prefix_length: usize, config: &config::Config) -> String {
+    if !line.is_empty() {
+        // The prefix contains -/+/space characters, added by git. We removes them now so they
+        // are not present during syntax highlighting or wrapping. If --keep-plus-minus-markers
+        // is in effect the prefix is re-inserted in Painter::paint_line.
+        let line = line.graphemes(true).skip(prefix_length);
+        format!("{}\n", expand_tabs(line, config.tab_width))
+    } else {
+        "\n".to_string()
+    }
+}
+
+// Remove initial -/+ characters, expand tabs as spaces, retaining ANSI sequences. Terminate with
+// newline character.
+pub fn prepare_raw_line(raw_line: &str, prefix_length: usize, config: &config::Config) -> String {
+    format!(
+        "{}\n",
+        ansi::ansi_preserving_slice(
+            &expand_tabs(raw_line.graphemes(true), config.tab_width),
+            prefix_length
+        ),
+    )
 }
 
 /// Expand tabs as spaces.

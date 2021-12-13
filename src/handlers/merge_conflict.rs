@@ -8,7 +8,7 @@ use crate::cli;
 use crate::config::{self, delta_unreachable};
 use crate::delta::{DiffType, InMergeConflict, MergeParents, State, StateMachine};
 use crate::minusplus::MinusPlus;
-use crate::paint;
+use crate::paint::{self, prepare};
 use crate::style::Style;
 
 #[derive(Clone, Debug, PartialEq)]
@@ -121,7 +121,7 @@ impl<'a> StateMachine<'a> {
     fn store_line(&mut self, commit: MergeConflictCommit, state: State) -> bool {
         use State::*;
         if let HunkMinus(diff_type, _) | HunkZero(diff_type, _) | HunkPlus(diff_type, _) = &state {
-            let line = self.painter.prepare(&self.line, diff_type.n_parents());
+            let line = prepare(&self.line, diff_type.n_parents(), self.config);
             self.painter.merge_conflict_lines[commit].push((line, state));
             true
         } else {
