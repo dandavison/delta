@@ -148,13 +148,14 @@ impl<'a> StateMachine<'a> {
     // Return Some(prepared_raw_line) if delta should emit this line raw.
     fn maybe_raw_line(
         &self,
-        _state: State,
+        state: State,
         n_parents: usize,
         non_raw_styles: &[style::Style],
     ) -> Option<String> {
         let emit_raw_line = is_word_diff()
             || self.config.inspect_raw_lines == cli::InspectRawLines::True
-                && style::line_has_style_other_than(&self.raw_line, non_raw_styles);
+                && style::line_has_style_other_than(&self.raw_line, non_raw_styles)
+            || self.config.get_style(&state).is_raw;
         if emit_raw_line {
             Some(self.painter.prepare_raw_line(&self.raw_line, n_parents))
         } else {
