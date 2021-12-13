@@ -92,7 +92,8 @@ impl<'a> StateMachine<'a> {
                 }
                 let n_parents = diff_type.n_parents();
                 let line = prepare(&self.line, n_parents, self.config);
-                let raw_line = self.maybe_raw_line(
+                let raw_line = maybe_raw_line(
+                    &self.raw_line,
                     self.config.minus_style.is_raw,
                     n_parents,
                     &[*style::GIT_DEFAULT_MINUS_STYLE, self.config.git_minus_style],
@@ -105,7 +106,8 @@ impl<'a> StateMachine<'a> {
             Some(HunkPlus(diff_type, _)) => {
                 let n_parents = diff_type.n_parents();
                 let line = prepare(&self.line, n_parents, self.config);
-                let raw_line = self.maybe_raw_line(
+                let raw_line = maybe_raw_line(
+                    &self.raw_line,
                     self.config.plus_style.is_raw,
                     n_parents,
                     &[*style::GIT_DEFAULT_PLUS_STYLE, self.config.git_plus_style],
@@ -126,8 +128,13 @@ impl<'a> StateMachine<'a> {
                     diff_type.n_parents()
                 };
                 let line = prepare(&self.line, n_parents, self.config);
-                let raw_line =
-                    self.maybe_raw_line(self.config.zero_style.is_raw, n_parents, &[], self.config); // TODO
+                let raw_line = maybe_raw_line(
+                    &self.raw_line,
+                    self.config.zero_style.is_raw,
+                    n_parents,
+                    &[],
+                    self.config,
+                ); // TODO
                 let state = State::HunkZero(diff_type, raw_line);
                 self.painter.paint_zero_line(&line, state.clone());
                 state
@@ -148,24 +155,24 @@ impl<'a> StateMachine<'a> {
         self.painter.emit()?;
         Ok(true)
     }
+}
 
-    // Return Some(prepared_raw_line) if delta should emit this line raw.
-    fn maybe_raw_line(
-        &self,
-        state_style_is_raw: bool,
-        n_parents: usize,
-        non_raw_styles: &[style::Style],
-        config: &Config,
-    ) -> Option<String> {
-        let emit_raw_line = is_word_diff()
-            || self.config.inspect_raw_lines == cli::InspectRawLines::True
-                && style::line_has_style_other_than(&self.raw_line, non_raw_styles)
-            || state_style_is_raw;
-        if emit_raw_line {
-            Some(prepare_raw_line(&self.raw_line, n_parents, config))
-        } else {
-            None
-        }
+// Return Some(prepared_raw_line) if delta should emit this line raw.
+fn maybe_raw_line(
+    raw_line: &str,
+    state_style_is_raw: bool,
+    n_parents: usize,
+    non_raw_styles: &[style::Style],
+    config: &Config,
+) -> Option<String> {
+    let emit_raw_line = is_word_diff()
+        || config.inspect_raw_lines == cli::InspectRawLines::True
+            && style::line_has_style_other_than(raw_line, non_raw_styles)
+        || state_style_is_raw;
+    if emit_raw_line {
+        Some(prepare_raw_line(raw_line, n_parents, config))
+    } else {
+        None
     }
 }
 
