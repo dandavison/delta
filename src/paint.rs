@@ -134,7 +134,7 @@ impl<'p> Painter<'p> {
             // are not present during syntax highlighting or wrapping. If --keep-plus-minus-markers
             // is in effect the prefix is re-inserted in Painter::paint_line.
             let line = line.graphemes(true).skip(prefix_length);
-            format!("{}\n", self.expand_tabs(line))
+            format!("{}\n", expand_tabs(line, self.config.tab_width))
         } else {
             "\n".to_string()
         }
@@ -145,23 +145,11 @@ impl<'p> Painter<'p> {
     pub fn prepare_raw_line(&self, raw_line: &str, prefix_length: usize) -> String {
         format!(
             "{}\n",
-            ansi::ansi_preserving_slice(&self.expand_tabs(raw_line.graphemes(true)), prefix_length),
+            ansi::ansi_preserving_slice(
+                &expand_tabs(raw_line.graphemes(true), self.config.tab_width),
+                prefix_length
+            ),
         )
-    }
-
-    /// Expand tabs as spaces.
-    /// tab_width = 0 is documented to mean do not replace tabs.
-    pub fn expand_tabs<'a, I>(&self, line: I) -> String
-    where
-        I: Iterator<Item = &'a str>,
-    {
-        if self.config.tab_width > 0 {
-            let tab_replacement = " ".repeat(self.config.tab_width);
-            line.map(|s| if s == "\t" { &tab_replacement } else { s })
-                .collect::<String>()
-        } else {
-            line.collect::<String>()
-        }
     }
 
     pub fn paint_buffered_minus_and_plus_lines(&mut self) {
@@ -296,7 +284,10 @@ impl<'p> Painter<'p> {
         state: State,
         background_color_extends_to_terminal_width: BgShouldFill,
     ) {
-        let lines = vec![(self.expand_tabs(line.graphemes(true)), state)];
+        let lines = vec![(
+            expand_tabs(line.graphemes(true), self.config.tab_width),
+            state,
+        )];
         let syntax_style_sections =
             get_syntax_style_sections_for_lines(&lines, self.highlighter.as_mut(), self.config);
         let diff_style_sections = match style_sections {
@@ -603,6 +594,21 @@ impl<'p> Painter<'p> {
                 }
             }
         }
+    }
+}
+
+/// Expand tabs as spaces.
+/// tab_width = 0 is documented to mean do not replace tabs.
+pub fn expand_tabs<'a, I>(line: I, tab_width: usize) -> String
+where
+    I: Iterator<Item = &'a str>,
+{
+    if tab_width > 0 {
+        let tab_replacement = " ".repeat(tab_width);
+        line.map(|s| if s == "\t" { &tab_replacement } else { s })
+            .collect::<String>()
+    } else {
+        line.collect::<String>()
     }
 }
 

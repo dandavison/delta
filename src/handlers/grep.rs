@@ -8,7 +8,7 @@ use unicode_segmentation::UnicodeSegmentation;
 use crate::ansi;
 use crate::delta::{State, StateMachine};
 use crate::handlers::{self, ripgrep_json};
-use crate::paint::{self, BgShouldFill, StyleSectionSpecifier};
+use crate::paint::{self, expand_tabs, BgShouldFill, StyleSectionSpecifier};
 use crate::style::Style;
 use crate::utils::process;
 
@@ -139,10 +139,11 @@ impl<'a> StateMachine<'a> {
                                     // (At the time of writing, we are in this
                                     // arm iff we are handling `ripgrep --json`
                                     // output.)
-                                    grep_line.code = self
-                                        .painter
-                                        .expand_tabs(grep_line.code.graphemes(true))
-                                        .into();
+                                    grep_line.code = paint::expand_tabs(
+                                        grep_line.code.graphemes(true),
+                                        self.config.tab_width,
+                                    )
+                                    .into();
                                     make_style_sections(
                                         &grep_line.code,
                                         submatches,
@@ -157,8 +158,10 @@ impl<'a> StateMachine<'a> {
                                     // enough. But at the point it is guaranteed
                                     // that this handler is going to handle this
                                     // line, so mutating it is acceptable.
-                                    self.raw_line =
-                                        self.painter.expand_tabs(self.raw_line.graphemes(true));
+                                    self.raw_line = expand_tabs(
+                                        self.raw_line.graphemes(true),
+                                        self.config.tab_width,
+                                    );
                                     get_code_style_sections(
                                         &self.raw_line,
                                         self.config.grep_match_word_style,
