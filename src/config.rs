@@ -152,6 +152,7 @@ impl Config {
     pub fn get_style(&self, state: &State) -> &Style {
         match state {
             State::HunkMinus(_, _) => &self.minus_style,
+            State::HunkZero(_, _) => &self.zero_style,
             State::HunkPlus(_, _) => &self.plus_style,
             State::CommitMeta => &self.commit_style,
             State::DiffHeader(_) => &self.file_style,
