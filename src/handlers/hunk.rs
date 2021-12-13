@@ -79,7 +79,7 @@ impl<'a> StateMachine<'a> {
         if let State::HunkHeader(_, parsed_hunk_header, line, raw_line) = &self.state.clone() {
             self.emit_hunk_header_line(parsed_hunk_header, line, raw_line)?;
         }
-        // TODO: The following code is pretty convoluted currently and has been volving. It may be
+        // TODO: The following code is pretty convoluted currently and has been evolving. It may be
         // heading for (state, line | raw_line) to be held together in an enum variant representing
         // a line.
         self.state = match new_line_state(&self.line, &self.state) {
@@ -148,7 +148,7 @@ impl<'a> StateMachine<'a> {
     // Return Some(prepared_raw_line) if delta should emit this line raw.
     fn maybe_raw_line(
         &self,
-        state: State,
+        _state: State,
         n_parents: usize,
         non_raw_styles: &[style::Style],
     ) -> Option<String> {
