@@ -171,9 +171,21 @@ pub struct DeltaTestOutput {
 }
 
 impl DeltaTestOutput {
+    /// Print output, either without ANSI escape sequences or, if explain_ansi() has been called,
+    /// with ASCII explanation of ANSI escape sequences.
+    #[allow(unused)]
     pub fn inspect(self) -> Self {
         eprintln!("{}", "▼".repeat(100));
         eprintln!("{}", self.format_output());
+        eprintln!("{}", "▲".repeat(100));
+        self
+    }
+
+    /// Print raw output, with any ANSI escape sequences.
+    #[allow(unused)]
+    pub fn inspect_raw(self) -> Self {
+        eprintln!("{}", "▼".repeat(100));
+        eprintln!("{}", self.output);
         eprintln!("{}", "▲".repeat(100));
         self
     }
