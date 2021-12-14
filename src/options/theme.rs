@@ -119,12 +119,11 @@ fn valid_syntax_theme_name_or_none(
 
 #[cfg(test)]
 mod tests {
-    use std::env;
-
     use super::*;
     use crate::color;
     use crate::tests::integration_test_utils;
 
+    // TODO: Test influence of BAT_THEME env var. E.g. see utils::process::tests::FakeParentArgs.
     #[test]
     fn test_syntax_theme_selection() {
         #[derive(PartialEq)]
@@ -134,52 +133,35 @@ mod tests {
         }
         for (
             syntax_theme,
-            bat_theme_env_var,
             mode, // (--light, --dark)
             expected_syntax_theme,
             expected_mode,
         ) in vec![
-            (None, "", None, DEFAULT_DARK_SYNTAX_THEME, Mode::Dark),
-            (Some("GitHub"), "", None, "GitHub", Mode::Light),
-            (Some("GitHub"), "1337", None, "GitHub", Mode::Light),
-            (None, "1337", None, "1337", Mode::Dark),
+            (None, None, DEFAULT_DARK_SYNTAX_THEME, Mode::Dark),
+            (Some("GitHub"), None, "GitHub", Mode::Light),
+            (Some("GitHub"), None, "GitHub", Mode::Light),
             (
                 None,
-                "<not set>",
-                None,
-                DEFAULT_DARK_SYNTAX_THEME,
-                Mode::Dark,
-            ),
-            (
-                None,
-                "",
                 Some(Mode::Light),
                 DEFAULT_LIGHT_SYNTAX_THEME,
                 Mode::Light,
             ),
             (
                 None,
-                "",
                 Some(Mode::Dark),
                 DEFAULT_DARK_SYNTAX_THEME,
                 Mode::Dark,
             ),
             (
                 None,
-                "<@@@@@>",
                 Some(Mode::Light),
                 DEFAULT_LIGHT_SYNTAX_THEME,
                 Mode::Light,
             ),
-            (None, "GitHub", Some(Mode::Light), "GitHub", Mode::Light),
-            (Some("none"), "", None, "none", Mode::Dark),
-            (Some("None"), "", Some(Mode::Light), "none", Mode::Light),
+            (None, Some(Mode::Light), "GitHub", Mode::Light),
+            (Some("none"), None, "none", Mode::Dark),
+            (Some("None"), Some(Mode::Light), "none", Mode::Light),
         ] {
-            if bat_theme_env_var == "<not set>" {
-                env::remove_var("BAT_THEME")
-            } else {
-                env::set_var("BAT_THEME", bat_theme_env_var);
-            }
             let mut args = vec![];
             if let Some(syntax_theme) = syntax_theme {
                 args.push("--syntax-theme");

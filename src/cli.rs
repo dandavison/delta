@@ -325,7 +325,7 @@ pub struct Opt {
     /// options in ~/.gitconfig. See FEATURES section.
     pub features: Option<String>,
 
-    #[structopt(long = "syntax-theme", env = "BAT_THEME")]
+    #[structopt(long = "syntax-theme")]
     /// The code syntax-highlighting theme to use. Use --show-syntax-themes to demo available
     /// themes. If the syntax-highlighting theme is not set using this option, it will be taken
     /// from the BAT_THEME environment variable, if that contains a valid theme name.

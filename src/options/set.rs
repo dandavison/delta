@@ -76,6 +76,9 @@ pub fn set_options(
         set_git_config_entries(opt, git_config);
     }
     opt.navigate = opt.navigate || env::get_boolean_env_var("DELTA_NAVIGATE");
+    if opt.syntax_theme.is_none() {
+        opt.syntax_theme = env::get_env_var("BAT_THEME")
+    }
 
     let option_names = cli::Opt::get_option_names();
 
