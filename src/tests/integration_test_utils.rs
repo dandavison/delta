@@ -172,7 +172,9 @@ pub struct DeltaTestOutput {
 
 impl DeltaTestOutput {
     pub fn inspect(self) -> Self {
+        eprintln!("{}", "▼".repeat(100));
         eprintln!("{}", self.format_output());
+        eprintln!("{}", "▲".repeat(100));
         self
     }
 
