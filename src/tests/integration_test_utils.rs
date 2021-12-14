@@ -306,7 +306,6 @@ ignored!  2
             .set_cfg(|c| c.pager = None)
             .set_cfg(|c| c.line_numbers = true)
             .with_input(input)
-            .inspect()
             .expect_skip(
                 0,
                 r#"
@@ -316,20 +315,16 @@ ignored!  2
                      ⋮ 1  │+2"#,
             );
 
-        DeltaTest::with(&[])
-            .with_input(input)
-            .inspect()
-            .expect_skip(
-                4,
-                r#"
+        DeltaTest::with(&[]).with_input(input).expect_skip(
+            4,
+            r#"
                 1
                 2"#,
-            );
+        );
 
         DeltaTest::with(&["--raw"])
             .with_input(input)
             .explain_ansi()
-            .inspect()
             .expect_skip(
                 0,
                 "\n\
