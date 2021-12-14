@@ -642,7 +642,6 @@ pub mod tests {
     }
 
     #[test]
-    #[ignore]
     fn test_two_plus_lines_spaces_and_ansi() {
         DeltaTest::with(&[
             "--side-by-side",
