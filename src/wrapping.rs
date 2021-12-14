@@ -474,7 +474,7 @@ pub fn wrap_minusplus_block<'c: 'a, 'a>(
 #[allow(clippy::comparison_chain, clippy::type_complexity)]
 pub fn wrap_zero_block<'c: 'a, 'a>(
     config: &'c Config,
-    raw_line: &str,
+    line: &str,
     mut states: Vec<State>,
     syntax_style_sections: Vec<LineSections<'a, SyntectStyle>>,
     diff_style_sections: Vec<LineSections<'a, Style>>,
@@ -501,7 +501,7 @@ pub fn wrap_zero_block<'c: 'a, 'a>(
     // If that changes the wrapping logic should be updated as well.
     debug_assert_eq!(diff_style_sections.len(), 1);
 
-    let should_wrap = line_is_too_long(raw_line, line_width);
+    let should_wrap = line_is_too_long(line, line_width);
 
     if should_wrap {
         let syntax_style = wrap_line(
