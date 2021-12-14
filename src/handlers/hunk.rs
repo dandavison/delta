@@ -288,7 +288,8 @@ mod tests {
         #[ignore] // FIXME
         fn test_color_words_map_styles() {
             DeltaTest::with(&[
-                "--map-styles='red => bold yellow #dddddd, green => bold blue #dddddd'",
+                "--map-styles",
+                "red => bold yellow #dddddd, green => bold blue #dddddd",
             ])
             .with_calling_process("git diff --color-words")
             .with_input(GIT_DIFF_COLOR_WORDS)
