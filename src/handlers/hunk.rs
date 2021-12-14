@@ -306,6 +306,57 @@ mod tests {
             );
         }
 
+        #[test]
+        fn test_hunk_line_style_raw() {
+            DeltaTest::with(&["--minus-style", "raw", "--plus-style", "raw"])
+                .with_input(GIT_DIFF_WITH_COLOR)
+                .explain_ansi()
+                .expect_skip(
+                    14,
+                    "
+(red)aaa(normal)
+(green)bbb(normal)
+",
+                );
+        }
+
+        #[test]
+        fn test_hunk_line_style_raw_map_styles() {
+            DeltaTest::with(&[
+                "--minus-style",
+                "raw",
+                "--plus-style",
+                "raw",
+                "--map-styles",
+                "red => bold blue, green => dim yellow",
+            ])
+            .with_input(GIT_DIFF_WITH_COLOR)
+            .explain_ansi()
+            .expect_skip(
+                14,
+                "
+(bold blue)aaa(normal)
+(dim yellow)bbb(normal)
+",
+            );
+        }
+
+        const GIT_DIFF_WITH_COLOR: &str = r#"\
+[33mcommit 3ef7fba7258fe473f1d8befff367bb793c786107[m
+Author: Dan Davison <dandavison7@gmail.com>
+Date:   Mon Dec 13 22:54:43 2021 -0500
+
+    753 Test file
+
+[1mdiff --git a/file b/file[m
+[1mindex 72943a1..f761ec1 100644[m
+[1m--- a/file[m
+[1m+++ b/file[m
+[31m@@ -1 +1 @@[m
+[31m-aaa[m
+[32m+[m[32mbbb[m
+"#;
+
         const GIT_DIFF_COLOR_WORDS: &str = r#"\
 [33mcommit 6feea4949c20583aaf16eee84f38d34d6a7f1741[m
 Author: Dan Davison <dandavison7@gmail.com>
