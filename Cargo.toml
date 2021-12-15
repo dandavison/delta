@@ -43,7 +43,7 @@ vte = "0.10.1"
 xdg = "2.4.0"
 
 [dependencies.git2]
-version = "0.13.23"
+version = "0.13.25"
 default-features = false
 features = []
 
