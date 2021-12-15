@@ -53,8 +53,7 @@ default-features = false
 features = ["parsing", "assets", "yaml-load", "dump-load", "regex-onig"]
 
 [dependencies.sysinfo]
-git = "https://github.com/GuillaumeGomez/sysinfo"
-rev = "d647acfbf216848a8237e1f9251b2c48860a547f"
+version = "0.22.2"
 # no default features to disable the use of threads
 default-features = false
 features = []
