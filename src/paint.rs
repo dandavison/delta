@@ -141,7 +141,7 @@ impl<'p> Painter<'p> {
         let syntax_style_sections =
             get_syntax_style_sections_for_lines(lines, self.highlighter.as_mut(), self.config);
         let mut diff_style_sections = vec![vec![(self.config.zero_style, lines[0].0.as_str())]]; // TODO: compute style from state
-        Painter::update_styles(
+        Painter::update_diff_style_sections(
             lines,
             &mut diff_style_sections,
             None,
@@ -490,40 +490,8 @@ impl<'p> Painter<'p> {
     ///    computed diff styles with these styles from the raw line. (This is
     ///    how support for git's --color-moved is implemented.)
     fn update_diff_style_sections<'a>(
-        lines: &MinusPlus<&'a Vec<(String, State)>>,
-        lines_style_sections: &mut MinusPlus<Vec<LineSections<'a, Style>>>,
-        lines_have_homolog: &MinusPlus<Vec<bool>>,
-        config: &config::Config,
-    ) {
-        Self::update_styles(
-            lines[Minus],
-            &mut lines_style_sections[Minus],
-            None,
-            if config.minus_non_emph_style != config.minus_emph_style {
-                Some(config.minus_non_emph_style)
-            } else {
-                None
-            },
-            &lines_have_homolog[Minus],
-            config,
-        );
-        Self::update_styles(
-            lines[Plus],
-            &mut lines_style_sections[Plus],
-            Some(config.whitespace_error_style),
-            if config.plus_non_emph_style != config.plus_emph_style {
-                Some(config.plus_non_emph_style)
-            } else {
-                None
-            },
-            &lines_have_homolog[Plus],
-            config,
-        );
-    }
-
-    fn update_styles<'a>(
         lines: &'a [(String, State)],
-        lines_style_sections: &mut Vec<LineSections<'a, Style>>,
+        diff_style_sections: &mut Vec<LineSections<'a, Style>>,
         whitespace_error_style: Option<Style>,
         non_emph_style: Option<Style>,
         lines_have_homolog: &[bool],
@@ -531,7 +499,7 @@ impl<'p> Painter<'p> {
     ) {
         for (((_, state), style_sections), line_has_homolog) in lines
             .iter()
-            .zip_eq(lines_style_sections)
+            .zip_eq(diff_style_sections)
             .zip_eq(lines_have_homolog)
         {
             if let State::HunkMinus(_, Some(raw_line))
@@ -626,9 +594,27 @@ pub fn paint_minus_and_plus_lines(
     let (mut diff_style_sections, line_alignment) = get_diff_style_sections(&lines, config);
     let lines_have_homolog = edits::make_lines_have_homolog(&line_alignment);
     Painter::update_diff_style_sections(
-        &lines,
-        &mut diff_style_sections,
-        &lines_have_homolog,
+        lines[Minus],
+        &mut diff_style_sections[Minus],
+        None,
+        if config.minus_non_emph_style != config.minus_emph_style {
+            Some(config.minus_non_emph_style)
+        } else {
+            None
+        },
+        &lines_have_homolog[Minus],
+        config,
+    );
+    Painter::update_diff_style_sections(
+        lines[Plus],
+        &mut diff_style_sections[Plus],
+        Some(config.whitespace_error_style),
+        if config.plus_non_emph_style != config.plus_emph_style {
+            Some(config.plus_non_emph_style)
+        } else {
+            None
+        },
+        &lines_have_homolog[Plus],
         config,
     );
     if config.side_by_side {
