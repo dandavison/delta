@@ -3,8 +3,9 @@ use std::cmp::min;
 use lazy_static::lazy_static;
 
 use crate::cli;
-use crate::config::delta_unreachable;
+use crate::config::{delta_unreachable, Config};
 use crate::delta::{DiffType, InMergeConflict, MergeParents, State, StateMachine};
+use crate::paint::{expand_tabs, prepare, prepare_raw_line};
 use crate::style;
 use crate::utils::process::{self, CallingProcess};
 use unicode_segmentation::UnicodeSegmentation;
@@ -79,40 +80,27 @@ impl<'a> StateMachine<'a> {
         if let State::HunkHeader(_, parsed_hunk_header, line, raw_line) = &self.state.clone() {
             self.emit_hunk_header_line(parsed_hunk_header, line, raw_line)?;
         }
-        // TODO: The following code is pretty convoluted currently and has been volving. It may be
-        // heading for (state, line | raw_line) to be held together in an enum variant representing
-        // a line.
-        self.state = match new_line_state(&self.line, &self.state) {
-            Some(HunkMinus(diff_type, _)) => {
+        self.state = match new_line_state(&self.line, &self.raw_line, &self.state, self.config) {
+            Some(HunkMinus(diff_type, raw_line)) => {
                 if let HunkPlus(_, _) = self.state {
                     // We have just entered a new subhunk; process the previous one
                     // and flush the line buffers.
                     self.painter.paint_buffered_minus_and_plus_lines();
                 }
                 let n_parents = diff_type.n_parents();
-                let line = self.painter.prepare(&self.line, n_parents);
-                let raw_line = self.maybe_raw_line(
-                    HunkMinus(diff_type.clone(), None), // TODO
-                    n_parents,
-                    &[*style::GIT_DEFAULT_MINUS_STYLE, self.config.git_minus_style],
-                );
+                let line = prepare(&self.line, n_parents, self.config);
                 let state = HunkMinus(diff_type, raw_line);
                 self.painter.minus_lines.push((line, state.clone()));
                 state
             }
-            Some(HunkPlus(diff_type, _)) => {
+            Some(HunkPlus(diff_type, raw_line)) => {
                 let n_parents = diff_type.n_parents();
-                let line = self.painter.prepare(&self.line, n_parents);
-                let raw_line = self.maybe_raw_line(
-                    HunkPlus(diff_type.clone(), None), // TODO
-                    n_parents,
-                    &[*style::GIT_DEFAULT_PLUS_STYLE, self.config.git_plus_style],
-                );
+                let line = prepare(&self.line, n_parents, self.config);
                 let state = HunkPlus(diff_type, raw_line);
                 self.painter.plus_lines.push((line, state.clone()));
                 state
             }
-            Some(HunkZero(diff_type, _)) => {
+            Some(HunkZero(diff_type, raw_line)) => {
                 // We are in a zero (unchanged) line, therefore we have just exited a subhunk (a
                 // sequence of consecutive minus (removed) and/or plus (added) lines). Process that
                 // subhunk and flush the line buffers.
@@ -122,9 +110,7 @@ impl<'a> StateMachine<'a> {
                 } else {
                     diff_type.n_parents()
                 };
-                let line = self.painter.prepare(&self.line, n_parents);
-                let raw_line =
-                    self.maybe_raw_line(HunkZero(diff_type.clone(), None), n_parents, &[]); // TODO
+                let line = prepare(&self.line, n_parents, self.config);
                 let state = State::HunkZero(diff_type, raw_line);
                 self.painter.paint_zero_line(&line, state.clone());
                 state
@@ -134,9 +120,10 @@ impl<'a> StateMachine<'a> {
                 // is not a hunk line, but the parser does not have a more accurate state corresponding
                 // to this.
                 self.painter.paint_buffered_minus_and_plus_lines();
-                self.painter
-                    .output_buffer
-                    .push_str(&self.painter.expand_tabs(self.raw_line.graphemes(true)));
+                self.painter.output_buffer.push_str(&expand_tabs(
+                    self.raw_line.graphemes(true),
+                    self.config.tab_width,
+                ));
                 self.painter.output_buffer.push('\n');
                 State::HunkZero(Unified, None)
             }
@@ -144,37 +131,49 @@ impl<'a> StateMachine<'a> {
         self.painter.emit()?;
         Ok(true)
     }
+}
 
-    // Return Some(prepared_raw_line) if delta should emit this line raw.
-    fn maybe_raw_line(
-        &self,
-        state: State,
-        n_parents: usize,
-        non_raw_styles: &[style::Style],
-    ) -> Option<String> {
-        let emit_raw_line = is_word_diff()
-            || self.config.inspect_raw_lines == cli::InspectRawLines::True
-                && style::line_has_style_other_than(&self.raw_line, non_raw_styles)
-            || self.config.get_style(&state).is_raw;
-        if emit_raw_line {
-            Some(self.painter.prepare_raw_line(&self.raw_line, n_parents))
-        } else {
-            None
-        }
+// Return Some(prepared_raw_line) if delta should emit this line raw.
+fn maybe_raw_line(
+    raw_line: &str,
+    state_style_is_raw: bool,
+    n_parents: usize,
+    non_raw_styles: &[style::Style],
+    config: &Config,
+) -> Option<String> {
+    let emit_raw_line = is_word_diff()
+        || config.inspect_raw_lines == cli::InspectRawLines::True
+            && style::line_has_style_other_than(raw_line, non_raw_styles)
+        || state_style_is_raw;
+    if emit_raw_line {
+        Some(prepare_raw_line(raw_line, n_parents, config))
+    } else {
+        None
     }
 }
 
 // Return the new state corresponding to `new_line`, given the previous state. A return value of
 // None means that `new_line` is not recognized as a hunk line.
-fn new_line_state(new_line: &str, prev_state: &State) -> Option<State> {
+fn new_line_state(
+    new_line: &str,
+    new_raw_line: &str,
+    prev_state: &State,
+    config: &Config,
+) -> Option<State> {
     use DiffType::*;
     use MergeParents::*;
     use State::*;
 
     if is_word_diff() {
-        return Some(HunkZero(Unified, None));
+        return Some(HunkZero(
+            Unified,
+            maybe_raw_line(new_raw_line, config.zero_style.is_raw, 0, &[], config),
+        ));
     }
 
+    // 1. Given the previous line state, compute the new line diff type. These are basically the
+    //    same, except that a string prefix is converted into an integer number of parents (prefix
+    //    length).
     let diff_type = match prev_state {
         HunkMinus(Unified, _)
         | HunkZero(Unified, _)
@@ -204,7 +203,8 @@ fn new_line_state(new_line: &str, prev_state: &State) -> Option<State> {
         )),
     };
 
-    let (prefix_char, prefix, in_merge_conflict) = match diff_type {
+    // 2. Given the new diff state, and the new line, compute the new prefix.
+    let (prefix_char, prefix, in_merge_conflict) = match diff_type.clone() {
         Unified => (new_line.chars().next(), None, None),
         Combined(Number(n_parents), in_merge_conflict) => {
             let prefix = &new_line[..min(n_parents, new_line.len())];
@@ -224,19 +224,52 @@ fn new_line_state(new_line: &str, prev_state: &State) -> Option<State> {
         _ => delta_unreachable(""),
     };
 
+    let maybe_minus_raw_line = || {
+        maybe_raw_line(
+            new_raw_line,
+            config.minus_style.is_raw,
+            diff_type.n_parents(),
+            &[*style::GIT_DEFAULT_MINUS_STYLE, config.git_minus_style],
+            config,
+        )
+    };
+    let maybe_zero_raw_line = || {
+        maybe_raw_line(
+            new_raw_line,
+            config.zero_style.is_raw,
+            diff_type.n_parents(),
+            &[],
+            config,
+        )
+    };
+    let maybe_plus_raw_line = || {
+        maybe_raw_line(
+            new_raw_line,
+            config.plus_style.is_raw,
+            diff_type.n_parents(),
+            &[*style::GIT_DEFAULT_PLUS_STYLE, config.git_plus_style],
+            config,
+        )
+    };
+
+    // 3. Given the new prefix, compute the full new line state...except without its raw_line, which
+    //    is added later. TODO: that is not a sensible design.
     match (prefix_char, prefix, in_merge_conflict) {
-        (Some('-'), None, None) => Some(HunkMinus(Unified, None)),
-        (Some(' '), None, None) => Some(HunkZero(Unified, None)),
-        (Some('+'), None, None) => Some(HunkPlus(Unified, None)),
-        (Some('-'), Some(prefix), Some(in_merge_conflict)) => {
-            Some(HunkMinus(Combined(Prefix(prefix), in_merge_conflict), None))
-        }
-        (Some(' '), Some(prefix), Some(in_merge_conflict)) => {
-            Some(HunkZero(Combined(Prefix(prefix), in_merge_conflict), None))
-        }
-        (Some('+'), Some(prefix), Some(in_merge_conflict)) => {
-            Some(HunkPlus(Combined(Prefix(prefix), in_merge_conflict), None))
-        }
+        (Some('-'), None, None) => Some(HunkMinus(Unified, maybe_minus_raw_line())),
+        (Some(' '), None, None) => Some(HunkZero(Unified, maybe_zero_raw_line())),
+        (Some('+'), None, None) => Some(HunkPlus(Unified, maybe_plus_raw_line())),
+        (Some('-'), Some(prefix), Some(in_merge_conflict)) => Some(HunkMinus(
+            Combined(Prefix(prefix), in_merge_conflict),
+            maybe_minus_raw_line(),
+        )),
+        (Some(' '), Some(prefix), Some(in_merge_conflict)) => Some(HunkZero(
+            Combined(Prefix(prefix), in_merge_conflict),
+            maybe_zero_raw_line(),
+        )),
+        (Some('+'), Some(prefix), Some(in_merge_conflict)) => Some(HunkPlus(
+            Combined(Prefix(prefix), in_merge_conflict),
+            maybe_plus_raw_line(),
+        )),
         _ => None,
     }
 }

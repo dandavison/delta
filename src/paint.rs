@@ -124,46 +124,6 @@ impl<'p> Painter<'p> {
         };
     }
 
-    /// Remove initial -/+ character, expand tabs as spaces, and terminate with newline.
-    // Terminating with newline character is necessary for many of the sublime syntax definitions to
-    // highlight correctly.
-    // See https://docs.rs/syntect/3.2.0/syntect/parsing/struct.SyntaxSetBuilder.html#method.add_from_folder
-    pub fn prepare(&self, line: &str, prefix_length: usize) -> String {
-        if !line.is_empty() {
-            // The prefix contains -/+/space characters, added by git. We removes them now so they
-            // are not present during syntax highlighting or wrapping. If --keep-plus-minus-markers
-            // is in effect the prefix is re-inserted in Painter::paint_line.
-            let line = line.graphemes(true).skip(prefix_length);
-            format!("{}\n", self.expand_tabs(line))
-        } else {
-            "\n".to_string()
-        }
-    }
-
-    // Remove initial -/+ characters, expand tabs as spaces, retaining ANSI sequences. Terminate with
-    // newline character.
-    pub fn prepare_raw_line(&self, raw_line: &str, prefix_length: usize) -> String {
-        format!(
-            "{}\n",
-            ansi::ansi_preserving_slice(&self.expand_tabs(raw_line.graphemes(true)), prefix_length),
-        )
-    }
-
-    /// Expand tabs as spaces.
-    /// tab_width = 0 is documented to mean do not replace tabs.
-    pub fn expand_tabs<'a, I>(&self, line: I) -> String
-    where
-        I: Iterator<Item = &'a str>,
-    {
-        if self.config.tab_width > 0 {
-            let tab_replacement = " ".repeat(self.config.tab_width);
-            line.map(|s| if s == "\t" { &tab_replacement } else { s })
-                .collect::<String>()
-        } else {
-            line.collect::<String>()
-        }
-    }
-
     pub fn paint_buffered_minus_and_plus_lines(&mut self) {
         paint_minus_and_plus_lines(
             MinusPlus::new(&self.minus_lines, &self.plus_lines),
@@ -181,7 +141,7 @@ impl<'p> Painter<'p> {
         let syntax_style_sections =
             get_syntax_style_sections_for_lines(lines, self.highlighter.as_mut(), self.config);
         let mut diff_style_sections = vec![vec![(self.config.zero_style, lines[0].0.as_str())]]; // TODO: compute style from state
-        Painter::update_styles(
+        Painter::update_diff_style_sections(
             lines,
             &mut diff_style_sections,
             None,
@@ -296,7 +256,10 @@ impl<'p> Painter<'p> {
         state: State,
         background_color_extends_to_terminal_width: BgShouldFill,
     ) {
-        let lines = vec![(self.expand_tabs(line.graphemes(true)), state)];
+        let lines = vec![(
+            expand_tabs(line.graphemes(true), self.config.tab_width),
+            state,
+        )];
         let syntax_style_sections =
             get_syntax_style_sections_for_lines(&lines, self.highlighter.as_mut(), self.config);
         let diff_style_sections = match style_sections {
@@ -527,40 +490,8 @@ impl<'p> Painter<'p> {
     ///    computed diff styles with these styles from the raw line. (This is
     ///    how support for git's --color-moved is implemented.)
     fn update_diff_style_sections<'a>(
-        lines: &MinusPlus<&'a Vec<(String, State)>>,
-        lines_style_sections: &mut MinusPlus<Vec<LineSections<'a, Style>>>,
-        lines_have_homolog: &MinusPlus<Vec<bool>>,
-        config: &config::Config,
-    ) {
-        Self::update_styles(
-            lines[Minus],
-            &mut lines_style_sections[Minus],
-            None,
-            if config.minus_non_emph_style != config.minus_emph_style {
-                Some(config.minus_non_emph_style)
-            } else {
-                None
-            },
-            &lines_have_homolog[Minus],
-            config,
-        );
-        Self::update_styles(
-            lines[Plus],
-            &mut lines_style_sections[Plus],
-            Some(config.whitespace_error_style),
-            if config.plus_non_emph_style != config.plus_emph_style {
-                Some(config.plus_non_emph_style)
-            } else {
-                None
-            },
-            &lines_have_homolog[Plus],
-            config,
-        );
-    }
-
-    fn update_styles<'a>(
         lines: &'a [(String, State)],
-        lines_style_sections: &mut Vec<LineSections<'a, Style>>,
+        diff_style_sections: &mut Vec<LineSections<'a, Style>>,
         whitespace_error_style: Option<Style>,
         non_emph_style: Option<Style>,
         lines_have_homolog: &[bool],
@@ -568,7 +499,7 @@ impl<'p> Painter<'p> {
     ) {
         for (((_, state), style_sections), line_has_homolog) in lines
             .iter()
-            .zip_eq(lines_style_sections)
+            .zip_eq(diff_style_sections)
             .zip_eq(lines_have_homolog)
         {
             if let State::HunkMinus(_, Some(raw_line))
@@ -606,6 +537,49 @@ impl<'p> Painter<'p> {
     }
 }
 
+/// Remove initial -/+ character, expand tabs as spaces, and terminate with newline.
+// Terminating with newline character is necessary for many of the sublime syntax definitions to
+// highlight correctly.
+// See https://docs.rs/syntect/3.2.0/syntect/parsing/struct.SyntaxSetBuilder.html#method.add_from_folder
+pub fn prepare(line: &str, prefix_length: usize, config: &config::Config) -> String {
+    if !line.is_empty() {
+        // The prefix contains -/+/space characters, added by git. We removes them now so they
+        // are not present during syntax highlighting or wrapping. If --keep-plus-minus-markers
+        // is in effect the prefix is re-inserted in Painter::paint_line.
+        let line = line.graphemes(true).skip(prefix_length);
+        format!("{}\n", expand_tabs(line, config.tab_width))
+    } else {
+        "\n".to_string()
+    }
+}
+
+// Remove initial -/+ characters, expand tabs as spaces, retaining ANSI sequences. Terminate with
+// newline character.
+pub fn prepare_raw_line(raw_line: &str, prefix_length: usize, config: &config::Config) -> String {
+    format!(
+        "{}\n",
+        ansi::ansi_preserving_slice(
+            &expand_tabs(raw_line.graphemes(true), config.tab_width),
+            prefix_length
+        ),
+    )
+}
+
+/// Expand tabs as spaces.
+/// tab_width = 0 is documented to mean do not replace tabs.
+pub fn expand_tabs<'a, I>(line: I, tab_width: usize) -> String
+where
+    I: Iterator<Item = &'a str>,
+{
+    if tab_width > 0 {
+        let tab_replacement = " ".repeat(tab_width);
+        line.map(|s| if s == "\t" { &tab_replacement } else { s })
+            .collect::<String>()
+    } else {
+        line.collect::<String>()
+    }
+}
+
 pub fn paint_minus_and_plus_lines(
     lines: MinusPlus<&Vec<(String, State)>>,
     line_numbers_data: &mut Option<LineNumbersData>,
@@ -620,9 +594,27 @@ pub fn paint_minus_and_plus_lines(
     let (mut diff_style_sections, line_alignment) = get_diff_style_sections(&lines, config);
     let lines_have_homolog = edits::make_lines_have_homolog(&line_alignment);
     Painter::update_diff_style_sections(
-        &lines,
-        &mut diff_style_sections,
-        &lines_have_homolog,
+        lines[Minus],
+        &mut diff_style_sections[Minus],
+        None,
+        if config.minus_non_emph_style != config.minus_emph_style {
+            Some(config.minus_non_emph_style)
+        } else {
+            None
+        },
+        &lines_have_homolog[Minus],
+        config,
+    );
+    Painter::update_diff_style_sections(
+        lines[Plus],
+        &mut diff_style_sections[Plus],
+        Some(config.whitespace_error_style),
+        if config.plus_non_emph_style != config.plus_emph_style {
+            Some(config.plus_non_emph_style)
+        } else {
+            None
+        },
+        &lines_have_homolog[Plus],
         config,
     );
     if config.side_by_side {
