@@ -800,12 +800,14 @@ FLAGS:
 OPTIONS:
         --features <features>
             Name of delta features to use (space-separated). A feature is a named collection of delta options in
-            ~/.gitconfig. See FEATURES section [env: DELTA_FEATURES=]  [default: ]
+            ~/.gitconfig. See FEATURES section. The environment variable DELTA_FEATURES can be set to a space-separated
+            list of feature names. If this is preceded with a space, the features from the environment variable will be
+            added to those specified in git config. E.g. DELTA_FEATURES=+side-by-side can be used to activate side-by-
+            side temporarily
         --syntax-theme <syntax-theme>
-            The code syntax-highlighting theme to use. Use --show-syntax-themes to demo available themes. If the syntax-
-            highlighting theme is not set using this option, it will be taken from the BAT_THEME environment
-            variable, if that contains a valid theme name. --syntax-theme=none disables all syntax highlighting [env:
-            BAT_THEME=]
+            The code syntax-highlighting theme to use. Use --show-syntax-themes to demo available themes. Defaults to
+            the value of the BAT_THEME environment variable, if that contains a valid theme name. --syntax-theme=none
+            disables all syntax highlighting
         --minus-style <minus-style>
             Style (foreground, background, attributes) for removed lines. See STYLES section [default: normal auto]
         --zero-style <zero-style>
@@ -817,13 +819,13 @@ OPTIONS:
             [default: normal auto]
         --minus-non-emph-style <minus-non-emph-style>
             Style (foreground, background, attributes) for non-emphasized sections of removed lines that have an
-            emphasized section. Defaults to --minus-style. See STYLES section [default: auto auto]
+            emphasized section. See STYLES section [default: minus-style]
         --plus-emph-style <plus-emph-style>
             Style (foreground, background, attributes) for emphasized sections of added lines. See STYLES section
             [default: syntax auto]
         --plus-non-emph-style <plus-non-emph-style>
             Style (foreground, background, attributes) for non-emphasized sections of added lines that have an
-            emphasized section. Defaults to --plus-style. See STYLES section [default: auto auto]
+            emphasized section. See STYLES section [default: plus-style]
         --commit-style <commit-style>
             Style (foreground, background, attributes) for the commit hash line. See STYLES section. The style 'omit'
             can be used to remove the commit hash line from the output [default: raw]
@@ -1026,7 +1028,9 @@ OPTIONS:
             "24bit". If your terminal application (the application you use to enter commands at a shell prompt) supports
             24 bit colors, then it probably already sets this environment variable, in which case you don't need to do
             anything [default: auto]
-        --24-bit-color <24-bit-color>                                      Deprecated: use --true-color
+        --24-bit-color <24-bit-color>
+            Deprecated: use --true-color
+
         --inspect-raw-lines <inspect-raw-lines>
             Whether to examine ANSI color escape sequences in raw lines received from Git and handle lines colored in
             certain ways specially. This is on by default: it is how Delta supports Git's --color-moved feature. Set
@@ -1074,7 +1078,9 @@ OPTIONS:
         --hunk-color <deprecated-hunk-color>
             Deprecated: use --hunk-header-style='my_foreground_color' --hunk-header-decoration-
             style='my_foreground_color'
-        --theme <deprecated-theme>                                         Deprecated: use --syntax-theme
+        --theme <deprecated-theme>
+            Deprecated: use --syntax-theme
+
 
 ARGS:
     <minus-file>    First file to be compared when delta is being used in diff mode: `delta file_1 file_2` is

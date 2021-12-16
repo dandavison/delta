@@ -322,14 +322,16 @@ pub struct Opt {
     ////////////////////////////////////////////////////////////////////////////////////////////
     #[structopt(long = "features")]
     /// Name of delta features to use (space-separated). A feature is a named collection of delta
-    /// options in ~/.gitconfig. See FEATURES section.
+    /// options in ~/.gitconfig. See FEATURES section. The environment variable DELTA_FEATURES can
+    /// be set to a space-separated list of feature names. If this is preceded with a space, the
+    /// features from the environment variable will be added to those specified in git config. E.g.
+    /// DELTA_FEATURES=+side-by-side can be used to activate side-by-side temporarily.
     pub features: Option<String>,
 
     #[structopt(long = "syntax-theme")]
     /// The code syntax-highlighting theme to use. Use --show-syntax-themes to demo available
-    /// themes. If the syntax-highlighting theme is not set using this option, it will be taken
-    /// from the BAT_THEME environment variable, if that contains a valid theme name.
-    /// --syntax-theme=none disables all syntax highlighting.
+    /// themes. Defaults to the value of the BAT_THEME environment variable, if that contains a
+    /// valid theme name. --syntax-theme=none disables all syntax highlighting.
     pub syntax_theme: Option<String>,
 
     #[structopt(long = "minus-style", default_value = "normal auto")]
