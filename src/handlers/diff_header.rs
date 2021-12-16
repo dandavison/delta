@@ -73,8 +73,8 @@ impl<'a> StateMachine<'a> {
         // and to call fn handle_generic_diff_header_header_line directly.
         if self.config.color_only {
             write_generic_diff_header_header_line(
-                &self.line,
-                &self.raw_line,
+                FileChangeDescription::Modified(self.line.to_string()),
+                FileChangeDescription::Modified(self.raw_line.to_string()),
                 &mut self.painter,
                 self.config,
             )?;
@@ -127,8 +127,8 @@ impl<'a> StateMachine<'a> {
         // and to call fn handle_generic_diff_header_header_line directly.
         if self.config.color_only {
             write_generic_diff_header_header_line(
-                &self.line,
-                &self.raw_line,
+                FileChangeDescription::Modified(self.line.to_string()),
+                FileChangeDescription::Modified(self.raw_line.to_string()),
                 &mut self.painter,
                 self.config,
             )?;
@@ -145,7 +145,7 @@ impl<'a> StateMachine<'a> {
 
     /// Construct file change line from minus and plus file and write with DiffHeader styling.
     fn _handle_diff_header_header_line(&mut self, comparing: bool) -> std::io::Result<()> {
-        let line = get_file_change_description_from_file_paths(
+        let file_change_description = get_file_change_description_from_file_paths(
             &self.minus_file,
             &self.plus_file,
             comparing,
@@ -154,21 +154,29 @@ impl<'a> StateMachine<'a> {
             self.config,
         );
         // FIXME: no support for 'raw'
-        write_generic_diff_header_header_line(&line, &line, &mut self.painter, self.config)
+        write_generic_diff_header_header_line(
+            file_change_description.clone(),
+            file_change_description,
+            &mut self.painter,
+            self.config,
+        )
     }
 }
 
 /// Write `line` with DiffHeader styling.
 pub fn write_generic_diff_header_header_line(
-    line: &str,
-    raw_line: &str,
+    line: FileChangeDescription,
+    raw_line: FileChangeDescription,
     painter: &mut Painter,
     config: &Config,
 ) -> std::io::Result<()> {
     // If file_style is "omit", we'll skip the process and print nothing.
     // However in the case of color_only mode,
     // we won't skip because we can't change raw_line structure.
-    if config.file_style.is_omitted && !config.color_only {
+    if config.file_style.is_omitted
+        && !config.color_only
+        && matches!(line, FileChangeDescription::Modified(_))
+    {
         return Ok(());
     }
     let (mut draw_fn, pad, decoration_ansi_term_style) =
@@ -179,8 +187,8 @@ pub fn write_generic_diff_header_header_line(
     }
     draw_fn(
         painter.writer,
-        &format!("{}{}", line, if pad { " " } else { "" }),
-        &format!("{}{}", raw_line, if pad { " " } else { "" }),
+        &format!("{}{}", line.as_ref(), if pad { " " } else { "" }),
+        &format!("{}{}", raw_line.as_ref(), if pad { " " } else { "" }),
         &config.decorations_width,
         config.file_style,
         decoration_ansi_term_style,
@@ -294,6 +302,22 @@ fn _parse_file_path(s: &str, git_diff_name: bool) -> String {
     .to_string()
 }
 
+#[derive(Debug, Clone, PartialEq)]
+pub enum FileChangeDescription {
+    Modified(String),
+    Other(String),
+}
+
+impl AsRef<str> for FileChangeDescription {
+    fn as_ref(&self) -> &str {
+        use FileChangeDescription::*;
+        match self {
+            Modified(s) => s.as_str(),
+            Other(s) => s.as_str(),
+        }
+    }
+}
+
 pub fn get_file_change_description_from_file_paths(
     minus_file: &str,
     plus_file: &str,
@@ -301,7 +325,7 @@ pub fn get_file_change_description_from_file_paths(
     minus_file_event: &FileEvent,
     plus_file_event: &FileEvent,
     config: &Config,
-) -> String {
+) -> FileChangeDescription {
     let format_label = |label: &str| {
         if !label.is_empty() {
             format!("{} ", label)
@@ -310,13 +334,13 @@ pub fn get_file_change_description_from_file_paths(
         }
     };
     if comparing {
-        format!(
+        FileChangeDescription::Other(format!(
             "{}{} {} {}",
             format_label(&config.file_modified_label),
             minus_file,
             config.right_arrow,
             plus_file
-        )
+        ))
     } else {
         let format_file = |file| {
             if config.hyperlinks {
@@ -331,44 +355,54 @@ pub fn get_file_change_description_from_file_paths(
                 plus_file,
                 FileEvent::ModeChange(old_mode),
                 FileEvent::ModeChange(new_mode),
-            ) if minus_file == plus_file => match (old_mode.as_str(), new_mode.as_str()) {
-                // 100755 for executable and 100644 for non-executable are the only file modes Git records.
-                // https://medium.com/@tahteche/how-git-treats-changes-in-file-permissions-f71874ca239d
-                ("100644", "100755") => format!("{}: mode +x", plus_file),
-                ("100755", "100644") => format!("{}: mode -x", plus_file),
-                _ => format!(
-                    "{}: {} {} {}",
-                    plus_file, old_mode, config.right_arrow, new_mode
-                ),
-            },
-            (minus_file, plus_file, _, _) if minus_file == plus_file => format!(
-                "{}{}",
-                format_label(&config.file_modified_label),
-                format_file(minus_file)
-            ),
-            (minus_file, "/dev/null", _, _) => format!(
+            ) if minus_file == plus_file => {
+                FileChangeDescription::Other(match (old_mode.as_str(), new_mode.as_str()) {
+                    // 100755 for executable and 100644 for non-executable are the only file modes Git records.
+                    // https://medium.com/@tahteche/how-git-treats-changes-in-file-permissions-f71874ca239d
+                    ("100644", "100755") => format!("{}: mode +x", plus_file),
+                    ("100755", "100644") => format!("{}: mode -x", plus_file),
+                    _ => format!(
+                        "{}: {} {} {}",
+                        plus_file, old_mode, config.right_arrow, new_mode
+                    ),
+                })
+            }
+            (minus_file, plus_file, _, _) if minus_file == plus_file => {
+                FileChangeDescription::Modified(format!(
+                    "{}{}",
+                    format_label(&config.file_modified_label),
+                    format_file(minus_file)
+                ))
+            }
+            (minus_file, "/dev/null", _, _) => FileChangeDescription::Other(format!(
                 "{}{}",
                 format_label(&config.file_removed_label),
                 format_file(minus_file)
-            ),
-            ("/dev/null", plus_file, _, _) => format!(
+            )),
+            ("/dev/null", plus_file, _, _) => FileChangeDescription::Other(format!(
                 "{}{}",
                 format_label(&config.file_added_label),
                 format_file(plus_file)
-            ),
+            )),
             // minus_file_event == plus_file_event, except in the ModeChange
             // case above.
-            (minus_file, plus_file, file_event, _) => format!(
-                "{}{} {} {}",
-                format_label(match file_event {
-                    FileEvent::Rename => &config.file_renamed_label,
-                    FileEvent::Copy => &config.file_copied_label,
-                    _ => &config.file_modified_label,
-                }),
-                format_file(minus_file),
-                config.right_arrow,
-                format_file(plus_file)
-            ),
+            (minus_file, plus_file, file_event, _) => {
+                let line = format!(
+                    "{}{} {} {}",
+                    format_label(match file_event {
+                        FileEvent::Rename => &config.file_renamed_label,
+                        FileEvent::Copy => &config.file_copied_label,
+                        _ => &config.file_modified_label,
+                    }),
+                    format_file(minus_file),
+                    config.right_arrow,
+                    format_file(plus_file)
+                );
+                match file_event {
+                    FileEvent::Rename | FileEvent::Copy => FileChangeDescription::Other(line),
+                    _ => FileChangeDescription::Modified(line),
+                }
+            }
         }
     }
 }

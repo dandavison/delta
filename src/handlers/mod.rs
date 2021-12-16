@@ -16,6 +16,7 @@ mod ripgrep_json;
 pub mod submodule;
 
 use crate::delta::{State, StateMachine};
+use diff_header::FileChangeDescription;
 
 impl<'a> StateMachine<'a> {
     pub fn handle_additional_cases(&mut self, to_state: State) -> std::io::Result<bool> {
@@ -39,8 +40,8 @@ impl<'a> StateMachine<'a> {
         if self.should_handle() {
             self.painter.emit()?;
             diff_header::write_generic_diff_header_header_line(
-                &self.line,
-                &self.raw_line,
+                FileChangeDescription::Modified(self.line.to_string()),
+                FileChangeDescription::Modified(self.raw_line.to_string()),
                 &mut self.painter,
                 self.config,
             )?;
