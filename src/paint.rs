@@ -70,7 +70,8 @@ pub enum StyleSectionSpecifier<'l> {
 
 impl<'p> Painter<'p> {
     pub fn new(writer: &'p mut dyn Write, config: &'p config::Config) -> Self {
-        let default_syntax = Self::get_syntax(&config.syntax_set, None);
+        let default_syntax =
+            Self::get_syntax(&config.syntax_set, None, config.default_language.as_deref());
 
         let panel_width_fix = ansifill::UseFullPanelWidth::new(config);
 
@@ -104,11 +105,19 @@ impl<'p> Painter<'p> {
     }
 
     pub fn set_syntax(&mut self, extension: Option<&str>) {
-        self.syntax = Painter::get_syntax(&self.config.syntax_set, extension);
+        self.syntax = Painter::get_syntax(
+            &self.config.syntax_set,
+            extension,
+            self.config.default_language.as_deref(),
+        );
     }
 
-    fn get_syntax<'a>(syntax_set: &'a SyntaxSet, extension: Option<&str>) -> &'a SyntaxReference {
-        if let Some(extension) = extension {
+    fn get_syntax<'a>(
+        syntax_set: &'a SyntaxSet,
+        extension: Option<&str>,
+        fallback_extension: Option<&str>,
+    ) -> &'a SyntaxReference {
+        for extension in [extension, fallback_extension].iter().flatten() {
             if let Some(syntax) = syntax_set.find_syntax_by_extension(extension) {
                 return syntax;
             }
