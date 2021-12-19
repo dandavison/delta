@@ -392,6 +392,10 @@ pub struct Opt {
     /// (overline), or the combination 'ul ol'.
     pub file_decoration_style: String,
 
+    #[structopt(long = "file-transformation")]
+    /// A sed-style command specifying how file paths should be transformed for display.
+    pub file_regex_replacement: Option<String>,
+
     /// Format string for commit hyperlinks (requires --hyperlinks). The
     /// placeholder "{commit}" will be replaced by the commit hash. For example:
     /// --hyperlinks-commit-link-format='https://mygitrepo/{commit}/'
