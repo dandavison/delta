@@ -1,3 +1,4 @@
+use std::borrow::Cow;
 use std::collections::HashMap;
 use std::io::Write;
 
@@ -784,6 +785,11 @@ pub fn paint_file_path_with_line_number(
 ) -> String {
     let mut file_with_line_number = Vec::new();
     if let Some(file_style) = file_style {
+        let plus_file = if let Some(regex_replacement) = &config.file_regex_replacement {
+            regex_replacement.execute(plus_file)
+        } else {
+            Cow::from(plus_file)
+        };
         file_with_line_number.push(file_style.paint(plus_file))
     };
     if let Some(line_number) = line_number {

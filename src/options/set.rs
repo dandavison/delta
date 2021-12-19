@@ -143,6 +143,7 @@ pub fn set_options(
             file_modified_label,
             file_removed_label,
             file_renamed_label,
+            file_regex_replacement,
             right_arrow,
             hunk_label,
             file_style,
@@ -704,6 +705,7 @@ pub mod tests {
     file-modified-label = xxxyyyzzz
     file-removed-label = xxxyyyzzz
     file-renamed-label = xxxyyyzzz
+    file-transformation = s/foo/bar/
     right-arrow = xxxyyyzzz
     file-style = black black
     hunk-header-decoration-style = black black
@@ -771,6 +773,7 @@ pub mod tests {
         assert_eq!(opt.file_renamed_label, "xxxyyyzzz");
         assert_eq!(opt.right_arrow, "xxxyyyzzz");
         assert_eq!(opt.file_style, "black black");
+        assert_eq!(opt.file_regex_replacement, Some("s/foo/bar/".to_string()));
         assert_eq!(opt.hunk_header_decoration_style, "black black");
         assert_eq!(opt.hunk_header_style, "black black");
         assert_eq!(opt.keep_plus_minus_markers, true);

@@ -25,6 +25,7 @@ use crate::style;
 use crate::style::Style;
 use crate::tests::TESTING;
 use crate::utils::bat::output::PagingMode;
+use crate::utils::regex_replacement::RegexReplacement;
 use crate::utils::syntect::FromDeltaStyle;
 use crate::wrapping::WrapConfig;
 
@@ -80,6 +81,7 @@ pub struct Config {
     pub file_modified_label: String,
     pub file_removed_label: String,
     pub file_renamed_label: String,
+    pub file_regex_replacement: Option<RegexReplacement>,
     pub right_arrow: String,
     pub file_style: Style,
     pub git_config_entries: HashMap<String, GitConfigEntry>,
@@ -263,6 +265,11 @@ impl From<cli::Opt> for Config {
             file_modified_label,
             file_removed_label,
             file_renamed_label,
+            file_regex_replacement: opt
+                .file_regex_replacement
+                .as_deref()
+                .map(RegexReplacement::from_sed_command)
+                .flatten(),
             right_arrow,
             hunk_label,
             file_style: styles["file-style"],
