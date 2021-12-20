@@ -26,7 +26,7 @@
 
 [delta]
     navigate = true
-    
+
 [merge]
     conflictstyle = diff3
 
