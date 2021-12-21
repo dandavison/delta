@@ -288,8 +288,14 @@ fn make_output_config() -> GrepOutputConfig {
 }
 
 enum GrepLineRegex {
+    FilePathWithFileExtensionAndLineNumber,
     FilePathWithFileExtension,
     FilePathWithoutSeparatorCharacters,
+}
+
+lazy_static! {
+    static ref GREP_LINE_REGEX_ASSUMING_FILE_EXTENSION_AND_LINE_NUMBER: Regex =
+        make_grep_line_regex(GrepLineRegex::FilePathWithFileExtensionAndLineNumber);
 }
 
 lazy_static! {
@@ -328,7 +334,8 @@ fn make_grep_line_regex(regex_variant: GrepLineRegex) -> Regex {
     // Make-7-file-7-xxx
 
     let file_path = match regex_variant {
-        GrepLineRegex::FilePathWithFileExtension => {
+        GrepLineRegex::FilePathWithFileExtensionAndLineNumber
+        | GrepLineRegex::FilePathWithFileExtension => {
             r"
         (                        # 1. file name (colons not allowed)
             [^:|\ ]                 # try to be strict about what a file path can start with
@@ -348,7 +355,29 @@ fn make_grep_line_regex(regex_variant: GrepLineRegex) -> Regex {
         }
     };
 
-    let separator = r#"
+    let separator = match regex_variant {
+        GrepLineRegex::FilePathWithFileExtensionAndLineNumber => {
+            r#"
+    (?:
+        (
+            :                # 2. match marker
+            ([0-9]+):        # 3. line number followed by second match marker
+        )
+        |
+        (
+            -                # 4. nomatch marker
+            ([0-9]+)-        # 5. line number followed by second nomatch marker
+        )
+        |
+        (
+            =                # 6. match marker
+            ([0-9]+)=        # 7. line number followed by second header marker
+        )
+    )
+            "#
+        }
+        _ => {
+            r#"
     (?:
         (                    
             :                # 2. match marker
@@ -365,7 +394,9 @@ fn make_grep_line_regex(regex_variant: GrepLineRegex) -> Regex {
             (?:([0-9]+)=)?   # 7. optional: line number followed by second header marker
         )
     )
-        "#;
+        "#
+        }
+    };
 
     Regex::new(&format!(
         "(?x)
@@ -387,6 +418,7 @@ pub fn parse_grep_line(line: &str) -> Option<GrepLine> {
     } else {
         match &*process::calling_process() {
             process::CallingProcess::GitGrep(_) | process::CallingProcess::OtherGrep => [
+                &*GREP_LINE_REGEX_ASSUMING_FILE_EXTENSION_AND_LINE_NUMBER,
                 &*GREP_LINE_REGEX_ASSUMING_FILE_EXTENSION,
                 &*GREP_LINE_REGEX_ASSUMING_NO_INTERNAL_SEPARATOR_CHARS,
             ]
