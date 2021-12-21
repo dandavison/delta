@@ -288,24 +288,24 @@ fn make_output_config() -> GrepOutputConfig {
 }
 
 enum GrepLineRegex {
-    FilePathWithFileExtensionAndLineNumber,
-    FilePathWithFileExtension,
-    FilePathWithoutSeparatorCharacters,
+    WithFileExtensionAndLineNumber,
+    WithFileExtension,
+    WithoutSeparatorCharacters,
 }
 
 lazy_static! {
     static ref GREP_LINE_REGEX_ASSUMING_FILE_EXTENSION_AND_LINE_NUMBER: Regex =
-        make_grep_line_regex(GrepLineRegex::FilePathWithFileExtensionAndLineNumber);
+        make_grep_line_regex(GrepLineRegex::WithFileExtensionAndLineNumber);
 }
 
 lazy_static! {
     static ref GREP_LINE_REGEX_ASSUMING_FILE_EXTENSION: Regex =
-        make_grep_line_regex(GrepLineRegex::FilePathWithFileExtension);
+        make_grep_line_regex(GrepLineRegex::WithFileExtension);
 }
 
 lazy_static! {
     static ref GREP_LINE_REGEX_ASSUMING_NO_INTERNAL_SEPARATOR_CHARS: Regex =
-        make_grep_line_regex(GrepLineRegex::FilePathWithoutSeparatorCharacters);
+        make_grep_line_regex(GrepLineRegex::WithoutSeparatorCharacters);
 }
 
 // See tests for example grep lines
@@ -334,8 +334,7 @@ fn make_grep_line_regex(regex_variant: GrepLineRegex) -> Regex {
     // Make-7-file-7-xxx
 
     let file_path = match regex_variant {
-        GrepLineRegex::FilePathWithFileExtensionAndLineNumber
-        | GrepLineRegex::FilePathWithFileExtension => {
+        GrepLineRegex::WithFileExtensionAndLineNumber | GrepLineRegex::WithFileExtension => {
             r"
         (                        # 1. file name (colons not allowed)
             [^:|\ ]                 # try to be strict about what a file path can start with
@@ -344,7 +343,7 @@ fn make_grep_line_regex(regex_variant: GrepLineRegex) -> Regex {
         )    
         "
         }
-        GrepLineRegex::FilePathWithoutSeparatorCharacters => {
+        GrepLineRegex::WithoutSeparatorCharacters => {
             r"
         (                        # 1. file name (colons not allowed)
             [^:|\ =-]               # try to be strict about what a file path can start with
@@ -356,7 +355,7 @@ fn make_grep_line_regex(regex_variant: GrepLineRegex) -> Regex {
     };
 
     let separator = match regex_variant {
-        GrepLineRegex::FilePathWithFileExtensionAndLineNumber => {
+        GrepLineRegex::WithFileExtensionAndLineNumber => {
             r#"
     (?:
         (
