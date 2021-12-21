@@ -684,6 +684,17 @@ mod tests {
                 submatches: None,
             })
         );
+
+        assert_eq!(
+            parse_grep_line(r#"foo.rs-12-  .x-"#),
+            Some(GrepLine {
+                path: "foo.rs".into(),
+                line_number: Some(12),
+                line_type: LineType::Context,
+                code: r#"  .x-"#.into(),
+                submatches: None,
+            })
+        );
     }
 
     #[test]
