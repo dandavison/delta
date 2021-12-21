@@ -333,7 +333,7 @@ fn make_grep_line_regex(regex_variant: GrepLineRegex) -> Regex {
         (                        # 1. file name (colons not allowed)
             [^:|\ ]                 # try to be strict about what a file path can start with
             [^:]*                   # anything
-            \.[^.\ :=-]{1,6}        # extension
+            [^\ ]\.[^.\ :=-]{1,6}   # extension
         )    
         "
         }
