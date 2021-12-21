@@ -348,30 +348,35 @@ fn make_grep_line_regex(regex_variant: GrepLineRegex) -> Regex {
         }
     };
 
+    let separator = r#"
+    (?:
+        (                    
+            :                # 2. match marker
+            (?:([0-9]+):)?   # 3. optional: line number followed by second match marker
+        )
+        |
+        (
+            -                # 4. nomatch marker
+            (?:([0-9]+)-)?   # 5. optional: line number followed by second nomatch marker
+        )
+        |
+        (
+            =                # 6. match marker
+            (?:([0-9]+)=)?   # 7. optional: line number followed by second header marker
+        )
+    )
+        "#;
+
     Regex::new(&format!(
         "(?x)
 ^
 {file_path}
-(?:
-    (                    
-        :                # 2. match marker
-        (?:([0-9]+):)?   # 3. optional: line number followed by second match marker
-    )
-    |
-    (
-        -                # 4. nomatch marker
-        (?:([0-9]+)-)?   # 5. optional: line number followed by second nomatch marker
-    )
-    |
-    (
-        =                # 6. match marker
-        (?:([0-9]+)=)?   # 7. optional: line number followed by second header marker
-    )
-)
+{separator}
 (.*)                     # 8. code (i.e. line contents)
 $
 ",
-        file_path = file_path
+        file_path = file_path,
+        separator = separator,
     ))
     .unwrap()
 }
