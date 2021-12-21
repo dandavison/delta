@@ -691,17 +691,15 @@ mod tests {
                     (Deletion, "the"),
                     (Deletion, " "),
                     (Deletion, "commit"),
-                    (Deletion, " "),
-                    (Deletion, "number "),
-                    (MinusNoop, "from any one of them."),
+                    (Deletion, " number"),
+                    (MinusNoop, " from any one of them."),
                 ]],
                 vec![vec![
                     (PlusNoop, "so it is safe to read "),
                     (Insertion, "build"),
                     (Insertion, " "),
                     (Insertion, "info"),
-                    (Insertion, " "),
-                    (PlusNoop, "from any one of them."),
+                    (PlusNoop, " from any one of them."),
                 ]],
             ),
             1.0,
@@ -807,6 +805,27 @@ mod tests {
                         (Insertion, "r"),
                     ],
                 ],
+            ),
+        );
+    }
+
+    #[test]
+    fn test_infer_edits_15() {
+        assert_paired_edits(
+            vec![r#"printf "%s\n" s y y | git add -p &&"#],
+            vec!["test_write_lines s y y | git add -p &&"],
+            (
+                vec![vec![
+                    (MinusNoop, ""),
+                    (Deletion, "printf"),
+                    (Deletion, r#" "%s\n""#),
+                    (MinusNoop, " s y y | git add -p &&"),
+                ]],
+                vec![vec![
+                    (PlusNoop, ""),
+                    (Insertion, "test_write_lines"),
+                    (PlusNoop, " s y y | git add -p &&"),
+                ]],
             ),
         );
     }
