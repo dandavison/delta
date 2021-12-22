@@ -364,7 +364,11 @@ trait ProcessInterface {
                     };
                     iter_parents(self, pid, &mut sum_distance);
 
-                    Some((length_of_process_chain, args))
+                    if length_of_process_chain == usize::MAX {
+                        None
+                    } else {
+                        Some((length_of_process_chain, args))
+                    }
                 }
                 _ => None,
             })
@@ -846,6 +850,20 @@ pub mod tests {
         );
         // ignored: dropping causes a panic while panicing, so can't test
         calling_process_cmdline(ProcInfo::new(), guess_git_blame_filename_extension);
+    }
+
+    #[test]
+    fn test_process_blame_no_parent_found() {
+        let two_trees = MockProcInfo::with(&[
+            (2, 100, "-shell", None),
+            (3, 100, "git blame src/main.rs", Some(2)),
+            (4, 100, "call_delta.sh", None),
+            (5, 100, "delta", Some(4)),
+        ]);
+        assert_eq!(
+            calling_process_cmdline(two_trees, guess_git_blame_filename_extension),
+            None
+        );
     }
 
     #[test]
