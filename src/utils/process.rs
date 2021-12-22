@@ -226,6 +226,13 @@ struct ProcInfo {
 }
 impl ProcInfo {
     fn new() -> Self {
+        // On Linux sysinfo optimizes for repeated process queries and keeps per-process
+        // /proc file descriptors open. This caching is not needed here, so
+        // set this to zero (this does nothing on other platforms).
+        // Also, there is currently a kernel bug which slows down syscalls when threads are
+        // involved (here: the ctrlc handler) and a lot of files are kept open.
+        sysinfo::set_open_files_limit(0);
+
         ProcInfo {
             info: sysinfo::System::new(),
         }
