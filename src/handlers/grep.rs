@@ -246,8 +246,8 @@ fn get_code_style_sections<'b>(
 }
 
 fn make_output_config() -> GrepOutputConfig {
-    match process::calling_process().as_deref() {
-        Some(process::CallingProcess::GitGrep(command_line))
+    match &*process::calling_process() {
+        process::CallingProcess::GitGrep(command_line)
             if command_line.short_options.contains("-W")
                 || command_line.long_options.contains("--function-context") =>
         {
@@ -265,7 +265,7 @@ fn make_output_config() -> GrepOutputConfig {
                 pad_line_number: true,
             }
         }
-        Some(process::CallingProcess::GitGrep(command_line))
+        process::CallingProcess::GitGrep(command_line)
             if command_line.short_options.contains("-p")
                 || command_line.long_options.contains("--show-function") =>
         {
@@ -380,9 +380,8 @@ pub fn parse_grep_line(line: &str) -> Option<GrepLine> {
     if line.starts_with('{') {
         ripgrep_json::parse_line(line)
     } else {
-        match process::calling_process().as_deref() {
-            Some(process::CallingProcess::GitGrep(_))
-            | Some(process::CallingProcess::OtherGrep) => [
+        match &*process::calling_process() {
+            process::CallingProcess::GitGrep(_) | process::CallingProcess::OtherGrep => [
                 &*GREP_LINE_REGEX_ASSUMING_FILE_EXTENSION,
                 &*GREP_LINE_REGEX_ASSUMING_NO_INTERNAL_SEPARATOR_CHARS,
             ]

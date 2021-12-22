@@ -65,6 +65,12 @@ pub mod errors {
 
 #[cfg(not(tarpaulin_include))]
 fn main() -> std::io::Result<()> {
+    // Do this first because both parsing all the input in `run_app()` and
+    // listing all processes takes about 50ms on Linux.
+    // It also improves the chance that the calling process is still around when
+    // input is piped into delta (e.g. `git show  --word-diff=color | delta`).
+    utils::process::start_determining_calling_process_in_thread();
+
     // Ignore ctrl-c (SIGINT) to avoid leaving an orphaned pager process.
     // See https://github.com/dandavison/delta/issues/681
     ctrlc::set_handler(|| {})
