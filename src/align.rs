@@ -240,46 +240,56 @@ mod tests {
 
     #[test]
     fn test_0() {
-        let (before, after) = ("aaa", "aba");
-        assert_string_distance_parts(before, after, (1, 3));
-        assert_eq!(operations(before, after), vec![NoOp, Substitution, NoOp,]);
+        TestCase {
+            before: "aaa",
+            after: "aba",
+            distance: 1,
+            parts: (1, 3),
+            operations: vec![NoOp, Substitution, NoOp],
+        }
+        .run();
     }
 
     #[test]
     fn test_0_nonascii() {
-        let (before, after) = ("ááb", "áaa");
-        assert_string_distance_parts(before, after, (2, 3));
-        assert_eq!(
-            operations(before, after),
-            vec![NoOp, Substitution, Substitution,]
-        );
+        TestCase {
+            before: "ááb",
+            after: "áaa",
+            distance: 2,
+            parts: (2, 3),
+            operations: vec![NoOp, Substitution, Substitution],
+        }
+        .run();
     }
 
     #[test]
     fn test_1() {
-        let (before, after) = ("kitten", "sitting");
-        assert_string_distance_parts(before, after, (3, 7));
-        assert_eq!(
-            operations(before, after),
-            vec![
+        TestCase {
+            before: "kitten",
+            after: "sitting",
+            distance: 3,
+            parts: (3, 7),
+            operations: vec![
                 Substitution, // K S
                 NoOp,         // I I
                 NoOp,         // T T
                 NoOp,         // T T
                 Substitution, // E I
                 NoOp,         // N N
-                Insertion     // - G
-            ]
-        );
+                Insertion,    // - G
+            ],
+        }
+        .run();
     }
 
     #[test]
     fn test_2() {
-        let (before, after) = ("saturday", "sunday");
-        assert_string_distance_parts(before, after, (3, 8));
-        assert_eq!(
-            operations(before, after),
-            vec![
+        TestCase {
+            before: "saturday",
+            after: "sunday",
+            distance: 3,
+            parts: (3, 8),
+            operations: vec![
                 NoOp,         // S S
                 Deletion,     // A -
                 Deletion,     // T -
@@ -287,21 +297,42 @@ mod tests {
                 Substitution, // R N
                 NoOp,         // D D
                 NoOp,         // A A
-                NoOp          // Y Y
-            ]
-        );
+                NoOp,         // Y Y
+            ],
+        }
+        .run();
     }
 
-    fn assert_string_distance_parts(s1: &str, s2: &str, parts: (usize, usize)) {
-        let (numer, _) = parts;
-        assert_string_levenshtein_distance(s1, s2, numer);
-        assert_eq!(string_distance_parts(s1, s2), parts);
-        assert_eq!(string_distance_parts(s2, s1), parts);
+    struct TestCase<'a> {
+        before: &'a str,
+        after: &'a str,
+        distance: usize,
+        parts: (usize, usize),
+        operations: Vec<Operation>,
     }
 
-    fn assert_string_levenshtein_distance(s1: &str, s2: &str, d: usize) {
-        assert_eq!(string_levenshtein_distance(s1, s2), d);
-        assert_eq!(string_levenshtein_distance(s2, s1), d);
+    impl<'a> TestCase<'a> {
+        pub fn run(&self) -> () {
+            self.assert_string_distance_parts();
+            assert_eq!(operations(self.before, self.after), self.operations);
+        }
+
+        fn assert_string_distance_parts(&self) {
+            self.assert_string_levenshtein_distance();
+            assert_eq!(string_distance_parts(self.before, self.after), self.parts);
+            assert_eq!(string_distance_parts(self.after, self.before), self.parts);
+        }
+
+        fn assert_string_levenshtein_distance(&self) {
+            assert_eq!(
+                string_levenshtein_distance(self.before, self.after),
+                self.distance
+            );
+            assert_eq!(
+                string_levenshtein_distance(self.after, self.before),
+                self.distance
+            );
+        }
     }
 
     fn string_distance_parts(x: &str, y: &str) -> (usize, usize) {
