@@ -27,13 +27,11 @@ lazy_static! {
 }
 
 fn compute_is_word_diff() -> bool {
-    match process::calling_process().as_deref() {
-        Some(
-            CallingProcess::GitDiff(cmd_line)
-            | CallingProcess::GitShow(cmd_line, _)
-            | CallingProcess::GitLog(cmd_line)
-            | CallingProcess::GitReflog(cmd_line),
-        ) => {
+    match &*process::calling_process() {
+        CallingProcess::GitDiff(cmd_line)
+        | CallingProcess::GitShow(cmd_line, _)
+        | CallingProcess::GitLog(cmd_line)
+        | CallingProcess::GitReflog(cmd_line) => {
             cmd_line.long_options.contains("--word-diff")
                 || cmd_line.long_options.contains("--word-diff-regex")
                 || cmd_line.long_options.contains("--color-words")

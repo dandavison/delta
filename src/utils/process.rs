@@ -1,9 +1,9 @@
-use std::borrow::Cow;
 use std::collections::{HashMap, HashSet};
 use std::path::Path;
-use sysinfo::{Pid, Process, ProcessExt, ProcessRefreshKind, SystemExt};
+use std::sync::{Arc, Condvar, Mutex, MutexGuard};
 
 use lazy_static::lazy_static;
+use sysinfo::{Pid, Process, ProcessExt, ProcessRefreshKind, SystemExt};
 
 #[derive(Clone, Debug, PartialEq)]
 pub enum CallingProcess {
@@ -13,6 +13,8 @@ pub enum CallingProcess {
     GitReflog(CommandLine),
     GitGrep(CommandLine),
     OtherGrep, // rg, grep, ag, ack, etc
+    None,      // no matching process could be found
+    Pending,   // calling process is currently being determined
 }
 // TODO: Git blame is currently handled differently
 
@@ -23,23 +25,49 @@ pub struct CommandLine {
     last_arg: Option<String>,
 }
 
-pub fn calling_process() -> Option<Cow<'static, CallingProcess>> {
-    #[cfg(not(test))]
-    {
-        CACHED_CALLING_PROCESS.as_ref().map(Cow::Borrowed)
-    }
-    #[cfg(test)]
-    {
-        determine_calling_process().map(Cow::Owned)
-    }
-}
-
 lazy_static! {
-    static ref CACHED_CALLING_PROCESS: Option<CallingProcess> = determine_calling_process();
+    static ref CALLER: Arc<(Mutex<CallingProcess>, Condvar)> =
+        Arc::new((Mutex::new(CallingProcess::Pending), Condvar::new()));
 }
 
-fn determine_calling_process() -> Option<CallingProcess> {
+pub fn start_determining_calling_process_in_thread() {
+    // The handle is neither kept nor returned nor joined but dropped, so the main
+    // thread can exit early if it does not need to know its parent process.
+    std::thread::Builder::new()
+        .name("find_calling_process".into())
+        .spawn(move || {
+            let calling_process = determine_calling_process();
+
+            let (caller_mutex, determine_done) = &**CALLER;
+
+            let mut caller = caller_mutex.lock().unwrap();
+            *caller = calling_process;
+            determine_done.notify_all();
+        })
+        .unwrap();
+}
+
+#[cfg(not(test))]
+pub fn calling_process() -> MutexGuard<'static, CallingProcess> {
+    let (caller_mutex, determine_done) = &**CALLER;
+
+    determine_done
+        .wait_while(caller_mutex.lock().unwrap(), |caller| {
+            *caller == CallingProcess::Pending
+        })
+        .unwrap()
+}
+
+// The return value is duck-typed to work in place of a MutexGuard when testing.
+#[cfg(test)]
+pub fn calling_process() -> Box<CallingProcess> {
+    type _UnusedImport = MutexGuard<'static, i8>;
+    Box::new(determine_calling_process())
+}
+
+fn determine_calling_process() -> CallingProcess {
     calling_process_cmdline(ProcInfo::new(), describe_calling_process)
+        .unwrap_or(CallingProcess::None)
 }
 
 // Return value of `extract_args(args: &[String]) -> ProcessArgs<T>` function which is

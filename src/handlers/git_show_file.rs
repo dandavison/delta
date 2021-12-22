@@ -9,9 +9,7 @@ impl<'a> StateMachine<'a> {
         self.painter.emit()?;
         let mut handled_line = false;
         if matches!(self.state, State::Unknown) {
-            if let Some(process::CallingProcess::GitShow(_, extension)) =
-                process::calling_process().as_deref()
-            {
+            if let process::CallingProcess::GitShow(_, extension) = &*process::calling_process() {
                 self.state = State::GitShowFile;
                 self.painter.set_syntax(extension.as_deref());
                 self.painter.set_highlighter();
