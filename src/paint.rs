@@ -319,7 +319,7 @@ impl<'p> Painter<'p> {
                     .next()
                     .unwrap_or(config.null_style)
             }
-            State::Blame(_, _) => diff_sections[0].0,
+            State::Blame(_) => diff_sections[0].0,
             _ => config.null_style,
         };
 
@@ -457,7 +457,7 @@ impl<'p> Painter<'p> {
                 // with syntax-highlighting.
                 true
             }
-            State::Blame(_, _) => true,
+            State::Blame(_) => true,
             State::GitShowFile => true,
             State::Grep => true,
             State::Unknown

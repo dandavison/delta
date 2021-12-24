@@ -24,43 +24,7 @@ pub fn parse_styles(opt: &cli::Opt) -> HashMap<String, Style> {
     make_line_number_styles(opt, &mut styles);
     make_grep_styles(opt, &mut styles);
     make_merge_conflict_styles(opt, &mut styles);
-
-    styles.insert(
-        "inline-hint-style",
-        style_from_str(
-            &opt.inline_hint_style,
-            None,
-            None,
-            opt.computed.true_color,
-            opt.git_config.as_ref(),
-        ),
-    );
-    styles.insert(
-        "git-minus-style",
-        StyleReference::Style(match opt.git_config_entries.get("color.diff.old") {
-            Some(GitConfigEntry::Style(s)) => Style::from_git_str(s),
-            _ => *style::GIT_DEFAULT_MINUS_STYLE,
-        }),
-    );
-    styles.insert(
-        "git-plus-style",
-        StyleReference::Style(match opt.git_config_entries.get("color.diff.new") {
-            Some(GitConfigEntry::Style(s)) => Style::from_git_str(s),
-            _ => *style::GIT_DEFAULT_PLUS_STYLE,
-        }),
-    );
-    if let Some(style_string) = &opt.blame_code_style {
-        styles.insert(
-            "blame-code-style",
-            style_from_str(
-                style_string,
-                None,
-                None,
-                opt.computed.true_color,
-                opt.git_config.as_ref(),
-            ),
-        );
-    };
+    make_misc_styles(opt, &mut styles);
 
     let mut resolved_styles = resolve_style_references(styles, opt);
     resolved_styles.get_mut("minus-emph-style").unwrap().is_emph = true;
@@ -491,6 +455,33 @@ fn make_merge_conflict_styles(opt: &cli::Opt, styles: &mut HashMap<&str, StyleRe
             opt.computed.true_color,
             opt.git_config.as_ref(),
         ),
+    );
+}
+
+fn make_misc_styles(opt: &cli::Opt, styles: &mut HashMap<&str, StyleReference>) {
+    styles.insert(
+        "inline-hint-style",
+        style_from_str(
+            &opt.inline_hint_style,
+            None,
+            None,
+            opt.computed.true_color,
+            opt.git_config.as_ref(),
+        ),
+    );
+    styles.insert(
+        "git-minus-style",
+        StyleReference::Style(match opt.git_config_entries.get("color.diff.old") {
+            Some(GitConfigEntry::Style(s)) => Style::from_git_str(s),
+            _ => *style::GIT_DEFAULT_MINUS_STYLE,
+        }),
+    );
+    styles.insert(
+        "git-plus-style",
+        StyleReference::Style(match opt.git_config_entries.get("color.diff.new") {
+            Some(GitConfigEntry::Style(s)) => Style::from_git_str(s),
+            _ => *style::GIT_DEFAULT_PLUS_STYLE,
+        }),
     );
 }
 
