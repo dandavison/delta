@@ -22,70 +22,37 @@ impl<'a> StateMachine<'a> {
         // .to_owned()s.
         let mut handled_line = false;
         self.painter.emit()?;
-        let (previous_commit, mut repeat_blame_line, try_parse) = match &self.state {
-            State::Blame(commit, repeat_blame_line) => {
-                (Some(commit.as_str()), repeat_blame_line.clone(), true)
-            }
-            State::Unknown => (None, None, true),
-            _ => (None, None, false),
+        let (previous_key, try_parse) = match &self.state {
+            State::Blame(key) => (Some(key.clone()), true),
+            State::Unknown => (None, true),
+            _ => (None, false),
         };
         if try_parse {
-            if let Some(blame) =
-                parse_git_blame_line(&self.line, &self.config.blame_timestamp_format)
-            {
-                let is_repeat = previous_commit == Some(blame.commit);
-
-                let mut style =
-                    match paint::parse_style_sections(&self.raw_line, self.config).first() {
-                        Some((style, _)) if style != &Style::default() => {
-                            // Something like `blame.coloring = highlightRecent` is in effect; honor
-                            // the color from git, subject to map-styles.
-                            *style
-                        }
-                        _ => {
-                            // Compute the color ourselves.
-                            let color = self.get_color(blame.commit, previous_commit, is_repeat);
-                            // TODO: This will often be pointlessly updating a key with the
-                            // value it already has. It might be nicer to do this (and
-                            // compute the style) in get_color(), but as things stand the
-                            // borrow checker won't permit that.
-                            let style = Style::from_colors(
-                                None,
-                                color::parse_color(&color, true, self.config.git_config.as_ref()),
-                            );
-                            self.blame_commit_colors
-                                .insert(blame.commit.to_owned(), color);
-                            style
-                        }
-                    };
-
-                style.is_syntax_highlighted = true;
-
-                // Construct commit metadata, paint, and emit
+            let line = self.line.to_owned();
+            if let Some(blame) = parse_git_blame_line(&line, &self.config.blame_timestamp_format) {
+                // Format blame metadata
                 let format_data = format::parse_line_number_format(
                     &self.config.blame_format,
                     &*BLAME_PLACEHOLDER_REGEX,
                     false,
                 );
-                let blame_line = match (is_repeat, &repeat_blame_line) {
-                    (false, _) => Cow::from(format_blame_metadata(
-                        &format_data,
-                        &blame,
-                        false,
-                        self.config,
-                    )),
-                    (true, None) => {
-                        repeat_blame_line = Some(format_blame_metadata(
-                            &format_data,
-                            &blame,
-                            true,
-                            self.config,
-                        ));
-                        Cow::from(repeat_blame_line.as_ref().unwrap())
-                    }
-                    (true, Some(repeat_blame_line)) => Cow::from(repeat_blame_line),
+                let mut formatted_blame_metadata =
+                    format_blame_metadata(&format_data, &blame, self.config);
+                let key = blame.commit;
+                let is_repeat = previous_key.as_deref() == Some(key);
+                if is_repeat {
+                    formatted_blame_metadata =
+                        " ".repeat(measure_text_width(&formatted_blame_metadata))
                 };
-                write!(self.painter.writer, "{}", style.paint(blame_line))?;
+                let metadata_style =
+                    self.blame_metadata_style(&key, previous_key.as_deref(), is_repeat);
+                let code_style = self.config.blame_code_style.unwrap_or(metadata_style);
+
+                write!(
+                    self.painter.writer,
+                    "{}",
+                    metadata_style.paint(&formatted_blame_metadata),
+                )?;
 
                 // Emit syntax-highlighted code
                 if matches!(self.state, State::Unknown) {
@@ -97,10 +64,10 @@ impl<'a> StateMachine<'a> {
                         self.painter.set_highlighter();
                     }
                 }
-                self.state = State::Blame(blame.commit.to_owned(), repeat_blame_line.to_owned());
+                self.state = State::Blame(key);
                 self.painter.syntax_highlight_and_paint_line(
                     &format!("{}\n", blame.code),
-                    StyleSectionSpecifier::Style(self.config.blame_code_style.unwrap_or(style)),
+                    StyleSectionSpecifier::Style(code_style),
                     self.state.clone(),
                     BgShouldFill::default(),
                 );
@@ -110,64 +77,89 @@ impl<'a> StateMachine<'a> {
         Ok(handled_line)
     }
 
-    fn get_color(
-        &self,
-        this_commit: &str,
-        previous_commit: Option<&str>,
+    fn blame_metadata_style(
+        &mut self,
+        key: &str,
+        previous_key: Option<&str>,
         is_repeat: bool,
-    ) -> String {
+    ) -> Style {
+        let mut style = match paint::parse_style_sections(&self.raw_line, self.config).first() {
+            Some((style, _)) if style != &Style::default() => {
+                // Something like `blame.coloring = highlightRecent` is in effect; honor
+                // the color from git, subject to map-styles.
+                *style
+            }
+            _ => {
+                // Compute the color ourselves.
+                let color = self.get_color(key, previous_key, is_repeat);
+                // TODO: This will often be pointlessly updating a key with the
+                // value it already has. It might be nicer to do this (and
+                // compute the style) in get_color(), but as things stand the
+                // borrow checker won't permit that.
+                let style = Style::from_colors(
+                    None,
+                    color::parse_color(&color, true, self.config.git_config.as_ref()),
+                );
+                self.blame_key_colors.insert(key.to_owned(), color);
+                style
+            }
+        };
+
+        style.is_syntax_highlighted = true;
+        style
+    }
+
+    fn get_color(&self, this_key: &str, previous_key: Option<&str>, is_repeat: bool) -> String {
         // Determine color for this line
-        let previous_commit_color = match previous_commit {
-            Some(previous_commit) => self.blame_commit_colors.get(previous_commit),
+        let previous_key_color = match previous_key {
+            Some(previous_key) => self.blame_key_colors.get(previous_key),
             None => None,
         };
 
         match (
-            self.blame_commit_colors.get(this_commit),
-            previous_commit_color,
+            self.blame_key_colors.get(this_key),
+            previous_key_color,
             is_repeat,
         ) {
-            (Some(commit_color), Some(previous_commit_color), true) => {
-                debug_assert!(commit_color == previous_commit_color);
-                // Repeated commit: assign same color
-                commit_color.to_owned()
+            (Some(key_color), Some(previous_key_color), true) => {
+                debug_assert!(key_color == previous_key_color);
+                // Repeated key: assign same color
+                key_color.to_owned()
             }
-            (None, Some(previous_commit_color), false) => {
-                // The commit has no color: assign the next color that differs
-                // from previous commit.
-                self.get_next_color(Some(previous_commit_color))
+            (None, Some(previous_key_color), false) => {
+                // The key has no color: assign the next color that differs
+                // from previous key.
+                self.get_next_color(Some(previous_key_color))
             }
             (None, None, false) => {
-                // The commit has no color, and there is no previous commit:
+                // The key has no color, and there is no previous key:
                 // Just assign the next color. is_repeat is necessarily false.
                 self.get_next_color(None)
             }
-            (Some(commit_color), Some(previous_commit_color), false) => {
-                if commit_color != previous_commit_color {
-                    // Consecutive commits differ without a collision
-                    commit_color.to_owned()
+            (Some(key_color), Some(previous_key_color), false) => {
+                if key_color != previous_key_color {
+                    // Consecutive keys differ without a collision
+                    key_color.to_owned()
                 } else {
-                    // Consecutive commits differ; prevent color collision
-                    self.get_next_color(Some(commit_color))
+                    // Consecutive keys differ; prevent color collision
+                    self.get_next_color(Some(key_color))
                 }
             }
-            (None, _, true) => {
-                delta_unreachable("is_repeat cannot be true when commit has no color.")
-            }
+            (None, _, true) => delta_unreachable("is_repeat cannot be true when key has no color."),
             (Some(_), None, _) => {
-                delta_unreachable("There must be a previous commit if the commit has a color.")
+                delta_unreachable("There must be a previous key if the key has a color.")
             }
         }
     }
 
     fn get_next_color(&self, other_than_color: Option<&str>) -> String {
-        let n_commits = self.blame_commit_colors.len();
+        let n_keys = self.blame_key_colors.len();
         let n_colors = self.config.blame_palette.len();
-        let color = self.config.blame_palette[n_commits % n_colors].clone();
+        let color = self.config.blame_palette[n_keys % n_colors].clone();
         if Some(color.as_str()) != other_than_color {
             color
         } else {
-            self.config.blame_palette[(n_commits + 1) % n_colors].clone()
+            self.config.blame_palette[(n_keys + 1) % n_colors].clone()
         }
     }
 }
@@ -182,7 +174,7 @@ pub struct BlameLine<'a> {
 }
 
 // E.g.
-//ea82f2d0 (Dan Davison       2021-08-22 18:20:19 -0700 120)             let mut handled_line = self.handle_commit_meta_header_line()?
+//ea82f2d0 (Dan Davison       2021-08-22 18:20:19 -0700 120)             let mut handled_line = self.handle_key_meta_header_line()?
 
 lazy_static! {
     static ref BLAME_LINE_REGEX: Regex = Regex::new(
@@ -245,7 +237,6 @@ lazy_static! {
 pub fn format_blame_metadata(
     format_data: &[format::FormatStringPlaceholderData],
     blame: &BlameLine,
-    is_repeat: bool,
     config: &config::Config,
 ) -> String {
     let mut s = String::new();
@@ -259,7 +250,6 @@ pub fn format_blame_metadata(
             .unwrap_or(&format::Align::Left);
         let width = placeholder.width.unwrap_or(15);
 
-        let pad = |s| format::pad(s, width, alignment_spec, placeholder.precision);
         let field = match placeholder.placeholder {
             Some(Placeholder::Str("timestamp")) => Some(Cow::from(
                 chrono_humanize::HumanTime::from(blame.time).to_string(),
@@ -270,12 +260,12 @@ pub fn format_blame_metadata(
             _ => unreachable!("Unexpected `git blame` input"),
         };
         if let Some(field) = field {
-            let field = pad(&field);
-            if is_repeat {
-                s.push_str(&" ".repeat(measure_text_width(&field)));
-            } else {
-                s.push_str(&field)
-            }
+            s.push_str(&format::pad(
+                &field,
+                width,
+                alignment_spec,
+                placeholder.precision,
+            ))
         }
         suffix = placeholder.suffix.as_str();
     }
@@ -328,45 +318,45 @@ mod tests {
         .into_iter()
         .collect();
 
-        // First commit gets first color
+        // First key gets first color
         machine.line = blame_lines["A"].into();
         machine.handle_blame_line().unwrap();
         assert_eq!(
-            hashmap_items(&machine.blame_commit_colors),
+            hashmap_items(&machine.blame_key_colors),
             &[("aaaaaaa", "1")]
         );
 
-        // Repeat commit: same color
+        // Repeat key: same color
         machine.line = blame_lines["A"].into();
         machine.handle_blame_line().unwrap();
         assert_eq!(
-            hashmap_items(&machine.blame_commit_colors),
+            hashmap_items(&machine.blame_key_colors),
             &[("aaaaaaa", "1")]
         );
 
-        // Second distinct commit gets second color
+        // Second distinct key gets second color
         machine.line = blame_lines["B"].into();
         machine.handle_blame_line().unwrap();
         assert_eq!(
-            hashmap_items(&machine.blame_commit_colors),
+            hashmap_items(&machine.blame_key_colors),
             &[("aaaaaaa", "1"), ("bbbbbbb", "2")]
         );
 
-        // Third distinct commit gets first color (we only have 2 colors)
+        // Third distinct key gets first color (we only have 2 colors)
         machine.line = blame_lines["C"].into();
         machine.handle_blame_line().unwrap();
         assert_eq!(
-            hashmap_items(&machine.blame_commit_colors),
+            hashmap_items(&machine.blame_key_colors),
             &[("aaaaaaa", "1"), ("bbbbbbb", "2"), ("ccccccc", "1")]
         );
 
-        // Now the first commit appears again. It would get the first color, but
-        // that would be a consecutive-commit-color-collision. So it gets the
+        // Now the first key appears again. It would get the first color, but
+        // that would be a consecutive-key-color-collision. So it gets the
         // second color.
         machine.line = blame_lines["A"].into();
         machine.handle_blame_line().unwrap();
         assert_eq!(
-            hashmap_items(&machine.blame_commit_colors),
+            hashmap_items(&machine.blame_key_colors),
             &[("aaaaaaa", "2"), ("bbbbbbb", "2"), ("ccccccc", "1")]
         );
     }

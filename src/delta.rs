@@ -25,7 +25,7 @@ pub enum State {
     MergeConflict(MergeParents, merge_conflict::MergeConflictCommit),
     SubmoduleLog, // In a submodule section, with gitconfig diff.submodule = log
     SubmoduleShort(String), // In a submodule section, with gitconfig diff.submodule = short
-    Blame(String, Option<String>), // In a line of `git blame` output (commit, repeat_blame_line).
+    Blame(String), // In a line of `git blame` output (key).
     GitShowFile,  // In a line of `git show $revision:./path/to/file.ext` output
     Grep,         // In a line of `git grep` output
     Unknown,
@@ -107,7 +107,7 @@ pub struct StateMachine<'a> {
     // avoid emitting the file meta header line twice (#245).
     pub current_file_pair: Option<(String, String)>,
     pub handled_diff_header_header_line_file_pair: Option<(String, String)>,
-    pub blame_commit_colors: HashMap<String, String>,
+    pub blame_key_colors: HashMap<String, String>,
 }
 
 pub fn delta<I>(lines: ByteLines<I>, writer: &mut dyn Write, config: &Config) -> std::io::Result<()>
@@ -133,7 +133,7 @@ impl<'a> StateMachine<'a> {
             handled_diff_header_header_line_file_pair: None,
             painter: Painter::new(writer, config),
             config,
-            blame_commit_colors: HashMap::new(),
+            blame_key_colors: HashMap::new(),
         }
     }
 
