@@ -100,7 +100,7 @@ impl<'a> StateMachine<'a> {
                 self.state = State::Blame(blame.commit.to_owned(), repeat_blame_line.to_owned());
                 self.painter.syntax_highlight_and_paint_line(
                     &format!("{}\n", blame.code),
-                    StyleSectionSpecifier::Style(style),
+                    StyleSectionSpecifier::Style(self.config.blame_code_style.unwrap_or(style)),
                     self.state.clone(),
                     BgShouldFill::default(),
                 );
