@@ -491,7 +491,7 @@ pub struct Opt {
     /// "{timestamp}", "{author}", and "{commit}".
     #[structopt(
         long = "blame-format",
-        default_value = "{timestamp:<15} {author:<15.14} {commit:<8} │ "
+        default_value = "{timestamp:<15} {author:<15.14} {commit:<8} │"
     )]
     pub blame_format: String,
 
