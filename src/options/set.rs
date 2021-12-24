@@ -125,6 +125,7 @@ pub fn set_options(
 
     set_options!(
         [
+            blame_code_style,
             blame_format,
             blame_palette,
             blame_timestamp_format,

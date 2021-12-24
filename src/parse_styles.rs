@@ -49,6 +49,19 @@ pub fn parse_styles(opt: &cli::Opt) -> HashMap<String, Style> {
             _ => *style::GIT_DEFAULT_PLUS_STYLE,
         }),
     );
+    if let Some(style_string) = &opt.blame_code_style {
+        styles.insert(
+            "blame-code-style",
+            style_from_str(
+                style_string,
+                None,
+                None,
+                opt.computed.true_color,
+                opt.git_config.as_ref(),
+            ),
+        );
+    };
+
     let mut resolved_styles = resolve_style_references(styles, opt);
     resolved_styles.get_mut("minus-emph-style").unwrap().is_emph = true;
     resolved_styles.get_mut("plus-emph-style").unwrap().is_emph = true;
