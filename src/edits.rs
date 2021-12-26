@@ -735,7 +735,6 @@ mod tests {
     }
 
     #[test]
-    #[ignore]
     fn test_infer_edits_12() {
         assert_edits(
             vec!["                     (xxxxxxxxx, \"build info\"),"],
