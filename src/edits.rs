@@ -631,13 +631,13 @@ mod tests {
             vec!["fn coalesce_edits<'a, 'b, EditOperation>("],
             (
                 vec![vec![
-                    (MinusNoop, "fn coalesce_edits<'a"),
-                    (MinusNoop, ", EditOperation>("),
+                    (MinusNoop, "fn coalesce_edits<'a, "),
+                    (MinusNoop, "EditOperation>("),
                 ]],
                 vec![vec![
-                    (PlusNoop, "fn coalesce_edits<'a"),
-                    (Insertion, ", 'b"),
-                    (PlusNoop, ", EditOperation>("),
+                    (PlusNoop, "fn coalesce_edits<'a, "),
+                    (Insertion, "'b, "),
+                    (PlusNoop, "EditOperation>("),
                 ]],
             ),
             0.66,
@@ -652,15 +652,15 @@ mod tests {
             (
                 vec![vec![
                     (MinusNoop, "for _ in range(0, "),
-                    (MinusNoop, "options[\"count\"]"),
-                    (MinusNoop, "):"),
+                    (MinusNoop, "options[\"count\"])"),
+                    (MinusNoop, ":"),
                 ]],
                 vec![vec![
                     (PlusNoop, "for _ in range(0, "),
                     (Insertion, "int("),
-                    (PlusNoop, "options[\"count\"]"),
+                    (PlusNoop, "options[\"count\"])"),
                     (Insertion, ")"),
-                    (PlusNoop, "):"),
+                    (PlusNoop, ":"),
                 ]],
             ),
             0.3,
@@ -673,8 +673,8 @@ mod tests {
             vec!["a a"],
             vec!["a b a"],
             (
-                vec![vec![(MinusNoop, "a"), (MinusNoop, " a")]],
-                vec![vec![(PlusNoop, "a"), (Insertion, " b"), (PlusNoop, " a")]],
+                vec![vec![(MinusNoop, "a "), (MinusNoop, "a")]],
+                vec![vec![(PlusNoop, "a "), (Insertion, "b "), (PlusNoop, "a")]],
             ),
             1.0,
         );
@@ -682,8 +682,8 @@ mod tests {
             vec!["a a"],
             vec!["a b b a"],
             (
-                vec![vec![(MinusNoop, "a"), (MinusNoop, " a")]],
-                vec![vec![(PlusNoop, "a"), (Insertion, " b b"), (PlusNoop, " a")]],
+                vec![vec![(MinusNoop, "a "), (MinusNoop, "a")]],
+                vec![vec![(PlusNoop, "a "), (Insertion, "b b "), (PlusNoop, "a")]],
             ),
             1.0,
         );
@@ -751,6 +751,34 @@ mod tests {
                 ]],
             ),
             1.0,
+        );
+    }
+
+    #[test]
+    fn test_infer_edits_13() {
+        assert_paired_edits(
+            vec!["'b '", "[element,]"],
+            vec!["' b'", "[element],"],
+            (
+                vec![
+                    vec![
+                        (MinusNoop, "'"),
+                        (Deletion, "b"),
+                        (MinusNoop, " "),
+                        (MinusNoop, "'"),
+                    ],
+                    vec![(MinusNoop, "[element"), (Deletion, ","), (MinusNoop, "]")],
+                ],
+                vec![
+                    vec![
+                        (PlusNoop, "'"),
+                        (PlusNoop, " "),
+                        (Insertion, "b"),
+                        (PlusNoop, "'"),
+                    ],
+                    vec![(PlusNoop, "[element"), (PlusNoop, "]"), (Insertion, ",")],
+                ],
+            ),
         );
     }
 

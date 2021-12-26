@@ -76,7 +76,17 @@ impl<'a> Alignment<'a> {
             for (j, y_j) in self.y.iter().enumerate() {
                 let (left, diag, up) =
                     (self.index(i, j + 1), self.index(i, j), self.index(i + 1, j));
+                // The order of the candidates matters if two of them have the
+                // same cost as in that case we choose the first one. Insertions
+                // are preferred to deletions in order to highlight moved tokens
+                // as a deletion followed by an insertion (as the edit sequence
+                // is read backwards we need to choose the insertion first)
                 let candidates = [
+                    Cell {
+                        parent: up,
+                        operation: Insertion,
+                        cost: self.table[up].cost + INSERTION_COST,
+                    },
                     Cell {
                         parent: left,
                         operation: Deletion,
@@ -87,11 +97,6 @@ impl<'a> Alignment<'a> {
                         operation: if x_i == y_j { NoOp } else { Substitution },
                         cost: self.table[diag].cost
                             + if x_i == y_j { 0 } else { SUBSTITUTION_COST },
-                    },
-                    Cell {
-                        parent: up,
-                        operation: Insertion,
-                        cost: self.table[up].cost + INSERTION_COST,
                     },
                 ];
                 let index = self.index(i + 1, j + 1);
