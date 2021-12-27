@@ -38,8 +38,8 @@ impl<'a> StateMachine<'a> {
                 );
                 let mut formatted_blame_metadata =
                     format_blame_metadata(&format_data, &blame, self.config);
-                let key = blame.commit;
-                let is_repeat = previous_key.as_deref() == Some(key);
+                let key = formatted_blame_metadata.clone();
+                let is_repeat = previous_key.as_deref() == Some(&key);
                 if is_repeat {
                     formatted_blame_metadata =
                         " ".repeat(measure_text_width(&formatted_blame_metadata))
@@ -325,7 +325,7 @@ mod tests {
         machine.handle_blame_line().unwrap();
         assert_eq!(
             hashmap_items(&machine.blame_key_colors),
-            &[("aaaaaaa", "1")]
+            &[("4 months ago    Dan Davison     aaaaaaa ", "1")]
         );
 
         // Repeat key: same color
@@ -333,7 +333,7 @@ mod tests {
         machine.handle_blame_line().unwrap();
         assert_eq!(
             hashmap_items(&machine.blame_key_colors),
-            &[("aaaaaaa", "1")]
+            &[("4 months ago    Dan Davison     aaaaaaa ", "1")]
         );
 
         // Second distinct key gets second color
@@ -341,7 +341,10 @@ mod tests {
         machine.handle_blame_line().unwrap();
         assert_eq!(
             hashmap_items(&machine.blame_key_colors),
-            &[("aaaaaaa", "1"), ("bbbbbbb", "2")]
+            &[
+                ("4 months ago    Dan Davison     aaaaaaa ", "1"),
+                ("a year ago      Dan Davison     bbbbbbb ", "2")
+            ]
         );
 
         // Third distinct key gets first color (we only have 2 colors)
@@ -349,7 +352,11 @@ mod tests {
         machine.handle_blame_line().unwrap();
         assert_eq!(
             hashmap_items(&machine.blame_key_colors),
-            &[("aaaaaaa", "1"), ("bbbbbbb", "2"), ("ccccccc", "1")]
+            &[
+                ("4 months ago    Dan Davison     aaaaaaa ", "1"),
+                ("a year ago      Dan Davison     bbbbbbb ", "2"),
+                ("a year ago      Dan Davison     ccccccc ", "1")
+            ]
         );
 
         // Now the first key appears again. It would get the first color, but
@@ -359,7 +366,11 @@ mod tests {
         machine.handle_blame_line().unwrap();
         assert_eq!(
             hashmap_items(&machine.blame_key_colors),
-            &[("aaaaaaa", "2"), ("bbbbbbb", "2"), ("ccccccc", "1")]
+            &[
+                ("4 months ago    Dan Davison     aaaaaaa ", "2"),
+                ("a year ago      Dan Davison     bbbbbbb ", "2"),
+                ("a year ago      Dan Davison     ccccccc ", "1")
+            ]
         );
     }
 
