@@ -491,9 +491,18 @@ pub struct Opt {
     /// "{timestamp}", "{author}", and "{commit}".
     #[structopt(
         long = "blame-format",
-        default_value = "{timestamp:<15} {author:<15.14} {commit:<8} │"
+        default_value = "{timestamp:<15} {author:<15.14} {commit:<8}"
     )]
     pub blame_format: String,
+
+    /// Separator between the commit metadata and code sections of a line of git blame output.
+    #[structopt(long = "blame-separator", default_value = "│")]
+    pub blame_separator: String,
+
+    #[structopt(long = "blame-separator-style")]
+    /// Style (foreground, background, attributes) for the separator between the commit metadata and
+    /// code sections of a line of `git blame` output.
+    pub blame_separator_style: Option<String>,
 
     #[structopt(long = "blame-code-style")]
     /// Style (foreground, background, attributes) for the code section of a line of `git blame`
