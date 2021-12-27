@@ -22,6 +22,7 @@ pub fn parse_styles(opt: &cli::Opt) -> HashMap<String, Style> {
     make_hunk_styles(opt, &mut styles);
     make_commit_file_hunk_header_styles(opt, &mut styles);
     make_line_number_styles(opt, &mut styles);
+    make_blame_styles(opt, &mut styles);
     make_grep_styles(opt, &mut styles);
     make_merge_conflict_styles(opt, &mut styles);
     make_misc_styles(opt, &mut styles);
@@ -358,6 +359,33 @@ fn make_commit_file_hunk_header_styles(opt: &cli::Opt, styles: &mut HashMap<&str
             )
         ),
     ]);
+}
+
+fn make_blame_styles(opt: &cli::Opt, styles: &mut HashMap<&str, StyleReference>) {
+    if let Some(style_string) = &opt.blame_code_style {
+        styles.insert(
+            "blame-code-style",
+            style_from_str(
+                style_string,
+                None,
+                None,
+                opt.computed.true_color,
+                opt.git_config.as_ref(),
+            ),
+        );
+    };
+    if let Some(style_string) = &opt.blame_separator_style {
+        styles.insert(
+            "blame-separator-style",
+            style_from_str(
+                style_string,
+                None,
+                None,
+                opt.computed.true_color,
+                opt.git_config.as_ref(),
+            ),
+        );
+    };
 }
 
 fn make_grep_styles(opt: &cli::Opt, styles: &mut HashMap<&str, StyleReference>) {

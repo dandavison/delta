@@ -47,11 +47,13 @@ impl<'a> StateMachine<'a> {
                 let metadata_style =
                     self.blame_metadata_style(&key, previous_key.as_deref(), is_repeat);
                 let code_style = self.config.blame_code_style.unwrap_or(metadata_style);
+                let separator_style = self.config.blame_separator_style.unwrap_or(code_style);
 
                 write!(
                     self.painter.writer,
-                    "{}",
+                    "{}{}",
                     metadata_style.paint(&formatted_blame_metadata),
+                    separator_style.paint(&self.config.blame_separator)
                 )?;
 
                 // Emit syntax-highlighted code

@@ -63,6 +63,8 @@ pub struct Config {
     pub blame_code_style: Option<Style>,
     pub blame_format: String,
     pub blame_palette: Vec<String>,
+    pub blame_separator: String,
+    pub blame_separator_style: Option<Style>,
     pub blame_timestamp_format: String,
     pub color_only: bool,
     pub commit_regex: Regex,
@@ -166,7 +168,7 @@ impl Config {
 
 impl From<cli::Opt> for Config {
     fn from(opt: cli::Opt) -> Self {
-        let styles = parse_styles::parse_styles(&opt);
+        let mut styles = parse_styles::parse_styles(&opt);
         let styles_map = parse_styles::parse_styles_map(&opt);
 
         let max_line_distance_for_naively_paired_lines =
@@ -242,8 +244,10 @@ impl From<cli::Opt> for Config {
                 .computed
                 .background_color_extends_to_terminal_width,
             blame_format: opt.blame_format,
-            blame_code_style: styles.get("blame-code-style").copied(),
+            blame_code_style: styles.remove("blame-code-style"),
             blame_palette,
+            blame_separator: opt.blame_separator,
+            blame_separator_style: styles.remove("blame-separator-style"),
             blame_timestamp_format: opt.blame_timestamp_format,
             commit_style: styles["commit-style"],
             color_only: opt.color_only,
