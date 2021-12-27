@@ -191,23 +191,11 @@ where
         *substrings_offset += n;
         &line[old_offset..*line_offset]
     };
-    let mut minus_section = |n| {
-        get_section(
-            n,
-            &mut minus_line_offset,
-            &mut x_offset,
-            &alignment.x,
-            minus_line,
-        )
+    let mut minus_section = |n: usize, offset: &mut usize| {
+        get_section(n, &mut minus_line_offset, offset, &alignment.x, minus_line)
     };
-    let mut plus_section = |n| {
-        get_section(
-            n,
-            &mut plus_line_offset,
-            &mut y_offset,
-            &alignment.y,
-            plus_line,
-        )
+    let mut plus_section = |n: usize, offset: &mut usize| {
+        get_section(n, &mut plus_line_offset, offset, &alignment.y, plus_line)
     };
     let distance_contribution = |section: &str| UnicodeWidthStr::width(section.trim());
 
@@ -215,7 +203,7 @@ where
     for (op, n) in alignment.coalesced_operations() {
         match op {
             align::Operation::Deletion => {
-                let minus_section = minus_section(n);
+                let minus_section = minus_section(n, &mut x_offset);
                 let n_d = distance_contribution(minus_section);
                 d_denom += n_d;
                 d_numer += n_d;
@@ -223,12 +211,14 @@ where
                 minus_op_prev = deletion;
             }
             align::Operation::NoOp => {
-                let minus_section = minus_section(n);
+                let minus_section = minus_section(n, &mut x_offset);
                 let n_d = distance_contribution(minus_section);
                 d_denom += n_d;
                 let is_space = minus_section.trim().is_empty();
                 let coalesce_space_with_previous = is_space
-                    && ((minus_op_prev == deletion && plus_op_prev == insertion)
+                    && ((minus_op_prev == deletion
+                        && plus_op_prev == insertion
+                        && (x_offset < alignment.x.len() - 1 || y_offset < alignment.y.len() - 1))
                         || (minus_op_prev == noop_deletion && plus_op_prev == noop_insertion));
                 annotated_minus_line.push((
                     if coalesce_space_with_previous {
@@ -244,23 +234,23 @@ where
                     } else {
                         noop_insertion
                     },
-                    plus_section(n),
+                    plus_section(n, &mut y_offset),
                 ));
                 minus_op_prev = noop_deletion;
                 plus_op_prev = noop_insertion;
             }
             align::Operation::Substitution => {
-                let minus_section = minus_section(n);
+                let minus_section = minus_section(n, &mut x_offset);
                 let n_d = distance_contribution(minus_section);
                 d_denom += n_d;
                 d_numer += n_d;
                 annotated_minus_line.push((deletion, minus_section));
-                annotated_plus_line.push((insertion, plus_section(n)));
+                annotated_plus_line.push((insertion, plus_section(n, &mut y_offset)));
                 minus_op_prev = deletion;
                 plus_op_prev = insertion;
             }
             align::Operation::Insertion => {
-                let plus_section = plus_section(n);
+                let plus_section = plus_section(n, &mut y_offset);
                 let n_d = distance_contribution(plus_section);
                 d_denom += n_d;
                 d_numer += n_d;
@@ -777,6 +767,45 @@ mod tests {
                         (PlusNoop, "'"),
                     ],
                     vec![(PlusNoop, "[element"), (PlusNoop, "]"), (Insertion, ",")],
+                ],
+            ),
+        );
+    }
+
+    #[test]
+    fn test_infer_edits_14() {
+        assert_paired_edits(
+            vec!["a b c d ", "p "],
+            vec!["x y c z ", "q r"],
+            (
+                vec![
+                    vec![
+                        (MinusNoop, ""),
+                        (Deletion, "a"),
+                        (Deletion, " "),
+                        (Deletion, "b"),
+                        (MinusNoop, " c "),
+                        (Deletion, "d"),
+                        (MinusNoop, " "),
+                    ],
+                    vec![(MinusNoop, ""), (Deletion, "p"), (Deletion, " ")],
+                ],
+                vec![
+                    vec![
+                        (PlusNoop, ""),
+                        (Insertion, "x"),
+                        (Insertion, " "),
+                        (Insertion, "y"),
+                        (PlusNoop, " c "),
+                        (Insertion, "z"),
+                        (PlusNoop, " "),
+                    ],
+                    vec![
+                        (PlusNoop, ""),
+                        (Insertion, "q"),
+                        (Insertion, " "),
+                        (Insertion, "r"),
+                    ],
                 ],
             ),
         );
