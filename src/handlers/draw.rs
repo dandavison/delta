@@ -5,8 +5,25 @@ use crate::ansi;
 use crate::cli::Width;
 use crate::style::{DecorationStyle, Style};
 
-pub type DrawFunction =
-    dyn FnMut(&mut dyn Write, &str, &str, &Width, Style, ansi_term::Style) -> std::io::Result<()>;
+fn paint_text(text_style: Style, text: &str, addendum: &str) -> String {
+    if addendum.is_empty() {
+        text_style.paint(text).to_string()
+    } else {
+        text_style
+            .paint(text.to_string() + " (" + addendum + ")")
+            .to_string()
+    }
+}
+
+pub type DrawFunction = dyn FnMut(
+    &mut dyn Write,
+    &str,
+    &str,
+    &str,
+    &Width,
+    Style,
+    ansi_term::Style,
+) -> std::io::Result<()>;
 
 pub fn get_draw_function(
     decoration_style: DecorationStyle,
@@ -39,6 +56,7 @@ fn write_no_decoration(
     writer: &mut dyn Write,
     text: &str,
     raw_text: &str,
+    addendum: &str,
     _line_width: &Width, // ignored
     text_style: Style,
     _decoration_style: ansi_term::Style,
@@ -46,7 +64,7 @@ fn write_no_decoration(
     if text_style.is_raw {
         writeln!(writer, "{}", raw_text)?;
     } else {
-        writeln!(writer, "{}", text_style.paint(text))?;
+        writeln!(writer, "{}", paint_text(text_style, text, addendum))?;
     }
     Ok(())
 }
@@ -57,6 +75,7 @@ pub fn write_boxed(
     writer: &mut dyn Write,
     text: &str,
     raw_text: &str,
+    addendum: &str,
     _line_width: &Width, // ignored
     text_style: Style,
     decoration_style: ansi_term::Style,
@@ -71,6 +90,7 @@ pub fn write_boxed(
         writer,
         text,
         raw_text,
+        addendum,
         box_width,
         text_style,
         decoration_style,
@@ -85,6 +105,7 @@ fn write_boxed_with_underline(
     writer: &mut dyn Write,
     text: &str,
     raw_text: &str,
+    addendum: &str,
     line_width: &Width,
     text_style: Style,
     decoration_style: ansi_term::Style,
@@ -94,6 +115,7 @@ fn write_boxed_with_underline(
         writer,
         text,
         raw_text,
+        addendum,
         box_width,
         text_style,
         decoration_style,
@@ -126,6 +148,7 @@ fn write_underlined(
     writer: &mut dyn Write,
     text: &str,
     raw_text: &str,
+    addendum: &str,
     line_width: &Width,
     text_style: Style,
     decoration_style: ansi_term::Style,
@@ -135,6 +158,7 @@ fn write_underlined(
         writer,
         text,
         raw_text,
+        addendum,
         line_width,
         text_style,
         decoration_style,
@@ -145,6 +169,7 @@ fn write_overlined(
     writer: &mut dyn Write,
     text: &str,
     raw_text: &str,
+    addendum: &str,
     line_width: &Width,
     text_style: Style,
     decoration_style: ansi_term::Style,
@@ -154,6 +179,7 @@ fn write_overlined(
         writer,
         text,
         raw_text,
+        addendum,
         line_width,
         text_style,
         decoration_style,
@@ -164,6 +190,7 @@ fn write_underoverlined(
     writer: &mut dyn Write,
     text: &str,
     raw_text: &str,
+    addendum: &str,
     line_width: &Width,
     text_style: Style,
     decoration_style: ansi_term::Style,
@@ -173,17 +200,20 @@ fn write_underoverlined(
         writer,
         text,
         raw_text,
+        addendum,
         line_width,
         text_style,
         decoration_style,
     )
 }
 
+#[allow(clippy::too_many_arguments)]
 fn _write_under_or_over_lined(
     underoverline: UnderOverline,
     writer: &mut dyn Write,
     text: &str,
     raw_text: &str,
+    addendum: &str,
     line_width: &Width,
     text_style: Style,
     decoration_style: ansi_term::Style,
@@ -206,7 +236,7 @@ fn _write_under_or_over_lined(
     if text_style.is_raw {
         writeln!(writer, "{}", raw_text)?;
     } else {
-        writeln!(writer, "{}", text_style.paint(text))?;
+        writeln!(writer, "{}", paint_text(text_style, text, addendum))?;
     }
     match underoverline {
         UnderOverline::Over => {}
@@ -237,6 +267,7 @@ fn write_boxed_with_horizontal_whisker(
     writer: &mut dyn Write,
     text: &str,
     raw_text: &str,
+    addendum: &str,
     box_width: usize,
     text_style: Style,
     decoration_style: ansi_term::Style,
@@ -250,6 +281,7 @@ fn write_boxed_with_horizontal_whisker(
         writer,
         text,
         raw_text,
+        addendum,
         box_width,
         text_style,
         decoration_style,
@@ -262,6 +294,7 @@ fn write_boxed_partial(
     writer: &mut dyn Write,
     text: &str,
     raw_text: &str,
+    addendum: &str,
     box_width: usize,
     text_style: Style,
     decoration_style: ansi_term::Style,
@@ -289,7 +322,7 @@ fn write_boxed_partial(
     if text_style.is_raw {
         write!(writer, "{}", raw_text)?;
     } else {
-        write!(writer, "{}", text_style.paint(text))?;
+        write!(writer, "{}", paint_text(text_style, text, addendum))?;
     }
     write!(
         writer,

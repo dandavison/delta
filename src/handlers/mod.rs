@@ -42,6 +42,7 @@ impl<'a> StateMachine<'a> {
                 &self.line,
                 &self.raw_line,
                 &mut self.painter,
+                &mut self.mode_info,
                 self.config,
             )?;
             handled_line = true;

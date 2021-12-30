@@ -17,7 +17,6 @@ pub enum FileEvent {
     Change,
     Copy,
     Rename,
-    ModeChange(String),
     NoEvent,
 }
 
@@ -27,8 +26,7 @@ impl<'a> StateMachine<'a> {
         (matches!(self.state, State::DiffHeader(_)) || self.source == Source::DiffUnified)
             && (self.line.starts_with("--- ")
                 || self.line.starts_with("rename from ")
-                || self.line.starts_with("copy from ")
-                || self.line.starts_with("old mode "))
+                || self.line.starts_with("copy from "))
     }
 
     pub fn handle_diff_header_minus_line(&mut self) -> std::io::Result<bool> {
@@ -46,14 +44,7 @@ impl<'a> StateMachine<'a> {
                 None
             },
         );
-        // In the case of ModeChange only, the file path is taken from the diff
-        // --git line (since that is the only place the file path occurs);
-        // otherwise it is taken from the --- / +++ line.
-        self.minus_file = if let FileEvent::ModeChange(_) = &file_event {
-            get_repeated_file_path_from_diff_line(&self.diff_line).unwrap_or(path_or_mode)
-        } else {
-            path_or_mode
-        };
+        self.minus_file = path_or_mode;
         self.minus_file_event = file_event;
 
         if self.source == Source::DiffUnified {
@@ -76,6 +67,7 @@ impl<'a> StateMachine<'a> {
                 &self.line,
                 &self.raw_line,
                 &mut self.painter,
+                &mut self.mode_info,
                 self.config,
             )?;
             handled_line = true;
@@ -83,13 +75,40 @@ impl<'a> StateMachine<'a> {
         Ok(handled_line)
     }
 
+    pub fn handle_diff_header_mode_line(&mut self) -> std::io::Result<bool> {
+        if !self.line.starts_with("old mode ") && !self.line.starts_with("new mode ") {
+            return Ok(false);
+        }
+        self.state = State::DiffHeader(DiffType::Unified);
+        if !self.should_handle() || self.config.color_only {
+            return Ok(false);
+        }
+        if self.line.starts_with("old") {
+            self.mode_info = self.line[9..].to_string();
+        } else if self.mode_info.is_empty() {
+            return Ok(false);
+        } else {
+            let new_mode = self.line[9..].to_string();
+            self.mode_info = match (self.mode_info.as_str(), new_mode.as_str()) {
+                // 100755 for executable and 100644 for non-executable are the only file modes Git records.
+                // https://medium.com/@tahteche/how-git-treats-changes-in-file-permissions-f71874ca239d
+                ("100644", "100755") => "mode +x".to_string(),
+                ("100755", "100644") => "mode -x".to_string(),
+                _ => format!(
+                    "mode {} {} {}",
+                    self.mode_info, self.config.right_arrow, new_mode
+                ),
+            };
+        }
+        Ok(true)
+    }
+
     #[inline]
     fn test_diff_header_plus_line(&self) -> bool {
         (matches!(self.state, State::DiffHeader(_)) || self.source == Source::DiffUnified)
             && (self.line.starts_with("+++ ")
                 || self.line.starts_with("rename to ")
-                || self.line.starts_with("copy to ")
-                || self.line.starts_with("new mode "))
+                || self.line.starts_with("copy to "))
     }
 
     pub fn handle_diff_header_plus_line(&mut self) -> std::io::Result<bool> {
@@ -106,14 +125,7 @@ impl<'a> StateMachine<'a> {
                 None
             },
         );
-        // In the case of ModeChange only, the file path is taken from the diff
-        // --git line (since that is the only place the file path occurs);
-        // otherwise it is taken from the --- / +++ line.
-        self.plus_file = if let FileEvent::ModeChange(_) = &file_event {
-            get_repeated_file_path_from_diff_line(&self.diff_line).unwrap_or(path_or_mode)
-        } else {
-            path_or_mode
-        };
+        self.plus_file = path_or_mode;
         self.plus_file_event = file_event;
         self.painter
             .set_syntax(get_file_extension_from_diff_header_line_file_path(
@@ -130,6 +142,7 @@ impl<'a> StateMachine<'a> {
                 &self.line,
                 &self.raw_line,
                 &mut self.painter,
+                &mut self.mode_info,
                 self.config,
             )?;
             handled_line = true
@@ -154,7 +167,43 @@ impl<'a> StateMachine<'a> {
             self.config,
         );
         // FIXME: no support for 'raw'
-        write_generic_diff_header_header_line(&line, &line, &mut self.painter, self.config)
+        write_generic_diff_header_header_line(
+            &line,
+            &line,
+            &mut self.painter,
+            &mut self.mode_info,
+            self.config,
+        )
+    }
+
+    pub fn handle_pending_mode_line_with_diff_name(&mut self) {
+        if !self.mode_info.is_empty() {
+            let format_label = |label: &str| {
+                if !label.is_empty() {
+                    format!("{} ", label)
+                } else {
+                    "".to_string()
+                }
+            };
+            let format_file = |file| {
+                if self.config.hyperlinks {
+                    features::hyperlinks::format_osc8_file_hyperlink(file, None, file, self.config)
+                } else {
+                    Cow::from(file)
+                }
+            };
+            let label = format_label(&self.config.file_modified_label);
+            let name = get_repeated_file_path_from_diff_line(&self.diff_line)
+                .unwrap_or_else(|| "".to_string());
+            let line = format!("{}{}", label, format_file(&name));
+            let _got = write_generic_diff_header_header_line(
+                &line,
+                &line,
+                &mut self.painter,
+                &mut self.mode_info,
+                self.config,
+            );
+        }
     }
 }
 
@@ -163,6 +212,7 @@ pub fn write_generic_diff_header_header_line(
     line: &str,
     raw_line: &str,
     painter: &mut Painter,
+    mode_info: &mut String,
     config: &Config,
 ) -> std::io::Result<()> {
     // If file_style is "omit", we'll skip the process and print nothing.
@@ -181,10 +231,14 @@ pub fn write_generic_diff_header_header_line(
         painter.writer,
         &format!("{}{}", line, if pad { " " } else { "" }),
         &format!("{}{}", raw_line, if pad { " " } else { "" }),
+        mode_info,
         &config.decorations_width,
         config.file_style,
         decoration_ansi_term_style,
     )?;
+    if !mode_info.is_empty() {
+        mode_info.truncate(0);
+    }
     Ok(())
 }
 
@@ -239,18 +293,11 @@ fn parse_diff_header_line(
         line if line.starts_with("copy to ") => {
             (line[8..].to_string(), FileEvent::Copy) // "copy to ".len()
         }
-        line if line.starts_with("old mode ") => {
-            ("".to_string(), FileEvent::ModeChange(line[9..].to_string())) // "old mode ".len()
-        }
-        line if line.starts_with("new mode ") => {
-            ("".to_string(), FileEvent::ModeChange(line[9..].to_string())) // "new mode ".len()
-        }
         _ => ("".to_string(), FileEvent::NoEvent),
     };
 
     if let Some(base) = relative_path_base {
-        if let FileEvent::ModeChange(_) = file_event {
-        } else if let Some(relative_path) = pathdiff::diff_paths(&path_or_mode, base) {
+        if let Some(relative_path) = pathdiff::diff_paths(&path_or_mode, base) {
             if let Some(relative_path) = relative_path.to_str() {
                 path_or_mode = relative_path.to_owned();
             }
@@ -326,33 +373,6 @@ pub fn get_file_change_description_from_file_paths(
             }
         };
         match (minus_file, plus_file, minus_file_event, plus_file_event) {
-            (
-                minus_file,
-                plus_file,
-                FileEvent::ModeChange(old_mode),
-                FileEvent::ModeChange(new_mode),
-            ) if minus_file == plus_file => match (old_mode.as_str(), new_mode.as_str()) {
-                // 100755 for executable and 100644 for non-executable are the only file modes Git records.
-                // https://medium.com/@tahteche/how-git-treats-changes-in-file-permissions-f71874ca239d
-                ("100644", "100755") => format!(
-                    "{}{}: mode +x",
-                    format_label(&config.file_modified_label),
-                    format_file(plus_file)
-                ),
-                ("100755", "100644") => format!(
-                    "{}{}: mode -x",
-                    format_label(&config.file_modified_label),
-                    format_file(plus_file)
-                ),
-                _ => format!(
-                    "{}{}: {} {} {}",
-                    format_label(&config.file_modified_label),
-                    format_file(plus_file),
-                    old_mode,
-                    config.right_arrow,
-                    new_mode
-                ),
-            },
             (minus_file, plus_file, _, _) if minus_file == plus_file => format!(
                 "{}{}",
                 format_label(&config.file_modified_label),
@@ -368,8 +388,7 @@ pub fn get_file_change_description_from_file_paths(
                 format_label(&config.file_added_label),
                 format_file(plus_file)
             ),
-            // minus_file_event == plus_file_event, except in the ModeChange
-            // case above.
+            // minus_file_event == plus_file_event
             (minus_file, plus_file, file_event, _) => format!(
                 "{}{} {} {}",
                 format_label(match file_event {
@@ -549,8 +568,9 @@ mod tests {
             None
         );
         assert_eq!(
-        get_repeated_file_path_from_diff_line("diff --git a/.config/Code - Insiders/User/settings.json b/.config/Code - Insiders/User/settings.json"),
-        Some(".config/Code - Insiders/User/settings.json".to_string())
-    );
+            get_repeated_file_path_from_diff_line(
+                "diff --git a/.config/Code - Insiders/User/settings.json b/.config/Code - Insiders/User/settings.json"),
+            Some(".config/Code - Insiders/User/settings.json".to_string())
+        );
     }
 }

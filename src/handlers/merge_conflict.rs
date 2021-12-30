@@ -200,6 +200,7 @@ fn write_diff_header(
         painter.writer,
         &text,
         &text,
+        "",
         &config.decorations_width,
         style,
         decoration_ansi_term_style,
