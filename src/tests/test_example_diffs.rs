@@ -8,6 +8,7 @@ mod tests {
     use crate::tests::ansi_test_utils::ansi_test_utils;
     use crate::tests::integration_test_utils;
     use crate::tests::test_utils;
+    use regex::Regex;
 
     #[test]
     fn test_added_file() {
@@ -1607,6 +1608,40 @@ src/align.rs:71: impl<'a> Alignment<'a> { │
     }
 
     #[test]
+    fn test_file_mode_change_unexpected_bits() {
+        let config =
+            integration_test_utils::make_config_from_args(&["--navigate", "--right-arrow=->"]);
+        let output =
+            integration_test_utils::run_delta(GIT_DIFF_FILE_MODE_CHANGE_UNEXPECTED_BITS, &config);
+        let output = strip_ansi_codes(&output);
+        assert!(output.contains(r"Δ src/delta.rs: 100700 -> 100644"));
+    }
+
+    #[test]
+    fn test_file_mode_change_with_diff() {
+        let config = integration_test_utils::make_config_from_args(&[
+            "--navigate",
+            "--keep-plus-minus-markers",
+        ]);
+        let output =
+            integration_test_utils::run_delta(GIT_DIFF_FILE_MODE_CHANGE_WITH_DIFF, &config);
+        let output = strip_ansi_codes(&output);
+        let re = Regex::new(r"\n─+\n").unwrap();
+        let output = re.replace(&output, "\n-----\n");
+        assert!(output.contains(
+            "Δ src/script: mode +x
+-----
+
+─────┐
+• 1: │
+─────┘
+-#!/bin/sh
++#!/bin/bash
+"
+        ));
+    }
+
+    #[test]
     fn test_hyperlinks_commit_link_format() {
         let config = integration_test_utils::make_config_from_args(&[
             // If commit-style is not set then the commit line is handled in raw
@@ -2316,6 +2351,24 @@ new mode 100755
 diff --git a/src/delta.rs b/src/delta.rs
 old mode 100755
 new mode 100644
+";
+
+    const GIT_DIFF_FILE_MODE_CHANGE_UNEXPECTED_BITS: &str = "
+diff --git a/src/delta.rs b/src/delta.rs
+old mode 100700
+new mode 100644
+";
+
+    const GIT_DIFF_FILE_MODE_CHANGE_WITH_DIFF: &str = "
+diff --git a/src/script b/src/script
+old mode 100644
+new mode 100755
+index d00491f..0cfbf08 100644
+--- a/src/script
++++ b/src/script
+@@ -1 +1 @@
+-#!/bin/sh
++#!/bin/bash
 ";
 
     const GIT_DIFF_NO_INDEX_FILENAMES_WITH_SPACES: &str = "
