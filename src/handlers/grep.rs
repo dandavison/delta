@@ -690,6 +690,28 @@ mod tests {
                 submatches: None,
             })
         );
+
+        assert_eq!(
+            parse_grep_line(r#"aaa/bbb.scala-              s"xxx.yyy.zzz: $ccc ddd""#),
+            Some(GrepLine {
+                path: "aaa/bbb.scala".into(),
+                line_number: None,
+                line_type: LineType::Context,
+                code: r#"              s"xxx.yyy.zzz: $ccc ddd""#.into(),
+                submatches: None,
+            })
+        );
+
+        assert_eq!(
+            parse_grep_line(r#"aaa/bbb.scala-  val atRegex = Regex.compile("(@.*)|(-shdw@.*)""#),
+            Some(GrepLine {
+                path: "aaa/bbb.scala".into(),
+                line_number: None,
+                line_type: LineType::Context,
+                code: r#"  val atRegex = Regex.compile("(@.*)|(-shdw@.*)""#.into(),
+                submatches: None,
+            })
+        );
     }
 
     #[test]
