@@ -290,12 +290,18 @@ fn make_output_config() -> GrepOutputConfig {
 enum GrepLineRegex {
     WithFileExtensionAndLineNumber,
     WithFileExtension,
+    WithFileExtensionNoSpaces,
     WithoutSeparatorCharacters,
 }
 
 lazy_static! {
     static ref GREP_LINE_REGEX_ASSUMING_FILE_EXTENSION_AND_LINE_NUMBER: Regex =
         make_grep_line_regex(GrepLineRegex::WithFileExtensionAndLineNumber);
+}
+
+lazy_static! {
+    static ref GREP_LINE_REGEX_ASSUMING_FILE_EXTENSION_NO_SPACES: Regex =
+        make_grep_line_regex(GrepLineRegex::WithFileExtensionNoSpaces);
 }
 
 lazy_static! {
@@ -339,6 +345,14 @@ fn make_grep_line_regex(regex_variant: GrepLineRegex) -> Regex {
         (                        # 1. file name (colons not allowed)
             [^:|\ ]                 # try to be strict about what a file path can start with
             [^:]*                   # anything
+            [^\ ]\.[^.\ :=-]{1,6}   # extension
+        )    
+        "
+        }
+        GrepLineRegex::WithFileExtensionNoSpaces => {
+            r"
+        (                        # 1. file name (colons not allowed)
+            [^:|\ ]+                # try to be strict about what a file path can start with
             [^\ ]\.[^.\ :=-]{1,6}   # extension
         )    
         "
@@ -418,6 +432,7 @@ pub fn parse_grep_line(line: &str) -> Option<GrepLine> {
         match &*process::calling_process() {
             process::CallingProcess::GitGrep(_) | process::CallingProcess::OtherGrep => [
                 &*GREP_LINE_REGEX_ASSUMING_FILE_EXTENSION_AND_LINE_NUMBER,
+                &*GREP_LINE_REGEX_ASSUMING_FILE_EXTENSION_NO_SPACES,
                 &*GREP_LINE_REGEX_ASSUMING_FILE_EXTENSION,
                 &*GREP_LINE_REGEX_ASSUMING_NO_INTERNAL_SEPARATOR_CHARS,
             ]
