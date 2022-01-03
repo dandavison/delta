@@ -62,7 +62,21 @@ pub fn calling_process() -> MutexGuard<'static, CallingProcess> {
 #[cfg(test)]
 pub fn calling_process() -> Box<CallingProcess> {
     type _UnusedImport = MutexGuard<'static, i8>;
-    Box::new(determine_calling_process())
+
+    if crate::utils::process::tests::FakeParentArgs::are_set() {
+        // If the (thread-local) FakeParentArgs are set, then the following command returns
+        // these, so the cached global real ones can not be used.
+        Box::new(determine_calling_process())
+    } else {
+        let (caller_mutex, _) = &**CALLER;
+
+        let mut caller = caller_mutex.lock().unwrap();
+        if *caller == CallingProcess::Pending {
+            *caller = determine_calling_process();
+        }
+
+        Box::new(caller.clone())
+    }
 }
 
 fn determine_calling_process() -> CallingProcess {
@@ -588,6 +602,9 @@ pub mod tests {
                     TlsState::Invalid | TlsState::With(_, _) => Self::error("get"),
                 }
             })
+        }
+        pub fn are_set() -> bool {
+            FAKE_ARGS.with(|a| *a.borrow() != TlsState::None)
         }
         fn error(where_: &str) -> ! {
             panic!(
