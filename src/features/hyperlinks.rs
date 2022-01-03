@@ -8,6 +8,7 @@ use crate::config::Config;
 use crate::features::OptionValueFunction;
 use crate::git_config::{GitConfig, GitConfigEntry, GitRemoteRepo};
 
+#[cfg(not(tarpaulin_include))]
 pub fn make_feature() -> Vec<(String, OptionValueFunction)> {
     builtin_feature!([
         (
@@ -109,4 +110,102 @@ fn format_commit_line_captures_with_osc8_commit_hyperlink(
 
 fn format_github_commit_url(commit: &str, github_repo: &str) -> String {
     format!("https://github.com/{}/commit/{}", github_repo, commit)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::tests::integration_test_utils::integration_test_utils::make_config_from_args_and_git_config;
+    use std::fs::remove_file;
+    use std::path::{Path, PathBuf};
+
+    #[test]
+    fn test_format_commit_line_with_osc8_commit_hyperlink() {
+        let git_config_contents = b"
+[remote \"origin\"]
+    url = git@github.com:dandavison/delta.git
+";
+        let git_config_path = "delta__format_commit_line_with_osc8_commit_hyperlink.gitconfig";
+        let config = make_config_from_args_and_git_config(
+            &[],
+            Some(git_config_contents),
+            Some(git_config_path),
+        );
+        assert_eq!(
+            format_commit_line_with_osc8_commit_hyperlink(
+                "commit e198c0d841d9fb660e59e0329235a8601b407c69 (HEAD -> master, origin/master)",
+                &config
+            ),
+            "commit \u{1b}]8;;https://github.com/dandavison/delta/commit/e198c0d841d9fb660e59e0329235a8601b407c69\u{1b}\\e198c0d841d9fb660e59e0329235a8601b407c69\u{1b}]8;;\u{1b}\\ (HEAD -> master, origin/master)"
+        );
+        remove_file(git_config_path).unwrap();
+    }
+
+    #[test]
+    fn test_format_osc8_file_hyperlink() {
+        let mut config = make_config_from_args_and_git_config(&[], None, None);
+        config.git_config_entries.insert(
+            "delta.__workdir__".to_string(),
+            GitConfigEntry::Path(PathBuf::from("/working/directory")),
+        );
+        println!(
+            "{}",
+            format!(
+                "\x1b]8;;file://{}\x1b\\link-text\x1b]8;;\x1b\\",
+                Path::new("/working/directory/relative/path/file.rs").to_string_lossy()
+            )
+        );
+        println!(
+            "{}",
+            format_osc8_file_hyperlink("relative/path/file.rs", None, "link-text", &config)
+        );
+        dbg!(format!(
+            "\x1b]8;;file://{}\x1b\\link-text\x1b]8;;\x1b\\",
+            Path::new("/working/directory/relative/path/file.rs").to_string_lossy()
+        ));
+        dbg!(format_osc8_file_hyperlink(
+            "relative/path/file.rs",
+            None,
+            "link-text",
+            &config
+        ));
+        assert_eq!(
+            format!(
+                "\x1b]8;;file://{}\x1b\\link-text\x1b]8;;\x1b\\",
+                Path::new("/working/directory/relative/path/file.rs").to_string_lossy()
+            ),
+            format_osc8_file_hyperlink("relative/path/file.rs", None, "link-text", &config)
+        )
+    }
+
+    #[test]
+    fn test_format_osc8_file_hyperlink_with_line_number() {
+        let mut config = make_config_from_args_and_git_config(
+            &["--hyperlinks-file-link-format", "file-line://{path}:{line}"],
+            None,
+            None,
+        );
+        config.git_config_entries.insert(
+            "delta.__workdir__".to_string(),
+            GitConfigEntry::Path(PathBuf::from("/working/directory")),
+        );
+        assert_eq!(
+            format!(
+                "\x1b]8;;file-line://{}:7\x1b\\link-text\x1b]8;;\x1b\\",
+                Path::new("/working/directory/relative/path/file.rs").to_string_lossy()
+            ),
+            format_osc8_file_hyperlink("relative/path/file.rs", Some(7), "link-text", &config)
+        )
+    }
+
+    #[test]
+    fn test_format_github_commit_url() {
+        assert_eq!(
+            format_github_commit_url(
+                "b9a76d4523949c09013f24ff555180da1d39e9e4",
+                "dandavison/delta"
+            ),
+            "https://github.com/dandavison/delta/commit/b9a76d4523949c09013f24ff555180da1d39e9e4"
+        )
+    }
 }

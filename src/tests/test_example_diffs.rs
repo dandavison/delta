@@ -64,7 +64,6 @@ mod tests {
         let config = integration_test_utils::make_config_from_args(&[]);
         let output = integration_test_utils::run_delta(RENAMED_FILE_WITH_CHANGES_INPUT, &config);
         let output = strip_ansi_codes(&output);
-        println!("{}", output);
         assert!(test_utils::contains_once(
             &output,
             "\nrenamed: Casks/font-dejavusansmono-nerd-font.rb ⟶   Casks/font-dejavu-sans-mono-nerd-font.rb\n"));
