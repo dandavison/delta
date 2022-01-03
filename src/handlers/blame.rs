@@ -246,10 +246,7 @@ pub fn format_blame_metadata(
     for placeholder in format_data {
         s.push_str(placeholder.prefix.as_str());
 
-        let alignment_spec = placeholder
-            .alignment_spec
-            .as_ref()
-            .unwrap_or(&format::Align::Left);
+        let alignment_spec = placeholder.alignment_spec.unwrap_or(format::Align::Left);
         let width = placeholder.width.unwrap_or(15);
 
         let field = match placeholder.placeholder {
