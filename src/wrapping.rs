@@ -903,7 +903,7 @@ index 223ca50..e69de29 100644
 
     #[test]
     fn test_wrap_with_unequal_hunk_zero_width() {
-        DeltaTest::with(&default_wrap_cfg_plus(&[
+        DeltaTest::with_args(&default_wrap_cfg_plus(&[
             "--side-by-side",
             "--line-numbers-left-format",
             "│L│",
@@ -916,7 +916,7 @@ index 223ca50..e69de29 100644
         ]))
         .set_cfg(|cfg| cfg.truncation_symbol = ">".into())
         .with_input(HUNK_ZERO_DIFF)
-        .expect(
+        .expect_after_header(
             r#"
             │L│abcdefghijklm+   │RRRR│abcdefghijklm+
             │L│nopqrstuvwxzy+   │RRRR│nopqrstuvwxzy+
@@ -929,7 +929,7 @@ index 223ca50..e69de29 100644
 
     #[test]
     fn test_wrap_with_large_hunk_zero_line_numbers() {
-        DeltaTest::with(&default_wrap_cfg_plus(&[
+        DeltaTest::with_args(&default_wrap_cfg_plus(&[
             "--side-by-side",
             "--line-numbers-left-format",
             "│LLL│",
@@ -942,7 +942,7 @@ index 223ca50..e69de29 100644
         ]))
         .set_cfg(|cfg| cfg.truncation_symbol = ">".into())
         .with_input(HUNK_ZERO_LARGE_LINENUMBERS_DIFF)
-        .expect(
+        .expect_after_header(
             r#"
             │LLL│abcde+                   │WW   10   +- 101999 WW│abcde+
             │LLL│fghij+                   │WW        +-        WW│fghij+
@@ -956,15 +956,15 @@ index 223ca50..e69de29 100644
     #[test]
     fn test_wrap_with_keep_markers() {
         use crate::features::side_by_side::ansifill::ODD_PAD_CHAR;
-        let t = DeltaTest::with(&default_wrap_cfg_plus(&[
+        let t = DeltaTest::with_args(&default_wrap_cfg_plus(&[
             "--side-by-side",
             "--keep-plus-minus-markers",
             "--width",
             "45",
         ]))
         .set_cfg(|cfg| cfg.truncation_symbol = ">".into())
-        .with_input(HUNK_MP_DIFF);
-        let output = t.expect(
+        .with_input(HUNK_MP_DIFF)
+        .expect_after_header(
             r#"
             │ 4  │ abcdefghijklmn+ │ 15 │ abcdefghijklmn+
             │    │ opqrstuvwxzy 0+ │    │ opqrstuvwxzy 0+
@@ -979,138 +979,133 @@ index 223ca50..e69de29 100644
             // this column here is^ where ODD_PAD_CHAR is inserted due to the odd 45 width
         );
 
-        assert!(!output.is_empty());
+        assert!(!t.output.is_empty());
 
-        for line in output.lines().skip(crate::config::HEADER_LEN) {
+        for line in t.output.lines().skip(crate::config::HEADER_LEN) {
             assert_eq!(line.chars().nth(22), Some(ODD_PAD_CHAR));
         }
     }
 
     #[test]
     fn test_alignment_2_lines_vs_3_lines() {
-        let config =
-            make_config_from_args(&default_wrap_cfg_plus(&["--side-by-side", "--width", "55"]));
+        let config_1 =
+            || make_config_from_args(&default_wrap_cfg_plus(&["--side-by-side", "--width", "55"]));
+
         {
-            DeltaTest::with_config_and_input(
-                &config,
-                &format!(
+            DeltaTest::with_config(config_1())
+                .with_input(&format!(
                     "{}-{}+{}",
                     HUNK_ALIGN_DIFF_HEADER, HUNK_ALIGN_DIFF_SHORT, HUNK_ALIGN_DIFF_LONG
-                ),
-            )
-            .expect(
-                r#"
-                │ 1  │.........1.........2< │ 1  │.........1.........2+
-                │    │                >.... │    │.........3.........4+
-                │    │                      │    │.........5.........6"#,
-            );
+                ))
+                .expect_after_header(
+                    r#"
+                    │ 1  │.........1.........2< │ 1  │.........1.........2+
+                    │    │                >.... │    │.........3.........4+
+                    │    │                      │    │.........5.........6"#,
+                );
             // the place where ODD_PAD_CHAR^ is inserted due to the odd 55 width
         }
 
         {
-            DeltaTest::with_config_and_input(
-                &config,
-                &format!(
+            DeltaTest::with_config(config_1())
+                .with_input(&format!(
                     "{}-{}+{}",
                     HUNK_ALIGN_DIFF_HEADER, HUNK_ALIGN_DIFF_LONG, HUNK_ALIGN_DIFF_SHORT
-                ),
-            )
-            .expect(
-                r#"
-                │ 1  │.........1.........2+ │ 1  │.........1.........2<
-                │    │.........3.........4+ │    │                >....
-                │    │.........5.........6  │    │"#,
-            );
+                ))
+                .expect_after_header(
+                    r#"
+                    │ 1  │.........1.........2+ │ 1  │.........1.........2<
+                    │    │.........3.........4+ │    │                >....
+                    │    │.........5.........6  │    │"#,
+                );
         }
     }
 
     #[test]
     fn test_alignment_1_line_vs_3_lines() {
-        let config = make_config_from_args(&default_wrap_cfg_plus(&[
-            "--side-by-side",
-            "--width",
-            "61",
-            "--line-fill-method",
-            "spaces",
-        ]));
+        let config_2 = || {
+            make_config_from_args(&default_wrap_cfg_plus(&[
+                "--side-by-side",
+                "--width",
+                "61",
+                "--line-fill-method",
+                "spaces",
+            ]))
+        };
 
         {
-            DeltaTest::with_config_and_input(
-                &config,
-                &format!(
+            DeltaTest::with_config(config_2())
+                .with_input(&format!(
                     "{}-{}+{}",
                     HUNK_ALIGN_DIFF_HEADER, HUNK_ALIGN_DIFF_SHORT, HUNK_ALIGN_DIFF_LONG
-                ),
-            )
-            .expect(
-                r#"
-                │ 1  │.........1.........2....│ 1  │.........1.........2...+
-                │    │                        │    │......3.........4......+
-                │    │                        │    │...5.........6          "#,
-            );
+                ))
+                .expect_after_header(
+                    r#"
+                    │ 1  │.........1.........2....│ 1  │.........1.........2...+
+                    │    │                        │    │......3.........4......+
+                    │    │                        │    │...5.........6          "#,
+                );
         }
 
         {
-            DeltaTest::with_config_and_input(
-                &config,
-                &format!(
+            DeltaTest::with_config(config_2())
+                .with_input(&format!(
                     "{}-{}+{}",
                     HUNK_ALIGN_DIFF_HEADER, HUNK_ALIGN_DIFF_LONG, HUNK_ALIGN_DIFF_SHORT
-                ),
-            )
-            .expect(
-                r#"
-                │ 1  │.........1.........2...+│ 1  │.........1.........2....
-                │    │......3.........4......+│    │
-                │    │...5.........6          │    │"#,
-            );
+                ))
+                .expect_after_header(
+                    r#"
+                    │ 1  │.........1.........2...+│ 1  │.........1.........2....
+                    │    │......3.........4......+│    │
+                    │    │...5.........6          │    │"#,
+                );
         }
     }
 
     #[test]
     fn test_wrap_max_lines_2() {
         // TODO overriding is not possible, need to change config directly
-        let mut config = make_config_from_args(&default_wrap_cfg_plus(&[
-            // "--wrap-max-lines",
-            // "2",
-            "--side-by-side",
-            "--width",
-            "72",
-            "--line-fill-method",
-            "spaces",
-        ]));
-        config.truncation_symbol = ">".into();
+        let config_3 = || {
+            let mut config = make_config_from_args(&default_wrap_cfg_plus(&[
+                // "--wrap-max-lines",
+                // "2",
+                "--side-by-side",
+                "--width",
+                "72",
+                "--line-fill-method",
+                "spaces",
+            ]));
+            config.truncation_symbol = ">".into();
+            config
+        };
 
         {
-            DeltaTest::with_config_and_input(
-                &config,
-                &format!(
+            DeltaTest::with_config(config_3())
+                .with_input(&format!(
                     "{}-{}+{}",
                     HUNK_ALIGN_DIFF_HEADER, HUNK_ALIGN_DIFF_SHORT, HUNK_ALIGN_DIFF_LONG
-                ),
-            )
-            .expect(
-                r#"
-                │ 1  │.........1.........2....      │ 1  │.........1.........2.........+
-                │    │                              │    │3.........4.........5........+
-                │    │                              │    │.6                            "#,
-            );
+                ))
+                .expect_after_header(
+                    r#"
+                    │ 1  │.........1.........2....      │ 1  │.........1.........2.........+
+                    │    │                              │    │3.........4.........5........+
+                    │    │                              │    │.6                            "#,
+                );
         }
 
         {
+            let mut config = config_3();
             config.wrap_config.max_lines = 2;
-            DeltaTest::with_config_and_input(
-                &config,
-                &format!(
+            DeltaTest::with_config(config)
+                .with_input(&format!(
                     "{}-{}+{}",
                     HUNK_ALIGN_DIFF_HEADER, HUNK_ALIGN_DIFF_SHORT, HUNK_ALIGN_DIFF_LONG
-                ),
-            )
-            .expect(
-                r#"
-                │ 1  │.........1.........2....      │ 1  │.........1.........2.........+
-                │    │                              │    │3.........4.........5........>"#,
-            );
+                ))
+                .expect_after_header(
+                    r#"
+                    │ 1  │.........1.........2....      │ 1  │.........1.........2.........+
+                    │    │                              │    │3.........4.........5........>"#,
+                );
         }
     }
 }

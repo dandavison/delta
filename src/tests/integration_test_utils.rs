@@ -12,6 +12,7 @@ use crate::cli;
 use crate::config;
 use crate::delta::delta;
 use crate::git_config::GitConfig;
+use crate::tests::test_utils;
 use crate::utils::process::tests::FakeParentArgs;
 
 pub fn make_options_from_args_and_git_config(
@@ -94,19 +95,25 @@ pub fn get_line_of_code_from_delta(
 //     line1"#;`  // line 2 etc.
 // ignore the first newline and compare the following `lines()` to those produced
 // by `have`, `skip`-ping the first few. The leading spaces of the first line
+// to indicate the last line in the list). The leading spaces of the first line
 // are stripped from every following line (and verified), unless the first line
 // marks the indentation level with `#indent_mark`.
-pub fn lines_match(expected: &str, have: &str, skip: Option<usize>) {
+pub fn assert_lines_match_after_skip(skip: usize, expected: &str, have: &str) {
     let mut exp = expected.lines().peekable();
-    assert!(exp.next() == Some(""), "first line must be empty");
-    let line1 = exp.peek().unwrap();
+    let mut line1 = exp.next().unwrap();
+    let allow_partial = line1 == "#partial";
+    assert!(
+        allow_partial || line1.is_empty(),
+        "first line must be empty or \"#partial\""
+    );
+    line1 = exp.peek().unwrap();
     let indentation = line1.find(|c| c != ' ').unwrap_or(0);
     let ignore_indent = &line1[indentation..] == "#indent_mark";
     if ignore_indent {
         let _indent_mark = exp.next();
     }
 
-    let mut it = have.lines().skip(skip.unwrap_or(0));
+    let mut it = have.lines().skip(skip);
 
     for (i, expected) in exp.enumerate() {
         if !ignore_indent {
@@ -119,23 +126,47 @@ pub fn lines_match(expected: &str, have: &str, skip: Option<usize>) {
         assert_eq!(
             &expected[indentation..],
             it.next().unwrap(),
-            "on line {} of input",
-            i + 1
+            "on line {} of input:\n{}",
+            i + 1,
+            delineated_string(have),
         );
     }
-    assert_eq!(it.next(), None, "more input than expected");
+    if !allow_partial {
+        assert_eq!(it.next(), None, "more input than expected");
+    }
+}
+
+pub fn assert_lines_match(expected: &str, have: &str) {
+    assert_lines_match_after_skip(0, expected, have)
+}
+
+pub fn delineated_string(txt: &str) -> String {
+    let top = "▼".repeat(100);
+    let btm = "▲".repeat(100);
+    let nl = "\n";
+    top + &nl + txt + &nl + &btm
 }
 
 pub struct DeltaTest {
     config: config::Config,
     calling_process: Option<String>,
+    explain_ansi_: bool,
 }
 
 impl DeltaTest {
-    pub fn with(args: &[&str]) -> Self {
+    pub fn with_args(args: &[&str]) -> Self {
         Self {
             config: make_config_from_args(args),
             calling_process: None,
+            explain_ansi_: false,
+        }
+    }
+
+    pub fn with_config(config: config::Config) -> Self {
+        Self {
+            config: config,
+            calling_process: None,
+            explain_ansi_: false,
         }
     }
 
@@ -152,22 +183,30 @@ impl DeltaTest {
         self
     }
 
-    pub fn with_config_and_input(config: &config::Config, input: &str) -> DeltaTestOutput {
-        DeltaTestOutput {
-            output: run_delta(input, &config),
-            explain_ansi_: false,
-        }
+    pub fn explain_ansi(mut self) -> Self {
+        self.explain_ansi_ = true;
+        self
     }
 
     pub fn with_input(&self, input: &str) -> DeltaTestOutput {
         let _args = FakeParentArgs::for_scope(self.calling_process.as_deref().unwrap_or(""));
-        DeltaTest::with_config_and_input(&self.config, input)
+        let raw = run_delta(input, &self.config);
+        let cooked = if self.explain_ansi_ {
+            ansi::explain_ansi(&raw, false)
+        } else {
+            ansi::strip_ansi_codes(&raw)
+        };
+
+        DeltaTestOutput {
+            raw_output: raw,
+            output: cooked,
+        }
     }
 }
 
 pub struct DeltaTestOutput {
-    output: String,
-    explain_ansi_: bool,
+    pub raw_output: String,
+    pub output: String,
 }
 
 impl DeltaTestOutput {
@@ -175,42 +214,58 @@ impl DeltaTestOutput {
     /// with ASCII explanation of ANSI escape sequences.
     #[allow(unused)]
     pub fn inspect(self) -> Self {
-        eprintln!("{}", "▼".repeat(100));
-        eprintln!("{}", self.format_output());
-        eprintln!("{}", "▲".repeat(100));
+        eprintln!("{}", delineated_string(&self.output.as_str()));
         self
     }
 
     /// Print raw output, with any ANSI escape sequences.
     #[allow(unused)]
     pub fn inspect_raw(self) -> Self {
-        eprintln!("{}", "▼".repeat(100));
-        eprintln!("{}", self.output);
-        eprintln!("{}", "▲".repeat(100));
+        eprintln!("{}", delineated_string(&self.raw_output));
         self
     }
 
-    pub fn explain_ansi(mut self) -> Self {
-        self.explain_ansi_ = true;
+    pub fn expect_after_skip(self, skip: usize, expected: &str) -> Self {
+        assert_lines_match_after_skip(skip, expected, &self.output);
         self
     }
 
-    pub fn expect_skip(self, skip: usize, expected: &str) -> String {
-        let processed = self.format_output();
-        lines_match(expected, &processed, Some(skip));
-        processed
+    pub fn expect(self, expected: &str) -> Self {
+        self.expect_after_skip(0, expected)
     }
 
-    pub fn expect(self, expected: &str) -> String {
-        self.expect_skip(crate::config::HEADER_LEN, expected)
+    pub fn expect_after_header(self, expected: &str) -> Self {
+        self.expect_after_skip(crate::config::HEADER_LEN, expected)
     }
 
-    fn format_output(&self) -> String {
-        if self.explain_ansi_ {
-            ansi::explain_ansi(&self.output, false)
-        } else {
-            ansi::strip_ansi_codes(&self.output)
-        }
+    pub fn expect_contains(self, expected: &str) -> Self {
+        assert!(
+            self.output.contains(expected),
+            "Output does not contain \"{}\":\n{}",
+            expected,
+            delineated_string(&self.output.as_str())
+        );
+        self
+    }
+
+    pub fn expect_raw_contains(self, expected: &str) -> Self {
+        assert!(
+            self.raw_output.contains(expected),
+            "Raw output does not contain \"{}\":\n{}",
+            expected,
+            delineated_string(&self.raw_output.as_str())
+        );
+        self
+    }
+
+    pub fn expect_contains_once(self, expected: &str) -> Self {
+        assert!(
+            test_utils::contains_once(&self.output, expected),
+            "Output does not contain \"{}\" exactly once:\n{}",
+            expected,
+            delineated_string(&self.output.as_str())
+        );
+        self
     }
 }
 
@@ -235,30 +290,30 @@ pub mod tests {
         one
         two
         three"#;
-        lines_match(expected, "one\ntwo\nthree", None);
+        assert_lines_match(expected, "one\ntwo\nthree");
 
         let expected = r#"
         #indent_mark
         one
           2
         three"#;
-        lines_match(expected, "one\n  2\nthree", None);
+        assert_lines_match(expected, "one\n  2\nthree");
 
         let expected = r#"
             #indent_mark
              1 
               2  
                3"#;
-        lines_match(expected, " 1 \n  2  \n   3", None);
+        assert_lines_match(expected, " 1 \n  2  \n   3");
 
         let expected = r#"
         #indent_mark
          1 
 ignored!  2  
            3"#;
-        lines_match(expected, " 1 \n  2  \n   3", None);
+        assert_lines_match(expected, " 1 \n  2  \n   3");
         let expected = "\none\ntwo\nthree";
-        lines_match(expected, "one\ntwo\nthree", None);
+        assert_lines_match(expected, "one\ntwo\nthree");
     }
 
     #[test]
@@ -266,7 +321,7 @@ ignored!  2
     fn test_lines_match_no_nl() {
         let expected = r#"bad
         lines"#;
-        lines_match(expected, "bad\nlines", None);
+        assert_lines_match(expected, "bad\nlines");
     }
 
     #[test]
@@ -276,7 +331,7 @@ ignored!  2
         one
         two
         three"#;
-        lines_match(expected, "one\ntwo\nthree\nFOUR", None);
+        assert_lines_match(expected, "one\ntwo\nthree\nFOUR");
     }
 
     #[test]
@@ -286,7 +341,7 @@ ignored!  2
         ok
           wrong_indent
         "#;
-        lines_match(expected, "ok", None);
+        assert_lines_match(expected, "ok");
     }
 
     #[test]
@@ -296,18 +351,17 @@ ignored!  2
         ok
        wrong_indent
         "#;
-        lines_match(expected, "ok", None);
+        assert_lines_match(expected, "ok");
     }
 
     #[test]
     fn test_delta_test() {
         let input = "@@ -1,1 +1,1 @@ fn foo() {\n-1\n+2\n";
-        DeltaTest::with(&["--raw"])
+        DeltaTest::with_args(&["--raw"])
             .set_cfg(|c| c.pager = None)
             .set_cfg(|c| c.line_numbers = true)
             .with_input(input)
-            .expect_skip(
-                0,
+            .expect(
                 r#"
                  #indent_mark
                  @@ -1,1 +1,1 @@ fn foo() {
@@ -315,18 +369,19 @@ ignored!  2
                      ⋮ 1  │+2"#,
             );
 
-        DeltaTest::with(&[]).with_input(input).expect_skip(
-            4,
-            r#"
+        DeltaTest::with_args(&[])
+            .with_input(input)
+            .expect_after_skip(
+                4,
+                r#"
                 1
                 2"#,
-        );
+            );
 
-        DeltaTest::with(&["--raw"])
-            .with_input(input)
+        DeltaTest::with_args(&["--raw"])
             .explain_ansi()
-            .expect_skip(
-                0,
+            .with_input(input)
+            .expect(
                 "\n\
                 (normal)@@ -1,1 +1,1 @@ fn foo() {\n\
                 (red)-1(normal)\n\

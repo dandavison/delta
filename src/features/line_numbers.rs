@@ -630,7 +630,7 @@ pub mod tests {
 
     #[test]
     fn test_two_minus_lines() {
-        DeltaTest::with(&[
+        DeltaTest::with_args(&[
             "--line-numbers",
             "--line-numbers-left-format",
             "{nm:^4}⋮",
@@ -646,7 +646,7 @@ pub mod tests {
             "0 4",
         ])
         .with_input(TWO_MINUS_LINES_DIFF)
-        .expect(
+        .expect_after_header(
             r#"
              #indent_mark
               1  ⋮    │a = 1
@@ -656,7 +656,7 @@ pub mod tests {
 
     #[test]
     fn test_two_plus_lines() {
-        DeltaTest::with(&[
+        DeltaTest::with_args(&[
             "--line-numbers",
             "--line-numbers-left-format",
             "{nm:^4}⋮",
@@ -672,7 +672,7 @@ pub mod tests {
             "0 4",
         ])
         .with_input(TWO_PLUS_LINES_DIFF)
-        .expect(
+        .expect_after_header(
             r#"
              #indent_mark
                  ⋮ 1  │a = 1
@@ -779,9 +779,9 @@ pub mod tests {
 
     #[test]
     fn test_line_numbers_continue_correctly() {
-        DeltaTest::with(&["--side-by-side", "--width", "44", "--line-fill-method=ansi"])
+        DeltaTest::with_args(&["--side-by-side", "--width", "44", "--line-fill-method=ansi"])
             .with_input(DIFF_PLUS_MINUS_WITH_1_CONTEXT_DIFF)
-            .expect(
+            .expect_after_header(
                 r#"
                 │ 1  │abc             │ 1  │abc
                 │ 2  │a = left side   │ 2  │a = right side
@@ -791,7 +791,7 @@ pub mod tests {
 
     #[test]
     fn test_line_numbers_continue_correctly_after_wrapping() {
-        DeltaTest::with(&[
+        DeltaTest::with_args(&[
             "--side-by-side",
             "--width",
             "32",
@@ -802,7 +802,7 @@ pub mod tests {
             "@",
         ])
         .with_input(DIFF_PLUS_MINUS_WITH_1_CONTEXT_DIFF)
-        .expect(
+        .expect_after_header(
             r#"
             │ 1  │abc       │ 1  │abc
             │ 2  │a = left @│ 2  │a = right@
@@ -821,9 +821,9 @@ pub mod tests {
             "@",
         ];
 
-        DeltaTest::with(cfg)
+        DeltaTest::with_args(cfg)
             .with_input(DIFF_WITH_LONGER_MINUS_1_CONTEXT)
-            .expect(
+            .expect_after_header(
                 r#"
                 │ 1  │abc            │ 1  │abc
                 │ 2  │a = one side   │ 2  │a = one longer@
@@ -831,9 +831,9 @@ pub mod tests {
                 │ 3  │xyz            │ 3  │xyz"#,
             );
 
-        DeltaTest::with(cfg)
+        DeltaTest::with_args(cfg)
             .with_input(DIFF_WITH_LONGER_PLUS_1_CONTEXT)
-            .expect(
+            .expect_after_header(
                 r#"
                 │ 1  │abc            │ 1  │abc
                 │ 2  │a = one longer@│ 2  │a = one side
@@ -841,9 +841,9 @@ pub mod tests {
                 │ 3  │xyz            │ 3  │xyz"#,
             );
 
-        DeltaTest::with(cfg)
+        DeltaTest::with_args(cfg)
             .with_input(DIFF_MISMATCH_LONGER_MINUS_1_CONTEXT)
-            .expect(
+            .expect_after_header(
                 r#"
                 │ 1  │abc            │ 1  │abc
                 │ 2  │a = left side @│    │
@@ -852,9 +852,9 @@ pub mod tests {
                 │ 3  │xyz            │ 3  │xyz"#,
             );
 
-        DeltaTest::with(cfg)
+        DeltaTest::with_args(cfg)
             .with_input(DIFF_MISMATCH_LONGER_PLUS_1_CONTEXT)
-            .expect(
+            .expect_after_header(
                 r#"
                 │ 1  │abc            │ 1  │abc
                 │ 2  │a = other one  │    │
