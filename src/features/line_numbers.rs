@@ -261,10 +261,7 @@ fn format_and_paint_line_number_field<'a>(
             min_field_width
         };
 
-        let alignment_spec = placeholder
-            .alignment_spec
-            .as_ref()
-            .unwrap_or(&Align::Center);
+        let alignment_spec = placeholder.alignment_spec.unwrap_or(Align::Center);
         match placeholder.placeholder {
             Some(Placeholder::NumberMinus) => {
                 ansi_strings.push(styles[Minus].paint(format_line_number(
@@ -298,7 +295,7 @@ fn format_and_paint_line_number_field<'a>(
 /// Return line number formatted according to `alignment` and `width`.
 fn format_line_number(
     line_number: Option<usize>,
-    alignment: &Align,
+    alignment: Align,
     width: usize,
     precision: Option<usize>,
     plus_file: Option<&str>,
@@ -306,12 +303,11 @@ fn format_line_number(
 ) -> String {
     let pad = |n| format::pad(n, width, alignment, precision);
     match (line_number, config.hyperlinks, plus_file) {
-        (None, _, _) => pad(""),
+        (None, _, _) => " ".repeat(width),
         (Some(n), true, Some(file)) => {
-            hyperlinks::format_osc8_file_hyperlink(file, line_number, &pad(&n.to_string()), config)
-                .to_string()
+            hyperlinks::format_osc8_file_hyperlink(file, line_number, &pad(n), config).to_string()
         }
-        (Some(n), _, _) => pad(&n.to_string()),
+        (Some(n), _, _) => pad(n),
     }
 }
 
@@ -649,8 +645,8 @@ pub mod tests {
         .expect_after_header(
             r#"
              #indent_mark
-              1  ⋮    │a = 1
-              2  ⋮    │b = 23456"#,
+               1 ⋮    │a = 1
+               2 ⋮    │b = 23456"#,
         );
     }
 
@@ -675,8 +671,8 @@ pub mod tests {
         .expect_after_header(
             r#"
              #indent_mark
-                 ⋮ 1  │a = 1
-                 ⋮ 2  │b = 234567"#,
+                 ⋮  1 │a = 1
+                 ⋮  2 │b = 234567"#,
         );
     }
 
@@ -700,9 +696,9 @@ pub mod tests {
         let output = run_delta(ONE_MINUS_ONE_PLUS_LINE_DIFF, &config);
         let output = strip_ansi_codes(&output);
         let mut lines = output.lines().skip(crate::config::HEADER_LEN);
-        assert_eq!(lines.next().unwrap(), " 1  ⋮ 1  │a = 1");
-        assert_eq!(lines.next().unwrap(), " 2  ⋮    │b = 2");
-        assert_eq!(lines.next().unwrap(), "    ⋮ 2  │bb = 2");
+        assert_eq!(lines.next().unwrap(), "  1 ⋮  1 │a = 1");
+        assert_eq!(lines.next().unwrap(), "  2 ⋮    │b = 2");
+        assert_eq!(lines.next().unwrap(), "    ⋮  2 │bb = 2");
     }
 
     #[test]
@@ -725,9 +721,9 @@ pub mod tests {
         let output = run_delta(ONE_MINUS_ONE_PLUS_LINE_DIFF, &config);
         let output = strip_ansi_codes(&output);
         let mut lines = output.lines().skip(crate::config::HEADER_LEN);
-        assert_eq!(lines.next().unwrap(), " 1    1  ⋮ 1  │a = 1");
-        assert_eq!(lines.next().unwrap(), " 2    2  ⋮    │b = 2");
-        assert_eq!(lines.next().unwrap(), "         ⋮ 2  │bb = 2");
+        assert_eq!(lines.next().unwrap(), "  1    1 ⋮  1 │a = 1");
+        assert_eq!(lines.next().unwrap(), "  2    2 ⋮    │b = 2");
+        assert_eq!(lines.next().unwrap(), "         ⋮  2 │bb = 2");
     }
 
     #[test]
@@ -747,7 +743,7 @@ pub mod tests {
         let output = run_delta(UNEQUAL_DIGIT_DIFF, &config);
         let output = strip_ansi_codes(&output);
         let mut lines = output.lines().skip(crate::config::HEADER_LEN);
-        assert_eq!(lines.next().unwrap(), "10000⋮9999 │a = 1");
+        assert_eq!(lines.next().unwrap(), "10000⋮ 9999│a = 1");
         assert_eq!(lines.next().unwrap(), "10001⋮     │b = 2");
         assert_eq!(lines.next().unwrap(), "     ⋮10000│bb = 2");
     }
@@ -758,8 +754,8 @@ pub mod tests {
         let output = run_delta(TWO_MINUS_LINES_DIFF, &config);
         let mut lines = output.lines().skip(5);
         let (line_1, line_2) = (lines.next().unwrap(), lines.next().unwrap());
-        assert_eq!(strip_ansi_codes(line_1), " 1  ⋮    │-a = 1");
-        assert_eq!(strip_ansi_codes(line_2), " 2  ⋮    │-b = 23456");
+        assert_eq!(strip_ansi_codes(line_1), "  1 ⋮    │-a = 1");
+        assert_eq!(strip_ansi_codes(line_2), "  2 ⋮    │-b = 23456");
     }
 
     #[test]
@@ -768,13 +764,13 @@ pub mod tests {
         let output = run_delta(TWO_LINE_DIFFS, &config);
         let output = strip_ansi_codes(&output);
         let mut lines = output.lines().skip(4);
-        assert_eq!(lines.next().unwrap(), " 1  ⋮ 1  │a = 1");
-        assert_eq!(lines.next().unwrap(), " 2  ⋮    │b = 2");
-        assert_eq!(lines.next().unwrap(), "    ⋮ 2  │bb = 2");
+        assert_eq!(lines.next().unwrap(), "  1 ⋮  1 │a = 1");
+        assert_eq!(lines.next().unwrap(), "  2 ⋮    │b = 2");
+        assert_eq!(lines.next().unwrap(), "    ⋮  2 │bb = 2");
         assert_eq!(lines.next().unwrap(), "");
-        assert_eq!(lines.next().unwrap(), "499 ⋮499 │a = 3");
-        assert_eq!(lines.next().unwrap(), "500 ⋮    │b = 4");
-        assert_eq!(lines.next().unwrap(), "    ⋮500 │bb = 4");
+        assert_eq!(lines.next().unwrap(), " 499⋮ 499│a = 3");
+        assert_eq!(lines.next().unwrap(), " 500⋮    │b = 4");
+        assert_eq!(lines.next().unwrap(), "    ⋮ 500│bb = 4");
     }
 
     #[test]
@@ -783,9 +779,9 @@ pub mod tests {
             .with_input(DIFF_PLUS_MINUS_WITH_1_CONTEXT_DIFF)
             .expect_after_header(
                 r#"
-                │ 1  │abc             │ 1  │abc
-                │ 2  │a = left side   │ 2  │a = right side
-                │ 3  │xyz             │ 3  │xyz"#,
+                │  1 │abc             │  1 │abc
+                │  2 │a = left side   │  2 │a = right side
+                │  3 │xyz             │  3 │xyz"#,
             );
     }
 
@@ -804,10 +800,10 @@ pub mod tests {
         .with_input(DIFF_PLUS_MINUS_WITH_1_CONTEXT_DIFF)
         .expect_after_header(
             r#"
-            │ 1  │abc       │ 1  │abc
-            │ 2  │a = left @│ 2  │a = right@
+            │  1 │abc       │  1 │abc
+            │  2 │a = left @│  2 │a = right@
             │    │side      │    │ side
-            │ 3  │xyz       │ 3  │xyz"#,
+            │  3 │xyz       │  3 │xyz"#,
         );
 
         let cfg = &[
@@ -825,43 +821,43 @@ pub mod tests {
             .with_input(DIFF_WITH_LONGER_MINUS_1_CONTEXT)
             .expect_after_header(
                 r#"
-                │ 1  │abc            │ 1  │abc
-                │ 2  │a = one side   │ 2  │a = one longer@
+                │  1 │abc            │  1 │abc
+                │  2 │a = one side   │  2 │a = one longer@
                 │    │               │    │ side
-                │ 3  │xyz            │ 3  │xyz"#,
+                │  3 │xyz            │  3 │xyz"#,
             );
 
         DeltaTest::with_args(cfg)
             .with_input(DIFF_WITH_LONGER_PLUS_1_CONTEXT)
             .expect_after_header(
                 r#"
-                │ 1  │abc            │ 1  │abc
-                │ 2  │a = one longer@│ 2  │a = one side
+                │  1 │abc            │  1 │abc
+                │  2 │a = one longer@│  2 │a = one side
                 │    │ side          │    │
-                │ 3  │xyz            │ 3  │xyz"#,
+                │  3 │xyz            │  3 │xyz"#,
             );
 
         DeltaTest::with_args(cfg)
             .with_input(DIFF_MISMATCH_LONGER_MINUS_1_CONTEXT)
             .expect_after_header(
                 r#"
-                │ 1  │abc            │ 1  │abc
-                │ 2  │a = left side @│    │
+                │  1 │abc            │  1 │abc
+                │  2 │a = left side @│    │
                 │    │which is longer│    │
-                │    │               │ 2  │a = other one
-                │ 3  │xyz            │ 3  │xyz"#,
+                │    │               │  2 │a = other one
+                │  3 │xyz            │  3 │xyz"#,
             );
 
         DeltaTest::with_args(cfg)
             .with_input(DIFF_MISMATCH_LONGER_PLUS_1_CONTEXT)
             .expect_after_header(
                 r#"
-                │ 1  │abc            │ 1  │abc
-                │ 2  │a = other one  │    │
-                │    │               │ 2  │a = right side@
+                │  1 │abc            │  1 │abc
+                │  2 │a = other one  │    │
+                │    │               │  2 │a = right side@
                 │    │               │    │ which is long@
                 │    │               │    │er
-                │ 3  │xyz            │ 3  │xyz"#,
+                │  3 │xyz            │  3 │xyz"#,
             );
     }
 

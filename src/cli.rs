@@ -162,9 +162,9 @@ To display line numbers, use --line-numbers.
 
 Line numbers are displayed in two columns. Here's what it looks like by default:
 
- 1  ⋮ 1  │ unchanged line
- 2  ⋮    │ removed line
-    ⋮ 2  │ added line
+  1 ⋮  1 │ unchanged line
+  2 ⋮    │ removed line
+    ⋮  2 │ added line
 
 In that output, the line numbers for the old (minus) version of the file appear in the left column,
 and the line numbers for the new (plus) version of the file appear in the right column. In an
