@@ -25,7 +25,7 @@ impl<'a> TryFrom<Option<&'a str>> for Placeholder<'a> {
     }
 }
 
-#[derive(Debug, PartialEq)]
+#[derive(Debug, Copy, Clone, PartialEq)]
 pub enum Align {
     Left,
     Center,
@@ -165,26 +165,111 @@ pub fn parse_line_number_format<'a>(
     format_data
 }
 
+pub trait CenterRightNumbers {
+    fn width_for_center_right(&self) -> usize;
+}
+
+impl CenterRightNumbers for &str {
+    fn width_for_center_right(&self) -> usize {
+        // Disables the center-right formatting and aligns strings center-left
+        usize::MAX
+    }
+}
+
+impl CenterRightNumbers for String {
+    fn width_for_center_right(&self) -> usize {
+        self.as_str().width_for_center_right()
+    }
+}
+
+impl<'a> CenterRightNumbers for &std::borrow::Cow<'a, str> {
+    fn width_for_center_right(&self) -> usize {
+        self.as_ref().width_for_center_right()
+    }
+}
+
+impl CenterRightNumbers for usize {
+    fn width_for_center_right(&self) -> usize {
+        // log10 for integers is only in nightly and this is faster than
+        // casting to f64 and back.
+        let mut n = *self;
+        let mut len = 1;
+        loop {
+            if n <= 9 {
+                break len;
+            }
+            len += 1;
+            n /= 10;
+        }
+    }
+}
+
 // Note that in this case of a string `s`, `precision` means "max width".
 // See https://doc.rust-lang.org/std/fmt/index.html
-pub fn pad(s: &str, width: usize, alignment: &Align, precision: Option<usize>) -> String {
-    match precision {
+pub fn pad<T: std::fmt::Display + CenterRightNumbers>(
+    s: T,
+    width: usize,
+    alignment: Align,
+    precision: Option<usize>,
+) -> String {
+    let center_left_to_right_align_fix = || {
+        let q = s.width_for_center_right();
+        width > q && (width % 2 != q % 2)
+    };
+    let space = if alignment == Align::Center && center_left_to_right_align_fix() {
+        " "
+    } else {
+        ""
+    };
+    let mut result = match precision {
         None => match alignment {
-            Align::Left => format!("{0:<1$}", s, width),
-            Align::Center => format!("{0:^1$}", s, width),
-            Align::Right => format!("{0:>1$}", s, width),
+            Align::Left => format!("{0}{1:<2$}", space, s, width),
+            Align::Center => format!("{0}{1:^2$}", space, s, width),
+            Align::Right => format!("{0}{1:>2$}", space, s, width),
         },
         Some(precision) => match alignment {
-            Align::Left => format!("{0:<1$.2$}", s, width, precision),
-            Align::Center => format!("{0:^1$.2$}", s, width, precision),
-            Align::Right => format!("{0:>1$.2$}", s, width, precision),
+            Align::Left => format!("{0}{1:<2$.3$}", space, s, width, precision),
+            Align::Center => format!("{0}{1:^2$.3$}", space, s, width, precision),
+            Align::Right => format!("{0}{1:>2$.3$}", space, s, width, precision),
         },
+    };
+    if !space.is_empty() {
+        result.pop();
     }
+    result
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn test_width_trait() {
+        dbg!("asdf".to_string().width_for_center_right());
+        dbg!(3_usize.width_for_center_right());
+        dbg!(99_999_usize.width_for_center_right());
+        dbg!(100_000_usize.width_for_center_right());
+        dbg!(100_003_usize.width_for_center_right());
+        dbg!(700_003_usize.width_for_center_right());
+        dbg!(999_999_usize.width_for_center_right());
+        dbg!(1_000_000_usize.width_for_center_right());
+        dbg!(1_000_001_usize.width_for_center_right());
+        dbg!(9876654321_usize.width_for_center_right());
+    }
+
+    #[test]
+    fn test_pad_center_align() {
+        for i in (1..1001_usize)
+            .into_iter()
+            .filter(|&i| i < 20 || (i > 90 && i < 120) || i > 990)
+        {
+            println!(
+                "string: │{}│     num: │{}│",
+                pad(i.to_string(), 4, Align::Center, None),
+                pad(i, 4, Align::Center, None),
+            );
+        }
+    }
 
     #[test]
     fn test_placeholder_regex() {
