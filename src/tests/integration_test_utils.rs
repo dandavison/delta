@@ -1,5 +1,6 @@
 #![cfg(test)]
 
+use std::borrow::Cow;
 use std::fs::File;
 use std::io::{BufReader, Write};
 use std::path::Path;
@@ -147,24 +148,24 @@ pub fn delineated_string(txt: &str) -> String {
     top + &nl + txt + &nl + &btm
 }
 
-pub struct DeltaTest {
-    config: config::Config,
+pub struct DeltaTest<'a> {
+    config: Cow<'a, config::Config>,
     calling_process: Option<String>,
     explain_ansi_: bool,
 }
 
-impl DeltaTest {
+impl<'a> DeltaTest<'a> {
     pub fn with_args(args: &[&str]) -> Self {
         Self {
-            config: make_config_from_args(args),
+            config: Cow::Owned(make_config_from_args(args)),
             calling_process: None,
             explain_ansi_: false,
         }
     }
 
-    pub fn with_config(config: config::Config) -> Self {
+    pub fn with_config(config: &'a config::Config) -> Self {
         Self {
-            config: config,
+            config: Cow::Borrowed(config),
             calling_process: None,
             explain_ansi_: false,
         }
@@ -174,7 +175,9 @@ impl DeltaTest {
     where
         F: Fn(&mut config::Config),
     {
-        f(&mut self.config);
+        let mut owned_config = self.config.into_owned();
+        f(&mut owned_config);
+        self.config = Cow::Owned(owned_config);
         self
     }
 

@@ -36,7 +36,7 @@ pub use MinusPlusIndex::Plus as Right;
 
 use super::line_numbers::LineNumbersData;
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct Panel {
     pub width: usize,
 }

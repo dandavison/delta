@@ -8,8 +8,6 @@ use std::env;
 #[cfg(test)]
 use std::path::Path;
 
-use crate::fatal;
-
 use lazy_static::lazy_static;
 
 pub struct GitConfig {
@@ -17,10 +15,31 @@ pub struct GitConfig {
     config_from_env_var: HashMap<String, String>,
     pub enabled: bool,
     pub repo: Option<git2::Repository>,
+    // To make GitConfig cloneable when testing (in turn to make Config cloneable):
+    #[cfg(test)]
+    path: std::path::PathBuf,
+}
+
+#[cfg(test)]
+impl Clone for GitConfig {
+    fn clone(&self) -> Self {
+        assert!(self.repo.is_none());
+        GitConfig {
+            // Assumes no test modifies the file pointed to by `path`
+            config: git2::Config::open(&self.path).unwrap(),
+            config_from_env_var: self.config_from_env_var.clone(),
+            enabled: self.enabled,
+            repo: None,
+            path: self.path.clone(),
+        }
+    }
 }
 
 impl GitConfig {
+    #[cfg(not(test))]
     pub fn try_create() -> Option<Self> {
+        use crate::fatal;
+
         let repo = match std::env::current_dir() {
             Ok(dir) => git2::Repository::discover(dir).ok(),
             _ => None,
@@ -46,6 +65,11 @@ impl GitConfig {
     }
 
     #[cfg(test)]
+    pub fn try_create() -> Option<Self> {
+        unreachable!("GitConfig::try_create() is not available when testing");
+    }
+
+    #[cfg(test)]
     pub fn from_path(path: &Path, honor_env_var: bool) -> Self {
         Self {
             config: git2::Config::open(path).unwrap(),
@@ -56,6 +80,7 @@ impl GitConfig {
             },
             repo: None,
             enabled: true,
+            path: path.into(),
         }
     }
 
