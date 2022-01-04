@@ -914,7 +914,7 @@ index 223ca50..e69de29 100644
             "--line-fill-method",
             "spaces",
         ]))
-        .set_cfg(|cfg| cfg.truncation_symbol = ">".into())
+        .set_config(|cfg| cfg.truncation_symbol = ">".into())
         .with_input(HUNK_ZERO_DIFF)
         .expect_after_header(
             r#"
@@ -940,7 +940,7 @@ index 223ca50..e69de29 100644
             "--line-fill-method",
             "ansi",
         ]))
-        .set_cfg(|cfg| cfg.truncation_symbol = ">".into())
+        .set_config(|cfg| cfg.truncation_symbol = ">".into())
         .with_input(HUNK_ZERO_LARGE_LINENUMBERS_DIFF)
         .expect_after_header(
             r#"
@@ -962,7 +962,7 @@ index 223ca50..e69de29 100644
             "--width",
             "45",
         ]))
-        .set_cfg(|cfg| cfg.truncation_symbol = ">".into())
+        .set_config(|cfg| cfg.truncation_symbol = ">".into())
         .with_input(HUNK_MP_DIFF)
         .expect_after_header(
             r#"

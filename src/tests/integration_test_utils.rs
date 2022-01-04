@@ -170,7 +170,7 @@ impl DeltaTest {
         }
     }
 
-    pub fn set_cfg<F>(mut self, f: F) -> Self
+    pub fn set_config<F>(mut self, f: F) -> Self
     where
         F: Fn(&mut config::Config),
     {
@@ -358,8 +358,8 @@ ignored!  2
     fn test_delta_test() {
         let input = "@@ -1,1 +1,1 @@ fn foo() {\n-1\n+2\n";
         DeltaTest::with_args(&["--raw"])
-            .set_cfg(|c| c.pager = None)
-            .set_cfg(|c| c.line_numbers = true)
+            .set_config(|c| c.pager = None)
+            .set_config(|c| c.line_numbers = true)
             .with_input(input)
             .expect(
                 r#"

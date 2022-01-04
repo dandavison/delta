@@ -616,7 +616,7 @@ pub mod tests {
             "28",
             "--line-fill-method=spaces",
         ])
-        .set_cfg(|cfg| cfg.truncation_symbol = ">".into())
+        .set_config(|cfg| cfg.truncation_symbol = ">".into())
         .with_input(TWO_MINUS_LINES_DIFF)
         .expect_after_header(
             r#"
