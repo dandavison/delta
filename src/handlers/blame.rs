@@ -8,10 +8,20 @@ use crate::color;
 use crate::config;
 use crate::config::delta_unreachable;
 use crate::delta::{self, State, StateMachine};
-use crate::format::{self, Placeholder};
+use crate::fatal;
+use crate::format::{self, Placeholder, FormatStringSimple};
+use crate::format::{make_placeholder_regex, parse_line_number_format};
 use crate::paint::{self, BgShouldFill, StyleSectionSpecifier};
 use crate::style::Style;
 use crate::utils;
+
+#[derive(Clone, Debug)]
+pub enum BlameLineNumbers {
+    // "none" equals a fixed string with just a separator
+    On(FormatStringSimple),
+    PerBlock(FormatStringSimple),
+    Every(usize, FormatStringSimple),
+}
 
 impl<'a> StateMachine<'a> {
     /// If this is a line of git blame output then render it accordingly. If
@@ -49,11 +59,19 @@ impl<'a> StateMachine<'a> {
                 let code_style = self.config.blame_code_style.unwrap_or(metadata_style);
                 let separator_style = self.config.blame_separator_style.unwrap_or(code_style);
 
+                let (nr_prefix, line_number, nr_suffix) = format_blame_line_number(
+                    &self.config.blame_separator_format,
+                    blame.line_number,
+                    is_repeat,
+                );
+
                 write!(
                     self.painter.writer,
-                    "{}{}",
+                    "{}{}{}{}",
                     metadata_style.paint(&formatted_blame_metadata),
-                    separator_style.paint(&self.config.blame_separator)
+                    separator_style.paint(nr_prefix),
+                    metadata_style.paint(&line_number),
+                    separator_style.paint(nr_suffix),
                 )?;
 
                 // Emit syntax-highlighted code
@@ -232,6 +250,7 @@ pub fn parse_git_blame_line<'a>(line: &'a str, timestamp_format: &str) -> Option
 }
 
 lazy_static! {
+    // line numbers (`{n}`) change with every line and are set separately via `blame-separator-format`
     pub static ref BLAME_PLACEHOLDER_REGEX: Regex =
         format::make_placeholder_regex(&["timestamp", "author", "commit"]);
 }
@@ -270,6 +289,93 @@ pub fn format_blame_metadata(
     }
     s.push_str(suffix);
     s
+}
+
+pub fn format_blame_line_number(
+    format: &BlameLineNumbers,
+    line_number: usize,
+    is_repeat: bool,
+) -> (&str, String, &str) {
+    let (format, empty) = match &format {
+        BlameLineNumbers::PerBlock(format) => (format, is_repeat),
+        BlameLineNumbers::Every(n, format) => (format, is_repeat && line_number % n != 0),
+        BlameLineNumbers::On(format) => (format, false),
+    };
+    let mut result = String::new();
+
+    // depends on defaults being set when parsing arguments
+    let line_number = if format.width.is_some() {
+        format::pad(
+            line_number,
+            format.width.unwrap(),
+            format.alignment_spec.unwrap(),
+            None,
+        )
+    } else {
+        String::new()
+    };
+
+    if empty {
+        for _ in 0..measure_text_width(&line_number) {
+            result.push(' ');
+        }
+    } else {
+        result.push_str(&line_number);
+    }
+
+    (format.prefix.as_str(), result, format.suffix.as_str())
+}
+
+pub fn parse_blame_line_numbers(arg: &str) -> BlameLineNumbers {
+    if arg == "none" {
+        return BlameLineNumbers::On(crate::format::FormatStringSimple::only_string("│"));
+    }
+
+    let regex = make_placeholder_regex(&["n"]);
+    let f = match parse_line_number_format(arg, &regex, false) {
+        v if v.len() > 1 => {
+            fatal("Too many format arguments numbers for blame-line-numbers".to_string())
+        }
+        mut v => v.pop().unwrap(),
+    };
+
+    let set_defaults = |mut format: crate::format::FormatStringSimple| {
+        format.width = format.width.or(Some(4));
+        format.alignment_spec = format.alignment_spec.or(Some(crate::format::Align::Center));
+
+        format
+    };
+
+    if f.placeholder.is_none() {
+        return BlameLineNumbers::On(crate::format::FormatStringSimple::only_string(
+            f.suffix.as_str(),
+        ));
+    }
+
+    match f.fmt_type.as_str() {
+        t if t.is_empty() || t == "every" => BlameLineNumbers::On(set_defaults(f.into_simple())),
+        t if t == "block" => BlameLineNumbers::PerBlock(set_defaults(f.into_simple())),
+        every_n if every_n.starts_with("every-") => {
+            let n = every_n["every-".len()..]
+                .parse::<usize>()
+                .unwrap_or_else(|err| {
+                    fatal(format!(
+                        "Invalid number for blame-line-numbers in every-N argument: {}",
+                        err
+                    ))
+                });
+
+            if n > 1 {
+                BlameLineNumbers::Every(n, set_defaults(f.into_simple()))
+            } else {
+                BlameLineNumbers::On(set_defaults(f.into_simple()))
+            }
+        }
+        t => fatal(format!(
+            "Invalid format type \"{}\" for blame-line-numbers",
+            t
+        )),
+    }
 }
 
 #[cfg(test)]
