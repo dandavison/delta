@@ -128,8 +128,8 @@ pub fn set_options(
         [
             blame_code_style,
             blame_format,
+            blame_separator_format,
             blame_palette,
-            blame_separator,
             blame_separator_style,
             blame_timestamp_format,
             color_only,

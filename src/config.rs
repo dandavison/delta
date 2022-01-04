@@ -17,6 +17,8 @@ use crate::features::navigate;
 use crate::features::side_by_side::{self, ansifill, LeftRight};
 use crate::git_config::{GitConfig, GitConfigEntry};
 use crate::handlers;
+use crate::handlers::blame::parse_blame_line_numbers;
+use crate::handlers::blame::BlameLineNumbers;
 use crate::minusplus::MinusPlus;
 use crate::paint::BgFillMethod;
 use crate::parse_styles;
@@ -63,8 +65,8 @@ pub struct Config {
     pub background_color_extends_to_terminal_width: bool,
     pub blame_code_style: Option<Style>,
     pub blame_format: String,
+    pub blame_separator_format: BlameLineNumbers,
     pub blame_palette: Vec<String>,
-    pub blame_separator: String,
     pub blame_separator_style: Option<Style>,
     pub blame_timestamp_format: String,
     pub color_only: bool,
@@ -248,7 +250,7 @@ impl From<cli::Opt> for Config {
             blame_format: opt.blame_format,
             blame_code_style: styles.remove("blame-code-style"),
             blame_palette,
-            blame_separator: opt.blame_separator,
+            blame_separator_format: parse_blame_line_numbers(&opt.blame_separator_format),
             blame_separator_style: styles.remove("blame-separator-style"),
             blame_timestamp_format: opt.blame_timestamp_format,
             commit_style: styles["commit-style"],

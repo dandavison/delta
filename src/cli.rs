@@ -551,9 +551,15 @@ pub struct Opt {
     /// Available placeholders are "{timestamp}", "{author}", and "{commit}".
     pub blame_format: String,
 
-    #[clap(long = "blame-separator", default_value = "│")]
-    /// Separator between the commit metadata and code sections of a git blame line.
-    pub blame_separator: String,
+    /// Separator between the commit metadata and code sections of a line of git blame output. Contains
+    /// the line number by default. Possible values are "none" to disable line numbers or a format
+    /// string. This may contain one "{n:}" placeholder and will display the line number on every line.
+    /// A type may be added after all other format specifiers and can be separated by '_':
+    /// If type is set to 'block' (e.g. "{n:^4_block}") the line number will only be shown when a new blame
+    /// block starts; or if it is set to 'every-N' the line will be show with every block and every
+    /// N-th (modulo) line.
+    #[clap(long = "blame-separator-format", default_value = "│{n:^4}│")]
+    pub blame_separator_format: String,
 
     #[clap(long = "blame-separator-style")]
     /// Style string for the separator between the commit metadata and code sections of a git blame line.
