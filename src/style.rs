@@ -215,6 +215,7 @@ pub fn ansi_term_style_equality(a: ansi_term::Style, b: ansi_term::Style) -> boo
 // TODO: The equality methods were implemented first, and the equality_key
 // methods later. The former should be re-implemented in terms of the latter.
 // But why did the former not address equality of ansi_term::Color::RGB values?
+#[derive(Clone)]
 pub struct AnsiTermStyleEqualityKey {
     attrs_key: (bool, bool, bool, bool, bool, bool, bool, bool),
     foreground_key: Option<(u8, u8, u8, u8)>,

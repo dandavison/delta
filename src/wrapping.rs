@@ -988,11 +988,11 @@ index 223ca50..e69de29 100644
 
     #[test]
     fn test_alignment_2_lines_vs_3_lines() {
-        let config_1 =
-            || make_config_from_args(&default_wrap_cfg_plus(&["--side-by-side", "--width", "55"]));
+        let config =
+            make_config_from_args(&default_wrap_cfg_plus(&["--side-by-side", "--width", "55"]));
 
         {
-            DeltaTest::with_config(config_1())
+            DeltaTest::with_config(&config)
                 .with_input(&format!(
                     "{}-{}+{}",
                     HUNK_ALIGN_DIFF_HEADER, HUNK_ALIGN_DIFF_SHORT, HUNK_ALIGN_DIFF_LONG
@@ -1007,7 +1007,7 @@ index 223ca50..e69de29 100644
         }
 
         {
-            DeltaTest::with_config(config_1())
+            DeltaTest::with_config(&config)
                 .with_input(&format!(
                     "{}-{}+{}",
                     HUNK_ALIGN_DIFF_HEADER, HUNK_ALIGN_DIFF_LONG, HUNK_ALIGN_DIFF_SHORT
@@ -1023,18 +1023,16 @@ index 223ca50..e69de29 100644
 
     #[test]
     fn test_alignment_1_line_vs_3_lines() {
-        let config_2 = || {
-            make_config_from_args(&default_wrap_cfg_plus(&[
-                "--side-by-side",
-                "--width",
-                "61",
-                "--line-fill-method",
-                "spaces",
-            ]))
-        };
+        let config = make_config_from_args(&default_wrap_cfg_plus(&[
+            "--side-by-side",
+            "--width",
+            "61",
+            "--line-fill-method",
+            "spaces",
+        ]));
 
         {
-            DeltaTest::with_config(config_2())
+            DeltaTest::with_config(&config)
                 .with_input(&format!(
                     "{}-{}+{}",
                     HUNK_ALIGN_DIFF_HEADER, HUNK_ALIGN_DIFF_SHORT, HUNK_ALIGN_DIFF_LONG
@@ -1048,7 +1046,7 @@ index 223ca50..e69de29 100644
         }
 
         {
-            DeltaTest::with_config(config_2())
+            DeltaTest::with_config(&config)
                 .with_input(&format!(
                     "{}-{}+{}",
                     HUNK_ALIGN_DIFF_HEADER, HUNK_ALIGN_DIFF_LONG, HUNK_ALIGN_DIFF_SHORT
@@ -1065,22 +1063,19 @@ index 223ca50..e69de29 100644
     #[test]
     fn test_wrap_max_lines_2() {
         // TODO overriding is not possible, need to change config directly
-        let config_3 = || {
-            let mut config = make_config_from_args(&default_wrap_cfg_plus(&[
-                // "--wrap-max-lines",
-                // "2",
-                "--side-by-side",
-                "--width",
-                "72",
-                "--line-fill-method",
-                "spaces",
-            ]));
-            config.truncation_symbol = ">".into();
-            config
-        };
+        let mut config = make_config_from_args(&default_wrap_cfg_plus(&[
+            // "--wrap-max-lines",
+            // "2",
+            "--side-by-side",
+            "--width",
+            "72",
+            "--line-fill-method",
+            "spaces",
+        ]));
+        config.truncation_symbol = ">".into();
 
         {
-            DeltaTest::with_config(config_3())
+            DeltaTest::with_config(&config)
                 .with_input(&format!(
                     "{}-{}+{}",
                     HUNK_ALIGN_DIFF_HEADER, HUNK_ALIGN_DIFF_SHORT, HUNK_ALIGN_DIFF_LONG
@@ -1094,9 +1089,8 @@ index 223ca50..e69de29 100644
         }
 
         {
-            let mut config = config_3();
             config.wrap_config.max_lines = 2;
-            DeltaTest::with_config(config)
+            DeltaTest::with_config(&config)
                 .with_input(&format!(
                     "{}-{}+{}",
                     HUNK_ALIGN_DIFF_HEADER, HUNK_ALIGN_DIFF_SHORT, HUNK_ALIGN_DIFF_LONG

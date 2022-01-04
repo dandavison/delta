@@ -2,7 +2,7 @@ use std::ops::{Index, IndexMut};
 
 /// Represent data related to removed/minus and added/plus lines which
 /// can be indexed with [`MinusPlusIndex::{Plus`](MinusPlusIndex::Plus)`,`[`Minus}`](MinusPlusIndex::Minus).
-#[derive(Debug, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub struct MinusPlus<T> {
     pub minus: T,
     pub plus: T,
