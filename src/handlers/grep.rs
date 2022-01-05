@@ -288,18 +288,30 @@ fn make_output_config() -> GrepOutputConfig {
 }
 
 enum GrepLineRegex {
-    FilePathWithFileExtension,
-    FilePathWithoutSeparatorCharacters,
+    WithFileExtensionAndLineNumber,
+    WithFileExtension,
+    WithFileExtensionNoSpaces,
+    WithoutSeparatorCharacters,
+}
+
+lazy_static! {
+    static ref GREP_LINE_REGEX_ASSUMING_FILE_EXTENSION_AND_LINE_NUMBER: Regex =
+        make_grep_line_regex(GrepLineRegex::WithFileExtensionAndLineNumber);
+}
+
+lazy_static! {
+    static ref GREP_LINE_REGEX_ASSUMING_FILE_EXTENSION_NO_SPACES: Regex =
+        make_grep_line_regex(GrepLineRegex::WithFileExtensionNoSpaces);
 }
 
 lazy_static! {
     static ref GREP_LINE_REGEX_ASSUMING_FILE_EXTENSION: Regex =
-        make_grep_line_regex(GrepLineRegex::FilePathWithFileExtension);
+        make_grep_line_regex(GrepLineRegex::WithFileExtension);
 }
 
 lazy_static! {
     static ref GREP_LINE_REGEX_ASSUMING_NO_INTERNAL_SEPARATOR_CHARS: Regex =
-        make_grep_line_regex(GrepLineRegex::FilePathWithoutSeparatorCharacters);
+        make_grep_line_regex(GrepLineRegex::WithoutSeparatorCharacters);
 }
 
 // See tests for example grep lines
@@ -328,16 +340,24 @@ fn make_grep_line_regex(regex_variant: GrepLineRegex) -> Regex {
     // Make-7-file-7-xxx
 
     let file_path = match regex_variant {
-        GrepLineRegex::FilePathWithFileExtension => {
+        GrepLineRegex::WithFileExtensionAndLineNumber | GrepLineRegex::WithFileExtension => {
             r"
         (                        # 1. file name (colons not allowed)
             [^:|\ ]                 # try to be strict about what a file path can start with
             [^:]*                   # anything
-            \.[^.\ :=-]{1,6}        # extension
+            [^\ ]\.[^.\ :=-]{1,6}   # extension
         )    
         "
         }
-        GrepLineRegex::FilePathWithoutSeparatorCharacters => {
+        GrepLineRegex::WithFileExtensionNoSpaces => {
+            r"
+        (                        # 1. file name (colons not allowed)
+            [^:|\ ]+                # try to be strict about what a file path can start with
+            [^\ ]\.[^.\ :=-]{1,6}   # extension
+        )    
+        "
+        }
+        GrepLineRegex::WithoutSeparatorCharacters => {
             r"
         (                        # 1. file name (colons not allowed)
             [^:|\ =-]               # try to be strict about what a file path can start with
@@ -348,30 +368,59 @@ fn make_grep_line_regex(regex_variant: GrepLineRegex) -> Regex {
         }
     };
 
+    let separator = match regex_variant {
+        GrepLineRegex::WithFileExtensionAndLineNumber => {
+            r#"
+    (?:
+        (
+            :                # 2. match marker
+            ([0-9]+):        # 3. line number followed by second match marker
+        )
+        |
+        (
+            -                # 4. nomatch marker
+            ([0-9]+)-        # 5. line number followed by second nomatch marker
+        )
+        |
+        (
+            =                # 6. match marker
+            ([0-9]+)=        # 7. line number followed by second header marker
+        )
+    )
+            "#
+        }
+        _ => {
+            r#"
+    (?:
+        (                    
+            :                # 2. match marker
+            (?:([0-9]+):)?   # 3. optional: line number followed by second match marker
+        )
+        |
+        (
+            -                # 4. nomatch marker
+            (?:([0-9]+)-)?   # 5. optional: line number followed by second nomatch marker
+        )
+        |
+        (
+            =                # 6. match marker
+            (?:([0-9]+)=)?   # 7. optional: line number followed by second header marker
+        )
+    )
+        "#
+        }
+    };
+
     Regex::new(&format!(
         "(?x)
 ^
 {file_path}
-(?:
-    (                    
-        :                # 2. match marker
-        (?:([0-9]+):)?   # 3. optional: line number followed by second match marker
-    )
-    |
-    (
-        -                # 4. nomatch marker
-        (?:([0-9]+)-)?   # 5. optional: line number followed by second nomatch marker
-    )
-    |
-    (
-        =                # 6. match marker
-        (?:([0-9]+)=)?   # 7. optional: line number followed by second header marker
-    )
-)
+{separator}
 (.*)                     # 8. code (i.e. line contents)
 $
 ",
-        file_path = file_path
+        file_path = file_path,
+        separator = separator,
     ))
     .unwrap()
 }
@@ -382,6 +431,8 @@ pub fn parse_grep_line(line: &str) -> Option<GrepLine> {
     } else {
         match &*process::calling_process() {
             process::CallingProcess::GitGrep(_) | process::CallingProcess::OtherGrep => [
+                &*GREP_LINE_REGEX_ASSUMING_FILE_EXTENSION_AND_LINE_NUMBER,
+                &*GREP_LINE_REGEX_ASSUMING_FILE_EXTENSION_NO_SPACES,
                 &*GREP_LINE_REGEX_ASSUMING_FILE_EXTENSION,
                 &*GREP_LINE_REGEX_ASSUMING_NO_INTERNAL_SEPARATOR_CHARS,
             ]
@@ -654,6 +705,28 @@ mod tests {
                 submatches: None,
             })
         );
+
+        assert_eq!(
+            parse_grep_line(r#"aaa/bbb.scala-              s"xxx.yyy.zzz: $ccc ddd""#),
+            Some(GrepLine {
+                path: "aaa/bbb.scala".into(),
+                line_number: None,
+                line_type: LineType::Context,
+                code: r#"              s"xxx.yyy.zzz: $ccc ddd""#.into(),
+                submatches: None,
+            })
+        );
+
+        assert_eq!(
+            parse_grep_line(r#"aaa/bbb.scala-  val atRegex = Regex.compile("(@.*)|(-shdw@.*)""#),
+            Some(GrepLine {
+                path: "aaa/bbb.scala".into(),
+                line_number: None,
+                line_type: LineType::Context,
+                code: r#"  val atRegex = Regex.compile("(@.*)|(-shdw@.*)""#.into(),
+                submatches: None,
+            })
+        );
     }
 
     #[test]
@@ -681,6 +754,28 @@ mod tests {
                 line_number: Some(58),
                 line_type: LineType::Context,
                 code: "    pub available_terminal_width: usize,".into(),
+                submatches: None,
+            })
+        );
+
+        assert_eq!(
+            parse_grep_line(r#"foo.rs-12-  .x-"#),
+            Some(GrepLine {
+                path: "foo.rs".into(),
+                line_number: Some(12),
+                line_type: LineType::Context,
+                code: r#"  .x-"#.into(),
+                submatches: None,
+            })
+        );
+
+        assert_eq!(
+            parse_grep_line(r#"foo.rs-12-.x-"#),
+            Some(GrepLine {
+                path: "foo.rs".into(),
+                line_number: Some(12),
+                line_type: LineType::Context,
+                code: r#".x-"#.into(),
                 submatches: None,
             })
         );
