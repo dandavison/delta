@@ -22,6 +22,7 @@ impl<'a> StateMachine<'a> {
             } else {
                 State::DiffHeader(DiffType::Unified)
             };
+        self.handle_pending_mode_line_with_diff_name()?;
         self.handled_diff_header_header_line_file_pair = None;
         self.diff_line = self.line.clone();
         if !self.should_skip_line() {

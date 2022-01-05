@@ -50,6 +50,7 @@ impl<'a> StateMachine<'a> {
             self.painter.writer,
             &format!("{}{}", formatted_line, if pad { " " } else { "" }),
             &format!("{}{}", formatted_raw_line, if pad { " " } else { "" }),
+            "",
             &self.config.decorations_width,
             self.config.commit_style,
             decoration_ansi_term_style,

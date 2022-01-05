@@ -1572,31 +1572,40 @@ src/align.rs:71: impl<'a> Alignment<'a> { │
     }
 
     #[test]
+    fn test_file_mode_change_with_rename() {
+        let config = integration_test_utils::make_config_from_args(&["--right-arrow=->"]);
+        let output =
+            integration_test_utils::run_delta(GIT_DIFF_FILE_MODE_CHANGE_WITH_RENAME, &config);
+        let output = strip_ansi_codes(&output);
+        assert!(output.contains("renamed: old-longer-name -> shorter-name (mode +x)"));
+    }
+
+    #[test]
     fn test_file_mode_change_gain_executable_bit() {
         DeltaTest::with_args(&[])
             .with_input(GIT_DIFF_FILE_MODE_CHANGE_GAIN_EXECUTABLE_BIT)
-            .expect_contains(r"src/delta.rs: mode +x");
+            .expect_contains("src/delta.rs (mode +x)");
     }
 
     #[test]
     fn test_file_mode_change_lose_executable_bit() {
         DeltaTest::with_args(&[])
             .with_input(GIT_DIFF_FILE_MODE_CHANGE_LOSE_EXECUTABLE_BIT)
-            .expect_contains(r"src/delta.rs: mode -x");
+            .expect_contains("src/delta.rs (mode -x)");
     }
 
     #[test]
     fn test_file_mode_change_unexpected_bits() {
         DeltaTest::with_args(&["--navigate", "--right-arrow=->"])
             .with_input(GIT_DIFF_FILE_MODE_CHANGE_UNEXPECTED_BITS)
-            .expect_contains(r"Δ src/delta.rs: 100700 -> 100644");
+            .expect_contains("Δ src/delta.rs (mode 100700 -> 100644)");
     }
 
     #[test]
     fn test_file_mode_change_with_diff() {
         DeltaTest::with_args(&["--navigate", "--keep-plus-minus-markers"])
             .with_input(GIT_DIFF_FILE_MODE_CHANGE_WITH_DIFF)
-            .expect_contains("Δ src/script: mode +x")
+            .expect_contains("Δ src/script (mode +x)")
             .expect_after_skip(
                 5,
                 "
@@ -2307,6 +2316,15 @@ Date:   Sun Nov 1 15:28:53 2020 -0500
 \ No newline at end of file[m
 [32m+[m[32m][m
 "#;
+
+    const GIT_DIFF_FILE_MODE_CHANGE_WITH_RENAME: &str = "
+diff --git a/old-longer-name b/shorter-name
+old mode 100644
+new mode 100755
+similarity index 100%
+rename from old-longer-name
+rename to shorter-name
+";
 
     const GIT_DIFF_FILE_MODE_CHANGE_GAIN_EXECUTABLE_BIT: &str = "
 diff --git a/src/delta.rs b/src/delta.rs
