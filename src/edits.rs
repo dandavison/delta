@@ -213,7 +213,7 @@ where
             align::Operation::NoOp => {
                 let minus_section = minus_section(n, &mut x_offset);
                 let n_d = distance_contribution(minus_section);
-                d_denom += n_d;
+                d_denom += 2 * n_d;
                 let is_space = minus_section.trim().is_empty();
                 let coalesce_space_with_previous = is_space
                     && ((minus_op_prev == deletion
@@ -238,16 +238,6 @@ where
                 ));
                 minus_op_prev = noop_deletion;
                 plus_op_prev = noop_insertion;
-            }
-            align::Operation::Substitution => {
-                let minus_section = minus_section(n, &mut x_offset);
-                let n_d = distance_contribution(minus_section);
-                d_denom += n_d;
-                d_numer += n_d;
-                annotated_minus_line.push((deletion, minus_section));
-                annotated_plus_line.push((insertion, plus_section(n, &mut y_offset)));
-                minus_op_prev = deletion;
-                plus_op_prev = insertion;
             }
             align::Operation::Insertion => {
                 let plus_section = plus_section(n, &mut y_offset);
@@ -688,10 +678,9 @@ mod tests {
                 // TODO: Coalesce runs of the same operation.
                 vec![vec![
                     (MinusNoop, "so it is safe to read "),
-                    (Deletion, "the"),
+                    (Deletion, "the commit"),
                     (Deletion, " "),
-                    (Deletion, "commit"),
-                    (Deletion, " number"),
+                    (Deletion, "number"),
                     (MinusNoop, " from any one of them."),
                 ]],
                 vec![vec![
@@ -817,8 +806,7 @@ mod tests {
             (
                 vec![vec![
                     (MinusNoop, ""),
-                    (Deletion, "printf"),
-                    (Deletion, r#" "%s\n""#),
+                    (Deletion, r#"printf "%s\n""#),
                     (MinusNoop, " s y y | git add -p &&"),
                 ]],
                 vec![vec![
@@ -827,6 +815,32 @@ mod tests {
                     (PlusNoop, " s y y | git add -p &&"),
                 ]],
             ),
+        );
+    }
+
+    #[test]
+    fn test_infer_edits_16() {
+        assert_edits(
+            vec!["a a a a a a b b b"],
+            vec!["c a a a a a a c c"],
+            (
+                vec![vec![
+                    (MinusNoop, ""),
+                    (MinusNoop, "a a a a a a "),
+                    (Deletion, "b b"),
+                    (Deletion, " "),
+                    (Deletion, "b"),
+                ]],
+                vec![vec![
+                    (PlusNoop, ""),
+                    (Insertion, "c "),
+                    (PlusNoop, "a a a a a a "),
+                    (Insertion, "c"),
+                    (Insertion, " "),
+                    (Insertion, "c"),
+                ]],
+            ),
+            1.0,
         );
     }
 

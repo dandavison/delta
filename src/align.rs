@@ -1,10 +1,6 @@
 use std::cmp::max;
 use std::collections::VecDeque;
 
-// Cost invariants:
-//    SUBSTITUTION_COST < DELETION_COST + INSERTION_COST
-//    DELETION_COST + INSERTION_COST + INITIAL_MISMATCH_PENALITY < 2 * SUBSTITUTION_COST
-const SUBSTITUTION_COST: usize = 3;
 const DELETION_COST: usize = 2;
 const INSERTION_COST: usize = 2;
 // extra cost for starting a new group of changed tokens
@@ -13,7 +9,6 @@ const INITIAL_MISMATCH_PENALITY: usize = 1;
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum Operation {
     NoOp,
-    Substitution,
     Deletion,
     Insertion,
 }
@@ -101,11 +96,11 @@ impl<'a> Alignment<'a> {
                     },
                     Cell {
                         parent: diag,
-                        operation: if x_i == y_j { NoOp } else { Substitution },
+                        operation: NoOp,
                         cost: if x_i == y_j {
                             self.table[diag].cost
                         } else {
-                            self.mismatch_cost(diag, SUBSTITUTION_COST)
+                            usize::MAX
                         },
                     },
                 ];
@@ -186,7 +181,6 @@ impl<'a> Alignment<'a> {
         let parent = &self.table[cell.parent];
         let op = match cell.operation {
             Deletion => "-",
-            Substitution => "*",
             Insertion => "+",
             NoOp => ".",
         };
@@ -268,9 +262,9 @@ mod tests {
         TestCase {
             before: "aaa",
             after: "aba",
-            distance: 4,
-            parts: (1, 3),
-            operations: vec![NoOp, Substitution, NoOp],
+            distance: 5,
+            parts: (2, 4),
+            operations: vec![NoOp, Deletion, Insertion, NoOp],
         }
         .run();
     }
@@ -280,9 +274,9 @@ mod tests {
         TestCase {
             before: "ááb",
             after: "áaa",
-            distance: 7,
-            parts: (2, 3),
-            operations: vec![NoOp, Substitution, Substitution],
+            distance: 9,
+            parts: (4, 5),
+            operations: vec![NoOp, Deletion, Deletion, Insertion, Insertion],
         }
         .run();
     }
@@ -292,16 +286,18 @@ mod tests {
         TestCase {
             before: "kitten",
             after: "sitting",
-            distance: 11,
-            parts: (3, 7),
+            distance: 13,
+            parts: (5, 9),
             operations: vec![
-                Substitution, // K S
-                NoOp,         // I I
-                NoOp,         // T T
-                NoOp,         // T T
-                Substitution, // E I
-                NoOp,         // N N
-                Insertion,    // - G
+                Deletion,  // K -
+                Insertion, // - S
+                NoOp,      // I I
+                NoOp,      // T T
+                NoOp,      // T T
+                Deletion,  // E -
+                Insertion, // - I
+                NoOp,      // N N
+                Insertion, // - G
             ],
         }
         .run();
@@ -312,17 +308,18 @@ mod tests {
         TestCase {
             before: "saturday",
             after: "sunday",
-            distance: 9,
-            parts: (3, 8),
+            distance: 10,
+            parts: (4, 9),
             operations: vec![
-                NoOp,         // S S
-                Deletion,     // A -
-                Deletion,     // T -
-                NoOp,         // U U
-                Substitution, // R N
-                NoOp,         // D D
-                NoOp,         // A A
-                NoOp,         // Y Y
+                NoOp,      // S S
+                Deletion,  // A -
+                Deletion,  // T -
+                NoOp,      // U U
+                Deletion,  // R -
+                Insertion, // - N
+                NoOp,      // D D
+                NoOp,      // A A
+                NoOp,      // Y Y
             ],
         }
         .run();
@@ -331,7 +328,7 @@ mod tests {
     #[test]
     fn test_3() {
         TestCase {
-            // Prefer [Deletion NoOp Insertion] over [Substitution Substitution]
+            // Prefer [Deletion NoOp Insertion] over [Insertion NoOp Deletion]
             before: "ab",
             after: "ba",
             distance: 6,
@@ -383,38 +380,20 @@ mod tests {
 
     #[test]
     fn test_6() {
-        // Deletion and substitution are grouped together.
+        // Insertion and Deletion are grouped together.
         TestCase {
             before: "AAABBB",
             after: "ACB",
-            distance: 10,
-            parts: (4, 6),
+            distance: 11,
+            parts: (5, 7),
             operations: vec![
-                NoOp,         // A A
-                Substitution, // A C
-                Deletion,     // A -
-                Deletion,     // B -
-                Deletion,     // B -
-                NoOp,         // B B
-            ],
-        }
-        .run();
-    }
-
-    #[test]
-    fn test_7() {
-        // Insertion and Substitution are grouped together
-        TestCase {
-            before: "ACB",
-            after: "AADBB",
-            distance: 8,
-            parts: (3, 5),
-            operations: vec![
-                NoOp,         // A A
-                Substitution, // C A
-                Insertion,    // - D
-                Insertion,    // - B
-                NoOp,         // B B
+                NoOp,      // A A
+                Deletion,  // A -
+                Deletion,  // A -
+                Deletion,  // B -
+                Deletion,  // B -
+                Insertion, // - C
+                NoOp,      // B B
             ],
         }
         .run();
