@@ -481,7 +481,7 @@ mod tests {
     #[test]
     fn test_parse_grep_match() {
         let fake_parent_grep_command = "git --doesnt-matter grep --nor-this nor_this -- nor_this";
-        let _args = FakeParentArgs::for_scope(&fake_parent_grep_command);
+        let _args = FakeParentArgs::for_scope(fake_parent_grep_command);
 
         assert_eq!(
             parse_grep_line("src/co-7-fig.rs:xxx"),
@@ -573,7 +573,7 @@ mod tests {
     fn test_parse_grep_n_match() {
         let fake_parent_grep_command =
             "/usr/local/bin/git --doesnt-matter grep --nor-this nor_this -- nor_this";
-        let _args = FakeParentArgs::for_scope(&fake_parent_grep_command);
+        let _args = FakeParentArgs::for_scope(fake_parent_grep_command);
 
         assert_eq!(
             parse_grep_line("src/co-7-fig.rs:7:xxx"),
@@ -642,7 +642,7 @@ mod tests {
         // This fails: we can't parse it currently.
         let fake_parent_grep_command =
             "/usr/local/bin/git --doesnt-matter grep --nor-this nor_this -- nor_this";
-        let _args = FakeParentArgs::once(&fake_parent_grep_command);
+        let _args = FakeParentArgs::once(fake_parent_grep_command);
 
         assert_eq!(
             parse_grep_line("etc/examples/119-within-line-edits:4:repo=$(mktemp -d)"),
@@ -660,7 +660,7 @@ mod tests {
     fn test_parse_grep_no_match() {
         let fake_parent_grep_command =
             "/usr/local/bin/git --doesnt-matter grep --nor-this nor_this -- nor_this";
-        let _args = FakeParentArgs::for_scope(&fake_parent_grep_command);
+        let _args = FakeParentArgs::for_scope(fake_parent_grep_command);
 
         assert_eq!(
             parse_grep_line("src/co-7-fig.rs-xxx"),
@@ -735,7 +735,7 @@ mod tests {
         let fake_parent_grep_command =
             "/usr/local/bin/git --doesnt-matter grep --nor-this nor_this -- nor_this";
 
-        let _args = FakeParentArgs::for_scope(&fake_parent_grep_command);
+        let _args = FakeParentArgs::for_scope(fake_parent_grep_command);
         assert_eq!(
             parse_grep_line("src/co-7-fig.rs-7-xxx"),
             Some(GrepLine {
@@ -785,7 +785,7 @@ mod tests {
     fn test_parse_grep_match_no_extension() {
         let fake_parent_grep_command =
             "/usr/local/bin/git --doesnt-matter grep --nor-this nor_this -- nor_this";
-        let _args = FakeParentArgs::once(&fake_parent_grep_command);
+        let _args = FakeParentArgs::once(fake_parent_grep_command);
 
         assert_eq!(
             parse_grep_line("Makefile:xxx"),
@@ -804,7 +804,7 @@ mod tests {
         // git grep -n
         let fake_parent_grep_command =
             "/usr/local/bin/git --doesnt-matter grep --nor-this nor_this -- nor_this";
-        let _args = FakeParentArgs::once(&fake_parent_grep_command);
+        let _args = FakeParentArgs::once(fake_parent_grep_command);
         assert_eq!(
             parse_grep_line("Makefile:7:xxx"),
             Some(GrepLine {
@@ -824,7 +824,7 @@ mod tests {
         let fake_parent_grep_command =
             "/usr/local/bin/git --doesnt-matter grep --nor-this nor_this -- nor_this";
 
-        let _args = FakeParentArgs::once(&fake_parent_grep_command);
+        let _args = FakeParentArgs::once(fake_parent_grep_command);
         assert_eq!(
             parse_grep_line("src/config.rs=pub struct Config {"), // match
             Some(GrepLine {
@@ -843,7 +843,7 @@ mod tests {
         // git grep -n -W
         let fake_parent_grep_command =
             "/usr/local/bin/git --doesnt-matter grep --nor-this nor_this -- nor_this";
-        let _args = FakeParentArgs::once(&fake_parent_grep_command);
+        let _args = FakeParentArgs::once(fake_parent_grep_command);
 
         assert_eq!(
             parse_grep_line("src/config.rs=57=pub struct Config {"),
@@ -861,7 +861,7 @@ mod tests {
     fn test_parse_grep_not_grep_output() {
         let fake_parent_grep_command =
             "/usr/local/bin/git --doesnt-matter grep --nor-this nor_this -- nor_this";
-        let _args = FakeParentArgs::once(&fake_parent_grep_command);
+        let _args = FakeParentArgs::once(fake_parent_grep_command);
 
         let not_grep_output = "|       expose it in delta's color output styled with grep:";
         assert_eq!(parse_grep_line(not_grep_output), None);
@@ -871,7 +871,7 @@ mod tests {
     fn test_parse_grep_parent_command_is_not_grep_1() {
         let fake_parent_grep_command =
             "/usr/local/bin/notgrep --doesnt-matter --nor-this nor_this -- nor_this";
-        let _args = FakeParentArgs::once(&fake_parent_grep_command);
+        let _args = FakeParentArgs::once(fake_parent_grep_command);
 
         let apparently_grep_output = "src/co-7-fig.rs:xxx";
         assert_eq!(parse_grep_line(apparently_grep_output), None);
