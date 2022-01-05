@@ -21,6 +21,34 @@ pub enum FileEvent {
 }
 
 impl<'a> StateMachine<'a> {
+    /// Check for the old mode|new mode lines and cache their info for later use.
+    pub fn handle_diff_header_mode_line(&mut self) -> std::io::Result<bool> {
+        let mut handled_line = false;
+        if let Some(line_suf) = self.line.strip_prefix("old mode ") {
+            self.state = State::DiffHeader(DiffType::Unified);
+            if self.should_handle() && !self.config.color_only {
+                self.mode_info = line_suf.to_string();
+                handled_line = true;
+            }
+        } else if let Some(line_suf) = self.line.strip_prefix("new mode ") {
+            self.state = State::DiffHeader(DiffType::Unified);
+            if self.should_handle() && !self.config.color_only && !self.mode_info.is_empty() {
+                self.mode_info = match (self.mode_info.as_str(), line_suf) {
+                    // 100755 for executable and 100644 for non-executable are the only file modes Git records.
+                    // https://medium.com/@tahteche/how-git-treats-changes-in-file-permissions-f71874ca239d
+                    ("100644", "100755") => "mode +x".to_string(),
+                    ("100755", "100644") => "mode -x".to_string(),
+                    _ => format!(
+                        "mode {} {} {}",
+                        self.mode_info, self.config.right_arrow, line_suf
+                    ),
+                };
+                handled_line = true;
+            }
+        }
+        Ok(handled_line)
+    }
+
     #[inline]
     fn test_diff_header_minus_line(&self) -> bool {
         (matches!(self.state, State::DiffHeader(_)) || self.source == Source::DiffUnified)
@@ -29,6 +57,7 @@ impl<'a> StateMachine<'a> {
                 || self.line.starts_with("copy from "))
     }
 
+    /// Check for and handle the "--- filename ..." line.
     pub fn handle_diff_header_minus_line(&mut self) -> std::io::Result<bool> {
         if !self.test_diff_header_minus_line() {
             return Ok(false);
@@ -75,34 +104,6 @@ impl<'a> StateMachine<'a> {
         Ok(handled_line)
     }
 
-    pub fn handle_diff_header_mode_line(&mut self) -> std::io::Result<bool> {
-        if !self.line.starts_with("old mode ") && !self.line.starts_with("new mode ") {
-            return Ok(false);
-        }
-        self.state = State::DiffHeader(DiffType::Unified);
-        if !self.should_handle() || self.config.color_only {
-            return Ok(false);
-        }
-        if self.line.starts_with("old") {
-            self.mode_info = self.line[9..].to_string();
-        } else if self.mode_info.is_empty() {
-            return Ok(false);
-        } else {
-            let new_mode = self.line[9..].to_string();
-            self.mode_info = match (self.mode_info.as_str(), new_mode.as_str()) {
-                // 100755 for executable and 100644 for non-executable are the only file modes Git records.
-                // https://medium.com/@tahteche/how-git-treats-changes-in-file-permissions-f71874ca239d
-                ("100644", "100755") => "mode +x".to_string(),
-                ("100755", "100644") => "mode -x".to_string(),
-                _ => format!(
-                    "mode {} {} {}",
-                    self.mode_info, self.config.right_arrow, new_mode
-                ),
-            };
-        }
-        Ok(true)
-    }
-
     #[inline]
     fn test_diff_header_plus_line(&self) -> bool {
         (matches!(self.state, State::DiffHeader(_)) || self.source == Source::DiffUnified)
@@ -111,6 +112,7 @@ impl<'a> StateMachine<'a> {
                 || self.line.starts_with("copy to "))
     }
 
+    /// Check for and handle the "+++ filename ..." line.
     pub fn handle_diff_header_plus_line(&mut self) -> std::io::Result<bool> {
         if !self.test_diff_header_plus_line() {
             return Ok(false);
@@ -176,7 +178,7 @@ impl<'a> StateMachine<'a> {
         )
     }
 
-    pub fn handle_pending_mode_line_with_diff_name(&mut self) {
+    pub fn handle_pending_mode_line_with_diff_name(&mut self) -> std::io::Result<()> {
         if !self.mode_info.is_empty() {
             let format_label = |label: &str| {
                 if !label.is_empty() {
@@ -196,13 +198,15 @@ impl<'a> StateMachine<'a> {
             let name = get_repeated_file_path_from_diff_line(&self.diff_line)
                 .unwrap_or_else(|| "".to_string());
             let line = format!("{}{}", label, format_file(&name));
-            let _got = write_generic_diff_header_header_line(
+            write_generic_diff_header_header_line(
                 &line,
                 &line,
                 &mut self.painter,
                 &mut self.mode_info,
                 self.config,
-            );
+            )
+        } else {
+            Ok(())
         }
     }
 }
