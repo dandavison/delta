@@ -1,4 +1,3 @@
-use std::path::PathBuf;
 use std::result::Result;
 use std::str::FromStr;
 
@@ -11,7 +10,6 @@ use crate::errors::*;
 pub enum GitConfigEntry {
     Style(String),
     GitRemote(GitRemoteRepo),
-    Path(PathBuf),
 }
 
 #[derive(Clone, Debug, PartialEq)]

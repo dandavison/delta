@@ -7,6 +7,7 @@ use regex::{Captures, Regex};
 use crate::config::Config;
 use crate::features::OptionValueFunction;
 use crate::git_config::{GitConfig, GitConfigEntry, GitRemoteRepo};
+use crate::utils::cwd::cwd_of_user_shell_process;
 
 pub fn make_feature() -> Vec<(String, OptionValueFunction)> {
     builtin_feature!([
@@ -60,9 +61,8 @@ pub fn format_osc8_file_hyperlink<'a>(
     text: &str,
     config: &Config,
 ) -> Cow<'a, str> {
-    if let Some(GitConfigEntry::Path(workdir)) = config.git_config_entries.get("delta.__workdir__")
-    {
-        let absolute_path = workdir.join(relative_path);
+    if let Some(cwd) = cwd_of_user_shell_process(config) {
+        let absolute_path = cwd.join(relative_path);
         let mut url = config
             .hyperlinks_file_link_format
             .replace("{path}", &absolute_path.to_string_lossy());
