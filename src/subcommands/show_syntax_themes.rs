@@ -1,13 +1,11 @@
-use std::io::{self, ErrorKind, Read, Write};
-
-use structopt::StructOpt;
-
 use crate::cli;
 use crate::config;
 use crate::delta;
 use crate::options::theme::is_light_syntax_theme;
 use crate::utils::bat::assets::HighlightingAssets;
 use crate::utils::bat::output::{OutputType, PagingMode};
+use clap::Parser;
+use std::io::{self, ErrorKind, Read, Write};
 
 #[cfg(not(tarpaulin_include))]
 pub fn show_syntax_themes() -> std::io::Result<()> {
@@ -15,7 +13,7 @@ pub fn show_syntax_themes() -> std::io::Result<()> {
     let mut output_type = OutputType::from_mode(
         PagingMode::QuitIfOneScreen,
         None,
-        &config::Config::from(cli::Opt::from_args()),
+        &config::Config::from(cli::Opt::parse()),
     )
     .unwrap();
     let mut writer = output_type.handle().unwrap();
@@ -33,7 +31,7 @@ pub fn show_syntax_themes() -> std::io::Result<()> {
     };
 
     let make_opt = || {
-        let mut opt = cli::Opt::from_args();
+        let mut opt = cli::Opt::parse();
         opt.computed.syntax_set = assets.syntax_set.clone();
         opt
     };

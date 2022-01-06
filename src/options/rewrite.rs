@@ -2,8 +2,6 @@
 /// 1. Express deprecated usages in the new non-deprecated form
 /// 2. Implement options such as --raw which are defined to be equivalent to some set of
 ///    other options.
-use structopt::clap;
-
 use crate::cli;
 use crate::config::user_supplied_option;
 use crate::fatal;
@@ -186,7 +184,7 @@ fn _get_rewritten_minus_plus_style_string(
 mod tests {
     use std::ffi::OsString;
 
-    use structopt::{clap, StructOpt};
+    use clap::Parser;
 
     use crate::cli;
     use crate::options::rewrite::apply_rewrite_rules;
@@ -195,22 +193,22 @@ mod tests {
     /// the deprecated option is allowed to overwrite it.
     #[test]
     fn test_deprecated_hunk_style_is_rewritten() {
-        let mut opt = cli::Opt::from_iter(Vec::<OsString>::new());
+        let mut opt = cli::Opt::parse_from(Vec::<OsString>::new());
         opt.deprecated_hunk_style = Some("underline".to_string());
         let default = "blue box";
         assert_eq!(opt.hunk_header_decoration_style, default);
-        apply_rewrite_rules(&mut opt, &clap::ArgMatches::new());
+        apply_rewrite_rules(&mut opt, &clap::ArgMatches::default());
         assert_eq!(opt.deprecated_hunk_style, None);
         assert_eq!(opt.hunk_header_decoration_style, "underline");
     }
 
     #[test]
     fn test_deprecated_hunk_style_is_not_rewritten() {
-        let mut opt = cli::Opt::from_iter(Vec::<OsString>::new());
+        let mut opt = cli::Opt::parse_from(Vec::<OsString>::new());
         opt.deprecated_hunk_style = Some("".to_string());
         let default = "blue box";
         assert_eq!(opt.hunk_header_decoration_style, default);
-        apply_rewrite_rules(&mut opt, &clap::ArgMatches::new());
+        apply_rewrite_rules(&mut opt, &clap::ArgMatches::default());
         assert_eq!(opt.deprecated_hunk_style, None);
         assert_eq!(opt.hunk_header_decoration_style, default);
     }
