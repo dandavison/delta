@@ -668,15 +668,6 @@ fn set_git_config_entries(opt: &mut cli::Opt, git_config: &mut GitConfig) {
                 .insert(key.to_string(), GitConfigEntry::Style(style_string));
         }
     }
-
-    if let Some(repo) = &git_config.repo {
-        if let Some(workdir) = repo.workdir() {
-            opt.git_config_entries.insert(
-                "delta.__workdir__".to_string(),
-                GitConfigEntry::Path(workdir.to_path_buf()),
-            );
-        }
-    }
 }
 
 #[cfg(test)]

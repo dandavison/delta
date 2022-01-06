@@ -316,7 +316,6 @@ fn write_to_output_buffer(
 pub mod tests {
     use super::*;
     use crate::ansi::strip_ansi_codes;
-    use crate::git_config::GitConfigEntry;
     use crate::tests::integration_test_utils;
 
     #[test]
@@ -410,14 +409,11 @@ pub mod tests {
         // returns a hyperlinked file path with line number.
 
         let mut cfg = integration_test_utils::make_config_from_args(&["--features", "hyperlinks"]);
-        cfg.git_config_entries.insert(
-            "delta.__workdir__".to_string(),
-            GitConfigEntry::Path("/some/workdir".into()),
-        );
+        cfg.cwd = Some("/some/current/directory".into());
 
         let result = paint_file_path_with_line_number(Some(3), "some-file", &cfg);
 
-        assert_eq!(result, "\u{1b}]8;;file:///some/workdir/some-file\u{1b}\\\u{1b}[34m3\u{1b}[0m\u{1b}]8;;\u{1b}\\");
+        assert_eq!(result, "\u{1b}]8;;file:///some/current/directory/some-file\u{1b}\\\u{1b}[34m3\u{1b}[0m\u{1b}]8;;\u{1b}\\");
     }
 
     #[test]
