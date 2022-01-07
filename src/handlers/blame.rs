@@ -253,9 +253,7 @@ pub fn format_blame_metadata(
         let width = placeholder.width.unwrap_or(15);
 
         let field = match placeholder.placeholder {
-            Some(Placeholder::Str("timestamp")) => Some(Cow::from(
-                chrono_humanize::HumanTime::from(blame.time).to_string(),
-            )),
+            Some(Placeholder::Str("timestamp")) => Some(Cow::from("dummy".to_string())),
             Some(Placeholder::Str("author")) => Some(Cow::from(blame.author)),
             Some(Placeholder::Str("commit")) => Some(delta::format_raw_line(blame.commit, config)),
             None => None,
