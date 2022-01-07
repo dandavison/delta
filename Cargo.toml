@@ -48,7 +48,8 @@ default-features = false
 features = []
 
 [dependencies.syntect]
-version = "4.6.0"
+git = "https://github.com/trishume/syntect"
+revision = "0635a764b6e05b2f8c443a8e35233eeb02bf2ea9"
 default-features = false
 features = ["parsing", "assets", "yaml-load", "dump-load", "regex-onig"]
 
