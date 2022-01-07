@@ -1,4 +1,3 @@
-use chrono::{DateTime, FixedOffset};
 use lazy_static::lazy_static;
 use regex::Regex;
 use std::borrow::Cow;
@@ -29,7 +28,7 @@ impl<'a> StateMachine<'a> {
         };
         if try_parse {
             let line = self.line.to_owned();
-            if let Some(blame) = parse_git_blame_line(&line, &self.config.blame_timestamp_format) {
+            if let Some(blame) = parse_git_blame_line(&line) {
                 // Format blame metadata
                 let format_data = format::parse_line_number_format(
                     &self.config.blame_format,
@@ -170,7 +169,6 @@ impl<'a> StateMachine<'a> {
 pub struct BlameLine<'a> {
     pub commit: &'a str,
     pub author: &'a str,
-    pub time: DateTime<FixedOffset>,
     pub line_number: usize,
     pub code: &'a str,
 }
@@ -209,14 +207,11 @@ $
     .unwrap();
 }
 
-pub fn parse_git_blame_line<'a>(line: &'a str, timestamp_format: &str) -> Option<BlameLine<'a>> {
+pub fn parse_git_blame_line(line: &str) -> Option<BlameLine> {
     let caps = BLAME_LINE_REGEX.captures(line)?;
 
     let commit = caps.get(1).unwrap().as_str();
     let author = caps.get(2).unwrap().as_str();
-    let timestamp = caps.get(3).unwrap().as_str();
-
-    let time = DateTime::parse_from_str(timestamp, timestamp_format).ok()?;
 
     let line_number = caps.get(4).unwrap().as_str().parse::<usize>().ok()?;
 
@@ -225,7 +220,6 @@ pub fn parse_git_blame_line<'a>(line: &'a str, timestamp_format: &str) -> Option
     Some(BlameLine {
         commit,
         author,
-        time,
         line_number,
         code,
     })
@@ -291,7 +285,7 @@ mod tests {
         ] {
             let caps = BLAME_LINE_REGEX.captures(line);
             assert!(caps.is_some());
-            assert!(parse_git_blame_line(line, "%Y-%m-%d %H:%M:%S %z").is_some());
+            assert!(parse_git_blame_line(line).is_some());
         }
     }
 
