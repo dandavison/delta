@@ -6,9 +6,7 @@ on:
     - cron: '0 0 * * *'
   push:
     paths:
-      - '**/Cargo.toml'
-      - '**/Cargo.lock'
-      - '**/audit.toml'
+      - '**/*'
 
 jobs:
   audit:
@@ -19,4 +17,3 @@ jobs:
       - uses: actions-rs/audit-check@v1
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
-
