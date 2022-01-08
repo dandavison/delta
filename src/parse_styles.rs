@@ -310,53 +310,55 @@ fn make_line_number_styles(opt: &cli::Opt, styles: &mut HashMap<&str, StyleRefer
 fn make_commit_file_hunk_header_styles(opt: &cli::Opt, styles: &mut HashMap<&str, StyleReference>) {
     let true_color = opt.computed.true_color;
     styles.extend([
-        ("commit-style",
-            style_from_str_with_handling_of_special_decoration_attributes_and_respecting_deprecated_foreground_color_arg(
+        (
+            "commit-style",
+            style_from_str_with_handling_of_special_decoration_attributes(
                 &opt.commit_style,
                 None,
                 Some(&opt.commit_decoration_style),
-                opt.deprecated_commit_color.as_deref(),
                 true_color,
                 opt.git_config.as_ref(),
-            )
+            ),
         ),
-        ("file-style",
-            style_from_str_with_handling_of_special_decoration_attributes_and_respecting_deprecated_foreground_color_arg(
+        (
+            "file-style",
+            style_from_str_with_handling_of_special_decoration_attributes(
                 &opt.file_style,
                 None,
                 Some(&opt.file_decoration_style),
-                opt.deprecated_file_color.as_deref(),
                 true_color,
                 opt.git_config.as_ref(),
-            )
+            ),
         ),
-        ("hunk-header-style",
-            style_from_str_with_handling_of_special_decoration_attributes_and_respecting_deprecated_foreground_color_arg(
+        (
+            "hunk-header-style",
+            style_from_str_with_handling_of_special_decoration_attributes(
                 &opt.hunk_header_style,
                 None,
                 Some(&opt.hunk_header_decoration_style),
-                opt.deprecated_hunk_color.as_deref(),
                 true_color,
                 opt.git_config.as_ref(),
-            )
+            ),
         ),
-        ("hunk-header-file-style",
+        (
+            "hunk-header-file-style",
             style_from_str_with_handling_of_special_decoration_attributes(
                 &opt.hunk_header_file_style,
                 None,
                 None,
                 true_color,
                 opt.git_config.as_ref(),
-            )
+            ),
         ),
-        ("hunk-header-line-number-style",
+        (
+            "hunk-header-line-number-style",
             style_from_str_with_handling_of_special_decoration_attributes(
                 &opt.hunk_header_line_number_style,
                 None,
                 None,
                 true_color,
                 opt.git_config.as_ref(),
-            )
+            ),
         ),
     ]);
 }
@@ -552,28 +554,6 @@ fn style_from_str_with_handling_of_special_decoration_attributes(
                 git_config,
             ),
         )
-    }
-}
-
-fn style_from_str_with_handling_of_special_decoration_attributes_and_respecting_deprecated_foreground_color_arg(
-    style_string: &str,
-    default: Option<Style>,
-    decoration_style_string: Option<&str>,
-    deprecated_foreground_color_arg: Option<&str>,
-    true_color: bool,
-    git_config: Option<&GitConfig>,
-) -> StyleReference {
-    if is_style_reference(style_string) {
-        StyleReference::Reference(style_string.to_owned())
-    } else {
-        StyleReference::Style(Style::from_str_with_handling_of_special_decoration_attributes_and_respecting_deprecated_foreground_color_arg(
-            style_string,
-            default,
-            decoration_style_string,
-            deprecated_foreground_color_arg,
-            true_color,
-            git_config,
-        ))
     }
 }
 
