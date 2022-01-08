@@ -522,16 +522,6 @@ commit 94907c0f136f46dc46ffae2dc92dca9af7eb7c2e │
         ]);
     }
 
-    #[test]
-    fn test_commit_style_underline_deprecated_options() {
-        _do_test_commit_style_underline(&[
-            "--commit-color",
-            "yellow",
-            "--commit-style",
-            "underline",
-        ]);
-    }
-
     fn _do_test_commit_style_underline(args: &[&str]) {
         let config = integration_test_utils::make_config_from_args(args);
         let output = integration_test_utils::run_delta(GIT_DIFF_SINGLE_HUNK, &config);
@@ -699,11 +689,6 @@ src/align.rs
         ]);
     }
 
-    #[test]
-    fn test_file_style_box_ul_deprecated_options() {
-        _do_test_file_style_box_ul(&["--file-color", "green", "--file-style", "box"]);
-    }
-
     fn _do_test_file_style_box(args: &[&str]) {
         let config = integration_test_utils::make_config_from_args(args);
         let output = integration_test_utils::run_delta(GIT_DIFF_SINGLE_HUNK, &config);
@@ -777,11 +762,6 @@ src/align.rs │
             "--file-decoration-style",
             "magenta underline",
         ]);
-    }
-
-    #[test]
-    fn test_file_style_underline_deprecated_options() {
-        _do_test_file_style_underline(&["--file-color", "magenta", "--file-style", "underline"]);
     }
 
     fn _do_test_file_style_underline(args: &[&str]) {
@@ -1202,11 +1182,6 @@ impl<'a> Alignment<'a> {
         ]);
     }
 
-    #[test]
-    fn test_hunk_header_style_box_deprecated_options() {
-        _do_test_hunk_header_style_box(&["--hunk-color", "white", "--hunk-style", "box"]);
-    }
-
     fn _do_test_hunk_header_style_box(args: &[&str]) {
         let config = integration_test_utils::make_config_from_args(args);
         let output = integration_test_utils::run_delta(GIT_DIFF_SINGLE_HUNK, &config);
@@ -1316,16 +1291,6 @@ src/align.rs:71: impl<'a> Alignment<'a> { │
         _do_test_hunk_header_style_underline(&[
             "--hunk-header-decoration-style",
             "black underline",
-        ]);
-    }
-
-    #[test]
-    fn test_hunk_header_style_underline_deprecated_options() {
-        _do_test_hunk_header_style_underline(&[
-            "--hunk-color",
-            "black",
-            "--hunk-style",
-            "underline",
         ]);
     }
 

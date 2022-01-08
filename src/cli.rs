@@ -969,7 +969,6 @@ impl Opt {
     ) -> Self {
         let mut opt = Opt::from_arg_matches(&arg_matches)
             .unwrap_or_else(|_| delta_unreachable("Opt::from_arg_matches failed"));
-        options::rewrite::apply_rewrite_rules(&mut opt);
         options::set::set_options(&mut opt, &mut git_config, &arg_matches, assets);
         opt.git_config = git_config;
         opt
