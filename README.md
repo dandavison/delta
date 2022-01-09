@@ -220,6 +220,10 @@ Note that the package is often called `git-delta`, but the executable installed 
     <td><code>pkg install git-delta</code></td>
   </tr>
   <tr>
+    <td><a href="https://cvsweb.openbsd.org/ports/textproc/delta/">OpenBSD</a></td>
+    <td><code>pkg_add delta</code></td>
+  </tr>
+  <tr>
     <td><a href="https://packages.gentoo.org/packages/dev-util/git-delta">Gentoo</a></td>
     <td><code>emerge dev-util/git-delta</code></td>
   </tr>
