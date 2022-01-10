@@ -115,6 +115,7 @@ pub fn show_config(config: &config::Config, writer: &mut dyn Write) -> std::io::
         writer,
         "    max-line-distance             = {max_line_distance}
     max-line-length               = {max_line_length}
+    diff-stat-align-width         = {diff_stat_align_width}
     line-fill-method              = {line_fill_method}
     navigate                      = {navigate}
     navigate-regex                = {navigate_regex}
@@ -125,6 +126,7 @@ pub fn show_config(config: &config::Config, writer: &mut dyn Write) -> std::io::
     width                         = {width}
     tabs                          = {tab_width}
     word-diff-regex               = {tokenization_regex}",
+        diff_stat_align_width = config.diff_stat_align_width,
         max_line_distance = config.max_line_distance,
         max_line_length = config.max_line_length,
         line_fill_method = match config.line_fill_method {
