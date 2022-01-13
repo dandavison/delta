@@ -168,7 +168,7 @@ pub fn explain_ansi(line: &str, colorful: bool) -> String {
             if colorful {
                 format!("({}){}", style.to_painted_string(), style.paint(s))
             } else {
-                format!("({}){}", style.to_string(), s)
+                format!("({}){}", style, s)
             }
         })
         .collect()

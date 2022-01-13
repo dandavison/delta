@@ -481,7 +481,7 @@ where
     */
 
     let pid_range = my_pid.saturating_sub(10)..my_pid.saturating_add(20);
-    for p in pid_range.clone() {
+    for p in pid_range {
         // Processes which were not refreshed do not exist for sysinfo, so by selectively
         // letting it know about processes the `find_sibling..` function will only
         // consider these.
