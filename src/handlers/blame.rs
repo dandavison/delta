@@ -185,9 +185,9 @@ lazy_static! {
 (
     \^?[0-9a-f]{4,40} # commit hash (^ is 'boundary commit' marker)
 )
-(?: .+)?           # optional file name (unused; present if file has been renamed; TODO: inefficient?)
+(?: [^(]+)?        # optional file name (unused; present if file has been renamed; TODO: inefficient?)
 [\ ]
-\(                 # open (
+\(                 # open ( which the previous file name may not contain in case a name does (which is more likely)
 (
     [^\ ].*[^\ ]   # author name
 )
@@ -295,6 +295,14 @@ mod tests {
             assert!(caps.is_some());
             assert!(parse_git_blame_line(line, "%Y-%m-%d %H:%M:%S %z").is_some());
         }
+    }
+
+    #[test]
+    fn test_blame_line_with_parens_in_name() {
+        let line =
+            "61f180c8 (Kangwook Lee (이강욱) 2021-06-09 23:33:59 +0900 130)     let mut output_type =";
+        let caps = BLAME_LINE_REGEX.captures(line).unwrap();
+        assert_eq!(caps.get(2).unwrap().as_str(), "Kangwook Lee (이강욱)");
     }
 
     #[test]
