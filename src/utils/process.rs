@@ -61,6 +61,17 @@ pub fn start_determining_calling_process_in_thread() {
         .unwrap();
 }
 
+// When the entrypoint is not `main()` the calling process still has to be set. If it
+// is irrevelant - usually for benchmarks - set it to `None` here.
+#[cfg(not(test))]
+pub fn set_no_calling_process() {
+    let (caller_mutex, determine_done) = &**CALLER;
+    let mut caller = caller_mutex.lock().unwrap();
+    *caller = CallingProcess::None;
+    // If `calling_process()` is already waiting:
+    determine_done.notify_all();
+}
+
 #[cfg(not(test))]
 pub fn calling_process() -> MutexGuard<'static, CallingProcess> {
     let (caller_mutex, determine_done) = &**CALLER;
