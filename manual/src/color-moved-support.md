@@ -20,6 +20,13 @@ This feature allows all of git's color-moved options to be rendered using delta 
     map-styles = bold purple => syntax magenta, bold cyan => syntax blue
 ```
 
+There is a pair of features provided in [themes.config](https://github.com/chtenb/delta/blob/master/themes.gitconfig) called `zebra-dark` and `zebra-light` which utilise the moved colors by displaying them as a faint background color on the affected lines while keeping syntax highlighting as the foreground color. You can enable one of these features by stacking it upon the theme you are using.
+
+<table><tr>
+  <td><img width=600px src="https://user-images.githubusercontent.com/1030961/149756321-d9e885fe-206c-4e08-8c40-e0ed5969b04a.png" alt="image" /></td>
+  <td><img width=600px src="https://user-images.githubusercontent.com/1030961/149756332-ce8a4e2a-7487-4880-a151-761872657a28.png" alt="image" /></td>
+</tr></table>
+
 It is also possible to reference other styles.
 
 ```gitconfig

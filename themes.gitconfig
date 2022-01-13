@@ -270,3 +270,29 @@
     minus-emph-style = syntax bold red
     plus-emph-style = syntax bold green
     whitespace-error-style = purple bold
+
+[delta "zebra-dark"]
+    minus-style = syntax "#330f0f"
+    minus-emph-style = syntax "#4f1917"
+    plus-style = syntax "#0e2f19"
+    plus-emph-style = syntax "#174525"
+    map-styles = \
+       bold purple => syntax "#330f29", \
+       bold blue => syntax "#271344", \
+       bold cyan => syntax "#0d3531", \
+       bold yellow => syntax "#222f14"
+    zero-style = syntax
+    whitespace-error-style = "#aaaaaa"
+
+[delta "zebra-light"]
+    minus-style = syntax "#fbdada"
+    minus-emph-style = syntax "#f6b6b6"
+    plus-style = syntax "#d6ffd6"
+    plus-emph-style = syntax "#adffad"
+    map-styles = \
+       bold purple => syntax "#feecf7", \
+       bold blue => syntax "#e5dff6", \
+       bold cyan => syntax "#d8fdf6", \
+       bold yellow => syntax "#f4ffe0"
+    zero-style = syntax
+    whitespace-error-style = "#aaaaaa"
