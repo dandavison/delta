@@ -66,3 +66,14 @@ features = []
 version = "0.12.4"
 default-features = false
 features = []
+
+[dev-dependencies]
+criterion = "0.3"
+
+[[bench]]
+name = "blame"
+harness = false
+
+[[bench]]
+name = "show"
+harness = false
