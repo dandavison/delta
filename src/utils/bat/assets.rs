@@ -69,6 +69,12 @@ impl HighlightingAssets {
     }
 }
 
+impl Default for HighlightingAssets {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 fn theme_set_path() -> PathBuf {
     PROJECT_DIRS.cache_dir().join("themes.bin")
 }
