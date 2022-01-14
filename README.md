@@ -131,12 +131,12 @@ Here's what `git show` can look like with git configured to use delta:
   <tr>
     <td>
       <img width=500px style="border: 1px solid black"
-           src="https://user-images.githubusercontent.com/52205/80850197-b8f5a000-8be8-11ea-8c9e-29c5b213c4b7.png"
+           src="https://user-images.githubusercontent.com/52205/149431273-e3ad049d-771e-4186-869d-0e57967958a6.png"
            alt="image" />
     </td>
     <td>
       <img width=450px style="border: 1px solid black"
-           src="https://user-images.githubusercontent.com/52205/80850237-e04c6d00-8be8-11ea-9027-0d2ea62f15c2.png"
+           src="https://user-images.githubusercontent.com/52205/149431419-48836001-2afc-4fd0-97ad-561a69b71db7.png"
            alt="image" />
     </td>
   </tr>
