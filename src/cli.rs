@@ -10,8 +10,8 @@ use syntect::highlighting::Theme as SyntaxTheme;
 use syntect::parsing::SyntaxSet;
 
 use crate::git_config::{GitConfig, GitConfigEntry};
-use crate::options;
 use crate::utils::bat::output::PagingMode;
+use crate::{options, utils};
 
 // No Default trait as this ignores `default_value = ..`
 #[derive(StructOpt)]
@@ -890,7 +890,7 @@ impl Opt {
         I: IntoIterator,
         I::Item: Into<OsString> + Clone,
     {
-        let assets = bat::assets::HighlightingAssets::from_binary();
+        let assets = utils::bat::assets::load_highlighting_assets();
         Self::from_clap_and_git_config(Self::clap().get_matches_from(iter), git_config, assets)
     }
 

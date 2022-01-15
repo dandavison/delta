@@ -6,11 +6,12 @@ use crate::cli;
 use crate::config;
 use crate::delta;
 use crate::options::theme::is_light_syntax_theme;
+use crate::utils;
 use crate::utils::bat::output::{OutputType, PagingMode};
 
 #[cfg(not(tarpaulin_include))]
 pub fn show_syntax_themes() -> std::io::Result<()> {
-    let assets = bat::assets::HighlightingAssets::from_binary();
+    let assets = utils::bat::assets::load_highlighting_assets();
     let mut output_type = OutputType::from_mode(
         PagingMode::QuitIfOneScreen,
         None,
@@ -81,7 +82,7 @@ index f38589a..0f1bb83 100644
     opt.computed.is_light_mode = is_light_mode;
     let mut config = config::Config::from(opt);
     let title_style = ansi_term::Style::new().bold();
-    let assets = bat::assets::HighlightingAssets::from_binary();
+    let assets = utils::bat::assets::load_highlighting_assets();
 
     for syntax_theme in assets
         .themes()

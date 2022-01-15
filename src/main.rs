@@ -85,7 +85,7 @@ fn main() -> std::io::Result<()> {
 // report that two files differ when delta is called with two positional
 // arguments and without standard input; 2 is used to report a real problem.
 fn run_app() -> std::io::Result<i32> {
-    let assets = bat::assets::HighlightingAssets::from_binary();
+    let assets = utils::bat::assets::load_highlighting_assets();
     let opt = cli::Opt::from_args_and_git_config(git_config::GitConfig::try_create(), assets);
 
     let subcommand_result = if opt.list_languages {

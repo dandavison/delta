@@ -7,8 +7,15 @@ use ansi_term::Colour::Green;
 use ansi_term::Style;
 use bat;
 
+use crate::utils;
+
+pub fn load_highlighting_assets() -> bat::assets::HighlightingAssets {
+    bat::assets::HighlightingAssets::from_cache(utils::bat::dirs::PROJECT_DIRS.cache_dir())
+        .unwrap_or_else(|_| bat::assets::HighlightingAssets::from_binary())
+}
+
 pub fn list_languages() -> std::io::Result<()> {
-    let assets = bat::assets::HighlightingAssets::from_binary();
+    let assets = utils::bat::assets::load_highlighting_assets();
     let mut languages = assets
         .get_syntaxes()
         .unwrap()
