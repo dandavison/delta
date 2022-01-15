@@ -1,6 +1,6 @@
 # Get started
 
-[Install](#installation) delta and add this to your `~/.gitconfig`:
+[Install](./installation.md) delta and add this to your `~/.gitconfig`:
 
 ```gitconfig
 [core]

@@ -13,4 +13,4 @@ Here's an example:
 
 That means: For removed lines, set the foreground (text) color to 'red', make it bold and underlined, and set the background color to `#ffeeee`.
 
-For full details, see the `STYLES` section in [`delta --help`](#full---help-output).
+For full details, see the `STYLES` section in [`delta --help`](./full---help-output.md).
