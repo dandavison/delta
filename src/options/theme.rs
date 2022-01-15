@@ -6,11 +6,11 @@
 /// by the user, it is determined by the classification of the syntax theme into light-background
 /// vs dark-background syntax themes. If the user didn't choose a syntax theme, a dark-background
 /// default is selected.
-use syntect::highlighting::ThemeSet;
+use bat::assets::HighlightingAssets;
+use bat::assets::LazyThemeSet;
 
 use crate::cli;
 use crate::env;
-use crate::utils::bat::assets::HighlightingAssets;
 
 #[allow(non_snake_case)]
 pub fn set__is_light_mode__syntax_theme__syntax_set(
@@ -22,16 +22,22 @@ pub fn set__is_light_mode__syntax_theme__syntax_set(
         opt.syntax_theme.as_ref(),
         syntax_theme_name_from_bat_theme.as_ref(),
         opt.light,
-        &assets.theme_set,
+        assets.get_theme_set(),
     );
     opt.computed.is_light_mode = is_light_mode;
 
     opt.computed.syntax_theme = if is_no_syntax_highlighting_syntax_theme_name(&syntax_theme_name) {
         None
     } else {
-        Some(assets.theme_set.themes[&syntax_theme_name].clone())
+        Some(
+            assets
+                .get_theme_set()
+                .get(&syntax_theme_name)
+                .unwrap()
+                .clone(),
+        )
     };
-    opt.computed.syntax_set = assets.syntax_set;
+    opt.computed.syntax_set = assets.get_syntax_set().unwrap().clone();
 }
 
 pub fn is_light_syntax_theme(theme: &str) -> bool {
@@ -86,7 +92,7 @@ fn get_is_light_mode_and_syntax_theme_name(
     theme_arg: Option<&String>,
     bat_theme_env_var: Option<&String>,
     light_mode_arg: bool,
-    theme_set: &ThemeSet,
+    theme_set: &LazyThemeSet,
 ) -> (bool, String) {
     let theme_arg = valid_syntax_theme_name_or_none(theme_arg, theme_set);
     let bat_theme_env_var = valid_syntax_theme_name_or_none(bat_theme_env_var, theme_set);
@@ -104,12 +110,12 @@ fn get_is_light_mode_and_syntax_theme_name(
 // no-syntax-highlighting name.
 fn valid_syntax_theme_name_or_none(
     theme_name: Option<&String>,
-    theme_set: &ThemeSet,
+    theme_set: &LazyThemeSet,
 ) -> Option<String> {
     match theme_name {
         Some(name)
             if is_no_syntax_highlighting_syntax_theme_name(name)
-                || theme_set.themes.contains_key(name) =>
+                || theme_set.get(name).is_some() =>
         {
             Some(name.to_string())
         }

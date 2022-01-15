@@ -2,14 +2,14 @@ use crate::cli;
 use crate::config;
 use crate::delta;
 use crate::options::theme::is_light_syntax_theme;
-use crate::utils::bat::assets::HighlightingAssets;
+use crate::utils;
 use crate::utils::bat::output::{OutputType, PagingMode};
 use clap::Parser;
 use std::io::{self, ErrorKind, Read, Write};
 
 #[cfg(not(tarpaulin_include))]
 pub fn show_syntax_themes() -> std::io::Result<()> {
-    let assets = HighlightingAssets::new();
+    let assets = utils::bat::assets::load_highlighting_assets();
     let mut output_type = OutputType::from_mode(
         PagingMode::QuitIfOneScreen,
         None,
@@ -32,7 +32,7 @@ pub fn show_syntax_themes() -> std::io::Result<()> {
 
     let make_opt = || {
         let mut opt = cli::Opt::parse();
-        opt.computed.syntax_set = assets.syntax_set.clone();
+        opt.computed.syntax_set = assets.get_syntax_set().unwrap().clone();
         opt
     };
     let opt = make_opt();
@@ -80,21 +80,18 @@ index f38589a..0f1bb83 100644
     opt.computed.is_light_mode = is_light_mode;
     let mut config = config::Config::from(opt);
     let title_style = ansi_term::Style::new().bold();
-    let assets = HighlightingAssets::new();
+    let assets = utils::bat::assets::load_highlighting_assets();
 
     for syntax_theme in assets
-        .theme_set
-        .themes
-        .iter()
-        .filter(|(t, _)| is_light_syntax_theme(t) == is_light_mode)
-        .map(|(t, _)| t)
+        .themes()
+        .filter(|t| is_light_syntax_theme(t) == is_light_mode)
     {
         writeln!(
             writer,
             "\n\nSyntax theme: {}\n",
             title_style.paint(syntax_theme)
         )?;
-        config.syntax_theme = Some(assets.theme_set.themes[syntax_theme.as_str()].clone());
+        config.syntax_theme = Some(assets.get_theme_set().get(syntax_theme).unwrap().clone());
         if let Err(error) =
             delta::delta(ByteLines::new(BufReader::new(&input[0..])), writer, &config)
         {
