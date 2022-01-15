@@ -15,6 +15,7 @@ name = "delta"
 path = "src/main.rs"
 
 [dependencies]
+bat = { git = "https://github.com/dandavison/bat", rev = "0b22913108152bda7fc1890616ebfabf02c8468a" }
 chrono = "0.4.19"
 chrono-humanize = "0.2.1"
 ansi_colours = "1.0.4"

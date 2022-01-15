@@ -7,7 +7,6 @@ use crate::git_config;
 use crate::paint;
 use crate::paint::BgShouldFill;
 use crate::style;
-use crate::utils::bat::assets::HighlightingAssets;
 use crate::utils::bat::output::{OutputType, PagingMode};
 
 #[cfg(not(tarpaulin_include))]
@@ -16,7 +15,7 @@ pub fn show_colors() -> std::io::Result<()> {
 
     use crate::delta::DiffType;
 
-    let assets = HighlightingAssets::new();
+    let assets = bat::assets::HighlightingAssets::from_binary();
     let opt = cli::Opt::from_args_and_git_config(git_config::GitConfig::try_create(), assets);
     let config = config::Config::from(opt);
 

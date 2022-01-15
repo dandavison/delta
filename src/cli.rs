@@ -2,6 +2,7 @@ use std::collections::{HashMap, HashSet};
 use std::ffi::OsString;
 use std::path::PathBuf;
 
+use bat::assets::HighlightingAssets;
 use lazy_static::lazy_static;
 use structopt::clap::AppSettings::{ColorAlways, ColoredHelp, DeriveDisplayOrder};
 use structopt::{clap, StructOpt};
@@ -10,7 +11,6 @@ use syntect::parsing::SyntaxSet;
 
 use crate::git_config::{GitConfig, GitConfigEntry};
 use crate::options;
-use crate::utils::bat::assets::HighlightingAssets;
 use crate::utils::bat::output::PagingMode;
 
 // No Default trait as this ignores `default_value = ..`
@@ -890,7 +890,7 @@ impl Opt {
         I: IntoIterator,
         I::Item: Into<OsString> + Clone,
     {
-        let assets = HighlightingAssets::new();
+        let assets = bat::assets::HighlightingAssets::from_binary();
         Self::from_clap_and_git_config(Self::clap().get_matches_from(iter), git_config, assets)
     }
 

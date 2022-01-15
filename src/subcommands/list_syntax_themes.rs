@@ -3,7 +3,6 @@ use std::io::{self, Write};
 use itertools::Itertools;
 
 use crate::options::theme::is_light_syntax_theme;
-use crate::utils::bat::assets::HighlightingAssets;
 
 #[cfg(not(tarpaulin_include))]
 pub fn list_syntax_themes() -> std::io::Result<()> {
@@ -17,15 +16,14 @@ pub fn list_syntax_themes() -> std::io::Result<()> {
 }
 
 pub fn _list_syntax_themes_for_humans(writer: &mut dyn Write) -> std::io::Result<()> {
-    let assets = HighlightingAssets::new();
-    let themes = &assets.theme_set.themes;
+    let assets = bat::assets::HighlightingAssets::from_binary();
 
     writeln!(writer, "Light syntax themes:")?;
-    for (theme, _) in themes.iter().filter(|(t, _)| is_light_syntax_theme(*t)) {
+    for theme in assets.themes().filter(|t| is_light_syntax_theme(*t)) {
         writeln!(writer, "    {}", theme)?;
     }
     writeln!(writer, "\nDark syntax themes:")?;
-    for (theme, _) in themes.iter().filter(|(t, _)| !is_light_syntax_theme(*t)) {
+    for theme in assets.themes().filter(|t| !is_light_syntax_theme(*t)) {
         writeln!(writer, "    {}", theme)?;
     }
     writeln!(
@@ -36,12 +34,8 @@ pub fn _list_syntax_themes_for_humans(writer: &mut dyn Write) -> std::io::Result
 }
 
 pub fn _list_syntax_themes_for_machines(writer: &mut dyn Write) -> std::io::Result<()> {
-    let assets = HighlightingAssets::new();
-    let themes = &assets.theme_set.themes;
-    for (theme, _) in themes
-        .iter()
-        .sorted_by_key(|(t, _)| is_light_syntax_theme(*t))
-    {
+    let assets = bat::assets::HighlightingAssets::from_binary();
+    for theme in assets.themes().sorted_by_key(|t| is_light_syntax_theme(*t)) {
         writeln!(
             writer,
             "{}\t{}",
