@@ -339,7 +339,7 @@ pub struct Opt {
     pub color_only: bool,
 
     ////////////////////////////////////////////////////////////////////////////////////////////
-    #[clap(long = "features")]
+    #[clap(long = "features", value_name = "FEATURE_NAMES")]
     /// Names of delta features to activate (space-separated).
     ///
     /// A feature is a named collection of delta options in ~/.gitconfig. See FEATURES section. The
@@ -349,7 +349,7 @@ pub struct Opt {
     /// side-by-side temporarily.
     pub features: Option<String>,
 
-    #[clap(long = "syntax-theme")]
+    #[clap(long = "syntax-theme", value_name = "THEME_NAME")]
     /// The syntax-highlighting theme to use.
     ///
     /// Use --show-syntax-themes to demo available themes. Defaults to the value of the BAT_THEME
@@ -357,56 +357,92 @@ pub struct Opt {
     /// syntax highlighting.
     pub syntax_theme: Option<String>,
 
-    #[clap(long = "minus-style", default_value = "normal auto")]
+    #[clap(
+        long = "minus-style",
+        default_value = "normal auto",
+        value_name = "STYLE_STRING"
+    )]
     /// Style string for removed lines.
     ///
     /// See STYLES section.
     pub minus_style: String,
 
-    #[clap(long = "zero-style", default_value = "syntax normal")]
+    #[clap(
+        long = "zero-style",
+        default_value = "syntax normal",
+        value_name = "STYLE_STRING"
+    )]
     /// Style string for unchanged lines.
     ///
     /// See STYLES section.
     pub zero_style: String,
 
-    #[clap(long = "plus-style", default_value = "syntax auto")]
+    #[clap(
+        long = "plus-style",
+        default_value = "syntax auto",
+        value_name = "STYLE_STRING"
+    )]
     /// Style string for added lines.
     ///
     /// See STYLES section.
     pub plus_style: String,
 
-    #[clap(long = "minus-emph-style", default_value = "normal auto")]
+    #[clap(
+        long = "minus-emph-style",
+        default_value = "normal auto",
+        value_name = "STYLE_STRING"
+    )]
     /// Style string for emphasized sections of removed lines.
     ///
     /// See STYLES section.
     pub minus_emph_style: String,
 
-    #[clap(long = "minus-non-emph-style", default_value = "minus-style")]
+    #[clap(
+        long = "minus-non-emph-style",
+        default_value = "minus-style",
+        value_name = "STYLE_STRING"
+    )]
     /// Style string for non-emphasized sections of removed lines that have an emphasized section.
     ///
     /// See STYLES section.
     pub minus_non_emph_style: String,
 
-    #[clap(long = "plus-emph-style", default_value = "syntax auto")]
+    #[clap(
+        long = "plus-emph-style",
+        default_value = "syntax auto",
+        value_name = "STYLE_STRING"
+    )]
     /// Style string for emphasized sections of added lines.
     ///
     /// See STYLES section.
     pub plus_emph_style: String,
 
-    #[clap(long = "plus-non-emph-style", default_value = "plus-style")]
+    #[clap(
+        long = "plus-non-emph-style",
+        default_value = "plus-style",
+        value_name = "STYLE_STRING"
+    )]
     /// Style string for non-emphasized sections of added lines that have an emphasized section.
     ///
     /// See STYLES section.
     pub plus_non_emph_style: String,
 
-    #[clap(long = "commit-style", default_value = "raw")]
+    #[clap(
+        long = "commit-style",
+        default_value = "raw",
+        value_name = "STYLE_STRING"
+    )]
     /// Style string for the commit hash line.
     ///
     /// See STYLES section. The style 'omit' can be used to remove the commit hash line from the
     /// output.
     pub commit_style: String,
 
-    #[clap(long = "commit-decoration-style", default_value = "")]
+    #[clap(
+        long = "commit-decoration-style",
+        default_value = "",
+        value_name = "STYLE_STRING"
+    )]
     /// Style string for the commit hash decoration.
     ///
     /// See STYLES section. The style string should contain one of the special attributes 'box',
@@ -417,31 +453,43 @@ pub struct Opt {
     /// Regular expression used to identify the commit line when parsing git output.
     pub commit_regex: String,
 
-    #[clap(long = "file-style", default_value = "blue")]
+    #[clap(
+        long = "file-style",
+        default_value = "blue",
+        value_name = "STYLE_STRING"
+    )]
     /// Style string for the file section.
     ///
     /// See STYLES section. The style 'omit' can be used to remove the file section from the output.
     pub file_style: String,
 
-    #[clap(long = "file-decoration-style", default_value = "blue ul")]
+    #[clap(
+        long = "file-decoration-style",
+        default_value = "blue ul",
+        value_name = "STYLE_STRING"
+    )]
     /// Style string for the file decoration.
     ///
     /// See STYLES section. The style string should contain one of the special attributes 'box',
     /// 'ul' (underline), 'ol' (overline), or the combination 'ul ol'.
     pub file_decoration_style: String,
 
-    #[structopt(long = "file-transformation")]
-    /// A sed-style command transforming file paths for display.
+    #[structopt(long = "file-transformation", value_name = "SED_COMMAND")]
+    /// Sed-style command transforming file paths for display.
     pub file_regex_replacement: Option<String>,
 
-    #[clap(long = "hyperlinks-commit-link-format")]
-    /// Format string for commit hyperlinks (requires --hyperlinks).
+    #[clap(long = "hyperlinks-commit-link-format", value_name = "FORMAT_STRING")]
+    /// Format string for commit hyperlinks (requiraes --hyperlinks).
     ///
     /// The placeholder "{commit}" will be replaced by the commit hash. For example:
     /// --hyperlinks-commit-link-format='https://mygitrepo/{commit}/'
     pub hyperlinks_commit_link_format: Option<String>,
 
-    #[clap(long = "hyperlinks-file-link-format", default_value = "file://{path}")]
+    #[clap(
+        long = "hyperlinks-file-link-format",
+        default_value = "file://{path}",
+        value_name = "FORMAT_STRING"
+    )]
     /// Format string for file hyperlinks (requires --hyperlinks).
     ///
     /// The placeholders "{path}" and "{line}" will be replaced by the absolute file path and the
@@ -454,7 +502,11 @@ pub struct Opt {
     /// https://github.com/dandavison/open-in-editor for an example.
     pub hyperlinks_file_link_format: String,
 
-    #[clap(long = "hunk-header-style", default_value = "line-number syntax")]
+    #[clap(
+        long = "hunk-header-style",
+        default_value = "line-number syntax",
+        value_name = "STYLE_STRING"
+    )]
     /// Style string for the hunk-header.
     ///
     /// See STYLES section. Special attributes 'file' and 'line-number' can be used to include the
@@ -462,34 +514,54 @@ pub struct Opt {
     /// to remove the hunk header section from the output.
     pub hunk_header_style: String,
 
-    #[clap(long = "hunk-header-file-style", default_value = "blue")]
+    #[clap(
+        long = "hunk-header-file-style",
+        default_value = "blue",
+        value_name = "STYLE_STRING"
+    )]
     /// Style string for the file path part of the hunk-header.
     ///
     /// See STYLES section. The file path will only be displayed if hunk-header-style contains the
     /// 'file' special attribute.
     pub hunk_header_file_style: String,
 
-    #[clap(long = "hunk-header-line-number-style", default_value = "blue")]
+    #[clap(
+        long = "hunk-header-line-number-style",
+        default_value = "blue",
+        value_name = "STYLE_STRING"
+    )]
     /// Style string for the line number part of the hunk-header.
     ///
     /// See STYLES section. The line number will only be displayed if hunk-header-style contains the
     /// 'line-number' special attribute.
     pub hunk_header_line_number_style: String,
 
-    #[clap(long = "hunk-header-decoration-style", default_value = "blue box")]
+    #[clap(
+        long = "hunk-header-decoration-style",
+        default_value = "blue box",
+        value_name = "STYLE_STRING"
+    )]
     /// Style string for the hunk-header decoration.
     ///
     /// See STYLES section. The style string should contain one of the special attributes 'box',
     /// 'ul' (underline), 'ol' (overline), or the combination 'ul ol'.
     pub hunk_header_decoration_style: String,
 
-    #[clap(long = "merge-conflict-begin-symbol", default_value = "▼")]
+    #[clap(
+        long = "merge-conflict-begin-symbol",
+        default_value = "▼",
+        value_name = "STRING"
+    )]
     /// String marking the beginning of a merge conflict region.
     ///
     /// The string will be repeated until it reaches the required length.
     pub merge_conflict_begin_symbol: String,
 
-    #[clap(long = "merge-conflict-end-symbol", default_value = "▲")]
+    #[clap(
+        long = "merge-conflict-end-symbol",
+        default_value = "▲",
+        value_name = "STRING"
+    )]
     /// String marking the end of a merge conflict region.
     ///
     /// The string will be repeated until it reaches the required length.
@@ -497,7 +569,8 @@ pub struct Opt {
 
     #[clap(
         long = "merge-conflict-ours-diff-header-style",
-        default_value = "normal"
+        default_value = "normal",
+        value_name = "STYLE_STRING"
     )]
     /// Style string for the header above the 'ours' branch merge conflict diff.
     ///
@@ -506,7 +579,8 @@ pub struct Opt {
 
     #[clap(
         long = "merge-conflict-ours-diff-header-decoration-style",
-        default_value = "box"
+        default_value = "box",
+        value_name = "STYLE_STRING"
     )]
     /// Style string for the decoration of the header above the 'ours' merge conflict diff.
     ///
@@ -517,7 +591,8 @@ pub struct Opt {
 
     #[clap(
         long = "merge-conflict-theirs-diff-header-style",
-        default_value = "normal"
+        default_value = "normal",
+        value_name = "STYLE_STRING"
     )]
     /// Style string for the header above the 'theirs' branch merge conflict diff.
     ///
@@ -536,7 +611,7 @@ pub struct Opt {
     /// attributes 'box', 'ul' (underline), 'ol' (overline), or the combination 'ul ol'.
     pub merge_conflict_theirs_diff_header_decoration_style: String,
 
-    #[clap(long = "map-styles")]
+    #[clap(long = "map-styles", value_name = "STYLES_MAP")]
     /// Map styles encountered in raw input to desired output styles.
     ///
     /// An example is --map-styles='bold purple => red "#eeeeee", bold cyan => syntax "#eeeeee"'
@@ -544,22 +619,27 @@ pub struct Opt {
 
     #[clap(
         long = "blame-format",
-        default_value = "{timestamp:<15} {author:<15.14} {commit:<8}"
+        default_value = "{timestamp:<15} {author:<15.14} {commit:<8}",
+        value_name = "FORMAT_STRING"
     )]
     /// Format string for git blame commit metadata.
     ///
     /// Available placeholders are "{timestamp}", "{author}", and "{commit}".
     pub blame_format: String,
 
-    #[clap(long = "blame-separator", default_value = "│")]
+    #[clap(
+        long = "blame-separator",
+        default_value = "│",
+        value_name = "SEPARATOR_STRING"
+    )]
     /// Separator between the commit metadata and code sections of a git blame line.
     pub blame_separator: String,
 
-    #[clap(long = "blame-separator-style")]
+    #[clap(long = "blame-separator-style", value_name = "STYLE_STRING")]
     /// Style string for the separator between the commit metadata and code sections of a git blame line.
     pub blame_separator_style: Option<String>,
 
-    #[clap(long = "blame-code-style")]
+    #[clap(long = "blame-code-style", value_name = "STYLE_STRING")]
     /// Style string for the code section of a git blame line.
     ///
     /// By default the code will be syntax-highlighted with the same background color as the blame
@@ -567,7 +647,7 @@ pub struct Opt {
     /// setting this option to 'syntax' will syntax-highlight the code with no background color.
     pub blame_code_style: Option<String>,
 
-    #[clap(long = "blame-palette")]
+    #[clap(long = "blame-palette", value_name = "COLORS")]
     /// Background colors used for git blame lines (space-separated string).
     ///
     /// Lines added by the same commit are painted with the same color; colors are recycled as
@@ -576,42 +656,47 @@ pub struct Opt {
 
     #[clap(
         long = "blame-timestamp-format",
-        default_value = "%Y-%m-%d %H:%M:%S %z"
+        default_value = "%Y-%m-%d %H:%M:%S %z",
+        value_name = "TIMESTAMP_FORMAT_STRING"
     )]
     /// Format of `git blame` timestamp in raw git output received by delta.
     pub blame_timestamp_format: String,
 
-    #[clap(long = "grep-match-line-style")]
+    #[clap(long = "grep-match-line-style", value_name = "STYLE_STRING")]
     /// Style string for matching lines of grep output.
     ///
     /// See STYLES section. Defaults to plus-style.
     pub grep_match_line_style: Option<String>,
 
-    #[clap(long = "grep-match-word-style")]
+    #[clap(long = "grep-match-word-style", value_name = "STYLE_STRING")]
     /// Style string for the matching substrings within a matching line of grep output.
     ///
     /// See STYLES section. Defaults to plus-style.
     pub grep_match_word_style: Option<String>,
 
-    #[clap(long = "grep-context-line-style")]
+    #[clap(long = "grep-context-line-style", value_name = "STYLE_STRING")]
     /// Style string for non-matching lines of grep output.
     ///
     /// See STYLES section. Defaults to zero-style.
     pub grep_context_line_style: Option<String>,
 
-    #[clap(long = "grep-file-style")]
+    #[clap(long = "grep-file-style", value_name = "STYLE_STRING")]
     /// Style string for file paths in grep output.
     ///
     /// See STYLES section. Defaults to hunk-header-file-path-style.
     pub grep_file_style: Option<String>,
 
-    #[clap(long = "grep-line-number-style")]
+    #[clap(long = "grep-line-number-style", value_name = "STYLE_STRING")]
     /// Style string for line numbers in grep output.
     ///
     /// See STYLES section. Defaults to hunk-header-line-number-style.
     pub grep_line_number_style: Option<String>,
 
-    #[clap(long = "grep-separator-symbol", default_value = ":")]
+    #[clap(
+        long = "grep-separator-symbol",
+        default_value = ":",
+        value_name = "SEPARATOR"
+    )]
     /// Separator symbol printed after the file path and line number in grep output.
     ///
     /// Defaults to ":" for both match and context lines, since many terminal emulators recognize
@@ -619,21 +704,25 @@ pub struct Opt {
     /// lines: set this option to "keep" to keep the original separator symbols.
     pub grep_separator_symbol: String,
 
-    #[clap(long = "default-language")]
+    #[clap(long = "default-language", value_name = "LANGUAGE")]
     /// Default language used for syntax highlighting.
     ///
     /// Used when the language cannot be inferred from a filename. It will typically make sense to
     /// set this in per-repository git config (.git/config)
     pub default_language: Option<String>,
 
-    #[clap(long = "inline-hint-style", default_value = "blue")]
+    #[clap(
+        long = "inline-hint-style",
+        default_value = "blue",
+        value_name = "STYLE_STRING"
+    )]
     /// Style string for short inline hint text.
     ///
     /// This styles certain content added by delta to the original diff such as special characters
     /// to highlight tabs, and the symbols used to indicate wrapped lines. See STYLES section.
     pub inline_hint_style: String,
 
-    #[clap(long = "word-diff-regex", default_value = r"\w+")]
+    #[clap(long = "word-diff-regex", default_value = r"\w+", value_name = "REGEX")]
     /// Regular expression defining a 'word' in within-line diff algorithm.
     ///
     /// The regular expression used to decide what a word is for the within-line highlight
@@ -641,7 +730,11 @@ pub struct Opt {
     /// --max-line-distance=1.0 (this is more similar to `git --word-diff`).
     pub tokenization_regex: String,
 
-    #[clap(long = "max-line-distance", default_value = "0.6")]
+    #[clap(
+        long = "max-line-distance",
+        default_value = "0.6",
+        value_name = "NUMBER"
+    )]
     /// Maximum line pair distance parameter in within-line diff algorithm.
     ///
     /// This parameter is the maximum distance (0.0 - 1.0) between two lines for them to be inferred
@@ -649,25 +742,41 @@ pub struct Opt {
     /// insertion operations transforming one into the other.
     pub max_line_distance: f64,
 
-    #[clap(long = "line-numbers-minus-style", default_value = "auto")]
+    #[clap(
+        long = "line-numbers-minus-style",
+        default_value = "auto",
+        value_name = "STYLE_STRING"
+    )]
     /// Style string for line numbers in the old (minus) version of the file.
     ///
     /// See STYLES and LINE NUMBERS sections.
     pub line_numbers_minus_style: String,
 
-    #[clap(long = "line-numbers-zero-style", default_value = "auto")]
+    #[clap(
+        long = "line-numbers-zero-style",
+        default_value = "auto",
+        value_name = "STYLE_STRING"
+    )]
     /// Style string for line numbers in unchanged (zero) lines.
     ///
     /// See STYLES and LINE NUMBERS sections.
     pub line_numbers_zero_style: String,
 
-    #[clap(long = "line-numbers-plus-style", default_value = "auto")]
+    #[clap(
+        long = "line-numbers-plus-style",
+        default_value = "auto",
+        value_name = "STYLE_STRING"
+    )]
     /// Style string for line numbers in the new (plus) version of the file.
     ///
     /// See STYLES and LINE NUMBERS sections.
     pub line_numbers_plus_style: String,
 
-    #[clap(long = "line-numbers-left-format", default_value = "{nm:^4}⋮")]
+    #[clap(
+        long = "line-numbers-left-format",
+        default_value = "{nm:^4}⋮",
+        value_name = "FORMAT_STRING"
+    )]
     /// Format string for the left column of line numbers.
     ///
     /// A typical value would be "{nm:^4}⋮" which means to display the line numbers of the minus
@@ -675,7 +784,11 @@ pub struct Opt {
     /// dividing character. See the LINE NUMBERS section.
     pub line_numbers_left_format: String,
 
-    #[clap(long = "line-numbers-right-format", default_value = "{np:^4}│")]
+    #[clap(
+        long = "line-numbers-right-format",
+        default_value = "{np:^4}│",
+        value_name = "FORMAT_STRING"
+    )]
     /// Format string for the right column of line numbers.
     ///
     /// A typical value would be "{np:^4}│ " which means to display the line numbers of the plus
@@ -683,97 +796,141 @@ pub struct Opt {
     /// dividing character, and a space. See the LINE NUMBERS section.
     pub line_numbers_right_format: String,
 
-    #[clap(long = "line-numbers-left-style", default_value = "auto")]
+    #[clap(
+        long = "line-numbers-left-style",
+        default_value = "auto",
+        value_name = "STYLE_STRING"
+    )]
     /// Style string for the left column of line numbers.
     ///
     /// See STYLES and LINE NUMBERS sections.
     pub line_numbers_left_style: String,
 
-    #[clap(long = "line-numbers-right-style", default_value = "auto")]
+    #[clap(
+        long = "line-numbers-right-style",
+        default_value = "auto",
+        value_name = "STYLE_STRING"
+    )]
     /// Style string for the right column of line numbers.
     ///
     /// See STYLES and LINE NUMBERS sections.
     pub line_numbers_right_style: String,
 
-    #[clap(long = "wrap-max-lines", default_value = "2")]
+    #[clap(
+        long = "wrap-max-lines",
+        default_value = "2",
+        value_name = "NUMBER_OF_LINES"
+    )]
     /// How often a line should be wrapped if it does not fit.
     ///
     /// Zero means to never wrap. Any content which does not fit will be truncated. A value of
     /// "unlimited" means a line will be wrapped as many times as required.
     pub wrap_max_lines: String,
 
-    #[clap(long = "wrap-left-symbol", default_value = "↵")]
+    #[clap(long = "wrap-left-symbol", default_value = "↵", value_name = "STRING")]
     /// End-of-line wrapped content symbol (left-aligned).
     ///
     /// Symbol added to the end of a line indicating that the content has been wrapped onto the next
     /// line and continues left-aligned.
     pub wrap_left_symbol: String,
 
-    #[clap(long = "wrap-right-symbol", default_value = "↴")]
+    #[clap(long = "wrap-right-symbol", default_value = "↴", value_name = "STRING")]
     /// End-of-line wrapped content symbol (right-aligned).
     ///
     /// Symbol added to the end of a line indicating that the content has been wrapped onto the next
     /// line and continues right-aligned.
     pub wrap_right_symbol: String,
 
-    #[clap(long = "wrap-right-percent", default_value = "37.0")]
+    #[clap(
+        long = "wrap-right-percent",
+        default_value = "37.0",
+        value_name = "PERCENT"
+    )]
     /// Threshold for right-aligning wrapped content.
     ///
     /// If the length of the remaining wrapped content, as a percentage of width, is less than this
     /// quantity it will be right-aligned. Otherwise it will be left-aligned.
     pub wrap_right_percent: String,
 
-    #[clap(long = "wrap-right-prefix-symbol", default_value = "…")]
+    #[clap(
+        long = "wrap-right-prefix-symbol",
+        default_value = "…",
+        value_name = "STRING"
+    )]
     /// Pre-wrapped content symbol (right-aligned).
     ///
     /// Symbol displayed in front of right-aligned wrapped content.
     pub wrap_right_prefix_symbol: String,
 
-    #[clap(long = "navigate-regex")]
+    #[clap(long = "navigate-regex", value_name = "REGEX")]
     /// Regular expression defining navigation stop points.
     pub navigate_regex: Option<String>,
 
-    #[clap(long = "file-modified-label", default_value = "")]
+    #[clap(
+        long = "file-modified-label",
+        default_value = "",
+        value_name = "STRING"
+    )]
     /// Text to display in front of a modified file path.
     ///
     /// Used in the default value of navigate-regex.
     pub file_modified_label: String,
 
-    #[clap(long = "file-removed-label", default_value = "removed:")]
+    #[clap(
+        long = "file-removed-label",
+        default_value = "removed:",
+        value_name = "STRING"
+    )]
     /// Text to display in front of a removed file path.
     ///
     /// Used in the default value of navigate-regex.
     pub file_removed_label: String,
 
-    #[clap(long = "file-added-label", default_value = "added:")]
+    #[clap(
+        long = "file-added-label",
+        default_value = "added:",
+        value_name = "STRING"
+    )]
     /// Text to display in front of an added file path.
     ///
     /// Used in the default value of navigate-regex.
     pub file_added_label: String,
 
-    #[clap(long = "file-copied-label", default_value = "copied:")]
+    #[clap(
+        long = "file-copied-label",
+        default_value = "copied:",
+        value_name = "STRING"
+    )]
     /// Text to display in front of a copied file path.
     pub file_copied_label: String,
 
-    #[clap(long = "file-renamed-label", default_value = "renamed:")]
+    #[clap(
+        long = "file-renamed-label",
+        default_value = "renamed:",
+        value_name = "STRING"
+    )]
     /// Text to display in front of a renamed file path.
     ///
     /// Used in the default value of navigate-regex.
     pub file_renamed_label: String,
 
-    #[clap(long = "right-arrow", default_value = "⟶  ")]
+    #[clap(long = "right-arrow", default_value = "⟶  ", value_name = "STRING")]
     /// Text to display with a changed file path.
     ///
     /// For example, a unified diff heading, a rename, or a chmod.
     pub right_arrow: String,
 
-    #[clap(long = "hunk-label", default_value = "")]
+    #[clap(long = "hunk-label", default_value = "", value_name = "STRING")]
     /// Text to display in front of a hunk header.
     ///
     /// Used in the default value of navigate-regex.
     pub hunk_label: String,
 
-    #[clap(long = "max-line-length", default_value = "512")]
+    #[clap(
+        long = "max-line-length",
+        default_value = "512",
+        value_name = "NUMBER_OF_CHARACTERS"
+    )]
     /// Truncate lines longer than this.
     ///
     /// To prevent any truncation, set to zero. Note that delta will be slow on very long lines
@@ -781,7 +938,7 @@ pub struct Opt {
     /// to fit at least all visible characters.
     pub max_line_length: usize,
 
-    #[clap(long = "line-fill-method")]
+    #[clap(long = "line-fill-method", value_name = "STRING")]
     /// Line-fill method in side-by-side mode.
     ///
     /// How to extend the background color to the end of the line in side-by-side mode. Can be ansi
@@ -789,7 +946,7 @@ pub struct Opt {
     /// --width=variable is given.
     pub line_fill_method: Option<String>,
 
-    #[clap(short = 'w', long = "width")]
+    #[clap(short = 'w', long = "width", value_name = "WIDTH")]
     /// The width of underline/overline decorations.
     ///
     /// Examples: "72" (exactly 72 characters), "-2" (auto-detected terminal width minus 2). An
@@ -799,13 +956,17 @@ pub struct Opt {
     /// full terminal width.
     pub width: Option<String>,
 
-    #[clap(long = "diff-stat-align-width", default_value = "48")]
+    #[clap(
+        long = "diff-stat-align-width",
+        default_value = "48",
+        value_name = "WIDTH"
+    )]
     /// Width allocated for file paths in a diff stat section.
     ///
     /// If a relativized file path exceeds this width then the diff stat will be misaligned.
     pub diff_stat_align_width: usize,
 
-    #[clap(long = "tabs", default_value = "4")]
+    #[clap(long = "tabs", default_value = "4", value_name = "NUMBER_OF_SPACES")]
     /// The number of spaces to replace tab characters with.
     ///
     /// Use --tabs=0 to pass tab characters through directly, but note that in that case delta will
@@ -814,7 +975,11 @@ pub struct Opt {
     /// incorrect.
     pub tab_width: usize,
 
-    #[clap(long = "true-color", default_value = "auto")]
+    #[clap(
+        long = "true-color",
+        default_value = "auto",
+        value_name = "auto|always|never"
+    )]
     /// Whether to emit 24-bit ("true color") RGB color codes.
     ///
     /// Options are auto, always, and never. "auto" means that delta will emit 24-bit color codes if
@@ -824,11 +989,15 @@ pub struct Opt {
     /// need to do anything.
     pub true_color: String,
 
-    #[clap(long = "24-bit-color")]
+    #[clap(long = "24-bit-color", value_name = "auto|always|never")]
     /// Deprecated: use --true-color.
     pub _24_bit_color: Option<String>,
 
-    #[clap(long = "inspect-raw-lines", default_value = "true")]
+    #[clap(
+        long = "inspect-raw-lines",
+        default_value = "true",
+        value_name = "true|false"
+    )]
     /// Kill-switch for --color-moved support.
     ///
     /// Whether to examine ANSI color escape sequences in raw lines received from Git and handle
@@ -836,7 +1005,7 @@ pub struct Opt {
     /// Git's --color-moved feature. Set this to "false" to disable this behavior.
     pub inspect_raw_lines: String,
 
-    #[clap(long = "pager")]
+    #[clap(long = "pager", value_name = "PAGER_COMMAND")]
     /// Which pager to use.
     ///
     /// The default pager is `less`. You can also change pager by setting the environment variables
@@ -844,7 +1013,11 @@ pub struct Opt {
     /// overrides all environment variables above.
     pub pager: Option<String>,
 
-    #[clap(long = "paging", default_value = "auto")]
+    #[clap(
+        long = "paging",
+        default_value = "auto",
+        value_name = "auto|always|never"
+    )]
     /// Whether to use a pager when displaying output.
     ///
     /// Options are: auto, always, and never.
@@ -862,26 +1035,39 @@ pub struct Opt {
 
     #[clap(
         long = "--minus-empty-line-marker-style",
-        default_value = "normal auto"
+        default_value = "normal auto",
+        value_name = "STYLE_STRING"
     )]
     /// Style string for removed empty line marker.
     ///
     /// Used only if --minus-style has no background color.
     pub minus_empty_line_marker_style: String,
 
-    #[clap(long = "--plus-empty-line-marker-style", default_value = "normal auto")]
+    #[clap(
+        long = "--plus-empty-line-marker-style",
+        default_value = "normal auto",
+        value_name = "STYLE_STRING"
+    )]
     /// Style string for added empty line marker.
     ///
     /// Used only if --plus-style has no background color.
     pub plus_empty_line_marker_style: String,
 
-    #[clap(long = "whitespace-error-style", default_value = "auto auto")]
+    #[clap(
+        long = "whitespace-error-style",
+        default_value = "auto auto",
+        value_name = "STYLE_STRING"
+    )]
     /// Style string for whitespace errors.
     ///
     /// Defaults to color.diff.whitespace if that is set in git config, or else 'magenta reverse'.
     pub whitespace_error_style: String,
 
-    #[clap(long = "line-buffer-size", default_value = "32")]
+    #[clap(
+        long = "line-buffer-size",
+        default_value = "32",
+        value_name = "NUMBER_OF_LINES"
+    )]
     /// Size of internal line buffer.
     ///
     /// Delta compares the added and removed versions of nearby lines in order to detect and
