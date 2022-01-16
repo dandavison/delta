@@ -15,7 +15,7 @@
 
 ## Get Started
 
-[Install](http://localhost:3000/installation.html) delta and add this to your `~/.gitconfig`:
+[Install](https://dandavison.github.io/delta/installation.html) delta and add this to your `~/.gitconfig`:
 
 ```gitconfig
 [core]
