@@ -23,4 +23,4 @@ In addition to `DELTA_PAGER`, and `PAGER`, delta currently also consults `$BAT_P
 However, this is deprecated: please use `DELTA_PAGER` instead.
 No other [`bat`](https://github.com/sharkdp/bat) environment variables are used by delta.
 
-If you are interested in the implementation of delta, please see [ARCHITECTURE.md](./ARCHITECTURE.md).
+If you are interested in the implementation of delta, please see [ARCHITECTURE.md](https://github.com/dandavison/delta/blob/master/ARCHITECTURE.md).
