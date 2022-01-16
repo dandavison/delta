@@ -335,12 +335,7 @@ pub mod tests {
             vec![format::FormatStringPlaceholderData {
                 prefix: "".into(),
                 placeholder: Some(Placeholder::NumberMinus),
-                alignment_spec: None,
-                width: None,
-                precision: None,
-                suffix: "".into(),
-                prefix_len: 0,
-                suffix_len: 0,
+                ..Default::default()
             }]
         )
     }
@@ -354,10 +349,7 @@ pub mod tests {
                 placeholder: Some(Placeholder::NumberPlus),
                 alignment_spec: None,
                 width: Some(4),
-                precision: None,
-                suffix: "".into(),
-                prefix_len: 0,
-                suffix_len: 0,
+                ..Default::default()
             }]
         )
     }
@@ -372,9 +364,7 @@ pub mod tests {
                 alignment_spec: Some(Align::Right),
                 width: Some(4),
                 precision: None,
-                suffix: "".into(),
-                prefix_len: 0,
-                suffix_len: 0,
+                ..Default::default()
             }]
         )
     }
@@ -388,10 +378,7 @@ pub mod tests {
                 placeholder: Some(Placeholder::NumberPlus),
                 alignment_spec: Some(Align::Right),
                 width: Some(4),
-                precision: None,
-                suffix: "".into(),
-                prefix_len: 0,
-                suffix_len: 0,
+                ..Default::default()
             }]
         )
     }
@@ -409,6 +396,7 @@ pub mod tests {
                 suffix: "@@".into(),
                 prefix_len: 2,
                 suffix_len: 2,
+                ..Default::default()
             }]
         )
     }
@@ -427,6 +415,7 @@ pub mod tests {
                     suffix: "@@---{np:_>4}**".into(),
                     prefix_len: 2,
                     suffix_len: 15,
+                    ..Default::default()
                 },
                 format::FormatStringPlaceholderData {
                     prefix: "@@---".into(),
@@ -437,6 +426,7 @@ pub mod tests {
                     suffix: "**".into(),
                     prefix_len: 5,
                     suffix_len: 2,
+                    ..Default::default()
                 }
             ]
         )
@@ -455,6 +445,7 @@ pub mod tests {
                 suffix: "__@@---**".into(),
                 prefix_len: 0,
                 suffix_len: 9,
+                ..Default::default()
             },]
         )
     }
@@ -472,6 +463,7 @@ pub mod tests {
                 suffix: "|".into(),
                 prefix_len: 2,
                 suffix_len: 1,
+                ..Default::default()
             }]
         );
     }
@@ -494,6 +486,7 @@ pub mod tests {
                     suffix: "+{np:<4}|".into(),
                     prefix_len: 2,
                     suffix_len: 9,
+                    ..Default::default()
                 },
                 format::FormatStringPlaceholderData {
                     prefix: "+".into(),
@@ -504,6 +497,7 @@ pub mod tests {
                     suffix: "|".into(),
                     prefix_len: 1,
                     suffix_len: 1,
+                    ..Default::default()
                 }
             ]
         );
@@ -521,6 +515,7 @@ pub mod tests {
                 suffix: "|++|".into(),
                 prefix_len: 1,
                 suffix_len: 4,
+                ..Default::default()
             }]
         );
     }
@@ -543,6 +538,7 @@ pub mod tests {
                 precision: None,
                 suffix: long.into(),
                 suffix_len: long.len(),
+                ..Default::default()
             },]
         )
     }
