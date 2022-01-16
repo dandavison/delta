@@ -156,7 +156,7 @@
   </tr>
 </table>
 <div style="break-before: page; page-break-before: always;"></div><h1 id="get-started"><a class="header" href="#get-started">Get started</a></h1>
-<p><a href="get-started.html#installation">Install</a> delta and add this to your <code>~/.gitconfig</code>:</p>
+<p><a href="./installation.html">Install</a> delta and add this to your <code>~/.gitconfig</code>:</p>
 <pre><code class="language-gitconfig">[core]
     pager = delta
 
@@ -277,7 +277,7 @@ File paths can also be formatted as hyperlinks for opening in your OS.</li>
 <p>Users of older MacOS versions (e.g. 10.11 El Capitan) should install using Homebrew, Cargo, or MacPorts: the binaries on the release page will not work.</p>
 <p>Behind the scenes, delta uses <a href="https://www.greenwoodsoftware.com/less/"><code>less</code></a> for paging.
 It's important to have a reasonably recent version of less installed.
-On MacOS, install <code>less</code> from Homebrew. For Windows, see <a href="installation.html#using-delta-on-windows">Using Delta on Windows</a>.</p>
+On MacOS, install <code>less</code> from Homebrew. For Windows, see <a href="./using-delta-on-windows.html">Using Delta on Windows</a>.</p>
 <div style="break-before: page; page-break-before: always;"></div><h1 id="configuration"><a class="header" href="#configuration">Configuration</a></h1>
 <h2 id="git-config-file"><a class="header" href="#git-config-file">Git config file</a></h2>
 <p>The most convenient way to configure delta is with a <code>[delta]</code> section in <code>~/.gitconfig</code>. Here's an example:</p>
@@ -356,18 +356,18 @@ https://git-scm.com/docs/git-config#Documentation/git-config.txt-color</p>
     minus-style = red bold ul &quot;#ffeeee&quot;
 </code></pre>
 <p>That means: For removed lines, set the foreground (text) color to 'red', make it bold and underlined, and set the background color to <code>#ffeeee</code>.</p>
-<p>For full details, see the <code>STYLES</code> section in <a href="choosing-colors-styles.html#full---help-output"><code>delta --help</code></a>.</p>
+<p>For full details, see the <code>STYLES</code> section in <a href="./full---help-output.html"><code>delta --help</code></a>.</p>
 <div style="break-before: page; page-break-before: always;"></div><h1 id="line-numbers"><a class="header" href="#line-numbers">Line numbers</a></h1>
 <pre><code class="language-gitconfig">[delta]
     line-numbers = true
 </code></pre>
 <table><tr><td><img width=400px src="https://user-images.githubusercontent.com/52205/86275526-76792100-bba1-11ea-9e78-6be9baa80b29.png" alt="image" /></td></tr></table>
-<p>The numbers are displayed in two columns and there are several configuration options: see the <code>LINE NUMBERS</code> section in <a href="line-numbers.html#full---help-output"><code>delta --help</code></a> for details, and see the next section for an example of configuring line numbers.</p>
+<p>The numbers are displayed in two columns and there are several configuration options: see the <code>LINE NUMBERS</code> section in <a href="./full---help-output.html"><code>delta --help</code></a> for details, and see the next section for an example of configuring line numbers.</p>
 <div style="break-before: page; page-break-before: always;"></div><h1 id="side-by-side-view"><a class="header" href="#side-by-side-view">Side-by-side view</a></h1>
 <pre><code class="language-gitconfig">[delta]
     side-by-side = true
 </code></pre>
-<p>By default, side-by-side view has line-numbers activated, and has syntax highlighting in both the left and right panels: [<a href="side-by-side-view.html#side-by-side-view-1">config</a>]</p>
+<p>By default, side-by-side view has line-numbers activated, and has syntax highlighting in both the left and right panels: [<a href="./side-by-side-view-1.html">config</a>]</p>
 <table><tr><td><img width=800px src="https://user-images.githubusercontent.com/52205/87230973-412eb900-c381-11ea-8aec-cc200290bd1b.png" alt="image" /></td></tr></table>
 <p>To disable the line numbers in side-by-side view, but keep a vertical delimiter line between the left and right panels, use the line-numbers format options. For example:</p>
 <pre><code class="language-gitconfig">[delta]
@@ -383,7 +383,7 @@ In contrast, the long replacement line in the right panel overflows by almost an
 Line wrapping was implemented by @th1000s.</p>
 <div style="break-before: page; page-break-before: always;"></div><h1 id="grep"><a class="header" href="#grep">Grep</a></h1>
 <p>Delta applies syntax-highlighting and other enhancements to standard grep output such as from <code>git grep</code>, <a href="https://github.com/BurntSushi/ripgrep/">ripgrep</a> (aka <code>rg</code>), grep, etc.
-To use with <code>git grep</code>, set delta as the pager for <code>grep</code> in the <code>[pager]</code> section of your gitconfig. See the example at the <a href="grep.html#get-started">top of the page</a>.
+To use with <code>git grep</code>, set delta as the pager for <code>grep</code> in the <code>[pager]</code> section of your gitconfig. See the example at the <a href="./get-started.html">top of the page</a>.
 Output from other grep tools can be piped to delta: e.g. <code>rg -Hn --color=always</code>, <code>grep -Hn --color=always</code>, etc.
 To customize the colors and syntax highlighting, see <code>grep-match-line-style</code>, <code>grep-match-word-style</code>, <code>grep-contexct-line-style</code>, <code>grep-file-style</code>, <code>grep-line-number-style</code>.
 Ripgrep's <code>rg --json</code> output format is supported; this avoids certain file name parsing ambiguities that are inevitable with the standard grep output formats.
@@ -412,7 +412,7 @@ Note that <code>git grep</code> can display the &quot;function context&quot; for
 </code></pre>
 <table><tr><td><img width=400px src="https://user-images.githubusercontent.com/52205/86275048-a96ee500-bba0-11ea-8a19-584f69758aee.png" alt="image" /></td></tr></table>
 <div style="break-before: page; page-break-before: always;"></div><h1 id="custom-themes"><a class="header" href="#custom-themes">Custom themes</a></h1>
-<p>A &quot;theme&quot; in delta is just a collection of settings grouped together in a named <a href="custom-themes.html#features-named-groups-of-settings">feature</a>. One of the available settings is <code>syntax-theme</code>: this dictates the colors and styles that are applied to foreground text by the syntax highlighter. Thus the concept of &quot;theme&quot; in delta encompasses not just the foreground syntax-highlighting color theme, but also background colors, decorations such as boxes and under/overlines, etc.</p>
+<p>A &quot;theme&quot; in delta is just a collection of settings grouped together in a named <a href="./features-named-groups-of-settings.html">feature</a>. One of the available settings is <code>syntax-theme</code>: this dictates the colors and styles that are applied to foreground text by the syntax highlighter. Thus the concept of &quot;theme&quot; in delta encompasses not just the foreground syntax-highlighting color theme, but also background colors, decorations such as boxes and under/overlines, etc.</p>
 <p>The delta git repo contains a <a href="./themes.gitconfig">collection of themes</a> created by users. These focus on the visual appearance: colors etc. If you want features like <code>side-by-side</code> or <code>navigate</code>, you would set that yourself, after selecting the color theme. To use the delta themes, clone the delta repo (or download the <a href="./themes.gitconfig">themes.gitconfig</a> file) and add the following entry in your gitconfig:</p>
 <pre><code class="language-gitconfig">[include]
     path = /PATH/TO/delta/themes.gitconfig
@@ -479,7 +479,7 @@ We can also define custom named colors in git config, and styles can reference o
 <table><tr><td><img width=500px src="https://user-images.githubusercontent.com/52205/144783121-bb549100-69d8-41b8-ac62-1704f1f7b43e.png" alt="image" /></td></tr></table>
 <p>This display can be customized using <code>merge-conflict-begin-symbol</code>, <code>merge-conflict-end-symbol</code>, <code>merge-conflict-ours-diff-header-style</code>, <code>merge-conflict-ours-diff-header-decoration-style</code>, <code>merge-conflict-theirs-diff-header-style</code>, <code>merge-conflict-theirs-diff-header-decoration-style</code>.</p>
 <div style="break-before: page; page-break-before: always;"></div><h1 id="git-blame"><a class="header" href="#git-blame">Git blame</a></h1>
-<p>Set delta as the pager for <code>blame</code> in the <code>[pager]</code> section of your gitconfig: see the <a href="git-blame.html#get-started">example gitconfig</a>.
+<p>Set delta as the pager for <code>blame</code> in the <code>[pager]</code> section of your gitconfig: see the <a href="./get-started.html">example gitconfig</a>.
 If <code>hyperlinks</code> is enabled in the <code>[delta]</code> section then each blame commit will link to the commit on GitHub/GitLab/Bitbucket/etc.</p>
 <table><tr><td><img width=600px src="https://user-images.githubusercontent.com/52205/141891376-1fdb87dc-1d9c-4ad6-9d72-eeb19a8aeb0b.png" alt="image" /></td></tr></table>
 <div style="break-before: page; page-break-before: always;"></div><h1 id="24-bit-color-truecolor"><a class="header" href="#24-bit-color-truecolor">24 bit color (truecolor)</a></h1>
@@ -1168,6 +1168,25 @@ https://github.com/dandavison/delta/issues.
     line-numbers-plus-style = 28
 </code></pre>
 <div style="break-before: page; page-break-before: always;"></div><h1 id="side-by-side-view-2"><a class="header" href="#side-by-side-view-2">Side-by-side view</a></h1>
+<p><a href="https://github.com/vuejs/vue/commit/7ec4627902020cccd7b3f4fbc63e1b0d6b9798cd">https://github.com/vuejs/vue/commit/7ec4627902020cccd7b3f4fbc63e1b0d6b9798cd</a></p>
+<pre><code class="language-gitconfig">[delta]
+    features = side-by-side line-numbers decorations
+    syntax-theme = Dracula
+    plus-style = syntax &quot;#003800&quot;
+    minus-style = syntax &quot;#3f0001&quot;
+
+[delta &quot;decorations&quot;]
+    commit-decoration-style = bold yellow box ul
+    file-style = bold yellow ul
+    file-decoration-style = none
+    hunk-header-decoration-style = cyan box ul
+
+[delta &quot;line-numbers&quot;]
+    line-numbers-left-style = cyan
+    line-numbers-right-style = cyan
+    line-numbers-minus-style = 124
+    line-numbers-plus-style = 28
+</code></pre>
 
                     </main>
 

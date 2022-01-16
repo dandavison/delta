@@ -136,7 +136,7 @@
                     <main>
                         <h1 id="grep"><a class="header" href="#grep">Grep</a></h1>
 <p>Delta applies syntax-highlighting and other enhancements to standard grep output such as from <code>git grep</code>, <a href="https://github.com/BurntSushi/ripgrep/">ripgrep</a> (aka <code>rg</code>), grep, etc.
-To use with <code>git grep</code>, set delta as the pager for <code>grep</code> in the <code>[pager]</code> section of your gitconfig. See the example at the <a href="#get-started">top of the page</a>.
+To use with <code>git grep</code>, set delta as the pager for <code>grep</code> in the <code>[pager]</code> section of your gitconfig. See the example at the <a href="./get-started.html">top of the page</a>.
 Output from other grep tools can be piped to delta: e.g. <code>rg -Hn --color=always</code>, <code>grep -Hn --color=always</code>, etc.
 To customize the colors and syntax highlighting, see <code>grep-match-line-style</code>, <code>grep-match-word-style</code>, <code>grep-contexct-line-style</code>, <code>grep-file-style</code>, <code>grep-line-number-style</code>.
 Ripgrep's <code>rg --json</code> output format is supported; this avoids certain file name parsing ambiguities that are inevitable with the standard grep output formats.
