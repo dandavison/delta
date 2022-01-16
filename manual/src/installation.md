@@ -33,10 +33,6 @@ Note that the package is often called `git-delta`, but the executable installed 
     <td><code>pkg install git-delta</code></td>
   </tr>
   <tr>
-    <td><a href="https://cvsweb.openbsd.org/ports/textproc/delta/">OpenBSD</a></td>
-    <td><code>pkg_add delta</code></td>
-  </tr>
-  <tr>
     <td><a href="https://packages.gentoo.org/packages/dev-util/git-delta">Gentoo</a></td>
     <td><code>emerge dev-util/git-delta</code></td>
   </tr>
@@ -51,6 +47,10 @@ Note that the package is often called `git-delta`, but the executable installed 
   <tr>
     <td><a href="https://search.nixos.org/packages?show=delta&query=delta">Nix</a></td>
     <td><code>nix-env -iA nixpkgs.delta</code>
+  </tr>
+  <tr>
+    <td><a href="https://cvsweb.openbsd.org/ports/textproc/delta/">OpenBSD</a></td>
+    <td><code>pkg_add delta</code></td>
   </tr>
   <tr>
     <td><a href="https://software.opensuse.org/package/git-delta">openSUSE Tumbleweed</a></td>
@@ -75,7 +75,7 @@ Note that the package is often called `git-delta`, but the executable installed 
       <br>
       .deb files are on the <a href="https://github.com/dandavison/delta/releases">releases</a> page.
       <br>
-      <sup><b>IMPORTANT</b>: If you are using Ubuntu <= 19.10 or are mixing apt sources, read <a href="https://github.com/dandavison/delta/issues/504">#504</a>, be extremely cautious, and try the versions linked against musl.</sup>
+      <sup>If you are using Ubuntu <= 19.10 or are mixing apt sources, please read <a href="https://github.com/dandavison/delta/issues/504">#504</a>.</sup>
     </td>
   </tr>
 </table>
