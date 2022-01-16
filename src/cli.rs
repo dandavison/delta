@@ -200,6 +200,8 @@ Use '<' for left-align, '^' for center-align, and '>' for right-align.
 
 If something isn't working correctly, or you have a feature request, please open an issue at
 https://github.com/dandavison/delta/issues.
+
+For a short help summary, please use delta -h.
 "
 )]
 pub struct Opt {
