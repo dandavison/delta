@@ -4,7 +4,6 @@ use std::result::Result;
 use std::str::FromStr;
 
 use console::Term;
-use structopt::clap;
 
 use crate::cli;
 use crate::config;
@@ -25,7 +24,7 @@ macro_rules! set_options {
         $(
             let kebab_case_field_name = stringify!($field_ident).replace("_", "-");
             let option_name = $expected_option_name_map[kebab_case_field_name.as_str()];
-            if !$crate::config::user_supplied_option(&option_name, $arg_matches) {
+            if !$crate::config::user_supplied_option(&kebab_case_field_name, $arg_matches) {
                 if let Some(value) = $crate::options::get::get_option_value(
                     option_name,
                     &$builtin_features,
@@ -45,11 +44,13 @@ macro_rules! set_options {
                 "diff-highlight", // Does not exist as a flag on config
                 "diff-so-fancy", // Does not exist as a flag on config
                 "features",  // Processed differently
+                "help", // automatically added by clap
                 // Set prior to the rest
                 "no-gitconfig",
                 "dark",
                 "light",
                 "syntax-theme",
+                "version", // automatically added by clap
             ]);
             let expected_option_names: HashSet<_> = $expected_option_name_map.values().cloned().collect();
 
@@ -80,7 +81,7 @@ pub fn set_options(
         opt.syntax_theme = env::get_env_var("BAT_THEME")
     }
 
-    let option_names = cli::Opt::get_option_names();
+    let option_names = cli::Opt::get_argument_and_option_names();
 
     // Set features
     let mut builtin_features = features::make_builtin_features();
