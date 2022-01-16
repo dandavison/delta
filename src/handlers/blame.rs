@@ -308,7 +308,12 @@ mod tests {
     #[test]
     fn test_color_assignment() {
         let mut writer = Cursor::new(vec![0; 512]);
-        let config = integration_test_utils::make_config_from_args(&["--blame-palette", "1 2"]);
+        let config = integration_test_utils::make_config_from_args(&[
+            "--blame-format",
+            "{author} {commit}",
+            "--blame-palette",
+            "1 2",
+        ]);
         let mut machine = StateMachine::new(&mut writer, &config);
 
         let blame_lines: HashMap<&str, &str> = vec![
@@ -333,7 +338,7 @@ mod tests {
         machine.handle_blame_line().unwrap();
         assert_eq!(
             hashmap_items(&machine.blame_key_colors),
-            &[("4 months ago    Dan Davison     aaaaaaa ", "1")]
+            &[("Dan Davison     aaaaaaa        ", "1")]
         );
 
         // Repeat key: same color
@@ -341,7 +346,7 @@ mod tests {
         machine.handle_blame_line().unwrap();
         assert_eq!(
             hashmap_items(&machine.blame_key_colors),
-            &[("4 months ago    Dan Davison     aaaaaaa ", "1")]
+            &[("Dan Davison     aaaaaaa        ", "1")]
         );
 
         // Second distinct key gets second color
@@ -350,8 +355,8 @@ mod tests {
         assert_eq!(
             hashmap_items(&machine.blame_key_colors),
             &[
-                ("4 months ago    Dan Davison     aaaaaaa ", "1"),
-                ("a year ago      Dan Davison     bbbbbbb ", "2")
+                ("Dan Davison     aaaaaaa        ", "1"),
+                ("Dan Davison     bbbbbbb        ", "2")
             ]
         );
 
@@ -361,9 +366,9 @@ mod tests {
         assert_eq!(
             hashmap_items(&machine.blame_key_colors),
             &[
-                ("4 months ago    Dan Davison     aaaaaaa ", "1"),
-                ("a year ago      Dan Davison     bbbbbbb ", "2"),
-                ("a year ago      Dan Davison     ccccccc ", "1")
+                ("Dan Davison     aaaaaaa        ", "1"),
+                ("Dan Davison     bbbbbbb        ", "2"),
+                ("Dan Davison     ccccccc        ", "1")
             ]
         );
 
@@ -375,9 +380,9 @@ mod tests {
         assert_eq!(
             hashmap_items(&machine.blame_key_colors),
             &[
-                ("4 months ago    Dan Davison     aaaaaaa ", "2"),
-                ("a year ago      Dan Davison     bbbbbbb ", "2"),
-                ("a year ago      Dan Davison     ccccccc ", "1")
+                ("Dan Davison     aaaaaaa        ", "2"),
+                ("Dan Davison     bbbbbbb        ", "2"),
+                ("Dan Davison     ccccccc        ", "1")
             ]
         );
     }
