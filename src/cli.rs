@@ -752,7 +752,8 @@ pub struct Opt {
 
     #[clap(
         long = "merge-conflict-theirs-diff-header-decoration-style",
-        default_value = "box"
+        default_value = "box",
+        value_name = "STYLE_STRING"
     )]
     /// Style string for the decoration of the header above the 'theirs' merge conflict diff.
     ///
