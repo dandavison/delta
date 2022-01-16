@@ -63,66 +63,6 @@ impl Style {
         );
         style
     }
-
-    /// As from_str_with_handling_of_special_decoration_attributes but respecting an optional
-    /// foreground color which has precedence when present.
-    pub fn from_str_with_handling_of_special_decoration_attributes_and_respecting_deprecated_foreground_color_arg(
-        style_string: &str,
-        default: Option<Self>,
-        decoration_style_string: Option<&str>,
-        deprecated_foreground_color_arg: Option<&str>,
-        true_color: bool,
-        git_config: Option<&GitConfig>,
-    ) -> Self {
-        let mut style = Self::from_str_with_handling_of_special_decoration_attributes(
-            style_string,
-            default,
-            decoration_style_string,
-            true_color,
-            git_config,
-        );
-        if let Some(s) = deprecated_foreground_color_arg {
-            // The deprecated --{commit,file,hunk}-color args functioned to set the decoration
-            // foreground color. In the case of file, it set the text foreground color also.
-            let foreground_from_deprecated_arg =
-                parse_ansi_term_style(s, None, true_color, git_config)
-                    .0
-                    .foreground;
-            style.ansi_term_style.foreground = foreground_from_deprecated_arg;
-            style.decoration_style = match style.decoration_style {
-                DecorationStyle::Box(mut ansi_term_style) => {
-                    ansi_term_style.foreground = foreground_from_deprecated_arg;
-                    DecorationStyle::Box(ansi_term_style)
-                }
-                DecorationStyle::Underline(mut ansi_term_style) => {
-                    ansi_term_style.foreground = foreground_from_deprecated_arg;
-                    DecorationStyle::Underline(ansi_term_style)
-                }
-                DecorationStyle::Overline(mut ansi_term_style) => {
-                    ansi_term_style.foreground = foreground_from_deprecated_arg;
-                    DecorationStyle::Overline(ansi_term_style)
-                }
-                DecorationStyle::UnderOverline(mut ansi_term_style) => {
-                    ansi_term_style.foreground = foreground_from_deprecated_arg;
-                    DecorationStyle::UnderOverline(ansi_term_style)
-                }
-                DecorationStyle::BoxWithUnderline(mut ansi_term_style) => {
-                    ansi_term_style.foreground = foreground_from_deprecated_arg;
-                    DecorationStyle::BoxWithUnderline(ansi_term_style)
-                }
-                DecorationStyle::BoxWithOverline(mut ansi_term_style) => {
-                    ansi_term_style.foreground = foreground_from_deprecated_arg;
-                    DecorationStyle::BoxWithOverline(ansi_term_style)
-                }
-                DecorationStyle::BoxWithUnderOverline(mut ansi_term_style) => {
-                    ansi_term_style.foreground = foreground_from_deprecated_arg;
-                    DecorationStyle::BoxWithUnderOverline(ansi_term_style)
-                }
-                DecorationStyle::NoDecoration => style.decoration_style,
-            };
-        }
-        style
-    }
 }
 
 bitflags! {
@@ -618,50 +558,6 @@ mod tests {
             "raw",
             None,
             Some("box"),
-            true,
-            None,
-        );
-        let empty_ansi_term_style = ansi_term::Style::new();
-        assert_eq!(
-            actual_style,
-            Style {
-                ansi_term_style: empty_ansi_term_style,
-                decoration_style: DecorationStyle::Box(empty_ansi_term_style),
-                is_raw: true,
-                ..Style::new()
-            }
-        )
-    }
-
-    #[test]
-    fn test_style_from_str_with_handling_of_special_decoration_attributes_and_respecting_deprecated_foreground_color_arg(
-    ) {
-        let expected_decoration_style = DecorationStyle::BoxWithUnderOverline(ansi_term::Style {
-            foreground: Some(ansi_term::Color::Red),
-            background: Some(ansi_term::Color::Green),
-            is_bold: true,
-            ..ansi_term::Style::new()
-        });
-        let actual_style = Style::from_str_with_handling_of_special_decoration_attributes_and_respecting_deprecated_foreground_color_arg(
-                "", None, Some("ol red box bold green ul"), None, true, None
-            );
-        assert_eq!(
-            actual_style,
-            Style {
-                decoration_style: expected_decoration_style,
-                ..Style::new()
-            }
-        )
-    }
-
-    #[test]
-    fn test_style_from_str_with_handling_of_special_decoration_attributes_and_respecting_deprecated_foreground_color_arg_raw_with_box(
-    ) {
-        let actual_style = Style::from_str_with_handling_of_special_decoration_attributes_and_respecting_deprecated_foreground_color_arg(
-            "raw",
-            None,
-            Some("box"),
-            None,
             true,
             None,
         );

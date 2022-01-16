@@ -891,51 +891,6 @@ pub struct Opt {
     /// affect delta's performance when entire files are added/removed.
     pub line_buffer_size: usize,
 
-    #[clap(long = "minus-color")]
-    /// Deprecated: use --minus-style='normal my_background_color'.
-    pub deprecated_minus_background_color: Option<String>,
-
-    #[clap(long = "minus-emph-color")]
-    /// Deprecated: use --minus-emph-style='normal my_background_color'.
-    pub deprecated_minus_emph_background_color: Option<String>,
-
-    #[clap(long = "plus-color")]
-    /// Deprecated: Use --plus-style='syntax my_background_color' to change the background color
-    /// while retaining syntax-highlighting.
-    pub deprecated_plus_background_color: Option<String>,
-
-    #[clap(long = "plus-emph-color")]
-    /// Deprecated: Use --plus-emph-style='syntax my_background_color' to change the background
-    /// color while retaining syntax-highlighting.
-    pub deprecated_plus_emph_background_color: Option<String>,
-
-    #[clap(long = "highlight-removed")]
-    /// Deprecated: use --minus-style='syntax'.
-    pub deprecated_highlight_minus_lines: bool,
-
-    #[clap(long = "commit-color")]
-    /// Deprecated: use --commit-style='my_foreground_color'
-    /// --commit-decoration-style='my_foreground_color'.
-    pub deprecated_commit_color: Option<String>,
-
-    #[clap(long = "file-color")]
-    /// Deprecated: use --file-style='my_foreground_color'
-    /// --file-decoration-style='my_foreground_color'.
-    pub deprecated_file_color: Option<String>,
-
-    #[clap(long = "hunk-style")]
-    /// Deprecated: synonym of --hunk-header-decoration-style.
-    pub deprecated_hunk_style: Option<String>,
-
-    #[clap(long = "hunk-color")]
-    /// Deprecated: use --hunk-header-style='my_foreground_color'
-    /// --hunk-header-decoration-style='my_foreground_color'.
-    pub deprecated_hunk_color: Option<String>,
-
-    #[clap(long = "theme")]
-    /// Deprecated: use --syntax-theme.
-    pub deprecated_theme: Option<String>,
-
     #[clap(skip)]
     pub computed: ComputedValues,
 
@@ -1014,7 +969,6 @@ impl Opt {
     ) -> Self {
         let mut opt = Opt::from_arg_matches(&arg_matches)
             .unwrap_or_else(|_| delta_unreachable("Opt::from_arg_matches failed"));
-        options::rewrite::apply_rewrite_rules(&mut opt, &arg_matches);
         options::set::set_options(&mut opt, &mut git_config, &arg_matches, assets);
         opt.git_config = git_config;
         opt
@@ -1039,21 +993,10 @@ impl Opt {
     }
 }
 
-// Option names to exclude when listing options to process for various purposes. These are
-// (1) Deprecated options
-// (2) Pseudo-flag commands such as --list-languages
+// Option names to exclude when listing options to process for various purposes. These are all
+// pseudo-flag commands such as --list-languages
 lazy_static! {
     static ref IGNORED_OPTION_NAMES: HashSet<&'static str> = vec![
-        "deprecated-file-color",
-        "deprecated-hunk-style",
-        "deprecated-minus-background-color",
-        "deprecated-minus-emph-background-color",
-        "deprecated-hunk-color",
-        "deprecated-plus-emph-background-color",
-        "deprecated-plus-background-color",
-        "deprecated-highlight-minus-lines",
-        "deprecated-theme",
-        "deprecated-commit-color",
         "list-languages",
         "list-syntax-themes",
         "show-config",

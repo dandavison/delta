@@ -6,24 +6,6 @@ DELTA="$DELTA_BIN --no-gitconfig"
 
 foreground_color=red
 for decoration_attr in box underline plain; do
-
     git show | $DELTA --commit-style $decoration_attr
     git show | $DELTA --file-style $decoration_attr
-    git show | $DELTA --hunk-style $decoration_attr
-
-    git show | $DELTA --commit-color $foreground_color
-    git show | $DELTA --file-color $foreground_color
-    git show | $DELTA --hunk-color $foreground_color
-
-    git show | $DELTA --commit-color $foreground_color --commit-style $decoration_attr
-    git show | $DELTA --file-color $foreground_color --file-style $decoration_attr
-    git show | $DELTA --hunk-color $foreground_color --hunk-style $decoration_attr
-
 done
-
-background_color=blue
-for option in --minus-color --plus-color --minus-emph-color --plus-emph-color; do
-    git show | $DELTA $option $background_color
-done
-
-git show | $DELTA --theme=GitHub --highlight-removed
