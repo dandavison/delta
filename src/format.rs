@@ -48,17 +48,49 @@ impl TryFrom<Option<&str>> for Align {
     }
 }
 
-#[derive(Debug, Default, PartialEq)]
-pub struct FormatStringPlaceholderData<'a> {
+#[derive(Debug, PartialEq, Clone)]
+pub struct FormatStringPlaceholderDataAnyPlaceholder<T> {
     pub prefix: SmolStr,
     pub prefix_len: usize,
-    pub placeholder: Option<Placeholder<'a>>,
+    pub placeholder: Option<T>,
     pub alignment_spec: Option<Align>,
     pub width: Option<usize>,
     pub precision: Option<usize>,
+    pub fmt_type: SmolStr,
     pub suffix: SmolStr,
     pub suffix_len: usize,
 }
+
+impl<T> Default for FormatStringPlaceholderDataAnyPlaceholder<T> {
+    fn default() -> Self {
+        Self {
+            prefix: SmolStr::default(),
+            prefix_len: 0,
+            placeholder: None,
+            alignment_spec: None,
+            width: None,
+            precision: None,
+            fmt_type: SmolStr::default(),
+            suffix: SmolStr::default(),
+            suffix_len: 0,
+        }
+    }
+}
+
+impl<T> FormatStringPlaceholderDataAnyPlaceholder<T> {
+    pub fn only_string(s: &str) -> Self {
+        Self {
+            suffix: s.into(),
+            suffix_len: s.graphemes(true).count(),
+            ..Self::default()
+        }
+    }
+}
+
+pub type FormatStringPlaceholderData<'a> =
+    FormatStringPlaceholderDataAnyPlaceholder<Placeholder<'a>>;
+
+pub type FormatStringSimple = FormatStringPlaceholderDataAnyPlaceholder<()>;
 
 impl<'a> FormatStringPlaceholderData<'a> {
     pub fn width(&self, hunk_max_line_number_width: usize) -> (usize, usize) {
@@ -75,6 +107,19 @@ impl<'a> FormatStringPlaceholderData<'a> {
             self.suffix_len,
         )
     }
+    pub fn into_simple(self) -> FormatStringSimple {
+        FormatStringSimple {
+            prefix: self.prefix,
+            prefix_len: self.prefix_len,
+            placeholder: None,
+            alignment_spec: self.alignment_spec,
+            width: self.width,
+            precision: self.precision,
+            fmt_type: self.fmt_type,
+            suffix: self.suffix,
+            suffix_len: self.suffix_len,
+        }
+    }
 }
 
 pub type FormatStringData<'a> = Vec<FormatStringPlaceholderData<'a>>;
@@ -83,18 +128,21 @@ pub fn make_placeholder_regex(labels: &[&str]) -> Regex {
     Regex::new(&format!(
         r"(?x)
     \{{
-    ({})            # 1: Placeholder labels
-    (?:             # Start optional format spec (non-capturing)
-      :             #     Literal colon
-      (?:           #     Start optional fill/alignment spec (non-capturing)
-        ([^<^>])?   #         2: Optional fill character (ignored)
-        ([<^>])     #         3: Alignment spec
-      )?            #
-      (\d+)         #     4: Width
-      (?:           #     Start optional precision (non-capturing)
-        \.(\d+)     #         5: Precision
-      )?            #
-    )?              #
+    ({})                             # 1: Placeholder labels
+    (?:                              # Start optional format spec (non-capturing)
+      :                              #     Literal colon
+      (?:                            #     Start optional fill/alignment spec (non-capturing)
+        ([^<^>])?                    #         2: Optional fill character (ignored)
+        ([<^>])                      #         3: Alignment spec
+      )?                             #
+      (\d+)?                         #     4: Width (optional)
+      (?:                            #     Start optional precision (non-capturing)
+        \.(\d+)                      #         5: Precision
+      )?                             #
+      (?:                            #     Start optional format type (non-capturing)
+        _?([A-Za-z][0-9A-Za-z_-]*)   #         6: Format type, optional leading _
+      )?                             #
+    )?                               #
     \}}
     ",
         labels.join("|")
@@ -102,6 +150,7 @@ pub fn make_placeholder_regex(labels: &[&str]) -> Regex {
     .unwrap()
 }
 
+// The resulting vector is never empty
 pub fn parse_line_number_format<'a>(
     format_string: &'a str,
     placeholder_regex: &Regex,
@@ -143,6 +192,10 @@ pub fn parse_line_number_format<'a>(
                     panic!("Invalid precision in format string: {}", format_string)
                 })
             }),
+            fmt_type: captures
+                .get(6)
+                .map(|m| SmolStr::from(m.as_str()))
+                .unwrap_or_default(),
             suffix,
             suffix_len,
         });
@@ -312,6 +365,79 @@ mod tests {
     }
 
     #[test]
+    fn test_placeholder_with_notype() {
+        let regex = make_placeholder_regex(&["placeholder"]);
+        assert_eq!(
+            parse_line_number_format("{placeholder:^4}", &regex, false),
+            vec![FormatStringPlaceholderData {
+                placeholder: Some(Placeholder::Str("placeholder")),
+                alignment_spec: Some(Align::Center),
+                width: Some(4),
+                ..Default::default()
+            }]
+        );
+    }
+
+    #[test]
+    fn test_placeholder_with_only_type_dash_number() {
+        let regex = make_placeholder_regex(&["placeholder"]);
+        assert_eq!(
+            parse_line_number_format("{placeholder:a_type-b-12}", &regex, false),
+            vec![FormatStringPlaceholderData {
+                placeholder: Some(Placeholder::Str("placeholder")),
+                fmt_type: "a_type-b-12".into(),
+                ..Default::default()
+            }]
+        );
+    }
+
+    #[test]
+    fn test_placeholder_with_empty_formatting() {
+        let regex = make_placeholder_regex(&["placeholder"]);
+        assert_eq!(
+            parse_line_number_format("{placeholder:}", &regex, false),
+            vec![FormatStringPlaceholderData {
+                placeholder: Some(Placeholder::Str("placeholder")),
+                ..Default::default()
+            }]
+        );
+    }
+
+    #[test]
+    fn test_placeholder_with_type_and_more() {
+        let regex = make_placeholder_regex(&["placeholder"]);
+        assert_eq!(
+            parse_line_number_format("prefix {placeholder:<15.14type} suffix", &regex, false),
+            vec![FormatStringPlaceholderData {
+                prefix: "prefix ".into(),
+                placeholder: Some(Placeholder::Str("placeholder")),
+                alignment_spec: Some(Align::Left),
+                width: Some(15),
+                precision: Some(14),
+                fmt_type: "type".into(),
+                suffix: " suffix".into(),
+                prefix_len: 7,
+                suffix_len: 7,
+            }]
+        );
+
+        assert_eq!(
+            parse_line_number_format("prefix {placeholder:<15.14_type} suffix", &regex, false),
+            vec![FormatStringPlaceholderData {
+                prefix: "prefix ".into(),
+                placeholder: Some(Placeholder::Str("placeholder")),
+                alignment_spec: Some(Align::Left),
+                width: Some(15),
+                precision: Some(14),
+                fmt_type: "type".into(),
+                suffix: " suffix".into(),
+                prefix_len: 7,
+                suffix_len: 7,
+            }]
+        );
+    }
+
+    #[test]
     fn test_placeholder_regex() {
         let regex = make_placeholder_regex(&["placeholder"]);
         assert_eq!(
@@ -322,10 +448,84 @@ mod tests {
                 alignment_spec: Some(Align::Left),
                 width: Some(15),
                 precision: Some(14),
+                fmt_type: SmolStr::default(),
                 suffix: " suffix".into(),
                 prefix_len: 7,
                 suffix_len: 7,
             }]
         );
+    }
+
+    #[test]
+    fn test_placeholder_regex_empty_placeholder() {
+        let regex = make_placeholder_regex(&[""]);
+        assert_eq!(
+            parse_line_number_format("prefix {:<15.14} suffix", &regex, false),
+            vec![FormatStringPlaceholderData {
+                prefix: "prefix ".into(),
+                placeholder: Some(Placeholder::Str("")),
+                alignment_spec: Some(Align::Left),
+                width: Some(15),
+                precision: Some(14),
+                fmt_type: SmolStr::default(),
+                suffix: " suffix".into(),
+                prefix_len: 7,
+                suffix_len: 7,
+            }]
+        );
+    }
+    #[test]
+    fn test_format_string_simple() {
+        let regex = make_placeholder_regex(&["foo"]);
+        let f = parse_line_number_format("prefix {foo:<15.14} suffix", &regex, false);
+
+        assert_eq!(
+            f,
+            vec![FormatStringPlaceholderData {
+                prefix: "prefix ".into(),
+                placeholder: Some(Placeholder::Str("foo")),
+                alignment_spec: Some(Align::Left),
+                width: Some(15),
+                precision: Some(14),
+                fmt_type: SmolStr::default(),
+                suffix: " suffix".into(),
+                prefix_len: 7,
+                suffix_len: 7,
+            }]
+        );
+        let simple: Vec<_> = f
+            .into_iter()
+            .map(FormatStringPlaceholderData::into_simple)
+            .collect();
+        assert_eq!(
+            simple,
+            vec![FormatStringSimple {
+                prefix: "prefix ".into(),
+                placeholder: None,
+                alignment_spec: Some(Align::Left),
+                width: Some(15),
+                precision: Some(14),
+                fmt_type: SmolStr::default(),
+                suffix: " suffix".into(),
+                prefix_len: 7,
+                suffix_len: 7,
+            }]
+        );
+    }
+
+    #[test]
+    fn test_line_number_format_only_string() {
+        let f = FormatStringSimple::only_string("abc");
+        assert_eq!(f.suffix_len, 3);
+    }
+
+    #[test]
+    fn test_parse_line_number_format_not_empty() {
+        let regex = make_placeholder_regex(&["abc"]);
+        assert!(!parse_line_number_format(" abc ", &regex, false).is_empty());
+        assert!(!parse_line_number_format("", &regex, false).is_empty());
+        let regex = make_placeholder_regex(&[""]);
+        assert!(!parse_line_number_format(" abc ", &regex, false).is_empty());
+        assert!(!parse_line_number_format("", &regex, false).is_empty());
     }
 }
