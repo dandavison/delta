@@ -261,10 +261,7 @@ fn format_and_paint_line_number_field<'a>(
             min_field_width
         };
 
-        let alignment_spec = placeholder
-            .alignment_spec
-            .as_ref()
-            .unwrap_or(&Align::Center);
+        let alignment_spec = placeholder.alignment_spec.unwrap_or(Align::Center);
         match placeholder.placeholder {
             Some(Placeholder::NumberMinus) => {
                 ansi_strings.push(styles[Minus].paint(format_line_number(
@@ -298,7 +295,7 @@ fn format_and_paint_line_number_field<'a>(
 /// Return line number formatted according to `alignment` and `width`.
 fn format_line_number(
     line_number: Option<usize>,
-    alignment: &Align,
+    alignment: Align,
     width: usize,
     precision: Option<usize>,
     plus_file: Option<&str>,
@@ -306,12 +303,11 @@ fn format_line_number(
 ) -> String {
     let pad = |n| format::pad(n, width, alignment, precision);
     match (line_number, config.hyperlinks, plus_file) {
-        (None, _, _) => pad(""),
+        (None, _, _) => " ".repeat(width),
         (Some(n), true, Some(file)) => {
-            hyperlinks::format_osc8_file_hyperlink(file, line_number, &pad(&n.to_string()), config)
-                .to_string()
+            hyperlinks::format_osc8_file_hyperlink(file, line_number, &pad(n), config).to_string()
         }
-        (Some(n), _, _) => pad(&n.to_string()),
+        (Some(n), _, _) => pad(n),
     }
 }
 
@@ -339,12 +335,7 @@ pub mod tests {
             vec![format::FormatStringPlaceholderData {
                 prefix: "".into(),
                 placeholder: Some(Placeholder::NumberMinus),
-                alignment_spec: None,
-                width: None,
-                precision: None,
-                suffix: "".into(),
-                prefix_len: 0,
-                suffix_len: 0,
+                ..Default::default()
             }]
         )
     }
@@ -358,10 +349,7 @@ pub mod tests {
                 placeholder: Some(Placeholder::NumberPlus),
                 alignment_spec: None,
                 width: Some(4),
-                precision: None,
-                suffix: "".into(),
-                prefix_len: 0,
-                suffix_len: 0,
+                ..Default::default()
             }]
         )
     }
@@ -376,9 +364,7 @@ pub mod tests {
                 alignment_spec: Some(Align::Right),
                 width: Some(4),
                 precision: None,
-                suffix: "".into(),
-                prefix_len: 0,
-                suffix_len: 0,
+                ..Default::default()
             }]
         )
     }
@@ -392,10 +378,7 @@ pub mod tests {
                 placeholder: Some(Placeholder::NumberPlus),
                 alignment_spec: Some(Align::Right),
                 width: Some(4),
-                precision: None,
-                suffix: "".into(),
-                prefix_len: 0,
-                suffix_len: 0,
+                ..Default::default()
             }]
         )
     }
@@ -413,6 +396,7 @@ pub mod tests {
                 suffix: "@@".into(),
                 prefix_len: 2,
                 suffix_len: 2,
+                ..Default::default()
             }]
         )
     }
@@ -431,6 +415,7 @@ pub mod tests {
                     suffix: "@@---{np:_>4}**".into(),
                     prefix_len: 2,
                     suffix_len: 15,
+                    ..Default::default()
                 },
                 format::FormatStringPlaceholderData {
                     prefix: "@@---".into(),
@@ -441,6 +426,7 @@ pub mod tests {
                     suffix: "**".into(),
                     prefix_len: 5,
                     suffix_len: 2,
+                    ..Default::default()
                 }
             ]
         )
@@ -459,6 +445,7 @@ pub mod tests {
                 suffix: "__@@---**".into(),
                 prefix_len: 0,
                 suffix_len: 9,
+                ..Default::default()
             },]
         )
     }
@@ -476,6 +463,7 @@ pub mod tests {
                 suffix: "|".into(),
                 prefix_len: 2,
                 suffix_len: 1,
+                ..Default::default()
             }]
         );
     }
@@ -498,6 +486,7 @@ pub mod tests {
                     suffix: "+{np:<4}|".into(),
                     prefix_len: 2,
                     suffix_len: 9,
+                    ..Default::default()
                 },
                 format::FormatStringPlaceholderData {
                     prefix: "+".into(),
@@ -508,6 +497,7 @@ pub mod tests {
                     suffix: "|".into(),
                     prefix_len: 1,
                     suffix_len: 1,
+                    ..Default::default()
                 }
             ]
         );
@@ -525,6 +515,7 @@ pub mod tests {
                 suffix: "|++|".into(),
                 prefix_len: 1,
                 suffix_len: 4,
+                ..Default::default()
             }]
         );
     }
@@ -547,6 +538,7 @@ pub mod tests {
                 precision: None,
                 suffix: long.into(),
                 suffix_len: long.len(),
+                ..Default::default()
             },]
         )
     }
