@@ -400,6 +400,7 @@ pub mod tests {
     }
 
     #[test]
+    #[cfg(not(target_os = "windows"))]
     fn test_paint_file_path_with_line_number_hyperlinks() {
         // hunk-header-style (by default) includes 'line-number' but not 'file'.
         // Normally, `paint_file_path_with_line_number` would return a painted line number.
