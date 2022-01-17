@@ -316,6 +316,7 @@ fn write_to_output_buffer(
 pub mod tests {
     use super::*;
     use crate::ansi::strip_ansi_codes;
+    use crate::git_config::GitConfigEntry;
     use crate::tests::integration_test_utils;
 
     #[test]
@@ -389,6 +390,8 @@ pub mod tests {
 
     #[test]
     fn test_paint_file_path_with_line_number_default() {
+        // hunk-header-style (by default) includes 'line-number' but not 'file'.
+        // This test confirms that `paint_file_path_with_line_number` returns a painted line number.
         let cfg = integration_test_utils::make_config_from_args(&[]);
 
         let result = paint_file_path_with_line_number(Some(3), "some-file", &cfg);
@@ -398,15 +401,28 @@ pub mod tests {
 
     #[test]
     fn test_paint_file_path_with_line_number_hyperlinks() {
-        let cfg = integration_test_utils::make_config_from_args(&["--features", "hyperlinks"]);
+        // hunk-header-style (by default) includes 'line-number' but not 'file'.
+        // Normally, `paint_file_path_with_line_number` would return a painted line number.
+        // But in this test hyperlinks are activated, and the test ensures that delta.__workdir__ is
+        // present in git_config_entries.
+        // This test confirms that, under those circumstances, `paint_file_path_with_line_number`
+        // returns a hyperlinked file path with line number.
+
+        let mut cfg = integration_test_utils::make_config_from_args(&["--features", "hyperlinks"]);
+        cfg.git_config_entries.insert(
+            "delta.__workdir__".to_string(),
+            GitConfigEntry::Path("/some/workdir".into()),
+        );
 
         let result = paint_file_path_with_line_number(Some(3), "some-file", &cfg);
 
-        assert_eq!(result, "some-file");
+        assert_eq!(result, "\u{1b}]8;;file:///some/workdir/some-file\u{1b}\\\u{1b}[34m3\u{1b}[0m\u{1b}]8;;\u{1b}\\");
     }
 
     #[test]
     fn test_paint_file_path_with_line_number_empty() {
+        // hunk-header-style includes neither 'file' nor 'line-number'.
+        // This causes `paint_file_path_with_line_number` to return empty string.
         let cfg = integration_test_utils::make_config_from_args(&[
             "--hunk-header-style",
             "syntax bold",
@@ -421,6 +437,10 @@ pub mod tests {
 
     #[test]
     fn test_paint_file_path_with_line_number_empty_hyperlinks() {
+        // hunk-header-style includes neither 'file' nor 'line-number'.
+        // This causes `paint_file_path_with_line_number` to return empty string.
+        // This test confirms that this remains true even when we are requesting hyperlinks.
+
         let cfg = integration_test_utils::make_config_from_args(&[
             "--hunk-header-style",
             "syntax bold",
