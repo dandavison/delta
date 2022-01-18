@@ -314,6 +314,8 @@ fn write_to_output_buffer(
 
 #[cfg(test)]
 pub mod tests {
+    use std::path::PathBuf;
+
     use super::*;
     use crate::ansi::strip_ansi_codes;
     use crate::tests::integration_test_utils;
@@ -391,9 +393,9 @@ pub mod tests {
     fn test_paint_file_path_with_line_number_default() {
         // hunk-header-style (by default) includes 'line-number' but not 'file'.
         // This test confirms that `paint_file_path_with_line_number` returns a painted line number.
-        let cfg = integration_test_utils::make_config_from_args(&[]);
+        let config = integration_test_utils::make_config_from_args(&[]);
 
-        let result = paint_file_path_with_line_number(Some(3), "some-file", &cfg);
+        let result = paint_file_path_with_line_number(Some(3), "some-file", &config);
 
         assert_eq!(result, "\u{1b}[34m3\u{1b}[0m");
     }
@@ -408,10 +410,11 @@ pub mod tests {
         // This test confirms that, under those circumstances, `paint_file_path_with_line_number`
         // returns a hyperlinked file path with line number.
 
-        let mut cfg = integration_test_utils::make_config_from_args(&["--features", "hyperlinks"]);
-        cfg.cwd = Some("/some/current/directory".into());
+        let mut config =
+            integration_test_utils::make_config_from_args(&["--features", "hyperlinks"]);
+        config.cwd_of_user_shell_process = Some(PathBuf::from("/some/current/directory"));
 
-        let result = paint_file_path_with_line_number(Some(3), "some-file", &cfg);
+        let result = paint_file_path_with_line_number(Some(3), "some-file", &config);
 
         assert_eq!(result, "\u{1b}]8;;file:///some/current/directory/some-file\u{1b}\\\u{1b}[34m3\u{1b}[0m\u{1b}]8;;\u{1b}\\");
     }
@@ -420,14 +423,14 @@ pub mod tests {
     fn test_paint_file_path_with_line_number_empty() {
         // hunk-header-style includes neither 'file' nor 'line-number'.
         // This causes `paint_file_path_with_line_number` to return empty string.
-        let cfg = integration_test_utils::make_config_from_args(&[
+        let config = integration_test_utils::make_config_from_args(&[
             "--hunk-header-style",
             "syntax bold",
             "--hunk-header-decoration-style",
             "omit",
         ]);
 
-        let result = paint_file_path_with_line_number(Some(3), "some-file", &cfg);
+        let result = paint_file_path_with_line_number(Some(3), "some-file", &config);
 
         assert_eq!(result, "");
     }
@@ -438,7 +441,7 @@ pub mod tests {
         // This causes `paint_file_path_with_line_number` to return empty string.
         // This test confirms that this remains true even when we are requesting hyperlinks.
 
-        let cfg = integration_test_utils::make_config_from_args(&[
+        let config = integration_test_utils::make_config_from_args(&[
             "--hunk-header-style",
             "syntax bold",
             "--hunk-header-decoration-style",
@@ -447,14 +450,14 @@ pub mod tests {
             "hyperlinks",
         ]);
 
-        let result = paint_file_path_with_line_number(Some(3), "some-file", &cfg);
+        let result = paint_file_path_with_line_number(Some(3), "some-file", &config);
 
         assert_eq!(result, "");
     }
 
     #[test]
     fn test_paint_file_path_with_line_number_empty_navigate() {
-        let cfg = integration_test_utils::make_config_from_args(&[
+        let config = integration_test_utils::make_config_from_args(&[
             "--hunk-header-style",
             "syntax bold",
             "--hunk-header-decoration-style",
@@ -462,7 +465,7 @@ pub mod tests {
             "--navigate",
         ]);
 
-        let result = paint_file_path_with_line_number(Some(3), "δ some-file", &cfg);
+        let result = paint_file_path_with_line_number(Some(3), "δ some-file", &config);
 
         assert_eq!(result, "");
     }

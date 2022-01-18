@@ -24,6 +24,7 @@ use crate::style;
 use crate::style::Style;
 use crate::tests::TESTING;
 use crate::utils::bat::output::PagingMode;
+use crate::utils::cwd::cwd_of_user_shell_process;
 use crate::utils::regex_replacement::RegexReplacement;
 use crate::utils::syntect::FromDeltaStyle;
 use crate::wrapping::WrapConfig;
@@ -70,7 +71,8 @@ pub struct Config {
     pub color_only: bool,
     pub commit_regex: Regex,
     pub commit_style: Style,
-    pub cwd: Option<PathBuf>,
+    pub cwd_of_delta_process: Option<PathBuf>,
+    pub cwd_of_user_shell_process: Option<PathBuf>,
     pub cwd_relative_to_repo_root: Option<String>,
     pub decorations_width: cli::Width,
     pub default_language: Option<String>,
@@ -241,6 +243,13 @@ impl From<cli::Opt> for Config {
 
         let wrap_max_lines_plus1 = adapt_wrap_max_lines_argument(opt.wrap_max_lines);
 
+        let cwd_of_delta_process = std::env::current_dir().ok();
+        let cwd_relative_to_repo_root = std::env::var("GIT_PREFIX").ok();
+        let cwd_of_user_shell_process = cwd_of_user_shell_process(
+            cwd_of_delta_process.as_ref(),
+            cwd_relative_to_repo_root.as_deref(),
+        );
+
         Self {
             available_terminal_width: opt.computed.available_terminal_width,
             background_color_extends_to_terminal_width: opt
@@ -255,8 +264,9 @@ impl From<cli::Opt> for Config {
             commit_style: styles["commit-style"],
             color_only: opt.color_only,
             commit_regex,
-            cwd: std::env::current_dir().ok(),
-            cwd_relative_to_repo_root: std::env::var("GIT_PREFIX").ok(),
+            cwd_of_delta_process,
+            cwd_of_user_shell_process,
+            cwd_relative_to_repo_root,
             decorations_width: opt.computed.decorations_width,
             default_language: opt.default_language,
             diff_stat_align_width: opt.diff_stat_align_width,

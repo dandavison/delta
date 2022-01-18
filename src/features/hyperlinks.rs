@@ -7,8 +7,6 @@ use regex::{Captures, Regex};
 use crate::config::Config;
 use crate::features::OptionValueFunction;
 use crate::git_config::{GitConfig, GitConfigEntry, GitRemoteRepo};
-use crate::utils::cwd::cwd_of_user_shell_process;
-
 pub fn make_feature() -> Vec<(String, OptionValueFunction)> {
     builtin_feature!([
         (
@@ -61,7 +59,7 @@ pub fn format_osc8_file_hyperlink<'a>(
     text: &str,
     config: &Config,
 ) -> Cow<'a, str> {
-    if let Some(cwd) = cwd_of_user_shell_process(config) {
+    if let Some(cwd) = &config.cwd_of_user_shell_process {
         let absolute_path = cwd.join(relative_path);
         let mut url = config
             .hyperlinks_file_link_format
@@ -144,8 +142,7 @@ pub mod tests {
             "--hyperlinks-file-link-format",
             "{path}",
         ]);
-        config.cwd_relative_to_repo_root = None; // Not set because we were not invoked by git
-        config.cwd = Some(PathBuf::from("/some/cwd"));
+        config.cwd_of_user_shell_process = Some(PathBuf::from("/some/cwd"));
         assert_file_hyperlink_matches("a", "/some/cwd/a", &config)
     }
 
@@ -161,9 +158,7 @@ pub mod tests {
             "--hyperlinks-file-link-format",
             "{path}",
         ]);
-        config.cwd_relative_to_repo_root = None; // Not set because we were not invoked by git
-        config.cwd = Some("/some/repo-root".into()); // Git invokes delta from the repo root
-        config.cwd_relative_to_repo_root = Some("b".into()); // Git preserves the user's directory in the GIT_PREFIX env var
+        config.cwd_of_user_shell_process = Some(PathBuf::from("/some/repo-root/b"));
         assert_file_hyperlink_matches("a", "/some/repo-root/b/a", &config)
     }
 }
