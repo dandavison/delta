@@ -281,8 +281,7 @@ impl From<cli::Opt> for Config {
             file_regex_replacement: opt
                 .file_regex_replacement
                 .as_deref()
-                .map(RegexReplacement::from_sed_command)
-                .flatten(),
+                .and_then(RegexReplacement::from_sed_command),
             right_arrow,
             hunk_label,
             file_style: styles["file-style"],
