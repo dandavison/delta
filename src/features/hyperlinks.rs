@@ -145,7 +145,7 @@ pub mod tests {
             "{path}",
         ]);
         config.cwd_relative_to_repo_root = None; // Not set because we were not invoked by git
-        config.cwd = Some(PathBuf::from("/some/cwd"));
+        config.cwd_of_delta_process = Some(PathBuf::from("/some/cwd"));
         assert_file_hyperlink_matches("a", "/some/cwd/a", &config)
     }
 
@@ -162,7 +162,7 @@ pub mod tests {
             "{path}",
         ]);
         config.cwd_relative_to_repo_root = None; // Not set because we were not invoked by git
-        config.cwd = Some("/some/repo-root".into()); // Git invokes delta from the repo root
+        config.cwd_of_delta_process = Some("/some/repo-root".into()); // Git invokes delta from the repo root
         config.cwd_relative_to_repo_root = Some("b".into()); // Git preserves the user's directory in the GIT_PREFIX env var
         assert_file_hyperlink_matches("a", "/some/repo-root/b/a", &config)
     }

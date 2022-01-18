@@ -7,7 +7,10 @@ use crate::config::Config;
 /// constructed if they are using either (a) delta's relative-paths option or (b) git's --relative
 /// flag.
 pub fn cwd_of_user_shell_process(config: &Config) -> Option<PathBuf> {
-    match (&config.cwd, &config.cwd_relative_to_repo_root) {
+    match (
+        &config.cwd_of_delta_process,
+        &config.cwd_relative_to_repo_root,
+    ) {
         (Some(cwd), None) => {
             // We are not a child process of git
             Some(PathBuf::from(cwd))
