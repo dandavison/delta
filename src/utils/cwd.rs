@@ -2,10 +2,10 @@ use std::path::PathBuf;
 
 use crate::config::Config;
 
-/// Return current working directory of the user's shell process. I.e. the directory in which they
-/// are in when delta exits. This is the directory relative to which the file paths in delta output
-/// are constructed if they are using either (a) delta's relative-paths option or (b) git's
-/// --relative flag.
+/// Return current working directory of the user's shell process. I.e. the directory which they are
+/// in when delta exits. This is the directory relative to which the file paths in delta output are
+/// constructed if they are using either (a) delta's relative-paths option or (b) git's --relative
+/// flag.
 pub fn cwd_of_user_shell_process(config: &Config) -> Option<PathBuf> {
     match (&config.cwd, &config.cwd_relative_to_repo_root) {
         (Some(cwd), None) => {
