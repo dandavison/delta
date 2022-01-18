@@ -136,7 +136,7 @@ pub fn show_config(config: &config::Config, writer: &mut dyn Write) -> std::io::
         navigate = config.navigate,
         navigate_regex = match &config.navigate_regex {
             None => "".to_string(),
-            Some(s) => format_option_value(s.to_string()),
+            Some(s) => format_option_value(s),
         },
         pager = config.pager.clone().unwrap_or_else(|| "none".to_string()),
         paging_mode = match config.paging_mode {
