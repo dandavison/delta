@@ -58,7 +58,7 @@ impl<'a> StateMachine<'a> {
                 // Emit syntax-highlighted code
                 // TODO: Determine the language less frequently, e.g. only when the file changes.
                 if let Some(lang) = handlers::diff_header::get_extension(&grep_line.path)
-                    .or_else(|| self.config.default_language.as_deref())
+                    .or(self.config.default_language.as_deref())
                 {
                     self.painter.set_syntax(Some(lang));
                     self.painter.set_highlighter();
@@ -455,7 +455,7 @@ pub fn _parse_grep_line<'b>(regex: &Regex, line: &'b str) -> Option<GrepLine<'b>
     .find_map(|(i, line_type)| {
         if caps.get(*i).is_some() {
             let line_number: Option<usize> =
-                caps.get(i + 1).map(|m| m.as_str().parse().ok()).flatten();
+                caps.get(i + 1).and_then(|m| m.as_str().parse().ok());
             Some((*line_type, line_number))
         } else {
             None
