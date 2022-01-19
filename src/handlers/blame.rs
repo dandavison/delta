@@ -182,10 +182,29 @@ impl<'a> StateMachine<'a> {
 }
 
 #[derive(Debug)]
+// The parsed time stamp, or if that fails the raw input string.
+pub(crate) enum BlameTime<'a> {
+    Time(DateTime<FixedOffset>),
+    RawString(&'a str),
+}
+
+impl<'a> BlameTime<'a> {
+    fn format(&self, format_str: &Option<String>) -> String {
+        match self {
+            Self::Time(datetime) => match format_str {
+                Some(time_format) => datetime.format(time_format).to_string(),
+                None => chrono_humanize::HumanTime::from(*datetime).to_string(),
+            },
+            Self::RawString(s) => s.to_string(),
+        }
+    }
+}
+
+#[derive(Debug)]
 pub struct BlameLine<'a> {
     pub commit: &'a str,
     pub author: &'a str,
-    pub time: DateTime<FixedOffset>,
+    pub time: BlameTime<'a>,
     pub line_number: usize,
     pub code: &'a str,
 }
@@ -204,11 +223,11 @@ lazy_static! {
 [\ ]
 \(                 # open ( which the previous file name may not contain in case a name does (which is more likely)
 (
-    [^\ ].*[^\ ]   # author name
+    [^\ ].*?[^\ ]  # author name (non-greedy via '?' so the following timestamp is matched)
 )
 [\ ]+
-(                  # timestamp
-    [0-9]{4}-[0-9]{2}-[0-9]{2}\ [0-9]{2}:[0-9]{2}:[0-9]{2}\ [-+][0-9]{4}
+(                  # timestamp, a general regex to capture input which will be parsed by strftime
+    (?:[0-9]+[\ :\+-T]+)*[0-9]+      # numbers and possible separatores, then a final number
 )
 [\ ]+
 (
@@ -231,7 +250,10 @@ pub fn parse_git_blame_line<'a>(line: &'a str, timestamp_format: &str) -> Option
     let author = caps.get(2).unwrap().as_str();
     let timestamp = caps.get(3).unwrap().as_str();
 
-    let time = DateTime::parse_from_str(timestamp, timestamp_format).ok()?;
+    let time = match DateTime::parse_from_str(timestamp, timestamp_format) {
+        Ok(datetime) => BlameTime::Time(datetime),
+        Err(_) => BlameTime::RawString(timestamp),
+    };
 
     let line_number = caps.get(4).unwrap().as_str().parse::<usize>().ok()?;
 
@@ -266,12 +288,9 @@ pub fn format_blame_metadata(
         let width = placeholder.width.unwrap_or(15);
 
         let field = match placeholder.placeholder {
-            Some(Placeholder::Str("timestamp")) => {
-                Some(Cow::from(match &config.blame_timestamp_output_format {
-                    Some(time_format) => blame.time.format(time_format).to_string(),
-                    None => chrono_humanize::HumanTime::from(blame.time).to_string(),
-                }))
-            }
+            Some(Placeholder::Str("timestamp")) => Some(Cow::from(
+                blame.time.format(&config.blame_timestamp_output_format),
+            )),
             Some(Placeholder::Str("author")) => Some(Cow::from(blame.author)),
             Some(Placeholder::Str("commit")) => Some(delta::format_raw_line(blame.commit, config)),
             None => None,
@@ -399,6 +418,9 @@ mod tests {
             assert!(caps.is_some());
             assert!(parse_git_blame_line(line, "%Y-%m-%d %H:%M:%S %z").is_some());
         }
+
+        let strange_date = "1234 (Author Name-Here   19-01-0500 18-08+2022T41 1) --date=format:'%d-%m%z %M-%H+%YT%S'";
+        assert!(parse_git_blame_line(strange_date, "%d-%m%z %M-%H+%YT%S").is_some());
     }
 
     #[test]
@@ -448,6 +470,23 @@ mod tests {
             count_trailing_spaces(result1),
             count_trailing_spaces(result2)
         );
+    }
+
+    #[test]
+    fn test_blame_timestamp_regex() {
+        // Not supported: rfc2822, the weekday start (plus possible localisation) can't be separated from the author
+        for timestamp_fmt in &[
+            "1234 (Author Name-Here   2021-08-22 18:20:19 -0700 1) default blame (iso)",
+            "1234 (Author Name-Here   2022-01-19T23:49:50+01:00 1) iso strict",
+            "1234 (Author Name-Here   2022-01-19 1) short",
+            "1234 (Author Name-Here   123456789 1) unix",
+            "1234 (Author Name-Here   123456789 +0100 1) raw",
+            "1234 (Author Name-Here   19-01-0500 18-08+2022T41 1) --date=format:'%d-%m%z %M-%H+%YT%S'"
+        ] {
+            let caps = BLAME_LINE_REGEX.captures(timestamp_fmt);
+            assert!(caps.is_some());
+            assert!(caps.unwrap().get(3).is_some())
+        }
     }
 
     #[test]
@@ -545,7 +584,7 @@ mod tests {
         BlameLine {
             commit: "",
             author: "",
-            time,
+            time: BlameTime::Time(time),
             line_number: 0,
             code: "",
         }
@@ -562,7 +601,7 @@ mod tests {
         BlameLine {
             commit: "",
             author,
-            time: chrono::DateTime::default(),
+            time: BlameTime::Time(chrono::DateTime::default()),
             line_number: 0,
             code: "",
         }
