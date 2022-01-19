@@ -368,8 +368,8 @@ ignored!  2
                 r#"
                  #indent_mark
                  @@ -1,1 +1,1 @@ fn foo() {
-                  1  ⋮    │-1
-                     ⋮ 1  │+2"#,
+                   1 ⋮    │-1
+                     ⋮  1 │+2"#,
             );
 
         DeltaTest::with_args(&[])
