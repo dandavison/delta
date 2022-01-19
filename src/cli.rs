@@ -20,6 +20,7 @@ use crate::utils::bat::output::PagingMode;
     version,
     color = ColorChoice::Always,
     setting(AppSettings::DeriveDisplayOrder),
+    term_width(usize::MAX),
     after_long_help = "\
 GIT CONFIG
 ----------
@@ -729,8 +730,7 @@ pub struct Opt {
     #[clap(
         long = "merge-conflict-theirs-diff-header-decoration-style",
         default_value = "box",
-        // See https://github.com/clap-rs/clap/issues/3300
-        value_name = "STYLE>                            "
+        value_name = "STYLE"
     )]
     /// Style string for the decoration of the header above the 'theirs' merge conflict diff.
     ///
