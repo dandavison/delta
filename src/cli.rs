@@ -20,7 +20,7 @@ use crate::utils::bat::output::PagingMode;
     version,
     color = ColorChoice::Always,
     setting(AppSettings::DeriveDisplayOrder),
-    term_width(usize::MAX),
+    term_width(0),
     after_long_help = "\
 GIT CONFIG
 ----------
