@@ -9,7 +9,7 @@ use crate::config;
 use crate::config::delta_unreachable;
 use crate::delta::{self, State, StateMachine};
 use crate::fatal;
-use crate::format::{self, Placeholder, FormatStringSimple};
+use crate::format::{self, FormatStringSimple, Placeholder};
 use crate::format::{make_placeholder_regex, parse_line_number_format};
 use crate::paint::{self, BgShouldFill, StyleSectionSpecifier};
 use crate::style::Style;
