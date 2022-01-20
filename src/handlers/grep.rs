@@ -58,7 +58,7 @@ impl<'a> StateMachine<'a> {
                 // Emit syntax-highlighted code
                 // TODO: Determine the language less frequently, e.g. only when the file changes.
                 if let Some(lang) = handlers::diff_header::get_extension(&grep_line.path)
-                    .or(self.config.default_language.as_deref())
+                    .or_else(|| self.config.default_language.as_deref())
                 {
                     self.painter.set_syntax(Some(lang));
                     self.painter.set_highlighter();
