@@ -6,8 +6,8 @@
 /// by the user, it is determined by the classification of the syntax theme into light-background
 /// vs dark-background syntax themes. If the user didn't choose a syntax theme, a dark-background
 /// default is selected.
+use bat;
 use bat::assets::HighlightingAssets;
-use bat::assets::LazyThemeSet;
 
 use crate::cli;
 use crate::env;
@@ -92,7 +92,7 @@ fn get_is_light_mode_and_syntax_theme_name(
     theme_arg: Option<&String>,
     bat_theme_env_var: Option<&String>,
     light_mode_arg: bool,
-    theme_set: &LazyThemeSet,
+    theme_set: &bat::assets::ThemeSet,
 ) -> (bool, String) {
     let theme_arg = valid_syntax_theme_name_or_none(theme_arg, theme_set);
     let bat_theme_env_var = valid_syntax_theme_name_or_none(bat_theme_env_var, theme_set);
@@ -110,7 +110,7 @@ fn get_is_light_mode_and_syntax_theme_name(
 // no-syntax-highlighting name.
 fn valid_syntax_theme_name_or_none(
     theme_name: Option<&String>,
-    theme_set: &LazyThemeSet,
+    theme_set: &bat::assets::ThemeSet,
 ) -> Option<String> {
     match theme_name {
         Some(name)
