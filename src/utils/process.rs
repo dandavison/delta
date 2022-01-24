@@ -5,6 +5,8 @@ use std::sync::{Arc, Condvar, Mutex, MutexGuard};
 use lazy_static::lazy_static;
 use sysinfo::{Pid, PidExt, Process, ProcessExt, ProcessRefreshKind, SystemExt};
 
+pub type DeltaPid = u32;
+
 #[derive(Clone, Debug, PartialEq)]
 pub enum CallingProcess {
     GitDiff(CommandLine),
@@ -283,7 +285,7 @@ impl ProcInfo {
 
 trait ProcActions {
     fn cmd(&self) -> &[String];
-    fn parent(&self) -> Option<Pid>;
+    fn parent(&self) -> Option<DeltaPid>;
     fn start_time(&self) -> u64;
 }
 
@@ -294,8 +296,8 @@ where
     fn cmd(&self) -> &[String] {
         ProcessExt::cmd(self)
     }
-    fn parent(&self) -> Option<Pid> {
-        ProcessExt::parent(self)
+    fn parent(&self) -> Option<DeltaPid> {
+        ProcessExt::parent(self).map(|p| p.as_u32())
     }
     fn start_time(&self) -> u64 {
         ProcessExt::start_time(self)
@@ -305,26 +307,30 @@ where
 trait ProcessInterface {
     type Out: ProcActions;
 
-    fn my_pid(&self) -> Pid;
+    fn my_pid(&self) -> DeltaPid;
 
-    fn process(&self, pid: Pid) -> Option<&Self::Out>;
+    fn process(&self, pid: DeltaPid) -> Option<&Self::Out>;
     fn processes(&self) -> &HashMap<Pid, Self::Out>;
 
-    fn refresh_process(&mut self, pid: Pid) -> bool;
+    fn refresh_process(&mut self, pid: DeltaPid) -> bool;
     fn refresh_processes(&mut self);
 
-    fn parent_process(&mut self, pid: Pid) -> Option<&Self::Out> {
+    fn parent_process(&mut self, pid: DeltaPid) -> Option<&Self::Out> {
         self.refresh_process(pid).then(|| ())?;
         let parent_pid = self.process(pid)?.parent()?;
         self.refresh_process(parent_pid).then(|| ())?;
         self.process(parent_pid)
     }
-    fn naive_sibling_process(&mut self, pid: Pid) -> Option<&Self::Out> {
-        let sibling_pid = Pid::from_u32(pid.as_u32() - 1);
+    fn naive_sibling_process(&mut self, pid: DeltaPid) -> Option<&Self::Out> {
+        let sibling_pid = pid - 1;
         self.refresh_process(sibling_pid).then(|| ())?;
         self.process(sibling_pid)
     }
-    fn find_sibling_in_refreshed_processes<F, T>(&mut self, pid: Pid, extract_args: &F) -> Option<T>
+    fn find_sibling_in_refreshed_processes<F, T>(
+        &mut self,
+        pid: DeltaPid,
+        extract_args: &F,
+    ) -> Option<T>
     where
         F: Fn(&[String]) -> ProcessArgs<T>,
         Self: Sized,
@@ -349,7 +355,7 @@ trait ProcessInterface {
 
         let this_start_time = self.process(pid)?.start_time();
 
-        let mut pid_distances = HashMap::<Pid, usize>::new();
+        let mut pid_distances = HashMap::<DeltaPid, usize>::new();
         let mut collect_parent_pids = |pid, distance| {
             pid_distances.insert(pid, distance);
         };
@@ -376,7 +382,7 @@ trait ProcessInterface {
                             }
                         }
                     };
-                    iter_parents(self, pid, &mut sum_distance);
+                    iter_parents(self, pid.as_u32(), &mut sum_distance);
 
                     if length_of_process_chain == usize::MAX {
                         None
@@ -396,15 +402,15 @@ trait ProcessInterface {
 impl ProcessInterface for ProcInfo {
     type Out = Process;
 
-    fn my_pid(&self) -> Pid {
-        Pid::from_u32(std::process::id() as _)
+    fn my_pid(&self) -> DeltaPid {
+        std::process::id()
     }
-    fn refresh_process(&mut self, pid: Pid) -> bool {
+    fn refresh_process(&mut self, pid: DeltaPid) -> bool {
         self.info
-            .refresh_process_specifics(pid, ProcessRefreshKind::new())
+            .refresh_process_specifics(Pid::from_u32(pid), ProcessRefreshKind::new())
     }
-    fn process(&self, pid: Pid) -> Option<&Self::Out> {
-        self.info.process(pid)
+    fn process(&self, pid: DeltaPid) -> Option<&Self::Out> {
+        self.info.process(Pid::from_u32(pid))
     }
     fn processes(&self) -> &HashMap<Pid, Self::Out> {
         self.info.processes()
@@ -480,13 +486,12 @@ where
 
     */
 
-    let my_pid_u32 = my_pid.as_u32();
-    let pid_range = my_pid_u32.saturating_sub(10)..my_pid_u32.saturating_add(20);
+    let pid_range = my_pid.saturating_sub(10)..my_pid.saturating_add(20);
     for p in pid_range {
         // Processes which were not refreshed do not exist for sysinfo, so by selectively
         // letting it know about processes the `find_sibling..` function will only
         // consider these.
-        info.refresh_process(Pid::from_u32(p));
+        info.refresh_process(p);
     }
 
     match info.find_sibling_in_refreshed_processes(my_pid, &extract_args) {
@@ -500,15 +505,15 @@ where
 
 // Walk up the process tree, calling `f` with the pid and the distance to `starting_pid`.
 // Prerequisite: `info.refresh_processes()` has been called.
-fn iter_parents<P, F>(info: &P, starting_pid: Pid, f: F)
+fn iter_parents<P, F>(info: &P, starting_pid: DeltaPid, f: F)
 where
     P: ProcessInterface,
-    F: FnMut(Pid, usize),
+    F: FnMut(DeltaPid, usize),
 {
-    fn inner_iter_parents<P, F>(info: &P, pid: Pid, mut f: F, distance: usize)
+    fn inner_iter_parents<P, F>(info: &P, pid: DeltaPid, mut f: F, distance: usize)
     where
         P: ProcessInterface,
-        F: FnMut(Pid, usize),
+        F: FnMut(u32, usize),
     {
         // Probably bad input, not a tree:
         if distance > 2000 {
@@ -700,15 +705,15 @@ pub mod tests {
     #[derive(Debug)]
     struct FakeProc {
         #[allow(dead_code)]
-        pid: Pid,
+        pid: DeltaPid,
         start_time: u64,
         cmd: Vec<String>,
-        ppid: Option<Pid>,
+        ppid: Option<DeltaPid>,
     }
     impl Default for FakeProc {
         fn default() -> Self {
             Self {
-                pid: Pid::from_u32(0),
+                pid: 0,
                 start_time: 0,
                 cmd: Vec::new(),
                 ppid: None,
@@ -716,7 +721,7 @@ pub mod tests {
         }
     }
     impl FakeProc {
-        fn new(pid: Pid, start_time: u64, cmd: Vec<String>, ppid: Option<Pid>) -> Self {
+        fn new(pid: DeltaPid, start_time: u64, cmd: Vec<String>, ppid: Option<DeltaPid>) -> Self {
             FakeProc {
                 pid,
                 start_time,
@@ -730,7 +735,7 @@ pub mod tests {
         fn cmd(&self) -> &[String] {
             &self.cmd
         }
-        fn parent(&self) -> Option<Pid> {
+        fn parent(&self) -> Option<DeltaPid> {
             self.ppid
         }
         fn start_time(&self) -> u64 {
@@ -740,26 +745,29 @@ pub mod tests {
 
     #[derive(Debug)]
     struct MockProcInfo {
-        delta_pid: Pid,
+        delta_pid: DeltaPid,
         info: HashMap<Pid, FakeProc>,
     }
     impl Default for MockProcInfo {
         fn default() -> Self {
             Self {
-                delta_pid: Pid::from_u32(0),
+                delta_pid: 0,
                 info: HashMap::new(),
             }
         }
     }
     impl MockProcInfo {
-        fn with(processes: &[(Pid, u64, &str, Option<Pid>)]) -> Self {
+        fn with(processes: &[(DeltaPid, u64, &str, Option<DeltaPid>)]) -> Self {
             MockProcInfo {
-                delta_pid: processes.last().map(|p| p.0).unwrap_or(Pid::from_u32(1)),
+                delta_pid: processes.last().map(|p| p.0).unwrap_or(1),
                 info: processes
                     .iter()
                     .map(|(pid, start_time, cmd, ppid)| {
                         let cmd_vec = cmd.split(' ').map(str::to_owned).collect();
-                        (*pid, FakeProc::new(*pid, *start_time, cmd_vec, *ppid))
+                        (
+                            Pid::from_u32(*pid),
+                            FakeProc::new(*pid, *start_time, cmd_vec, *ppid),
+                        )
                     })
                     .collect(),
             }
@@ -769,17 +777,17 @@ pub mod tests {
     impl ProcessInterface for MockProcInfo {
         type Out = FakeProc;
 
-        fn my_pid(&self) -> Pid {
+        fn my_pid(&self) -> DeltaPid {
             self.delta_pid
         }
-        fn process(&self, pid: Pid) -> Option<&Self::Out> {
-            self.info.get(&pid)
+        fn process(&self, pid: DeltaPid) -> Option<&Self::Out> {
+            self.info.get(&Pid::from_u32(pid))
         }
         fn processes(&self) -> &HashMap<Pid, Self::Out> {
             &self.info
         }
         fn refresh_processes(&mut self) {}
-        fn refresh_process(&mut self, _pid: Pid) -> bool {
+        fn refresh_process(&mut self, _pid: DeltaPid) -> bool {
             true
         }
     }
@@ -891,15 +899,10 @@ pub mod tests {
     #[test]
     fn test_process_blame_no_parent_found() {
         let two_trees = MockProcInfo::with(&[
-            (Pid::from_u32(2), 100, "-shell", None),
-            (
-                Pid::from_u32(3),
-                100,
-                "git blame src/main.rs",
-                Some(Pid::from_u32(2)),
-            ),
-            (Pid::from_u32(4), 100, "call_delta.sh", None),
-            (Pid::from_u32(5), 100, "delta", Some(Pid::from_u32(4))),
+            (2, 100, "-shell", None),
+            (3, 100, "git blame src/main.rs", Some(2)),
+            (4, 100, "call_delta.sh", None),
+            (5, 100, "delta", Some(4)),
         ]);
         assert_eq!(
             calling_process_cmdline(two_trees, guess_git_blame_filename_extension),
@@ -916,14 +919,9 @@ pub mod tests {
         );
 
         let parent = MockProcInfo::with(&[
-            (Pid::from_u32(2), 100, "-shell", None),
-            (
-                Pid::from_u32(3),
-                100,
-                "git blame hello.txt",
-                Some(Pid::from_u32(2)),
-            ),
-            (Pid::from_u32(4), 100, "delta", Some(Pid::from_u32(3))),
+            (2, 100, "-shell", None),
+            (3, 100, "git blame hello.txt", Some(2)),
+            (4, 100, "delta", Some(3)),
         ]);
         assert_eq!(
             calling_process_cmdline(parent, guess_git_blame_filename_extension),
@@ -931,20 +929,10 @@ pub mod tests {
         );
 
         let grandparent = MockProcInfo::with(&[
-            (Pid::from_u32(2), 100, "-shell", None),
-            (
-                Pid::from_u32(3),
-                100,
-                "git blame src/main.rs",
-                Some(Pid::from_u32(2)),
-            ),
-            (
-                Pid::from_u32(4),
-                100,
-                "call_delta.sh",
-                Some(Pid::from_u32(3)),
-            ),
-            (Pid::from_u32(5), 100, "delta", Some(Pid::from_u32(4))),
+            (2, 100, "-shell", None),
+            (3, 100, "git blame src/main.rs", Some(2)),
+            (4, 100, "call_delta.sh", Some(3)),
+            (5, 100, "delta", Some(4)),
         ]);
         assert_eq!(
             calling_process_cmdline(grandparent, guess_git_blame_filename_extension),
@@ -955,15 +943,10 @@ pub mod tests {
     #[test]
     fn test_process_blame_info_with_sibling() {
         let sibling = MockProcInfo::with(&[
-            (Pid::from_u32(2), 100, "-xterm", None),
-            (Pid::from_u32(3), 100, "-shell", Some(Pid::from_u32(2))),
-            (
-                Pid::from_u32(4),
-                100,
-                "git blame src/main.rs",
-                Some(Pid::from_u32(3)),
-            ),
-            (Pid::from_u32(5), 100, "delta", Some(Pid::from_u32(3))),
+            (2, 100, "-xterm", None),
+            (3, 100, "-shell", Some(2)),
+            (4, 100, "git blame src/main.rs", Some(3)),
+            (5, 100, "delta", Some(3)),
         ]);
         assert_eq!(
             calling_process_cmdline(sibling, guess_git_blame_filename_extension),
@@ -971,22 +954,17 @@ pub mod tests {
         );
 
         let indirect_sibling = MockProcInfo::with(&[
-            (Pid::from_u32(2), 100, "-xterm", None),
-            (Pid::from_u32(3), 100, "-shell", Some(Pid::from_u32(2))),
+            (2, 100, "-xterm", None),
+            (3, 100, "-shell", Some(2)),
+            (4, 100, "Git.exe blame --correct src/main.abc", Some(3)),
             (
-                Pid::from_u32(4),
-                100,
-                "Git.exe blame --correct src/main.abc",
-                Some(Pid::from_u32(3)),
-            ),
-            (
-                Pid::from_u32(10),
+                10,
                 100,
                 "Git.exe blame --ignored-child src/main.def",
-                Some(Pid::from_u32(4)),
+                Some(4),
             ),
-            (Pid::from_u32(5), 100, "delta.sh", Some(Pid::from_u32(3))),
-            (Pid::from_u32(20), 100, "delta", Some(Pid::from_u32(5))),
+            (5, 100, "delta.sh", Some(3)),
+            (20, 100, "delta", Some(5)),
         ]);
         assert_eq!(
             calling_process_cmdline(indirect_sibling, guess_git_blame_filename_extension),
@@ -994,22 +972,12 @@ pub mod tests {
         );
 
         let indirect_sibling2 = MockProcInfo::with(&[
-            (Pid::from_u32(2), 100, "-xterm", None),
-            (Pid::from_u32(3), 100, "-shell", Some(Pid::from_u32(2))),
-            (
-                Pid::from_u32(4),
-                100,
-                "git wrap src/main.abc",
-                Some(Pid::from_u32(3)),
-            ),
-            (
-                Pid::from_u32(10),
-                100,
-                "git blame src/main.def",
-                Some(Pid::from_u32(4)),
-            ),
-            (Pid::from_u32(5), 100, "delta.sh", Some(Pid::from_u32(3))),
-            (Pid::from_u32(20), 100, "delta", Some(Pid::from_u32(5))),
+            (2, 100, "-xterm", None),
+            (3, 100, "-shell", Some(2)),
+            (4, 100, "git wrap src/main.abc", Some(3)),
+            (10, 100, "git blame src/main.def", Some(4)),
+            (5, 100, "delta.sh", Some(3)),
+            (20, 100, "delta", Some(5)),
         ]);
         assert_eq!(
             calling_process_cmdline(indirect_sibling2, guess_git_blame_filename_extension),
@@ -1019,46 +987,16 @@ pub mod tests {
         // 3 blame processes, 2 with matching start times, pick the one with lower
         // distance but larger start time difference.
         let indirect_sibling_start_times = MockProcInfo::with(&[
-            (Pid::from_u32(2), 100, "-xterm", None),
-            (Pid::from_u32(3), 100, "-shell", Some(Pid::from_u32(2))),
-            (
-                Pid::from_u32(4),
-                109,
-                "git wrap src/main.abc",
-                Some(Pid::from_u32(3)),
-            ),
-            (
-                Pid::from_u32(10),
-                109,
-                "git blame src/main.def",
-                Some(Pid::from_u32(4)),
-            ),
-            (
-                Pid::from_u32(20),
-                100,
-                "git wrap1 src/main.abc",
-                Some(Pid::from_u32(3)),
-            ),
-            (
-                Pid::from_u32(21),
-                100,
-                "git wrap2 src/main.def",
-                Some(Pid::from_u32(20)),
-            ),
-            (
-                Pid::from_u32(22),
-                101,
-                "git blame src/main.not",
-                Some(Pid::from_u32(21)),
-            ),
-            (
-                Pid::from_u32(23),
-                102,
-                "git blame src/main.this",
-                Some(Pid::from_u32(20)),
-            ),
-            (Pid::from_u32(5), 100, "delta.sh", Some(Pid::from_u32(3))),
-            (Pid::from_u32(20), 100, "delta", Some(Pid::from_u32(5))),
+            (2, 100, "-xterm", None),
+            (3, 100, "-shell", Some(2)),
+            (4, 109, "git wrap src/main.abc", Some(3)),
+            (10, 109, "git blame src/main.def", Some(4)),
+            (20, 100, "git wrap1 src/main.abc", Some(3)),
+            (21, 100, "git wrap2 src/main.def", Some(20)),
+            (22, 101, "git blame src/main.not", Some(21)),
+            (23, 102, "git blame src/main.this", Some(20)),
+            (5, 100, "delta.sh", Some(3)),
+            (20, 100, "delta", Some(5)),
         ]);
         assert_eq!(
             calling_process_cmdline(
@@ -1083,14 +1021,9 @@ pub mod tests {
             last_arg: Some("hello.txt".to_string()),
         };
         let parent = MockProcInfo::with(&[
-            (Pid::from_u32(2), 100, "-shell", None),
-            (
-                Pid::from_u32(3),
-                100,
-                "git grep pattern hello.txt",
-                Some(Pid::from_u32(2)),
-            ),
-            (Pid::from_u32(4), 100, "delta", Some(Pid::from_u32(3))),
+            (2, 100, "-shell", None),
+            (3, 100, "git grep pattern hello.txt", Some(2)),
+            (4, 100, "delta", Some(3)),
         ]);
         assert_eq!(
             calling_process_cmdline(parent, describe_calling_process),
@@ -1098,14 +1031,9 @@ pub mod tests {
         );
 
         let parent = MockProcInfo::with(&[
-            (Pid::from_u32(2), 100, "-shell", None),
-            (
-                Pid::from_u32(3),
-                100,
-                "Git.exe grep pattern hello.txt",
-                Some(Pid::from_u32(2)),
-            ),
-            (Pid::from_u32(4), 100, "delta", Some(Pid::from_u32(3))),
+            (2, 100, "-shell", None),
+            (3, 100, "Git.exe grep pattern hello.txt", Some(2)),
+            (4, 100, "delta", Some(3)),
         ]);
         assert_eq!(
             calling_process_cmdline(parent, describe_calling_process),
@@ -1119,9 +1047,9 @@ pub mod tests {
             "ack.exe pattern hello.txt",
         ] {
             let parent = MockProcInfo::with(&[
-                (Pid::from_u32(2), 100, "-shell", None),
-                (Pid::from_u32(3), 100, grep_command, Some(Pid::from_u32(2))),
-                (Pid::from_u32(4), 100, "delta", Some(Pid::from_u32(3))),
+                (2, 100, "-shell", None),
+                (3, 100, grep_command, Some(2)),
+                (4, 100, "delta", Some(3)),
             ]);
             assert_eq!(
                 calling_process_cmdline(parent, describe_calling_process),
@@ -1139,14 +1067,9 @@ pub mod tests {
         }));
 
         let parent = MockProcInfo::with(&[
-            (Pid::from_u32(2), 100, "-shell", None),
-            (
-                Pid::from_u32(3),
-                100,
-                git_grep_command,
-                Some(Pid::from_u32(2)),
-            ),
-            (Pid::from_u32(4), 100, "delta", Some(Pid::from_u32(3))),
+            (2, 100, "-shell", None),
+            (3, 100, git_grep_command, Some(2)),
+            (4, 100, "delta", Some(3)),
         ]);
         assert_eq!(
             calling_process_cmdline(parent, describe_calling_process),
@@ -1154,20 +1077,10 @@ pub mod tests {
         );
 
         let grandparent = MockProcInfo::with(&[
-            (Pid::from_u32(2), 100, "-shell", None),
-            (
-                Pid::from_u32(3),
-                100,
-                git_grep_command,
-                Some(Pid::from_u32(2)),
-            ),
-            (
-                Pid::from_u32(4),
-                100,
-                "call_delta.sh",
-                Some(Pid::from_u32(3)),
-            ),
-            (Pid::from_u32(5), 100, "delta", Some(Pid::from_u32(4))),
+            (2, 100, "-shell", None),
+            (3, 100, git_grep_command, Some(2)),
+            (4, 100, "call_delta.sh", Some(3)),
+            (5, 100, "delta", Some(4)),
         ]);
         assert_eq!(
             calling_process_cmdline(grandparent, describe_calling_process),
@@ -1192,9 +1105,9 @@ pub mod tests {
             ),
         ] {
             let parent = MockProcInfo::with(&[
-                (Pid::from_u32(2), 100, "-shell", None),
-                (Pid::from_u32(3), 100, command, Some(Pid::from_u32(2))),
-                (Pid::from_u32(4), 100, "delta", Some(Pid::from_u32(3))),
+                (2, 100, "-shell", None),
+                (3, 100, command, Some(2)),
+                (4, 100, "delta", Some(3)),
             ]);
             if let Some(CallingProcess::GitShow(cmd_line, ext)) =
                 calling_process_cmdline(parent, describe_calling_process)
@@ -1219,14 +1132,10 @@ pub mod tests {
         info.refresh_processes();
         let mut ppid_distance = Vec::new();
 
-        iter_parents(
-            &info,
-            Pid::from_u32(std::process::id() as _),
-            |pid, distance| {
-                ppid_distance.push(pid.as_u32() as i32);
-                ppid_distance.push(distance as i32)
-            },
-        );
+        iter_parents(&info, std::process::id(), |pid, distance| {
+            ppid_distance.push(pid as i32);
+            ppid_distance.push(distance as i32)
+        });
 
         assert!(ppid_distance[1] == 1);
 
