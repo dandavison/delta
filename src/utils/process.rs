@@ -20,6 +20,18 @@ pub enum CallingProcess {
 }
 // TODO: Git blame is currently handled differently
 
+impl CallingProcess {
+    pub fn paths_in_input_are_relative_to_cwd(&self) -> bool {
+        match self {
+            CallingProcess::GitDiff(cmd) if cmd.long_options.contains("--relative") => true,
+            CallingProcess::GitShow(cmd, _) if cmd.long_options.contains("--relative") => true,
+            CallingProcess::GitLog(cmd) if cmd.long_options.contains("--relative") => true,
+            CallingProcess::GitGrep(_) | CallingProcess::OtherGrep => true,
+            _ => false,
+        }
+    }
+}
+
 #[derive(Clone, Debug, PartialEq)]
 pub struct CommandLine {
     pub long_options: HashSet<String>,

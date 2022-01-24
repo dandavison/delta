@@ -6,8 +6,8 @@ use unicode_segmentation::UnicodeSegmentation;
 use super::draw;
 use crate::config::Config;
 use crate::delta::{DiffType, Source, State, StateMachine};
-use crate::features;
 use crate::paint::Painter;
+use crate::{features, utils};
 
 // https://git-scm.com/docs/git-config#Documentation/git-config.txt-diffmnemonicPrefix
 const DIFF_PREFIXES: [&str; 6] = ["a/", "b/", "c/", "i/", "o/", "w/"];
@@ -64,16 +64,12 @@ impl<'a> StateMachine<'a> {
         }
         let mut handled_line = false;
 
-        let (path_or_mode, file_event) = parse_diff_header_line(
-            &self.line,
-            self.source == Source::GitDiff,
-            if self.config.relative_paths {
-                self.config.cwd_relative_to_repo_root.as_deref()
-            } else {
-                None
-            },
-        );
-        self.minus_file = path_or_mode;
+        let (path_or_mode, file_event) =
+            parse_diff_header_line(&self.line, self.source == Source::GitDiff);
+
+        self.minus_file = utils::path::relativize_path_maybe(&path_or_mode, self.config)
+            .map(|p| p.to_string_lossy().to_owned().to_string())
+            .unwrap_or(path_or_mode);
         self.minus_file_event = file_event;
 
         if self.source == Source::DiffUnified {
@@ -118,16 +114,12 @@ impl<'a> StateMachine<'a> {
             return Ok(false);
         }
         let mut handled_line = false;
-        let (path_or_mode, file_event) = parse_diff_header_line(
-            &self.line,
-            self.source == Source::GitDiff,
-            if self.config.relative_paths {
-                self.config.cwd_relative_to_repo_root.as_deref()
-            } else {
-                None
-            },
-        );
-        self.plus_file = path_or_mode;
+        let (path_or_mode, file_event) =
+            parse_diff_header_line(&self.line, self.source == Source::GitDiff);
+
+        self.plus_file = utils::path::relativize_path_maybe(&path_or_mode, self.config)
+            .map(|p| p.to_string_lossy().to_owned().to_string())
+            .unwrap_or(path_or_mode);
         self.plus_file_event = file_event;
         self.painter
             .set_syntax(get_file_extension_from_diff_header_line_file_path(
@@ -274,12 +266,8 @@ pub fn get_extension(s: &str) -> Option<&str> {
         .or_else(|| path.file_name().and_then(|s| s.to_str()))
 }
 
-fn parse_diff_header_line(
-    line: &str,
-    git_diff_name: bool,
-    relative_path_base: Option<&str>,
-) -> (String, FileEvent) {
-    let (mut path_or_mode, file_event) = match line {
+fn parse_diff_header_line(line: &str, git_diff_name: bool) -> (String, FileEvent) {
+    match line {
         line if line.starts_with("--- ") || line.starts_with("+++ ") => {
             let offset = 4;
             let file = _parse_file_path(&line[offset..], git_diff_name);
@@ -298,17 +286,7 @@ fn parse_diff_header_line(
             (line[8..].to_string(), FileEvent::Copy) // "copy to ".len()
         }
         _ => ("".to_string(), FileEvent::NoEvent),
-    };
-
-    if let Some(base) = relative_path_base {
-        if let Some(relative_path) = pathdiff::diff_paths(&path_or_mode, base) {
-            if let Some(relative_path) = relative_path.to_str() {
-                path_or_mode = relative_path.to_owned();
-            }
-        }
     }
-
-    (path_or_mode, file_event)
 }
 
 /// Given input like "diff --git a/src/my file.rs b/src/my file.rs"
@@ -369,12 +347,12 @@ pub fn get_file_change_description_from_file_paths(
             plus_file
         )
     } else {
-        let format_file = |file| {
-            if config.hyperlinks {
-                features::hyperlinks::format_osc8_file_hyperlink(file, None, file, config)
-            } else {
-                Cow::from(file)
+        let format_file = |file| match (config.hyperlinks, utils::path::absolute_path(file, config))
+        {
+            (true, Some(absolute_path)) => {
+                features::hyperlinks::format_osc8_file_hyperlink(absolute_path, None, file, config)
             }
+            _ => Cow::from(file),
         };
         match (minus_file, plus_file, minus_file_event, plus_file_event) {
             (minus_file, plus_file, _, _) if minus_file == plus_file => format!(
@@ -479,21 +457,21 @@ mod tests {
     #[test]
     fn test_get_file_path_from_git_diff_header_line() {
         assert_eq!(
-            parse_diff_header_line("--- /dev/null", true, None),
+            parse_diff_header_line("--- /dev/null", true),
             ("/dev/null".to_string(), FileEvent::Change)
         );
         for prefix in &DIFF_PREFIXES {
             assert_eq!(
-                parse_diff_header_line(&format!("--- {}src/delta.rs", prefix), true, None),
+                parse_diff_header_line(&format!("--- {}src/delta.rs", prefix), true),
                 ("src/delta.rs".to_string(), FileEvent::Change)
             );
         }
         assert_eq!(
-            parse_diff_header_line("--- src/delta.rs", true, None),
+            parse_diff_header_line("--- src/delta.rs", true),
             ("src/delta.rs".to_string(), FileEvent::Change)
         );
         assert_eq!(
-            parse_diff_header_line("+++ src/delta.rs", true, None),
+            parse_diff_header_line("+++ src/delta.rs", true),
             ("src/delta.rs".to_string(), FileEvent::Change)
         );
     }
@@ -501,23 +479,23 @@ mod tests {
     #[test]
     fn test_get_file_path_from_git_diff_header_line_containing_spaces() {
         assert_eq!(
-            parse_diff_header_line("+++ a/my src/delta.rs", true, None),
+            parse_diff_header_line("+++ a/my src/delta.rs", true),
             ("my src/delta.rs".to_string(), FileEvent::Change)
         );
         assert_eq!(
-            parse_diff_header_line("+++ my src/delta.rs", true, None),
+            parse_diff_header_line("+++ my src/delta.rs", true),
             ("my src/delta.rs".to_string(), FileEvent::Change)
         );
         assert_eq!(
-            parse_diff_header_line("+++ a/src/my delta.rs", true, None),
+            parse_diff_header_line("+++ a/src/my delta.rs", true),
             ("src/my delta.rs".to_string(), FileEvent::Change)
         );
         assert_eq!(
-            parse_diff_header_line("+++ a/my src/my delta.rs", true, None),
+            parse_diff_header_line("+++ a/my src/my delta.rs", true),
             ("my src/my delta.rs".to_string(), FileEvent::Change)
         );
         assert_eq!(
-            parse_diff_header_line("+++ b/my src/my enough/my delta.rs", true, None),
+            parse_diff_header_line("+++ b/my src/my enough/my delta.rs", true),
             (
                 "my src/my enough/my delta.rs".to_string(),
                 FileEvent::Change
@@ -528,7 +506,7 @@ mod tests {
     #[test]
     fn test_get_file_path_from_git_diff_header_line_rename() {
         assert_eq!(
-            parse_diff_header_line("rename from nospace/file2.el", true, None),
+            parse_diff_header_line("rename from nospace/file2.el", true),
             ("nospace/file2.el".to_string(), FileEvent::Rename)
         );
     }
@@ -536,7 +514,7 @@ mod tests {
     #[test]
     fn test_get_file_path_from_git_diff_header_line_rename_containing_spaces() {
         assert_eq!(
-            parse_diff_header_line("rename from with space/file1.el", true, None),
+            parse_diff_header_line("rename from with space/file1.el", true),
             ("with space/file1.el".to_string(), FileEvent::Rename)
         );
     }
@@ -544,11 +522,11 @@ mod tests {
     #[test]
     fn test_parse_diff_header_line() {
         assert_eq!(
-            parse_diff_header_line("--- src/delta.rs", false, None),
+            parse_diff_header_line("--- src/delta.rs", false),
             ("src/delta.rs".to_string(), FileEvent::Change)
         );
         assert_eq!(
-            parse_diff_header_line("+++ src/delta.rs", false, None),
+            parse_diff_header_line("+++ src/delta.rs", false),
             ("src/delta.rs".to_string(), FileEvent::Change)
         );
     }
