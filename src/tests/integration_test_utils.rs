@@ -244,7 +244,7 @@ impl DeltaTestOutput {
     pub fn expect_contains(self, expected: &str) -> Self {
         assert!(
             self.output.contains(expected),
-            "Output does not contain \"{}\":\n{}",
+            "Output does not contain \"{}\":\n{}\n",
             expected,
             delineated_string(&self.output.as_str())
         );
@@ -254,7 +254,7 @@ impl DeltaTestOutput {
     pub fn expect_raw_contains(self, expected: &str) -> Self {
         assert!(
             self.raw_output.contains(expected),
-            "Raw output does not contain \"{}\":\n{}",
+            "Raw output does not contain \"{}\":\n{}\n",
             expected,
             delineated_string(&self.raw_output.as_str())
         );
@@ -264,7 +264,7 @@ impl DeltaTestOutput {
     pub fn expect_contains_once(self, expected: &str) -> Self {
         assert!(
             test_utils::contains_once(&self.output, expected),
-            "Output does not contain \"{}\" exactly once:\n{}",
+            "Output does not contain \"{}\" exactly once:\n{}\n",
             expected,
             delineated_string(&self.output.as_str())
         );
