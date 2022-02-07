@@ -22,20 +22,13 @@ pub fn set__is_light_mode__syntax_theme__syntax_set(
         opt.syntax_theme.as_ref(),
         syntax_theme_name_from_bat_theme.as_ref(),
         opt.light,
-        assets.get_theme_set(),
     );
     opt.computed.is_light_mode = is_light_mode;
 
     opt.computed.syntax_theme = if is_no_syntax_highlighting_syntax_theme_name(&syntax_theme_name) {
         None
     } else {
-        Some(
-            assets
-                .get_theme_set()
-                .get(&syntax_theme_name)
-                .unwrap()
-                .clone(),
-        )
+        Some(assets.get_theme(&syntax_theme_name).clone())
     };
     opt.computed.syntax_set = assets.get_syntax_set().unwrap().clone();
 }
@@ -92,34 +85,16 @@ fn get_is_light_mode_and_syntax_theme_name(
     theme_arg: Option<&String>,
     bat_theme_env_var: Option<&String>,
     light_mode_arg: bool,
-    theme_set: &bat::assets::ThemeSet,
 ) -> (bool, String) {
-    let theme_arg = valid_syntax_theme_name_or_none(theme_arg, theme_set);
-    let bat_theme_env_var = valid_syntax_theme_name_or_none(bat_theme_env_var, theme_set);
     match (theme_arg, bat_theme_env_var, light_mode_arg) {
         (None, None, false) => (false, DEFAULT_DARK_SYNTAX_THEME.to_string()),
-        (Some(theme_name), _, false) => (is_light_syntax_theme(&theme_name), theme_name),
-        (None, Some(theme_name), false) => (is_light_syntax_theme(&theme_name), theme_name),
-        (None, None, true) => (true, DEFAULT_LIGHT_SYNTAX_THEME.to_string()),
-        (Some(theme_name), _, is_light_mode) => (is_light_mode, theme_name),
-        (None, Some(theme_name), is_light_mode) => (is_light_mode, theme_name),
-    }
-}
-
-// At this stage the theme name is considered valid if it is either a real theme name or the special
-// no-syntax-highlighting name.
-fn valid_syntax_theme_name_or_none(
-    theme_name: Option<&String>,
-    theme_set: &bat::assets::ThemeSet,
-) -> Option<String> {
-    match theme_name {
-        Some(name)
-            if is_no_syntax_highlighting_syntax_theme_name(name)
-                || theme_set.get(name).is_some() =>
-        {
-            Some(name.to_string())
+        (Some(theme_name), _, false) => (is_light_syntax_theme(theme_name), theme_name.to_string()),
+        (None, Some(theme_name), false) => {
+            (is_light_syntax_theme(theme_name), theme_name.to_string())
         }
-        _ => None,
+        (None, None, true) => (true, DEFAULT_LIGHT_SYNTAX_THEME.to_string()),
+        (Some(theme_name), _, is_light_mode) => (is_light_mode, theme_name.to_string()),
+        (None, Some(theme_name), is_light_mode) => (is_light_mode, theme_name.to_string()),
     }
 }
 

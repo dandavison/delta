@@ -91,7 +91,7 @@ index f38589a..0f1bb83 100644
             "\n\nSyntax theme: {}\n",
             title_style.paint(syntax_theme)
         )?;
-        config.syntax_theme = Some(assets.get_theme_set().get(syntax_theme).unwrap().clone());
+        config.syntax_theme = Some(assets.get_theme(syntax_theme).clone());
         if let Err(error) =
             delta::delta(ByteLines::new(BufReader::new(&input[0..])), writer, &config)
         {

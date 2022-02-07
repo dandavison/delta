@@ -76,7 +76,7 @@ checksum = "904dfeac50f3cdaba28fc6f57fdcddb75f49ed61346676a78c4ffe55877802fd"
 [[package]]
 name = "bat"
 version = "0.19.0"
-source = "git+https://github.com/dandavison/bat?rev=3d019910e9a2b0696e9ff84be684921ed82689d3#3d019910e9a2b0696e9ff84be684921ed82689d3"
+source = "git+https://github.com/dandavison/bat?rev=ae6773e3f27de141bd5dea20f7dd19baa517fcc4#ae6773e3f27de141bd5dea20f7dd19baa517fcc4"
 dependencies = [
  "ansi_colours",
  "ansi_term",
