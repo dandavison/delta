@@ -111,54 +111,55 @@ fn format_github_commit_url(commit: &str, github_repo: &str) -> String {
 
 #[cfg(test)]
 pub mod tests {
-    use std::path::PathBuf;
-
-    use super::*;
-    use crate::tests::integration_test_utils;
-
-    fn assert_file_hyperlink_matches(
-        relative_path: &str,
-        expected_hyperlink_path: &str,
-        config: &Config,
-    ) {
-        let link_text = "link text";
-        assert_eq!(
-            format_osc8_hyperlink(
-                &PathBuf::from(expected_hyperlink_path).to_string_lossy(),
-                link_text
-            ),
-            format_osc8_file_hyperlink(relative_path, None, link_text, config)
-        )
-    }
-
-    #[test]
     #[cfg(not(target_os = "windows"))]
-    fn test_relative_path_file_hyperlink_when_not_child_process_of_git() {
-        // The current process is not a child process of git.
-        // Delta receives a file path 'a'.
-        // The hyperlink should be $cwd/a.
-        let mut config = integration_test_utils::make_config_from_args(&[
-            "--hyperlinks",
-            "--hyperlinks-file-link-format",
-            "{path}",
-        ]);
-        config.cwd_of_user_shell_process = Some(PathBuf::from("/some/cwd"));
-        assert_file_hyperlink_matches("a", "/some/cwd/a", &config)
-    }
+    pub mod unix {
+        use std::path::PathBuf;
 
-    #[test]
-    #[cfg(not(target_os = "windows"))]
-    fn test_relative_path_file_hyperlink_when_child_process_of_git() {
-        // The current process is a child process of git.
-        // Delta receives a file path 'a'.
-        // We are in directory b/ relative to the repo root.
-        // The hyperlink should be $repo_root/b/a.
-        let mut config = integration_test_utils::make_config_from_args(&[
-            "--hyperlinks",
-            "--hyperlinks-file-link-format",
-            "{path}",
-        ]);
-        config.cwd_of_user_shell_process = Some(PathBuf::from("/some/repo-root/b"));
-        assert_file_hyperlink_matches("a", "/some/repo-root/b/a", &config)
+        use super::super::*;
+        use crate::tests::integration_test_utils;
+
+        fn assert_file_hyperlink_matches(
+            relative_path: &str,
+            expected_hyperlink_path: &str,
+            config: &Config,
+        ) {
+            let link_text = "link text";
+            assert_eq!(
+                format_osc8_hyperlink(
+                    &PathBuf::from(expected_hyperlink_path).to_string_lossy(),
+                    link_text
+                ),
+                format_osc8_file_hyperlink(relative_path, None, link_text, config)
+            )
+        }
+
+        #[test]
+        fn test_relative_path_file_hyperlink_when_not_child_process_of_git() {
+            // The current process is not a child process of git.
+            // Delta receives a file path 'a'.
+            // The hyperlink should be $cwd/a.
+            let mut config = integration_test_utils::make_config_from_args(&[
+                "--hyperlinks",
+                "--hyperlinks-file-link-format",
+                "{path}",
+            ]);
+            config.cwd_of_user_shell_process = Some(PathBuf::from("/some/cwd"));
+            assert_file_hyperlink_matches("a", "/some/cwd/a", &config)
+        }
+
+        #[test]
+        fn test_relative_path_file_hyperlink_when_child_process_of_git() {
+            // The current process is a child process of git.
+            // Delta receives a file path 'a'.
+            // We are in directory b/ relative to the repo root.
+            // The hyperlink should be $repo_root/b/a.
+            let mut config = integration_test_utils::make_config_from_args(&[
+                "--hyperlinks",
+                "--hyperlinks-file-link-format",
+                "{path}",
+            ]);
+            config.cwd_of_user_shell_process = Some(PathBuf::from("/some/repo-root/b"));
+            assert_file_hyperlink_matches("a", "/some/repo-root/b/a", &config)
+        }
     }
 }

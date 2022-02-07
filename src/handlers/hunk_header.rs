@@ -314,8 +314,6 @@ fn write_to_output_buffer(
 
 #[cfg(test)]
 pub mod tests {
-    use std::path::PathBuf;
-
     use super::*;
     use crate::ansi::strip_ansi_codes;
     use crate::tests::integration_test_utils;
@@ -412,7 +410,8 @@ pub mod tests {
 
         let mut config =
             integration_test_utils::make_config_from_args(&["--features", "hyperlinks"]);
-        config.cwd_of_user_shell_process = Some(PathBuf::from("/some/current/directory"));
+        config.cwd_of_user_shell_process =
+            Some(std::path::PathBuf::from("/some/current/directory"));
 
         let result = paint_file_path_with_line_number(Some(3), "some-file", &config);
 
