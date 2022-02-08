@@ -26,6 +26,7 @@
 
 [delta]
     navigate = true  # use n and N to move between diff sections
+    syntax-theme = Monokai Extended
 
 [merge]
     conflictstyle = diff3
