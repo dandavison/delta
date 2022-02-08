@@ -15,6 +15,7 @@ The most convenient way to configure delta is with a `[delta]` section in `~/.gi
 
 [delta]
     features = decorations
+    syntax-theme = Monokai Extended
 
 [delta "interactive"]
     keep-plus-minus-markers = false
@@ -33,7 +34,7 @@ The most convenient way to configure delta is with a `[delta]` section in `~/.gi
 
 Use `delta --help` to see all the available options.
 
-Note that delta style argument values in ~/.gitconfig should be in double quotes, like `--minus-style="syntax #340001"`. For theme names and other values, do not use quotes as they will be passed on to delta, like `theme = Monokai Extended`.
+Note that delta style argument values in ~/.gitconfig should be in double quotes, like `--minus-style="syntax #340001"`. For syntax theme names and other values, do not use quotes as they will be passed on to delta, like `syntax-theme = Monokai Extended`.
 
 All git commands that display diff output should now display syntax-highlighted output. For example:
 
