@@ -341,19 +341,34 @@ __path__:  some matching line
     impl<'a> FilePathsTestCase<'a> {
         pub fn get_args(&self) -> Vec<String> {
             let mut args = vec![
-                "--navigate".to_string(), // helps locate the file path in the output
-                "--hyperlinks".to_string(),
-                "--hyperlinks-file-link-format".to_string(),
-                "{path}".to_string(),
-                "--grep-file-style".to_string(),
-                "raw".to_string(),
-                "--grep-line-number-style".to_string(),
-                "raw".to_string(),
+                "--navigate", // helps locate the file path in the output
+                "--line-numbers",
+                "--hyperlinks",
+                "--hyperlinks-file-link-format",
+                "{path}",
+                "--grep-file-style",
+                "raw",
+                "--grep-line-number-style",
+                "raw",
+                "--hunk-header-file-style",
+                "raw",
+                "--hunk-header-line-number-style",
+                "raw",
+                "--line-numbers-plus-style",
+                "raw",
+                "--line-numbers-left-style",
+                "raw",
+                "--line-numbers-right-style",
+                "raw",
+                "--line-numbers-left-format",
+                "{nm}અ",
+                "--line-numbers-right-format",
+                "{np}જ",
             ];
             if self.delta_relative_paths_option {
-                args.push("--relative-paths".to_string());
+                args.push("--relative-paths");
             }
-            args
+            args.iter().map(|s| s.to_string()).collect()
         }
 
         pub fn calling_process(&self) -> CallingProcess {
@@ -475,9 +490,34 @@ __path__:  some matching line
             CallingProcess::OtherGrep => delta_test
                 .with_input(&GIT_GREP_OUTPUT.replace("__path__", &test_case.path_in_delta_input)),
         };
-        delta_test.expect_raw_contains(&format_osc8_hyperlink(
-            &PathBuf::from(test_case.expected_hyperlink_path()).to_string_lossy(),
-            test_case.expected_displayed_path,
-        ));
+        let make_expected_hyperlink = |text| {
+            format_osc8_hyperlink(
+                &PathBuf::from(test_case.expected_hyperlink_path()).to_string_lossy(),
+                text,
+            )
+        };
+        match test_case.calling_process() {
+            CallingProcess::GitDiff(_) => {
+                let line_number = "1";
+                delta_test
+                    .inspect_raw()
+                    // file hyperlink
+                    .expect_raw_contains(&format!(
+                        "Δ {}",
+                        make_expected_hyperlink(test_case.expected_displayed_path)
+                    ))
+                    // hunk header hyperlink
+                    .expect_raw_contains(&format!("• {}", make_expected_hyperlink(line_number)))
+                    // line number hyperlink
+                    .expect_raw_contains(&format!("અ{}જ", make_expected_hyperlink(line_number)));
+            }
+            CallingProcess::GitGrep | CallingProcess::OtherGrep => {
+                delta_test
+                    .inspect_raw()
+                    .expect_raw_contains(&make_expected_hyperlink(
+                        test_case.expected_displayed_path,
+                    ));
+            }
+        }
     }
 }
