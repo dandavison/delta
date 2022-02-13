@@ -320,8 +320,14 @@ __path__:  some matching line
     }
 
     #[derive(Debug)]
+    enum GitDiffRelative {
+        Yes,
+        No,
+    }
+
+    #[derive(Debug)]
     enum CallingProcess {
-        GitDiff(bool),
+        GitDiff(GitDiffRelative),
         GitGrep,
         OtherGrep,
     }
@@ -353,10 +359,10 @@ __path__:  some matching line
         pub fn calling_process(&self) -> CallingProcess {
             match (&self.input_type, self.calling_cmd) {
                 (InputType::GitDiff, Some(s)) if s.starts_with("git diff --relative") => {
-                    CallingProcess::GitDiff(true)
+                    CallingProcess::GitDiff(GitDiffRelative::Yes)
                 }
                 (InputType::GitDiff, Some(s)) if s.starts_with("git diff") => {
-                    CallingProcess::GitDiff(false)
+                    CallingProcess::GitDiff(GitDiffRelative::No)
                 }
                 (InputType::Grep, Some(s)) if s.starts_with("git grep") => CallingProcess::GitGrep,
                 (InputType::Grep, Some(s)) if s.starts_with("rg") => CallingProcess::OtherGrep,
@@ -370,11 +376,11 @@ __path__:  some matching line
 
         pub fn path_in_git_output(&self) -> String {
             match self.calling_process() {
-                CallingProcess::GitDiff(false) => self
+                CallingProcess::GitDiff(GitDiffRelative::No) => self
                     .true_location_of_file_relative_to_repo_root
                     .to_string_lossy()
                     .to_string(),
-                CallingProcess::GitDiff(true) => pathdiff::diff_paths(
+                CallingProcess::GitDiff(GitDiffRelative::Yes) => pathdiff::diff_paths(
                     self.true_location_of_file_relative_to_repo_root,
                     self.git_prefix_env_var.unwrap(),
                 )
