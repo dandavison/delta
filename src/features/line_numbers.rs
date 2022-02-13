@@ -12,6 +12,7 @@ use crate::features::OptionValueFunction;
 use crate::format::{self, Align, Placeholder};
 use crate::minusplus::*;
 use crate::style::Style;
+use crate::utils;
 
 pub fn make_feature() -> Vec<(String, OptionValueFunction)> {
     builtin_feature!([
@@ -304,9 +305,13 @@ fn format_line_number(
     let pad = |n| format::pad(n, width, alignment, precision);
     match (line_number, config.hyperlinks, plus_file) {
         (None, _, _) => " ".repeat(width),
-        (Some(n), true, Some(file)) => {
-            hyperlinks::format_osc8_file_hyperlink(file, line_number, &pad(n), config).to_string()
-        }
+        (Some(n), true, Some(file)) => match utils::path::absolute_path(file, config) {
+            Some(absolute_path) => {
+                hyperlinks::format_osc8_file_hyperlink(absolute_path, line_number, &pad(n), config)
+                    .to_string()
+            }
+            None => file.to_owned(),
+        },
         (Some(n), _, _) => pad(n),
     }
 }
