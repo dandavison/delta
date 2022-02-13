@@ -179,12 +179,17 @@ impl<'a> StateMachine<'a> {
                     "".to_string()
                 }
             };
-            let format_file = |file| {
-                if self.config.hyperlinks {
-                    features::hyperlinks::format_osc8_file_hyperlink(file, None, file, self.config)
-                } else {
-                    Cow::from(file)
-                }
+            let format_file = |file| match (
+                self.config.hyperlinks,
+                utils::path::absolute_path(file, self.config),
+            ) {
+                (true, Some(absolute_path)) => features::hyperlinks::format_osc8_file_hyperlink(
+                    absolute_path,
+                    None,
+                    file,
+                    self.config,
+                ),
+                _ => Cow::from(file),
             };
             let label = format_label(&self.config.file_modified_label);
             let name = get_repeated_file_path_from_diff_line(&self.diff_line)
