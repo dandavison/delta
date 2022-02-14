@@ -399,8 +399,11 @@ pub mod tests {
     }
 
     #[test]
-    #[cfg(not(target_os = "windows"))]
     fn test_paint_file_path_with_line_number_hyperlinks() {
+        use std::{iter::FromIterator, path::PathBuf};
+
+        use crate::utils;
+
         // hunk-header-style (by default) includes 'line-number' but not 'file'.
         // Normally, `paint_file_path_with_line_number` would return a painted line number.
         // But in this test hyperlinks are activated, and the test ensures that delta.__workdir__ is
@@ -408,14 +411,21 @@ pub mod tests {
         // This test confirms that, under those circumstances, `paint_file_path_with_line_number`
         // returns a hyperlinked file path with line number.
 
-        let mut config =
-            integration_test_utils::make_config_from_args(&["--features", "hyperlinks"]);
-        config.cwd_of_user_shell_process =
-            Some(std::path::PathBuf::from("/some/current/directory"));
+        let config = integration_test_utils::make_config_from_args(&["--features", "hyperlinks"]);
+        let relative_path = PathBuf::from_iter(["some-dir", "some-file"]);
 
-        let result = paint_file_path_with_line_number(Some(3), "some-file", &config);
+        let result =
+            paint_file_path_with_line_number(Some(3), &relative_path.to_string_lossy(), &config);
 
-        assert_eq!(result, "\u{1b}]8;;file:///some/current/directory/some-file\u{1b}\\\u{1b}[34m3\u{1b}[0m\u{1b}]8;;\u{1b}\\");
+        assert_eq!(
+            result,
+            format!(
+                "\u{1b}]8;;file://{}\u{1b}\\\u{1b}[34m3\u{1b}[0m\u{1b}]8;;\u{1b}\\",
+                utils::path::fake_delta_cwd_for_tests()
+                    .join(relative_path)
+                    .to_string_lossy()
+            )
+        );
     }
 
     #[test]

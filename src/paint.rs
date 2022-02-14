@@ -11,7 +11,6 @@ use unicode_segmentation::UnicodeSegmentation;
 
 use crate::config::{self, delta_unreachable, Config};
 use crate::delta::{DiffType, InMergeConflict, MergeParents, State};
-use crate::edits;
 use crate::features::hyperlinks;
 use crate::features::line_numbers::{self, LineNumbersData};
 use crate::features::side_by_side::ansifill;
@@ -21,6 +20,7 @@ use crate::minusplus::*;
 use crate::paint::superimpose_style_sections::superimpose_style_sections;
 use crate::style::Style;
 use crate::{ansi, style};
+use crate::{edits, utils};
 
 pub type LineSections<'a, S> = Vec<(S, &'a str)>;
 
@@ -775,7 +775,7 @@ pub fn parse_style_sections<'a>(
 #[allow(clippy::too_many_arguments)]
 pub fn paint_file_path_with_line_number(
     line_number: Option<usize>,
-    plus_file: &str,
+    file_path: &str,
     pad_line_number: bool,
     separator: &str,
     terminate_with_separator: bool,
@@ -785,12 +785,12 @@ pub fn paint_file_path_with_line_number(
 ) -> String {
     let mut file_with_line_number = Vec::new();
     if let Some(file_style) = file_style {
-        let plus_file = if let Some(regex_replacement) = &config.file_regex_replacement {
-            regex_replacement.execute(plus_file)
+        let file_path = if let Some(regex_replacement) = &config.file_regex_replacement {
+            regex_replacement.execute(file_path)
         } else {
-            Cow::from(plus_file)
+            Cow::from(file_path)
         };
-        file_with_line_number.push(file_style.paint(plus_file))
+        file_with_line_number.push(file_style.paint(file_path))
     };
     if let Some(line_number) = line_number {
         if let Some(line_number_style) = line_number_style {
@@ -820,16 +820,19 @@ pub fn paint_file_path_with_line_number(
         }
     }
     let file_with_line_number = ansi_term::ANSIStrings(&file_with_line_number).to_string();
-    if config.hyperlinks && !file_with_line_number.is_empty() {
-        hyperlinks::format_osc8_file_hyperlink(
-            plus_file,
+    match if config.hyperlinks && !file_with_line_number.is_empty() {
+        utils::path::absolute_path(file_path, config)
+    } else {
+        None
+    } {
+        Some(absolute_path) => hyperlinks::format_osc8_file_hyperlink(
+            absolute_path,
             line_number,
             &file_with_line_number,
             config,
         )
-        .into()
-    } else {
-        file_with_line_number
+        .into(),
+        _ => file_with_line_number,
     }
 }
 
