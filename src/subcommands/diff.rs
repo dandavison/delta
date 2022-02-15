@@ -37,7 +37,7 @@ You can also use delta to diff two files: `delta file_A file_B`."
     };
 
     let diff_process = process::Command::new(diff_command_path)
-        .args(&["diff", "--no-index"])
+        .args(&["diff", "--no-index", "--color"])
         .args(&[minus_file, plus_file])
         .stdout(process::Stdio::piped())
         .spawn();
