@@ -29,7 +29,7 @@ pub fn format_commit_line_with_osc8_commit_hyperlink<'a>(
             let commit = captures.get(2).unwrap().as_str();
             format_osc8_hyperlink(&commit_link_format.replace("{commit}", commit), commit)
         })
-    } else if let Some(GitConfigEntry::GitRemote(GitRemoteRepo::GitHubRepo(repo))) =
+    } else if let Some(GitConfigEntry::GitRemote(repo)) =
         config.git_config.as_ref().and_then(get_remote_url)
     {
         COMMIT_LINE_REGEX.replace(line, |captures: &Captures| {
@@ -93,22 +93,18 @@ lazy_static! {
 
 fn format_commit_line_captures_with_osc8_commit_hyperlink(
     captures: &Captures,
-    github_repo: &str,
+    repo: &GitRemoteRepo,
 ) -> String {
     let commit = captures.get(2).unwrap().as_str();
     format!(
         "{prefix}{osc}8;;{url}{st}{commit}{osc}8;;{st}{suffix}",
-        url = format_github_commit_url(commit, github_repo),
+        url = repo.format_commit_url(commit),
         commit = commit,
         prefix = captures.get(1).map(|m| m.as_str()).unwrap_or(""),
         suffix = captures.get(3).unwrap().as_str(),
         osc = "\x1b]",
         st = "\x1b\\"
     )
-}
-
-fn format_github_commit_url(commit: &str, github_repo: &str) -> String {
-    format!("https://github.com/{}/commit/{}", github_repo, commit)
 }
 
 #[cfg(not(target_os = "windows"))]
