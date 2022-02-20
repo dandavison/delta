@@ -35,7 +35,8 @@ struct Performer {
 
 #[derive(Clone, Debug, PartialEq)]
 pub enum Element {
-    Csi(ansi_term::Style, usize, usize),
+    Sgr(ansi_term::Style, usize, usize),
+    Csi(usize, usize),
     Esc(usize, usize),
     Osc(usize, usize),
     Text(usize, usize),
@@ -57,7 +58,8 @@ impl<'a> AnsiElementIterator<'a> {
     pub fn dbg(s: &str) {
         for el in AnsiElementIterator::new(s) {
             match el {
-                Element::Csi(_, i, j) => println!("CSI({}, {}, {:?})", i, j, &s[i..j]),
+                Element::Sgr(_, i, j) => println!("SGR({}, {}, {:?})", i, j, &s[i..j]),
+                Element::Csi(i, j) => println!("CSI({}, {}, {:?})", i, j, &s[i..j]),
                 Element::Esc(i, j) => println!("ESC({}, {}, {:?})", i, j, &s[i..j]),
                 Element::Osc(i, j) => println!("OSC({}, {}, {:?})", i, j, &s[i..j]),
                 Element::Text(i, j) => println!("Text({}, {}, {:?})", i, j, &s[i..j]),
@@ -101,7 +103,8 @@ impl<'a> Iterator for AnsiElementIterator<'a> {
                     let start = self.start;
                     self.start = self.pos;
                     let element = match self.element.as_ref().unwrap() {
-                        Element::Csi(style, _, _) => Element::Csi(*style, start, self.pos),
+                        Element::Sgr(style, _, _) => Element::Sgr(*style, start, self.pos),
+                        Element::Csi(_, _) => Element::Csi(start, self.pos),
                         Element::Esc(_, _) => Element::Esc(start, self.pos),
                         Element::Osc(_, _) => Element::Osc(start, self.pos),
                         Element::Text(_, _) => unreachable!(),
@@ -131,12 +134,14 @@ impl vte::Perform for Performer {
                 // Attr::Reset
                 // Probably doesn't need to be handled: https://github.com/dandavison/delta/pull/431#discussion_r536883568
             } else {
-                self.element = Some(Element::Csi(
+                self.element = Some(Element::Sgr(
                     ansi_term_style_from_sgr_parameters(&mut params.iter()),
                     0,
                     0,
                 ));
             }
+        } else {
+            self.element = Some(Element::Csi(0, 0));
         }
     }
 
@@ -288,13 +293,13 @@ mod tests {
             if *git_style_string == "normal" {
                 // This one has a different pattern
                 assert!(
-                    matches!(it.next().unwrap(), Element::Csi(s, _, _) if s == ansi_term::Style::default())
+                    matches!(it.next().unwrap(), Element::Sgr(s, _, _) if s == ansi_term::Style::default())
                 );
                 assert!(
                     matches!(it.next().unwrap(), Element::Text(i, j) if &git_output[i..j] == "text")
                 );
                 assert!(
-                    matches!(it.next().unwrap(), Element::Csi(s, _, _) if s == ansi_term::Style::default())
+                    matches!(it.next().unwrap(), Element::Sgr(s, _, _) if s == ansi_term::Style::default())
                 );
                 continue;
             }
@@ -302,7 +307,7 @@ mod tests {
             // First element should be a style
             let element = it.next().unwrap();
             match element {
-                Element::Csi(style, _, _) => assert!(style::ansi_term_style_equality(
+                Element::Sgr(style, _, _) => assert!(style::ansi_term_style_equality(
                     style,
                     style::Style::from_git_str(git_style_string).ansi_term_style
                 )),
@@ -317,12 +322,12 @@ mod tests {
             // Third element is the reset style
             assert!(matches!(
                 it.next().unwrap(),
-                Element::Csi(s, _, _) if s == ansi_term::Style::default()));
+                Element::Sgr(s, _, _) if s == ansi_term::Style::default()));
 
             // Fourth element should be a style
             let element = it.next().unwrap();
             match element {
-                Element::Csi(style, _, _) => assert!(style::ansi_term_style_equality(
+                Element::Sgr(style, _, _) => assert!(style::ansi_term_style_equality(
                     style,
                     style::Style::from_git_str(git_style_string).ansi_term_style
                 )),
@@ -337,7 +342,7 @@ mod tests {
             // Sixth element is the reset style
             assert!(matches!(
                 it.next().unwrap(),
-                Element::Csi(s, _, _) if s == ansi_term::Style::default()));
+                Element::Sgr(s, _, _) if s == ansi_term::Style::default()));
 
             assert!(matches!(
                 it.next().unwrap(),
@@ -354,7 +359,7 @@ mod tests {
         assert_eq!(
             actual_elements,
             vec![
-                Element::Csi(
+                Element::Sgr(
                     ansi_term::Style {
                         foreground: Some(ansi_term::Color::Red),
                         ..ansi_term::Style::default()
@@ -363,7 +368,7 @@ mod tests {
                     5
                 ),
                 Element::Text(5, 9),
-                Element::Csi(ansi_term::Style::default(), 9, 12),
+                Element::Sgr(ansi_term::Style::default(), 9, 12),
                 Element::Text(12, 13),
             ]
         );
@@ -378,7 +383,7 @@ mod tests {
         assert_eq!(
             actual_elements,
             vec![
-                Element::Csi(
+                Element::Sgr(
                     ansi_term::Style {
                         foreground: Some(ansi_term::Color::Red),
                         ..ansi_term::Style::default()
@@ -387,7 +392,7 @@ mod tests {
                     5
                 ),
                 Element::Text(5, 9),
-                Element::Csi(ansi_term::Style::default(), 9, 12),
+                Element::Sgr(ansi_term::Style::default(), 9, 12),
                 Element::Text(12, 16),
             ]
         );
@@ -402,7 +407,7 @@ mod tests {
         assert_eq!(
             actual_elements,
             vec![
-                Element::Csi(
+                Element::Sgr(
                     ansi_term::Style {
                         foreground: Some(ansi_term::Color::Red),
                         ..ansi_term::Style::default()
@@ -411,10 +416,40 @@ mod tests {
                     5
                 ),
                 Element::Text(5, 11),
-                Element::Csi(ansi_term::Style::default(), 11, 15),
+                Element::Sgr(ansi_term::Style::default(), 11, 15),
             ]
         );
         assert_eq!("バー", &s[5..11]);
+    }
+
+    #[test]
+    fn test_iterator_erase_in_line() {
+        let s = "\x1b[0Kあ.\x1b[m";
+        let actual_elements: Vec<Element> = AnsiElementIterator::new(s).collect();
+        assert_eq!(
+            actual_elements,
+            vec![
+                Element::Csi(0, 4),
+                Element::Text(4, 8),
+                Element::Sgr(ansi_term::Style::default(), 8, 11),
+            ]
+        );
+        assert_eq!("あ.", &s[4..8]);
+    }
+
+    #[test]
+    fn test_iterator_erase_in_line_without_n() {
+        let s = "\x1b[Kあ.\x1b[m";
+        let actual_elements: Vec<Element> = AnsiElementIterator::new(s).collect();
+        assert_eq!(
+            actual_elements,
+            vec![
+                Element::Csi(0, 3),
+                Element::Text(3, 7),
+                Element::Sgr(ansi_term::Style::default(), 7, 10),
+            ]
+        );
+        assert_eq!("あ.", &s[3..7]);
     }
 
     #[test]
@@ -435,7 +470,7 @@ mod tests {
         assert_eq!(
             actual_elements,
             vec![
-                Element::Csi(
+                Element::Sgr(
                     ansi_term::Style {
                         foreground: Some(ansi_term::Color::Fixed(4)),
                         ..ansi_term::Style::default()
@@ -448,7 +483,7 @@ mod tests {
                 Element::Text(59, 80),
                 Element::Osc(80, 86),
                 Element::Esc(86, 87),
-                Element::Csi(ansi_term::Style::default(), 87, 91),
+                Element::Sgr(ansi_term::Style::default(), 87, 91),
                 Element::Text(91, 92),
             ]
         );

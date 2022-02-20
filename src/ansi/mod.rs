@@ -71,7 +71,7 @@ pub fn parse_style_sections(s: &str) -> Vec<(ansi_term::Style, &str)> {
     for element in AnsiElementIterator::new(s) {
         match element {
             Element::Text(start, end) => sections.push((curr_style, &s[start..end])),
-            Element::Csi(style, _, _) => curr_style = style,
+            Element::Sgr(style, _, _) => curr_style = style,
             _ => {}
         }
     }
@@ -81,7 +81,7 @@ pub fn parse_style_sections(s: &str) -> Vec<(ansi_term::Style, &str)> {
 // Return the first CSI element, if any, as an `ansi_term::Style`.
 pub fn parse_first_style(s: &str) -> Option<ansi_term::Style> {
     AnsiElementIterator::new(s).find_map(|el| match el {
-        Element::Csi(style, _, _) => Some(style),
+        Element::Sgr(style, _, _) => Some(style),
         _ => None,
     })
 }
@@ -89,7 +89,7 @@ pub fn parse_first_style(s: &str) -> Option<ansi_term::Style> {
 pub fn string_starts_with_ansi_style_sequence(s: &str) -> bool {
     AnsiElementIterator::new(s)
         .next()
-        .map(|el| matches!(el, Element::Csi(_, _, _)))
+        .map(|el| matches!(el, Element::Sgr(_, _, _)))
         .unwrap_or(false)
 }
 
@@ -101,7 +101,8 @@ pub fn ansi_preserving_slice(s: &str, start: usize) -> String {
         .scan(0, |index, element| {
             // `index` is the index in non-ANSI-escape-sequence content.
             Some(match element {
-                Element::Csi(_, a, b) => &s[a..b],
+                Element::Sgr(_, a, b) => &s[a..b],
+                Element::Csi(a, b) => &s[a..b],
                 Element::Esc(a, b) => &s[a..b],
                 Element::Osc(a, b) => &s[a..b],
                 Element::Text(a, b) => {
@@ -140,7 +141,8 @@ pub fn ansi_preserving_index(s: &str, i: usize) -> Option<usize> {
 
 fn ansi_strings_iterator(s: &str) -> impl Iterator<Item = (&str, bool)> {
     AnsiElementIterator::new(s).map(move |el| match el {
-        Element::Csi(_, i, j) => (&s[i..j], true),
+        Element::Sgr(_, i, j) => (&s[i..j], true),
+        Element::Csi(i, j) => (&s[i..j], true),
         Element::Esc(i, j) => (&s[i..j], true),
         Element::Osc(i, j) => (&s[i..j], true),
         Element::Text(i, j) => (&s[i..j], false),
