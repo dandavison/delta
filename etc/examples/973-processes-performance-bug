@@ -1,9 +1,8 @@
 build_oci_img() {
   # RUN apk add --no-cache bash git
   docker build "$@" - <<'EOF'
-  FROM archlinux
-  RUN pacman -Sy > /dev/null
-  RUN pacman -S --noconfirm --needed coreutils curl gcc bc git > /dev/null
+  FROM ubuntu
+  RUN apt update && apt install -y bc curl gcc git
   ENV CARGO_HOME=/usr/local
   RUN curl -fsSL 'https://sh.rustup.rs' | sh -s -- -y --profile minimal
   RUN /usr/local/bin/cargo install --version 0.11.3 git-delta && cp /usr/local/bin/delta /usr/local/bin/delta-0.11.3
