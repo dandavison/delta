@@ -7,7 +7,11 @@ build_oci_img() {
   RUN curl -fsSL 'https://sh.rustup.rs' | sh -s -- -y --profile minimal
   RUN /usr/local/bin/cargo install --version 0.11.3 git-delta && cp /usr/local/bin/delta /usr/local/bin/delta-0.11.3
   RUN /usr/local/bin/cargo install --version 0.12.0 git-delta && cp /usr/local/bin/delta /usr/local/bin/delta-0.12.0
-  WORKDIR /repo
+  RUN echo "I've forgotten how to invalidate layer cache entries properly: 1" > /dev/null
+  RUN git clone https://github.com/dandavison/delta.git
+  WORKDIR delta
+  RUN git checkout 973-processes-performance
+  RUN cargo build --release && cp ./target/release/delta /usr/local/bin/delta-dev
 EOF
 }
 
@@ -30,7 +34,7 @@ benchmark-command() {
 }
 
 benchmark-delta-versions() {
-  for v in 0.11.3 0.12.0; do
+  for v in 0.11.3 0.12.0 dev; do
     echo "Benchmarking version: $v"
     delta-${v} --version
     benchmark-command 10 "git diff --no-index a b | delta-${v} >| delta-${v}-result"
