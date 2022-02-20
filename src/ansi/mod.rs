@@ -102,6 +102,7 @@ pub fn ansi_preserving_slice(s: &str, start: usize) -> String {
             // `index` is the index in non-ANSI-escape-sequence content.
             Some(match element {
                 Element::Csi(_, a, b) => &s[a..b],
+                Element::Csi_(a, b) => &s[a..b],
                 Element::Esc(a, b) => &s[a..b],
                 Element::Osc(a, b) => &s[a..b],
                 Element::Text(a, b) => {
@@ -141,6 +142,7 @@ pub fn ansi_preserving_index(s: &str, i: usize) -> Option<usize> {
 fn ansi_strings_iterator(s: &str) -> impl Iterator<Item = (&str, bool)> {
     AnsiElementIterator::new(s).map(move |el| match el {
         Element::Csi(_, i, j) => (&s[i..j], true),
+        Element::Csi_(i, j) => (&s[i..j], true),
         Element::Esc(i, j) => (&s[i..j], true),
         Element::Osc(i, j) => (&s[i..j], true),
         Element::Text(i, j) => (&s[i..j], false),

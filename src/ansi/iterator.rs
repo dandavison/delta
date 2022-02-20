@@ -36,6 +36,7 @@ struct Performer {
 #[derive(Clone, Debug, PartialEq)]
 pub enum Element {
     Csi(ansi_term::Style, usize, usize),
+    Csi_(usize, usize),
     Esc(usize, usize),
     Osc(usize, usize),
     Text(usize, usize),
@@ -58,6 +59,7 @@ impl<'a> AnsiElementIterator<'a> {
         for el in AnsiElementIterator::new(s) {
             match el {
                 Element::Csi(_, i, j) => println!("CSI({}, {}, {:?})", i, j, &s[i..j]),
+                Element::Csi_(i, j) => println!("CSI({}, {}, {:?})", i, j, &s[i..j]),
                 Element::Esc(i, j) => println!("ESC({}, {}, {:?})", i, j, &s[i..j]),
                 Element::Osc(i, j) => println!("OSC({}, {}, {:?})", i, j, &s[i..j]),
                 Element::Text(i, j) => println!("Text({}, {}, {:?})", i, j, &s[i..j]),
@@ -102,6 +104,7 @@ impl<'a> Iterator for AnsiElementIterator<'a> {
                     self.start = self.pos;
                     let element = match self.element.as_ref().unwrap() {
                         Element::Csi(style, _, _) => Element::Csi(*style, start, self.pos),
+                        Element::Csi_(_, _) => Element::Csi_(start, self.pos),
                         Element::Esc(_, _) => Element::Esc(start, self.pos),
                         Element::Osc(_, _) => Element::Osc(start, self.pos),
                         Element::Text(_, _) => unreachable!(),
@@ -137,6 +140,8 @@ impl vte::Perform for Performer {
                     0,
                 ));
             }
+        } else {
+            self.element = Some(Element::Csi_(0, 0));
         }
     }
 
@@ -415,6 +420,36 @@ mod tests {
             ]
         );
         assert_eq!("バー", &s[5..11]);
+    }
+
+    #[test]
+    fn test_iterator_erase_in_line() {
+        let s = "\x1b[0Kあ.\x1b[m";
+        let actual_elements: Vec<Element> = AnsiElementIterator::new(s).collect();
+        assert_eq!(
+            actual_elements,
+            vec![
+                Element::Csi_(0, 4),
+                Element::Text(4, 8),
+                Element::Csi(ansi_term::Style::default(), 8, 11),
+            ]
+        );
+        assert_eq!("あ.", &s[4..8]);
+    }
+
+    #[test]
+    fn test_iterator_erase_in_line_without_n() {
+        let s = "\x1b[Kあ.\x1b[m";
+        let actual_elements: Vec<Element> = AnsiElementIterator::new(s).collect();
+        assert_eq!(
+            actual_elements,
+            vec![
+                Element::Csi_(0, 3),
+                Element::Text(3, 7),
+                Element::Csi(ansi_term::Style::default(), 7, 10),
+            ]
+        );
+        assert_eq!("あ.", &s[3..7]);
     }
 
     #[test]
