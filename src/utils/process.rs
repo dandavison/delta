@@ -508,8 +508,13 @@ where
 
     match info.find_sibling_in_refreshed_processes(my_pid, &extract_args) {
         None => {
-            info.refresh_processes();
-            info.find_sibling_in_refreshed_processes(my_pid, &extract_args)
+            #[cfg(test)]
+            {
+                info.refresh_processes();
+                info.find_sibling_in_refreshed_processes(my_pid, &extract_args)
+            }
+            #[cfg(not(test))]
+            None
         }
         some => some,
     }
