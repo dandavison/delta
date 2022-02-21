@@ -1,5 +1,5 @@
 use std::io::{ErrorKind, Write};
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 use std::process;
 
 use bytelines::ByteLinesReader;
@@ -27,23 +27,36 @@ You can also use delta to diff two files: `delta file_A file_B`."
     let minus_file = minus_file.unwrap();
     let plus_file = plus_file.unwrap();
 
-    let diff_command = "git";
-    let diff_command_path = match grep_cli::resolve_binary(PathBuf::from(diff_command)) {
+    // When called as `delta <(echo foo) <(echo bar)`, then git as of version 2.34 just prints the
+    // diff of the filenames which were created by the process substitution and does not read their
+    // content, so fall back to plain `diff` which simply opens the given input as files.
+    // This fallback ignores git settings, but is better than nothing.
+    let via_process_substitution =
+        |f: &Path| f.starts_with("/proc/self/fd/") || f.starts_with("/dev/fd/");
+
+    let diff_cmd = if via_process_substitution(minus_file) || via_process_substitution(plus_file) {
+        ["diff", "-u", "--"].as_slice()
+    } else {
+        ["git", "diff", "--no-index", "--color", "--"].as_slice()
+    };
+
+    let diff_bin = diff_cmd[0];
+    let diff_path = match grep_cli::resolve_binary(PathBuf::from(diff_bin)) {
         Ok(path) => path,
         Err(err) => {
-            eprintln!("Failed to resolve command '{}': {}", diff_command, err);
+            eprintln!("Failed to resolve command '{}': {}", diff_bin, err);
             return config.error_exit_code;
         }
     };
 
-    let diff_process = process::Command::new(diff_command_path)
-        .args(&["diff", "--no-index", "--color"])
+    let diff_process = process::Command::new(diff_path)
+        .args(&diff_cmd[1..])
         .args(&[minus_file, plus_file])
         .stdout(process::Stdio::piped())
         .spawn();
 
     if let Err(err) = diff_process {
-        eprintln!("Failed to execute the command '{}': {}", diff_command, err);
+        eprintln!("Failed to execute the command '{}': {}", diff_bin, err);
         return config.error_exit_code;
     }
     let mut diff_process = diff_process.unwrap();
@@ -62,17 +75,17 @@ You can also use delta to diff two files: `delta file_A file_B`."
         }
     };
 
-    // Return the exit code from the `git diff` processl, so that the exit code
+    // Return the exit code from the diff process, so that the exit code
     // contract of `delta file_A file_B` is the same as that of `diff file_A
     // file_B` (i.e. 0 if same, 1 if different, 2 if error).
     diff_process
         .wait()
         .unwrap_or_else(|_| {
-            delta_unreachable(&format!("'{}' process not running.", diff_command));
+            delta_unreachable(&format!("'{}' process not running.", diff_bin));
         })
         .code()
         .unwrap_or_else(|| {
-            eprintln!("'{}' process terminated without exit status.", diff_command);
+            eprintln!("'{}' process terminated without exit status.", diff_bin);
             config.error_exit_code
         })
 }
