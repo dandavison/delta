@@ -71,13 +71,9 @@ fn main() -> std::io::Result<()> {
     // input is piped into delta (e.g. `git show  --word-diff=color | delta`).
     utils::process::start_determining_calling_process_in_thread();
 
-    // Ignore ctrl-c (SIGINT) to avoid leaving an orphaned pager process.
-    // See https://github.com/dandavison/delta/issues/681
-    ctrlc::set_handler(|| {})
-        .unwrap_or_else(|err| eprintln!("Failed to set ctrl-c handler: {}", err));
-    let exit_code = run_app()?;
-    // when you call process::exit, no destructors are called, so we want to do it only once, here
-    process::exit(exit_code);
+    dbg!(utils::process::calling_process());
+
+    Ok(())
 }
 
 #[cfg(not(tarpaulin_include))]
