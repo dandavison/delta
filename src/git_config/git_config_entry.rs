@@ -13,30 +13,21 @@ pub enum GitConfigEntry {
 }
 
 #[derive(Clone, Debug, PartialEq)]
-pub struct GitRemoteRepo {
-    repo_slug: String,
-    commit_link_format: String,
+pub enum GitRemoteRepo {
+    GitHubRepo(String),
+    GitLabRepo(String),
 }
 
 impl GitRemoteRepo {
-    pub fn github_repo(repo_slug: String) -> Self {
-        Self {
-            repo_slug,
-            commit_link_format: "https://github.com/{repo_slug}/commit/{commit}".to_string(),
-        }
-    }
-
-    pub fn gitlab_repo(repo_slug: String) -> Self {
-        Self {
-            repo_slug,
-            commit_link_format: "https://gitlab.com/{repo_slug}/-/commit/{commit}".to_string(),
-        }
-    }
-
     pub fn format_commit_url(&self, commit: &str) -> String {
-        self.commit_link_format
-            .replace("{repo_slug}", &self.repo_slug)
-            .replace("{commit}", commit)
+        match self {
+            Self::GitHubRepo(repo_slug) => {
+                format!("https://github.com/{}/commit/{}", repo_slug, commit)
+            }
+            Self::GitLabRepo(repo_slug) => {
+                format!("https://gitlab.com/{}/-/commit/{}", repo_slug, commit)
+            }
+        }
     }
 }
 
@@ -76,13 +67,13 @@ impl FromStr for GitRemoteRepo {
     type Err = Error;
     fn from_str(s: &str) -> Result<Self, Self::Err> {
         if let Some(caps) = GITHUB_REMOTE_URL.captures(s) {
-            Ok(Self::github_repo(format!(
+            Ok(Self::GitHubRepo(format!(
                 "{user}/{repo}",
                 user = caps.get(1).unwrap().as_str(),
                 repo = caps.get(2).unwrap().as_str()
             )))
         } else if let Some(caps) = GITLAB_REMOTE_URL.captures(s) {
-            Ok(Self::gitlab_repo(format!(
+            Ok(Self::GitLabRepo(format!(
                 "{user}{groups}/{repo}",
                 user = caps.get(1).unwrap().as_str(),
                 groups = caps.get(2).map(|x| x.as_str()).unwrap_or_default(),
@@ -113,14 +104,14 @@ mod tests {
             assert!(parsed.is_ok());
             assert_eq!(
                 parsed.unwrap(),
-                GitRemoteRepo::github_repo("dandavison/delta".to_string())
+                GitRemoteRepo::GitHubRepo("dandavison/delta".to_string())
             );
         }
     }
 
     #[test]
     fn test_format_github_commit_link() {
-        let repo = GitRemoteRepo::github_repo("dandavison/delta".to_string());
+        let repo = GitRemoteRepo::GitHubRepo("dandavison/delta".to_string());
         let commit_hash = "d3b07384d113edec49eaa6238ad5ff00";
         assert_eq!(
             repo.format_commit_url(commit_hash),
@@ -154,14 +145,14 @@ mod tests {
             assert!(parsed.is_ok());
             assert_eq!(
                 parsed.unwrap(),
-                GitRemoteRepo::gitlab_repo(expected.to_string())
+                GitRemoteRepo::GitLabRepo(expected.to_string())
             );
         }
     }
 
     #[test]
     fn test_format_gitlab_commit_link() {
-        let repo = GitRemoteRepo::gitlab_repo("proj/grp/repo".to_string());
+        let repo = GitRemoteRepo::GitLabRepo("proj/grp/repo".to_string());
         let commit_hash = "d3b07384d113edec49eaa6238ad5ff00";
         assert_eq!(
             repo.format_commit_url(commit_hash),
