@@ -528,8 +528,20 @@ where
 
     match info.find_sibling_in_refreshed_processes(my_pid, &extract_args) {
         None => {
-            info.refresh_processes();
-            info.find_sibling_in_refreshed_processes(my_pid, &extract_args)
+            #[cfg(not(target_os = "linux"))]
+            let full_scan = true;
+
+            // The full scan is expensive on Linux and rarely successful, so disable it by default.
+            #[cfg(target_os = "linux")]
+            let full_scan = std::env::var("DELTA_CALLING_PROCESS_QUERY_ALL")
+                .map_or(false, |v| !["0", "false", "no"].iter().any(|&n| n == v));
+
+            if full_scan {
+                info.refresh_processes();
+                info.find_sibling_in_refreshed_processes(my_pid, &extract_args)
+            } else {
+                None
+            }
         }
         some => some,
     }
