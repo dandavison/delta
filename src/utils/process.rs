@@ -298,6 +298,7 @@ impl ProcInfo {
 trait ProcActions {
     fn cmd(&self) -> &[String];
     fn parent(&self) -> Option<DeltaPid>;
+    fn pid(&self) -> DeltaPid;
     fn start_time(&self) -> u64;
 }
 
@@ -310,6 +311,9 @@ where
     }
     fn parent(&self) -> Option<DeltaPid> {
         ProcessExt::parent(self).map(|p| p.as_u32())
+    }
+    fn pid(&self) -> DeltaPid {
+        ProcessExt::pid(self).as_u32()
     }
     fn start_time(&self) -> u64 {
         ProcessExt::start_time(self)
@@ -450,29 +454,41 @@ where
 
     let my_pid = info.my_pid();
 
-    // 1) Try the parent process. If delta is set as the pager in git, then git is the parent process.
-    let parent = info.parent_process(my_pid)?;
+    // 1) Try the parent process(es). If delta is set as the pager in git, then git is the parent process.
+    // If delta is started by a script check the parent's parent as well.
+    let mut current_pid = my_pid;
+    'parent_iter: for depth in [1, 2, 3] {
+        let parent = match info.parent_process(current_pid) {
+            None => {
+                break 'parent_iter;
+            }
+            Some(parent) => parent,
+        };
+        let parent_pid = parent.pid();
 
-    match extract_args(parent.cmd()) {
-        ProcessArgs::Args(result) => return Some(result),
-        ProcessArgs::ArgError => return None,
+        match extract_args(parent.cmd()) {
+            ProcessArgs::Args(result) => return Some(result),
+            ProcessArgs::ArgError => return None,
 
-        // 2) The parent process was something else, this can happen if git output is piped into delta, e.g.
-        // `git blame foo.txt | delta`. When the shell sets up the pipe it creates the two processes, the pids
-        // are usually consecutive, so check if the process with `my_pid - 1` matches.
-        ProcessArgs::OtherProcess => {
-            let sibling = info.naive_sibling_process(my_pid);
-            if let Some(proc) = sibling {
-                if let ProcessArgs::Args(result) = extract_args(proc.cmd()) {
-                    return Some(result);
+            // 2) The 1st parent process was something else, this can happen if git output is piped into delta, e.g.
+            // `git blame foo.txt | delta`. When the shell sets up the pipe it creates the two processes, the pids
+            // are usually consecutive, so naively check if the process with `my_pid - 1` matches.
+            ProcessArgs::OtherProcess if depth == 1 => {
+                let sibling = info.naive_sibling_process(current_pid);
+                if let Some(proc) = sibling {
+                    if let ProcessArgs::Args(result) = extract_args(proc.cmd()) {
+                        return Some(result);
+                    }
                 }
             }
-            // else try the fallback
+            // This check is not done for the parent's parent etc.
+            ProcessArgs::OtherProcess => {}
         }
+        current_pid = parent_pid;
     }
 
     /*
-    3) Neither parent nor direct sibling were a match.
+    3) Neither parent(s) nor the direct sibling were a match.
     The most likely case is that the input program of the pipe wrote all its data and exited before delta
     started, so no command line can be parsed. Same if the data was piped from an input file.
 
@@ -498,12 +514,16 @@ where
 
     */
 
-    let pid_range = my_pid.saturating_sub(10)..my_pid.saturating_add(20);
+    // Also `add` because `A_has_pid101 | delta_has_pid102`, but if A is a wrapper which then calls
+    // git (no `exec`), then the final pid of the git process might be 103 or greater.
+    let pid_range = my_pid.saturating_sub(10)..my_pid.saturating_add(10);
     for p in pid_range {
         // Processes which were not refreshed do not exist for sysinfo, so by selectively
         // letting it know about processes the `find_sibling..` function will only
         // consider these.
-        info.refresh_process(p);
+        if info.process(p).is_none() {
+            info.refresh_process(p);
+        }
     }
 
     match info.find_sibling_in_refreshed_processes(my_pid, &extract_args) {
@@ -749,6 +769,9 @@ pub mod tests {
         }
         fn parent(&self) -> Option<DeltaPid> {
             self.ppid
+        }
+        fn pid(&self) -> DeltaPid {
+            self.pid
         }
         fn start_time(&self) -> u64 {
             self.start_time
