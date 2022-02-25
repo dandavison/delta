@@ -8,9 +8,9 @@ build_oci_img() {
   RUN /usr/local/bin/cargo install --version 0.11.3 git-delta && cp /usr/local/bin/delta /usr/local/bin/delta-0.11.3
   RUN /usr/local/bin/cargo install --version 0.12.0 git-delta && cp /usr/local/bin/delta /usr/local/bin/delta-0.12.0
   RUN echo "I've forgotten how to invalidate layer cache entries properly: 1" > /dev/null
-  RUN git clone https://github.com/dandavison/delta.git
+  RUN git clone https://github.com/th1000s/delta.git
   WORKDIR delta
-  RUN git checkout 973-processes-performance
+  RUN git checkout query_ppids
   RUN cargo build --release && cp ./target/release/delta /usr/local/bin/delta-dev
 EOF
 }
