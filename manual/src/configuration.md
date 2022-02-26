@@ -31,6 +31,8 @@ The most convenient way to configure delta is with a `[delta]` section in `~/.gi
 
 </sub>
 
+If you have the `GIT_PAGER` environment variable set, you'll need to unset it.
+
 Use `delta --help` to see all the available options.
 
 Note that delta style argument values in ~/.gitconfig should be in double quotes, like `--minus-style="syntax #340001"`. For theme names and other values, do not use quotes as they will be passed on to delta, like `theme = Monokai Extended`.
