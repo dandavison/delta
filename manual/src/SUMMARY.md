@@ -19,6 +19,7 @@
   - [Merge conflicts](./merge-conflicts.md)
   - [Git blame](./git-blame.md)
   - [24 bit color (truecolor)](./24-bit-color-truecolor.md)
+  - [Using Delta with tmux](./using-delta-with-tmux.md)
   - [Using Delta with GNU Screen](./using-delta-with-gnu-screen.md)
   - [Using Delta on Windows](./using-delta-on-windows.md)
   - [Mouse scrolling](./mouse-scrolling.md)
