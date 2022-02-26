@@ -308,6 +308,7 @@ On MacOS, install <code>less</code> from Homebrew. For Windows, see <a href="./u
     hunk-header-style = file line-number syntax
 </code></pre>
 </sub>
+<p>If you have the <code>GIT_PAGER</code> environment variable set, you'll need to unset it.</p>
 <p>Use <code>delta --help</code> to see all the available options.</p>
 <p>Note that delta style argument values in ~/.gitconfig should be in double quotes, like <code>--minus-style=&quot;syntax #340001&quot;</code>. For theme names and other values, do not use quotes as they will be passed on to delta, like <code>theme = Monokai Extended</code>.</p>
 <p>All git commands that display diff output should now display syntax-highlighted output. For example:</p>
