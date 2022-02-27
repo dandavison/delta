@@ -19,11 +19,11 @@ dependencies = [
 
 [[package]]
 name = "ansi_colours"
-version = "1.0.4"
+version = "1.1.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "60e2fb6138a49ad9f1cb3c6d8f8ccbdd5e62b4dab317c1b435a47ecd7da1d28f"
+checksum = "32678233b67f9056b0c144b39d46dc3218637e8d84ad6038ded339e08b19620d"
 dependencies = [
- "cc",
+ "rgb",
 ]
 
 [[package]]
@@ -75,14 +75,16 @@ checksum = "904dfeac50f3cdaba28fc6f57fdcddb75f49ed61346676a78c4ffe55877802fd"
 
 [[package]]
 name = "bat"
-version = "0.19.0"
-source = "git+https://github.com/dandavison/bat?rev=ae6773e3f27de141bd5dea20f7dd19baa517fcc4#ae6773e3f27de141bd5dea20f7dd19baa517fcc4"
+version = "0.20.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "f59cdca60e52d7c8ea28dd2b627ab0478e4d4a2df7cc30a13322aadb21035217"
 dependencies = [
  "ansi_colours",
  "ansi_term",
  "atty",
  "bincode",
  "bugreport",
+ "bytesize",
  "clap 2.34.0",
  "clircle",
  "console",
@@ -155,6 +157,18 @@ name = "bytelines"
 version = "2.2.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "791e4e40d13e1463dee537b254225c12c46ec7328f1817c6264873bc166f615f"
+
+[[package]]
+name = "bytemuck"
+version = "1.7.3"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "439989e6b8c38d1b6570a384ef1e49c8848128f5a97f3914baef02920842712f"
+
+[[package]]
+name = "bytesize"
+version = "1.1.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "6c58ec36aac5066d5ca17df51b3e70279f5670a72102f5752cb7e7c856adfc70"
 
 [[package]]
 name = "cc"
@@ -1073,6 +1087,15 @@ name = "regex-syntax"
 version = "0.6.25"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "f497285884f3fcff424ffc933e56d7cbca511def0c9831a7f9b5f6153e3cc89b"
+
+[[package]]
+name = "rgb"
+version = "0.8.31"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "9a374af9a0e5fdcdd98c1c7b64f05004f9ea2555b6c75f211daa81268a3c50f1"
+dependencies = [
+ "bytemuck",
+]
 
 [[package]]
 name = "ryu"
