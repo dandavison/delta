@@ -78,7 +78,7 @@ impl<'a> StateMachine<'a> {
                 if matches!(self.state, State::Unknown) {
                     if let Some(lang) = utils::process::git_blame_filename_extension()
                         .as_ref()
-                        .or_else(|| self.config.default_language.as_ref())
+                        .or(self.config.default_language.as_ref())
                     {
                         self.painter.set_syntax(Some(lang));
                         self.painter.set_highlighter();
