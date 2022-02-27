@@ -2,6 +2,7 @@ use std::collections::{HashMap, HashSet};
 use std::ffi::OsString;
 use std::path::PathBuf;
 
+use bat::assets::HighlightingAssets;
 use clap::{AppSettings, ColorChoice, FromArgMatches, IntoApp, Parser};
 use lazy_static::lazy_static;
 use syntect::highlighting::Theme as SyntaxTheme;
@@ -10,7 +11,7 @@ use syntect::parsing::SyntaxSet;
 use crate::config::delta_unreachable;
 use crate::git_config::{GitConfig, GitConfigEntry};
 use crate::options;
-use crate::utils::bat::assets::HighlightingAssets;
+use crate::utils;
 use crate::utils::bat::output::PagingMode;
 
 #[derive(Parser)]
@@ -1130,7 +1131,7 @@ impl Opt {
         I: IntoIterator,
         I::Item: Into<OsString> + Clone,
     {
-        let assets = HighlightingAssets::new();
+        let assets = utils::bat::assets::load_highlighting_assets();
         Self::from_clap_and_git_config(Self::into_app().get_matches_from(iter), git_config, assets)
     }
 

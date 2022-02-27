@@ -1,87 +1,24 @@
 // Based on code from https://github.com/sharkdp/bat a1b9334a44a2c652f52dddaa83dbacba57372468
 // See src/utils/bat/LICENSE
 
-use std::fs::File;
-use std::io::{self, BufReader, Write};
-use std::path::PathBuf;
+use std::io::{self, Write};
 
 use ansi_term::Colour::Green;
 use ansi_term::Style;
-use syntect::dumps::{from_binary, from_reader};
-use syntect::highlighting::ThemeSet;
-use syntect::parsing::SyntaxSet;
+use bat;
 
-use crate::errors::*;
-use crate::utils::bat::dirs::PROJECT_DIRS;
+use crate::utils;
 
-pub struct HighlightingAssets {
-    pub syntax_set: SyntaxSet,
-    pub theme_set: ThemeSet,
-}
-
-impl HighlightingAssets {
-    pub fn new() -> Self {
-        Self::from_cache().unwrap_or_else(|_| Self::from_binary())
-    }
-
-    fn get_integrated_syntaxset() -> SyntaxSet {
-        from_binary(include_bytes!("../../../etc/assets/syntaxes.bin"))
-    }
-
-    fn get_integrated_themeset() -> ThemeSet {
-        from_binary(include_bytes!("../../../etc/assets/themes.bin"))
-    }
-
-    fn from_cache() -> Result<Self> {
-        let theme_set_path = theme_set_path();
-        let syntax_set_file = File::open(&syntax_set_path()).chain_err(|| {
-            format!(
-                "Could not load cached syntax set '{}'",
-                syntax_set_path().to_string_lossy()
-            )
-        })?;
-        let syntax_set: SyntaxSet = from_reader(BufReader::new(syntax_set_file))
-            .chain_err(|| "Could not parse cached syntax set")?;
-
-        let theme_set_file = File::open(&theme_set_path).chain_err(|| {
-            format!(
-                "Could not load cached theme set '{}'",
-                theme_set_path.to_string_lossy()
-            )
-        })?;
-        let theme_set: ThemeSet = from_reader(BufReader::new(theme_set_file))
-            .chain_err(|| "Could not parse cached theme set")?;
-
-        Ok(HighlightingAssets {
-            syntax_set,
-            theme_set,
-        })
-    }
-
-    fn from_binary() -> Self {
-        let syntax_set = Self::get_integrated_syntaxset();
-        let theme_set = Self::get_integrated_themeset();
-
-        HighlightingAssets {
-            syntax_set,
-            theme_set,
-        }
-    }
-}
-
-fn theme_set_path() -> PathBuf {
-    PROJECT_DIRS.cache_dir().join("themes.bin")
-}
-
-fn syntax_set_path() -> PathBuf {
-    PROJECT_DIRS.cache_dir().join("syntaxes.bin")
+pub fn load_highlighting_assets() -> bat::assets::HighlightingAssets {
+    bat::assets::HighlightingAssets::from_cache(utils::bat::dirs::PROJECT_DIRS.cache_dir())
+        .unwrap_or_else(|_| bat::assets::HighlightingAssets::from_binary())
 }
 
 pub fn list_languages() -> std::io::Result<()> {
-    let assets = HighlightingAssets::new();
+    let assets = utils::bat::assets::load_highlighting_assets();
     let mut languages = assets
-        .syntax_set
-        .syntaxes()
+        .get_syntaxes()
+        .unwrap()
         .iter()
         .filter(|syntax| !syntax.hidden && !syntax.file_extensions.is_empty())
         .collect::<Vec<_>>();

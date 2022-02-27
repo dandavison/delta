@@ -3,6 +3,7 @@ use std::convert::TryInto;
 use std::result::Result;
 use std::str::FromStr;
 
+use bat::assets::HighlightingAssets;
 use console::Term;
 
 use crate::cli;
@@ -14,7 +15,6 @@ use crate::features;
 use crate::git_config::{GitConfig, GitConfigEntry};
 use crate::options::option_value::{OptionValue, ProvenancedOptionValue};
 use crate::options::theme;
-use crate::utils::bat::assets::HighlightingAssets;
 use crate::utils::bat::output::PagingMode;
 
 macro_rules! set_options {
