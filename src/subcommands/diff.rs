@@ -9,23 +9,12 @@ use crate::delta;
 
 /// Run `git diff` on the files provided on the command line and display the output.
 pub fn diff(
-    minus_file: Option<&PathBuf>,
-    plus_file: Option<&PathBuf>,
+    minus_file: &Path,
+    plus_file: &Path,
     config: &config::Config,
     writer: &mut dyn Write,
 ) -> i32 {
     use std::io::BufReader;
-    if minus_file.is_none() || plus_file.is_none() {
-        eprintln!(
-            "\
-The main way to use delta is to configure it as the pager for git: \
-see https://github.com/dandavison/delta#configuration. \
-You can also use delta to diff two files: `delta file_A file_B`."
-        );
-        return config.error_exit_code;
-    }
-    let minus_file = minus_file.unwrap();
-    let plus_file = plus_file.unwrap();
 
     // When called as `delta <(echo foo) <(echo bar)`, then git as of version 2.34 just prints the
     // diff of the filenames which were created by the process substitution and does not read their
@@ -126,8 +115,8 @@ mod main_tests {
         let config = integration_test_utils::make_config_from_args(&[]);
         let mut writer = Cursor::new(vec![]);
         let exit_code = diff(
-            Some(&PathBuf::from(file_a)),
-            Some(&PathBuf::from(file_b)),
+            &PathBuf::from(file_a),
+            &PathBuf::from(file_b),
             &config,
             &mut writer,
         );
