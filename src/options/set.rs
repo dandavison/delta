@@ -132,6 +132,7 @@ pub fn set_options(
             blame_palette,
             blame_separator_style,
             blame_timestamp_format,
+            caret_encode,
             color_only,
             commit_decoration_style,
             commit_regex,

@@ -22,7 +22,7 @@
     pager = delta
 
 [interactive]
-    diffFilter = delta --color-only
+    diffFilter = delta --color-only --caret-encode
 
 [delta]
     navigate = true  # use n and N to move between diff sections

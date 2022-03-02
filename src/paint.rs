@@ -213,6 +213,20 @@ impl<'p> Painter<'p> {
                 painted_prefix(state.clone(), config),
                 config,
             );
+            if config.caret_encode {
+                for n in 0..32 {
+                    // HT(0x09), LF(0x0a), ESC(0x1b) are skipped
+                    if n != 0x09 && n != 0x0a && n != 0x1b {
+                        line = line.replace(
+                            &char::from_u32(n).unwrap().to_string(),
+                            &format!(
+                                "\x1b[7m^{}\x1b[27m",
+                                &char::from_u32(n + 64).unwrap().to_string()
+                            ),
+                        );
+                    }
+                }
+            }
             let (bg_fill_mode, fill_style) =
                 Painter::get_should_right_fill_background_color_and_fill_style(
                     diff_sections,
