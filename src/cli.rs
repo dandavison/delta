@@ -323,13 +323,6 @@ pub struct Opt {
     /// If a relativized file path exceeds this width then the diff stat will be misaligned.
     pub diff_stat_align_width: usize,
 
-    #[clap(long = "caret-encode")]
-    /// Replace control characters in output with caret notation.
-    ///
-    /// This option is supposed to be used in interactive.diffFilter configuration for `git add -p`
-    /// where raw control characters result in strange display.
-    pub caret_encode: bool,
-
     #[clap(long = "features", value_name = "FEATURES")]
     /// Names of delta features to activate (space-separated).
     ///

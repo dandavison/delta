@@ -293,7 +293,7 @@ commit 94907c0f136f46dc46ffae2dc92dca9af7eb7c2e
 
     #[test]
     fn test_carriage_return_is_replaced_with_caret_notation() {
-        let config = integration_test_utils::make_config_from_args(&["--caret-encode"]);
+        let config = integration_test_utils::make_config_from_args(&[]);
         let output = integration_test_utils::run_delta(
             GIT_DIFF_SINGLE_HUNK_WITH_SEQUENCE_OF_CR_ESCAPE_SEQUENCES_LF,
             &config,
