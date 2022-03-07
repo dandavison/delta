@@ -136,6 +136,15 @@ mod tests {
     }
 
     #[test]
+    fn test_diff_unified_concatenated() {
+        // See #1002. Line buffers were not being flushed correctly, leading to material from first
+        // file last hunk appearing at beginning of second file first hunk.
+        DeltaTest::with_args(&[])
+            .with_input(DIFF_UNIFIED_CONCATENATED)
+            .expect_contains("\nLINES.\n\n1/y 2022-03-06");
+    }
+
+    #[test]
     #[ignore] // Ideally, delta would make this test pass. See #121.
     fn test_delta_ignores_non_diff_input() {
         let config = integration_test_utils::make_config_from_args(&[]);
@@ -1873,6 +1882,27 @@ Only in b/: just_b
  with a name that start with 'm' making it come after the 'Only in'
 -This is different from b
 +This is different from a
+";
+
+    const DIFF_UNIFIED_CONCATENATED: &str = "\
+--- 1/x 2022-03-06 11:16:06.313403500 -0800
++++ 2/x 2022-03-06 11:18:14.083403500 -0800
+@@ -1,5 +1,5 @@
+ This
+-is
++IS
+ a
+ few
+-lines.
++LINES.
+--- 1/y 2022-03-06 11:16:44.483403500 -0800
++++ 2/y 2022-03-06 11:16:55.213403500 -0800
+@@ -1,4 +1,4 @@
+ This
+ is
+-another
++ANOTHER
+ test.
 ";
 
     const NOT_A_DIFF_OUTPUT: &str = "\
