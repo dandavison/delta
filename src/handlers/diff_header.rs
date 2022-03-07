@@ -83,6 +83,7 @@ impl<'a> StateMachine<'a> {
                 ));
         }
 
+        self.painter.paint_buffered_minus_and_plus_lines();
         // In color_only mode, raw_line's structure shouldn't be changed.
         // So it needs to avoid fn _handle_diff_header_header_line
         // (it connects the plus_file and minus_file),
@@ -127,6 +128,7 @@ impl<'a> StateMachine<'a> {
             ));
         self.current_file_pair = Some((self.minus_file.clone(), self.plus_file.clone()));
 
+        self.painter.paint_buffered_minus_and_plus_lines();
         // In color_only mode, raw_line's structure shouldn't be changed.
         // So it needs to avoid fn _handle_diff_header_header_line
         // (it connects the plus_file and minus_file),
