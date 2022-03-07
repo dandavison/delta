@@ -1,7 +1,7 @@
 # Full --help output
 
 ```
-delta 0.12.0
+delta 0.12.1
 A viewer for git and diff output
 
 USAGE:

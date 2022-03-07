@@ -47,8 +47,8 @@ $(CREATE_GITHUB_RELEASE_SENTINEL):
 BUMP_VERSION_IN_DOCUMENTATION_LINKS_SENTINEL=.make-sentinels/bump-version-in-documentation-links
 bump-version-in-documentation-links: $(BUMP_VERSION_IN_DOCUMENTATION_LINKS_SENTINEL)
 $(BUMP_VERSION_IN_DOCUMENTATION_LINKS_SENTINEL):
-	sed -i -E "s,$$DELTA_OLD_VERSION,$$DELTA_NEW_VERSION,g" README.md
-	git add README.md
+	sed -i -E "s,$$DELTA_OLD_VERSION,$$DELTA_NEW_VERSION,g" manual/src/full---help-output.md manual/src/installation.md
+	git add manual/src/full---help-output.md manual/src/installation.md
 	git commit -m "Bump version in links to executables"
 	touch $(BUMP_VERSION_IN_DOCUMENTATION_LINKS_SENTINEL)
 
