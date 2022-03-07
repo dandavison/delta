@@ -126,6 +126,9 @@ impl<'p> Painter<'p> {
     }
 
     pub fn paint_buffered_minus_and_plus_lines(&mut self) {
+        if self.minus_lines.is_empty() && self.plus_lines.is_empty() {
+            return;
+        }
         paint_minus_and_plus_lines(
             MinusPlus::new(&self.minus_lines, &self.plus_lines),
             &mut self.line_numbers_data,
