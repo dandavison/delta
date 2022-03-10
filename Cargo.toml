@@ -1,14 +1,14 @@
 [package]
-name = "git-delta"
+name = "git-delta-lib"
 authors = ["Dan Davison <dandavison7@gmail.com>"]
 categories = ["command-line-utilities", "development-tools"]
-description = "A syntax-highlighting pager for git"
+description = "Not ready for use: use crate git-delta for the application"
 documentation = "https://github.com/dandavison/delta"
 edition = "2018"
 homepage = "https://github.com/dandavison/delta"
 license = "MIT"
 repository = "https://github.com/dandavison/delta"
-version = "0.12.1"
+version = "0.0.0"
 
 [[bin]]
 name = "delta"
