@@ -5,7 +5,6 @@ use regex::Regex;
 use syntect::highlighting::Style as SyntectStyle;
 use syntect::highlighting::Theme as SyntaxTheme;
 use syntect::parsing::SyntaxSet;
-use unicode_segmentation::UnicodeSegmentation;
 
 use crate::ansi;
 use crate::cli;
@@ -28,37 +27,9 @@ use crate::tests::TESTING;
 use crate::utils;
 use crate::utils::bat::output::PagingMode;
 use crate::utils::regex_replacement::RegexReplacement;
-use crate::utils::syntect::FromDeltaStyle;
 use crate::wrapping::WrapConfig;
 
 pub const INLINE_SYMBOL_WIDTH_1: usize = 1;
-
-fn remove_percent_suffix(arg: &str) -> &str {
-    match &arg.strip_suffix('%') {
-        Some(s) => s,
-        None => arg,
-    }
-}
-
-fn ensure_display_width_1(what: &str, arg: String) -> String {
-    match arg.grapheme_indices(true).count() {
-        INLINE_SYMBOL_WIDTH_1 => arg,
-        width => fatal(format!(
-            "Invalid value for {}, display width of \"{}\" must be {} but is {}",
-            what, arg, INLINE_SYMBOL_WIDTH_1, width
-        )),
-    }
-}
-
-fn adapt_wrap_max_lines_argument(arg: String) -> usize {
-    if arg == "∞" || arg == "unlimited" || arg.starts_with("inf") {
-        0
-    } else {
-        arg.parse::<usize>()
-            .unwrap_or_else(|err| fatal(format!("Invalid wrap-max-lines argument: {}", err)))
-            + 1
-    }
-}
 
 #[cfg_attr(test, derive(Clone))]
 pub struct Config {
@@ -178,6 +149,8 @@ impl From<cli::Opt> for Config {
         let mut styles = parse_styles::parse_styles(&opt);
         let styles_map = parse_styles::parse_styles_map(&opt);
 
+        let wrap_config = WrapConfig::from_opt(&opt, styles["inline-hint-style"]);
+
         let max_line_distance_for_naively_paired_lines =
             env::get_env_var("DELTA_EXPERIMENTAL_MAX_LINE_DISTANCE_FOR_NAIVELY_PAIRED_LINES")
                 .map(|s| s.parse::<f64>().unwrap_or(0.0))
@@ -242,8 +215,6 @@ impl From<cli::Opt> for Config {
         } else {
             opt.navigate_regex
         };
-
-        let wrap_max_lines_plus1 = adapt_wrap_max_lines_argument(opt.wrap_max_lines);
 
         #[cfg(not(test))]
         let cwd_of_delta_process = std::env::current_dir().ok();
@@ -341,22 +312,13 @@ impl From<cli::Opt> for Config {
             line_buffer_size: opt.line_buffer_size,
             max_line_distance: opt.max_line_distance,
             max_line_distance_for_naively_paired_lines,
-            max_line_length: match (opt.side_by_side, wrap_max_lines_plus1) {
-                (false, _) | (true, 1) => opt.max_line_length,
-                // Ensure there is enough text to wrap, either don't truncate the input at all (0)
-                // or ensure there is enough for the requested number of lines.
-                // The input can contain ANSI sequences, so round up a bit. This is enough for
-                // normal `git diff`, but might not be with ANSI heavy input.
-                (true, 0) => 0,
-                (true, wrap_max_lines) => {
-                    let single_pane_width = opt.computed.available_terminal_width / 2;
-                    let add_25_percent_or_term_width =
-                        |x| x + std::cmp::max((x * 250) / 1000, single_pane_width) as usize;
-                    std::cmp::max(
-                        opt.max_line_length,
-                        add_25_percent_or_term_width(single_pane_width * wrap_max_lines),
-                    )
-                }
+            max_line_length: if opt.side_by_side {
+                wrap_config.config_max_line_length(
+                    opt.max_line_length,
+                    opt.computed.available_terminal_width,
+                )
+            } else {
+                opt.max_line_length
             },
             merge_conflict_begin_symbol: opt.merge_conflict_begin_symbol,
             merge_conflict_ours_diff_header_style: styles["merge-conflict-ours-diff-header-style"],
@@ -393,34 +355,7 @@ impl From<cli::Opt> for Config {
             tokenization_regex,
             true_color: opt.computed.true_color,
             truncation_symbol: format!("{}→{}", ansi::ANSI_SGR_REVERSE, ansi::ANSI_SGR_RESET),
-            wrap_config: WrapConfig {
-                left_symbol: ensure_display_width_1("wrap-left-symbol", opt.wrap_left_symbol),
-                right_symbol: ensure_display_width_1("wrap-right-symbol", opt.wrap_right_symbol),
-                right_prefix_symbol: ensure_display_width_1(
-                    "wrap-right-prefix-symbol",
-                    opt.wrap_right_prefix_symbol,
-                ),
-                use_wrap_right_permille: {
-                    let arg = &opt.wrap_right_percent;
-                    let percent = remove_percent_suffix(arg)
-                        .parse::<f64>()
-                        .unwrap_or_else(|err| {
-                            fatal(format!(
-                                "Could not parse wrap-right-percent argument {}: {}.",
-                                &arg, err
-                            ))
-                        });
-                    if percent.is_finite() && percent > 0.0 && percent < 100.0 {
-                        (percent * 10.0).round() as usize
-                    } else {
-                        fatal("Invalid value for wrap-right-percent, not between 0 and 100.")
-                    }
-                },
-                max_lines: wrap_max_lines_plus1,
-                inline_hint_syntect_style: SyntectStyle::from_delta_style(
-                    styles["inline-hint-style"],
-                ),
-            },
+            wrap_config,
             whitespace_error_style: styles["whitespace-error-style"],
             zero_style: styles["zero-style"],
         }

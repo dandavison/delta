@@ -1,7 +1,9 @@
 use syntect::highlighting::Style as SyntectStyle;
 use unicode_segmentation::UnicodeSegmentation;
 
+use crate::cli;
 use crate::config::INLINE_SYMBOL_WIDTH_1;
+use crate::fatal;
 
 use crate::config::Config;
 use crate::delta::DiffType;
@@ -11,6 +13,7 @@ use crate::features::side_by_side::{available_line_width, line_is_too_long, Left
 use crate::minusplus::*;
 use crate::paint::LineSections;
 use crate::style::Style;
+use crate::utils::syntect::FromDeltaStyle;
 
 /// See [`wrap_line`] for documentation.
 #[derive(Clone, Debug)]
@@ -25,6 +28,92 @@ pub struct WrapConfig {
     // adapt_wrap_max_lines_argument()
     pub max_lines: usize,
     pub inline_hint_syntect_style: SyntectStyle,
+}
+
+impl WrapConfig {
+    pub fn from_opt(opt: &cli::Opt, inline_hint_style: Style) -> Self {
+        Self {
+            left_symbol: ensure_display_width_1("wrap-left-symbol", opt.wrap_left_symbol.clone()),
+            right_symbol: ensure_display_width_1(
+                "wrap-right-symbol",
+                opt.wrap_right_symbol.clone(),
+            ),
+            right_prefix_symbol: ensure_display_width_1(
+                "wrap-right-prefix-symbol",
+                opt.wrap_right_prefix_symbol.clone(),
+            ),
+            use_wrap_right_permille: {
+                let arg = &opt.wrap_right_percent;
+                let percent = remove_percent_suffix(arg)
+                    .parse::<f64>()
+                    .unwrap_or_else(|err| {
+                        fatal(format!(
+                            "Could not parse wrap-right-percent argument {}: {}.",
+                            &arg, err
+                        ))
+                    });
+                if percent.is_finite() && percent > 0.0 && percent < 100.0 {
+                    (percent * 10.0).round() as usize
+                } else {
+                    fatal("Invalid value for wrap-right-percent, not between 0 and 100.")
+                }
+            },
+            max_lines: adapt_wrap_max_lines_argument(opt.wrap_max_lines.clone()),
+            inline_hint_syntect_style: SyntectStyle::from_delta_style(inline_hint_style),
+        }
+    }
+
+    // Compute value of `max_line_length` field in the main `Config` struct.
+    pub fn config_max_line_length(
+        &self,
+        max_line_length: usize,
+        available_terminal_width: usize,
+    ) -> usize {
+        match self.max_lines {
+            1 => max_line_length,
+            // Ensure there is enough text to wrap, either don't truncate the input at all (0)
+            // or ensure there is enough for the requested number of lines.
+            // The input can contain ANSI sequences, so round up a bit. This is enough for
+            // normal `git diff`, but might not be with ANSI heavy input.
+            0 => 0,
+            wrap_max_lines => {
+                let single_pane_width = available_terminal_width / 2;
+                let add_25_percent_or_term_width =
+                    |x| x + std::cmp::max((x * 250) / 1000, single_pane_width) as usize;
+                std::cmp::max(
+                    max_line_length,
+                    add_25_percent_or_term_width(single_pane_width * wrap_max_lines),
+                )
+            }
+        }
+    }
+}
+
+fn remove_percent_suffix(arg: &str) -> &str {
+    match &arg.strip_suffix('%') {
+        Some(s) => s,
+        None => arg,
+    }
+}
+
+fn ensure_display_width_1(what: &str, arg: String) -> String {
+    match arg.grapheme_indices(true).count() {
+        INLINE_SYMBOL_WIDTH_1 => arg,
+        width => fatal(format!(
+            "Invalid value for {}, display width of \"{}\" must be {} but is {}",
+            what, arg, INLINE_SYMBOL_WIDTH_1, width
+        )),
+    }
+}
+
+fn adapt_wrap_max_lines_argument(arg: String) -> usize {
+    if arg == "∞" || arg == "unlimited" || arg.starts_with("inf") {
+        0
+    } else {
+        arg.parse::<usize>()
+            .unwrap_or_else(|err| fatal(format!("Invalid wrap-max-lines argument: {}", err)))
+            + 1
+    }
 }
 
 #[derive(PartialEq)]
