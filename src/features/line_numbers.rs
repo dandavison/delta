@@ -252,16 +252,12 @@ fn format_and_paint_line_number_field<'a>(
     let minus_plus_style = match (line_numbers[Minus], line_numbers[Plus]) {
         (Some(_), None) => styles[Minus],
         (None, Some(_)) => styles[Plus],
+        (Some(_), Some(_)) => styles[Plus], // FIXME!
         _ => unreachable!(),
     };
     let left_right_style = match &config.line_numbers_style_leftright[side] {
-        style => {
-            if style.is_omitted {
-                &minus_plus_style
-            } else {
-                style
-            }
-        }
+        style if style.is_omitted => &minus_plus_style,
+        style => style,
     };
 
     let mut ansi_strings = Vec::new();
@@ -286,7 +282,14 @@ fn format_and_paint_line_number_field<'a>(
                     None,
                     config,
                 );
-                ansi_strings.push(minus_plus_style.paint(formatted))
+                // In side-by-side mode we paint an empty cell according to its column; otherwise we
+                // paint it according to its row. (Only the background color is relevant to an empty
+                // cell.) See #949
+                let style = match (config.side_by_side, line_numbers[Minus].is_some()) {
+                    (true, _) | (false, true) => styles[Minus],
+                    (false, false) => styles[Plus],
+                };
+                ansi_strings.push(style.paint(formatted))
             }
             Some(Placeholder::NumberPlus) => {
                 let formatted = format_line_number(
@@ -297,7 +300,14 @@ fn format_and_paint_line_number_field<'a>(
                     Some(plus_file),
                     config,
                 );
-                ansi_strings.push(minus_plus_style.paint(formatted))
+                // In side-by-side mode we paint an empty cell according to its column; otherwise we
+                // paint it according to its row. (Only the background color is relevant to an empty
+                // cell.) See #949
+                let style = match (config.side_by_side, line_numbers[Plus].is_some()) {
+                    (true, _) | (false, true) => styles[Plus],
+                    (false, false) => styles[Minus],
+                };
+                ansi_strings.push(style.paint(formatted))
             }
             None => {}
             _ => unreachable!("Invalid placeholder"),
