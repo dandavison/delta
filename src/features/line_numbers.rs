@@ -259,7 +259,7 @@ fn format_and_paint_line_number_field<'a>(
     let mut ansi_strings = Vec::new();
     let mut suffix = "";
     for placeholder in format_data {
-        ansi_strings.push(style.paint(placeholder.prefix.as_str()));
+        ansi_strings.push(style2.paint(placeholder.prefix.as_str()));
 
         let width = if let Some(placeholder_width) = placeholder.width {
             max(placeholder_width, min_field_width)
@@ -296,7 +296,7 @@ fn format_and_paint_line_number_field<'a>(
         }
         suffix = placeholder.suffix.as_str();
     }
-    ansi_strings.push(style.paint(suffix));
+    ansi_strings.push(style2.paint(suffix));
     ansi_strings
 }
 
