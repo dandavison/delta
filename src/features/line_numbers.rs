@@ -249,19 +249,25 @@ fn format_and_paint_line_number_field<'a>(
 
     let format_data = &line_numbers_data.format_data[side];
     let plus_file = &line_numbers_data.plus_file;
-    let mut style = &config.line_numbers_style_leftright[side];
-    if style == &config.null_style {
-        style = if line_numbers[Minus].is_some() {
-            &styles[Minus]
-        } else {
-            &styles[Plus]
-        };
-    }
+    let minus_plus_style = match (line_numbers[Minus], line_numbers[Plus]) {
+        (Some(_), None) => styles[Minus],
+        (None, Some(_)) => styles[Plus],
+        _ => unreachable!(),
+    };
+    let left_right_style = match &config.line_numbers_style_leftright[side] {
+        style => {
+            if style.is_omitted {
+                &minus_plus_style
+            } else {
+                style
+            }
+        }
+    };
 
     let mut ansi_strings = Vec::new();
     let mut suffix = "";
     for placeholder in format_data {
-        ansi_strings.push(style.paint(placeholder.prefix.as_str()));
+        ansi_strings.push(left_right_style.paint(placeholder.prefix.as_str()));
 
         let width = if let Some(placeholder_width) = placeholder.width {
             max(placeholder_width, min_field_width)
@@ -280,7 +286,7 @@ fn format_and_paint_line_number_field<'a>(
                     None,
                     config,
                 );
-                ansi_strings.push(style.paint(formatted))
+                ansi_strings.push(minus_plus_style.paint(formatted))
             }
             Some(Placeholder::NumberPlus) => {
                 let formatted = format_line_number(
@@ -291,14 +297,14 @@ fn format_and_paint_line_number_field<'a>(
                     Some(plus_file),
                     config,
                 );
-                ansi_strings.push(style.paint(formatted))
+                ansi_strings.push(minus_plus_style.paint(formatted))
             }
             None => {}
             _ => unreachable!("Invalid placeholder"),
         }
         suffix = placeholder.suffix.as_str();
     }
-    ansi_strings.push(style.paint(suffix));
+    ansi_strings.push(left_right_style.paint(suffix));
     ansi_strings
 }
 
