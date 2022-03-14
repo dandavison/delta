@@ -250,6 +250,11 @@ fn format_and_paint_line_number_field<'a>(
     let format_data = &line_numbers_data.format_data[side];
     let plus_file = &line_numbers_data.plus_file;
     let style = &config.line_numbers_style_leftright[side];
+    let style2 = if line_numbers[Minus].is_some() {
+        styles[Minus]
+    } else {
+        styles[Plus]
+    };
 
     let mut ansi_strings = Vec::new();
     let mut suffix = "";
@@ -265,24 +270,26 @@ fn format_and_paint_line_number_field<'a>(
         let alignment_spec = placeholder.alignment_spec.unwrap_or(Align::Center);
         match placeholder.placeholder {
             Some(Placeholder::NumberMinus) => {
-                ansi_strings.push(styles[Minus].paint(format_line_number(
+                let formatted = format_line_number(
                     line_numbers[Minus],
                     alignment_spec,
                     width,
                     placeholder.precision,
                     None,
                     config,
-                )))
+                );
+                ansi_strings.push(style2.paint(formatted))
             }
             Some(Placeholder::NumberPlus) => {
-                ansi_strings.push(styles[Plus].paint(format_line_number(
+                let formatted = format_line_number(
                     line_numbers[Plus],
                     alignment_spec,
                     width,
                     placeholder.precision,
                     Some(plus_file),
                     config,
-                )))
+                );
+                ansi_strings.push(style2.paint(formatted))
             }
             None => {}
             _ => unreachable!("Invalid placeholder"),
