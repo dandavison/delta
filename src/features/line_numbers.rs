@@ -249,17 +249,19 @@ fn format_and_paint_line_number_field<'a>(
 
     let format_data = &line_numbers_data.format_data[side];
     let plus_file = &line_numbers_data.plus_file;
-    let style = &config.line_numbers_style_leftright[side];
-    let style2 = if line_numbers[Minus].is_some() {
-        styles[Minus]
-    } else {
-        styles[Plus]
-    };
+    let mut style = &config.line_numbers_style_leftright[side];
+    if style == &config.null_style {
+        style = if line_numbers[Minus].is_some() {
+            &styles[Minus]
+        } else {
+            &styles[Plus]
+        };
+    }
 
     let mut ansi_strings = Vec::new();
     let mut suffix = "";
     for placeholder in format_data {
-        ansi_strings.push(style2.paint(placeholder.prefix.as_str()));
+        ansi_strings.push(style.paint(placeholder.prefix.as_str()));
 
         let width = if let Some(placeholder_width) = placeholder.width {
             max(placeholder_width, min_field_width)
@@ -278,7 +280,7 @@ fn format_and_paint_line_number_field<'a>(
                     None,
                     config,
                 );
-                ansi_strings.push(style2.paint(formatted))
+                ansi_strings.push(style.paint(formatted))
             }
             Some(Placeholder::NumberPlus) => {
                 let formatted = format_line_number(
@@ -289,14 +291,14 @@ fn format_and_paint_line_number_field<'a>(
                     Some(plus_file),
                     config,
                 );
-                ansi_strings.push(style2.paint(formatted))
+                ansi_strings.push(style.paint(formatted))
             }
             None => {}
             _ => unreachable!("Invalid placeholder"),
         }
         suffix = placeholder.suffix.as_str();
     }
-    ansi_strings.push(style2.paint(suffix));
+    ansi_strings.push(style.paint(suffix));
     ansi_strings
 }
 

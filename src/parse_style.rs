@@ -18,6 +18,9 @@ impl Style {
         true_color: bool,
         git_config: Option<&GitConfig>,
     ) -> Self {
+        if style_string.to_lowercase() == "none" {
+            return Self::null_style();
+        }
         let (ansi_term_style, is_omitted, is_raw, is_syntax_highlighted) =
             parse_ansi_term_style(style_string, default, true_color, git_config);
         let decoration_style = DecorationStyle::from_str(
@@ -33,6 +36,10 @@ impl Style {
             is_syntax_highlighted,
             decoration_style,
         }
+    }
+
+    pub fn null_style() -> Self {
+        Self::new()
     }
 
     pub fn from_git_str(git_style_string: &str) -> Self {
