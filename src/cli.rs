@@ -1008,8 +1008,8 @@ pub struct Opt {
     #[clap(long = "wrap-max-lines", default_value = "2", value_name = "N")]
     /// How often a line should be wrapped if it does not fit.
     ///
-    /// Zero means to never wrap. Any content which does not fit will be truncated. A value of
-    /// "unlimited" means a line will be wrapped as many times as required.
+    /// Zero means to never wrap. Any content which does not fit after wrapping will be truncated. A
+    /// value of "unlimited" means a line will be wrapped as many times as required.
     pub wrap_max_lines: String,
 
     #[clap(
