@@ -354,12 +354,21 @@ pub fn get_file_change_description_from_file_paths(
             plus_file
         )
     } else {
-        let format_file = |file| match (config.hyperlinks, utils::path::absolute_path(file, config))
-        {
-            (true, Some(absolute_path)) => {
-                features::hyperlinks::format_osc8_file_hyperlink(absolute_path, None, file, config)
+        let format_file = |file| {
+            let formatted_file = if let Some(regex_replacement) = &config.file_regex_replacement {
+                regex_replacement.execute(file)
+            } else {
+                Cow::from(file)
+            };
+            match (config.hyperlinks, utils::path::absolute_path(file, config)) {
+                (true, Some(absolute_path)) => features::hyperlinks::format_osc8_file_hyperlink(
+                    absolute_path,
+                    None,
+                    &formatted_file,
+                    config,
+                ),
+                _ => formatted_file,
             }
-            _ => Cow::from(file),
         };
         match (minus_file, plus_file, minus_file_event, plus_file_event) {
             (minus_file, plus_file, _, _) if minus_file == plus_file => format!(
