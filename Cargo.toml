@@ -33,7 +33,7 @@ itertools = "0.10.1"
 lazy_static = "1.4"
 palette = "0.6.0"
 pathdiff = "0.2.1"
-regex = "1.4.6"
+regex = "1.5.5"
 serde = { version = "1.0.118", features = ["derive"] }
 serde_json = "1.0.70"
 shell-words = "1.0.0"
