@@ -510,7 +510,7 @@ pub struct Opt {
     pub hyperlinks: bool,
 
     #[clap(long = "hyperlinks-commit-link-format", value_name = "FMT")]
-    /// Format string for commit hyperlinks (requiraes --hyperlinks).
+    /// Format string for commit hyperlinks (requires --hyperlinks).
     ///
     /// The placeholder "{commit}" will be replaced by the commit hash. For example:
     /// --hyperlinks-commit-link-format='https://mygitrepo/{commit}/'
