@@ -980,7 +980,12 @@ pub struct Opt {
     /// Defaults to color.diff.whitespace if that is set in git config, or else 'magenta reverse'.
     pub whitespace_error_style: String,
 
-    #[clap(short = 'w', long = "width", value_name = "N")]
+    #[clap(
+        short = 'w',
+        long = "width",
+        value_name = "N",
+        allow_hyphen_values = true
+    )]
     /// The width of underline/overline decorations.
     ///
     /// Examples: "72" (exactly 72 characters), "-2" (auto-detected terminal width minus 2). An
