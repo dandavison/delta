@@ -837,6 +837,17 @@ pub struct Opt {
     /// Options are: auto, always, and never.
     pub paging_mode: String,
 
+    #[clap(
+        long = "panel-center-offset",
+        value_name = "OFFSET",
+        allow_hyphen_values = true
+    )]
+    /// Offset the center between the left and right panels.
+    ///
+    /// In side-by-side mode move the center between the two panels to the left (negative values)
+    /// or to the right (positive values).
+    pub panel_center_offset: Option<String>,
+
     #[clap(long = "parse-ansi")]
     /// Display ANSI color escape sequences in human-readable form.
     ///
