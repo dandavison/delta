@@ -2,7 +2,7 @@ use std::cmp::max;
 use std::io::Write;
 
 use crate::ansi;
-use crate::cli::Width;
+use crate::config::WidthAndDecoration;
 use crate::style::{DecorationStyle, Style};
 
 fn paint_text(text_style: Style, text: &str, addendum: &str) -> String {
@@ -20,7 +20,7 @@ pub type DrawFunction = dyn FnMut(
     &str,
     &str,
     &str,
-    &Width,
+    WidthAndDecoration,
     Style,
     ansi_term::Style,
 ) -> std::io::Result<()>;
@@ -57,7 +57,7 @@ fn write_no_decoration(
     text: &str,
     raw_text: &str,
     addendum: &str,
-    _line_width: &Width, // ignored
+    _line_width: WidthAndDecoration, // ignored
     text_style: Style,
     _decoration_style: ansi_term::Style,
 ) -> std::io::Result<()> {
@@ -76,7 +76,7 @@ pub fn write_boxed(
     text: &str,
     raw_text: &str,
     addendum: &str,
-    _line_width: &Width, // ignored
+    _line_width: WidthAndDecoration, // ignored
     text_style: Style,
     decoration_style: ansi_term::Style,
 ) -> std::io::Result<()> {
@@ -106,7 +106,7 @@ fn write_boxed_with_underline(
     text: &str,
     raw_text: &str,
     addendum: &str,
-    line_width: &Width,
+    line_width: WidthAndDecoration,
     text_style: Style,
     decoration_style: ansi_term::Style,
 ) -> std::io::Result<()> {
@@ -120,9 +120,10 @@ fn write_boxed_with_underline(
         text_style,
         decoration_style,
     )?;
-    let line_width = match *line_width {
-        Width::Fixed(n) => n,
-        Width::Variable => box_width,
+    let line_width = if line_width.limited_decoration_width() {
+        box_width
+    } else {
+        line_width.width()
     };
     write_horizontal_line(
         writer,
@@ -149,7 +150,7 @@ fn write_underlined(
     text: &str,
     raw_text: &str,
     addendum: &str,
-    line_width: &Width,
+    line_width: WidthAndDecoration,
     text_style: Style,
     decoration_style: ansi_term::Style,
 ) -> std::io::Result<()> {
@@ -170,7 +171,7 @@ fn write_overlined(
     text: &str,
     raw_text: &str,
     addendum: &str,
-    line_width: &Width,
+    line_width: WidthAndDecoration,
     text_style: Style,
     decoration_style: ansi_term::Style,
 ) -> std::io::Result<()> {
@@ -191,7 +192,7 @@ fn write_underoverlined(
     text: &str,
     raw_text: &str,
     addendum: &str,
-    line_width: &Width,
+    line_width: WidthAndDecoration,
     text_style: Style,
     decoration_style: ansi_term::Style,
 ) -> std::io::Result<()> {
@@ -214,14 +215,15 @@ fn _write_under_or_over_lined(
     text: &str,
     raw_text: &str,
     addendum: &str,
-    line_width: &Width,
+    line_width: WidthAndDecoration,
     text_style: Style,
     decoration_style: ansi_term::Style,
 ) -> std::io::Result<()> {
     let text_width = ansi::measure_text_width(text);
-    let line_width = match *line_width {
-        Width::Fixed(n) => max(n, text_width),
-        Width::Variable => text_width,
+    let line_width = if line_width.limited_decoration_width() {
+        text_width
+    } else {
+        max(line_width.width(), text_width)
     };
     let mut write_line: Box<dyn FnMut(&mut dyn Write) -> std::io::Result<()>> =
         Box::new(|writer| {

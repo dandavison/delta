@@ -3,7 +3,6 @@ use syntect::highlighting::Style as SyntectStyle;
 use unicode_segmentation::UnicodeSegmentation;
 
 use crate::ansi;
-use crate::cli;
 use crate::config::{self, delta_unreachable, Config};
 use crate::delta::DiffType;
 use crate::delta::State;
@@ -47,12 +46,8 @@ pub type SideBySideData = LeftRight<Panel>;
 
 impl SideBySideData {
     /// Create a [`LeftRight<Panel>`](LeftRight<Panel>) named [`SideBySideData`].
-    pub fn new_sbs(decorations_width: &cli::Width, available_terminal_width: &usize) -> Self {
-        let panel_width = match decorations_width {
-            cli::Width::Fixed(w) => w / 2,
-            _ => available_terminal_width / 2,
-        };
-        SideBySideData::new(Panel { width: panel_width }, Panel { width: panel_width })
+    pub fn new_sbs(width: usize) -> Self {
+        SideBySideData::new(Panel { width: width / 2 }, Panel { width: width / 2 })
     }
 }
 
@@ -536,7 +531,7 @@ fn pad_panel_line_to_width<'a>(
 
 pub mod ansifill {
     use super::SideBySideData;
-    use crate::config::Config;
+    use crate::config::{Config, WidthAndDecoration};
     use crate::paint::BgFillMethod;
 
     pub const ODD_PAD_CHAR: char = ' ';
@@ -561,11 +556,11 @@ pub mod ansifill {
         pub fn new(config: &Config) -> Self {
             Self(
                 config.side_by_side
-                    && Self::is_odd_with_ansi(&config.decorations_width, &config.line_fill_method),
+                    && Self::is_odd_with_ansi(config.width, &config.line_fill_method),
             )
         }
         pub fn sbs_odd_fix(
-            width: &crate::cli::Width,
+            width: WidthAndDecoration,
             method: &BgFillMethod,
             sbs_data: SideBySideData,
         ) -> SideBySideData {
@@ -578,9 +573,8 @@ pub mod ansifill {
         pub fn pad_width(&self) -> bool {
             self.0
         }
-        fn is_odd_with_ansi(width: &crate::cli::Width, method: &BgFillMethod) -> bool {
-            method == &BgFillMethod::TryAnsiSequence
-                && matches!(&width, crate::cli::Width::Fixed(width) if width % 2 == 1)
+        fn is_odd_with_ansi(width: WidthAndDecoration, method: &BgFillMethod) -> bool {
+            method == &BgFillMethod::TryAnsiSequence && width.width() % 2 == 1
         }
         fn adapt_sbs_data(mut sbs_data: SideBySideData) -> SideBySideData {
             sbs_data[super::Right].width += 1;

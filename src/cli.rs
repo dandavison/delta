@@ -980,15 +980,26 @@ pub struct Opt {
     /// Defaults to color.diff.whitespace if that is set in git config, or else 'magenta reverse'.
     pub whitespace_error_style: String,
 
-    #[clap(short = 'w', long = "width", value_name = "N")]
-    /// The width of underline/overline decorations.
+    #[clap(
+        short = 'w',
+        long = "width",
+        value_name = "N",
+        allow_hyphen_values = true
+    )]
+    /// The width of underline/overline(?) decorations.
     ///
     /// Examples: "72" (exactly 72 characters), "-2" (auto-detected terminal width minus 2). An
     /// expression such as "74-2" is also valid (equivalent to 72 but may be useful if the caller
-    /// has a variable holding the value "74"). Use --width=variable to extend decorations and
+    /// has a variable holding the value "74").
+    pub width: Option<String>,
+
+    #[clap(long = "background-color-extends-to-terminal-width-NOT")]
+    /// What am I?
+    ///
+    /// Use --width=variable to extend decorations and
     /// background colors to the end of the text only. Otherwise background colors extend to the
     /// full terminal width.
-    pub width: Option<String>,
+    pub background_color_extends_to_terminal_width_not: bool,
 
     #[clap(long = "word-diff-regex", default_value = r"\w+", value_name = "REGEX")]
     /// Regular expression defining a 'word' in within-line diff algorithm.
@@ -1078,26 +1089,12 @@ pub struct Opt {
 pub struct ComputedValues {
     pub available_terminal_width: usize,
     pub stdout_is_term: bool,
-    pub background_color_extends_to_terminal_width: bool,
-    pub decorations_width: Width,
     pub inspect_raw_lines: InspectRawLines,
     pub is_light_mode: bool,
     pub paging_mode: PagingMode,
     pub syntax_set: SyntaxSet,
     pub syntax_theme: Option<SyntaxTheme>,
     pub true_color: bool,
-}
-
-#[derive(Clone, Debug, PartialEq)]
-pub enum Width {
-    Fixed(usize),
-    Variable,
-}
-
-impl Default for Width {
-    fn default() -> Self {
-        Width::Variable
-    }
 }
 
 #[derive(Clone, Debug, PartialEq)]

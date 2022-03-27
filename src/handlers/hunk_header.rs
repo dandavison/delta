@@ -195,7 +195,7 @@ fn write_hunk_header_raw(
         &format!("{}{}", line, if pad { " " } else { "" }),
         &format!("{}{}", raw_line, if pad { " " } else { "" }),
         "",
-        &config.decorations_width,
+        config.width,
         config.hunk_header_style,
         decoration_ansi_term_style,
     )?;
@@ -231,7 +231,7 @@ pub fn write_hunk_header(
             &painter.output_buffer,
             &painter.output_buffer,
             "",
-            &config.decorations_width,
+            config.width,
             config.null_style,
             decoration_ansi_term_style,
         )?;

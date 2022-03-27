@@ -154,10 +154,7 @@ pub fn show_config(config: &config::Config, writer: &mut dyn Write) -> std::io::
             .clone()
             .map(|t| t.name.unwrap_or_else(|| "none".to_string()))
             .unwrap_or_else(|| "none".to_string()),
-        width = match config.decorations_width {
-            cli::Width::Fixed(width) => width.to_string(),
-            cli::Width::Variable => "variable".to_string(),
-        },
+        width = config.width.width(),
         tab_width = config.tab_width,
         tokenization_regex = format_option_value(&config.tokenization_regex.to_string()),
     )?;

@@ -51,7 +51,7 @@ impl<'a> StateMachine<'a> {
             &format!("{}{}", formatted_line, if pad { " " } else { "" }),
             &format!("{}{}", formatted_raw_line, if pad { " " } else { "" }),
             "",
-            &self.config.decorations_width,
+            self.config.width,
             self.config.commit_style,
             decoration_ansi_term_style,
         )?;

@@ -1,4 +1,5 @@
 use std::collections::HashMap;
+use std::convert::TryInto;
 use std::path::PathBuf;
 
 use regex::Regex;
@@ -34,7 +35,6 @@ pub const INLINE_SYMBOL_WIDTH_1: usize = 1;
 #[cfg_attr(test, derive(Clone))]
 pub struct Config {
     pub available_terminal_width: usize,
-    pub background_color_extends_to_terminal_width: bool,
     pub blame_code_style: Option<Style>,
     pub blame_format: String,
     pub blame_separator_format: BlameLineNumbers,
@@ -47,7 +47,6 @@ pub struct Config {
     pub cwd_of_delta_process: Option<PathBuf>,
     pub cwd_of_user_shell_process: Option<PathBuf>,
     pub cwd_relative_to_repo_root: Option<String>,
-    pub decorations_width: cli::Width,
     pub default_language: Option<String>,
     pub diff_stat_align_width: usize,
     pub error_exit_code: i32,
@@ -124,6 +123,7 @@ pub struct Config {
     pub tokenization_regex: Regex,
     pub true_color: bool,
     pub truncation_symbol: String,
+    pub width: WidthAndDecoration,
     pub whitespace_error_style: Style,
     pub wrap_config: WrapConfig,
     pub zero_style: Style,
@@ -184,6 +184,9 @@ impl From<cli::Opt> for Config {
         let right_arrow = opt.right_arrow;
         let hunk_label = opt.hunk_label;
 
+        let width = parse_width_specifier(opt.width, opt.computed.available_terminal_width)
+            .unwrap_or_else(|err| fatal(format!("Invalid value for width: {}", err)));
+
         let line_fill_method = match opt.line_fill_method.as_deref() {
             // Note that "default" is not documented
             Some("ansi") | Some("default") | None => BgFillMethod::TryAnsiSequence,
@@ -191,15 +194,14 @@ impl From<cli::Opt> for Config {
             _ => fatal("Invalid option for line-fill-method: Expected \"ansi\" or \"spaces\"."),
         };
 
-        let side_by_side_data = side_by_side::SideBySideData::new_sbs(
-            &opt.computed.decorations_width,
-            &opt.computed.available_terminal_width,
-        );
-        let side_by_side_data = ansifill::UseFullPanelWidth::sbs_odd_fix(
-            &opt.computed.decorations_width,
-            &line_fill_method,
-            side_by_side_data,
-        );
+        let side_by_side_data = side_by_side::SideBySideData::new_sbs(width);
+
+        let width =
+            WidthAndDecoration::new(width, opt.background_color_extends_to_terminal_width_not)
+                .unwrap_or_else(|| fatal("Invalid value for width, value is too large."));
+
+        let side_by_side_data =
+            ansifill::UseFullPanelWidth::sbs_odd_fix(width, &line_fill_method, side_by_side_data);
 
         let navigate_regex = if (opt.navigate || opt.show_themes)
             && (opt.navigate_regex.is_none() || opt.navigate_regex == Some("".to_string()))
@@ -230,9 +232,6 @@ impl From<cli::Opt> for Config {
 
         Self {
             available_terminal_width: opt.computed.available_terminal_width,
-            background_color_extends_to_terminal_width: opt
-                .computed
-                .background_color_extends_to_terminal_width,
             blame_format: opt.blame_format,
             blame_code_style: styles.remove("blame-code-style"),
             blame_palette,
@@ -245,7 +244,6 @@ impl From<cli::Opt> for Config {
             cwd_of_delta_process,
             cwd_of_user_shell_process,
             cwd_relative_to_repo_root,
-            decorations_width: opt.computed.decorations_width,
             default_language: opt.default_language,
             diff_stat_align_width: opt.diff_stat_align_width,
             error_exit_code: 2, // Use 2 for error because diff uses 0 and 1 for non-error.
@@ -355,6 +353,7 @@ impl From<cli::Opt> for Config {
             tokenization_regex,
             true_color: opt.computed.true_color,
             truncation_symbol: format!("{}→{}", ansi::ANSI_SGR_REVERSE, ansi::ANSI_SGR_RESET),
+            width,
             wrap_config,
             whitespace_error_style: styles["whitespace-error-style"],
             zero_style: styles["zero-style"],
@@ -382,6 +381,81 @@ fn make_blame_palette(blame_palette: Option<String>, is_light_mode: bool) -> Vec
 /// Did the user supply `option` on the command line?
 pub fn user_supplied_option(option: &str, arg_matches: &clap::ArgMatches) -> bool {
     arg_matches.occurrences_of(option) > 0
+}
+
+fn parse_width_specifier(
+    width_arg: Option<String>,
+    terminal_width: usize,
+) -> Result<usize, String> {
+    let width_arg = match width_arg.as_ref() {
+        Some(w) => w.trim(),
+        None => return Ok(terminal_width),
+    };
+
+    let parse = |width: &str, must_be_negative, subexpression| -> Result<isize, String> {
+        let remove_spaces = |s: &str| s.chars().filter(|c| c != &' ').collect::<String>();
+        match remove_spaces(width).parse() {
+            Ok(val) if must_be_negative && val > 0 => Err(()),
+            Err(_) => Err(()),
+            Ok(ok) => Ok(ok),
+        }
+        .map_err(|_| {
+            let pos = if must_be_negative { " negative" } else { "n" };
+            let subexpr = if subexpression {
+                format!(" (from {:?})", width_arg)
+            } else {
+                "".into()
+            };
+            format!(
+                "{:?}{subexpr} is not a{pos} integer",
+                width,
+                subexpr = subexpr,
+                pos = pos
+            )
+        })
+    };
+
+    let width = match width_arg.find('-') {
+        None => parse(width_arg, false, false)?.try_into().unwrap(),
+        Some(index) if index == 0 => (terminal_width as isize + parse(width_arg, true, false)?)
+            .try_into()
+            .map_err(|_| {
+                format!(
+                    "the current terminal width of {} minus {} is negative",
+                    terminal_width,
+                    &width_arg[1..].trim(),
+                )
+            })?,
+        Some(index) => {
+            let a = parse(&width_arg[0..index], false, true)?;
+            let b = parse(&width_arg[index..], true, true)?;
+            (a + b)
+                .try_into()
+                .map_err(|_| format!("expression {:?} is not positive", width_arg))?
+        }
+    };
+
+    Ok(width)
+}
+
+#[derive(Clone, Copy, Debug)]
+pub struct WidthAndDecoration {
+    // The magnitued represents the width, the 1-bit sign decides if
+    // decorations are full width or limited.
+    width: isize,
+}
+impl WidthAndDecoration {
+    pub fn new(width: usize, limited: bool) -> Option<Self> {
+        let width: isize = width.try_into().ok()?;
+        let width = if limited { -width } else { width };
+        Some(WidthAndDecoration { width })
+    }
+    pub fn width(&self) -> usize {
+        self.width.abs() as usize
+    }
+    pub fn limited_decoration_width(&self) -> bool {
+        self.width < 0
+    }
 }
 
 pub fn delta_unreachable(message: &str) -> ! {
@@ -420,12 +494,69 @@ pub mod tests {
             Some(git_config_path),
         );
         assert_eq!(config.true_color, false);
-        assert_eq!(config.decorations_width, cli::Width::Fixed(100));
-        assert_eq!(config.background_color_extends_to_terminal_width, true);
+        // assert_eq!(config.decorations_width, cli::Width::Fixed(100));
+        // assert_eq!(config.background_color_extends_to_terminal_width, true);
         assert_eq!(config.inspect_raw_lines, cli::InspectRawLines::True);
         assert_eq!(config.paging_mode, PagingMode::Never);
         assert!(config.syntax_theme.is_none());
         // syntax_set doesn't depend on gitconfig.
         remove_file(git_config_path).unwrap();
+    }
+
+    #[test]
+    fn test_parse_width_specifier() {
+        use super::parse_width_specifier;
+        let term_width = 12;
+
+        let assert_failure_containing = |x: &str, errmsg| {
+            assert!(parse_width_specifier(Some(x.into()), term_width)
+                .unwrap_err()
+                .contains(errmsg));
+        };
+
+        assert_failure_containing("", "is not an integer");
+        assert_failure_containing("foo", "is not an integer");
+        assert_failure_containing("123foo", "is not an integer");
+        assert_failure_containing("+12bar", "is not an integer");
+        assert_failure_containing("-456bar", "is not a negative integer");
+
+        assert_failure_containing("-13", "minus 13 is negative");
+        assert_failure_containing(" -   13 ", "minus 13 is negative");
+        assert_failure_containing("12-13", "expression");
+        assert_failure_containing(" 12   -   13  ", "expression \"12   -   13\" is not");
+        assert_failure_containing("12+foo", "is not an integer");
+        assert_failure_containing(
+            "  12 -  bar  ",
+            "\"-  bar\" (from \"12 -  bar\") is not a negative integer",
+        );
+
+        assert_eq!(
+            parse_width_specifier(Some("1".into()), term_width).unwrap(),
+            1
+        );
+        assert_eq!(
+            parse_width_specifier(Some(" 1 ".into()), term_width).unwrap(),
+            1
+        );
+        assert_eq!(
+            parse_width_specifier(Some("-2".into()), term_width).unwrap(),
+            10
+        );
+        assert_eq!(
+            parse_width_specifier(Some(" - 2".into()), term_width).unwrap(),
+            10
+        );
+        assert_eq!(
+            parse_width_specifier(Some("-12".into()), term_width).unwrap(),
+            0
+        );
+        assert_eq!(
+            parse_width_specifier(Some(" - 12 ".into()), term_width).unwrap(),
+            0
+        );
+        assert_eq!(
+            parse_width_specifier(Some(" 2 - 2 ".into()), term_width).unwrap(),
+            0
+        );
     }
 }
