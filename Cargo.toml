@@ -63,3 +63,6 @@ features = []
 version = "0.12.4"
 default-features = false
 features = []
+
+[profile.test]
+opt-level = 2

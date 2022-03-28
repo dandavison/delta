@@ -8,7 +8,7 @@ use console::Term;
 
 use crate::cli;
 use crate::config;
-use crate::env;
+use crate::env::DeltaEnv;
 use crate::errors::*;
 use crate::fatal;
 use crate::features;
@@ -76,9 +76,9 @@ pub fn set_options(
         }
         set_git_config_entries(opt, git_config);
     }
-    opt.navigate = opt.navigate || env::get_boolean_env_var("DELTA_NAVIGATE");
+    opt.navigate = opt.navigate || opt.env.navigate.is_some();
     if opt.syntax_theme.is_none() {
-        opt.syntax_theme = env::get_env_var("BAT_THEME")
+        opt.syntax_theme = opt.env.bat_theme.clone();
     }
 
     let option_names = cli::Opt::get_argument_and_option_names();
@@ -336,7 +336,7 @@ fn gather_features(
     builtin_features: &HashMap<String, features::BuiltinFeature>,
     git_config: &Option<GitConfig>,
 ) -> Vec<String> {
-    let from_env_var = env::get_env_var("DELTA_FEATURES");
+    let from_env_var = &opt.env.features;
     let from_args = opt.features.as_deref().unwrap_or("");
     let input_features: Vec<&str> = match from_env_var.as_deref() {
         Some(from_env_var) if from_env_var.starts_with('+') => from_env_var[1..]
@@ -463,12 +463,9 @@ fn gather_builtin_features_from_flags_in_gitconfig(
     git_config: &GitConfig,
 ) {
     for child_feature in builtin_features.keys() {
-        if let Some(value) =
-            git_config.get::<bool>(&format!("{}.{}", git_config_key, child_feature))
+        if let Some(true) = git_config.get::<bool>(&format!("{}.{}", git_config_key, child_feature))
         {
-            if value {
-                gather_builtin_features_recursively(child_feature, features, builtin_features, opt);
-            }
+            gather_builtin_features_recursively(child_feature, features, builtin_features, opt);
         }
     }
 }
@@ -507,17 +504,15 @@ fn gather_builtin_features_recursively(
         }
         for child_feature in builtin_features.keys() {
             if let Some(child_features_fn) = feature_data.get(child_feature) {
-                if let ProvenancedOptionValue::DefaultValue(OptionValue::Boolean(value)) =
+                if let ProvenancedOptionValue::DefaultValue(OptionValue::Boolean(true)) =
                     child_features_fn(opt, &None)
                 {
-                    if value {
-                        gather_builtin_features_recursively(
-                            child_feature,
-                            features,
-                            builtin_features,
-                            opt,
-                        );
-                    }
+                    gather_builtin_features_recursively(
+                        child_feature,
+                        features,
+                        builtin_features,
+                        opt,
+                    );
                 }
             }
         }
@@ -645,7 +640,7 @@ fn set_true_color(opt: &mut cli::Opt) {
     opt.computed.true_color = match opt.true_color.as_ref() {
         "always" => true,
         "never" => false,
-        "auto" => is_truecolor_terminal(),
+        "auto" => is_truecolor_terminal(&opt.env),
         _ => {
             fatal(format!(
                 "Invalid value for --true-color option: {} (valid values are \"always\", \"never\", and \"auto\")",
@@ -655,8 +650,9 @@ fn set_true_color(opt: &mut cli::Opt) {
     };
 }
 
-fn is_truecolor_terminal() -> bool {
-    env::get_env_var("COLORTERM")
+fn is_truecolor_terminal(env: &DeltaEnv) -> bool {
+    env.colorterm
+        .as_ref()
         .map(|colorterm| colorterm == "truecolor" || colorterm == "24bit")
         .unwrap_or(false)
 }

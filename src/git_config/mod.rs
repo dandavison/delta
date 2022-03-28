@@ -2,9 +2,9 @@ mod git_config_entry;
 
 pub use git_config_entry::{GitConfigEntry, GitRemoteRepo};
 
+use crate::env::DeltaEnv;
 use regex::Regex;
 use std::collections::HashMap;
-use std::env;
 #[cfg(test)]
 use std::path::Path;
 
@@ -37,11 +37,11 @@ impl Clone for GitConfig {
 
 impl GitConfig {
     #[cfg(not(test))]
-    pub fn try_create() -> Option<Self> {
+    pub fn try_create(env: &DeltaEnv) -> Option<Self> {
         use crate::fatal;
 
-        let repo = match std::env::current_dir() {
-            Ok(dir) => git2::Repository::discover(dir).ok(),
+        let repo = match &env.current_dir {
+            Some(dir) => git2::Repository::discover(dir).ok(),
             _ => None,
         };
         let config = match &repo {
@@ -55,7 +55,7 @@ impl GitConfig {
                 });
                 Some(Self {
                     config,
-                    config_from_env_var: parse_config_from_env_var(),
+                    config_from_env_var: parse_config_from_env_var(env),
                     repo,
                     enabled: true,
                 })
@@ -65,16 +65,16 @@ impl GitConfig {
     }
 
     #[cfg(test)]
-    pub fn try_create() -> Option<Self> {
+    pub fn try_create(_env: &DeltaEnv) -> Option<Self> {
         unreachable!("GitConfig::try_create() is not available when testing");
     }
 
     #[cfg(test)]
-    pub fn from_path(path: &Path, honor_env_var: bool) -> Self {
+    pub fn from_path(env: &DeltaEnv, path: &Path, honor_env_var: bool) -> Self {
         Self {
             config: git2::Config::open(path).unwrap(),
             config_from_env_var: if honor_env_var {
-                parse_config_from_env_var()
+                parse_config_from_env_var(env)
             } else {
                 HashMap::new()
             },
@@ -96,9 +96,9 @@ impl GitConfig {
     }
 }
 
-fn parse_config_from_env_var() -> HashMap<String, String> {
-    if let Ok(s) = env::var("GIT_CONFIG_PARAMETERS") {
-        parse_config_from_env_var_value(&s)
+fn parse_config_from_env_var(env: &DeltaEnv) -> HashMap<String, String> {
+    if let Some(s) = &env.git_config_parameters {
+        parse_config_from_env_var_value(s)
     } else {
         HashMap::new()
     }

@@ -86,7 +86,12 @@ fn main() -> std::io::Result<()> {
 // arguments and without standard input; 2 is used to report a real problem.
 fn run_app() -> std::io::Result<i32> {
     let assets = utils::bat::assets::load_highlighting_assets();
-    let opt = cli::Opt::from_args_and_git_config(git_config::GitConfig::try_create(), assets);
+    let env = env::DeltaEnv::init();
+    let opt = cli::Opt::from_args_and_git_config(
+        env.clone(),
+        git_config::GitConfig::try_create(&env),
+        assets,
+    );
 
     let subcommand_result = if opt.list_languages {
         Some(list_languages())
@@ -128,7 +133,7 @@ fn run_app() -> std::io::Result<i32> {
     }
 
     let mut output_type =
-        OutputType::from_mode(config.paging_mode, config.pager.clone(), &config).unwrap();
+        OutputType::from_mode(&env, config.paging_mode, config.pager.clone(), &config).unwrap();
     let mut writer = output_type.handle().unwrap();
 
     match (config.minus_file.as_ref(), config.plus_file.as_ref()) {

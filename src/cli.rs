@@ -9,6 +9,7 @@ use syntect::highlighting::Theme as SyntaxTheme;
 use syntect::parsing::SyntaxSet;
 
 use crate::config::delta_unreachable;
+use crate::env::DeltaEnv;
 use crate::git_config::{GitConfig, GitConfigEntry};
 use crate::options;
 use crate::utils;
@@ -1072,6 +1073,9 @@ pub struct Opt {
 
     #[clap(skip)]
     pub git_config_entries: HashMap<String, GitConfigEntry>,
+
+    #[clap(skip)]
+    pub env: DeltaEnv,
 }
 
 #[derive(Default, Clone, Debug)]
@@ -1120,28 +1124,40 @@ impl Default for PagingMode {
 
 impl Opt {
     pub fn from_args_and_git_config(
+        env: DeltaEnv,
         git_config: Option<GitConfig>,
         assets: HighlightingAssets,
     ) -> Self {
-        Self::from_clap_and_git_config(Self::into_app().get_matches(), git_config, assets)
+        Self::from_clap_and_git_config(env, Self::into_app().get_matches(), git_config, assets)
     }
 
-    pub fn from_iter_and_git_config<I>(iter: I, git_config: Option<GitConfig>) -> Self
+    pub fn from_iter_and_git_config<I>(
+        env: DeltaEnv,
+        iter: I,
+        git_config: Option<GitConfig>,
+    ) -> Self
     where
         I: IntoIterator,
         I::Item: Into<OsString> + Clone,
     {
         let assets = utils::bat::assets::load_highlighting_assets();
-        Self::from_clap_and_git_config(Self::into_app().get_matches_from(iter), git_config, assets)
+        Self::from_clap_and_git_config(
+            env,
+            Self::into_app().get_matches_from(iter),
+            git_config,
+            assets,
+        )
     }
 
     fn from_clap_and_git_config(
+        env: DeltaEnv,
         arg_matches: clap::ArgMatches,
         mut git_config: Option<GitConfig>,
         assets: HighlightingAssets,
     ) -> Self {
         let mut opt = Opt::from_arg_matches(&arg_matches)
             .unwrap_or_else(|_| delta_unreachable("Opt::from_arg_matches failed"));
+        opt.env = env;
         options::set::set_options(&mut opt, &mut git_config, &arg_matches, assets);
         opt.git_config = git_config;
         opt
