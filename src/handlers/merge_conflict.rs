@@ -299,6 +299,12 @@ impl MergeConflictCommitNames {
     }
 }
 
+impl Default for MergeConflictCommitNames {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use crate::ansi::strip_ansi_codes;
