@@ -1,7 +1,6 @@
 // https://github.com/sharkdp/bat a1b9334a44a2c652f52dddaa83dbacba57372468
 // src/output.rs
 // See src/utils/bat/LICENSE
-use std::env;
 use std::ffi::OsString;
 use std::io::{self, Write};
 use std::path::PathBuf;
@@ -10,6 +9,7 @@ use std::process::{Child, Command, Stdio};
 use super::less::retrieve_less_version;
 
 use crate::config;
+use crate::env::DeltaEnv;
 use crate::fatal;
 use crate::features::navigate;
 
@@ -29,34 +29,32 @@ pub enum OutputType {
 
 impl OutputType {
     pub fn from_mode(
+        env: &DeltaEnv,
         mode: PagingMode,
         pager: Option<String>,
         config: &config::Config,
     ) -> Result<Self> {
         use self::PagingMode::*;
         Ok(match mode {
-            Always => OutputType::try_pager(false, pager, config)?,
-            QuitIfOneScreen => OutputType::try_pager(true, pager, config)?,
+            Always => OutputType::try_pager(env, false, pager, config)?,
+            QuitIfOneScreen => OutputType::try_pager(env, true, pager, config)?,
             _ => OutputType::stdout(),
         })
     }
 
     /// Try to launch the pager. Fall back to stdout in case of errors.
     fn try_pager(
+        env: &DeltaEnv,
         quit_if_one_screen: bool,
         pager_from_config: Option<String>,
         config: &config::Config,
     ) -> Result<Self> {
         let mut replace_arguments_to_less = false;
 
-        let pager_from_env = match (
-            env::var("DELTA_PAGER"),
-            env::var("BAT_PAGER"),
-            env::var("PAGER"),
-        ) {
-            (Ok(delta_pager), _, _) => Some(delta_pager),
-            (_, Ok(bat_pager), _) => Some(bat_pager),
-            (_, _, Ok(pager)) => {
+        let pager_from_env = match env.pagers.clone() {
+            (Some(delta_pager), _, _) => Some(delta_pager),
+            (_, Some(bat_pager), _) => Some(bat_pager),
+            (_, _, Some(pager)) => {
                 // less needs to be called with the '-R' option in order to properly interpret ANSI
                 // color sequences. If someone has set PAGER="less -F", we therefore need to
                 // overwrite the arguments and add '-R'.

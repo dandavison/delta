@@ -137,173 +137,138 @@ impl GetOptionValue for usize {}
 
 #[cfg(test)]
 pub mod tests {
-    use std::env;
     use std::fs::remove_file;
 
+    use crate::cli::Opt;
+    use crate::env::DeltaEnv;
     use crate::options::get::get_themes;
     use crate::tests::integration_test_utils;
 
-    // TODO: the followig tests are collapsed into one since they all set the same env var and thus
-    // could affect each other if allowed to run concurrently.
+    // fn generic<T>(_s: SGen<T>) {}
+    fn _test_env_var_overrides_git_config_generic(
+        git_config_contents: &[u8],
+        git_config_path: &str,
+        env_value: String,
+        fn_cmp_before: &dyn Fn(Opt),
+        fn_cmp_after: &dyn Fn(Opt),
+    ) {
+        let opt = integration_test_utils::make_options_from_args_and_git_config(
+            &[],
+            Some(git_config_contents),
+            Some(git_config_path),
+        );
+        fn_cmp_before(opt);
 
+        let opt = integration_test_utils::make_options_from_args_and_git_config_honoring_env_var_with_custom_env(
+            DeltaEnv {
+                git_config_parameters: Some(env_value),
+                ..DeltaEnv::default()
+            },
+            &[],
+            Some(git_config_contents),
+            Some(git_config_path),
+        );
+        fn_cmp_after(opt);
+
+        remove_file(git_config_path).unwrap();
+    }
     #[test]
-    fn test_env_var_overrides_git_config() {
-        // ----------------------------------------------------------------------------------------
-        // simple string
+    fn test_env_var_overrides_git_config_simple_string() {
         let git_config_contents = b"
 [delta]
     plus-style = blue
 ";
         let git_config_path = "delta__test_simple_string_env_var_overrides_git_config.gitconfig";
-
-        let opt = integration_test_utils::make_options_from_args_and_git_config(
-            &[],
-            Some(git_config_contents),
-            Some(git_config_path),
+        _test_env_var_overrides_git_config_generic(
+            git_config_contents,
+            git_config_path,
+            "'delta.plus-style=green'".into(),
+            &|opt: Opt| assert_eq!(opt.plus_style, "blue"),
+            &|opt: Opt| assert_eq!(opt.plus_style, "green"),
         );
-        assert_eq!(opt.plus_style, "blue");
+    }
 
-        env::set_var("GIT_CONFIG_PARAMETERS", "'delta.plus-style=green'");
-        let opt = integration_test_utils::make_options_from_args_and_git_config_honoring_env_var(
-            &[],
-            Some(git_config_contents),
-            Some(git_config_path),
-        );
-        assert_eq!(opt.plus_style, "green");
-
-        remove_file(git_config_path).unwrap();
-
-        // ----------------------------------------------------------------------------------------
-        // complex string
+    #[test]
+    fn test_env_var_overrides_git_config_complex_string() {
         let git_config_contents = br##"
 [delta]
     minus-style = red bold ul "#ffeeee"
 "##;
         let git_config_path = "delta__test_complex_string_env_var_overrides_git_config.gitconfig";
-
-        let opt = integration_test_utils::make_options_from_args_and_git_config(
-            &[],
-            Some(git_config_contents),
-            Some(git_config_path),
+        _test_env_var_overrides_git_config_generic(
+            git_config_contents,
+            git_config_path,
+            r##"'delta.minus-style=magenta italic ol "#aabbcc"'"##.into(),
+            &|opt: Opt| assert_eq!(opt.minus_style, r##"red bold ul #ffeeee"##),
+            &|opt: Opt| assert_eq!(opt.minus_style, r##"magenta italic ol "#aabbcc""##,),
         );
-        assert_eq!(opt.minus_style, r##"red bold ul #ffeeee"##);
+    }
 
-        env::set_var(
-            "GIT_CONFIG_PARAMETERS",
-            r##"'delta.minus-style=magenta italic ol "#aabbcc"'"##,
-        );
-        let opt = integration_test_utils::make_options_from_args_and_git_config_honoring_env_var(
-            &[],
-            Some(git_config_contents),
-            Some(git_config_path),
-        );
-        assert_eq!(opt.minus_style, r##"magenta italic ol "#aabbcc""##,);
-
-        remove_file(git_config_path).unwrap();
-
-        // ----------------------------------------------------------------------------------------
-        // option string
+    #[test]
+    fn test_env_var_overrides_git_config_option_string() {
         let git_config_contents = b"
 [delta]
     plus-style = blue
 ";
         let git_config_path = "delta__test_option_string_env_var_overrides_git_config.gitconfig";
-
-        let opt = integration_test_utils::make_options_from_args_and_git_config(
-            &[],
-            Some(git_config_contents),
-            Some(git_config_path),
+        _test_env_var_overrides_git_config_generic(
+            git_config_contents,
+            git_config_path,
+            "'delta.plus-style=green'".into(),
+            &|opt: Opt| assert_eq!(opt.plus_style, "blue"),
+            &|opt: Opt| assert_eq!(opt.plus_style, "green"),
         );
-        assert_eq!(opt.plus_style, "blue");
+    }
 
-        env::set_var("GIT_CONFIG_PARAMETERS", "'delta.plus-style=green'");
-        let opt = integration_test_utils::make_options_from_args_and_git_config_honoring_env_var(
-            &[],
-            Some(git_config_contents),
-            Some(git_config_path),
-        );
-        assert_eq!(opt.plus_style, "green");
-
-        remove_file(git_config_path).unwrap();
-
-        // ----------------------------------------------------------------------------------------
-        // bool
+    #[test]
+    fn test_env_var_overrides_git_config_bool() {
         let git_config_contents = b"
 [delta]
     side-by-side = true
 ";
         let git_config_path = "delta__test_bool_env_var_overrides_git_config.gitconfig";
-
-        let opt = integration_test_utils::make_options_from_args_and_git_config(
-            &[],
-            Some(git_config_contents),
-            Some(git_config_path),
+        _test_env_var_overrides_git_config_generic(
+            git_config_contents,
+            git_config_path,
+            "'delta.side-by-side=false'".into(),
+            &|opt: Opt| assert_eq!(opt.side_by_side, true),
+            &|opt: Opt| assert_eq!(opt.side_by_side, false),
         );
-        assert_eq!(opt.side_by_side, true);
+    }
 
-        env::set_var("GIT_CONFIG_PARAMETERS", "'delta.side-by-side=false'");
-        let opt = integration_test_utils::make_options_from_args_and_git_config_honoring_env_var(
-            &[],
-            Some(git_config_contents),
-            Some(git_config_path),
-        );
-        assert_eq!(opt.side_by_side, false);
-
-        remove_file(git_config_path).unwrap();
-
-        // ----------------------------------------------------------------------------------------
-        // int
+    #[test]
+    fn test_env_var_overrides_git_config_int() {
         let git_config_contents = b"
 [delta]
     max-line-length = 1
 ";
         let git_config_path = "delta__test_int_env_var_overrides_git_config.gitconfig";
-
-        let opt = integration_test_utils::make_options_from_args_and_git_config(
-            &[],
-            Some(git_config_contents),
-            Some(git_config_path),
+        _test_env_var_overrides_git_config_generic(
+            git_config_contents,
+            git_config_path,
+            "'delta.max-line-length=2'".into(),
+            &|opt: Opt| assert_eq!(opt.max_line_length, 1),
+            &|opt: Opt| assert_eq!(opt.max_line_length, 2),
         );
-        assert_eq!(opt.max_line_length, 1);
+    }
 
-        env::set_var("GIT_CONFIG_PARAMETERS", "'delta.max-line-length=2'");
-        let opt = integration_test_utils::make_options_from_args_and_git_config_honoring_env_var(
-            &[],
-            Some(git_config_contents),
-            Some(git_config_path),
-        );
-        assert_eq!(opt.max_line_length, 2);
-
-        remove_file(git_config_path).unwrap();
-
-        // ----------------------------------------------------------------------------------------
-        // float
+    #[test]
+    fn test_env_var_overrides_git_config_float() {
         let git_config_contents = b"
 [delta]
     max-line-distance = 0.6
 ";
         let git_config_path = "delta__test_float_env_var_overrides_git_config.gitconfig";
-
-        let opt = integration_test_utils::make_options_from_args_and_git_config_honoring_env_var(
-            &[],
-            Some(git_config_contents),
-            Some(git_config_path),
+        _test_env_var_overrides_git_config_generic(
+            git_config_contents,
+            git_config_path,
+            "'delta.max-line-distance=0.7'".into(),
+            &|opt: Opt| assert_eq!(opt.max_line_distance, 0.6),
+            &|opt: Opt| assert_eq!(opt.max_line_distance, 0.7),
         );
-        assert_eq!(opt.max_line_distance, 0.6);
-
-        env::set_var("GIT_CONFIG_PARAMETERS", "'delta.max-line-distance=0.7'");
-        let opt = integration_test_utils::make_options_from_args_and_git_config_honoring_env_var(
-            &[],
-            Some(git_config_contents),
-            Some(git_config_path),
-        );
-        assert_eq!(opt.max_line_distance, 0.7);
-
-        remove_file(git_config_path).unwrap();
     }
 
     #[test]
-    #[ignore] // FIXME
     fn test_delta_features_env_var() {
         let git_config_contents = b"
 [delta]
@@ -319,22 +284,32 @@ pub mod tests {
         assert_eq!(opt.features.unwrap(), "feature-from-gitconfig");
         assert_eq!(opt.side_by_side, false);
 
-        env::set_var("DELTA_FEATURES", "side-by-side");
-        let opt = integration_test_utils::make_options_from_args_and_git_config(
+        let opt = integration_test_utils::make_options_from_args_and_git_config_with_custom_env(
+            DeltaEnv {
+                features: Some("side-by-side".into()),
+                ..DeltaEnv::default()
+            },
             &[],
             Some(git_config_contents),
             Some(git_config_path),
         );
-        assert_eq!(opt.features.unwrap(), "side-by-side");
+        // `line-numbers` is a builtin feature induced by side-by-side
+        assert_eq!(opt.features.unwrap(), "line-numbers side-by-side");
         assert_eq!(opt.side_by_side, true);
 
-        env::set_var("DELTA_FEATURES", "+side-by-side");
-        let opt = integration_test_utils::make_options_from_args_and_git_config(
+        let opt = integration_test_utils::make_options_from_args_and_git_config_with_custom_env(
+            DeltaEnv {
+                features: Some("+side-by-side".into()),
+                ..DeltaEnv::default()
+            },
             &[],
             Some(git_config_contents),
             Some(git_config_path),
         );
-        assert_eq!(opt.features.unwrap(), "side-by-side feature-from-gitconfig");
+        assert_eq!(
+            opt.features.unwrap(),
+            "feature-from-gitconfig line-numbers side-by-side"
+        );
         assert_eq!(opt.side_by_side, true);
 
         remove_file(git_config_path).unwrap();
@@ -365,6 +340,7 @@ pub mod tests {
         let git_config_path = "delta__test_get_themes_git_config.gitconfig";
 
         let git_config = Some(integration_test_utils::make_git_config(
+            &DeltaEnv::default(),
             git_config_contents.as_bytes(),
             git_config_path,
             false,

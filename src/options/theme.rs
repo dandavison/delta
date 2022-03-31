@@ -10,14 +10,13 @@ use bat;
 use bat::assets::HighlightingAssets;
 
 use crate::cli;
-use crate::env;
 
 #[allow(non_snake_case)]
 pub fn set__is_light_mode__syntax_theme__syntax_set(
     opt: &mut cli::Opt,
     assets: HighlightingAssets,
 ) {
-    let syntax_theme_name_from_bat_theme = env::get_env_var("BAT_THEME");
+    let syntax_theme_name_from_bat_theme = &opt.env.bat_theme;
     let (is_light_mode, syntax_theme_name) = get_is_light_mode_and_syntax_theme_name(
         opt.syntax_theme.as_ref(),
         syntax_theme_name_from_bat_theme.as_ref(),

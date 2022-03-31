@@ -94,6 +94,7 @@ pub mod tests {
     use std::fs::remove_file;
 
     use crate::cli;
+    use crate::env::DeltaEnv;
     use crate::features::make_builtin_features;
     use crate::tests::integration_test_utils::make_options_from_args_and_git_config;
 
@@ -102,7 +103,7 @@ pub mod tests {
         let builtin_features = make_builtin_features();
         let mut args = vec!["delta".to_string()];
         args.extend(builtin_features.keys().map(|s| format!("--{}", s)));
-        let opt = cli::Opt::from_iter_and_git_config(args, None);
+        let opt = cli::Opt::from_iter_and_git_config(DeltaEnv::default(), args, None);
         let features: HashSet<&str> = opt
             .features
             .as_deref()

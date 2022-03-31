@@ -10,7 +10,6 @@ use crate::ansi;
 use crate::cli;
 use crate::color;
 use crate::delta::State;
-use crate::env;
 use crate::fatal;
 use crate::features::navigate;
 use crate::features::side_by_side::{self, ansifill, LeftRight};
@@ -151,10 +150,12 @@ impl From<cli::Opt> for Config {
 
         let wrap_config = WrapConfig::from_opt(&opt, styles["inline-hint-style"]);
 
-        let max_line_distance_for_naively_paired_lines =
-            env::get_env_var("DELTA_EXPERIMENTAL_MAX_LINE_DISTANCE_FOR_NAIVELY_PAIRED_LINES")
-                .map(|s| s.parse::<f64>().unwrap_or(0.0))
-                .unwrap_or(0.0);
+        let max_line_distance_for_naively_paired_lines = opt
+            .env
+            .experimental_max_line_distance_for_naively_paired_lines
+            .as_ref()
+            .map(|s| s.parse::<f64>().unwrap_or(0.0))
+            .unwrap_or(0.0);
 
         let commit_regex = Regex::new(&opt.commit_regex).unwrap_or_else(|_| {
             fatal(format!(
@@ -217,11 +218,11 @@ impl From<cli::Opt> for Config {
         };
 
         #[cfg(not(test))]
-        let cwd_of_delta_process = std::env::current_dir().ok();
+        let cwd_of_delta_process = opt.env.current_dir;
         #[cfg(test)]
         let cwd_of_delta_process = Some(utils::path::fake_delta_cwd_for_tests());
 
-        let cwd_relative_to_repo_root = std::env::var("GIT_PREFIX").ok();
+        let cwd_relative_to_repo_root = opt.env.git_prefix;
 
         let cwd_of_user_shell_process = utils::path::cwd_of_user_shell_process(
             cwd_of_delta_process.as_ref(),

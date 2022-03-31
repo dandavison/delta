@@ -12,6 +12,7 @@ use crate::ansi;
 use crate::cli;
 use crate::config;
 use crate::delta::delta;
+use crate::env::DeltaEnv;
 use crate::git_config::GitConfig;
 use crate::tests::test_utils;
 use crate::utils::process::tests::FakeParentArgs;
@@ -21,18 +22,35 @@ pub fn make_options_from_args_and_git_config(
     git_config_contents: Option<&[u8]>,
     git_config_path: Option<&str>,
 ) -> cli::Opt {
-    _make_options_from_args_and_git_config(args, git_config_contents, git_config_path, false)
+    _make_options_from_args_and_git_config(
+        DeltaEnv::default(),
+        args,
+        git_config_contents,
+        git_config_path,
+        false,
+    )
 }
 
-pub fn make_options_from_args_and_git_config_honoring_env_var(
+pub fn make_options_from_args_and_git_config_with_custom_env(
+    env: DeltaEnv,
     args: &[&str],
     git_config_contents: Option<&[u8]>,
     git_config_path: Option<&str>,
 ) -> cli::Opt {
-    _make_options_from_args_and_git_config(args, git_config_contents, git_config_path, true)
+    _make_options_from_args_and_git_config(env, args, git_config_contents, git_config_path, false)
+}
+
+pub fn make_options_from_args_and_git_config_honoring_env_var_with_custom_env(
+    env: DeltaEnv,
+    args: &[&str],
+    git_config_contents: Option<&[u8]>,
+    git_config_path: Option<&str>,
+) -> cli::Opt {
+    _make_options_from_args_and_git_config(env, args, git_config_contents, git_config_path, true)
 }
 
 fn _make_options_from_args_and_git_config(
+    env: DeltaEnv,
     args: &[&str],
     git_config_contents: Option<&[u8]>,
     git_config_path: Option<&str>,
@@ -42,13 +60,13 @@ fn _make_options_from_args_and_git_config(
         .map(|s| *s)
         .collect();
     let git_config = match (git_config_contents, git_config_path) {
-        (Some(contents), Some(path)) => Some(make_git_config(contents, path, honor_env_var)),
+        (Some(contents), Some(path)) => Some(make_git_config(&env, contents, path, honor_env_var)),
         _ => {
             args.push("--no-gitconfig");
             None
         }
     };
-    cli::Opt::from_iter_and_git_config(args, git_config)
+    cli::Opt::from_iter_and_git_config(env, args, git_config)
 }
 
 pub fn make_options_from_args(args: &[&str]) -> cli::Opt {
@@ -72,11 +90,16 @@ pub fn make_config_from_args(args: &[&str]) -> config::Config {
     config::Config::from(make_options_from_args(args))
 }
 
-pub fn make_git_config(contents: &[u8], path: &str, honor_env_var: bool) -> GitConfig {
+pub fn make_git_config(
+    env: &DeltaEnv,
+    contents: &[u8],
+    path: &str,
+    honor_env_var: bool,
+) -> GitConfig {
     let path = Path::new(path);
     let mut file = File::create(path).unwrap();
     file.write_all(contents).unwrap();
-    GitConfig::from_path(&path, honor_env_var)
+    GitConfig::from_path(env, &path, honor_env_var)
 }
 
 pub fn get_line_of_code_from_delta(

@@ -3,6 +3,7 @@ use crate::color;
 use crate::colors;
 use crate::config;
 use crate::delta;
+use crate::env::DeltaEnv;
 use crate::git_config;
 use crate::paint;
 use crate::paint::BgShouldFill;
@@ -16,11 +17,16 @@ pub fn show_colors() -> std::io::Result<()> {
     use crate::{delta::DiffType, utils};
 
     let assets = utils::bat::assets::load_highlighting_assets();
-    let opt = cli::Opt::from_args_and_git_config(git_config::GitConfig::try_create(), assets);
+    let env = DeltaEnv::default();
+    let opt = cli::Opt::from_args_and_git_config(
+        env.clone(),
+        git_config::GitConfig::try_create(&env),
+        assets,
+    );
     let config = config::Config::from(opt);
 
     let mut output_type =
-        OutputType::from_mode(PagingMode::QuitIfOneScreen, None, &config).unwrap();
+        OutputType::from_mode(&env, PagingMode::QuitIfOneScreen, None, &config).unwrap();
     let writer = output_type.handle().unwrap();
 
     let mut painter = paint::Painter::new(writer, &config);
