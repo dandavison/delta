@@ -28,21 +28,17 @@ pub struct DeltaEnv {
 impl DeltaEnv {
     /// Create a structure with current environment variable
     pub fn init() -> Self {
-        let bat_theme = env::var(BAT_THEME).ok();
-        let colorterm = env::var(COLORTERM).ok();
+        let bat_theme = env_var(BAT_THEME);
+        let colorterm = env_var(COLORTERM);
         let experimental_max_line_distance_for_naively_paired_lines =
-            env::var(DELTA_EXPERIMENTAL_MAX_LINE_DISTANCE_FOR_NAIVELY_PAIRED_LINES).ok();
-        let features = env::var(DELTA_FEATURES).ok();
-        let git_config_parameters = env::var(GIT_CONFIG_PARAMETERS).ok();
-        let git_prefix = env::var(GIT_PREFIX).ok();
-        let navigate = env::var(DELTA_NAVIGATE).ok();
+            env_var(DELTA_EXPERIMENTAL_MAX_LINE_DISTANCE_FOR_NAIVELY_PAIRED_LINES);
+        let features = env_var(DELTA_FEATURES);
+        let git_config_parameters = env_var(GIT_CONFIG_PARAMETERS);
+        let git_prefix = env_var(GIT_PREFIX);
+        let navigate = env_var(DELTA_NAVIGATE);
 
         let current_dir = env::current_dir().ok();
-        let pagers = (
-            env::var(DELTA_PAGER).ok(),
-            env::var(BAT_PAGER).ok(),
-            env::var(PAGER).ok(),
-        );
+        let pagers = (env_var(DELTA_PAGER), env_var(BAT_PAGER), env_var(PAGER));
 
         Self {
             bat_theme,
@@ -55,6 +51,15 @@ impl DeltaEnv {
             navigate,
             pagers,
         }
+    }
+}
+
+/// If `name` is set and, after trimming whitespace, is not empty string, then return that trimmed
+/// string. Else None.
+fn env_var(name: &str) -> Option<String> {
+    match env::var(name).unwrap_or_else(|_| "".to_string()).trim() {
+        "" => None,
+        s => Some(s.to_string()),
     }
 }
 
