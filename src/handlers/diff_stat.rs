@@ -1,7 +1,11 @@
 use lazy_static::lazy_static;
 use regex::Regex;
+use std::borrow::Cow;
 
+use crate::config::Config;
 use crate::delta::{State, StateMachine};
+use crate::features;
+use crate::utils;
 
 impl<'a> StateMachine<'a> {
     #[inline]
@@ -17,11 +21,9 @@ impl<'a> StateMachine<'a> {
         let mut handled_line = false;
         if self.config.relative_paths {
             if let Some(cwd) = self.config.cwd_relative_to_repo_root.as_deref() {
-                if let Some(replacement_line) = relativize_path_in_diff_stat_line(
-                    &self.raw_line,
-                    cwd,
-                    self.config.diff_stat_align_width,
-                ) {
+                if let Some(replacement_line) =
+                    relativize_path_in_diff_stat_line(&self.raw_line, cwd, self.config)
+                {
                     self.painter.emit()?;
                     writeln!(self.painter.writer, "{}", replacement_line)?;
                     handled_line = true
@@ -44,7 +46,7 @@ lazy_static! {
 pub fn relativize_path_in_diff_stat_line(
     line: &str,
     cwd_relative_to_repo_root: &str,
-    diff_stat_align_width: usize,
+    config: &Config,
 ) -> Option<String> {
     let caps = DIFF_STAT_LINE_REGEX.captures(line)?;
     let path_relative_to_repo_root = caps.get(1).unwrap().as_str();
@@ -52,10 +54,24 @@ pub fn relativize_path_in_diff_stat_line(
     let relative_path =
         pathdiff::diff_paths(path_relative_to_repo_root, cwd_relative_to_repo_root)?;
     let relative_path = relative_path.to_str()?;
+    let formatted_path = match (
+        config.hyperlinks,
+        utils::path::absolute_path(path_relative_to_repo_root, config),
+    ) {
+        (true, Some(absolute_path)) => features::hyperlinks::format_osc8_file_hyperlink(
+            absolute_path,
+            None,
+            relative_path,
+            config,
+        ),
+        _ => Cow::from(relative_path),
+    };
     let suffix = caps.get(2).unwrap().as_str();
-    let pad_width = diff_stat_align_width.saturating_sub(relative_path.len());
+    let pad_width = config
+        .diff_stat_align_width
+        .saturating_sub(relative_path.len());
     let padding = " ".repeat(pad_width);
-    Some(format!(" {}{}{}", relative_path, padding, suffix))
+    Some(format!(" {}{}{}", formatted_path, padding, suffix))
 }
 
 #[cfg(test)]
