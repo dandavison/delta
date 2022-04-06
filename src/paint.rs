@@ -522,9 +522,15 @@ impl<'p> Painter<'p> {
             let line_has_emph_and_non_emph_sections =
                 style_sections_contain_more_than_one_style(style_sections);
             let should_update_non_emph_styles = non_emph_style.is_some() && *line_has_homolog;
-            let is_whitespace_error =
-                whitespace_error_style.is_some() && is_whitespace_error(style_sections);
-            for (style, _) in style_sections.iter_mut() {
+
+            // TODO: Git recognizes blank lines at end of file (blank-at-eof)
+            // as a whitespace error but delta does not yet.
+            // https://git-scm.com/docs/git-config#Documentation/git-config.txt-corewhitespace
+            let mut is_whitespace_error = whitespace_error_style.is_some();
+            for (style, s) in style_sections.iter_mut().rev() {
+                if is_whitespace_error && !s.trim().is_empty() {
+                    is_whitespace_error = false;
+                }
                 // If the line as a whole constitutes a whitespace error then highlight this
                 // section if either (a) it is an emph section, or (b) the line lacks any
                 // emph/non-emph distinction.
@@ -537,6 +543,9 @@ impl<'p> Painter<'p> {
                 // Otherwise, update the style if this is a non-emph section that needs updating.
                 else if should_update_non_emph_styles && !style.is_emph {
                     *style = non_emph_style.unwrap();
+                    if is_whitespace_error {
+                        *style = whitespace_error_style.unwrap();
+                    }
                 }
             }
         }
@@ -854,26 +863,6 @@ fn style_sections_contain_more_than_one_style(sections: &[(Style, &str)]) -> boo
     } else {
         false
     }
-}
-
-/// True iff the line represented by `sections` constitutes a whitespace error.
-// A line is a whitespace error iff it is non-empty and contains only whitespace
-// characters.
-// TODO: Git recognizes blank lines at end of file (blank-at-eof)
-// as a whitespace error but delta does not yet.
-// https://git-scm.com/docs/git-config#Documentation/git-config.txt-corewhitespace
-fn is_whitespace_error(sections: &[(Style, &str)]) -> bool {
-    let mut any_chars = false;
-    for c in sections.iter().flat_map(|(_, s)| s.chars()) {
-        if c == '\n' {
-            return any_chars;
-        } else if c != ' ' && c != '\t' {
-            return false;
-        } else {
-            any_chars = true;
-        }
-    }
-    false
 }
 
 mod superimpose_style_sections {

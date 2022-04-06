@@ -1463,6 +1463,182 @@ src/align.rs:71: impl<'a> Alignment<'a> { │
     }
 
     #[test]
+    fn test_whitespace_unrelated_edit_text_error() {
+        let whitespace_error_style = "bold yellow red ul";
+        let config = integration_test_utils::make_config_from_args(&[
+            "--whitespace-error-style",
+            whitespace_error_style,
+        ]);
+        let output =
+            integration_test_utils::run_delta(DIFF_WITH_WHITESPACE_UNRELATED_EDIT_ERROR, &config);
+        ansi_test_utils::assert_line_contain_substring_style(
+            &output,
+            9,
+            "some new",
+            "    ",
+            whitespace_error_style,
+            &config,
+        );
+    }
+
+    #[test]
+    fn test_whitespace_edit_text_error() {
+        let whitespace_error_style = "bold yellow red ul";
+        let config = integration_test_utils::make_config_from_args(&[
+            "--whitespace-error-style",
+            whitespace_error_style,
+        ]);
+        let output = integration_test_utils::run_delta(DIFF_WITH_WHITESPACE_EDIT_ERROR, &config);
+        ansi_test_utils::assert_line_contain_substring_style(
+            &output,
+            9,
+            "same ",
+            "    ",
+            whitespace_error_style,
+            &config,
+        );
+    }
+
+    #[test]
+    fn test_whitespace_added_empty_line_error() {
+        let whitespace_error_style = "bold yellow red ul";
+        let config = integration_test_utils::make_config_from_args(&[
+            "--whitespace-error-style",
+            whitespace_error_style,
+        ]);
+        let output =
+            integration_test_utils::run_delta(DIFF_WITH_ADDED_WHITESPACE_EMPTY_LINE_ERROR, &config);
+        // TODO is this the first style ?
+        ansi_test_utils::assert_line_has_style(&output, 9, " ", whitespace_error_style, &config);
+        ansi_test_utils::assert_line_contain_substring_style(
+            &output,
+            9,
+            "",
+            "   ",
+            whitespace_error_style,
+            &config,
+        );
+    }
+
+    #[test]
+    fn test_whitespace_after_text_error() {
+        let whitespace_error_style = "bold yellow red ul";
+        let config = integration_test_utils::make_config_from_args(&[
+            "--whitespace-error-style",
+            whitespace_error_style,
+        ]);
+        let output =
+            integration_test_utils::run_delta(DIFF_WITH_WHITESPACE_AFTER_TEXT_ERROR, &config);
+        ansi_test_utils::assert_line_contain_substring_style(
+            &output,
+            8,
+            "foo bar",
+            "  ",
+            whitespace_error_style,
+            &config,
+        );
+        let output = integration_test_utils::run_delta(
+            DIFF_WITH_REMOVED_WHITESPACE_AFTER_TEXT_ERROR,
+            &config,
+        );
+        ansi_test_utils::assert_line_does_not_contain_substring_style(
+            &output,
+            8,
+            "foo bar",
+            whitespace_error_style,
+            &config,
+        );
+    }
+
+    #[test]
+    fn test_whitespace_complex_error() {
+        let whitespace_error_style = "bold yellow red ul";
+        let config = integration_test_utils::make_config_from_args(&[
+            "--whitespace-error-style",
+            whitespace_error_style,
+        ]);
+        let output = integration_test_utils::run_delta(DIFF_WITH_WHITESPACE_COMPLEX_ERROR, &config);
+        // `minus` line should not display whitespace error
+        ansi_test_utils::assert_line_does_not_have_style(
+            &output,
+            8,
+            "  ",
+            whitespace_error_style,
+            &config,
+        );
+        ansi_test_utils::assert_line_does_not_have_style(
+            &output,
+            9,
+            "  ",
+            whitespace_error_style,
+            &config,
+        );
+        ansi_test_utils::assert_line_does_not_contain_substring_style(
+            &output,
+            10,
+            "  foo0 ",
+            whitespace_error_style,
+            &config,
+        );
+        ansi_test_utils::assert_line_does_not_contain_substring_style(
+            &output,
+            11,
+            "  foo1 ",
+            whitespace_error_style,
+            &config,
+        );
+        ansi_test_utils::assert_line_does_not_contain_substring_style(
+            &output,
+            12,
+            "  bar  ",
+            whitespace_error_style,
+            &config,
+        );
+
+        // `plus` line should display whitespace error
+        ansi_test_utils::assert_line_contain_substring_style(
+            &output,
+            13,
+            " ",
+            " ",
+            whitespace_error_style,
+            &config,
+        );
+        ansi_test_utils::assert_line_contain_substring_style(
+            &output,
+            14,
+            "   ",
+            "   ",
+            whitespace_error_style,
+            &config,
+        );
+        ansi_test_utils::assert_line_contain_substring_style(
+            &output,
+            15,
+            "  foo0",
+            " ",
+            whitespace_error_style,
+            &config,
+        );
+        ansi_test_utils::assert_line_contain_substring_style(
+            &output,
+            16,
+            "  foo1",
+            "   ",
+            whitespace_error_style,
+            &config,
+        );
+        ansi_test_utils::assert_line_contain_substring_style(
+            &output,
+            17,
+            "  bAr",
+            "  ",
+            whitespace_error_style,
+            &config,
+        );
+    }
+
+    #[test]
     fn test_added_empty_line_is_not_whitespace_error() {
         let plus_style = "bold yellow red ul";
         let config = integration_test_utils::make_config_from_args(&[
@@ -2268,6 +2444,77 @@ index 8d1c8b6..8b13789 100644
 @@ -1 +1 @@
 - 
 +
+";
+
+    const DIFF_WITH_WHITESPACE_UNRELATED_EDIT_ERROR: &str = r"
+diff --git a/foo b/foo
+index 8d1c8b6..8b13789 100644
+--- a/foo
++++ b/foo
+@@ -1 +1 @@
+-some line with trailing spaces    
++some new line with trailing spaces    
+";
+
+    const DIFF_WITH_WHITESPACE_EDIT_ERROR: &str = r"
+diff --git a/foo b/foo
+index 8d1c8b6..8b13789 100644
+--- a/foo
++++ b/foo
+@@ -1 +1 @@
+-same line with different number of trailing spaces   
++same line with different number of trailing spaces    
+";
+
+    const DIFF_WITH_WHITESPACE_AFTER_TEXT_ERROR: &str = r"
+diff --git c/a i/a
+new file mode 100644
+index 0000000..8d1c8b6
+--- /dev/null
++++ i/a
+@@ -0,0 +1 @@
++foo bar  
+";
+
+    const DIFF_WITH_REMOVED_WHITESPACE_AFTER_TEXT_ERROR: &str = r"
+diff --git i/a w/a
+index 8d1c8b6..8b13789 100644
+--- i/a
++++ w/a
+@@ -1 +0,0 @@
+-foo bar  
+";
+    const DIFF_WITH_ADDED_WHITESPACE_EMPTY_LINE_ERROR: &str = r"
+diff --git a/a b/a
+index 0ec702f..8c75341 100644
+--- a/a
++++ b/a
+@@ -1,0 +1,0 @@
+-  
++   
+";
+
+    // Delta handling is different for each of theses cases:
+    //      * Only space in the line is added or partially removed
+    //      * Space after text added or partially removed
+    //      * Space in a unmodified part of the line
+    // This test regroup theses 5 cases.
+    const DIFF_WITH_WHITESPACE_COMPLEX_ERROR: &str = r"
+diff --git a/a b/a
+index 0ec702f..8c75341 100644
+--- a/a
++++ b/a
+@@ -1,5 +1,5 @@
+-  
+-  
+-  foo0  
+-  foo1  
+-  bar  
++ 
++   
++  foo0 
++  foo1   
++  bAr  
 ";
 
     const DIFF_WITH_TWO_ADDED_LINES: &str = r#"
