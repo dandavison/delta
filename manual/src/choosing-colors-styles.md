@@ -8,7 +8,7 @@ Here's an example:
 
 ```gitconfig
 [delta]
-    minus-style = red bold ul "#ffeeee"
+    minus = red bold ul "#ffeeee"
 ```
 
 That means: For removed lines, set the foreground (text) color to 'red', make it bold and underlined, and set the background color to `#ffeeee`.
