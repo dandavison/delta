@@ -38,7 +38,7 @@ Delta has many features and is very customizable; please see the [user manual](h
 
 ## Features
 
-- Language syntax highlighting with the same syntax-highlighting themes as bat
+- Language syntax highlighting with the same syntax-highlighting themes as [bat](https://github.com/sharkdp/bat#readme)
 - Word-level diff highlighting using a Levenshtein edit inference algorithm
 - Side-by-side view with line-wrapping
 - Line numbering
