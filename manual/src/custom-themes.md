@@ -1,6 +1,19 @@
 # Custom themes
 
+## Use standard theme
+
 A "theme" in delta is just a collection of settings grouped together in a named [feature](./features-named-groups-of-settings.md). One of the available settings is `syntax-theme`: this dictates the colors and styles that are applied to foreground text by the syntax highlighter. Thus the concept of "theme" in delta encompasses not just the foreground syntax-highlighting color theme, but also background colors, decorations such as boxes and under/overlines, etc.
+
+To set a theme use the `syntax-theme` configuration:
+
+```gitconfig
+[delta]
+    syntax-theme = Monokai Extended
+    side-by-side = true
+    ...
+```
+
+## Use user created themes
 
 The delta git repo contains a [collection of themes](https://github.com/dandavison/delta/blob/master/themes.gitconfig) created by users. These focus on the visual appearance: colors etc. If you want features like `side-by-side` or `navigate`, you would set that yourself, after selecting the color theme. To use the delta themes, clone the delta repo (or [download](https://raw.githubusercontent.com/dandavison/delta/master/themes.gitconfig) the raw `themes.gitconfig` file) and add the following entry in your gitconfig:
 
