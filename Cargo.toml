@@ -15,7 +15,7 @@ name = "delta"
 path = "src/main.rs"
 
 [dependencies]
-bat = "0.20.0"
+bat = "0.21.0"
 chrono = "0.4.19"
 chrono-humanize = "0.2.1"
 ansi_colours = "1.0.4"
@@ -38,20 +38,16 @@ serde = { version = "1.0.118", features = ["derive"] }
 serde_json = "1.0.70"
 shell-words = "1.0.0"
 smol_str = "0.1.21"
+syntect = "5.0.0"
 unicode-segmentation = "1.9.0"
 unicode-width = "0.1.9"
 vte = "0.10.1"
 xdg = "2.4.1"
 
 [dependencies.git2]
-version = "0.13.25"
+version = "0.14.0"
 default-features = false
 features = []
-
-[dependencies.syntect]
-version = "4.6.0"
-default-features = false
-features = ["parsing", "assets", "yaml-load", "dump-load", "regex-onig"]
 
 [dependencies.sysinfo]
 version = "0.23.0"

@@ -677,7 +677,11 @@ pub fn get_syntax_style_sections_for_lines<'a>(
     ) {
         (Some(highlighter), true) => {
             for (line, _) in lines.iter() {
-                line_sections.push(highlighter.highlight(line, &config.syntax_set));
+                line_sections.push(
+                    highlighter
+                        .highlight_line(line, &config.syntax_set)
+                        .unwrap(),
+                );
             }
         }
         _ => {
