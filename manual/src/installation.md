@@ -13,7 +13,7 @@ You can download an executable for your system:
 
 Alternatively you can install delta using a package manager: see [repology.org/git-delta](https://repology.org/project/git-delta/versions).
 
-Note that the package is often called `git-delta`, but the executable installed is called `delta`. Here is a quick sumary for selected package managers:
+Note that the package is often called `git-delta`, but the executable installed is called `delta`. Here is a quick summary for selected package managers:
 
 <table>
   <tr>

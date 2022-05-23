@@ -146,13 +146,13 @@ mod tests {
     use crate::tests::integration_test_utils;
 
     #[test]
-    fn test_navigate_with_overriden_key_in_main_section() {
+    fn test_navigate_with_overridden_key_in_main_section() {
         let git_config_contents = b"
 [delta]
     features = navigate
     file-modified-label = \"modified: \"
 ";
-        let git_config_path = "delta__test_navigate_with_overriden_key_in_main_section.gitconfig";
+        let git_config_path = "delta__test_navigate_with_overridden_key_in_main_section.gitconfig";
 
         assert_eq!(
             integration_test_utils::make_options_from_args_and_git_config(&[], None, None)
@@ -191,7 +191,7 @@ mod tests {
     }
 
     #[test]
-    fn test_navigate_with_overriden_key_in_custom_navigate_section() {
+    fn test_navigate_with_overridden_key_in_custom_navigate_section() {
         let git_config_contents = b"
 [delta]
     features = navigate
@@ -200,7 +200,7 @@ mod tests {
     file-modified-label = \"modified: \"
 ";
         let git_config_path =
-            "delta__test_navigate_with_overriden_key_in_custom_navigate_section.gitconfig";
+            "delta__test_navigate_with_overridden_key_in_custom_navigate_section.gitconfig";
 
         assert_eq!(
             integration_test_utils::make_options_from_args_and_git_config(&[], None, None)

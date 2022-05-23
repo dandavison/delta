@@ -60,14 +60,14 @@ pub fn available_line_width(
     config: &Config,
     data: &line_numbers::LineNumbersData,
 ) -> line_numbers::SideBySideLineWidth {
-    let linennumbers_width = data.formatted_width();
+    let line_numbers_width = data.formatted_width();
 
     // The width can be reduced by the line numbers and/or
     // a possibly added/restored 1-wide "+/-/ " prefix.
     let line_width = |side: PanelSide| {
         config.side_by_side_data[side]
             .width
-            .saturating_sub(linennumbers_width[side])
+            .saturating_sub(line_numbers_width[side])
             .saturating_sub(config.keep_plus_minus_markers as usize)
     };
 
