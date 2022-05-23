@@ -213,7 +213,7 @@ File paths can also be formatted as hyperlinks for opening in your OS.</li>
 |
 <a href="https://github.com/dandavison/delta/releases">All</a></p>
 <p>Alternatively you can install delta using a package manager: see <a href="https://repology.org/project/git-delta/versions">repology.org/git-delta</a>.</p>
-<p>Note that the package is often called <code>git-delta</code>, but the executable installed is called <code>delta</code>. Here is a quick sumary for selected package managers:</p>
+<p>Note that the package is often called <code>git-delta</code>, but the executable installed is called <code>delta</code>. Here is a quick summary for selected package managers:</p>
 <table>
   <tr>
     <td><a href="https://archlinux.org/packages/community/x86_64/git-delta/">Arch Linux</a></td>
@@ -390,7 +390,7 @@ Line wrapping was implemented by @th1000s.</p>
 <p>Delta applies syntax-highlighting and other enhancements to standard grep output such as from <code>git grep</code>, <a href="https://github.com/BurntSushi/ripgrep/">ripgrep</a> (aka <code>rg</code>), grep, etc.
 To use with <code>git grep</code>, set delta as the pager for <code>grep</code> in the <code>[pager]</code> section of your gitconfig. See the example at the <a href="./get-started.html">top of the page</a>.
 Output from other grep tools can be piped to delta: e.g. <code>rg -Hn --color=always</code>, <code>grep -Hn --color=always</code>, etc.
-To customize the colors and syntax highlighting, see <code>grep-match-line-style</code>, <code>grep-match-word-style</code>, <code>grep-contexct-line-style</code>, <code>grep-file-style</code>, <code>grep-line-number-style</code>.
+To customize the colors and syntax highlighting, see <code>grep-match-line-style</code>, <code>grep-match-word-style</code>, <code>grep-context-line-style</code>, <code>grep-file-style</code>, <code>grep-line-number-style</code>.
 Ripgrep's <code>rg --json</code> output format is supported; this avoids certain file name parsing ambiguities that are inevitable with the standard grep output formats.
 Note that <code>git grep</code> can display the &quot;function context&quot; for matches and that delta handles this output specially: see the <code>-p</code> and <code>-W</code> options of <code>git grep</code>.</p>
 <div style="break-before: page; page-break-before: always;"></div><h1 id="features-named-groups-of-settings"><a class="header" href="#features-named-groups-of-settings">&quot;Features&quot;: named groups of settings</a></h1>

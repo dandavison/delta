@@ -138,7 +138,7 @@
 <p>Delta applies syntax-highlighting and other enhancements to standard grep output such as from <code>git grep</code>, <a href="https://github.com/BurntSushi/ripgrep/">ripgrep</a> (aka <code>rg</code>), grep, etc.
 To use with <code>git grep</code>, set delta as the pager for <code>grep</code> in the <code>[pager]</code> section of your gitconfig. See the example at the <a href="./get-started.html">top of the page</a>.
 Output from other grep tools can be piped to delta: e.g. <code>rg -Hn --color=always</code>, <code>grep -Hn --color=always</code>, etc.
-To customize the colors and syntax highlighting, see <code>grep-match-line-style</code>, <code>grep-match-word-style</code>, <code>grep-contexct-line-style</code>, <code>grep-file-style</code>, <code>grep-line-number-style</code>.
+To customize the colors and syntax highlighting, see <code>grep-match-line-style</code>, <code>grep-match-word-style</code>, <code>grep-context-line-style</code>, <code>grep-file-style</code>, <code>grep-line-number-style</code>.
 Ripgrep's <code>rg --json</code> output format is supported; this avoids certain file name parsing ambiguities that are inevitable with the standard grep output formats.
 Note that <code>git grep</code> can display the &quot;function context&quot; for matches and that delta handles this output specially: see the <code>-p</code> and <code>-W</code> options of <code>git grep</code>.</p>
 
