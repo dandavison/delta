@@ -154,24 +154,24 @@ impl<'a> StateMachine<'a> {
             // The bool indicates whether the line has been handled by that
             // method (in which case no subsequent handlers are permitted to
             // handle it).
-            let _ = self.handle_commit_meta_header_line()?
-                || self.handle_diff_stat_line()?
-                || self.handle_diff_header_diff_line()?
-                || self.handle_diff_header_file_operation_line()?
-                || self.handle_diff_header_minus_line()?
-                || self.handle_diff_header_plus_line()?
-                || self.handle_hunk_header_line()?
-                || self.handle_diff_header_mode_line()?
-                || self.handle_diff_header_misc_line()?
-                || self.handle_submodule_log_line()?
-                || self.handle_submodule_short_line()?
-                || self.handle_merge_conflict_line()?
-                || self.handle_hunk_line()?
-                || self.handle_git_show_file_line()?
-                || self.handle_blame_line()?
-                || self.handle_grep_line()?
-                || self.should_skip_line()
-                || self.emit_line_unchanged()?;
+            let _ = dbg!(self.handle_commit_meta_header_line()?)
+                || dbg!(self.handle_diff_stat_line()?)
+                || dbg!(self.handle_diff_header_diff_line()?)
+                || dbg!(self.handle_diff_header_file_operation_line()?)
+                || dbg!(self.handle_diff_header_minus_line()?)
+                || dbg!(self.handle_diff_header_plus_line()?)
+                || dbg!(self.handle_hunk_header_line()?)
+                || dbg!(self.handle_diff_header_mode_line()?)
+                || dbg!(self.handle_diff_header_misc_line()?)
+                || dbg!(self.handle_submodule_log_line()?)
+                || dbg!(self.handle_submodule_short_line()?)
+                || dbg!(self.handle_merge_conflict_line()?)
+                || dbg!(self.handle_hunk_line()?)
+                || dbg!(self.handle_git_show_file_line()?)
+                || dbg!(self.handle_blame_line()?)
+                || dbg!(self.handle_grep_line()?)
+                || dbg!(self.should_skip_line())
+                || dbg!(self.emit_line_unchanged()?);
         }
 
         self.handle_pending_line_with_diff_name()?;
