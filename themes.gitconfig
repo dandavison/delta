@@ -325,5 +325,5 @@
     plus-emph-style = bold green
     zero-style = syntax
     blame-code-style = syntax
-    blame-format = "{author:<18} ({commit:>7}) {timestamp:^12} "
+    blame-format = "{author:<18} ({commit:>7}) {timestamp:^16} "
     blame-palette = "#2E3440" "#3B4252" "#434C5E" "#4C566A"
