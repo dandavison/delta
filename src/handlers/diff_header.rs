@@ -1,8 +1,6 @@
 use std::borrow::Cow;
 use std::path::Path;
 
-use unicode_segmentation::UnicodeSegmentation;
-
 use super::draw;
 use crate::config::Config;
 use crate::delta::{DiffType, Source, State, StateMachine};
@@ -171,43 +169,6 @@ impl<'a> StateMachine<'a> {
             self.config,
         )
     }
-
-    pub fn handle_pending_mode_line_with_diff_name(&mut self) -> std::io::Result<()> {
-        if !self.mode_info.is_empty() {
-            let format_label = |label: &str| {
-                if !label.is_empty() {
-                    format!("{} ", label)
-                } else {
-                    "".to_string()
-                }
-            };
-            let format_file = |file| match (
-                self.config.hyperlinks,
-                utils::path::absolute_path(file, self.config),
-            ) {
-                (true, Some(absolute_path)) => features::hyperlinks::format_osc8_file_hyperlink(
-                    absolute_path,
-                    None,
-                    file,
-                    self.config,
-                ),
-                _ => Cow::from(file),
-            };
-            let label = format_label(&self.config.file_modified_label);
-            let name = get_repeated_file_path_from_diff_line(&self.diff_line)
-                .unwrap_or_else(|| "".to_string());
-            let line = format!("{}{}", label, format_file(&name));
-            write_generic_diff_header_header_line(
-                &line,
-                &line,
-                &mut self.painter,
-                &mut self.mode_info,
-                self.config,
-            )
-        } else {
-            Ok(())
-        }
-    }
 }
 
 /// Write `line` with DiffHeader styling.
@@ -294,23 +255,6 @@ fn parse_diff_header_line(line: &str, git_diff_name: bool) -> (String, FileEvent
         }
         _ => ("".to_string(), FileEvent::NoEvent),
     }
-}
-
-/// Given input like "diff --git a/src/my file.rs b/src/my file.rs"
-/// return Some("src/my file.rs")
-fn get_repeated_file_path_from_diff_line(line: &str) -> Option<String> {
-    if let Some(line) = line.strip_prefix("diff --git ") {
-        let line: Vec<&str> = line.graphemes(true).collect();
-        let midpoint = line.len() / 2;
-        if line[midpoint] == " " {
-            let first_path = _parse_file_path(&line[..midpoint].join(""), true);
-            let second_path = _parse_file_path(&line[midpoint + 1..].join(""), true);
-            if first_path == second_path {
-                return Some(first_path);
-            }
-        }
-    }
-    None
 }
 
 fn _parse_file_path(s: &str, git_diff_name: bool) -> String {
