@@ -17,6 +17,7 @@ mod tests {
     }
 
     #[test]
+    #[ignore] // #128
     fn test_added_empty_file() {
         DeltaTest::with_args(&[])
             .with_input(ADDED_EMPTY_FILE)
@@ -1570,21 +1571,6 @@ src/align.rs:71: impl<'a> Alignment<'a> { │
     }
 
     #[test]
-    fn test_file_deleted_without_preimage() {
-        DeltaTest::with_args(&[])
-            .with_input(GIT_DIFF_FILE_DELETED_WITHOUT_PREIMAGE)
-            .expect_contains("removed: foo.bar");
-    }
-
-    #[test]
-    fn test_files_deleted_without_preimage() {
-        DeltaTest::with_args(&[])
-            .with_input(GIT_DIFF_FILES_DELETED_WITHOUT_PREIMAGE)
-            .expect_contains("removed: foo")
-            .expect_contains("removed: bar");
-    }
-
-    #[test]
     fn test_file_mode_change_with_diff() {
         DeltaTest::with_args(&["--navigate", "--keep-plus-minus-markers"])
             .with_input(GIT_DIFF_FILE_MODE_CHANGE_WITH_DIFF)
@@ -2346,23 +2332,6 @@ new mode 100644
 diff --git a/src/delta.rs b/src/delta.rs
 old mode 100700
 new mode 100644
-";
-
-    // This output can be generated with `git diff -D`
-    const GIT_DIFF_FILE_DELETED_WITHOUT_PREIMAGE: &str = "
-diff --git a/foo.bar b/foo.bar
-deleted file mode 100644
-index e019be0..0000000
-";
-
-    // This output can be generated with `git diff -D`
-    const GIT_DIFF_FILES_DELETED_WITHOUT_PREIMAGE: &str = "
-diff --git a/foo b/foo
-deleted file mode 100644
-index e019be0..0000000
-diff --git a/bar b/bar
-deleted file mode 100644
-index e019be0..0000000
 ";
 
     const GIT_DIFF_FILE_MODE_CHANGE_WITH_DIFF: &str = "
