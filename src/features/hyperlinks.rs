@@ -26,8 +26,12 @@ pub fn format_commit_line_with_osc8_commit_hyperlink<'a>(
 ) -> Cow<'a, str> {
     if let Some(commit_link_format) = &config.hyperlinks_commit_link_format {
         COMMIT_LINE_REGEX.replace(line, |captures: &Captures| {
-            let commit = captures.get(2).unwrap().as_str();
-            format_osc8_hyperlink(&commit_link_format.replace("{commit}", commit), commit)
+            let prefix = captures.get(1).map(|m| m.as_str()).unwrap_or("");
+            let commit = captures.get(2).map(|m| m.as_str()).unwrap();
+            let suffix = captures.get(3).map(|m| m.as_str()).unwrap_or("");
+            let formatted_commit =
+                format_osc8_hyperlink(&commit_link_format.replace("{commit}", commit), commit);
+            format!("{}{}{}", prefix, formatted_commit, suffix)
         })
     } else if let Some(GitConfigEntry::GitRemote(repo)) =
         config.git_config.as_ref().and_then(get_remote_url)
