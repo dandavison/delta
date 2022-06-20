@@ -171,43 +171,6 @@ impl<'a> StateMachine<'a> {
             self.config,
         )
     }
-
-    pub fn handle_pending_mode_line_with_diff_name(&mut self) -> std::io::Result<()> {
-        if !self.mode_info.is_empty() {
-            let format_label = |label: &str| {
-                if !label.is_empty() {
-                    format!("{} ", label)
-                } else {
-                    "".to_string()
-                }
-            };
-            let format_file = |file| match (
-                self.config.hyperlinks,
-                utils::path::absolute_path(file, self.config),
-            ) {
-                (true, Some(absolute_path)) => features::hyperlinks::format_osc8_file_hyperlink(
-                    absolute_path,
-                    None,
-                    file,
-                    self.config,
-                ),
-                _ => Cow::from(file),
-            };
-            let label = format_label(&self.config.file_modified_label);
-            let name = get_repeated_file_path_from_diff_line(&self.diff_line)
-                .unwrap_or_else(|| "".to_string());
-            let line = format!("{}{}", label, format_file(&name));
-            write_generic_diff_header_header_line(
-                &line,
-                &line,
-                &mut self.painter,
-                &mut self.mode_info,
-                self.config,
-            )
-        } else {
-            Ok(())
-        }
-    }
 }
 
 /// Write `line` with DiffHeader styling.
@@ -298,6 +261,7 @@ fn parse_diff_header_line(line: &str, git_diff_name: bool) -> (String, FileEvent
 
 /// Given input like "diff --git a/src/my file.rs b/src/my file.rs"
 /// return Some("src/my file.rs")
+#[allow(unused)]
 fn get_repeated_file_path_from_diff_line(line: &str) -> Option<String> {
     if let Some(line) = line.strip_prefix("diff --git ") {
         let line: Vec<&str> = line.graphemes(true).collect();

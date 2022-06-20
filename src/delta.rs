@@ -173,7 +173,6 @@ impl<'a> StateMachine<'a> {
                 || self.emit_line_unchanged()?;
         }
 
-        self.handle_pending_mode_line_with_diff_name()?;
         self.painter.paint_buffered_minus_and_plus_lines();
         self.painter.emit()?;
         Ok(())
