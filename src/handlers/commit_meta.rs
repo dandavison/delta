@@ -16,6 +16,7 @@ impl<'a> StateMachine<'a> {
         }
         let mut handled_line = false;
         self.painter.paint_buffered_minus_and_plus_lines();
+        self.handle_pending_line_with_diff_name()?;
         self.state = State::CommitMeta;
         if self.should_handle() {
             self.painter.emit()?;
