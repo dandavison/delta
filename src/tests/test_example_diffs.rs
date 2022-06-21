@@ -1626,6 +1626,13 @@ src/align.rs:71: impl<'a> Alignment<'a> { │
             .expect_contains("a b ⟶   c d\n");
     }
 
+    #[test]
+    fn test_file_removal_in_log_output() {
+        DeltaTest::with_args(&[])
+            .with_input(GIT_LOG_FILE_REMOVAL_IN_FIRST_COMMIT)
+            .expect_after_header("#partial\n\nremoved: a");
+    }
+
     const GIT_DIFF_SINGLE_HUNK: &str = "\
 commit 94907c0f136f46dc46ffae2dc92dca9af7eb7c2e
 Author: Dan Davison <dandavison7@gmail.com>
@@ -2385,5 +2392,27 @@ index d00491f..0cfbf08 100644
 @@ -1 +1 @@
 -1
 +2
+";
+
+    const GIT_LOG_FILE_REMOVAL_IN_FIRST_COMMIT: &str = "
+commit 4117f616160180c0c57ea64840eadd08b7fa32a4
+Author: Björn Steinbrink <bsteinbr@gmail.com>
+Date:   Tue Jun 21 14:51:59 2022 +0200
+
+    remove file
+
+diff --git a a
+deleted file mode 100644
+index e69de29..0000000
+
+commit 190cce5dffeb9050fd6a27780f16d84b19c07dc0
+Author: Björn Steinbrink <bsteinbr@gmail.com>
+Date:   Tue Jun 21 14:48:20 2022 +0200
+
+    add file
+
+diff --git a a
+new file mode 100644
+index 0000000..e69de29
 ";
 }
