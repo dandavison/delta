@@ -1195,7 +1195,7 @@ pub mod tests {
         }
 
         // Tests that caller is something like "cargo test" or "cargo tarpaulin"
-        let find_test = |args: &[String]| find_calling_process(args, &["test", "tarpaulin"]);
+        let find_test = |args: &[String]| find_calling_process(args, &["t", "test", "tarpaulin"]);
         assert_eq!(calling_process_cmdline(info, find_test), Some(()));
 
         let nonsense = ppid_distance
