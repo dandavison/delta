@@ -136,21 +136,19 @@ fn run_app() -> std::io::Result<i32> {
         OutputType::from_mode(&env, config.paging_mode, config.pager.clone(), &config).unwrap();
     let mut writer = output_type.handle().unwrap();
 
-    match (config.minus_file.as_ref(), config.plus_file.as_ref()) {
-        (None, None) => {}
-        (Some(minus_file), Some(plus_file)) => {
-            let exit_code = subcommands::diff::diff(minus_file, plus_file, &config, &mut writer);
-            return Ok(exit_code);
-        }
-        _ => {
-            eprintln!(
-                "\
+    if let (Some(minus_file), Some(plus_file)) = (&config.minus_file, &config.plus_file) {
+        let exit_code = subcommands::diff::diff(minus_file, plus_file, &config, &mut writer);
+        return Ok(exit_code);
+    }
+
+    if atty::is(atty::Stream::Stdin) {
+        eprintln!(
+            "\
     The main way to use delta is to configure it as the pager for git: \
     see https://github.com/dandavison/delta#configuration. \
     You can also use delta to diff two files: `delta file_A file_B`."
-            );
-            return Ok(config.error_exit_code);
-        }
+        );
+        return Ok(config.error_exit_code);
     }
 
     if let Err(error) = delta(io::stdin().lock().byte_lines(), &mut writer, &config) {
