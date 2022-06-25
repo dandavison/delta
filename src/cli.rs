@@ -329,9 +329,9 @@ pub struct Opt {
     ///
     /// A feature is a named collection of delta options in ~/.gitconfig. See FEATURES section. The
     /// environment variable DELTA_FEATURES can be set to a space-separated list of feature names.
-    /// If this is preceded with a space, the features from the environment variable will be added
+    /// If this is preceded with a + character, the features from the environment variable will be added
     /// to those specified in git config. E.g. DELTA_FEATURES=+side-by-side can be used to activate
-    /// side-by-side temporarily.
+    /// side-by-side temporarily (use DELTA_FEATURES=+ to go back to just the features from git config).
     pub features: Option<String>,
 
     #[clap(
