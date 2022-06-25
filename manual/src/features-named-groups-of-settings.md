@@ -25,3 +25,17 @@ All delta options can go under the `[delta]` section in your git config file. Ho
 ```
 
 <table><tr><td><img width=400px src="https://user-images.githubusercontent.com/52205/86275048-a96ee500-bba0-11ea-8a19-584f69758aee.png" alt="image" /></td></tr></table>
+
+The environment variable `DELTA_FEATURES` can used to enable features from the command line: it should be set to a space-separated string of feature names.
+If you precede this with a `+` symbol, then the features are _added_ to those configured elsewhere, instead of replacing them.
+This is very useful, for example to temporarily switch delta to side-by-side mode you can do
+
+```
+export DELTA_FEATURES=+side-by-side
+```
+
+and to undo that:
+
+```
+export DELTA_FEATURES=+
+```
