@@ -157,6 +157,14 @@
     hunk-header-decoration-style = yellow box
 </code></pre>
 <table><tr><td><img width=400px src="https://user-images.githubusercontent.com/52205/86275048-a96ee500-bba0-11ea-8a19-584f69758aee.png" alt="image" /></td></tr></table>
+<p>The environment variable <code>DELTA_FEATURES</code> can used to enable features from the command line: it should be set to a space-separated string of feature names.
+If you precede this with a <code>+</code> symbol, then the features are <em>added</em> to those configured elsewhere, instead of replacing them.
+This is very useful, for example to temporarily switch delta to side-by-side mode you can do</p>
+<pre><code>export DELTA_FEATURES=+side-by-side
+</code></pre>
+<p>and to undo that:</p>
+<pre><code>export DELTA_FEATURES=+
+</code></pre>
 
                     </main>
 

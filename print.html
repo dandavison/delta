@@ -416,6 +416,14 @@ Note that <code>git grep</code> can display the &quot;function context&quot; for
     hunk-header-decoration-style = yellow box
 </code></pre>
 <table><tr><td><img width=400px src="https://user-images.githubusercontent.com/52205/86275048-a96ee500-bba0-11ea-8a19-584f69758aee.png" alt="image" /></td></tr></table>
+<p>The environment variable <code>DELTA_FEATURES</code> can used to enable features from the command line: it should be set to a space-separated string of feature names.
+If you precede this with a <code>+</code> symbol, then the features are <em>added</em> to those configured elsewhere, instead of replacing them.
+This is very useful, for example to temporarily switch delta to side-by-side mode you can do</p>
+<pre><code>export DELTA_FEATURES=+side-by-side
+</code></pre>
+<p>and to undo that:</p>
+<pre><code>export DELTA_FEATURES=+
+</code></pre>
 <div style="break-before: page; page-break-before: always;"></div><h1 id="custom-themes"><a class="header" href="#custom-themes">Custom themes</a></h1>
 <p>A &quot;theme&quot; in delta is just a collection of settings grouped together in a named <a href="./features-named-groups-of-settings.html">feature</a>. One of the available settings is <code>syntax-theme</code>: this dictates the colors and styles that are applied to foreground text by the syntax highlighter. Thus the concept of &quot;theme&quot; in delta encompasses not just the foreground syntax-highlighting color theme, but also background colors, decorations such as boxes and under/overlines, etc.</p>
 <p>The delta git repo contains a <a href="https://github.com/dandavison/delta/blob/master/themes.gitconfig">collection of themes</a> created by users. These focus on the visual appearance: colors etc. If you want features like <code>side-by-side</code> or <code>navigate</code>, you would set that yourself, after selecting the color theme. To use the delta themes, clone the delta repo (or <a href="https://raw.githubusercontent.com/dandavison/delta/master/themes.gitconfig">download</a> the raw <code>themes.gitconfig</code> file) and add the following entry in your gitconfig:</p>
