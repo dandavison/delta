@@ -183,17 +183,6 @@ impl<'a> StateMachine<'a> {
     fn ingest_line(&mut self, raw_line_bytes: &[u8]) {
         // TODO: retain raw_line as Cow
         self.raw_line = String::from_utf8_lossy(raw_line_bytes).to_string();
-        // When a file has \r\n line endings, git sometimes adds ANSI escape sequences between the
-        // \r and \n, in which case byte_lines does not remove the \r. Remove it now.
-        if let Some(cr_index) = self.raw_line.rfind('\r') {
-            if ansi::strip_ansi_codes(&self.raw_line[cr_index + 1..]).is_empty() {
-                self.raw_line = format!(
-                    "{}{}",
-                    &self.raw_line[..cr_index],
-                    &self.raw_line[cr_index + 1..]
-                );
-            }
-        }
         if self.config.max_line_length > 0
             && self.raw_line.len() > self.config.max_line_length
             // Do not truncate long hunk headers
