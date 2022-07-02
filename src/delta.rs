@@ -13,6 +13,7 @@ use crate::handlers::hunk_header::ParsedHunkHeader;
 use crate::handlers::{self, merge_conflict};
 use crate::paint::Painter;
 use crate::style::DecorationStyle;
+use crate::utils;
 
 #[derive(Clone, Debug, PartialEq)]
 pub enum State {
@@ -181,10 +182,25 @@ impl<'a> StateMachine<'a> {
     }
 
     fn ingest_line(&mut self, raw_line_bytes: &[u8]) {
-        // TODO: retain raw_line as Cow
-        self.raw_line = String::from_utf8_lossy(raw_line_bytes).to_string();
+        match String::from_utf8(raw_line_bytes.to_vec()) {
+            Ok(utf8) => self.ingest_line_utf8(utf8),
+            Err(_) => {
+                let raw_line = String::from_utf8_lossy(raw_line_bytes);
+                let truncated_len = utils::round_char_boundary::floor_char_boundary(
+                    &raw_line,
+                    self.config.max_line_length,
+                );
+                self.raw_line = raw_line[..truncated_len].to_string();
+                self.line = self.raw_line.clone();
+            }
+        }
+    }
+
+    fn ingest_line_utf8(&mut self, raw_line: String) {
+        self.raw_line = raw_line;
         // When a file has \r\n line endings, git sometimes adds ANSI escape sequences between the
         // \r and \n, in which case byte_lines does not remove the \r. Remove it now.
+        // TODO: Limit the number of characters we examine when looking for the \r?
         if let Some(cr_index) = self.raw_line.rfind('\r') {
             if ansi::strip_ansi_codes(&self.raw_line[cr_index + 1..]).is_empty() {
                 self.raw_line = format!(
