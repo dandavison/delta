@@ -232,7 +232,9 @@ fn get_code_style_sections<'b>(
         let match_style_sections = ansi::parse_style_sections(&raw_line[(prefix_end + 1)..])
             .iter()
             .map(|(ansi_term_style, s)| {
-                if ansi_term_style.foreground.is_some() {
+                if ansi_term_style.is_bold
+                    && ansi_term_style.foreground == Some(ansi_term::Colour::Red)
+                {
                     (match_style, *s)
                 } else {
                     (non_match_style, *s)
@@ -941,6 +943,19 @@ mod tests {
                 hit,
                 "kind: Service"
             )]))
+        );
+
+        let plus_example = format!("etc/examples/189-merge-conflict.2.diff{escape}[36m:{escape}[m10{escape}[36m:{escape}[m{escape}[32m +        let (style, non_emph_style) = {escape}[1;31mmatch{escape}[m state {{{escape}[m");
+        let plus_stripped = strip_ansi_codes(&plus_example);
+        let plus_grep = parse_grep_line(&plus_stripped).unwrap();
+
+        assert_eq!(
+            get_code_style_sections(&plus_example, hit, miss, &plus_grep),
+            Some(StyleSectionSpecifier::StyleSections(vec![
+                (miss, " +        let (style, non_emph_style) = "),
+                (hit, "match"),
+                (miss, " state {")
+            ]))
         );
     }
 }
