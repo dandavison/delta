@@ -14,12 +14,12 @@ impl<'a> StateMachine<'a> {
             {
                 self.state = State::GitShowFile;
                 self.painter.set_syntax(Some(extension));
-                self.painter.set_highlighter();
             } else {
                 return Ok(handled_line);
             }
         }
         if matches!(self.state, State::GitShowFile) {
+            self.painter.set_highlighter();
             self.painter.syntax_highlight_and_paint_line(
                 &self.line,
                 StyleSectionSpecifier::Style(self.config.zero_style),
