@@ -222,17 +222,19 @@ fn get_code_style_sections<'b>(
     non_match_style: Style,
     grep: &GrepLine,
 ) -> Option<StyleSectionSpecifier<'b>> {
-    if let Some(raw_code_start) = ansi::ansi_preserving_index(
+    if let Some(prefix_end) = ansi::ansi_preserving_index(
         raw_line,
         match grep.line_number {
-            Some(n) => format!("{}:{}:", grep.path, n).len(),
-            None => grep.path.len() + 1,
+            Some(n) => format!("{}:{}:", grep.path, n).len() - 1,
+            None => grep.path.len(),
         },
     ) {
-        let match_style_sections = ansi::parse_style_sections(&raw_line[raw_code_start..])
+        let match_style_sections = ansi::parse_style_sections(&raw_line[(prefix_end + 1)..])
             .iter()
             .map(|(ansi_term_style, s)| {
-                if ansi_term_style.foreground.is_some() {
+                if ansi_term_style.is_bold
+                    && ansi_term_style.foreground == Some(ansi_term::Colour::Red)
+                {
                     (match_style, *s)
                 } else {
                     (non_match_style, *s)
@@ -899,5 +901,61 @@ mod tests {
         // No fake parent grep command
         let apparently_grep_output = "src/co-7-fig.rs:xxx";
         assert_eq!(parse_grep_line(apparently_grep_output), None);
+    }
+
+    #[test]
+    fn test_get_code_style_sections() {
+        use crate::ansi::strip_ansi_codes;
+        use crate::handlers::grep::get_code_style_sections;
+        use crate::paint::StyleSectionSpecifier;
+        use crate::style::Style;
+
+        let fake_parent_grep_command = "git --doesnt-matter grep --nor-this nor_this -- nor_this";
+        let _args = FakeParentArgs::for_scope(fake_parent_grep_command);
+
+        let miss = Style::new();
+        let hit = Style {
+            is_emph: true,
+            ..miss
+        };
+
+        let escape = "\x1B";
+        let working_example = format!("foo/bar/baz.yaml{escape}[36m:{escape}[m1090{escape}[36m:{escape}[m  - {escape}[1;31mkind: Service{escape}[mAccount");
+        let stripped = strip_ansi_codes(&working_example);
+        let grep = parse_grep_line(&stripped).unwrap();
+
+        assert_eq!(
+            get_code_style_sections(&working_example, hit, miss, &grep),
+            Some(StyleSectionSpecifier::StyleSections(vec![
+                (miss, "  - "),
+                (hit, "kind: Service"),
+                (miss, "Account")
+            ]))
+        );
+
+        let broken_example = format!("foo/bar/baz.yaml{escape}[36m:{escape}[m2{escape}[36m:{escape}[m{escape}[1;31mkind: Service{escape}[m");
+        let broken_stripped = strip_ansi_codes(&broken_example);
+        let broken_grep = parse_grep_line(&broken_stripped).unwrap();
+
+        assert_eq!(
+            get_code_style_sections(&broken_example, hit, miss, &broken_grep),
+            Some(StyleSectionSpecifier::StyleSections(vec![(
+                hit,
+                "kind: Service"
+            )]))
+        );
+
+        let plus_example = format!("etc/examples/189-merge-conflict.2.diff{escape}[36m:{escape}[m10{escape}[36m:{escape}[m{escape}[32m +        let (style, non_emph_style) = {escape}[1;31mmatch{escape}[m state {{{escape}[m");
+        let plus_stripped = strip_ansi_codes(&plus_example);
+        let plus_grep = parse_grep_line(&plus_stripped).unwrap();
+
+        assert_eq!(
+            get_code_style_sections(&plus_example, hit, miss, &plus_grep),
+            Some(StyleSectionSpecifier::StyleSections(vec![
+                (miss, " +        let (style, non_emph_style) = "),
+                (hit, "match"),
+                (miss, " state {")
+            ]))
+        );
     }
 }
