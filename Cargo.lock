@@ -248,9 +248,9 @@ dependencies = [
 
 [[package]]
 name = "clap"
-version = "3.2.8"
+version = "3.2.14"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "190814073e85d238f31ff738fcb0bf6910cedeb73376c87cd69291028966fd83"
+checksum = "54635806b078b7925d6e36810b1755f2a4b5b4d57560432c1ecf60bcbe10602b"
 dependencies = [
  "atty",
  "bitflags",
@@ -633,7 +633,7 @@ dependencies = [
  "bytelines",
  "chrono",
  "chrono-humanize",
- "clap 3.2.8",
+ "clap 3.2.14",
  "console",
  "ctrlc",
  "dirs-next",
