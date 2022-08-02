@@ -507,6 +507,9 @@ fn pad_panel_line_to_width<'a>(
     if text_width > panel_width {
         *panel_line =
             ansi::truncate_str(panel_line, panel_width, &config.truncation_symbol).to_string();
+        for _ in 0..panel_width.saturating_sub(ansi::measure_text_width(panel_line)) {
+            panel_line.push(' ');
+        }
     }
 
     let (bg_fill_mode, fill_style) = get_right_fill_style_for_panel(
@@ -713,6 +716,25 @@ pub mod tests {
             r#"
             │  1 │a = 1         │  1 │a = 1
             │  2 │b = 2         │  2 │bb = 2        "#,
+        );
+    }
+
+    #[test]
+    fn test_two_minus_lines_unicode_truncated() {
+        DeltaTest::with_args(&[
+            "--side-by-side",
+            "--wrap-max-lines",
+            "2",
+            "--width",
+            "16",
+            "--line-fill-method=spaces",
+        ])
+        .set_config(|cfg| cfg.truncation_symbol = ">".into())
+        .with_input(TWO_MINUS_LINES_UNICODE_DIFF)
+        .expect_after_header(
+            r#"
+            │  1 │↵>│    │
+            │    │> │    │"#,
         );
     }
 }

@@ -975,4 +975,13 @@ index 223ca50..367a6f6 100644
 -a = other one
 +a = right side which is longer
  xyz";
+
+    pub const TWO_MINUS_LINES_UNICODE_DIFF: &str = "\
+diff --git a/a.py b/a.py
+index 8b0d958..e69de29 100644
+--- a/a.txt
++++ b/b.txt
+@@ -1,1 +0,0 @@
+-一二三
+";
 }
