@@ -227,7 +227,7 @@ pub trait CenterRightNumbers {
     // these are now aligned to the center right by having this trait return " "
     // instead of "". This is prepended to the format string. In the case of " "
     // the trailing " " must then be removed so everything is shifted to the right.
-    // This asumes no special padding characters, i.e. the default of space.
+    // This assumes no special padding characters, i.e. the default of space.
     fn center_right_space(&self, alignment: Align, width: usize) -> &'static str;
 }
 
