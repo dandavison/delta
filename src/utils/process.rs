@@ -598,7 +598,7 @@ pub mod tests {
     // When calling `FakeParentArgs::get()`, it can return `Some(values)` which were set earlier
     // during in the #[test]. Otherwise returns None.
     // This value can be valid once: `FakeParentArgs::once(val)`, for the entire scope:
-    // `FakeParentArgs::for_scope(val)`, or can be different values everytime `get()` is called:
+    // `FakeParentArgs::for_scope(val)`, or can be different values every time `get()` is called:
     // `FakeParentArgs::with([val1, val2, val3])`.
     // It is an error if `once` or `with` values remain unused, or are overused.
     // Note: The values are stored per-thread, so the expectation is that no thread boundaries are
@@ -890,7 +890,7 @@ pub mod tests {
     fn test_process_testing_assert_never_used() {
         let _args = FakeParentArgs::once("never used");
 
-        // causes a panic while panicing, so can't test:
+        // causes a panic while panicking, so can't test:
         // let _args = FakeParentArgs::for_scope(&"never used");
         // let _args = FakeParentArgs::once(&"never used");
     }
@@ -939,7 +939,7 @@ pub mod tests {
             calling_process_cmdline(ProcInfo::new(), guess_git_blame_filename_extension),
             Some("once".into())
         );
-        // ignored: dropping causes a panic while panicing, so can't test
+        // ignored: dropping causes a panic while panicking, so can't test
         calling_process_cmdline(ProcInfo::new(), guess_git_blame_filename_extension);
     }
 
