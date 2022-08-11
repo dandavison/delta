@@ -1,7 +1,7 @@
 # Full --help output
 
 ```
-delta 0.12.1
+delta 0.13.0
 A viewer for git and diff output
 
 USAGE:
@@ -103,7 +103,7 @@ OPTIONS:
         --features <FEATURES>
             Names of delta features to activate (space-separated).
             
-            A feature is a named collection of delta options in ~/.gitconfig. See FEATURES section. The environment variable DELTA_FEATURES can be set to a space-separated list of feature names. If this is preceded with a space, the features from the environment variable will be added to those specified in git config. E.g. DELTA_FEATURES=+side-by-side can be used to activate side-by-side temporarily.
+            A feature is a named collection of delta options in ~/.gitconfig. See FEATURES section. The environment variable DELTA_FEATURES can be set to a space-separated list of feature names. If this is preceded with a + character, the features from the environment variable will be added to those specified in git config. E.g. DELTA_FEATURES=+side-by-side can be used to activate side-by-side temporarily (use DELTA_FEATURES=+ to go back to just the features from git config).
 
         --file-added-label <STRING>
             Text to display before an added file path.
@@ -228,7 +228,7 @@ OPTIONS:
             Following the hyperlink spec for terminal emulators: https://gist.github.com/egmontkob/eb114294efbcd5adb1944c9f3cb5feda. By default, file names and line numbers link to the local file using a file URL, whereas commit hashes link to the commit in GitHub, if the remote repository is hosted by GitHub. See --hyperlinks-file-link-format for full control over the file URLs emitted. Hyperlinks are supported by several common terminal emulators. To make them work, you must use less version >= 581 with the -R flag (or use -r with older less versions, but this will break e.g. --navigate). If you use tmux, then you will also need a patched fork of tmux (see https://github.com/dandavison/tmux).
 
         --hyperlinks-commit-link-format <FMT>
-            Format string for commit hyperlinks (requiraes --hyperlinks).
+            Format string for commit hyperlinks (requires --hyperlinks).
             
             The placeholder "{commit}" will be replaced by the commit hash. For example: --hyperlinks-commit-link-format='https://mygitrepo/{commit}/'
 
@@ -570,7 +570,7 @@ OPTIONS:
         --wrap-max-lines <N>
             How often a line should be wrapped if it does not fit.
             
-            Zero means to never wrap. Any content which does not fit will be truncated. A value of "unlimited" means a line will be wrapped as many times as required.
+            Zero means to never wrap. Any content which does not fit after wrapping will be truncated. A value of "unlimited" means a line will be wrapped as many times as required.
             
             [default: 2]
 
