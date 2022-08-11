@@ -49,6 +49,13 @@ OPTIONS:
             
             [default: "%Y-%m-%d %H:%M:%S %z"]
 
+        --blame-timestamp-output-format <FMT>
+            Format string for git blame timestamp output.
+            
+            This string is used for formatting the timestamps in git blame output. It must follow the `strftime` format syntax specification. If it is not present, the timestamps will be formatted in a human-friendly but possibly less accurate form.
+            
+            See: (https://docs.rs/chrono/latest/chrono/format/strftime/index.html)
+
         --color-only
             Do not alter the input structurally in any way.
             

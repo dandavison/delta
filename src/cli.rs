@@ -260,6 +260,16 @@ pub struct Opt {
     /// Format of `git blame` timestamp in raw git output received by delta.
     pub blame_timestamp_format: String,
 
+    #[clap(long = "blame-timestamp-output-format", value_name = "FMT")]
+    /// Format string for git blame timestamp output.
+    ///
+    /// This string is used for formatting the timestamps in git blame output. It must follow
+    /// the `strftime` format syntax specification. If it is not present, the timestamps will
+    /// be formatted in a human-friendly but possibly less accurate form.
+    ///
+    /// See: (https://docs.rs/chrono/latest/chrono/format/strftime/index.html)
+    pub blame_timestamp_output_format: Option<String>,
+
     #[clap(long = "color-only")]
     /// Do not alter the input structurally in any way.
     ///
