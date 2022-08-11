@@ -207,11 +207,11 @@ lazy_static! {
 [\ ]
 \(                 # open ( which the previous file name may not contain in case a name does (which is more likely)
 (
-    [^\ ].*[^\ ]   # author name
+    [^\ ].*?[^\ ]  # author name (ungreedy so the following timestamp is matched)
 )
 [\ ]+
-(                  # timestamp
-    [0-9]{4}-[0-9]{2}-[0-9]{2}\ [0-9]{2}:[0-9]{2}:[0-9]{2}\ [-+][0-9]{4}
+(                  # timestamp, a general regex to capture input which will be parsed by strftime
+    (?:[0-9]+[\ :\+-T]+)*[0-9]+      # repeated (number separator) then a final number
 )
 [\ ]+
 (
@@ -398,6 +398,9 @@ mod tests {
             assert!(caps.is_some());
             assert!(parse_git_blame_line(line, "%Y-%m-%d %H:%M:%S %z").is_some());
         }
+
+        let strange_date = "1234 (Author Name-Here   19-01-0500 18-08+2022T41 1) --date=format:'%d-%m%z %M-%H+%YT%S'";
+        assert!(parse_git_blame_line(strange_date, "%d-%m%z %M-%H+%YT%S").is_some());
     }
 
     #[test]
@@ -406,6 +409,23 @@ mod tests {
             "61f180c8 (Kangwook Lee (이강욱) 2021-06-09 23:33:59 +0900 130)     let mut output_type =";
         let caps = BLAME_LINE_REGEX.captures(line).unwrap();
         assert_eq!(caps.get(2).unwrap().as_str(), "Kangwook Lee (이강욱)");
+    }
+
+    #[test]
+    fn test_blame_timestamp_regex() {
+        // Not supported: rfc2822, the weekday start (plus possible localisation) can't be separated from the author
+        for timestamp_fmt in &[
+            "1234 (Author Name-Here   2021-08-22 18:20:19 -0700 1) default blame (iso)",
+            "1234 (Author Name-Here   2022-01-19T23:49:50+01:00 1) iso strict",
+            "1234 (Author Name-Here   2022-01-19 1) short",
+            "1234 (Author Name-Here   123456789 1) unix",
+            "1234 (Author Name-Here   123456789 +0100 1) raw",
+            "1234 (Author Name-Here   19-01-0500 18-08+2022T41 1) --date=format:'%d-%m%z %M-%H+%YT%S'"
+        ] {
+            let caps = BLAME_LINE_REGEX.captures(timestamp_fmt);
+            assert!(caps.is_some());
+            assert!(caps.unwrap().get(3).is_some())
+        }
     }
 
     #[test]
