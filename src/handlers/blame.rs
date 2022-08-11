@@ -269,9 +269,12 @@ pub fn format_blame_metadata(
         let width = placeholder.width.unwrap_or(15);
 
         let field = match placeholder.placeholder {
-            Some(Placeholder::Str("timestamp")) => Some(Cow::from(
-                chrono_humanize::HumanTime::from(blame.time).to_string(),
-            )),
+            Some(Placeholder::Str("timestamp")) => {
+                Some(Cow::from(match &config.blame_timestamp_output_format {
+                    Some(time_format) => blame.time.format(time_format).to_string(),
+                    None => chrono_humanize::HumanTime::from(blame.time).to_string(),
+                }))
+            }
             Some(Placeholder::Str("author")) => Some(Cow::from(blame.author)),
             Some(Placeholder::Str("commit")) => Some(delta::format_raw_line(blame.commit, config)),
             None => None,
@@ -409,6 +412,33 @@ mod tests {
     }
 
     #[test]
+    fn test_format_blame_metadata_with_default_timestamp_output_format() {
+        let format_data = format::FormatStringPlaceholderData {
+            placeholder: Some(Placeholder::Str("timestamp")),
+            ..Default::default()
+        };
+        let blame = make_blame_line_with_time("1996-12-19T16:39:57-08:00");
+        let config = integration_test_utils::make_config_from_args(&[]);
+        let regex = Regex::new(r"^\d+ years ago$").unwrap();
+        let result = format_blame_metadata(&[format_data], &blame, &config);
+        assert!(regex.is_match(result.trim()));
+    }
+
+    #[test]
+    fn test_format_blame_metadata_with_custom_timestamp_output_format() {
+        let format_data = format::FormatStringPlaceholderData {
+            placeholder: Some(Placeholder::Str("timestamp")),
+            ..Default::default()
+        };
+        let blame = make_blame_line_with_time("1996-12-19T16:39:57-08:00");
+        let config = integration_test_utils::make_config_from_args(&[
+            "--blame-timestamp-output-format=%Y-%m-%d %H:%M",
+        ]);
+        let result = format_blame_metadata(&[format_data], &blame, &config);
+        assert_eq!(result.trim(), "1996-12-19 16:39");
+    }
+
+    #[test]
     fn test_color_assignment() {
         let mut writer = Cursor::new(vec![0; 512]);
         let config = integration_test_utils::make_config_from_args(&[
@@ -496,5 +526,16 @@ mod tests {
             .sorted()
             .map(|(k, v)| (k.as_str(), v.as_str()))
             .collect()
+    }
+
+    fn make_blame_line_with_time(timestamp: &str) -> BlameLine {
+        let time = chrono::DateTime::parse_from_rfc3339(&timestamp).unwrap();
+        return BlameLine {
+            commit: "",
+            author: "",
+            time: time,
+            line_number: 0,
+            code: "",
+        };
     }
 }
