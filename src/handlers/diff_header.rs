@@ -290,7 +290,7 @@ pub fn write_generic_diff_header_header_line(
         &format!("{}{}", line, if pad { " " } else { "" }),
         &format!("{}{}", raw_line, if pad { " " } else { "" }),
         mode_info,
-        &config.decorations_width,
+        config.width,
         config.file_style,
         decoration_ansi_term_style,
     )?;

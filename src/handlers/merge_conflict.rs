@@ -4,7 +4,6 @@ use itertools::Itertools;
 use unicode_segmentation::UnicodeSegmentation;
 
 use super::draw;
-use crate::cli;
 use crate::config::{self, delta_unreachable};
 use crate::delta::{DiffType, InMergeConflict, MergeParents, State, StateMachine};
 use crate::minusplus::MinusPlus;
@@ -201,7 +200,7 @@ fn write_diff_header(
         &text,
         &text,
         "",
-        &config.decorations_width,
+        config.width,
         style,
         decoration_ansi_term_style,
     )?;
@@ -213,14 +212,13 @@ fn write_merge_conflict_bar(
     painter: &mut paint::Painter,
     config: &config::Config,
 ) -> std::io::Result<()> {
-    let width = match config.decorations_width {
-        cli::Width::Fixed(width) => width,
-        cli::Width::Variable => config.available_terminal_width,
-    };
     writeln!(
         painter.writer,
         "{}",
-        &s.graphemes(true).cycle().take(width).join("")
+        &s.graphemes(true)
+            .cycle()
+            .take(config.width.width())
+            .join("")
     )?;
     Ok(())
 }

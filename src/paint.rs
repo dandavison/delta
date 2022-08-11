@@ -333,7 +333,7 @@ impl<'p> Painter<'p> {
         ) {
             (false, _) | (_, BgShouldFill::No) => (None, fill_style),
             (_, BgShouldFill::With(bgmode)) => {
-                if config.background_color_extends_to_terminal_width {
+                if !config.width.limited_decoration_width() {
                     (Some(bgmode), fill_style)
                 } else {
                     (None, fill_style)
