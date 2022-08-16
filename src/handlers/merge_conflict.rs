@@ -11,7 +11,7 @@ use crate::minusplus::MinusPlus;
 use crate::paint::{self, prepare};
 use crate::style::Style;
 
-#[derive(Clone, Debug, PartialEq)]
+#[derive(Clone, Debug, PartialEq, Eq)]
 pub enum MergeConflictCommit {
     Ours,
     Ancestral,

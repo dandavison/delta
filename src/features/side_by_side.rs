@@ -526,6 +526,7 @@ fn pad_panel_line_to_width<'a>(
         }
         Some(BgFillMethod::Spaces) if text_width >= panel_width => (),
         Some(BgFillMethod::Spaces) => panel_line.push_str(
+            #[allow(clippy::unnecessary_to_owned)]
             &fill_style
                 .paint(" ".repeat(panel_width - text_width))
                 .to_string(),

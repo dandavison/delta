@@ -15,7 +15,7 @@ use crate::paint::Painter;
 use crate::style::DecorationStyle;
 use crate::utils;
 
-#[derive(Clone, Debug, PartialEq)]
+#[derive(Clone, Debug, PartialEq, Eq)]
 pub enum State {
     CommitMeta,                                             // In commit metadata section
     DiffHeader(DiffType), // In diff metadata section, between (possible) commit metadata and first hunk
@@ -36,21 +36,21 @@ pub enum State {
     HunkPlusWrapped,  // Wrapped added line
 }
 
-#[derive(Clone, Debug, PartialEq)]
+#[derive(Clone, Debug, PartialEq, Eq)]
 pub enum DiffType {
     Unified,
     // https://git-scm.com/docs/git-diff#_combined_diff_format
     Combined(MergeParents, InMergeConflict),
 }
 
-#[derive(Clone, Debug, PartialEq)]
+#[derive(Clone, Debug, PartialEq, Eq)]
 pub enum MergeParents {
     Number(usize),  // Number of parent commits == (number of @s in hunk header) - 1
     Prefix(String), // Hunk line prefix, length == number of parent commits
     Unknown,
 }
 
-#[derive(Clone, Debug, PartialEq)]
+#[derive(Clone, Debug, PartialEq, Eq)]
 pub enum InMergeConflict {
     Yes,
     No,
@@ -69,7 +69,7 @@ impl DiffType {
     }
 }
 
-#[derive(Debug, PartialEq)]
+#[derive(Debug, PartialEq, Eq)]
 pub enum Source {
     GitDiff,     // Coming from a `git diff` command
     DiffUnified, // Coming from a `diff -u` command

@@ -1102,7 +1102,7 @@ pub struct ComputedValues {
     pub true_color: bool,
 }
 
-#[derive(Clone, Debug, PartialEq)]
+#[derive(Clone, Debug, PartialEq, Eq)]
 pub enum Width {
     Fixed(usize),
     Variable,
@@ -1114,7 +1114,7 @@ impl Default for Width {
     }
 }
 
-#[derive(Clone, Debug, PartialEq)]
+#[derive(Clone, Debug, PartialEq, Eq)]
 pub enum InspectRawLines {
     True,
     False,

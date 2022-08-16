@@ -13,7 +13,7 @@ use crate::env::DeltaEnv;
 use crate::fatal;
 use crate::features::navigate;
 
-#[derive(Debug, Clone, Copy, PartialEq)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
 #[allow(dead_code)]
 pub enum PagingMode {
     Always,

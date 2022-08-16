@@ -223,12 +223,11 @@ fn _write_under_or_over_lined(
         Width::Fixed(n) => max(n, text_width),
         Width::Variable => text_width,
     };
-    let mut write_line: Box<dyn FnMut(&mut dyn Write) -> std::io::Result<()>> =
-        Box::new(|writer| {
-            write_horizontal_line(writer, line_width, text_style, decoration_style)?;
-            writeln!(writer)?;
-            Ok(())
-        });
+    let write_line = |writer: &mut dyn Write| -> std::io::Result<()> {
+        write_horizontal_line(writer, line_width, text_style, decoration_style)?;
+        writeln!(writer)?;
+        Ok(())
+    };
     match underoverline {
         UnderOverline::Under => {}
         _ => write_line(writer)?,

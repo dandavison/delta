@@ -12,7 +12,7 @@ pub enum GitConfigEntry {
     GitRemote(GitRemoteRepo),
 }
 
-#[derive(Clone, Debug, PartialEq)]
+#[derive(Clone, Debug, PartialEq, Eq)]
 pub enum GitRemoteRepo {
     GitHubRepo { repo_slug: String },
     GitLabRepo { repo_slug: String },
