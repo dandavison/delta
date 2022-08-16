@@ -7,7 +7,7 @@ use sysinfo::{Pid, PidExt, Process, ProcessExt, ProcessRefreshKind, SystemExt};
 
 pub type DeltaPid = u32;
 
-#[derive(Clone, Debug, PartialEq)]
+#[derive(Clone, Debug, PartialEq, Eq)]
 pub enum CallingProcess {
     GitDiff(CommandLine),
     GitShow(CommandLine, Option<String>), // element 2 is file extension
@@ -32,7 +32,7 @@ impl CallingProcess {
     }
 }
 
-#[derive(Clone, Debug, PartialEq)]
+#[derive(Clone, Debug, PartialEq, Eq)]
 pub struct CommandLine {
     pub long_options: HashSet<String>,
     pub short_options: HashSet<String>,
@@ -100,7 +100,7 @@ fn determine_calling_process() -> CallingProcess {
 
 // Return value of `extract_args(args: &[String]) -> ProcessArgs<T>` function which is
 // passed to `calling_process_cmdline()`.
-#[derive(Debug, PartialEq)]
+#[derive(Debug, PartialEq, Eq)]
 pub enum ProcessArgs<T> {
     // A result has been successfully extracted from args.
     Args(T),

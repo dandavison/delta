@@ -12,7 +12,7 @@ use crate::paint::{self, expand_tabs, BgShouldFill, StyleSectionSpecifier};
 use crate::style::Style;
 use crate::utils::process;
 
-#[derive(Debug, PartialEq)]
+#[derive(Debug, PartialEq, Eq)]
 pub struct GrepLine<'b> {
     pub path: Cow<'b, str>,
     pub line_number: Option<usize>,
@@ -21,7 +21,7 @@ pub struct GrepLine<'b> {
     pub submatches: Option<Vec<(usize, usize)>>,
 }
 
-#[derive(Clone, Copy, Debug, PartialEq, Deserialize)]
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Deserialize)]
 #[serde(rename_all = "lowercase")]
 pub enum LineType {
     ContextHeader,

@@ -6,7 +6,7 @@ use unicode_segmentation::UnicodeSegmentation;
 
 use crate::features::side_by_side::ansifill::ODD_PAD_CHAR;
 
-#[derive(Debug, PartialEq)]
+#[derive(Debug, PartialEq, Eq)]
 pub enum Placeholder<'a> {
     NumberMinus,
     NumberPlus,
@@ -25,7 +25,7 @@ impl<'a> TryFrom<Option<&'a str>> for Placeholder<'a> {
     }
 }
 
-#[derive(Debug, Copy, Clone, PartialEq)]
+#[derive(Debug, Copy, Clone, PartialEq, Eq)]
 pub enum Align {
     Left,
     Center,
@@ -48,7 +48,7 @@ impl TryFrom<Option<&str>> for Align {
     }
 }
 
-#[derive(Debug, PartialEq, Clone)]
+#[derive(Debug, PartialEq, Eq, Clone)]
 pub struct FormatStringPlaceholderDataAnyPlaceholder<T> {
     pub prefix: SmolStr,
     pub prefix_len: usize,

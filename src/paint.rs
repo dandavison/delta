@@ -41,7 +41,7 @@ pub struct Painter<'p> {
 }
 
 // How the background of a line is filled up to the end
-#[derive(Debug, PartialEq, Clone, Copy)]
+#[derive(Debug, PartialEq, Eq, Clone, Copy)]
 pub enum BgFillMethod {
     // Fill the background with ANSI spaces if possible,
     // but might fallback to Spaces (e.g. in the left side-by-side panel),
@@ -51,7 +51,7 @@ pub enum BgFillMethod {
 }
 
 // If the background of a line extends to the end, and if configured to do so, how.
-#[derive(Debug, PartialEq, Clone, Copy)]
+#[derive(Debug, PartialEq, Eq, Clone, Copy)]
 pub enum BgShouldFill {
     With(BgFillMethod),
     No,
@@ -230,6 +230,7 @@ impl<'p> Painter<'p> {
             } else if let Some(BgFillMethod::Spaces) = bg_fill_mode {
                 let text_width = ansi::measure_text_width(&line);
                 line.push_str(
+                    #[allow(clippy::unnecessary_to_owned)]
                     &fill_style
                         .paint(" ".repeat(config.available_terminal_width - text_width))
                         .to_string(),
@@ -363,6 +364,7 @@ impl<'p> Painter<'p> {
     /// current buffer position.
     pub fn mark_empty_line(empty_line_style: &Style, line: &mut String, marker: Option<&str>) {
         line.push_str(
+            #[allow(clippy::unnecessary_to_owned)]
             &empty_line_style
                 .paint(marker.unwrap_or(ansi::ANSI_CSI_CLEAR_TO_BOL))
                 .to_string(),

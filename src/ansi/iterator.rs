@@ -129,7 +129,7 @@ impl vte::Perform for Performer {
             return;
         }
 
-        if let ('m', None) = (c, intermediates.get(0)) {
+        if let ('m', None) = (c, intermediates.first()) {
             if params.is_empty() {
                 // Attr::Reset
                 // Probably doesn't need to be handled: https://github.com/dandavison/delta/pull/431#discussion_r536883568

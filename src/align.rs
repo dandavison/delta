@@ -5,7 +5,7 @@ const SUBSTITUTION_COST: usize = 1;
 const DELETION_COST: usize = 1;
 const INSERTION_COST: usize = 1;
 
-#[derive(Clone, Copy, Debug, PartialEq)]
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum Operation {
     NoOp,
     Substitution,
