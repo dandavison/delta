@@ -1,3 +1,6 @@
 function foo() {
-    return bar();
+    return (
+        bar() &&
+        baz()
+    );
 }
