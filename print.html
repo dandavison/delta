@@ -323,7 +323,8 @@ On MacOS, install <code>less</code> from Homebrew. For Windows, see <a href="./u
 <pre><code>git -c delta.line-numbers=false show
 </code></pre>
 <p>There are several important environment variables that affect delta configuration and which can be used to configure delta dynamically.
-Please see <a href="./environment-variables.html">Environment variables</a>.</p>
+Please see <a href="./environment-variables.html">Environment variables</a>.
+In particular, note that delta does not currently honor all relevant <a href="https://git-scm.com/docs/git-config#_environment">git environment variables</a>, since delta uses <a href="https://github.com/libgit2/libgit2">libgit2</a> to read git config.</p>
 <div style="break-before: page; page-break-before: always;"></div><h1 id="environment-variables"><a class="header" href="#environment-variables">Environment variables</a></h1>
 <h2 id="git-environment-variables"><a class="header" href="#git-environment-variables">Git environment variables</a></h2>
 <p>The <code>GIT_PAGER</code> environment variable must either not be set at all, or set to the value <code>delta</code> (you can add argument here if you want; this env var plays the same role as the <code>core.pager</code> config entry).</p>
