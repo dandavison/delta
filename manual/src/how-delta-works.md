@@ -8,19 +8,4 @@ If you need to force delta to be invoked when git itself would not invoke it, th
 For example, `git diff | delta | something-that-expects-delta-output-with-colors` (in this example, git's output is being sent to a pipe, so git itself will not invoke delta).
 In general however, delta's output is intended for humans, not machines.
 
-The pager that delta uses is determined by consulting the following environment variables (in this order):
-
-- `DELTA_PAGER`
-- `PAGER`
-
-If neither is set, delta's fallback is `less -R`.
-
-The behavior of delta's default pager, `less`, can be controlled using the `LESS` environment variable.
-It may contain any of the `less` command line options and/or interactive less-commands (prefixed by a leading `+` sign; these are executed every time right after less is launched).
-For full documentation of `less` configuration options, please see the `less(1)` [manual](https://jlk.fjfi.cvut.cz/arch/manpages/man/core/less/less.1.en).
-
-In addition to `DELTA_PAGER`, and `PAGER`, delta currently also consults `$BAT_PAGER` (with priority between the two).
-However, this is deprecated: please use `DELTA_PAGER` instead.
-No other [`bat`](https://github.com/sharkdp/bat) environment variables are used by delta.
-
 If you are interested in the implementation of delta, please see [ARCHITECTURE.md](https://github.com/dandavison/delta/blob/master/ARCHITECTURE.md).

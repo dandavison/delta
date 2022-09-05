@@ -31,8 +31,6 @@ The most convenient way to configure delta is with a `[delta]` section in `~/.gi
 
 </sub>
 
-If you have the `GIT_PAGER` environment variable set, you'll need to unset it.
-
 Use `delta --help` to see all the available options.
 
 Note that delta style argument values in ~/.gitconfig should be in double quotes, like `--minus-style="syntax #340001"`. For theme names and other values, do not use quotes as they will be passed on to delta, like `theme = Monokai Extended`.
@@ -52,14 +50,5 @@ To change your delta options in a one-off git command, use `git -c`. For example
 git -c delta.line-numbers=false show
 ```
 
-Delta can also be used as a shorthand for diffing two files: the following two commands do the same thing:
-
-```
-delta a.txt b.txt
-
-git diff a.txt b.txt
-```
-
-Delta also handles unified diff format, e.g. `diff -u a.txt b.txt | delta`.
-
-For Mercurial, you can add delta, with its command line options, to the `[pager]` section of `.hgrc`.
+There are several important environment variables that affect delta configuration and which can be used to configure delta dynamically.
+Please see [Environment variables](./environment-variables.md).

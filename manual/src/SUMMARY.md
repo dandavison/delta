@@ -5,6 +5,7 @@
 - [Features](./features.md)
 - [Installation](./installation.md)
 - [Configuration](./configuration.md)
+- [Environment variables](./environment-variables.md)
 - [How delta works](./how-delta-works.md)
 - [Usage](./usage.md)
   - [Choosing colors (styles)](./choosing-colors-styles.md)
