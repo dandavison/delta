@@ -1,13 +1,15 @@
-# Contribution guidelines
+# Notes on contributing to delta
 
 First off, thank you for considering contributing to delta.
 
 If your contribution is not straightforward, please first discuss the change you
 wish to make by creating a new issue before making the change.
 
-## Developing
+## The codebase
 
-### Set up
+Take a look at [ARCHITECTURE.md](./ARCHITECTURE.md).
+
+## Set up
 
 This is no different than other Rust projects.
 
@@ -19,7 +21,7 @@ cargo build --release
 
 The executable is then at `./target/release/delta`.
 
-### Useful Commands
+## Useful Commands
 
 - Run all tests:
 
