@@ -50,7 +50,7 @@ default-features = false
 features = []
 
 [dependencies.sysinfo]
-version = "0.24.5"
+version = "0.26.2"
 # no default features to disable the use of threads
 default-features = false
 features = []
