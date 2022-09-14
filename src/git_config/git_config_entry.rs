@@ -16,6 +16,7 @@ pub enum GitConfigEntry {
 pub enum GitRemoteRepo {
     GitHubRepo { repo_slug: String },
     GitLabRepo { repo_slug: String },
+    SourceHutRepo { repo_slug: String },
 }
 
 impl GitRemoteRepo {
@@ -26,6 +27,9 @@ impl GitRemoteRepo {
             }
             Self::GitLabRepo { repo_slug } => {
                 format!("https://gitlab.com/{}/-/commit/{}", repo_slug, commit)
+            }
+            Self::SourceHutRepo { repo_slug } => {
+                format!("https://git.sr.ht/{}/commit/{}", repo_slug, commit)
             }
         }
     }
@@ -61,6 +65,19 @@ lazy_static! {
         "
     )
     .unwrap();
+    static ref SOURCEHUT_REMOTE_URL: Regex = Regex::new(
+        r"(?x)
+        ^
+        (?:https://|git@)? # Support both HTTPS and SSH URLs, SSH URLs optionally omitting the git@
+        git\.sr\.ht
+        [:/]              # This separator differs between SSH and HTTPS URLs
+        ~([^/]+)          # Capture the username
+        /
+        (.+)             # Capture the repo name
+        $
+        "
+    )
+    .unwrap();
 }
 
 impl FromStr for GitRemoteRepo {
@@ -83,8 +100,16 @@ impl FromStr for GitRemoteRepo {
                     repo = caps.get(3).unwrap().as_str()
                 ),
             })
+        } else if let Some(caps) = SOURCEHUT_REMOTE_URL.captures(s) {
+            Ok(Self::SourceHutRepo {
+                repo_slug: format!(
+                    "~{user}/{repo}",
+                    user = caps.get(1).unwrap().as_str(),
+                    repo = caps.get(2).unwrap().as_str()
+                ),
+            })
         } else {
-            Err("Not a GitHub or GitLab repo.".into())
+            Err("Not a GitHub, GitLab or SourceHut repo.".into())
         }
     }
 }
@@ -169,6 +194,40 @@ mod tests {
         assert_eq!(
             repo.format_commit_url(commit_hash),
             format!("https://gitlab.com/proj/grp/repo/-/commit/{}", commit_hash)
+        )
+    }
+
+    #[test]
+    fn test_parse_sourcehut_urls() {
+        let urls = &[
+            "https://git.sr.ht/~someuser/somerepo",
+            "git@git.sr.ht:~someuser/somerepo",
+            "git.sr.ht:~someuser/somerepo",
+        ];
+        for url in urls {
+            let parsed = GitRemoteRepo::from_str(url);
+            assert!(parsed.is_ok());
+            assert_eq!(
+                parsed.unwrap(),
+                GitRemoteRepo::SourceHutRepo {
+                    repo_slug: "~someuser/somerepo".to_string()
+                }
+            );
+        }
+    }
+
+    #[test]
+    fn test_format_sourcehut_commit_link() {
+        let repo = GitRemoteRepo::SourceHutRepo {
+            repo_slug: "~someuser/somerepo".to_string(),
+        };
+        let commit_hash = "df41ac86f08a40e64c76062fd67e238522c14990";
+        assert_eq!(
+            repo.format_commit_url(commit_hash),
+            format!(
+                "https://git.sr.ht/~someuser/somerepo/commit/{}",
+                commit_hash
+            )
         )
     }
 }
