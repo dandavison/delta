@@ -142,6 +142,7 @@ pub fn set_options(
             default_language,
             diff_args,
             diff_stat_align_width,
+            doctor,
             file_added_label,
             file_copied_label,
             file_decoration_style,
