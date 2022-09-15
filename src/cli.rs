@@ -311,6 +311,11 @@ pub struct Opt {
     /// If a relativized file path exceeds this width then the diff stat will be misaligned.
     pub diff_stat_align_width: usize,
 
+    #[arg(long = "doctor")]
+    /// Checks various aspects of the user's environment and reports on possible incompatibilities with
+    /// delta.
+    pub doctor: bool,
+
     #[arg(long = "features", value_name = "FEATURES")]
     /// Names of delta features to activate (space-separated).
     ///

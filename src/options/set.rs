@@ -140,6 +140,7 @@ pub fn set_options(
             commit_style,
             default_language,
             diff_stat_align_width,
+            doctor,
             file_added_label,
             file_copied_label,
             file_decoration_style,
