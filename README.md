@@ -47,12 +47,12 @@ Delta has many features and is very customizable; please see the [user manual](h
 - Line numbering
 - `n` and `N` keybindings to move between files in large diffs, and between diffs in `log -p` views (`--navigate`)
 - Improved merge conflict display
-- Improved `git blame` display (syntax highlighting; `--hyperlinks` formats commits as links to GitHub/GitLab/SourceHut etc)
+- Improved `git blame` display (syntax highlighting; `--hyperlinks` formats commits as links to hosting provider etc. Supported hosting providers are: GitHub, GitLab, SourceHut, Codeberg)
 - Syntax-highlights grep output from `rg`, `git grep`, `grep`, etc
 - Support for Git's `--color-moved` feature.
 - Code can be copied directly from the diff (`-/+` markers are removed by default).
 - `diff-highlight` and `diff-so-fancy` emulation modes
-- Commit hashes can be formatted as terminal [hyperlinks](https://gist.github.com/egmontkob/eb114294efbcd5adb1944c9f3cb5feda) to the GitHub/GitLab/SourceHut page (`--hyperlinks`).
+- Commit hashes can be formatted as terminal [hyperlinks](https://gist.github.com/egmontkob/eb114294efbcd5adb1944c9f3cb5feda) to the hosting provider page (`--hyperlinks`).
   File paths can also be formatted as hyperlinks for opening in your OS.
 - Stylable box/line decorations to draw attention to commit, file and hunk header sections.
 - Style strings (foreground color, background color, font attributes) are supported for >20 stylable elements, using the same color/style language as git
