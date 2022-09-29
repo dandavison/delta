@@ -419,11 +419,9 @@ In contrast, the long replacement line in the right panel overflows by almost an
 <p>For control over the details of line wrapping, see <code>--wrap-max-lines</code>, <code>--wrap-left-symbol</code>, <code>--wrap-right-symbol</code>, <code>--wrap-right-percent</code>, <code>--wrap-right-prefix-symbol</code>, <code>--inline-hint-style</code>.
 Line wrapping was implemented by @th1000s.</p>
 <div style="break-before: page; page-break-before: always;"></div><h1 id="grep"><a class="header" href="#grep">Grep</a></h1>
-<p>Delta applies syntax-highlighting and other enhancements to standard grep output such as from <code>git grep</code>, <a href="https://github.com/BurntSushi/ripgrep/">ripgrep</a> (aka <code>rg</code>), grep, etc.
-To use with <code>git grep</code>, set delta as the pager for <code>grep</code> in the <code>[pager]</code> section of your gitconfig. See the example at the <a href="./get-started.html">top of the page</a>.
-Output from other grep tools can be piped to delta: e.g. <code>rg -Hn --color=always</code>, <code>grep -Hn --color=always</code>, etc.
+<p>Delta applies syntax-highlighting and other enhancements to standard grep output such as from <a href="https://github.com/BurntSushi/ripgrep/">ripgrep</a> (aka <code>rg</code>), <code>git grep</code>, grep, etc.
+If you don't need special features of <code>git grep</code>, then for best results pipe <code>rg --json</code> output to delta: this avoids parsing ambiguities that are inevitable with the output of <code>git grep</code> and <code>grep</code>.
 To customize the colors and syntax highlighting, see <code>grep-match-line-style</code>, <code>grep-match-word-style</code>, <code>grep-context-line-style</code>, <code>grep-file-style</code>, <code>grep-line-number-style</code>.
-Ripgrep's <code>rg --json</code> output format is supported; this avoids certain file name parsing ambiguities that are inevitable with the standard grep output formats.
 Note that <code>git grep</code> can display the &quot;function context&quot; for matches and that delta handles this output specially: see the <code>-p</code> and <code>-W</code> options of <code>git grep</code>.</p>
 <div style="break-before: page; page-break-before: always;"></div><h1 id="features-named-groups-of-settings"><a class="header" href="#features-named-groups-of-settings">&quot;Features&quot;: named groups of settings</a></h1>
 <p>All delta options can go under the <code>[delta]</code> section in your git config file. However, you can also use named &quot;features&quot; to keep things organized: these are sections in git config like <code>[delta &quot;my-feature&quot;]</code>. Here's an example using two custom features:</p>
