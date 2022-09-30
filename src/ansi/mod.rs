@@ -21,7 +21,16 @@ pub fn strip_ansi_codes(s: &str) -> String {
 
 pub fn measure_text_width(s: &str) -> usize {
     // TODO: how should e.g. '\n' be handled?
-    strip_ansi_codes(s).width()
+    let mut width = 0;
+    let tab_width = 8; // We could get this from the terminal, but it should always be 8.
+
+    for chunk in strip_ansi_codes(s).split_inclusive('\t') {
+        width += chunk.width(); // tabs have width 0, so no need to separate it out.
+        if chunk.ends_with('\t') {
+            width += tab_width - (width % tab_width);
+        }
+    }
+    width
 }
 
 /// Truncate string such that `tail` is present as a suffix, preceded by as much of `s` as can be
@@ -201,6 +210,10 @@ mod tests {
         assert_eq!(measure_text_width("src/ansi/modバー.rs"), 19);
         assert_eq!(measure_text_width("\x1b[31mバー\x1b[0m"), 4);
         assert_eq!(measure_text_width("a\nb\n"), 2);
+        assert_eq!(measure_text_width("\tabcd"), 12); // leading tab
+        assert_eq!(measure_text_width("ab\tcd"), 10); // embedded tab
+        assert_eq!(measure_text_width("\u{2329}\tabcd"), 12); // double-width character, embedded tab
+        assert_eq!(measure_text_width("o\u{0300}\tabcd"), 12); // combining character, embedded tab
     }
 
     #[test]
