@@ -7,10 +7,7 @@ pub fn make_feature() -> Vec<(String, OptionValueFunction)> {
 
 pub fn _make_feature(bold: bool) -> Vec<(String, OptionValueFunction)> {
     let mut feature = raw::make_feature();
-    feature = feature
-        .into_iter()
-        .filter(|(s, _)| s != "keep-plus-minus-markers" && s != "tabs")
-        .collect();
+    feature.retain(|(s, _)| s != "keep-plus-minus-markers" && s != "tabs");
     feature.extend(builtin_feature!([
         (
             "commit-style",
