@@ -562,7 +562,9 @@ pub fn prepare(line: &str, prefix_length: usize, config: &config::Config) -> Str
         // are not present during syntax highlighting or wrapping. If --keep-plus-minus-markers
         // is in effect the prefix is re-inserted in Painter::paint_line.
         let line = line.graphemes(true).skip(prefix_length);
-        format!("{}\n", tabs::expand(line, config.tab_width))
+        let mut line = tabs::expand(line, config.tab_width);
+        line.push('\n');
+        line
     } else {
         "\n".to_string()
     }
@@ -571,13 +573,9 @@ pub fn prepare(line: &str, prefix_length: usize, config: &config::Config) -> Str
 // Remove initial -/+ characters, expand tabs as spaces, retaining ANSI sequences. Terminate with
 // newline character.
 pub fn prepare_raw_line(raw_line: &str, prefix_length: usize, config: &config::Config) -> String {
-    format!(
-        "{}\n",
-        ansi::ansi_preserving_slice(
-            &tabs::expand(raw_line.graphemes(true), config.tab_width),
-            prefix_length
-        ),
-    )
+    let mut line = tabs::expand(raw_line.graphemes(true), config.tab_width);
+    line.push('\n');
+    ansi::ansi_preserving_slice(&line, prefix_length)
 }
 
 pub fn paint_minus_and_plus_lines(
