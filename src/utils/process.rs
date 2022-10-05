@@ -332,14 +332,14 @@ trait ProcessInterface {
     fn refresh_processes(&mut self);
 
     fn parent_process(&mut self, pid: DeltaPid) -> Option<&Self::Out> {
-        self.refresh_process(pid).then(|| ())?;
+        self.refresh_process(pid).then_some(())?;
         let parent_pid = self.process(pid)?.parent()?;
-        self.refresh_process(parent_pid).then(|| ())?;
+        self.refresh_process(parent_pid).then_some(())?;
         self.process(parent_pid)
     }
     fn naive_sibling_process(&mut self, pid: DeltaPid) -> Option<&Self::Out> {
         let sibling_pid = pid - 1;
-        self.refresh_process(sibling_pid).then(|| ())?;
+        self.refresh_process(sibling_pid).then_some(())?;
         self.process(sibling_pid)
     }
     fn find_sibling_in_refreshed_processes<F, T>(
