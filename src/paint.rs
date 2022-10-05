@@ -568,9 +568,10 @@ pub fn prepare(line: &str, prefix_length: usize, config: &config::Config) -> Str
 // Remove initial -/+ characters, expand tabs as spaces, retaining ANSI sequences. Terminate with
 // newline character.
 pub fn prepare_raw_line(raw_line: &str, prefix_length: usize, config: &config::Config) -> String {
-    let mut line = tabs::expand(raw_line, &config.tab_cfg);
+    let cut_line = ansi::ansi_preserving_slice(raw_line, prefix_length);
+    let mut line = tabs::expand_raw(&cut_line, &config.tab_cfg);
     line.push('\n');
-    ansi::ansi_preserving_slice(&line, prefix_length)
+    line
 }
 
 pub fn paint_minus_and_plus_lines(

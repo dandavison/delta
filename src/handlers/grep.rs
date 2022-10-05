@@ -12,6 +12,7 @@ use crate::delta::{State, StateMachine};
 use crate::handlers::{self, ripgrep_json};
 use crate::paint::{self, BgShouldFill, StyleSectionSpecifier};
 use crate::style::Style;
+use crate::utils::tabs::TabCfg;
 use crate::utils::{process, tabs};
 
 use super::hunk_header::HunkHeaderIncludeHunkLabel;
@@ -166,7 +167,12 @@ impl<'a> StateMachine<'a> {
                 // (At the time of writing, we are in this
                 // arm iff we are handling `ripgrep --json`
                 // output.)
-                grep_line.code = tabs::expand(&grep_line.code, &self.config.tab_cfg).into();
+                tab_expand_in_code_and_raw(
+                    &mut grep_line.code,
+                    &mut self.raw_line,
+                    &self.config.tab_cfg,
+                );
+
                 make_style_sections(
                     &grep_line.code,
                     submatches,
@@ -181,7 +187,12 @@ impl<'a> StateMachine<'a> {
                 // enough. But at this point it is guaranteed
                 // that this handler is going to handle this
                 // line, so mutating it is acceptable.
-                self.raw_line = tabs::expand(&self.raw_line, &self.config.tab_cfg);
+                tab_expand_in_code_and_raw(
+                    &mut grep_line.code,
+                    &mut self.raw_line,
+                    &self.config.tab_cfg,
+                );
+
                 get_code_style_sections(
                     &self.raw_line,
                     self.config.grep_match_word_style,
@@ -304,7 +315,12 @@ impl<'a> StateMachine<'a> {
                 // (At the time of writing, we are in this
                 // arm iff we are handling `ripgrep --json`
                 // output.)
-                grep_line.code = tabs::expand(&grep_line.code, &self.config.tab_cfg).into();
+                tab_expand_in_code_and_raw(
+                    &mut grep_line.code,
+                    &mut self.raw_line,
+                    &self.config.tab_cfg,
+                );
+
                 make_style_sections(
                     &grep_line.code,
                     submatches,
@@ -319,7 +335,12 @@ impl<'a> StateMachine<'a> {
                 // enough. But at the point it is guaranteed
                 // that this handler is going to handle this
                 // line, so mutating it is acceptable.
-                self.raw_line = tabs::expand(&self.raw_line, &self.config.tab_cfg);
+                tab_expand_in_code_and_raw(
+                    &mut grep_line.code,
+                    &mut self.raw_line,
+                    &self.config.tab_cfg,
+                );
+
                 get_code_style_sections(
                     &self.raw_line,
                     self.config.grep_match_word_style,
@@ -620,6 +641,17 @@ pub fn _parse_grep_line<'b>(regex: &Regex, line: &'b str) -> Option<GrepLine<'b>
         code,
         submatches: None,
     })
+}
+
+fn tab_expand_in_code_and_raw<'a>(
+    code: &mut Cow<'a, str>,
+    raw_line: &mut String,
+    tab_cfg: &TabCfg,
+) {
+    if tabs::has_tab(&code) {
+        *code = tabs::expand_fixed(&code, &tab_cfg).into();
+        *raw_line = tabs::expand_fixed(&raw_line, &tab_cfg);
+    }
 }
 
 #[cfg(test)]

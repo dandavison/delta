@@ -141,7 +141,9 @@ pub fn ansi_preserving_index(s: &str, i: usize) -> Option<usize> {
     None
 }
 
-fn ansi_strings_iterator(s: &str) -> impl Iterator<Item = (&str, bool)> {
+/// Iterate over `s` and yield `(substring, true)` for all ansi control sequences,
+/// and `(.., false)` for other substrings (possibly affected by ansi styling).
+pub fn ansi_strings_iterator(s: &str) -> impl Iterator<Item = (&str, bool)> {
     AnsiElementIterator::new(s).map(move |el| match el {
         Element::Sgr(_, i, j) => (&s[i..j], true),
         Element::Csi(i, j) => (&s[i..j], true),
