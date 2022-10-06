@@ -17,6 +17,7 @@ pub enum GitRemoteRepo {
     GitHub { slug: String },
     GitLab { slug: String },
     SourceHut { slug: String },
+    Codeberg { slug: String },
 }
 
 impl GitRemoteRepo {
@@ -30,6 +31,9 @@ impl GitRemoteRepo {
             }
             Self::SourceHut { slug } => {
                 format!("https://git.sr.ht/{}/commit/{}", slug, commit)
+            }
+            Self::Codeberg { slug } => {
+                format!("https://codeberg.org/{}/commit/{}", slug, commit)
             }
         }
     }
@@ -78,6 +82,20 @@ lazy_static! {
         "
     )
     .unwrap();
+    static ref CODEBERG_REMOTE_URL: Regex = Regex::new(
+        r"(?x)
+        ^
+        (?:https://|git@)? # Support both HTTPS and SSH URLs, SSH URLs optionally omitting the git@
+        codeberg\.org
+        [:/]              # This separator differs between SSH and HTTPS URLs
+        ([^/]+)           # Capture the user/org name
+        /
+        (.+?)             # Capture the repo name (lazy to avoid consuming '.git' if present)
+        (?:\.git)?        # Non-capturing group to consume '.git' if present
+        $
+        "
+    )
+    .unwrap();
 }
 
 impl FromStr for GitRemoteRepo {
@@ -108,8 +126,16 @@ impl FromStr for GitRemoteRepo {
                     repo = caps.get(2).unwrap().as_str()
                 ),
             })
+        } else if let Some(caps) = CODEBERG_REMOTE_URL.captures(s) {
+            Ok(Self::Codeberg {
+                slug: format!(
+                    "{user}/{repo}",
+                    user = caps.get(1).unwrap().as_str(),
+                    repo = caps.get(2).unwrap().as_str()
+                ),
+            })
         } else {
-            Err("Not a GitHub, GitLab or SourceHut repo.".into())
+            Err("Not a GitHub, GitLab, SourceHut or Codeberg repo.".into())
         }
     }
 }
@@ -228,6 +254,40 @@ mod tests {
                 "https://git.sr.ht/~someuser/somerepo/commit/{}",
                 commit_hash
             )
+        )
+    }
+
+    #[test]
+    fn test_parse_codeberg_urls() {
+        let urls = &[
+            "https://codeberg.org/someuser/somerepo.git",
+            "https://codeberg.org/someuser/somerepo",
+            "git@codeberg.org:someuser/somerepo.git",
+            "git@codeberg.org:someuser/somerepo",
+            "codeberg.org:someuser/somerepo.git",
+            "codeberg.org:someuser/somerepo",
+        ];
+        for url in urls {
+            let parsed = GitRemoteRepo::from_str(url);
+            assert!(parsed.is_ok());
+            assert_eq!(
+                parsed.unwrap(),
+                GitRemoteRepo::Codeberg {
+                    slug: "someuser/somerepo".to_string()
+                }
+            );
+        }
+    }
+
+    #[test]
+    fn test_format_codeberg_commit_link() {
+        let repo = GitRemoteRepo::Codeberg {
+            slug: "dnkl/foot".to_string(),
+        };
+        let commit_hash = "1c072856ebf12419378c5098ad543c497197c6da";
+        assert_eq!(
+            repo.format_commit_url(commit_hash),
+            format!("https://codeberg.org/dnkl/foot/commit/{}", commit_hash)
         )
     }
 }
