@@ -609,7 +609,8 @@ fn set_widths_and_isatty(opt: &mut cli::Opt) {
 
     // If one extra character for e.g. `less --status-column` is required use "-1"
     // as an argument, also see #41, #10, #115 and #727.
-    opt.computed.available_terminal_width = term_stdout.size().1 as usize;
+    opt.computed.available_terminal_width =
+        crate::utils::workarounds::windows_msys2_width_fix(term_stdout.size(), &term_stdout);
 
     let (decorations_width, background_color_extends_to_terminal_width) = match opt.width.as_deref()
     {
