@@ -203,12 +203,21 @@ where
 
         let (style, text, graphemes) = stack
             .pop()
-            .map(|(style, text)| (style, text, text.graphemes(true).map(|item| (item.len(), item.width())).collect::<Vec<_>>()))
+            .map(|(style, text)| {
+                (
+                    style,
+                    text,
+                    text.graphemes(true)
+                        .map(|item| (item.len(), item.width()))
+                        .collect::<Vec<_>>(),
+                )
+            })
             .unwrap();
 
         let graphemes_width: usize = graphemes.iter().map(|(_, w)| w).sum();
         let new_len = curr_line.len + graphemes_width;
 
+        #[allow(clippy::comparison_chain)]
         let must_split = if new_len < line_width {
             curr_line.push_and_set_len((style, text), new_len);
             false
@@ -237,7 +246,9 @@ where
         // Text must be split, one part (or just `wrap_symbol`) is added to the
         // current line, the other is pushed onto the stack.
         if must_split {
-            let mut width_left = graphemes_width.saturating_sub(new_len - line_width).saturating_sub(wrap_config.left_symbol.width());
+            let mut width_left = graphemes_width
+                .saturating_sub(new_len - line_width)
+                .saturating_sub(wrap_config.left_symbol.width());
 
             // The length does not matter anymore and `curr_line` will be reset
             // at the end, so move the line segments out.
@@ -247,7 +258,7 @@ where
                 text
             } else {
                 let mut byte_split_pos = 0;
-                // After loop byte_split_pos may still equal to 0. If width_left 
+                // After loop byte_split_pos may still equal to 0. If width_left
                 // is less than the width of first character, We can't display it.
                 for &(item_len, item_width) in graphemes.iter() {
                     if width_left >= item_width {
@@ -278,7 +289,8 @@ where
         let current_permille = (curr_line.text_len() * 1000) / line_width;
 
         // pad line will add a wrap_config.right_prefix_symbol
-        let pad_len = line_width.saturating_sub(curr_line.text_len() + wrap_config.right_prefix_symbol.width());
+        let pad_len = line_width
+            .saturating_sub(curr_line.text_len() + wrap_config.right_prefix_symbol.width());
 
         if wrap_config.use_wrap_right_permille > current_permille && pad_len > 0 {
             // The inserted spaces, which align a line to the right, point into this string.
@@ -946,10 +958,10 @@ mod tests {
 
         // Not working: Tailored grapheme clusters: क्षि  = क् + षि
         //
-	    // Difference compare to previous example (even they may look like the 
-	    // same width in text editor.) :
+        // Difference compare to previous example (even they may look like the
+        // same width in text editor.) :
         //
-	    // width நி: 2
+        // width நி: 2
         // width ö̲: 1
         let line = vec![(*S1, "abc"), (*S2, "dநி"), (*S1, "ghij")];
         let lines = wrap_test(&cfg, line, 4);
