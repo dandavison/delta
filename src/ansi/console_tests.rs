@@ -54,10 +54,11 @@ mod tests {
             &truncate_str(&s, 10, "..."),
             &format!("foo {}...", style("bar").red().force_styling(true))
         );
+        // `バ`(width = 2) will be truncate to 1, we use space to fill
         let s = format!("foo {}", style("バー").red().force_styling(true));
         assert_eq!(
             &truncate_str(&s, 5, ""),
-            &format!("foo {}", style("").red().force_styling(true))
+            &format!("foo {}", style(" ").red().force_styling(true))
         );
         let s = format!("foo {}", style("バー").red().force_styling(true));
         assert_eq!(

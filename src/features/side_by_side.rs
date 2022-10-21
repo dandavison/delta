@@ -1,6 +1,6 @@
 use itertools::Itertools;
 use syntect::highlighting::Style as SyntectStyle;
-use unicode_segmentation::UnicodeSegmentation;
+use unicode_width::UnicodeWidthStr;
 
 use crate::ansi;
 use crate::cli;
@@ -75,12 +75,10 @@ pub fn available_line_width(
 }
 
 pub fn line_is_too_long(line: &str, line_width: usize) -> bool {
-    let line_sum = line.graphemes(true).count();
-
     debug_assert!(line.ends_with('\n'));
-    // `line_sum` is too large because a trailing newline is present,
-    // so allow one more character.
-    line_sum > line_width + 1
+
+    // graphemes will take care of newlines
+    line.width() > line_width
 }
 
 /// Return whether any of the input lines is too long, and a data
@@ -507,9 +505,6 @@ fn pad_panel_line_to_width<'a>(
     if text_width > panel_width {
         *panel_line =
             ansi::truncate_str(panel_line, panel_width, &config.truncation_symbol).to_string();
-        for _ in 0..panel_width.saturating_sub(ansi::measure_text_width(panel_line)) {
-            panel_line.push(' ');
-        }
     }
 
     let (bg_fill_mode, fill_style) = get_right_fill_style_for_panel(
@@ -733,8 +728,43 @@ pub mod tests {
         .with_input(TWO_MINUS_LINES_UNICODE_DIFF)
         .expect_after_header(
             r#"
-            │  1 │↵>│    │
-            │    │> │    │"#,
+            │  1 │↵ │    │
+            │    │↵ │    │
+            │    │ >│    │"#,
+        );
+
+        DeltaTest::with_args(&[
+            "--side-by-side",
+            "--wrap-max-lines",
+            "2",
+            "--width",
+            "17",
+            "--line-fill-method=spaces",
+        ])
+        .set_config(|cfg| cfg.truncation_symbol = ">".into())
+        .with_input(TWO_MINUS_LINES_UNICODE_DIFF)
+        .expect_after_header(
+            r#"
+            │  1 │↵ │    │
+            │    │↵ │    │
+            │    │ >│    │"#,
+        );
+
+        DeltaTest::with_args(&[
+            "--side-by-side",
+            "--wrap-max-lines",
+            "2",
+            "--width",
+            "18",
+            "--line-fill-method=spaces",
+        ])
+        .set_config(|cfg| cfg.truncation_symbol = ">".into())
+        .with_input(TWO_MINUS_LINES_UNICODE_DIFF)
+        .expect_after_header(
+            r#"
+            │  1 │一↵│    │
+            │    │二↵│    │
+            │    │三 │    │"#,
         );
     }
 }
