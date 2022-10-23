@@ -824,7 +824,7 @@ pub mod tests {
                 r#"
                 │  1 │abc            │  1 │abc
                 │  2 │a = one side   │  2 │a = one longer@
-                │    │               │    │         … side
+                │    │               │    │ side
                 │  3 │xyz            │  3 │xyz"#,
             );
 
@@ -834,7 +834,7 @@ pub mod tests {
                 r#"
                 │  1 │abc            │  1 │abc
                 │  2 │a = one longer@│  2 │a = one side
-                │    │         … side│    │
+                │    │ side          │    │
                 │  3 │xyz            │  3 │xyz"#,
             );
 
