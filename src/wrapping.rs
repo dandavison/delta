@@ -286,9 +286,7 @@ where
     // Done if wrapping adds exactly one line and this line is less than the given
     // permille wide. Also change the wrap symbol at the end of the previous (first) line.
     if result.len() == 1 && curr_line.has_text() {
-        // Add one since old calculation will count one newline.
-        // Some tests will fail without this.
-        let current_permille = ((curr_line.text_len() + 1) * 1000) / line_width;
+        let current_permille = (curr_line.text_len() * 1000) / line_width;
 
         // pad line will add a wrap_config.right_prefix_symbol
         let pad_len = line_width
@@ -818,7 +816,10 @@ mod tests {
             let lines = wrap_test(&cfg, line.clone(), 6);
             assert_eq!(
                 lines,
-                vec![vec![(*S1, "012"), (*S2, "34"), (*SD, W)], vec![(*S2, "56")]]
+                vec![
+                    vec![(*S1, "012"), (*S2, "34"), (*SD, WR)],
+                    vec![(*SD, "   "), (*SD, RA), (*S2, "56")]
+                ]
             );
         }
 
