@@ -21,7 +21,9 @@ pub fn strip_ansi_codes(s: &str) -> String {
 
 pub fn measure_text_width(s: &str) -> usize {
     // TODO: how should e.g. '\n' be handled?
-    strip_ansi_codes(s).width()
+    ansi_strings_iterator(s).fold(0, |acc, (element, is_ansi)| {
+        acc + if is_ansi { 0 } else { element.width() }
+    })
 }
 
 /// Truncate string such that `tail` is present as a suffix, preceded by as much of `s` as can be

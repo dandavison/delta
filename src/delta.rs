@@ -202,7 +202,7 @@ impl<'a> StateMachine<'a> {
         // \r and \n, in which case byte_lines does not remove the \r. Remove it now.
         // TODO: Limit the number of characters we examine when looking for the \r?
         if let Some(cr_index) = self.raw_line.rfind('\r') {
-            if ansi::strip_ansi_codes(&self.raw_line[cr_index + 1..]).is_empty() {
+            if ansi::measure_text_width(&self.raw_line[cr_index + 1..]) == 0 {
                 self.raw_line = format!(
                     "{}{}",
                     &self.raw_line[..cr_index],
