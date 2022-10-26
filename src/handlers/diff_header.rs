@@ -374,6 +374,15 @@ fn get_repeated_file_path_from_diff_line(line: &str) -> Option<String> {
     None
 }
 
+fn remove_surrounding_quotes(path: &str) -> &str {
+    if path.starts_with('"') && path.ends_with('"') {
+        // Indexing into the UTF-8 string is safe because of the previous test
+        &path[1..path.len() - 1]
+    } else {
+        path
+    }
+}
+
 fn _parse_file_path(s: &str, git_diff_name: bool) -> String {
     // It appears that, if the file name contains a space, git appends a tab
     // character in the diff metadata lines, e.g.
@@ -382,13 +391,15 @@ fn _parse_file_path(s: &str, git_diff_name: bool) -> String {
     // index·d00491f..0cfbf08·100644␊
     // ---·a/a·b├──┤␊
     // +++·b/c·d├──┤␊
-    match s.strip_suffix('\t').unwrap_or(s) {
+    let path = match s.strip_suffix('\t').unwrap_or(s) {
         path if path == "/dev/null" => "/dev/null",
         path if git_diff_name && DIFF_PREFIXES.iter().any(|s| path.starts_with(s)) => &path[2..],
         path if git_diff_name => path,
         path => path.split('\t').next().unwrap_or(""),
-    }
-    .to_string()
+    };
+    // When a path contains non-ASCII characters, a backslash, or a quote then it is quoted,
+    // so remove these quotes. Characters may also be escaped, but these are left as-is.
+    remove_surrounding_quotes(path).to_string()
 }
 
 pub fn get_file_change_description_from_file_paths(
@@ -550,6 +561,11 @@ mod tests {
         assert_eq!(
             parse_diff_header_line("+++ src/delta.rs", true),
             ("src/delta.rs".to_string(), FileEvent::Change)
+        );
+
+        assert_eq!(
+            parse_diff_header_line("+++ \".\\delta.rs\"", true),
+            (".\\delta.rs".to_string(), FileEvent::Change)
         );
     }
 
