@@ -439,7 +439,7 @@ pub fn parse_grep_line(line: &str) -> Option<GrepLine> {
                 &*GREP_LINE_REGEX_ASSUMING_NO_INTERNAL_SEPARATOR_CHARS,
             ]
             .iter()
-            .find_map(|regex| _parse_grep_line(*regex, line)),
+            .find_map(|regex| _parse_grep_line(regex, line)),
             _ => None,
         }
     }

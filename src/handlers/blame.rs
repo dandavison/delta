@@ -43,7 +43,7 @@ impl<'a> StateMachine<'a> {
                 // Format blame metadata
                 let format_data = format::parse_line_number_format(
                     &self.config.blame_format,
-                    &*BLAME_PLACEHOLDER_REGEX,
+                    &BLAME_PLACEHOLDER_REGEX,
                     false,
                 );
                 let mut formatted_blame_metadata =

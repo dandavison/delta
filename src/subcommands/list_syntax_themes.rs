@@ -19,11 +19,11 @@ pub fn _list_syntax_themes_for_humans(writer: &mut dyn Write) -> std::io::Result
     let assets = utils::bat::assets::load_highlighting_assets();
 
     writeln!(writer, "Light syntax themes:")?;
-    for theme in assets.themes().filter(|t| is_light_syntax_theme(*t)) {
+    for theme in assets.themes().filter(|t| is_light_syntax_theme(t)) {
         writeln!(writer, "    {}", theme)?;
     }
     writeln!(writer, "\nDark syntax themes:")?;
-    for theme in assets.themes().filter(|t| !is_light_syntax_theme(*t)) {
+    for theme in assets.themes().filter(|t| !is_light_syntax_theme(t)) {
         writeln!(writer, "    {}", theme)?;
     }
     writeln!(
@@ -35,7 +35,7 @@ pub fn _list_syntax_themes_for_humans(writer: &mut dyn Write) -> std::io::Result
 
 pub fn _list_syntax_themes_for_machines(writer: &mut dyn Write) -> std::io::Result<()> {
     let assets = utils::bat::assets::load_highlighting_assets();
-    for theme in assets.themes().sorted_by_key(|t| is_light_syntax_theme(*t)) {
+    for theme in assets.themes().sorted_by_key(|t| is_light_syntax_theme(t)) {
         writeln!(
             writer,
             "{}\t{}",
