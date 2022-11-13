@@ -29,7 +29,7 @@ pub fn absolute_path(relative_path: &str, config: &Config) -> Option<PathBuf> {
 pub fn relativize_path_maybe(path: &str, config: &Config) -> Option<PathBuf> {
     if config.relative_paths && !calling_process().paths_in_input_are_relative_to_cwd() {
         if let Some(base) = config.cwd_relative_to_repo_root.as_deref() {
-            pathdiff::diff_paths(&path, base)
+            pathdiff::diff_paths(path, base)
         } else {
             None
         }

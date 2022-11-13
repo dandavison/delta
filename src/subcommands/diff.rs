@@ -40,7 +40,7 @@ pub fn diff(
 
     let diff_process = process::Command::new(diff_path)
         .args(&diff_cmd[1..])
-        .args(&[minus_file, plus_file])
+        .args([minus_file, plus_file])
         .stdout(process::Stdio::piped())
         .spawn();
 

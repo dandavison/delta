@@ -88,7 +88,7 @@ impl<'a> StateMachine<'a> {
             parse_diff_header_line(&self.line, self.source == Source::GitDiff);
 
         self.minus_file = utils::path::relativize_path_maybe(&path_or_mode, self.config)
-            .map(|p| p.to_string_lossy().to_owned().to_string())
+            .map(|p| p.to_string_lossy().into_owned())
             .unwrap_or(path_or_mode);
         self.minus_file_event = file_event;
 
@@ -125,7 +125,7 @@ impl<'a> StateMachine<'a> {
             parse_diff_header_line(&self.line, self.source == Source::GitDiff);
 
         self.plus_file = utils::path::relativize_path_maybe(&path_or_mode, self.config)
-            .map(|p| p.to_string_lossy().to_owned().to_string())
+            .map(|p| p.to_string_lossy().into_owned())
             .unwrap_or(path_or_mode);
         self.plus_file_event = file_event;
         self.painter
@@ -162,8 +162,7 @@ impl<'a> StateMachine<'a> {
         let mut handled_line = false;
         let (_mode_info, file_event) =
             parse_diff_header_line(&self.line, self.source == Source::GitDiff);
-        let name = get_repeated_file_path_from_diff_line(&self.diff_line)
-            .unwrap_or_else(|| "".to_string());
+        let name = get_repeated_file_path_from_diff_line(&self.diff_line).unwrap_or_default();
         match file_event {
             FileEvent::Removed => {
                 self.minus_file = name;
@@ -242,8 +241,7 @@ impl<'a> StateMachine<'a> {
                 _ => Cow::from(file),
             };
             let label = format_label(&self.config.file_modified_label);
-            let name = get_repeated_file_path_from_diff_line(&self.diff_line)
-                .unwrap_or_else(|| "".to_string());
+            let name = get_repeated_file_path_from_diff_line(&self.diff_line).unwrap_or_default();
             let line = format!("{}{}", label, format_file(&name));
             write_generic_diff_header_header_line(
                 &line,

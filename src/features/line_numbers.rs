@@ -167,12 +167,12 @@ impl<'a> LineNumbersData<'a> {
             format_data: MinusPlus::new(
                 format::parse_line_number_format(
                     &format[Left],
-                    &*LINE_NUMBERS_PLACEHOLDER_REGEX,
+                    &LINE_NUMBERS_PLACEHOLDER_REGEX,
                     false,
                 ),
                 format::parse_line_number_format(
                     &format[Right],
-                    &*LINE_NUMBERS_PLACEHOLDER_REGEX,
+                    &LINE_NUMBERS_PLACEHOLDER_REGEX,
                     insert_center_space_on_odd_width,
                 ),
             ),
