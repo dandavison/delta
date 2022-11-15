@@ -9,7 +9,11 @@ pub struct Less {
     version: Option<usize>,
 }
 
-const MIN_LESS_VERSION: usize = 777777;
+#[cfg(target_os = "windows")]
+const MIN_LESS_VERSION: usize = 558;
+
+#[cfg(not(target_os = "windows"))]
+const MIN_LESS_VERSION: usize = 530;
 
 impl Less {
     pub fn probe() -> Self {
@@ -23,20 +27,23 @@ impl Less {
 impl Diagnostic for Less {
     fn report(&self) -> String {
         match self.version {
-            Some(version) => format!("less version: {}", version),
-            None => "Could not determine less version".to_string(),
+            Some(version) => format!(
+                "`less` version >= {} is required (your version: {})",
+                MIN_LESS_VERSION, version
+            ),
+            None => "`less` version >= {} is required".to_string(),
         }
     }
 
     fn diagnose(&self) -> Health {
         match self.version {
             Some(n) if n < self.min_version => Unhealthy(
-                "Your less version is too old".to_string(),
-                "Install a newer version of less".to_string(),
+                "You may need a newer `less` version".to_string(),
+                format!("Install `less` version >= {}", MIN_LESS_VERSION),
             ),
             None => Unhealthy(
-                "Could not determine less version".to_string(),
-                "Is it installed?".into(),
+                "Delta could not determine your `less` version".to_string(),
+                format!("Install `less` version >= {}", MIN_LESS_VERSION),
             ),
             _ => Healthy,
         }
