@@ -116,7 +116,7 @@ pub fn run_app(
     } else if opt.parse_ansi {
         Some(subcommands::parse_ansi::parse_ansi())
     } else if opt.doctor {
-        Some(subcommands::doctor::doctor::run_diagnostics())
+        Some(subcommands::doctor::report::run_diagnostics())
     } else {
         None
     };
