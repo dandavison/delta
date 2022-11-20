@@ -1,12 +1,11 @@
 use crate::subcommands::doctor::shared::Diagnostic;
 use crate::subcommands::doctor::shared::Health;
-use std::collections::HashMap;
 use std::env;
 
 use Health::*;
 
 pub struct GitConfigEnvVars {
-    env_vars: HashMap<String, Option<String>>,
+    env_vars: Vec<std::string::String>,
 }
 
 const UNSUPPORTED_GIT_CONFIG_ENV_VARS: [&str; 3] = [
@@ -19,76 +18,35 @@ impl GitConfigEnvVars {
     pub fn probe() -> Self {
         GitConfigEnvVars {
             env_vars: UNSUPPORTED_GIT_CONFIG_ENV_VARS
-                .map(|s| {
-                    (
-                        s.into(),
-                        match env::var(s) {
-                            Ok(v) => Some(v),
-                            Err(_) => None,
-                        },
-                    )
-                })
                 .iter()
-                .cloned()
-                .collect(),
+                .filter_map(|s| get_env_kv(s))
+                .map(|(k, v)| format!(" - {} = {}", k, v))
+                .collect::<Vec<String>>(),
         }
+    }
+
+    fn has_unsupported_env_vars(&self) -> bool {
+        return self.env_vars.len() > 0;
     }
 }
 
 impl Diagnostic for GitConfigEnvVars {
     fn report(&self) -> String {
-        let output_str = self
-            .env_vars
-            .iter()
-            .map(|(k, v)| {
-                format!(
-                    "- {} = {}",
-                    k,
-                    match v {
-                        Some(v) => v,
-                        None => "",
-                    }
-                )
-            })
-            .collect::<Vec<String>>()
-            .join("\n");
-        "`GIT_CONFIG_*` environment variables: \n".to_string() + &output_str
+        let vars = &self.env_vars;
+        if self.has_unsupported_env_vars() {
+            let vars_str = vars.join("\n").to_string();
+            return "`GIT_CONFIG_*` environment variables are not supported, but were found in your environment:\n".to_owned() + &vars_str;
+        } else {
+            return "No `GIT_CONFIG_*` environment variables are set.".to_owned();
+        }
     }
 
     fn diagnose(&self) -> Health {
-        let set_vars = self
-            .env_vars
-            .iter()
-            .filter(|&(_, v)| v.is_some())
-            .map(|(k, v)| (k, v));
+        let diagnosis = self.report();
+        let remedy = "Unset `GIT_CONFIG_*` environment variables.".to_string();
 
-        let mut n_vals = 0;
-        let diagnosis_prefix =
-            "Unsupported `GIT_CONFIG_*` environment variables are set: \n".to_string();
-        let remedy_prefix = "Unset `GIT_CONFIG_*` environment variables: \n".to_string();
-
-        let output_str_items = &set_vars
-            .map(|(k, v)| {
-                format!(
-                    "- {} = {}",
-                    k,
-                    match v {
-                        Some(v) => {
-                            n_vals += 1;
-                            v
-                        }
-                        None => "",
-                    }
-                )
-            })
-            .collect::<Vec<String>>()
-            .join("\n");
-
-        match n_vals > 0 {
-            true => Unhealthy(
-                diagnosis_prefix + output_str_items,
-                remedy_prefix + output_str_items,
-            ),
+        match self.has_unsupported_env_vars() {
+            true => Unhealthy(diagnosis, remedy),
             false => Healthy,
         }
     }
@@ -98,5 +56,12 @@ impl Diagnostic for GitConfigEnvVars {
             Unhealthy(_, remedy) => Some(remedy),
             _ => None,
         }
+    }
+}
+
+fn get_env_kv(k: &str) -> Option<(String, String)> {
+    match env::var(k) {
+        Ok(v) => Some((k.to_owned(), v)),
+        Err(_) => None,
     }
 }
