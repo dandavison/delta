@@ -26,12 +26,12 @@ fn build_report_row(diagnostic: Box<dyn Diagnostic>) -> Report {
     match remedy {
         Some(r) => Report {
             result: "❌".to_string(),
-            description: diagnostic.report(),
+            description: diagnostic.report().0,
             remedy: r,
         },
         None => Report {
             result: "✅".to_string(),
-            description: diagnostic.report(),
+            description: diagnostic.report().0,
             remedy: "".to_string(),
         },
     }
