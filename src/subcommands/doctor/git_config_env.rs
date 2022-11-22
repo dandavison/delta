@@ -26,27 +26,33 @@ impl GitConfigEnvVars {
     }
 
     fn has_unsupported_env_vars(&self) -> bool {
-        return self.env_vars.len() > 0;
+        !self.env_vars.is_empty()
     }
 }
 
 impl Diagnostic for GitConfigEnvVars {
-    fn report(&self) -> String {
+    fn report(&self) -> (String, bool) {
         let vars = &self.env_vars;
         if self.has_unsupported_env_vars() {
-            let vars_str = vars.join("\n").to_string();
-            return "`GIT_CONFIG_*` environment variables are not supported, but were found in your environment:\n".to_owned() + &vars_str;
+            let vars_str = vars.join("\n");
+            (
+                "`GIT_CONFIG_*` environment variables are not supported, but were found in your environment:\n".to_owned() + &vars_str,
+                false
+            )
         } else {
-            return "No `GIT_CONFIG_*` environment variables are set.".to_owned();
+            (
+                "No `GIT_CONFIG_*` environment variables are set.".to_owned(),
+                true,
+            )
         }
     }
 
     fn diagnose(&self) -> Health {
-        let diagnosis = self.report();
+        let diagnosis_is_healthy = self.report();
         let remedy = "Unset `GIT_CONFIG_*` environment variables.".to_string();
 
-        match self.has_unsupported_env_vars() {
-            true => Unhealthy(diagnosis, remedy),
+        match diagnosis_is_healthy.1 {
+            true => Unhealthy(diagnosis_is_healthy.0, remedy),
             false => Healthy,
         }
     }

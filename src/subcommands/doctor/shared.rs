@@ -4,7 +4,7 @@ pub enum Health {
 }
 
 pub trait Diagnostic {
-    fn report(&self) -> String;
+    fn report(&self) -> (String, bool);
     fn diagnose(&self) -> Health;
     fn remedy(&self) -> Option<String>;
 }

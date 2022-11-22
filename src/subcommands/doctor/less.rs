@@ -25,27 +25,35 @@ impl Less {
 }
 
 impl Diagnostic for Less {
-    fn report(&self) -> String {
+    fn report(&self) -> (String, bool) {
         match self.version {
-            Some(version) => format!(
-                "`less` version >= {} is required (your version: {})",
-                MIN_LESS_VERSION, version
-            ),
-            None => "`less` version >= {} is required".to_string(),
+            Some(n) => match n < self.min_version {
+                true => (
+                    format!(
+                        "`less` version >= {} is required (your version: {})",
+                        MIN_LESS_VERSION, n
+                    ),
+                    false,
+                ),
+                false => (
+                    format!(
+                        "`less` version >= {} is required (your version: {})",
+                        MIN_LESS_VERSION, n
+                    ),
+                    true,
+                ),
+            },
+            None => ("`less` version >= {} is required".to_string(), false),
         }
     }
 
     fn diagnose(&self) -> Health {
-        match self.version {
-            Some(n) if n < self.min_version => Unhealthy(
-                "You may need a newer `less` version".to_string(),
-                format!("Install `less` version >= {}", MIN_LESS_VERSION),
-            ),
-            None => Unhealthy(
-                "Delta could not determine your `less` version".to_string(),
-                format!("Install `less` version >= {}", MIN_LESS_VERSION),
-            ),
-            _ => Healthy,
+        let diagnosis_is_healthy = self.report();
+        let remedy = format!("Install `less` version >= {}", MIN_LESS_VERSION);
+
+        match diagnosis_is_healthy.1 {
+            true => Unhealthy(diagnosis_is_healthy.0, remedy),
+            false => Healthy,
         }
     }
 

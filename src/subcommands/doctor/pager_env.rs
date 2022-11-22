@@ -26,44 +26,40 @@ impl PagerEnvVars {
             Some(_v) => Some(val_contains_less(_v)),
             None => match self.env_vars.get("BAT_PAGER") {
                 Some(_v) => Some(val_contains_less(_v)),
-                None => match self.env_vars.get("PAGER") {
-                    Some(_v) => Some(val_contains_less(_v)),
-                    None => None,
-                },
+                None => self.env_vars.get("PAGER").map(|_v| val_contains_less(_v)),
             },
         }
     }
 }
 
 impl Diagnostic for PagerEnvVars {
-    fn report(&self) -> String {
+    fn report(&self) -> (String, bool) {
         let vars = &self.env_vars;
         match self.selected_pager_is_less() {
             Some(v) => match v {
-                true => "Your selected pager is `less`".to_owned(),
+                true => ("Your selected pager is `less`".to_owned(), true),
                 false => {
                     let vars_str = vars
                         .iter()
                         .map(|(k, v)| format!(" - {} = {}", k, v))
                         .collect::<Vec<String>>()
                         .join("\n");
-                    return "The pager specified by your *PAGER environment variables is not `less`. You have:\n".to_owned() + &vars_str;
+                    (
+                        "The pager specified by your *PAGER environment variables is not `less`. You have:\n".to_owned() + &vars_str, false
+                    )
                 }
             },
-            None => "Your selected pager is the system `less`".to_owned(),
+            None => ("Your selected pager is the system `less`".to_owned(), true),
         }
     }
 
     fn diagnose(&self) -> Health {
-        let diagnosis = self.report();
+        let diagnosis_is_healthy = self.report();
         let remedy = "Set `DELTA_PAGER` to your preferred version of `less`, or unset it to use the system `less`.".to_string();
 
-        match self.selected_pager_is_less() {
-            Some(v) => match v {
-                true => Healthy,
-                false => Unhealthy(diagnosis, remedy),
-            },
-            None => Healthy,
+        match diagnosis_is_healthy.1 {
+            true => Healthy,
+            false => Unhealthy(diagnosis_is_healthy.0, remedy),
         }
     }
 
@@ -83,5 +79,5 @@ fn get_env_kv(k: String, v: String) -> Option<(String, String)> {
 }
 
 fn val_contains_less(val: &str) -> bool {
-    return val.to_ascii_lowercase().contains("less");
+    val.to_ascii_lowercase().contains("less")
 }
