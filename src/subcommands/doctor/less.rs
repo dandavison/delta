@@ -27,23 +27,21 @@ impl Less {
 impl Diagnostic for Less {
     fn report(&self) -> (String, bool) {
         match self.version {
-            Some(n) => match n < self.min_version {
-                true => (
-                    format!(
-                        "`less` version >= {} is required (your version: {})",
-                        MIN_LESS_VERSION, n
-                    ),
-                    false,
+            Some(n) if n < self.min_version => (
+                format!(
+                    "`less` version >= {} is required (your version: {})",
+                    MIN_LESS_VERSION, n
                 ),
-                false => (
-                    format!(
-                        "`less` version >= {} is required (your version: {})",
-                        MIN_LESS_VERSION, n
-                    ),
-                    true,
+                false,
+            ),
+            Some(n) if n >= self.min_version => (
+                format!(
+                    "`less` version >= {} is required (your version: {})",
+                    MIN_LESS_VERSION, n
                 ),
-            },
-            None => ("`less` version >= {} is required".to_string(), false),
+                true,
+            ),
+            _ => ("`less` version >= {} is required".to_string(), false),
         }
     }
 
