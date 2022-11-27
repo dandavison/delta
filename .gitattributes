@@ -1,2 +1,3 @@
 *.Makefile linguist-language=Makefile
 etc/performance/* linguist-vendored
+*.rs whitespace=tab-in-indent,trailing-space,-space-before-tab eol=lf
