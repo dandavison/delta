@@ -1,5 +1,6 @@
 use syntect::highlighting::Style as SyntectStyle;
 use unicode_segmentation::UnicodeSegmentation;
+use unicode_width::UnicodeWidthStr;
 
 use crate::cli;
 use crate::config::INLINE_SYMBOL_WIDTH_1;
@@ -202,11 +203,21 @@ where
 
         let (style, text, graphemes) = stack
             .pop()
-            .map(|(style, text)| (style, text, text.grapheme_indices(true).collect::<Vec<_>>()))
+            .map(|(style, text)| {
+                (
+                    style,
+                    text,
+                    text.graphemes(true)
+                        .map(|item| (item.len(), item.width()))
+                        .collect::<Vec<_>>(),
+                )
+            })
             .unwrap();
 
-        let new_len = curr_line.len + graphemes.len();
+        let graphemes_width: usize = graphemes.iter().map(|(_, w)| w).sum();
+        let new_len = curr_line.len + graphemes_width;
 
+        #[allow(clippy::comparison_chain)]
         let must_split = if new_len < line_width {
             curr_line.push_and_set_len((style, text), new_len);
             false
@@ -228,15 +239,6 @@ where
                 }
                 _ => true,
             }
-        } else if new_len == line_width + 1 && stack.is_empty() {
-            // If the one overhanging char is '\n' then keep it on the current line.
-            if text.ends_with('\n') {
-                // Do not count the included '\n': - 1
-                curr_line.push_and_set_len((style, text), new_len - 1);
-                false
-            } else {
-                true
-            }
         } else {
             true
         };
@@ -244,16 +246,29 @@ where
         // Text must be split, one part (or just `wrap_symbol`) is added to the
         // current line, the other is pushed onto the stack.
         if must_split {
-            let grapheme_split_pos = graphemes.len() - (new_len - line_width) - 1;
+            let mut width_left = graphemes_width
+                .saturating_sub(new_len - line_width)
+                .saturating_sub(wrap_config.left_symbol.width());
 
             // The length does not matter anymore and `curr_line` will be reset
             // at the end, so move the line segments out.
             let mut line_segments = curr_line.line_segments;
 
-            let next_line = if grapheme_split_pos == 0 {
+            let next_line = if width_left == 0 {
                 text
             } else {
-                let byte_split_pos = graphemes[grapheme_split_pos].0;
+                let mut byte_split_pos = 0;
+                // After loop byte_split_pos may still equal to 0. If width_left
+                // is less than the width of first character, We can't display it.
+                for &(item_len, item_width) in graphemes.iter() {
+                    if width_left >= item_width {
+                        byte_split_pos += item_len;
+                        width_left -= item_width;
+                    } else {
+                        break;
+                    }
+                }
+
                 let this_line = &text[..byte_split_pos];
                 line_segments.push((style, this_line));
                 &text[byte_split_pos..]
@@ -273,7 +288,9 @@ where
     if result.len() == 1 && curr_line.has_text() {
         let current_permille = (curr_line.text_len() * 1000) / line_width;
 
-        let pad_len = line_width.saturating_sub(curr_line.text_len());
+        // pad line will add a wrap_config.right_prefix_symbol
+        let pad_len = line_width
+            .saturating_sub(curr_line.text_len() + wrap_config.right_prefix_symbol.width());
 
         if wrap_config.use_wrap_right_permille > current_permille && pad_len > 0 {
             // The inserted spaces, which align a line to the right, point into this string.
@@ -785,7 +802,7 @@ mod tests {
         let lines = wrap_test(&cfg, line, 11);
         assert_eq!(lines.len(), 2);
         assert_eq!(lines[0].last().unwrap().1, WR);
-        assert_eq!(lines[1], [(*SD, "         "), (*SD, ">"), (*S1, "ab")]);
+        assert_eq!(lines[1], [(*SD, "        "), (*SD, ">"), (*S1, "ab")]);
     }
 
     #[test]
@@ -801,7 +818,7 @@ mod tests {
                 lines,
                 vec![
                     vec![(*S1, "012"), (*S2, "34"), (*SD, WR)],
-                    vec![(*SD, "    "), (*SD, RA), (*S2, "56")]
+                    vec![(*SD, "   "), (*SD, RA), (*S2, "56")]
                 ]
             );
         }
@@ -940,13 +957,19 @@ mod tests {
         );
 
         // Not working: Tailored grapheme clusters: क्षि  = क् + षि
-        let line = vec![(*S1, "abc"), (*S2, "deநி"), (*S1, "ghij")];
+        //
+        // Difference compare to previous example (even they may look like the
+        // same width in text editor.) :
+        //
+        // width நி: 2
+        // width ö̲: 1
+        let line = vec![(*S1, "abc"), (*S2, "dநி"), (*S1, "ghij")];
         let lines = wrap_test(&cfg, line, 4);
         assert_eq!(
             lines,
             vec![
                 vec![(*S1, "abc"), (*SD, W)],
-                vec![(*S2, "deநி"), (*SD, W)],
+                vec![(*S2, "dநி"), (*SD, W)],
                 vec![(*S1, "ghij")]
             ]
         );

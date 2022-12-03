@@ -54,6 +54,10 @@ pub fn truncate_str<'a, 'b>(s: &'a str, display_width: usize, tail: &'b str) -> 
             for g in t.graphemes(true) {
                 let w = g.width();
                 if used + w > display_width {
+                    // use space to fill the gap left by truncate. Need another
+                    // option to custom this or just use `WrapOption.wrap_right_prefix_symbol`
+                    // in the future.
+                    result.push_str(&" ".repeat(display_width.saturating_sub(used)));
                     break;
                 }
                 result.push_str(g);

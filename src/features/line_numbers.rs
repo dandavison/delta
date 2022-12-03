@@ -797,6 +797,8 @@ pub mod tests {
             "@",
             "--wrap-right-symbol",
             "@",
+            "--wrap-right-prefix-symbol",
+            ">",
         ])
         .with_input(DIFF_PLUS_MINUS_WITH_1_CONTEXT_DIFF)
         .expect_after_header(
@@ -816,6 +818,8 @@ pub mod tests {
             "@",
             "--wrap-right-symbol",
             "@",
+            "--wrap-right-prefix-symbol",
+            ">",
         ];
 
         DeltaTest::with_args(cfg)
@@ -824,7 +828,7 @@ pub mod tests {
                 r#"
                 │  1 │abc            │  1 │abc
                 │  2 │a = one side   │  2 │a = one longer@
-                │    │               │    │ side
+                │    │               │    │         > side
                 │  3 │xyz            │  3 │xyz"#,
             );
 
@@ -834,7 +838,7 @@ pub mod tests {
                 r#"
                 │  1 │abc            │  1 │abc
                 │  2 │a = one longer@│  2 │a = one side
-                │    │ side          │    │
+                │    │         > side│    │
                 │  3 │xyz            │  3 │xyz"#,
             );
 
@@ -975,4 +979,13 @@ index 223ca50..367a6f6 100644
 -a = other one
 +a = right side which is longer
  xyz";
+
+    pub const TWO_MINUS_LINES_UNICODE_DIFF: &str = "\
+diff --git a/a.py b/a.py
+index 8b0d958..e69de29 100644
+--- a/a.txt
++++ b/b.txt
+@@ -1,1 +0,0 @@
+-一二三
+";
 }
