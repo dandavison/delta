@@ -162,7 +162,7 @@ Description: Syntax highlighter for git
  detection, and restructured diff output for git on the command line.
 EOF
 
-    fakeroot dpkg-deb --build "$tempdir" "${dpkgname}_${version}_${architecture}.deb"
+    fakeroot dpkg-deb -Zxz --build "$tempdir" "${dpkgname}_${version}_${architecture}.deb"
 }
 
 
