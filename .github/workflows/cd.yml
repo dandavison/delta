@@ -15,6 +15,9 @@ jobs:
           - os: macos-latest
             target: x86_64-apple-darwin
             use-cross: false
+          - os: macos-latest
+            target: aarch64-apple-darwin
+            use-cross: false
           - os: windows-latest
             target: x86_64-pc-windows-msvc
             use-cross: false
@@ -39,6 +42,7 @@ jobs:
         uses: actions-rs/toolchain@v1
         with:
           toolchain: stable
+          target: ${{ matrix.job.target }}
           profile: minimal
           override: true
       - name: Checkout repository
@@ -96,7 +100,7 @@ jobs:
         with:
           command: publish
           args: --token ${{ secrets.CARGO_API_KEY }} --allow-dirty
-          
+
   bump-homebrew-formula:
     runs-on: macos-latest
     steps:
