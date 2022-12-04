@@ -408,7 +408,7 @@ pub struct Opt {
     /// See STYLES section. The style 'omit' can be used to remove the file section from the output.
     pub file_style: String,
 
-    #[structopt(long = "file-transformation", value_name = "SED_CMD")]
+    #[arg(long = "file-transformation", value_name = "SED_CMD")]
     /// Sed-style command transforming file paths for display.
     pub file_regex_replacement: Option<String>,
 
