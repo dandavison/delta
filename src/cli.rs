@@ -3,7 +3,7 @@ use std::ffi::OsString;
 use std::path::PathBuf;
 
 use bat::assets::HighlightingAssets;
-use clap::{AppSettings, ColorChoice, FromArgMatches, CommandFactory, Parser};
+use clap::{AppSettings, ColorChoice, CommandFactory, FromArgMatches, Parser};
 use lazy_static::lazy_static;
 use syntect::highlighting::Theme as SyntaxTheme;
 use syntect::parsing::SyntaxSet;
@@ -1174,21 +1174,18 @@ impl Opt {
     }
 
     pub fn get_argument_and_option_names<'a>() -> HashMap<&'a str, &'a str> {
-        itertools::chain(
-            Self::command().get_opts(),
-            Self::command().get_arguments(),
-        )
-        .filter_map(|arg| match (arg.get_id(), arg.get_long()) {
-            (name, Some(long)) => {
-                if IGNORED_OPTION_NAMES.contains(name) {
-                    None
-                } else {
-                    Some((name, long))
+        itertools::chain(Self::command().get_opts(), Self::command().get_arguments())
+            .filter_map(|arg| match (arg.get_id(), arg.get_long()) {
+                (name, Some(long)) => {
+                    if IGNORED_OPTION_NAMES.contains(name) {
+                        None
+                    } else {
+                        Some((name, long))
+                    }
                 }
-            }
-            _ => None,
-        })
-        .collect()
+                _ => None,
+            })
+            .collect()
     }
 }
 
