@@ -3,7 +3,7 @@ use std::ffi::OsString;
 use std::path::PathBuf;
 
 use bat::assets::HighlightingAssets;
-use clap::{AppSettings, ColorChoice, CommandFactory, FromArgMatches, Parser};
+use clap::{ColorChoice, CommandFactory, FromArgMatches, Parser};
 use lazy_static::lazy_static;
 use syntect::highlighting::Theme as SyntaxTheme;
 use syntect::parsing::SyntaxSet;
@@ -21,7 +21,6 @@ use crate::utils::bat::output::PagingMode;
     about = "A viewer for git and diff output",
     version,
     color = ColorChoice::Always,
-    setting(AppSettings::DeriveDisplayOrder),
     term_width(0),
     after_long_help = "\
 GIT CONFIG
