@@ -3,7 +3,7 @@ use std::ffi::OsString;
 use std::path::PathBuf;
 
 use bat::assets::HighlightingAssets;
-use clap::{AppSettings, ColorChoice, FromArgMatches, IntoApp, Parser};
+use clap::{AppSettings, ColorChoice, CommandFactory, FromArgMatches, Parser};
 use lazy_static::lazy_static;
 use syntect::highlighting::Theme as SyntaxTheme;
 use syntect::parsing::SyntaxSet;
@@ -1065,13 +1065,13 @@ pub struct Opt {
     /// Deprecated: use --true-color.
     pub _24_bit_color: Option<String>,
 
-    #[clap(parse(from_os_str))]
+    #[clap(value_parser)]
     /// First file to be compared when delta is being used in diff mode
     ///
     /// `delta file_1 file_2` is equivalent to `diff -u file_1 file_2 | delta`.
     pub minus_file: Option<PathBuf>,
 
-    #[clap(parse(from_os_str))]
+    #[clap(value_parser)]
     /// Second file to be compared when delta is being used in diff mode.
     pub plus_file: Option<PathBuf>,
 
@@ -1138,7 +1138,7 @@ impl Opt {
         git_config: Option<GitConfig>,
         assets: HighlightingAssets,
     ) -> Self {
-        Self::from_clap_and_git_config(env, Self::into_app().get_matches(), git_config, assets)
+        Self::from_clap_and_git_config(env, Self::command().get_matches(), git_config, assets)
     }
 
     pub fn from_iter_and_git_config<I>(
@@ -1153,7 +1153,7 @@ impl Opt {
         let assets = utils::bat::assets::load_highlighting_assets();
         Self::from_clap_and_git_config(
             env,
-            Self::into_app().get_matches_from(iter),
+            Self::command().get_matches_from(iter),
             git_config,
             assets,
         )
@@ -1174,21 +1174,18 @@ impl Opt {
     }
 
     pub fn get_argument_and_option_names<'a>() -> HashMap<&'a str, &'a str> {
-        itertools::chain(
-            Self::into_app().get_opts(),
-            Self::into_app().get_arguments(),
-        )
-        .filter_map(|arg| match (arg.get_name(), arg.get_long()) {
-            (name, Some(long)) => {
-                if IGNORED_OPTION_NAMES.contains(name) {
-                    None
-                } else {
-                    Some((name, long))
+        itertools::chain(Self::command().get_opts(), Self::command().get_arguments())
+            .filter_map(|arg| match (arg.get_id(), arg.get_long()) {
+                (name, Some(long)) => {
+                    if IGNORED_OPTION_NAMES.contains(name) {
+                        None
+                    } else {
+                        Some((name, long))
+                    }
                 }
-            }
-            _ => None,
-        })
-        .collect()
+                _ => None,
+            })
+            .collect()
     }
 }
 
