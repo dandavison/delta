@@ -1064,13 +1064,13 @@ pub struct Opt {
     /// Deprecated: use --true-color.
     pub _24_bit_color: Option<String>,
 
-    #[arg(value_parser)]
+    #[arg()]
     /// First file to be compared when delta is being used in diff mode
     ///
     /// `delta file_1 file_2` is equivalent to `diff -u file_1 file_2 | delta`.
     pub minus_file: Option<PathBuf>,
 
-    #[arg(value_parser)]
+    #[arg()]
     /// Second file to be compared when delta is being used in diff mode.
     pub plus_file: Option<PathBuf>,
 
