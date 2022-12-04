@@ -1178,7 +1178,7 @@ impl Opt {
             Self::command().get_opts(),
             Self::command().get_arguments(),
         )
-        .filter_map(|arg| match (arg.get_name(), arg.get_long()) {
+        .filter_map(|arg| match (arg.get_id(), arg.get_long()) {
             (name, Some(long)) => {
                 if IGNORED_OPTION_NAMES.contains(name) {
                     None
