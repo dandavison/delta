@@ -1,6 +1,7 @@
 use std::collections::HashMap;
 use std::path::PathBuf;
 
+use clap::ValueSource;
 use regex::Regex;
 use syntect::highlighting::Style as SyntectStyle;
 use syntect::highlighting::Theme as SyntaxTheme;
@@ -384,7 +385,7 @@ fn make_blame_palette(blame_palette: Option<String>, is_light_mode: bool) -> Vec
 
 /// Did the user supply `option` on the command line?
 pub fn user_supplied_option(option: &str, arg_matches: &clap::ArgMatches) -> bool {
-    arg_matches.occurrences_of(option) > 0
+    arg_matches.value_source(option) == Some(ValueSource::CommandLine)
 }
 
 pub fn delta_unreachable(message: &str) -> ! {
