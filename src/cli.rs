@@ -16,7 +16,7 @@ use crate::utils;
 use crate::utils::bat::output::PagingMode;
 
 #[derive(Parser)]
-#[clap(
+#[command(
     name = "delta",
     about = "A viewer for git and diff output",
     version,
