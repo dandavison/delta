@@ -222,6 +222,7 @@ dependencies = [
  "once_cell",
  "strsim",
  "termcolor",
+ "terminal_size 0.2.3",
 ]
 
 [[package]]
@@ -268,7 +269,7 @@ dependencies = [
  "libc",
  "once_cell",
  "regex",
- "terminal_size",
+ "terminal_size 0.1.15",
  "unicode-width",
  "winapi",
 ]
@@ -1422,6 +1423,16 @@ checksum = "4bd2d183bd3fac5f5fe38ddbeb4dc9aec4a39a9d7d59e7491d900302da01cbe1"
 dependencies = [
  "libc",
  "winapi",
+]
+
+[[package]]
+name = "terminal_size"
+version = "0.2.3"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "cb20089a8ba2b69debd491f8d2d023761cbf196e999218c591fa1e7e15a21907"
+dependencies = [
+ "rustix",
+ "windows-sys",
 ]
 
 [[package]]
