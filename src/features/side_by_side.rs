@@ -358,7 +358,7 @@ fn get_right_fill_style_for_panel<'a>(
     background_color_extends_to_terminal_width: BgShouldFill,
     config: &Config,
 ) -> (Option<BgFillMethod>, Style) {
-    // If in the the left panel then it must be filled with spaces.
+    // If in the left panel then it must be filled with spaces.
     let none_or_override = if panel_side == Left {
         Some(BgFillMethod::Spaces)
     } else {
