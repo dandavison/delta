@@ -407,7 +407,7 @@ __path__:  some matching line
         }
 
         /// Return the relative path as it would appear in grep output, i.e. accounting for facts
-        /// such as that that the user may have invoked the grep command from a non-root directory
+        /// such as that the user may have invoked the grep command from a non-root directory
         /// in the repo.
         pub fn path_in_grep_output(&self) -> String {
             use CallingProcess::*;
