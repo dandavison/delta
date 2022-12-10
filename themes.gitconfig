@@ -71,7 +71,7 @@
     minus-style = "#ff0080"
     plus-emph-style = "#008a81" bold "#00ffbf"
     plus-style = syntax "#cffff3"
-    syntax-theme = Github
+    syntax-theme = GitHub
 
 [delta "hoopoe"]
     # author: https://github.com/dandavison
