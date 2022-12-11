@@ -82,7 +82,7 @@ impl<'p> Painter<'p> {
             ))
         } else if config.side_by_side {
             // If line numbers are disabled in side-by-side then the data is still used
-            // for width calculaction and to pad odd width to even, see `UseFullPanelWidth`
+            // for width calculation and to pad odd width to even, see `UseFullPanelWidth`
             // for details.
             Some(line_numbers::LineNumbersData::empty_for_sbs(
                 panel_width_fix,
