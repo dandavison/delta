@@ -32,7 +32,7 @@
     # light = true
 
 [merge]
-    conflictstyle = diff3
+    conflictstyle = zdiff3
 ```
 
 Delta has many features and is very customizable; please see the [user manual](https://dandavison.github.io/delta/).
