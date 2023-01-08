@@ -27,6 +27,7 @@
 [delta]
     navigate = true    # use n and N to move between diff sections
     light = false      # set to true if you're in a terminal w/ a light background color (e.g. the default macOS terminal)
+    pager = less       # if not set, will use environment (see delta --help)
 
 [merge]
     conflictstyle = diff3
