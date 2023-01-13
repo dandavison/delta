@@ -9,6 +9,13 @@ By default, side-by-side view has line-numbers activated, and has syntax highlig
 
 <table><tr><td><img width=800px src="https://user-images.githubusercontent.com/52205/87230973-412eb900-c381-11ea-8aec-cc200290bd1b.png" alt="image" /></td></tr></table>
 
+To activate and deactivate side-by-side view from the command line, consider using the [`DELTA_FEATURES`](./features-named-groups-of-settings.md) environment variable. For example:
+
+```
+export DELTA_FEATURES=+side-by-side # activate
+export DELTA_FEATURES=+             # deactivate
+```
+
 To disable the line numbers in side-by-side view, but keep a vertical delimiter line between the left and right panels, use the line-numbers format options. For example:
 
 ```gitconfig
