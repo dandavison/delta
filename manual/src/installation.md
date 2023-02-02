@@ -69,6 +69,10 @@ Note that the package is often called `git-delta`, but the executable installed 
     <td><code>scoop install delta</code></td>
   </tr>
   <tr>
+    <td>Windows (<a href="https://learn.microsoft.com/en-us/windows/package-manager/">Winget</a>)</td>
+    <td><code>winget install dandavison.delta</code></td>
+  </tr>
+  <tr>
     <td>Debian / Ubuntu</td>
     <td>
       <code>dpkg -i file.deb</code>
