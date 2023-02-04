@@ -13,7 +13,7 @@ use crate::color;
 use crate::delta::State;
 use crate::fatal;
 use crate::features::navigate;
-use crate::features::side_by_side::{self, ansifill, LeftRight};
+use crate::features::side_by_side::{self, ansifill, apply_panel_center_offset, LeftRight};
 use crate::git_config::{GitConfig, GitConfigEntry};
 use crate::handlers;
 use crate::handlers::blame::parse_blame_line_numbers;
@@ -198,6 +198,13 @@ impl From<cli::Opt> for Config {
             &opt.computed.decorations_width,
             &opt.computed.available_terminal_width,
         );
+
+        let side_by_side_data =
+            match apply_panel_center_offset(side_by_side_data, &opt.panel_center_offset) {
+                Ok(side_by_side_data) => side_by_side_data,
+                Err(msg) => fatal(format!("Invalid option for panel-center-offset: {}", msg)),
+            };
+
         let side_by_side_data = ansifill::UseFullPanelWidth::sbs_odd_fix(
             &opt.computed.decorations_width,
             &line_fill_method,

@@ -848,6 +848,17 @@ pub struct Opt {
     /// Options are: auto, always, and never.
     pub paging_mode: String,
 
+    #[clap(
+        long = "panel-center-offset",
+        value_name = "OFFSET",
+        allow_hyphen_values = true
+    )]
+    /// Offset the center between the left and right panels.
+    ///
+    /// In side-by-side mode move the center between the two panels to the left (negative values)
+    /// or to the right (positive values).
+    pub panel_center_offset: Option<String>,
+
     #[clap(long = "parse-ansi")]
     /// Display ANSI color escape sequences in human-readable form.
     ///
@@ -991,7 +1002,12 @@ pub struct Opt {
     /// Defaults to color.diff.whitespace if that is set in git config, or else 'magenta reverse'.
     pub whitespace_error_style: String,
 
-    #[clap(short = 'w', long = "width", value_name = "N")]
+    #[clap(
+        short = 'w',
+        long = "width",
+        value_name = "N",
+        allow_hyphen_values = true
+    )]
     /// The width of underline/overline decorations.
     ///
     /// Examples: "72" (exactly 72 characters), "-2" (auto-detected terminal width minus 2). An

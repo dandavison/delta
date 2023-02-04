@@ -56,6 +56,33 @@ impl SideBySideData {
     }
 }
 
+pub fn apply_panel_center_offset(
+    sbs: SideBySideData,
+    offset: &Option<String>,
+) -> Result<SideBySideData, String> {
+    let offset: isize = match offset {
+        Some(offset) => match offset.parse() {
+            Ok(val) => val,
+            Err(err) => return Err(format!("{}", err)),
+        },
+        _ => 0,
+    };
+
+    let SideBySideData {
+        minus: Panel { width: left },
+        plus: Panel { width: right },
+    } = sbs;
+
+    Ok(SideBySideData::new(
+        Panel {
+            width: (left as isize).saturating_add(offset) as usize,
+        },
+        Panel {
+            width: (right as isize).saturating_add(-offset) as usize,
+        },
+    ))
+}
+
 pub fn available_line_width(
     config: &Config,
     data: &line_numbers::LineNumbersData,
