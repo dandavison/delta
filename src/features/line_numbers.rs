@@ -327,9 +327,9 @@ pub mod tests {
 
     use super::*;
 
-    pub fn parse_line_number_format_with_default_regex<'a>(
-        format_string: &'a str,
-    ) -> FormatStringData<'a> {
+    pub fn parse_line_number_format_with_default_regex(
+        format_string: &str,
+    ) -> FormatStringData<'_> {
         format::parse_line_number_format(format_string, &LINE_NUMBERS_PLACEHOLDER_REGEX, false)
     }
 
@@ -612,7 +612,7 @@ pub mod tests {
         assert_eq!(data.formatted_width(), MinusPlus::new(32, 0));
 
         let format = MinusPlus::new("│{np:^3}│ │{nm:<12}│ │{np}│".into(), "".into());
-        let mut data = LineNumbersData::from_format_strings(&format, w.clone());
+        let mut data = LineNumbersData::from_format_strings(&format, w);
 
         data.initialize_hunk(&[(10, 11), (10000, 100001)], "a".into());
         assert_eq!(data.formatted_width(), MinusPlus::new(32, 0));

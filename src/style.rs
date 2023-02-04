@@ -487,7 +487,7 @@ pub mod tests {
             format!("{s:?}"),
             "Style { ansi_term_style: Style { bold }, <Eorsd> }"
         );
-        s.decoration_style = DecorationStyle::Underline(s.ansi_term_style.clone());
+        s.decoration_style = DecorationStyle::Underline(s.ansi_term_style);
         assert_eq!(
             format!("{s:?}"),
             "Style { ansi_term_style: Style { bold }, <Eors>, \

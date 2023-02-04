@@ -81,7 +81,7 @@ pub fn diff(
 
 #[cfg(test)]
 mod main_tests {
-    use std::io::{Cursor, Read, Seek, SeekFrom};
+    use std::io::{Cursor, Read, Seek};
     use std::path::PathBuf;
 
     use super::diff;
@@ -125,7 +125,7 @@ mod main_tests {
 
     fn _read_to_string(cursor: &mut Cursor<Vec<u8>>) -> String {
         let mut s = String::new();
-        cursor.seek(SeekFrom::Start(0)).unwrap();
+        cursor.rewind().unwrap();
         cursor.read_to_string(&mut s).unwrap();
         s
     }

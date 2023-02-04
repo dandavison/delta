@@ -109,7 +109,7 @@ index f38589a..0f1bb83 100644
 
 #[cfg(test)]
 mod tests {
-    use std::io::{Cursor, Seek, SeekFrom};
+    use std::io::{Cursor, Seek};
 
     use super::*;
     use crate::ansi;
@@ -123,7 +123,7 @@ mod tests {
         let mut writer = Cursor::new(vec![0; 1024]);
         _show_syntax_themes(opt, true, &mut writer, None).unwrap();
         let mut s = String::new();
-        writer.seek(SeekFrom::Start(0)).unwrap();
+        writer.rewind().unwrap();
         writer.read_to_string(&mut s).unwrap();
         let s = ansi::strip_ansi_codes(&s);
         assert!(s.contains("\nSyntax theme: gruvbox-light\n"));

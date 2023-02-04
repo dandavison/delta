@@ -408,7 +408,7 @@ mod tests {
     }
 
     impl<'a> TestCase<'a> {
-        pub fn run(&self) -> () {
+        pub fn run(&self) {
             self.assert_string_distance_parts();
             assert_eq!(operations(self.before, self.after), self.operations);
         }

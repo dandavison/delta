@@ -451,7 +451,7 @@ __path__:  some matching line
 
     fn run_test(test_case: FilePathsTestCase) {
         let mut config = integration_test_utils::make_config_from_args(
-            &test_case
+            test_case
                 .get_args()
                 .iter()
                 .map(|s| s.as_str())
@@ -482,12 +482,11 @@ __path__:  some matching line
                     test_case.path_in_delta_input,
                     test_case.path_in_grep_output()
                 );
-                delta_test.with_input(
-                    &GIT_GREP_OUTPUT.replace("__path__", &test_case.path_in_delta_input),
-                )
+                delta_test
+                    .with_input(&GIT_GREP_OUTPUT.replace("__path__", test_case.path_in_delta_input))
             }
             CallingProcess::OtherGrep => delta_test
-                .with_input(&GIT_GREP_OUTPUT.replace("__path__", &test_case.path_in_delta_input)),
+                .with_input(&GIT_GREP_OUTPUT.replace("__path__", test_case.path_in_delta_input)),
         };
         let make_expected_hyperlink = |text| {
             format_osc8_hyperlink(

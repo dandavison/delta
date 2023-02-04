@@ -348,10 +348,10 @@ fn paint_right_panel_plus_line<'a>(
 }
 
 #[allow(clippy::too_many_arguments)]
-fn get_right_fill_style_for_panel<'a>(
+fn get_right_fill_style_for_panel(
     line_is_empty: bool,
     line_index: Option<usize>,
-    diff_style_sections: &[LineSections<'a, Style>],
+    diff_style_sections: &[LineSections<'_, Style>],
     lines_have_homolog: Option<&[bool]>,
     state: &State,
     panel_side: PanelSide,
@@ -468,11 +468,11 @@ fn paint_minus_or_plus_panel_line<'a>(
 /// done with spaces. The right panel can be filled with spaces or using ANSI sequences
 /// instructing the terminal emulator to fill the background color rightwards.
 #[allow(clippy::too_many_arguments, clippy::comparison_chain)]
-fn pad_panel_line_to_width<'a>(
+fn pad_panel_line_to_width(
     panel_line: &mut String,
     panel_line_is_empty: bool,
     line_index: Option<usize>,
-    diff_style_sections: &[LineSections<'a, Style>],
+    diff_style_sections: &[LineSections<'_, Style>],
     lines_have_homolog: Option<&[bool]>,
     state: &State,
     panel_side: PanelSide,

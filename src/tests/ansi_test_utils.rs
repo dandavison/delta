@@ -81,7 +81,7 @@ pub mod ansi_test_utils {
     ) {
         let line = output.lines().nth(line_number).unwrap();
         let substring_end = substring_begin + expected_substring.len();
-        let substring = &ansi::strip_ansi_codes(&line)[substring_begin..substring_end];
+        let substring = &ansi::strip_ansi_codes(line)[substring_begin..substring_end];
         assert_eq!(substring, expected_substring);
         let painted_substring = paint_line(substring, language_extension, state, config);
         // remove trailing newline appended by paint::paint_lines.
@@ -103,7 +103,7 @@ pub mod ansi_test_utils {
     }
 
     pub fn get_color_variants(string: &str, config: &Config) -> (String, String) {
-        let string_without_any_color = ansi::strip_ansi_codes(string).to_string();
+        let string_without_any_color = ansi::strip_ansi_codes(string);
         let string_with_plus_color_only = config
             .plus_style
             .ansi_term_style
@@ -129,7 +129,7 @@ pub mod ansi_test_utils {
         };
         painter.set_syntax(Some(language_extension));
         painter.set_highlighter();
-        let lines = vec![(line.to_string(), state.clone())];
+        let lines = vec![(line.to_string(), state)];
         let syntax_style_sections = paint::get_syntax_style_sections_for_lines(
             &lines,
             painter.highlighter.as_mut(),

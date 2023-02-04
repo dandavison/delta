@@ -768,7 +768,7 @@ pub mod tests {
         assert_eq!(opt.line_numbers_right_format, "xxxyyyzzz");
         assert_eq!(opt.line_numbers_right_style, "black black");
         assert_eq!(opt.line_numbers_zero_style, "black black");
-        assert_eq!(opt.max_line_distance, 77 as f64);
+        assert_eq!(opt.max_line_distance, 77.0);
         assert_eq!(opt.max_line_length, 77);
         assert_eq!(opt.minus_emph_style, "black black");
         assert_eq!(opt.minus_empty_line_marker_style, "black black");

@@ -527,13 +527,13 @@ mod tests {
     }
 
     fn make_blame_line_with_time(timestamp: &str) -> BlameLine {
-        let time = chrono::DateTime::parse_from_rfc3339(&timestamp).unwrap();
-        return BlameLine {
+        let time = chrono::DateTime::parse_from_rfc3339(timestamp).unwrap();
+        BlameLine {
             commit: "",
             author: "",
-            time: time,
+            time,
             line_number: 0,
             code: "",
-        };
+        }
     }
 }

@@ -470,7 +470,7 @@ mod tests {
     }
 
     fn assert_tokenize(text: &str, expected_tokens: &[&str]) {
-        let actual_tokens = tokenize(text, &*DEFAULT_TOKENIZATION_REGEXP);
+        let actual_tokens = tokenize(text, &DEFAULT_TOKENIZATION_REGEXP);
         assert_eq!(text, expected_tokens.iter().join(""));
         // tokenize() guarantees that the first element of the token stream is "".
         // See comment in Alignment::new()
@@ -861,7 +861,7 @@ mod tests {
             Deletion,
             noop_insertions,
             Insertion,
-            &*DEFAULT_TOKENIZATION_REGEXP,
+            &DEFAULT_TOKENIZATION_REGEXP,
             max_line_distance,
             0.0,
         );

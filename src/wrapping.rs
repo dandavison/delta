@@ -80,7 +80,7 @@ impl WrapConfig {
             wrap_max_lines => {
                 let single_pane_width = available_terminal_width / 2;
                 let add_25_percent_or_term_width =
-                    |x| x + std::cmp::max((x * 250) / 1000, single_pane_width) as usize;
+                    |x| x + std::cmp::max((x * 250) / 1000, single_pane_width);
                 std::cmp::max(
                     max_line_length,
                     add_25_percent_or_term_width(single_pane_width * wrap_max_lines),
@@ -843,7 +843,7 @@ mod tests {
             let s1s2 = v.iter().cycle();
             let text: Vec<_> = IN.matches(|_| true).take(len + 1).collect();
             s1s2.zip(text.iter())
-                .map(|(style, text)| (style.clone(), *text))
+                .map(|(style, text)| (*style, *text))
                 .collect()
         }
         fn mk_input_nl(len: usize) -> LineSections<'static, Style> {
@@ -858,7 +858,7 @@ mod tests {
             to: usize,
             append: Option<(Style, &'a str)>,
         ) -> LineSections<'a, Style> {
-            let mut result: Vec<_> = vec[from..to].iter().cloned().collect();
+            let mut result: Vec<_> = vec[from..to].to_vec();
             if let Some(val) = append {
                 result.push(val);
             }
