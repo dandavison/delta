@@ -100,7 +100,7 @@ index f38589a..0f1bb83 100644
         {
             match error.kind() {
                 ErrorKind::BrokenPipe => std::process::exit(0),
-                _ => eprintln!("{}", error),
+                _ => eprintln!("{error}"),
             }
         };
     }
@@ -127,7 +127,7 @@ mod tests {
         writer.read_to_string(&mut s).unwrap();
         let s = ansi::strip_ansi_codes(&s);
         assert!(s.contains("\nSyntax theme: gruvbox-light\n"));
-        println!("{}", s);
+        println!("{s}");
         assert!(s.contains("\nfn print_cube(num: f64) {\n"));
     }
 }

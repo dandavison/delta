@@ -59,7 +59,7 @@ pub fn show_themes(dark: bool, light: bool, computed_theme_is_light: bool) -> st
             {
                 match error.kind() {
                     ErrorKind::BrokenPipe => std::process::exit(0),
-                    _ => eprintln!("{}", error),
+                    _ => eprintln!("{error}"),
                 }
             }
         }

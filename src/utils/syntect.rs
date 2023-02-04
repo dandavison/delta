@@ -21,7 +21,7 @@ pub fn syntect_color_from_name(name: &str) -> Option<Color> {
 /// Convert 8-bit ANSI code to #RGBA string with ANSI code in red channel and 0 in alpha channel.
 // See https://github.com/sharkdp/bat/pull/543
 pub fn syntect_color_from_ansi_number(n: u8) -> Option<Color> {
-    Color::from_str(&format!("#{:02x}000000", n)).ok()
+    Color::from_str(&format!("#{n:02x}000000")).ok()
 }
 
 pub trait FromAnsiTermStyle {

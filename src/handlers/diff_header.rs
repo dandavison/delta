@@ -223,7 +223,7 @@ impl<'a> StateMachine<'a> {
         if !self.mode_info.is_empty() {
             let format_label = |label: &str| {
                 if !label.is_empty() {
-                    format!("{} ", label)
+                    format!("{label} ")
                 } else {
                     "".to_string()
                 }
@@ -410,7 +410,7 @@ pub fn get_file_change_description_from_file_paths(
 ) -> String {
     let format_label = |label: &str| {
         if !label.is_empty() {
-            format!("{} ", label)
+            format!("{label} ")
         } else {
             "".to_string()
         }
@@ -548,7 +548,7 @@ mod tests {
         );
         for prefix in &DIFF_PREFIXES {
             assert_eq!(
-                parse_diff_header_line(&format!("--- {}src/delta.rs", prefix), true),
+                parse_diff_header_line(&format!("--- {prefix}src/delta.rs"), true),
                 ("src/delta.rs".to_string(), FileEvent::Change)
             );
         }

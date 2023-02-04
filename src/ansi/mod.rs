@@ -68,7 +68,7 @@ pub fn truncate_str<'a, 'b>(s: &'a str, display_width: usize, tail: &'b str) -> 
         }
     }
 
-    Cow::from(format!("{}{}", result, result_tail))
+    Cow::from(format!("{result}{result_tail}"))
 }
 
 pub fn parse_style_sections(s: &str) -> Vec<(ansi_term::Style, &str)> {
@@ -176,7 +176,7 @@ pub fn explain_ansi(line: &str, colorful: bool) -> String {
             if colorful {
                 format!("({}){}", style.to_painted_string(), style.paint(s))
             } else {
-                format!("({}){}", style, s)
+                format!("({style}){s}")
             }
         })
         .collect()

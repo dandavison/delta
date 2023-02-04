@@ -33,7 +33,7 @@ pub fn diff(
     let diff_path = match grep_cli::resolve_binary(PathBuf::from(diff_bin)) {
         Ok(path) => path,
         Err(err) => {
-            eprintln!("Failed to resolve command '{}': {}", diff_bin, err);
+            eprintln!("Failed to resolve command '{diff_bin}': {err}");
             return config.error_exit_code;
         }
     };
@@ -45,7 +45,7 @@ pub fn diff(
         .spawn();
 
     if let Err(err) = diff_process {
-        eprintln!("Failed to execute the command '{}': {}", diff_bin, err);
+        eprintln!("Failed to execute the command '{diff_bin}': {err}");
         return config.error_exit_code;
     }
     let mut diff_process = diff_process.unwrap();
@@ -58,7 +58,7 @@ pub fn diff(
         match error.kind() {
             ErrorKind::BrokenPipe => return 0,
             _ => {
-                eprintln!("{}", error);
+                eprintln!("{error}");
                 return config.error_exit_code;
             }
         }
@@ -70,11 +70,11 @@ pub fn diff(
     diff_process
         .wait()
         .unwrap_or_else(|_| {
-            delta_unreachable(&format!("'{}' process not running.", diff_bin));
+            delta_unreachable(&format!("'{diff_bin}' process not running."));
         })
         .code()
         .unwrap_or_else(|| {
-            eprintln!("'{}' process terminated without exit status.", diff_bin);
+            eprintln!("'{diff_bin}' process terminated without exit status.");
             config.error_exit_code
         })
 }

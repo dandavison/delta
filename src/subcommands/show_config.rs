@@ -176,7 +176,7 @@ where
         || s.contains(&['\\', '{', '}', ':'][..])
         || s.is_empty()
     {
-        format!("'{}'", s)
+        format!("'{s}'")
     } else {
         s.to_string()
     }

@@ -77,7 +77,7 @@ pub fn copy_less_hist_file_and_append_navigate_regex(config: &Config) -> std::io
         initial_contents
     };
     if !contents.ends_with(".search\n") {
-        contents = format!("{}.search\n", contents);
+        contents = format!("{contents}.search\n");
     }
     writeln!(
         std::fs::File::create(&delta_less_hist_file)?,

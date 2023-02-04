@@ -35,6 +35,8 @@ pub enum Align {
 impl TryFrom<Option<&str>> for Align {
     type Error = ();
     fn try_from(from: Option<&str>) -> Result<Self, Self::Error> {
+        // inlined format args are not supported for `debug_assert` with edition 2018.
+        #[allow(clippy::uninlined_format_args)]
         match from {
             Some(alignment) if alignment == "<" => Ok(Align::Left),
             Some(alignment) if alignment == ">" => Ok(Align::Right),
@@ -162,7 +164,7 @@ pub fn parse_line_number_format<'a>(
     let mut expand_first_prefix = |prefix: SmolStr| {
         // Only prefix the first placeholder with a space, also see `UseFullPanelWidth`
         if prefix_with_space {
-            let prefix = SmolStr::new(format!("{}{}", ODD_PAD_CHAR, prefix));
+            let prefix = SmolStr::new(format!("{ODD_PAD_CHAR}{prefix}"));
             prefix_with_space = false;
             prefix
         } else {
@@ -300,14 +302,14 @@ pub fn pad<T: std::fmt::Display + CenterRightNumbers>(
     let space = s.center_right_space(alignment, width);
     let mut result = match precision {
         None => match alignment {
-            Align::Left => format!("{0}{1:<2$}", space, s, width),
-            Align::Center => format!("{0}{1:^2$}", space, s, width),
-            Align::Right => format!("{0}{1:>2$}", space, s, width),
+            Align::Left => format!("{space}{s:<width$}"),
+            Align::Center => format!("{space}{s:^width$}"),
+            Align::Right => format!("{space}{s:>width$}"),
         },
         Some(precision) => match alignment {
-            Align::Left => format!("{0}{1:<2$.3$}", space, s, width, precision),
-            Align::Center => format!("{0}{1:^2$.3$}", space, s, width, precision),
-            Align::Right => format!("{0}{1:>2$.3$}", space, s, width, precision),
+            Align::Left => format!("{space}{s:<width$.precision$}"),
+            Align::Center => format!("{space}{s:^width$.precision$}"),
+            Align::Right => format!("{space}{s:>width$.precision$}"),
         },
     };
     if space == " " {

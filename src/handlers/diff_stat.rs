@@ -25,7 +25,7 @@ impl<'a> StateMachine<'a> {
                     relativize_path_in_diff_stat_line(&self.raw_line, cwd, self.config)
                 {
                     self.painter.emit()?;
-                    writeln!(self.painter.writer, "{}", replacement_line)?;
+                    writeln!(self.painter.writer, "{replacement_line}")?;
                     handled_line = true
                 }
             }
@@ -71,7 +71,7 @@ pub fn relativize_path_in_diff_stat_line(
         .diff_stat_align_width
         .saturating_sub(relative_path.len());
     let padding = " ".repeat(pad_width);
-    Some(format!(" {}{}{}", formatted_path, padding, suffix))
+    Some(format!(" {formatted_path}{padding}{suffix}"))
 }
 
 #[cfg(test)]

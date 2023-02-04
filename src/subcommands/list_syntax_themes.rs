@@ -20,11 +20,11 @@ pub fn _list_syntax_themes_for_humans(writer: &mut dyn Write) -> std::io::Result
 
     writeln!(writer, "Light syntax themes:")?;
     for theme in assets.themes().filter(|t| is_light_syntax_theme(t)) {
-        writeln!(writer, "    {}", theme)?;
+        writeln!(writer, "    {theme}")?;
     }
     writeln!(writer, "\nDark syntax themes:")?;
     for theme in assets.themes().filter(|t| !is_light_syntax_theme(t)) {
-        writeln!(writer, "    {}", theme)?;
+        writeln!(writer, "    {theme}")?;
     }
     writeln!(
         writer,

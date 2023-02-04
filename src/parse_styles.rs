@@ -68,7 +68,7 @@ fn resolve_style_references(
         loop {
             if !visited.insert(node) {
                 #[cfg(not(test))]
-                fatal(format!("Your delta styles form a cycle! {:?}", visited));
+                fatal(format!("Your delta styles form a cycle! {visited:?}"));
                 #[cfg(test)]
                 return [("__cycle__", Style::default())]
                     .iter()
@@ -100,18 +100,16 @@ fn parse_as_style_or_reference_to_git_config(style_string: &str, opt: &cli::Opt)
 
 fn parse_as_reference_to_git_config(style_string: &str, opt: &cli::Opt) -> Style {
     if let Some(git_config) = &opt.git_config {
-        let git_config_key = format!("delta.{}", style_string);
+        let git_config_key = format!("delta.{style_string}");
         match git_config.get::<String>(&git_config_key) {
             Some(s) => Style::from_git_str(&s),
             _ => fatal(format!(
-                "Style key not found in git config: {}",
-                git_config_key
+                "Style key not found in git config: {git_config_key}",
             )),
         }
     } else {
         fatal(format!(
-            "Style not found (git config unavailable): {}",
-            style_string
+            "Style not found (git config unavailable): {style_string}",
         ));
     }
 }

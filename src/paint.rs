@@ -806,7 +806,7 @@ pub fn paint_file_path_with_line_number(
             if !file_with_line_number.is_empty() {
                 file_with_line_number.push(ansi_term::ANSIString::from(separator));
             }
-            file_with_line_number.push(line_number_style.paint(format!("{}", line_number)))
+            file_with_line_number.push(line_number_style.paint(format!("{line_number}")))
         }
     }
     if terminate_with_separator {

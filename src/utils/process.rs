@@ -264,7 +264,7 @@ fn parse_command_line<'a>(args: impl Iterator<Item = &'a str>) -> CommandLine {
         } else if s.starts_with("--") {
             long_options.insert(s.split('=').next().unwrap().to_owned());
         } else if let Some(suffix) = s.strip_prefix('-') {
-            short_options.extend(suffix.chars().map(|c| format!("-{}", c)));
+            short_options.extend(suffix.chars().map(|c| format!("-{c}")));
         } else {
             last_arg = Some(s);
         }

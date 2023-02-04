@@ -363,8 +363,7 @@ pub fn parse_blame_line_numbers(arg: &str) -> BlameLineNumbers {
                 .parse::<usize>()
                 .unwrap_or_else(|err| {
                     fatal(format!(
-                        "Invalid number for blame-line-numbers in every-N argument: {}",
-                        err
+                        "Invalid number for blame-line-numbers in every-N argument: {err}",
                     ))
                 });
 
@@ -375,8 +374,7 @@ pub fn parse_blame_line_numbers(arg: &str) -> BlameLineNumbers {
             }
         }
         t => fatal(format!(
-            "Invalid format type \"{}\" for blame-line-numbers",
-            t
+            "Invalid format type \"{t}\" for blame-line-numbers",
         )),
     }
 }

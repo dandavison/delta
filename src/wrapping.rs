@@ -101,8 +101,7 @@ fn ensure_display_width_1(what: &str, arg: String) -> String {
     match arg.grapheme_indices(true).count() {
         INLINE_SYMBOL_WIDTH_1 => arg,
         width => fatal(format!(
-            "Invalid value for {}, display width of \"{}\" must be {} but is {}",
-            what, arg, INLINE_SYMBOL_WIDTH_1, width
+            "Invalid value for {what}, display width of \"{arg}\" must be {INLINE_SYMBOL_WIDTH_1} but is {width}",
         )),
     }
 }
@@ -112,7 +111,7 @@ fn adapt_wrap_max_lines_argument(arg: String) -> usize {
         0
     } else {
         arg.parse::<usize>()
-            .unwrap_or_else(|err| fatal(format!("Invalid wrap-max-lines argument: {}", err)))
+            .unwrap_or_else(|err| fatal(format!("Invalid wrap-max-lines argument: {err}")))
             + 1
     }
 }
@@ -470,8 +469,7 @@ pub fn wrap_minusplus_block<'c: 'a, 'a>(
         assert_eq!(
             (start, extended_to),
             (start2, extended_to2),
-            "syntax and diff wrapping differs {}",
-            errhint
+            "syntax and diff wrapping differs {errhint}",
         );
 
         (start, extended_to)
@@ -1106,8 +1104,7 @@ index 223ca50..e69de29 100644
         {
             DeltaTest::with_config(&config)
                 .with_input(&format!(
-                    "{}-{}+{}",
-                    HUNK_ALIGN_DIFF_HEADER, HUNK_ALIGN_DIFF_SHORT, HUNK_ALIGN_DIFF_LONG
+                    "{HUNK_ALIGN_DIFF_HEADER}-{HUNK_ALIGN_DIFF_SHORT}+{HUNK_ALIGN_DIFF_LONG}",
                 ))
                 .expect_after_header(
                     r#"
@@ -1121,8 +1118,7 @@ index 223ca50..e69de29 100644
         {
             DeltaTest::with_config(&config)
                 .with_input(&format!(
-                    "{}-{}+{}",
-                    HUNK_ALIGN_DIFF_HEADER, HUNK_ALIGN_DIFF_LONG, HUNK_ALIGN_DIFF_SHORT
+                    "{HUNK_ALIGN_DIFF_HEADER}-{HUNK_ALIGN_DIFF_LONG}+{HUNK_ALIGN_DIFF_SHORT}",
                 ))
                 .expect_after_header(
                     r#"
@@ -1146,8 +1142,7 @@ index 223ca50..e69de29 100644
         {
             DeltaTest::with_config(&config)
                 .with_input(&format!(
-                    "{}-{}+{}",
-                    HUNK_ALIGN_DIFF_HEADER, HUNK_ALIGN_DIFF_SHORT, HUNK_ALIGN_DIFF_LONG
+                    "{HUNK_ALIGN_DIFF_HEADER}-{HUNK_ALIGN_DIFF_SHORT}+{HUNK_ALIGN_DIFF_LONG}",
                 ))
                 .expect_after_header(
                     r#"
@@ -1160,8 +1155,7 @@ index 223ca50..e69de29 100644
         {
             DeltaTest::with_config(&config)
                 .with_input(&format!(
-                    "{}-{}+{}",
-                    HUNK_ALIGN_DIFF_HEADER, HUNK_ALIGN_DIFF_LONG, HUNK_ALIGN_DIFF_SHORT
+                    "{HUNK_ALIGN_DIFF_HEADER}-{HUNK_ALIGN_DIFF_LONG}+{HUNK_ALIGN_DIFF_SHORT}",
                 ))
                 .expect_after_header(
                     r#"
@@ -1189,8 +1183,7 @@ index 223ca50..e69de29 100644
         {
             DeltaTest::with_config(&config)
                 .with_input(&format!(
-                    "{}-{}+{}",
-                    HUNK_ALIGN_DIFF_HEADER, HUNK_ALIGN_DIFF_SHORT, HUNK_ALIGN_DIFF_LONG
+                    "{HUNK_ALIGN_DIFF_HEADER}-{HUNK_ALIGN_DIFF_SHORT}+{HUNK_ALIGN_DIFF_LONG}",
                 ))
                 .expect_after_header(
                     r#"
@@ -1204,8 +1197,7 @@ index 223ca50..e69de29 100644
             config.wrap_config.max_lines = 2;
             DeltaTest::with_config(&config)
                 .with_input(&format!(
-                    "{}-{}+{}",
-                    HUNK_ALIGN_DIFF_HEADER, HUNK_ALIGN_DIFF_SHORT, HUNK_ALIGN_DIFF_LONG
+                    "{HUNK_ALIGN_DIFF_HEADER}-{HUNK_ALIGN_DIFF_SHORT}+{HUNK_ALIGN_DIFF_LONG}",
                 ))
                 .expect_after_header(
                     r#"
