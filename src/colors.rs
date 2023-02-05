@@ -1,7 +1,5 @@
-use std::collections::HashMap;
-
-pub fn color_groups() -> HashMap<String, Vec<(String, String)>> {
-    [
+pub fn color_groups() -> Vec<(&'static str, Vec<(&'static str, &'static str)>)> {
+    vec![
         (
             "Blue",
             vec![
@@ -199,15 +197,4 @@ pub fn color_groups() -> HashMap<String, Vec<(String, String)>> {
             ],
         ),
     ]
-    .iter()
-    .map(|(name, colors)| {
-        (
-            name.to_string(),
-            colors
-                .iter()
-                .map(|(color, hex)| (color.to_string(), hex.to_string()))
-                .collect(),
-        )
-    })
-    .collect()
 }
