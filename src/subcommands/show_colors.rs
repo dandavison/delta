@@ -12,8 +12,6 @@ use crate::utils::bat::output::{OutputType, PagingMode};
 
 #[cfg(not(tarpaulin_include))]
 pub fn show_colors() -> std::io::Result<()> {
-    use itertools::Itertools;
-
     use crate::{delta::DiffType, utils};
 
     let assets = utils::bat::assets::load_highlighting_assets();
@@ -38,7 +36,7 @@ pub fn show_colors() -> std::io::Result<()> {
         is_syntax_highlighted: true,
         ..style::Style::default()
     };
-    for (group, color_names) in colors::color_groups().iter().sorted() {
+    for (group, color_names) in colors::color_groups() {
         writeln!(painter.writer, "\n\n{}\n", title_style.paint(group))?;
         for (color_name, hex) in color_names {
             // Two syntax-highlighted lines without background color
