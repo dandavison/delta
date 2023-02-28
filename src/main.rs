@@ -44,7 +44,7 @@ where
 {
     #[cfg(not(test))]
     {
-        eprintln!("{}", errmsg);
+        eprintln!("{errmsg}");
         // As in Config::error_exit_code: use 2 for error
         // because diff uses 0 and 1 for non-error.
         process::exit(2);
@@ -74,7 +74,7 @@ fn main() -> std::io::Result<()> {
     // Ignore ctrl-c (SIGINT) to avoid leaving an orphaned pager process.
     // See https://github.com/dandavison/delta/issues/681
     ctrlc::set_handler(|| {})
-        .unwrap_or_else(|err| eprintln!("Failed to set ctrl-c handler: {}", err));
+        .unwrap_or_else(|err| eprintln!("Failed to set ctrl-c handler: {err}"));
     let exit_code = run_app()?;
     // when you call process::exit, no destructors are called, so we want to do it only once, here
     process::exit(exit_code);
@@ -116,7 +116,7 @@ fn run_app() -> std::io::Result<i32> {
         if let Err(error) = result {
             match error.kind() {
                 ErrorKind::BrokenPipe => {}
-                _ => fatal(format!("{}", error)),
+                _ => fatal(format!("{error}")),
             }
         }
         return Ok(0);
@@ -154,7 +154,7 @@ fn run_app() -> std::io::Result<i32> {
     if let Err(error) = delta(io::stdin().lock().byte_lines(), &mut writer, &config) {
         match error.kind() {
             ErrorKind::BrokenPipe => return Ok(0),
-            _ => eprintln!("{}", error),
+            _ => eprintln!("{error}"),
         }
     };
     Ok(0)

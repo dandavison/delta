@@ -215,7 +215,7 @@ pub fn write_hunk_header(
     let line = if config.color_only {
         line.to_string()
     } else if !code_fragment.is_empty() {
-        format!("{} ", code_fragment)
+        format!("{code_fragment} ")
     } else {
         "".to_string()
     };
@@ -292,8 +292,7 @@ fn write_to_output_buffer(
         let space = if line.is_empty() { " " } else { "" };
         let _ = write!(
             &mut painter.output_buffer,
-            "{}:{}",
-            file_with_line_number, space
+            "{file_with_line_number}:{space}",
         );
     }
     if !line.is_empty() {

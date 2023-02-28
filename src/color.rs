@@ -14,7 +14,7 @@ pub fn parse_color(s: &str, true_color: bool, git_config: Option<&GitConfig>) ->
         return None;
     }
     let die = || {
-        fatal(format!("Invalid color or style attribute: {}", s));
+        fatal(format!("Invalid color or style attribute: {s}"));
     };
     let syntect_color = if s.starts_with('#') {
         SyntectColor::from_str(s).unwrap_or_else(|_| die())
@@ -27,7 +27,7 @@ pub fn parse_color(s: &str, true_color: bool, git_config: Option<&GitConfig>) ->
             .or_else(|| utils::syntect::syntect_color_from_name(s));
         if syntect_color.is_none() {
             if let Some(git_config) = git_config {
-                if let Some(val) = git_config.get::<String>(&format!("delta.{}", s)) {
+                if let Some(val) = git_config.get::<String>(&format!("delta.{s}")) {
                     return parse_color(&val, true_color, None);
                 }
             }
@@ -41,8 +41,8 @@ pub fn parse_color(s: &str, true_color: bool, git_config: Option<&GitConfig>) ->
 pub fn color_to_string(color: Color) -> String {
     match color {
         Color::Fixed(n) if n < 16 => ansi_16_color_number_to_name(n).unwrap().to_string(),
-        Color::Fixed(n) => format!("{}", n),
-        Color::RGB(r, g, b) => format!("\"#{:02x?}{:02x?}{:02x?}\"", r, g, b),
+        Color::Fixed(n) => format!("{n}"),
+        Color::RGB(r, g, b) => format!("\"#{r:02x?}{g:02x?}{b:02x?}\""),
         Color::Black => "black".to_string(),
         Color::Red => "red".to_string(),
         Color::Green => "green".to_string(),

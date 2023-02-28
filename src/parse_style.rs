@@ -214,8 +214,7 @@ fn parse_ansi_term_style(
             seen_background = true;
         } else {
             fatal(format!(
-                "Invalid style string: {}. See the STYLES section of delta --help.",
-                s
+                "Invalid style string: {s}. See the STYLES section of delta --help.",
             ));
         }
     }

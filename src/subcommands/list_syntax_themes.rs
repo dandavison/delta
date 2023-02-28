@@ -20,11 +20,11 @@ pub fn _list_syntax_themes_for_humans(writer: &mut dyn Write) -> std::io::Result
 
     writeln!(writer, "Light syntax themes:")?;
     for theme in assets.themes().filter(|t| is_light_syntax_theme(t)) {
-        writeln!(writer, "    {}", theme)?;
+        writeln!(writer, "    {theme}")?;
     }
     writeln!(writer, "\nDark syntax themes:")?;
     for theme in assets.themes().filter(|t| !is_light_syntax_theme(t)) {
-        writeln!(writer, "    {}", theme)?;
+        writeln!(writer, "    {theme}")?;
     }
     writeln!(
         writer,
@@ -52,7 +52,7 @@ pub fn _list_syntax_themes_for_machines(writer: &mut dyn Write) -> std::io::Resu
 
 #[cfg(test)]
 mod tests {
-    use std::io::{Cursor, Read, Seek, SeekFrom};
+    use std::io::{Cursor, Read, Seek};
 
     use super::*;
 
@@ -61,7 +61,7 @@ mod tests {
         let mut writer = Cursor::new(vec![0; 512]);
         _list_syntax_themes_for_humans(&mut writer).unwrap();
         let mut s = String::new();
-        writer.seek(SeekFrom::Start(0)).unwrap();
+        writer.rewind().unwrap();
         writer.read_to_string(&mut s).unwrap();
         assert!(s.contains("Light syntax themes:\n"));
         assert!(s.contains("    GitHub\n"));
@@ -74,7 +74,7 @@ mod tests {
         let mut writer = Cursor::new(vec![0; 512]);
         _list_syntax_themes_for_machines(&mut writer).unwrap();
         let mut s = String::new();
-        writer.seek(SeekFrom::Start(0)).unwrap();
+        writer.rewind().unwrap();
         writer.read_to_string(&mut s).unwrap();
         assert!(s.contains("light	GitHub\n"));
         assert!(s.contains("dark	Dracula\n"));

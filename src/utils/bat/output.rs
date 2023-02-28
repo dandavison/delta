@@ -130,7 +130,7 @@ fn _make_process_from_less_path(
     config: &config::Config,
 ) -> Option<Command> {
     if let Ok(less_path) = grep_cli::resolve_binary(less_path) {
-        let mut p = Command::new(&less_path);
+        let mut p = Command::new(less_path);
         if args.is_empty() || replace_arguments_to_less {
             p.args(vec!["--RAW-CONTROL-CHARS"]);
 
@@ -184,7 +184,7 @@ delta is not an appropriate value for $PAGER \
         );
     }
     if let Ok(pager_path) = grep_cli::resolve_binary(pager_path) {
-        let mut p = Command::new(&pager_path);
+        let mut p = Command::new(pager_path);
         p.args(args);
         Some(p)
     } else {

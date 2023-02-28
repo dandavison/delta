@@ -363,8 +363,7 @@ pub fn parse_blame_line_numbers(arg: &str) -> BlameLineNumbers {
                 .parse::<usize>()
                 .unwrap_or_else(|err| {
                     fatal(format!(
-                        "Invalid number for blame-line-numbers in every-N argument: {}",
-                        err
+                        "Invalid number for blame-line-numbers in every-N argument: {err}",
                     ))
                 });
 
@@ -375,8 +374,7 @@ pub fn parse_blame_line_numbers(arg: &str) -> BlameLineNumbers {
             }
         }
         t => fatal(format!(
-            "Invalid format type \"{}\" for blame-line-numbers",
-            t
+            "Invalid format type \"{t}\" for blame-line-numbers",
         )),
     }
 }
@@ -529,13 +527,13 @@ mod tests {
     }
 
     fn make_blame_line_with_time(timestamp: &str) -> BlameLine {
-        let time = chrono::DateTime::parse_from_rfc3339(&timestamp).unwrap();
-        return BlameLine {
+        let time = chrono::DateTime::parse_from_rfc3339(timestamp).unwrap();
+        BlameLine {
             commit: "",
             author: "",
-            time: time,
+            time,
             line_number: 0,
             code: "",
-        };
+        }
     }
 }

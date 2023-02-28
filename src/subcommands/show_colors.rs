@@ -60,11 +60,8 @@ pub fn show_colors() -> std::io::Result<()> {
                     .unwrap();
             style.ansi_term_style.background = Some(color);
             for line in [
-                &format!(
-                    r#"export function color(): string {{ return "{}" }}"#,
-                    color_name
-                ),
-                &format!(r#"export function hex(): string {{ return "{}" }}"#, hex),
+                &format!(r#"export function color(): string {{ return "{color_name}" }}"#),
+                &format!(r#"export function hex(): string {{ return "{hex}" }}"#),
             ] {
                 painter.syntax_highlight_and_paint_line(
                     line,

@@ -51,7 +51,7 @@ impl GitConfig {
         match config {
             Some(mut config) => {
                 let config = config.snapshot().unwrap_or_else(|err| {
-                    fatal(format!("Failed to read git config: {}", err));
+                    fatal(format!("Failed to read git config: {err}"));
                 });
                 Some(Self {
                     config,

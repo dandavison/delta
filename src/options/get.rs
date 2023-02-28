@@ -75,7 +75,7 @@ pub trait GetOptionValue {
         Self: Into<OptionValue>,
     {
         if let Some(git_config) = git_config {
-            if let Some(value) = git_config.get::<Self>(&format!("delta.{}", option_name)) {
+            if let Some(value) = git_config.get::<Self>(&format!("delta.{option_name}")) {
                 return Some(value);
             }
         }
@@ -114,9 +114,7 @@ pub trait GetOptionValue {
         Self: Into<OptionValue>,
     {
         if let Some(git_config) = git_config {
-            if let Some(value) =
-                git_config.get::<Self>(&format!("delta.{}.{}", feature, option_name))
-            {
+            if let Some(value) = git_config.get::<Self>(&format!("delta.{feature}.{option_name}")) {
                 return Some(GitConfigValue(value.into()));
             }
         }

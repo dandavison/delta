@@ -198,7 +198,7 @@ impl<'a> LineNumbersData<'a> {
             format_data: if insert_center_space_on_odd_width {
                 let format_left = vec![format::FormatStringPlaceholderData::default()];
                 let format_right = vec![format::FormatStringPlaceholderData {
-                    prefix: format!("{}", ODD_PAD_CHAR).into(),
+                    prefix: format!("{ODD_PAD_CHAR}").into(),
                     prefix_len: 1,
                     ..Default::default()
                 }];
@@ -327,9 +327,9 @@ pub mod tests {
 
     use super::*;
 
-    pub fn parse_line_number_format_with_default_regex<'a>(
-        format_string: &'a str,
-    ) -> FormatStringData<'a> {
+    pub fn parse_line_number_format_with_default_regex(
+        format_string: &str,
+    ) -> FormatStringData<'_> {
         format::parse_line_number_format(format_string, &LINE_NUMBERS_PLACEHOLDER_REGEX, false)
     }
 
@@ -460,7 +460,7 @@ pub mod tests {
         assert_eq!(
             format::parse_line_number_format("|{nm:<4}|", &LINE_NUMBERS_PLACEHOLDER_REGEX, true),
             vec![format::FormatStringPlaceholderData {
-                prefix: format!("{}|", ODD_PAD_CHAR).into(),
+                prefix: format!("{ODD_PAD_CHAR}|").into(),
                 placeholder: Some(Placeholder::NumberMinus),
                 alignment_spec: Some(Align::Left),
                 width: Some(4),
@@ -483,7 +483,7 @@ pub mod tests {
             ),
             vec![
                 format::FormatStringPlaceholderData {
-                    prefix: format!("{}|", ODD_PAD_CHAR).into(),
+                    prefix: format!("{ODD_PAD_CHAR}|").into(),
                     placeholder: Some(Placeholder::NumberMinus),
                     alignment_spec: Some(Align::Left),
                     width: Some(4),
@@ -512,7 +512,7 @@ pub mod tests {
         assert_eq!(
             format::parse_line_number_format("|++|", &LINE_NUMBERS_PLACEHOLDER_REGEX, true),
             vec![format::FormatStringPlaceholderData {
-                prefix: format!("{}", ODD_PAD_CHAR).into(),
+                prefix: format!("{ODD_PAD_CHAR}").into(),
                 placeholder: None,
                 alignment_spec: None,
                 width: None,
@@ -530,10 +530,7 @@ pub mod tests {
         let long = "line number format which is too large for SSO";
         assert!(long.len() > std::mem::size_of::<smol_str::SmolStr>());
         assert_eq!(
-            parse_line_number_format_with_default_regex(&format!(
-                "{long}{{nm}}{long}",
-                long = long
-            ),),
+            parse_line_number_format_with_default_regex(&format!("{long}{{nm}}{long}")),
             vec![format::FormatStringPlaceholderData {
                 prefix: long.into(),
                 prefix_len: long.len(),
@@ -615,7 +612,7 @@ pub mod tests {
         assert_eq!(data.formatted_width(), MinusPlus::new(32, 0));
 
         let format = MinusPlus::new("│{np:^3}│ │{nm:<12}│ │{np}│".into(), "".into());
-        let mut data = LineNumbersData::from_format_strings(&format, w.clone());
+        let mut data = LineNumbersData::from_format_strings(&format, w);
 
         data.initialize_hunk(&[(10, 11), (10000, 100001)], "a".into());
         assert_eq!(data.formatted_width(), MinusPlus::new(32, 0));

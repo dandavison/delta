@@ -24,16 +24,16 @@ impl GitRemoteRepo {
     pub fn format_commit_url(&self, commit: &str) -> String {
         match self {
             Self::GitHub { slug } => {
-                format!("https://github.com/{}/commit/{}", slug, commit)
+                format!("https://github.com/{slug}/commit/{commit}")
             }
             Self::GitLab { slug } => {
-                format!("https://gitlab.com/{}/-/commit/{}", slug, commit)
+                format!("https://gitlab.com/{slug}/-/commit/{commit}")
             }
             Self::SourceHut { slug } => {
-                format!("https://git.sr.ht/{}/commit/{}", slug, commit)
+                format!("https://git.sr.ht/{slug}/commit/{commit}")
             }
             Self::Codeberg { slug } => {
-                format!("https://codeberg.org/{}/commit/{}", slug, commit)
+                format!("https://codeberg.org/{slug}/commit/{commit}")
             }
         }
     }
@@ -174,7 +174,7 @@ mod tests {
         let commit_hash = "d3b07384d113edec49eaa6238ad5ff00";
         assert_eq!(
             repo.format_commit_url(commit_hash),
-            format!("https://github.com/dandavison/delta/commit/{}", commit_hash)
+            format!("https://github.com/dandavison/delta/commit/{commit_hash}")
         )
     }
 
@@ -219,7 +219,7 @@ mod tests {
         let commit_hash = "d3b07384d113edec49eaa6238ad5ff00";
         assert_eq!(
             repo.format_commit_url(commit_hash),
-            format!("https://gitlab.com/proj/grp/repo/-/commit/{}", commit_hash)
+            format!("https://gitlab.com/proj/grp/repo/-/commit/{commit_hash}")
         )
     }
 
@@ -250,10 +250,7 @@ mod tests {
         let commit_hash = "df41ac86f08a40e64c76062fd67e238522c14990";
         assert_eq!(
             repo.format_commit_url(commit_hash),
-            format!(
-                "https://git.sr.ht/~someuser/somerepo/commit/{}",
-                commit_hash
-            )
+            format!("https://git.sr.ht/~someuser/somerepo/commit/{commit_hash}")
         )
     }
 
@@ -287,7 +284,7 @@ mod tests {
         let commit_hash = "1c072856ebf12419378c5098ad543c497197c6da";
         assert_eq!(
             repo.format_commit_url(commit_hash),
-            format!("https://codeberg.org/dnkl/foot/commit/{}", commit_hash)
+            format!("https://codeberg.org/dnkl/foot/commit/{commit_hash}")
         )
     }
 }

@@ -125,7 +125,7 @@ impl<'a> StateMachine<'a> {
             self.painter.merge_conflict_lines[commit].push((line, state));
             true
         } else {
-            delta_unreachable(&format!("Invalid state: {:?}", state))
+            delta_unreachable(&format!("Invalid state: {state:?}"))
         }
     }
 

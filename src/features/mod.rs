@@ -102,7 +102,7 @@ pub mod tests {
     fn test_builtin_features_have_flags_and_these_set_features() {
         let builtin_features = make_builtin_features();
         let mut args = vec!["delta".to_string()];
-        args.extend(builtin_features.keys().map(|s| format!("--{}", s)));
+        args.extend(builtin_features.keys().map(|s| format!("--{s}")));
         let opt = cli::Opt::from_iter_and_git_config(DeltaEnv::default(), args, None);
         let features: HashSet<&str> = opt
             .features

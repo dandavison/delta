@@ -70,7 +70,7 @@ pub fn list_languages() -> std::io::Result<()> {
                 num_chars += new_chars;
                 write!(stdout, "{}", style.paint(&word[..]))?;
                 if extension.peek().is_some() {
-                    write!(stdout, "{}", comma_separator)?;
+                    write!(stdout, "{comma_separator}")?;
                 }
             }
             writeln!(stdout)?;

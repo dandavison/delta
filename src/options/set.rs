@@ -432,7 +432,7 @@ fn gather_features_recursively(
     } else {
         features.push_front(feature.to_string());
     }
-    if let Some(child_features) = git_config.get::<String>(&format!("delta.{}.features", feature)) {
+    if let Some(child_features) = git_config.get::<String>(&format!("delta.{feature}.features")) {
         for child_feature in split_feature_string(&child_features) {
             if !features.contains(&child_feature.to_string()) {
                 gather_features_recursively(
@@ -446,7 +446,7 @@ fn gather_features_recursively(
         }
     }
     gather_builtin_features_from_flags_in_gitconfig(
-        &format!("delta.{}", feature),
+        &format!("delta.{feature}"),
         features,
         builtin_features,
         opt,
@@ -464,8 +464,7 @@ fn gather_builtin_features_from_flags_in_gitconfig(
     git_config: &GitConfig,
 ) {
     for child_feature in builtin_features.keys() {
-        if let Some(true) = git_config.get::<bool>(&format!("{}.{}", git_config_key, child_feature))
-        {
+        if let Some(true) = git_config.get::<bool>(&format!("{git_config_key}.{child_feature}")) {
             gather_builtin_features_recursively(child_feature, features, builtin_features, opt);
         }
     }
@@ -532,8 +531,7 @@ impl FromStr for cli::InspectRawLines {
             "false" => Ok(Self::False),
             _ => {
                 fatal(format!(
-                    r#"Invalid value for inspect-raw-lines option: {}. Valid values are "true", and "false"."#,
-                    s
+                    r#"Invalid value for inspect-raw-lines option: {s}. Valid values are "true", and "false"."#,
                 ));
             }
         }
@@ -547,8 +545,7 @@ fn parse_paging_mode(paging_mode_string: &str) -> PagingMode {
         "auto" => PagingMode::QuitIfOneScreen,
         _ => {
             fatal(format!(
-                "Invalid value for --paging option: {} (valid values are \"always\", \"never\", and \"auto\")",
-                paging_mode_string
+                "Invalid value for --paging option: {paging_mode_string} (valid values are \"always\", \"never\", and \"auto\")",
             ));
         }
     }
@@ -567,16 +564,11 @@ fn parse_width_specifier(width_arg: &str, terminal_width: usize) -> Result<usize
         .map_err(|_| {
             let pos = if must_be_negative { " negative" } else { "n" };
             let subexpr = if subexpression {
-                format!(" (from {:?})", width_arg)
+                format!(" (from {width_arg:?})")
             } else {
                 "".into()
             };
-            format!(
-                "{:?}{subexpr} is not a{pos} integer",
-                width,
-                subexpr = subexpr,
-                pos = pos
-            )
+            format!("{width:?}{subexpr} is not a{pos} integer")
         })
     };
 
@@ -596,7 +588,7 @@ fn parse_width_specifier(width_arg: &str, terminal_width: usize) -> Result<usize
             let b = parse(&width_arg[index..], true, true)?;
             (a + b)
                 .try_into()
-                .map_err(|_| format!("expression {:?} is not positive", width_arg))?
+                .map_err(|_| format!("expression {width_arg:?} is not positive"))?
         }
     };
 
@@ -617,7 +609,7 @@ fn set_widths_and_isatty(opt: &mut cli::Opt) {
         Some("variable") => (cli::Width::Variable, false),
         Some(width) => {
             let width = parse_width_specifier(width, opt.computed.available_terminal_width)
-                .unwrap_or_else(|err| fatal(format!("Invalid value for width: {}", err)));
+                .unwrap_or_else(|err| fatal(format!("Invalid value for width: {err}")));
             (cli::Width::Fixed(width), true)
         }
         None => (
@@ -776,7 +768,7 @@ pub mod tests {
         assert_eq!(opt.line_numbers_right_format, "xxxyyyzzz");
         assert_eq!(opt.line_numbers_right_style, "black black");
         assert_eq!(opt.line_numbers_zero_style, "black black");
-        assert_eq!(opt.max_line_distance, 77 as f64);
+        assert_eq!(opt.max_line_distance, 77.0);
         assert_eq!(opt.max_line_length, 77);
         assert_eq!(opt.minus_emph_style, "black black");
         assert_eq!(opt.minus_empty_line_marker_style, "black black");

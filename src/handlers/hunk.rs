@@ -196,8 +196,7 @@ fn new_line_state(
             Combined(Number(*n), in_merge_conflict.clone())
         }
         _ => delta_unreachable(&format!(
-            "Unexpected state in new_line_state: {:?}",
-            prev_state
+            "Unexpected state in new_line_state: {prev_state:?}",
         )),
     };
 

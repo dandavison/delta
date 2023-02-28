@@ -31,7 +31,7 @@ pub fn format_commit_line_with_osc8_commit_hyperlink<'a>(
             let suffix = captures.get(3).map(|m| m.as_str()).unwrap_or("");
             let formatted_commit =
                 format_osc8_hyperlink(&commit_link_format.replace("{commit}", commit), commit);
-            format!("{}{}{}", prefix, formatted_commit, suffix)
+            format!("{prefix}{formatted_commit}{suffix}")
         })
     } else if let Some(GitConfigEntry::GitRemote(repo)) =
         config.git_config.as_ref().and_then(get_remote_url)
@@ -74,7 +74,7 @@ where
         .hyperlinks_file_link_format
         .replace("{path}", &absolute_path.as_ref().to_string_lossy());
     if let Some(n) = line_number {
-        url = url.replace("{line}", &format!("{}", n))
+        url = url.replace("{line}", &format!("{n}"))
     } else {
         url = url.replace("{line}", "")
     };
@@ -138,8 +138,7 @@ pub mod tests {
         ] {
             run_test(FilePathsTestCase {
                 name: &format!(
-                    "delta relative_paths={} calling_cmd={:?}",
-                    delta_relative_paths_option, calling_cmd
+                    "delta relative_paths={delta_relative_paths_option} calling_cmd={calling_cmd:?}",
                 ),
                 true_location_of_file_relative_to_repo_root:
                     true_location_of_file_relative_to_repo_root.as_path(),
@@ -452,7 +451,7 @@ __path__:  some matching line
 
     fn run_test(test_case: FilePathsTestCase) {
         let mut config = integration_test_utils::make_config_from_args(
-            &test_case
+            test_case
                 .get_args()
                 .iter()
                 .map(|s| s.as_str())
@@ -483,12 +482,11 @@ __path__:  some matching line
                     test_case.path_in_delta_input,
                     test_case.path_in_grep_output()
                 );
-                delta_test.with_input(
-                    &GIT_GREP_OUTPUT.replace("__path__", &test_case.path_in_delta_input),
-                )
+                delta_test
+                    .with_input(&GIT_GREP_OUTPUT.replace("__path__", test_case.path_in_delta_input))
             }
             CallingProcess::OtherGrep => delta_test
-                .with_input(&GIT_GREP_OUTPUT.replace("__path__", &test_case.path_in_delta_input)),
+                .with_input(&GIT_GREP_OUTPUT.replace("__path__", test_case.path_in_delta_input)),
         };
         let make_expected_hyperlink = |text| {
             format_osc8_hyperlink(

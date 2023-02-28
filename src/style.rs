@@ -189,7 +189,7 @@ impl fmt::Display for Style {
             words.push(color::color_to_string(color))
         }
         let style_str = words.join(" ");
-        write!(f, "{}", style_str)
+        write!(f, "{style_str}")
     }
 }
 
@@ -479,23 +479,23 @@ pub mod tests {
     #[test]
     fn test_style_compact_debug_fmt() {
         let mut s = Style::new();
-        assert_eq!(format!("{:?}", s), "Style { <aeorsd> }");
+        assert_eq!(format!("{s:?}"), "Style { <aeorsd> }");
         s.is_emph = true;
-        assert_eq!(format!("{:?}", s), "Style { <aEorsd> }");
+        assert_eq!(format!("{s:?}"), "Style { <aEorsd> }");
         s.ansi_term_style = ansi_term::Style::new().bold();
         assert_eq!(
-            format!("{:?}", s),
+            format!("{s:?}"),
             "Style { ansi_term_style: Style { bold }, <Eorsd> }"
         );
-        s.decoration_style = DecorationStyle::Underline(s.ansi_term_style.clone());
+        s.decoration_style = DecorationStyle::Underline(s.ansi_term_style);
         assert_eq!(
-            format!("{:?}", s),
+            format!("{s:?}"),
             "Style { ansi_term_style: Style { bold }, <Eors>, \
                   decoration_style: Underline(Style { bold }) }"
         );
         s.ansi_term_style = ansi_term::Style::default();
         assert_eq!(
-            format!("{:?}", s),
+            format!("{s:?}"),
             "Style { <aEors>, decoration_style: Underline(Style { bold }) }"
         );
     }

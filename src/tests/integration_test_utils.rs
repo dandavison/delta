@@ -57,7 +57,7 @@ fn _make_options_from_args_and_git_config(
     honor_env_var: bool,
 ) -> cli::Opt {
     let mut args: Vec<&str> = itertools::chain(&["/dev/null", "/dev/null"], args)
-        .map(|s| *s)
+        .copied()
         .collect();
     let git_config = match (git_config_contents, git_config_path) {
         (Some(contents), Some(path)) => Some(make_git_config(&env, contents, path, honor_env_var)),
@@ -99,7 +99,7 @@ pub fn make_git_config(
     let path = Path::new(path);
     let mut file = File::create(path).unwrap();
     file.write_all(contents).unwrap();
-    GitConfig::from_path(env, &path, honor_env_var)
+    GitConfig::from_path(env, path, honor_env_var)
 }
 
 pub fn get_line_of_code_from_delta(
@@ -108,7 +108,7 @@ pub fn get_line_of_code_from_delta(
     expected_text: &str,
     config: &config::Config,
 ) -> String {
-    let output = run_delta(&input, config);
+    let output = run_delta(input, config);
     let line_of_code = output.lines().nth(line_number).unwrap();
     assert!(ansi::strip_ansi_codes(line_of_code) == expected_text);
     line_of_code.to_string()
@@ -168,7 +168,7 @@ pub fn delineated_string(txt: &str) -> String {
     let top = "▼".repeat(100);
     let btm = "▲".repeat(100);
     let nl = "\n";
-    top + &nl + txt + &nl + &btm
+    top + nl + txt + nl + &btm
 }
 
 pub struct DeltaTest<'a> {
@@ -240,7 +240,7 @@ impl DeltaTestOutput {
     /// with ASCII explanation of ANSI escape sequences.
     #[allow(unused)]
     pub fn inspect(self) -> Self {
-        eprintln!("{}", delineated_string(&self.output.as_str()));
+        eprintln!("{}", delineated_string(&self.output));
         self
     }
 
@@ -269,7 +269,7 @@ impl DeltaTestOutput {
             self.output.contains(expected),
             "Output does not contain \"{}\":\n{}\n",
             expected,
-            delineated_string(&self.output.as_str())
+            delineated_string(&self.output)
         );
         self
     }
@@ -279,7 +279,7 @@ impl DeltaTestOutput {
             self.raw_output.contains(expected),
             "Raw output does not contain \"{}\":\n{}\n",
             expected,
-            delineated_string(&self.raw_output.as_str())
+            delineated_string(&self.raw_output)
         );
         self
     }
@@ -289,7 +289,7 @@ impl DeltaTestOutput {
             test_utils::contains_once(&self.output, expected),
             "Output does not contain \"{}\" exactly once:\n{}\n",
             expected,
-            delineated_string(&self.output.as_str())
+            delineated_string(&self.output)
         );
         self
     }
@@ -301,7 +301,7 @@ pub fn run_delta(input: &str, config: &config::Config) -> String {
     delta(
         ByteLines::new(BufReader::new(input.as_bytes())),
         &mut writer,
-        &config,
+        config,
     )
     .unwrap();
     String::from_utf8(writer).unwrap()

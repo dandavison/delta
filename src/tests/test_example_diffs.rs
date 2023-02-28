@@ -60,7 +60,7 @@ mod tests {
         // In addition to the background color, the code has language syntax highlighting.
         let config = integration_test_utils::make_config_from_args(&[]);
         let output = integration_test_utils::get_line_of_code_from_delta(
-            &ADDED_FILE_INPUT,
+            ADDED_FILE_INPUT,
             14,
             "class X:",
             &config,

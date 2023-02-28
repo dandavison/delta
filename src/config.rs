@@ -390,9 +390,8 @@ pub fn user_supplied_option(option: &str, arg_matches: &clap::ArgMatches) -> boo
 
 pub fn delta_unreachable(message: &str) -> ! {
     fatal(format!(
-        "{} This should not be possible. \
+        "{message} This should not be possible. \
          Please report the bug at https://github.com/dandavison/delta/issues.",
-        message
     ));
 }
 

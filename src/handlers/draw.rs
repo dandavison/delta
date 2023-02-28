@@ -62,7 +62,7 @@ fn write_no_decoration(
     _decoration_style: ansi_term::Style,
 ) -> std::io::Result<()> {
     if text_style.is_raw {
-        writeln!(writer, "{}", raw_text)?;
+        writeln!(writer, "{raw_text}")?;
     } else {
         writeln!(writer, "{}", paint_text(text_style, text, addendum))?;
     }
@@ -233,7 +233,7 @@ fn _write_under_or_over_lined(
         _ => write_line(writer)?,
     }
     if text_style.is_raw {
-        writeln!(writer, "{}", raw_text)?;
+        writeln!(writer, "{raw_text}")?;
     } else {
         writeln!(writer, "{}", paint_text(text_style, text, addendum))?;
     }
@@ -319,7 +319,7 @@ fn write_boxed_partial(
         decoration_style.paint(down_left),
     )?;
     if text_style.is_raw {
-        write!(writer, "{}", raw_text)?;
+        write!(writer, "{raw_text}")?;
     } else {
         write!(writer, "{}", paint_text(text_style, text, addendum))?;
     }

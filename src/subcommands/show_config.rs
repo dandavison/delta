@@ -159,7 +159,7 @@ pub fn show_config(config: &config::Config, writer: &mut dyn Write) -> std::io::
             cli::Width::Variable => "variable".to_string(),
         },
         tab_width = config.tab_width,
-        tokenization_regex = format_option_value(&config.tokenization_regex.to_string()),
+        tokenization_regex = format_option_value(config.tokenization_regex.to_string()),
     )?;
     Ok(())
 }
@@ -176,7 +176,7 @@ where
         || s.contains(&['\\', '{', '}', ':'][..])
         || s.is_empty()
     {
-        format!("'{}'", s)
+        format!("'{s}'")
     } else {
         s.to_string()
     }
@@ -188,7 +188,7 @@ mod tests {
 
     use super::*;
     use crate::ansi;
-    use std::io::{Cursor, Read, Seek, SeekFrom};
+    use std::io::{Cursor, Read, Seek};
 
     #[test]
     fn test_show_config() {
@@ -196,7 +196,7 @@ mod tests {
         let mut writer = Cursor::new(vec![0; 1024]);
         show_config(&config, &mut writer).unwrap();
         let mut s = String::new();
-        writer.seek(SeekFrom::Start(0)).unwrap();
+        writer.rewind().unwrap();
         writer.read_to_string(&mut s).unwrap();
         let s = ansi::strip_ansi_codes(&s);
         assert!(s.contains("    commit-style                  = raw\n"));

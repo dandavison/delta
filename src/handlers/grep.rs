@@ -421,8 +421,6 @@ fn make_grep_line_regex(regex_variant: GrepLineRegex) -> Regex {
 (.*)                     # 8. code (i.e. line contents)
 $
 ",
-        file_path = file_path,
-        separator = separator,
     ))
     .unwrap()
 }
