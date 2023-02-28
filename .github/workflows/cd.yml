@@ -44,14 +44,21 @@ jobs:
           targets: ${{ matrix.job.target }}
       - name: Checkout repository
         uses: actions/checkout@v3
+      - name: Install cross
+        if: matrix.job.use-cross
+        uses: taiki-e/install-action@v2
+        with:
+          tool: cross
       - name: Cargo build
         env:
           MACOSX_DEPLOYMENT_TARGET: 10.7
-        uses: actions-rs/cargo@v1
-        with:
-          command: build
-          use-cross: ${{ matrix.job.use-cross }}
-          args: --release --target ${{ matrix.job.target }}
+        shell: bash
+        run: |
+          if [[ "${{ matrix.job.cross }}" == "true" ]]; then
+            cross build --release --target ${{ matrix.job.target }}
+          else
+            cargo build --release --target ${{ matrix.job.target }}
+          fi
 
       - name: Install required dependencies
         shell: bash

@@ -42,12 +42,19 @@ jobs:
         uses: dtolnay/rust-toolchain@stable
         with:
           targets: ${{ matrix.job.target }}
-      - name: Unit tests
-        uses: actions-rs/cargo@v1
+      - name: Install cross
+        if: matrix.job.use-cross
+        uses: taiki-e/install-action@v2
         with:
-          command: test
-          use-cross: ${{ matrix.job.use-cross }}
-          args: --target ${{ matrix.job.target }} --verbose -- --nocapture
+          tool: cross
+      - name: Unit tests
+        shell: bash
+        run: |
+          if [[ "${{ matrix.job.use-cross }}" == "true" ]]; then
+            cross test --target ${{ matrix.job.target }} --verbose -- --nocapture
+          else
+            cargo test --target ${{ matrix.job.target }} --verbose -- --nocapture
+          fi
 
   integration_tests:
     name: Integration tests
