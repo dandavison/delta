@@ -46,7 +46,9 @@ lazy_static! {
 
 pub fn get_themes(git_config: Option<git_config::GitConfig>) -> Vec<String> {
     let mut themes: Vec<String> = Vec::new();
-    for e in &git_config.unwrap().config.entries(None).unwrap() {
+    let git_config = git_config.unwrap();
+    let mut entries = git_config.config.entries(None).unwrap();
+    while let Some(e) = entries.next() {
         let entry = e.unwrap();
         let entry_name = entry.name().unwrap();
         let caps = GIT_CONFIG_THEME_REGEX.captures(entry_name);
