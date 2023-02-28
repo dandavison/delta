@@ -39,22 +39,26 @@ jobs:
 
     steps:
       - name: Installing Rust toolchain
-        uses: actions-rs/toolchain@v1
+        uses: dtolnay/rust-toolchain@stable
         with:
-          toolchain: stable
-          target: ${{ matrix.job.target }}
-          profile: minimal
-          override: true
+          targets: ${{ matrix.job.target }}
       - name: Checkout repository
-        uses: actions/checkout@v2
+        uses: actions/checkout@v3
+      - name: Install cross
+        if: matrix.job.use-cross
+        uses: taiki-e/install-action@v2
+        with:
+          tool: cross
       - name: Cargo build
         env:
           MACOSX_DEPLOYMENT_TARGET: 10.7
-        uses: actions-rs/cargo@v1
-        with:
-          command: build
-          use-cross: ${{ matrix.job.use-cross }}
-          args: --release --target ${{ matrix.job.target }}
+        shell: bash
+        run: |
+          if [[ "${{ matrix.job.cross }}" == "true" ]]; then
+            cross build --release --target ${{ matrix.job.target }}
+          else
+            cargo build --release --target ${{ matrix.job.target }}
+          fi
 
       - name: Install required dependencies
         shell: bash
@@ -90,22 +94,15 @@ jobs:
     name: Publishing to Cargo
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@master
-      - uses: actions-rs/toolchain@v1
-        with:
-          toolchain: stable
-          profile: minimal
-          override: true
-      - uses: actions-rs/cargo@v1
-        with:
-          command: publish
-          args: --token ${{ secrets.CARGO_API_KEY }} --allow-dirty
+      - uses: actions/checkout@v3
+      - uses: dtolnay/rust-toolchain@stable
+      - run: cargo publish --token ${{ secrets.CARGO_API_KEY }} --allow-dirty
 
   bump-homebrew-formula:
     runs-on: macos-latest
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v2
+        uses: actions/checkout@v3
       - name: Bump Homebrew formulae
         uses: dawidd6/action-homebrew-bump-formula@v3
         with:

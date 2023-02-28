@@ -37,20 +37,24 @@ jobs:
             use-cross: true
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v2
+        uses: actions/checkout@v3
       - name: Install Rust
-        uses: actions-rs/toolchain@v1
+        uses: dtolnay/rust-toolchain@stable
         with:
-          toolchain: stable
-          target: ${{ matrix.job.target }}
-          profile: minimal
-          override: true
+          targets: ${{ matrix.job.target }}
+      - name: Install cross
+        if: matrix.job.use-cross
+        uses: taiki-e/install-action@v2
+        with:
+          tool: cross
       - name: Unit tests
-        uses: actions-rs/cargo@v1
-        with:
-          command: test
-          use-cross: ${{ matrix.job.use-cross }}
-          args: --target ${{ matrix.job.target }} --verbose -- --nocapture
+        shell: bash
+        run: |
+          if [[ "${{ matrix.job.use-cross }}" == "true" ]]; then
+            cross test --target ${{ matrix.job.target }} --verbose -- --nocapture
+          else
+            cargo test --target ${{ matrix.job.target }} --verbose -- --nocapture
+          fi
 
   integration_tests:
     name: Integration tests
@@ -65,18 +69,11 @@ jobs:
             target: x86_64-unknown-linux-gnu
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v2
+        uses: actions/checkout@v3
       - name: Install Rust
-        uses: actions-rs/toolchain@v1
-        with:
-          toolchain: stable
-          profile: minimal
-          override: true
+        uses: dtolnay/rust-toolchain@stable
       - name: Build for release
-        uses: actions-rs/cargo@v1
-        with:
-          command: build
-          args: --target ${{ matrix.target }} --release
+        run: cargo build --target ${{ matrix.target }} --release
       - name: End to end tests
         run: |
           DELTA_BIN=target/${{ matrix.target }}/release/delta
@@ -90,54 +87,41 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v2
+        uses: actions/checkout@v3
       - name: Install Rust
-        uses: actions-rs/toolchain@v1
+        uses: dtolnay/rust-toolchain@stable
         with:
-          toolchain: stable
-          profile: minimal
-          override: true
           components: rustfmt
       - name: Check formatting
-        uses: actions-rs/cargo@v1
-        with:
-          command: fmt
-          args: --all -- --check
+        run: cargo fmt --all --check
 
   clippy:
     name: Clippy
     runs-on: ubuntu-latest
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v2
+        uses: actions/checkout@v3
       - name: Install Rust
-        uses: actions-rs/toolchain@v1
+        uses: dtolnay/rust-toolchain@stable
         with:
-          toolchain: stable
-          profile: minimal
-          override: true
           components: clippy
       - name: Clippy Check
-        uses: actions-rs/cargo@v1
-        with:
-          command: clippy
-          args: -- -D warnings
+        run: cargo clippy -- -D warnings
 
   coverage:
     name: Code coverage
     runs-on: ubuntu-latest
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v2
+        uses: actions/checkout@v3
       - name: Install stable toolchain
-        uses: actions-rs/toolchain@v1
+        uses: dtolnay/rust-toolchain@stable
+      - name: Install cargo-tarpaulin
+        uses: taiki-e/install-action@v2
         with:
-          toolchain: stable
-          override: true
+          tool: cargo-tarpaulin
       - name: Run cargo-tarpaulin
-        uses: actions-rs/tarpaulin@v0.1
-        with:
-          args: '--ignore-tests --out Lcov --output-dir target/tarpaulin'
+        run: cargo tarpaulin --ignore-tests --out Lcov --output-dir target/tarpaulin
       - name: Upload to Coveralls
         # upload only if push
         if: ${{ github.event_name == 'push' }}
