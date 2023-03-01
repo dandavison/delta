@@ -23,7 +23,7 @@ macro_rules! set_options {
         let mut option_names = HashSet::new();
         $(
             let kebab_case_field_name = stringify!($field_ident).replace("_", "-");
-            let option_name = $expected_option_name_map[kebab_case_field_name.as_str()];
+            let option_name = &$expected_option_name_map[&kebab_case_field_name];
             if !$crate::config::user_supplied_option(&kebab_case_field_name, $arg_matches) {
                 if let Some(value) = $crate::options::get::get_option_value(
                     option_name,
@@ -35,7 +35,7 @@ macro_rules! set_options {
                 }
             }
             if $check_names {
-                option_names.insert(option_name);
+                option_names.insert(option_name.as_str());
             }
         )*
         if $check_names {
@@ -52,7 +52,10 @@ macro_rules! set_options {
                 "syntax-theme",
                 "version", // automatically added by clap
             ]);
-            let expected_option_names: HashSet<_> = $expected_option_name_map.values().cloned().collect();
+            let expected_option_names: HashSet<_> = $expected_option_name_map
+                .values()
+                .map(String::as_str)
+                .collect();
 
             if option_names != expected_option_names {
                 $crate::config::delta_unreachable(
@@ -251,7 +254,7 @@ fn set__light__dark__syntax_theme__options(
     opt: &mut cli::Opt,
     git_config: &mut Option<GitConfig>,
     arg_matches: &clap::ArgMatches,
-    option_names: &HashMap<&str, &str>,
+    option_names: &HashMap<String, String>,
 ) {
     let validate_light_and_dark = |opt: &cli::Opt| {
         if opt.light && opt.dark {

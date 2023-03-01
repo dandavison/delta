@@ -1170,14 +1170,17 @@ impl Opt {
         opt
     }
 
-    pub fn get_argument_and_option_names<'a>() -> HashMap<&'a str, &'a str> {
-        itertools::chain(Self::command().get_opts(), Self::command().get_arguments())
+    pub fn get_argument_and_option_names() -> HashMap<String, String> {
+        let command = Self::command();
+        command
+            .get_opts()
+            .chain(command.get_arguments())
             .filter_map(|arg| match (arg.get_id(), arg.get_long()) {
-                (name, Some(long)) => {
-                    if IGNORED_OPTION_NAMES.contains(name) {
+                (id, Some(long)) => {
+                    if IGNORED_OPTION_NAMES.contains(id.as_str()) {
                         None
                     } else {
-                        Some((name, long))
+                        Some((id.to_string(), long.to_owned()))
                     }
                 }
                 _ => None,
