@@ -29,7 +29,7 @@ pub fn show_themes(dark: bool, light: bool, computed_theme_is_light: bool) -> st
     let git_config = git_config::GitConfig::try_create(&env);
     let opt = cli::Opt::from_iter_and_git_config(
         env.clone(),
-        &["", "", "--navigate", "--show-themes"],
+        &["delta", "--navigate", "--show-themes"],
         git_config,
     );
     let mut output_type =
@@ -41,7 +41,7 @@ pub fn show_themes(dark: bool, light: bool, computed_theme_is_light: bool) -> st
         let git_config = git_config::GitConfig::try_create(&env);
         let opt = cli::Opt::from_iter_and_git_config(
             env.clone(),
-            &["", "", "--features", theme],
+            &["delta", "--features", theme],
             git_config,
         );
         let is_dark_theme = opt.dark;
