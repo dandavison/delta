@@ -773,7 +773,7 @@ pub struct Opt {
     pub merge_conflict_theirs_diff_header_style: String,
 
     #[arg(
-        long = "--minus-empty-line-marker-style",
+        long = "minus-empty-line-marker-style",
         default_value = "normal auto",
         value_name = "STYLE"
     )]
