@@ -1177,7 +1177,7 @@ impl Opt {
             .chain(command.get_arguments())
             .filter_map(|arg| match (arg.get_id(), arg.get_long()) {
                 (id, Some(long)) => {
-                    if IGNORED_OPTION_NAMES.contains(id.as_str()) {
+                    if IGNORED_OPTION_NAMES.contains(long) {
                         None
                     } else {
                         Some((id.to_string(), long.to_owned()))

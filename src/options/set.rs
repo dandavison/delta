@@ -22,9 +22,9 @@ macro_rules! set_options {
     $opt:expr, $builtin_features:expr, $git_config:expr, $arg_matches:expr, $expected_option_name_map:expr, $check_names:expr) => {
         let mut option_names = HashSet::new();
         $(
-            let kebab_case_field_name = stringify!($field_ident).replace("_", "-");
-            let option_name = &$expected_option_name_map[&kebab_case_field_name];
-            if !$crate::config::user_supplied_option(&kebab_case_field_name, $arg_matches) {
+            let field_name = stringify!($field_ident);
+            let option_name = &$expected_option_name_map[field_name];
+            if !$crate::config::user_supplied_option(&field_name, $arg_matches) {
                 if let Some(value) = $crate::options::get::get_option_value(
                     option_name,
                     &$builtin_features,
@@ -91,7 +91,7 @@ pub fn set_options(
 
     // --color-only is used for interactive.diffFilter (git add -p) and side-by-side cannot be used
     // there (does not emit lines in 1-1 correspondence with raw git output). See #274.
-    if config::user_supplied_option("color-only", arg_matches) {
+    if config::user_supplied_option("color_only", arg_matches) {
         builtin_features.remove("side-by-side");
     }
 
@@ -104,12 +104,12 @@ pub fn set_options(
     // HACK: make minus-line styles have syntax-highlighting iff side-by-side.
     if features.contains(&"side-by-side".to_string()) {
         let prefix = "normal ";
-        if !config::user_supplied_option("minus-style", arg_matches)
+        if !config::user_supplied_option("minus_style", arg_matches)
             && opt.minus_style.starts_with(prefix)
         {
             opt.minus_style = format!("syntax {}", &opt.minus_style[prefix.len()..]);
         }
-        if !config::user_supplied_option("minus-emph-style", arg_matches)
+        if !config::user_supplied_option("minus_emph_style", arg_matches)
             && opt.minus_emph_style.starts_with(prefix)
         {
             opt.minus_emph_style = format!("syntax {}", &opt.minus_emph_style[prefix.len()..]);
@@ -118,7 +118,7 @@ pub fn set_options(
 
     // Handle options which default to an arbitrary git config value.
     // TODO: incorporate this logic into the set_options macro.
-    if !config::user_supplied_option("whitespace-error-style", arg_matches) {
+    if !config::user_supplied_option("whitespace_error_style", arg_matches) {
         opt.whitespace_error_style = if let Some(git_config) = git_config {
             git_config.get::<String>("color.diff.whitespace")
         } else {
