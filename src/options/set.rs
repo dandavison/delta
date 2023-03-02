@@ -44,13 +44,11 @@ macro_rules! set_options {
                 "diff-highlight", // Does not exist as a flag on config
                 "diff-so-fancy", // Does not exist as a flag on config
                 "features",  // Processed differently
-                "help", // automatically added by clap
                 // Set prior to the rest
                 "no-gitconfig",
                 "dark",
                 "light",
                 "syntax-theme",
-                "version", // automatically added by clap
             ]);
             let expected_option_names: HashSet<_> = $expected_option_name_map
                 .values()
