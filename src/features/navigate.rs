@@ -90,7 +90,7 @@ pub fn copy_less_hist_file_and_append_navigate_regex(config: &Config) -> std::io
 
 #[cfg(target_os = "windows")]
 fn get_delta_less_hist_file() -> std::io::Result<PathBuf> {
-    let mut path = dirs_next::data_local_dir()
+    let mut path = dirs::data_local_dir()
         .ok_or_else(|| Error::new(ErrorKind::NotFound, "Can't find AppData\\Local folder"))?;
     path.push("delta");
     std::fs::create_dir_all(&path)?;
@@ -113,7 +113,7 @@ fn get_delta_less_hist_file() -> std::io::Result<PathBuf> {
 //        "$HOME/lesshst.ini" or "$INIT/lesshst.ini" on OS/2
 //        systems.
 fn get_less_hist_file() -> Option<PathBuf> {
-    if let Some(home_dir) = dirs_next::home_dir() {
+    if let Some(home_dir) = dirs::home_dir() {
         match std::env::var("LESSHISTFILE").as_deref() {
             Ok("-") | Ok("/dev/null") => {
                 // The user has explicitly disabled less history.
