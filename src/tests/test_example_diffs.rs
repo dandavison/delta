@@ -1604,7 +1604,7 @@ src/align.rs:71: impl<'a> Alignment<'a> { │
     fn test_hyperlinks_commit_link_format() {
         // If commit-style is not set then the commit line is handled in raw
         // mode, in which case we only format hyperlinks if output is a tty;
-        // this causes the test to fail on Github Actions, but pass locally
+        // this causes the test to fail on GitHub Actions, but pass locally
         // if output is left going to the screen.
         DeltaTest::with_args(&[
                 "--commit-style",

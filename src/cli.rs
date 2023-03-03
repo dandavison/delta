@@ -963,7 +963,7 @@ pub struct Opt {
     ///
     /// Use --tabs=0 to pass tab characters through directly, but note that in that case delta will
     /// calculate line widths assuming tabs occupy one character's width on the screen: if your
-    /// terminal renders tabs as more than than one character wide then delta's output will look
+    /// terminal renders tabs as more than one character wide then delta's output will look
     /// incorrect.
     pub tab_width: usize,
 
