@@ -145,7 +145,7 @@ fn run_app() -> std::io::Result<i32> {
         eprintln!(
             "\
     The main way to use delta is to configure it as the pager for git: \
-    see https://github.com/dandavison/delta#configuration. \
+    see https://github.com/dandavison/delta#get-started. \
     You can also use delta to diff two files: `delta file_A file_B`."
         );
         return Ok(config.error_exit_code);
