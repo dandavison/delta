@@ -41,7 +41,7 @@ smol_str = "0.1.23"
 syntect = "5.0.0"
 unicode-segmentation = "1.9.0"
 unicode-width = "0.1.9"
-vte = "0.10.1"
+vte = "0.11.0"
 xdg = "2.4.1"
 
 [dependencies.git2]
