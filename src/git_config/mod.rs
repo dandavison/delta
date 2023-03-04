@@ -5,7 +5,6 @@ pub use git_config_entry::{GitConfigEntry, GitRemoteRepo};
 use crate::env::DeltaEnv;
 use regex::Regex;
 use std::collections::HashMap;
-#[cfg(test)]
 use std::path::Path;
 
 use lazy_static::lazy_static;
@@ -64,9 +63,39 @@ impl GitConfig {
         }
     }
 
+    #[cfg(not(test))]
+    pub fn try_create_from_path(env: &DeltaEnv, path: &String) -> Self {
+        use crate::fatal;
+
+        let config = git2::Config::open(Path::new(path));
+
+        match config {
+            Ok(mut config) => {
+                let config = config.snapshot().unwrap_or_else(|err| {
+                    fatal(format!("Failed to read git config: {err}"));
+                });
+
+                Self {
+                    config,
+                    config_from_env_var: parse_config_from_env_var(env),
+                    repo: None,
+                    enabled: true,
+                }
+            }
+            Err(e) => {
+                fatal(format!("Failed to read git config: {}", e.message()));
+            }
+        }
+    }
+
     #[cfg(test)]
     pub fn try_create(_env: &DeltaEnv) -> Option<Self> {
         unreachable!("GitConfig::try_create() is not available when testing");
+    }
+
+    #[cfg(test)]
+    pub fn try_create_from_path(_env: &DeltaEnv, _path: &String) -> Self {
+        unreachable!("GitConfig::try_create_from_path() is not available when testing");
     }
 
     #[cfg(test)]

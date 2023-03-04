@@ -11,7 +11,7 @@ use ProvenancedOptionValue::*;
 // Look up a value of type `T` associated with `option name`. The search rules are:
 //
 // 1. If there is a value associated with `option_name` in the main [delta] git config
-//    section, then stop searching and return that value.
+//    section, then stop searching and return that value (steps 2 and 3 are not executed at all).
 //
 // 2. For each feature in the ordered list of enabled features:
 //
