@@ -11,7 +11,7 @@ use std::path::Path;
 use lazy_static::lazy_static;
 
 pub struct GitConfig {
-    pub config: git2::Config,
+    config: git2::Config,
     config_from_env_var: HashMap<String, String>,
     pub enabled: bool,
     pub repo: Option<git2::Repository>,
@@ -92,6 +92,18 @@ impl GitConfig {
             T::git_config_get(key, self)
         } else {
             None
+        }
+    }
+
+    pub fn for_each<F>(&self, regex: &str, mut f: F)
+    where
+        F: FnMut(&str, Option<&str>),
+    {
+        let mut entries = self.config.entries(Some(regex)).unwrap();
+        while let Some(entry) = entries.next() {
+            let entry = entry.unwrap();
+            let name = entry.name().unwrap();
+            f(name, entry.value());
         }
     }
 }
