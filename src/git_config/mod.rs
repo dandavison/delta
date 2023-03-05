@@ -96,17 +96,13 @@ impl GitConfig {
         }
     }
 
-    pub fn get_remote_url(&self) -> Option<GitConfigEntry> {
+    pub fn get_remote_url(&self) -> Option<GitRemoteRepo> {
         self.repo
             .as_ref()?
             .find_remote("origin")
             .ok()?
             .url()
-            .and_then(|url| {
-                GitRemoteRepo::from_str(url)
-                    .ok()
-                    .map(GitConfigEntry::GitRemote)
-            })
+            .and_then(|url| GitRemoteRepo::from_str(url).ok())
     }
 
     pub fn for_each<F>(&self, regex: &str, mut f: F)

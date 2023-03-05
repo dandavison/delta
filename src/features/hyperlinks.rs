@@ -6,7 +6,7 @@ use regex::{Captures, Regex};
 
 use crate::config::Config;
 use crate::features::OptionValueFunction;
-use crate::git_config::{GitConfig, GitConfigEntry, GitRemoteRepo};
+use crate::git_config::{GitConfig, GitRemoteRepo};
 
 pub fn make_feature() -> Vec<(String, OptionValueFunction)> {
     builtin_feature!([
@@ -32,7 +32,7 @@ pub fn format_commit_line_with_osc8_commit_hyperlink<'a>(
                 format_osc8_hyperlink(&commit_link_format.replace("{commit}", commit), commit);
             format!("{prefix}{formatted_commit}{suffix}")
         })
-    } else if let Some(GitConfigEntry::GitRemote(repo)) = config
+    } else if let Some(repo) = config
         .git_config
         .as_ref()
         .and_then(GitConfig::get_remote_url)
