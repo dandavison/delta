@@ -55,6 +55,23 @@ A feature name may not contain whitespace. You can activate multiple features:
 
 If more than one feature sets the same option, the last one wins.
 
+If an option is present in the [delta] section, then features are not considered at all.
+
+If you want an option to be fully overridable by a feature and also have a non default value when
+no features are used, then you need to define a \"default\" feature and include it in the main
+delta configuration.
+
+For instance:
+
+[delta]
+feature = default-feature
+
+[delta \"default-feature\"]
+width = 123
+
+At this point, you can override features set in the command line or in the environment variables
+and the \"last one wins\" rules will apply as expected.
+
 STYLES
 ------
 
@@ -275,6 +292,10 @@ pub struct Opt {
     /// But color and highlight hunk lines according to your delta configuration. This is mainly
     /// intended for other tools that use delta.
     pub color_only: bool,
+
+    #[arg(long = "config", default_value = "", value_name = "PATH")]
+    /// Load the config file at PATH instead of ~/.gitconfig.
+    pub config: String,
 
     #[arg(
         long = "commit-decoration-style",
@@ -1135,7 +1156,16 @@ impl Opt {
         git_config: Option<GitConfig>,
         assets: HighlightingAssets,
     ) -> Self {
-        Self::from_clap_and_git_config(env, Self::command().get_matches(), git_config, assets)
+        let mut final_config = git_config;
+        let matches = Self::command().get_matches();
+
+        if let Some(path) = matches.get_one::<String>("config") {
+            if !path.is_empty() {
+                final_config = Some(GitConfig::try_create_from_path(&env, path));
+            }
+        }
+
+        Self::from_clap_and_git_config(env, matches, final_config, assets)
     }
 
     pub fn from_iter_and_git_config<I>(
