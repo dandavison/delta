@@ -7,6 +7,7 @@ use regex::Regex;
 use std::collections::HashMap;
 #[cfg(test)]
 use std::path::Path;
+use std::str::FromStr;
 
 use lazy_static::lazy_static;
 
@@ -14,7 +15,7 @@ pub struct GitConfig {
     config: git2::Config,
     config_from_env_var: HashMap<String, String>,
     pub enabled: bool,
-    pub repo: Option<git2::Repository>,
+    repo: Option<git2::Repository>,
     // To make GitConfig cloneable when testing (in turn to make Config cloneable):
     #[cfg(test)]
     path: std::path::PathBuf,
@@ -93,6 +94,19 @@ impl GitConfig {
         } else {
             None
         }
+    }
+
+    pub fn get_remote_url(&self) -> Option<GitConfigEntry> {
+        self.repo
+            .as_ref()?
+            .find_remote("origin")
+            .ok()?
+            .url()
+            .and_then(|url| {
+                GitRemoteRepo::from_str(url)
+                    .ok()
+                    .map(GitConfigEntry::GitRemote)
+            })
     }
 
     pub fn for_each<F>(&self, regex: &str, mut f: F)

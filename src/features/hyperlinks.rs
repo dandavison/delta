@@ -1,6 +1,5 @@
 use std::borrow::Cow;
 use std::path::Path;
-use std::str::FromStr;
 
 use lazy_static::lazy_static;
 use regex::{Captures, Regex};
@@ -33,8 +32,10 @@ pub fn format_commit_line_with_osc8_commit_hyperlink<'a>(
                 format_osc8_hyperlink(&commit_link_format.replace("{commit}", commit), commit);
             format!("{prefix}{formatted_commit}{suffix}")
         })
-    } else if let Some(GitConfigEntry::GitRemote(repo)) =
-        config.git_config.as_ref().and_then(get_remote_url)
+    } else if let Some(GitConfigEntry::GitRemote(repo)) = config
+        .git_config
+        .as_ref()
+        .and_then(GitConfig::get_remote_url)
     {
         COMMIT_LINE_REGEX.replace(line, |captures: &Captures| {
             format_commit_line_captures_with_osc8_commit_hyperlink(captures, &repo)
@@ -42,20 +43,6 @@ pub fn format_commit_line_with_osc8_commit_hyperlink<'a>(
     } else {
         Cow::from(line)
     }
-}
-
-fn get_remote_url(git_config: &GitConfig) -> Option<GitConfigEntry> {
-    git_config
-        .repo
-        .as_ref()?
-        .find_remote("origin")
-        .ok()?
-        .url()
-        .and_then(|url| {
-            GitRemoteRepo::from_str(url)
-                .ok()
-                .map(GitConfigEntry::GitRemote)
-        })
 }
 
 /// Create a file hyperlink, displaying `text`.
