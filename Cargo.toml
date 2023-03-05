@@ -15,10 +15,10 @@ name = "delta"
 path = "src/main.rs"
 
 [dependencies]
-bat = { version = "0.21.0", default-features = false, features = ["regex-onig"] }
-chrono = "0.4.19"
-chrono-humanize = "0.2.1"
-ansi_colours = "1.0.4"
+bat = { version = "0.22.1", default-features = false, features = ["regex-onig"] }
+chrono = "0.4.23"
+chrono-humanize = "0.2.2"
+ansi_colours = "1.2.1"
 ansi_term = "0.12.1"
 atty = "0.2.14"
 bitflags = "1.3.2"
@@ -26,22 +26,22 @@ box_drawing = "0.1.2"
 bytelines = "2.4.0"
 clap = { version = "4.1.8", features = ["derive", "help", "usage", "error-context", "wrap_help"] }
 console = "0.15.0"
-ctrlc = "3.2.2"
-dirs-next = "2.0.0"
-grep-cli = "0.1.6"
-itertools = "0.10.3"
+ctrlc = "3.2.5"
+dirs = "4.0.0"
+grep-cli = "0.1.7"
+itertools = "0.10.5"
 lazy_static = "1.4"
-palette = "0.6.0"
+palette = "0.6.1"
 pathdiff = "0.2.1"
-regex = "1.5.5"
-serde = { version = "1.0.118", features = ["derive"] }
-serde_json = "1.0.82"
+regex = "1.7.1"
+serde = { version = "1.0.152", features = ["derive"] }
+serde_json = "1.0.93"
 shell-words = "1.0.0"
-smol_str = "0.1.23"
+smol_str = "0.1.24"
 syntect = "5.0.0"
-unicode-segmentation = "1.9.0"
-unicode-width = "0.1.9"
-vte = "0.10.1"
+unicode-segmentation = "1.10.1"
+unicode-width = "0.1.10"
+vte = "0.11.0"
 xdg = "2.4.1"
 
 [dependencies.git2]
@@ -50,7 +50,7 @@ default-features = false
 features = []
 
 [dependencies.sysinfo]
-version = "0.24.5"
+version = "0.28.2"
 # no default features to disable the use of threads
 default-features = false
 features = []
