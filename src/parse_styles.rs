@@ -3,7 +3,7 @@ use std::collections::{HashMap, HashSet};
 use crate::cli;
 use crate::color;
 use crate::fatal;
-use crate::git_config::{GitConfig, GitConfigEntry};
+use crate::git_config::GitConfig;
 use crate::style::{self, Style};
 
 #[derive(Debug, Clone)]
@@ -499,17 +499,29 @@ fn make_misc_styles(opt: &cli::Opt, styles: &mut HashMap<&str, StyleReference>) 
     );
     styles.insert(
         "git-minus-style",
-        StyleReference::Style(match opt.git_config_entries.get("color.diff.old") {
-            Some(GitConfigEntry::Style(s)) => Style::from_git_str(s),
-            _ => *style::GIT_DEFAULT_MINUS_STYLE,
-        }),
+        StyleReference::Style(
+            match opt
+                .git_config
+                .as_ref()
+                .and_then(|cfg| cfg.get::<String>("color.diff.old"))
+            {
+                Some(s) => Style::from_git_str(&s),
+                None => *style::GIT_DEFAULT_MINUS_STYLE,
+            },
+        ),
     );
     styles.insert(
         "git-plus-style",
-        StyleReference::Style(match opt.git_config_entries.get("color.diff.new") {
-            Some(GitConfigEntry::Style(s)) => Style::from_git_str(s),
-            _ => *style::GIT_DEFAULT_PLUS_STYLE,
-        }),
+        StyleReference::Style(
+            match opt
+                .git_config
+                .as_ref()
+                .and_then(|cfg| cfg.get::<String>("color.diff.new"))
+            {
+                Some(s) => Style::from_git_str(&s),
+                None => *style::GIT_DEFAULT_PLUS_STYLE,
+            },
+        ),
     );
 }
 
