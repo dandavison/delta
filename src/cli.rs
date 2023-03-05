@@ -55,9 +55,9 @@ A feature name may not contain whitespace. You can activate multiple features:
 
 If more than one feature sets the same option, the last one wins.
 
-If a value is present in the [delta] section, then features are not considered at all.
+If an option is present in the [delta] section, then features are not considered at all.
 
-If you want a value to be fully overridable by a feature and also have a non default value when
+If you want an option to be fully overridable by a feature and also have a non default value when
 no features are used, then you need to define a \"default\" feature and include it in the main
 delta configuration.
 
