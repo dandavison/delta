@@ -536,8 +536,8 @@ pub struct Opt {
     /// --hyperlinks-file-link-format for full control over the file URLs emitted. Hyperlinks are
     /// supported by several common terminal emulators. To make them work, you must use less version
     /// >= 581 with the -R flag (or use -r with older less versions, but this will break e.g.
-    /// --navigate). If you use tmux, then you will also need a patched fork of tmux (see
-    /// https://github.com/dandavison/tmux).
+    /// --navigate). If you use tmux, then you will need tmux>3.3a with config 
+    /// `set -ga terminal-features "*:hyperlinks"` to enable the feature.
     pub hyperlinks: bool,
 
     #[arg(long = "hyperlinks-commit-link-format", value_name = "FMT")]
