@@ -98,6 +98,18 @@ jobs:
       - uses: dtolnay/rust-toolchain@stable
       - run: cargo publish --token ${{ secrets.CARGO_API_KEY }} --allow-dirty
 
+  publish-to-winget:
+    name: Publish to WinGet
+    runs-on: windows-latest # Action can only be run on windows
+    needs: publish
+    steps:
+      - uses: vedantmgoyal2009/winget-releaser@v2
+        with:
+          identifier: dandavison.delta
+          version: ${{ github.ref_name }}
+          installers-regex: '-pc-windows-msvc\.zip$'
+          token: ${{ secrets.WINGET_TOKEN }}
+
   bump-homebrew-formula:
     runs-on: macos-latest
     steps:

@@ -9,3 +9,7 @@ updates:
   - dependency-name: regex
     versions:
     - 1.4.4
+- package-ecosystem: "github-actions"
+  directory: "/"
+  schedule:
+    interval: "daily"
