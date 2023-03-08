@@ -10,7 +10,7 @@ use syntect::parsing::SyntaxSet;
 
 use crate::config::delta_unreachable;
 use crate::env::DeltaEnv;
-use crate::git_config::{GitConfig, GitConfigEntry};
+use crate::git_config::GitConfig;
 use crate::options;
 use crate::utils;
 use crate::utils::bat::output::PagingMode;
@@ -1098,9 +1098,6 @@ pub struct Opt {
 
     #[arg(skip)]
     pub git_config: Option<GitConfig>,
-
-    #[arg(skip)]
-    pub git_config_entries: HashMap<String, GitConfigEntry>,
 
     #[arg(skip)]
     pub env: DeltaEnv,

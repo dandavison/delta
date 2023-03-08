@@ -1,6 +1,6 @@
 mod git_config_entry;
 
-pub use git_config_entry::{GitConfigEntry, GitRemoteRepo};
+pub use git_config_entry::GitRemoteRepo;
 
 use crate::env::DeltaEnv;
 use regex::Regex;
