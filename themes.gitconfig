@@ -384,7 +384,9 @@
     merge-conflict-theirs-diff-header-style = "#FABD2F" bold overline
     merge-conflict-ours-diff-header-decoration-style = ''
     merge-conflict-theirs-diff-header-decoration-style = ''
+
 [delta "discord-dark"]
+    # author: https://github.com/ILikePlayingGames
     commit-style                  = omit
     file-style                    = 34 ul
     file-decoration-style         =
