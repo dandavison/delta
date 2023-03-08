@@ -387,6 +387,7 @@
 
 [delta "discord-dark"]
     # author: https://github.com/ILikePlayingGames
+    dark                          = true
     commit-style                  = omit
     file-style                    = 34 ul
     file-decoration-style         =
