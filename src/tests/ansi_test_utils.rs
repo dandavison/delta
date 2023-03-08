@@ -165,7 +165,7 @@ pub mod ansi_test_utils {
             None,
             None,
             config.true_color,
-            config.git_config.as_ref(),
+            config.git_config(),
         );
         if _4_bit_color {
             style.ansi_term_style.foreground = style

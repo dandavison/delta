@@ -1214,6 +1214,10 @@ impl Opt {
             })
             .collect()
     }
+
+    pub fn git_config(&self) -> Option<&GitConfig> {
+        self.git_config.as_ref()
+    }
 }
 
 // Option names to exclude when listing options to process for various purposes. These are all
