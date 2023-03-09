@@ -142,6 +142,10 @@ impl Config {
             _ => delta_unreachable("Unreachable code reached in get_style."),
         }
     }
+
+    pub fn git_config(&self) -> Option<&GitConfig> {
+        self.git_config.as_ref()
+    }
 }
 
 impl From<cli::Opt> for Config {

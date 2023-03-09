@@ -54,8 +54,7 @@ pub fn show_colors() -> std::io::Result<()> {
             }
             // Two syntax-highlighted lines with background color
             let color =
-                color::parse_color(color_name, config.true_color, config.git_config.as_ref())
-                    .unwrap();
+                color::parse_color(color_name, config.true_color, config.git_config()).unwrap();
             style.ansi_term_style.background = Some(color);
             for line in [
                 &format!(r#"export function color(): string {{ return "{color_name}" }}"#),

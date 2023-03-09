@@ -118,7 +118,7 @@ impl<'a> StateMachine<'a> {
                 // borrow checker won't permit that.
                 let style = Style::from_colors(
                     None,
-                    color::parse_color(&color, true, self.config.git_config.as_ref()),
+                    color::parse_color(&color, true, self.config.git_config()),
                 );
                 self.blame_key_colors.insert(key.to_owned(), color);
                 style

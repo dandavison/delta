@@ -32,11 +32,7 @@ pub fn format_commit_line_with_osc8_commit_hyperlink<'a>(
                 format_osc8_hyperlink(&commit_link_format.replace("{commit}", commit), commit);
             format!("{prefix}{formatted_commit}{suffix}")
         })
-    } else if let Some(repo) = config
-        .git_config
-        .as_ref()
-        .and_then(GitConfig::get_remote_url)
-    {
+    } else if let Some(repo) = config.git_config().and_then(GitConfig::get_remote_url) {
         COMMIT_LINE_REGEX.replace(line, |captures: &Captures| {
             format_commit_line_captures_with_osc8_commit_hyperlink(captures, &repo)
         })
