@@ -1,6 +1,4 @@
-# Tips & tricks
-
-## Save delta output with colors to HTML/PDF etc
+# Save output with colors to HTML/PDF etc
 
 Install [ansifilter](https://formulae.brew.sh/formula/ansifilter).
 
