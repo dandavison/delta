@@ -32,4 +32,3 @@
 - [Related projects](./related-projects.md)
 - [Full --help output](./full---help-output.md)
 - [Delta configs used in screenshots](./delta-configs-used-in-screenshots.md)
-  - [Side-by-side view](./side-by-side-view-1.md)
