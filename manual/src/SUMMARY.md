@@ -26,6 +26,7 @@
   - [Mouse scrolling](./mouse-scrolling.md)
   - [Using Delta with Magit](./using-delta-with-magit.md)
   - [Supported languages and themes](./supported-languages-and-themes.md)
+- [Tips & tricks](./tips-and-tricks.md)
 - [Comparisons with other tools](./comparisons-with-other-tools.md)
 - [Build delta from source](./build-delta-from-source.md)
 - [Related projects](./related-projects.md)
