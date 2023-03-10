@@ -324,7 +324,7 @@ On MacOS, install <code>less</code> from Homebrew. For Windows, see <a href="./u
 <li><code>git add -p</code></li>
 </ul>
 <p>To change your delta options in a one-off git command, use <code>git -c</code>. For example</p>
-<pre><code>git -c delta.line-numbers=false show
+<pre><code class="language-sh">git -c delta.line-numbers=false show
 </code></pre>
 <p>There are several important environment variables that affect delta configuration and which can be used to configure delta dynamically.
 Please see <a href="./environment-variables.html">Environment variables</a>.
@@ -363,7 +363,7 @@ However, this is deprecated: please use <code>DELTA_PAGER</code> instead.
 No other <a href="https://github.com/sharkdp/bat"><code>bat</code></a> environment variables are used by delta, and delta does not use <code>bat</code> when it is running (it does use some code from the excellent <code>bat</code> project, but users don't need to be aware of this).</p>
 <h2 id="delta-specific-environment-variables"><a class="header" href="#delta-specific-environment-variables">Delta-specific environment variables</a></h2>
 <p>To temporarily activate and inactivate delta features, you can use <code>DELTA_FEATURES</code>, e.g.</p>
-<pre><code>export DELTA_FEATURES='+side-by-side my-feature'
+<pre><code class="language-sh">export DELTA_FEATURES='+side-by-side my-feature'
 </code></pre>
 <p>(The <code>+</code> means &quot;add these features to those configured in git config&quot;.)</p>
 <p>The <code>DELTA_PAGER</code> env var is described above.</p>
@@ -379,19 +379,19 @@ In general however, delta's output is intended for humans, not machines.</p>
 <div style="break-before: page; page-break-before: always;"></div><h1 id="usage"><a class="header" href="#usage">Usage</a></h1>
 <p>The main way to use delta is to configure it as the pager for git: see <a href="./configuration.html">Configuration</a>.</p>
 <p>Delta can also be used as a shorthand for diffing two files, even if they are not in a git repo: the following two commands do the same thing:</p>
-<pre><code>delta /somewhere/a.txt /somewhere/else/b.txt
+<pre><code class="language-sh">delta /somewhere/a.txt /somewhere/else/b.txt
 
 git diff /somewhere/a.txt /somewhere/else/b.txt
 </code></pre>
 <p>You can also use <a href="https://en.wikipedia.org/wiki/Process_substitution">process substitution</a> shell syntax with delta, e.g.</p>
-<pre><code>delta &lt;(sort file1) &lt;(sort file2)
+<pre><code class="language-sh">delta &lt;(sort file1) &lt;(sort file2)
 </code></pre>
 <p>In addition to git output, delta handles standard unified diff format, e.g. <code>diff -u a.txt b.txt | delta</code>.</p>
 <p>For Mercurial, you can add delta, with its command line options, to the <code>[pager]</code> section of <code>.hgrc</code>.</p>
 <div style="break-before: page; page-break-before: always;"></div><h1 id="choosing-colors-styles"><a class="header" href="#choosing-colors-styles">Choosing colors (styles)</a></h1>
 <p>All options that have a name like <code>--*-style</code> work in the same way. It is very similar to how
 colors/styles are specified in a gitconfig file:
-https://git-scm.com/docs/git-config#Documentation/git-config.txt-color</p>
+<a href="https://git-scm.com/docs/git-config#Documentation/git-config.txt-color">https://git-scm.com/docs/git-config#Documentation/git-config.txt-color</a></p>
 <p>Here's an example:</p>
 <pre><code class="language-gitconfig">[delta]
     minus-style = red bold ul &quot;#ffeeee&quot;
@@ -411,7 +411,7 @@ https://git-scm.com/docs/git-config#Documentation/git-config.txt-color</p>
 <p>By default, side-by-side view has line-numbers activated, and has syntax highlighting in both the left and right panels: [<a href="./side-by-side-view-1.html">config</a>]</p>
 <table><tr><td><img width=800px src="https://user-images.githubusercontent.com/52205/87230973-412eb900-c381-11ea-8aec-cc200290bd1b.png" alt="image" /></td></tr></table>
 <p>To activate and deactivate side-by-side view from the command line, consider using the <a href="./features-named-groups-of-settings.html"><code>DELTA_FEATURES</code></a> environment variable. For example:</p>
-<pre><code>export DELTA_FEATURES=+side-by-side # activate
+<pre><code class="language-sh">export DELTA_FEATURES=+side-by-side # activate
 export DELTA_FEATURES=+             # deactivate
 </code></pre>
 <p>To disable the line numbers in side-by-side view, but keep a vertical delimiter line between the left and right panels, use the line-numbers format options. For example:</p>
@@ -457,10 +457,10 @@ Note that <code>git grep</code> can display the &quot;function context&quot; for
 <p>The environment variable <code>DELTA_FEATURES</code> can used to enable features from the command line: it should be set to a space-separated string of feature names.
 If you precede this with a <code>+</code> symbol, then the features are <em>added</em> to those configured elsewhere, instead of replacing them.
 This is very useful, for example to temporarily switch delta to side-by-side mode you can do</p>
-<pre><code>export DELTA_FEATURES=+side-by-side
+<pre><code class="language-sh">export DELTA_FEATURES=+side-by-side
 </code></pre>
 <p>and to undo that:</p>
-<pre><code>export DELTA_FEATURES=+
+<pre><code class="language-sh">export DELTA_FEATURES=+
 </code></pre>
 <div style="break-before: page; page-break-before: always;"></div><h1 id="custom-themes"><a class="header" href="#custom-themes">Custom themes</a></h1>
 <p>A &quot;theme&quot; in delta is just a collection of settings grouped together in a named <a href="./features-named-groups-of-settings.html">feature</a>. One of the available settings is <code>syntax-theme</code>: this dictates the colors and styles that are applied to foreground text by the syntax highlighter. Thus the concept of &quot;theme&quot; in delta encompasses not just the foreground syntax-highlighting color theme, but also background colors, decorations such as boxes and under/overlines, etc.</p>
@@ -552,7 +552,7 @@ If <code>hyperlinks</code> is enabled in the <code>[delta]</code> section then e
 <p>The languages and color themes that ship with delta are those that ship with bat. So, to propose a new language or color theme for inclusion in delta, it would need to be a helpful addition to bat, in which case please open a PR against bat.</p>
 <div style="break-before: page; page-break-before: always;"></div><h1 id="tips--tricks"><a class="header" href="#tips--tricks">Tips &amp; tricks</a></h1>
 <div style="break-before: page; page-break-before: always;"></div><h1 id="24-bit-color-truecolor"><a class="header" href="#24-bit-color-truecolor">24 bit color (truecolor)</a></h1>
-<p>Delta looks best if your terminal application supports 24 bit colors. See https://github.com/termstandard/colors#readme. For example, on MacOS, iTerm2 supports 24-bit colors but Terminal.app does not.</p>
+<p>Delta looks best if your terminal application supports 24 bit colors. See <a href="https://github.com/termstandard/colors#readme">https://github.com/termstandard/colors#readme</a>. For example, on MacOS, iTerm2 supports 24-bit colors but Terminal.app does not.</p>
 <p>If your terminal application does not support 24-bit color, delta will still work, by automatically choosing the closest color from those available. See the <code>Colors</code> section of the help output below.</p>
 <div style="break-before: page; page-break-before: always;"></div><h1 id="using-delta-with-tmux"><a class="header" href="#using-delta-with-tmux">Using Delta with tmux</a></h1>
 <p>If you're using tmux, it's worth checking that 24 bit color is working correctly. For example, run a color test script like <a href="https://gist.githubusercontent.com/lifepillar/09a44b8cf0f9397465614e622979107f/raw/24-bit-color.sh">this one</a>, or one of the others listed <a href="https://gist.github.com/XVilka/8346728">here</a>. If you do not see smooth color gradients, see the discussion at <a href="https://github.com/tmux/tmux/issues/696">tmux#696</a>. The short version is you need something like this in your <code>~/.tmux.conf</code>:</p>
@@ -578,11 +578,11 @@ attrcolor b &quot;.I&quot;                                          # use bright
 </li>
 </ul>
 <div style="break-before: page; page-break-before: always;"></div><h1 id="using-delta-on-windows"><a class="header" href="#using-delta-on-windows">Using Delta on Windows</a></h1>
-<p>Delta works on Windows. However, it is essential to use a recent version of <code>less.exe</code>: you can download one from https://github.com/jftuga/less-Windows/releases/latest. If you see incorrect colors and/or strange characters in Delta output, then it is probably because Delta is picking up an old version of <code>less.exe</code> on your system.</p>
+<p>Delta works on Windows. However, it is essential to use a recent version of <code>less.exe</code>: you can download one from <a href="https://github.com/jftuga/less-Windows/releases/latest">https://github.com/jftuga/less-Windows/releases/latest</a>. If you see incorrect colors and/or strange characters in Delta output, then it is probably because Delta is picking up an old version of <code>less.exe</code> on your system.</p>
 <div style="break-before: page; page-break-before: always;"></div><h1 id="mouse-scrolling"><a class="header" href="#mouse-scrolling">Mouse scrolling</a></h1>
 <p>If mouse scrolling isn't working correctly, ensure that you have the most recent version of <code>less</code>.</p>
 <ul>
-<li>For Windows you can download from https://github.com/jftuga/less-Windows/releases/latest</li>
+<li>For Windows you can download from <a href="https://github.com/jftuga/less-Windows/releases/latest">https://github.com/jftuga/less-Windows/releases/latest</a></li>
 <li>For Mac you can install <code>brew install less; brew link less</code></li>
 </ul>
 <p>Alternatively try setting your <code>DELTA_PAGER</code> environment variable to (at least) <code>less -R</code>. See <a href="https://github.com/dandavison/delta/issues/58">issue #58</a>. See also <a href="https://github.com/sharkdp/bat#using-a-different-pager">bat README / &quot;Using a different pager&quot;</a>, since the <code>DELTA_PAGER</code> environment variable functions very similarly for delta.</p>
@@ -687,7 +687,7 @@ attrcolor b &quot;.I&quot;                                          # use bright
 <li><a href="https://github.com/Wilfred/difftastic">Wilfred/difftastic</a></li>
 </ul>
 <div style="break-before: page; page-break-before: always;"></div><h1 id="full---help-output"><a class="header" href="#full---help-output">Full --help output</a></h1>
-<pre><code>delta 0.15.0
+<pre><code class="language-txt">delta 0.15.0
 A viewer for git and diff output
 
 USAGE:

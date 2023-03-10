@@ -137,12 +137,12 @@
                         <h1 id="usage"><a class="header" href="#usage">Usage</a></h1>
 <p>The main way to use delta is to configure it as the pager for git: see <a href="./configuration.html">Configuration</a>.</p>
 <p>Delta can also be used as a shorthand for diffing two files, even if they are not in a git repo: the following two commands do the same thing:</p>
-<pre><code>delta /somewhere/a.txt /somewhere/else/b.txt
+<pre><code class="language-sh">delta /somewhere/a.txt /somewhere/else/b.txt
 
 git diff /somewhere/a.txt /somewhere/else/b.txt
 </code></pre>
 <p>You can also use <a href="https://en.wikipedia.org/wiki/Process_substitution">process substitution</a> shell syntax with delta, e.g.</p>
-<pre><code>delta &lt;(sort file1) &lt;(sort file2)
+<pre><code class="language-sh">delta &lt;(sort file1) &lt;(sort file2)
 </code></pre>
 <p>In addition to git output, delta handles standard unified diff format, e.g. <code>diff -u a.txt b.txt | delta</code>.</p>
 <p>For Mercurial, you can add delta, with its command line options, to the <code>[pager]</code> section of <code>.hgrc</code>.</p>

@@ -168,7 +168,7 @@ However, this is deprecated: please use <code>DELTA_PAGER</code> instead.
 No other <a href="https://github.com/sharkdp/bat"><code>bat</code></a> environment variables are used by delta, and delta does not use <code>bat</code> when it is running (it does use some code from the excellent <code>bat</code> project, but users don't need to be aware of this).</p>
 <h2 id="delta-specific-environment-variables"><a class="header" href="#delta-specific-environment-variables">Delta-specific environment variables</a></h2>
 <p>To temporarily activate and inactivate delta features, you can use <code>DELTA_FEATURES</code>, e.g.</p>
-<pre><code>export DELTA_FEATURES='+side-by-side my-feature'
+<pre><code class="language-sh">export DELTA_FEATURES='+side-by-side my-feature'
 </code></pre>
 <p>(The <code>+</code> means &quot;add these features to those configured in git config&quot;.)</p>
 <p>The <code>DELTA_PAGER</code> env var is described above.</p>
