@@ -1117,34 +1117,18 @@ pub struct ComputedValues {
     pub true_color: bool,
 }
 
-#[derive(Clone, Debug, PartialEq, Eq)]
+#[derive(Clone, Debug, Default, PartialEq, Eq)]
 pub enum Width {
     Fixed(usize),
+    #[default]
     Variable,
 }
 
-impl Default for Width {
-    fn default() -> Self {
-        Width::Variable
-    }
-}
-
-#[derive(Clone, Debug, PartialEq, Eq)]
+#[derive(Clone, Debug, Default, PartialEq, Eq)]
 pub enum InspectRawLines {
     True,
+    #[default]
     False,
-}
-
-impl Default for InspectRawLines {
-    fn default() -> Self {
-        InspectRawLines::False
-    }
-}
-
-impl Default for PagingMode {
-    fn default() -> Self {
-        PagingMode::Never
-    }
 }
 
 impl Opt {

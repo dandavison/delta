@@ -13,11 +13,12 @@ use crate::env::DeltaEnv;
 use crate::fatal;
 use crate::features::navigate;
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
 #[allow(dead_code)]
 pub enum PagingMode {
     Always,
     QuitIfOneScreen,
+    #[default]
     Never,
 }
 use crate::errors::*;
