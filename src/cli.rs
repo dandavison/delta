@@ -10,7 +10,7 @@ use syntect::parsing::SyntaxSet;
 
 use crate::config::delta_unreachable;
 use crate::env::DeltaEnv;
-use crate::git_config::{GitConfig, GitConfigEntry};
+use crate::git_config::GitConfig;
 use crate::options;
 use crate::utils;
 use crate::utils::bat::output::PagingMode;
@@ -1100,9 +1100,6 @@ pub struct Opt {
     pub git_config: Option<GitConfig>,
 
     #[arg(skip)]
-    pub git_config_entries: HashMap<String, GitConfigEntry>,
-
-    #[arg(skip)]
     pub env: DeltaEnv,
 }
 
@@ -1120,34 +1117,18 @@ pub struct ComputedValues {
     pub true_color: bool,
 }
 
-#[derive(Clone, Debug, PartialEq, Eq)]
+#[derive(Clone, Debug, Default, PartialEq, Eq)]
 pub enum Width {
     Fixed(usize),
+    #[default]
     Variable,
 }
 
-impl Default for Width {
-    fn default() -> Self {
-        Width::Variable
-    }
-}
-
-#[derive(Clone, Debug, PartialEq, Eq)]
+#[derive(Clone, Debug, Default, PartialEq, Eq)]
 pub enum InspectRawLines {
     True,
+    #[default]
     False,
-}
-
-impl Default for InspectRawLines {
-    fn default() -> Self {
-        InspectRawLines::False
-    }
-}
-
-impl Default for PagingMode {
-    fn default() -> Self {
-        PagingMode::Never
-    }
 }
 
 impl Opt {
@@ -1216,6 +1197,10 @@ impl Opt {
                 _ => None,
             })
             .collect()
+    }
+
+    pub fn git_config(&self) -> Option<&GitConfig> {
+        self.git_config.as_ref()
     }
 }
 

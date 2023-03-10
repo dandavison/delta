@@ -2,7 +2,7 @@
 
 All options that have a name like `--*-style` work in the same way. It is very similar to how
 colors/styles are specified in a gitconfig file:
-https://git-scm.com/docs/git-config#Documentation/git-config.txt-color
+<https://git-scm.com/docs/git-config#Documentation/git-config.txt-color>
 
 Here's an example:
 

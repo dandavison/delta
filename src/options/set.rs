@@ -12,7 +12,7 @@ use crate::env::DeltaEnv;
 use crate::errors::*;
 use crate::fatal;
 use crate::features;
-use crate::git_config::{GitConfig, GitConfigEntry};
+use crate::git_config::GitConfig;
 use crate::options::option_value::{OptionValue, ProvenancedOptionValue};
 use crate::options::theme;
 use crate::utils::bat::output::PagingMode;
@@ -75,7 +75,6 @@ pub fn set_options(
         if opt.no_gitconfig {
             git_config.enabled = false;
         }
-        set_git_config_entries(opt, git_config);
     }
     opt.navigate = opt.navigate || opt.env.navigate.is_some();
     if opt.syntax_theme.is_none() {
@@ -651,15 +650,6 @@ fn is_truecolor_terminal(env: &DeltaEnv) -> bool {
         .as_ref()
         .map(|colorterm| colorterm == "truecolor" || colorterm == "24bit")
         .unwrap_or(false)
-}
-
-fn set_git_config_entries(opt: &mut cli::Opt, git_config: &mut GitConfig) {
-    for key in &["color.diff.old", "color.diff.new"] {
-        if let Some(style_string) = git_config.get::<String>(key) {
-            opt.git_config_entries
-                .insert(key.to_string(), GitConfigEntry::Style(style_string));
-        }
-    }
 }
 
 #[cfg(test)]

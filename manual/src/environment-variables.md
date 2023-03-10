@@ -38,7 +38,7 @@ No other [`bat`](https://github.com/sharkdp/bat) environment variables are used 
 
 To temporarily activate and inactivate delta features, you can use `DELTA_FEATURES`, e.g.
 
-```
+```sh
 export DELTA_FEATURES='+side-by-side my-feature'
 ```
 

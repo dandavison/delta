@@ -4,7 +4,7 @@ The main way to use delta is to configure it as the pager for git: see [Configur
 
 Delta can also be used as a shorthand for diffing two files, even if they are not in a git repo: the following two commands do the same thing:
 
-```
+```sh
 delta /somewhere/a.txt /somewhere/else/b.txt
 
 git diff /somewhere/a.txt /somewhere/else/b.txt
@@ -12,7 +12,7 @@ git diff /somewhere/a.txt /somewhere/else/b.txt
 
 You can also use [process substitution](https://en.wikipedia.org/wiki/Process_substitution) shell syntax with delta, e.g.
 
-```
+```sh
 delta <(sort file1) <(sort file2)
 ```
 

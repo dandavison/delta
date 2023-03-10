@@ -14,7 +14,7 @@ use crate::delta::State;
 use crate::fatal;
 use crate::features::navigate;
 use crate::features::side_by_side::{self, ansifill, LeftRight};
-use crate::git_config::{GitConfig, GitConfigEntry};
+use crate::git_config::GitConfig;
 use crate::handlers;
 use crate::handlers::blame::parse_blame_line_numbers;
 use crate::handlers::blame::BlameLineNumbers;
@@ -60,7 +60,6 @@ pub struct Config {
     pub file_regex_replacement: Option<RegexReplacement>,
     pub right_arrow: String,
     pub file_style: Style,
-    pub git_config_entries: HashMap<String, GitConfigEntry>,
     pub git_config: Option<GitConfig>,
     pub git_minus_style: Style,
     pub git_plus_style: Style,
@@ -142,6 +141,10 @@ impl Config {
             State::SubmoduleLog => &self.file_style,
             _ => delta_unreachable("Unreachable code reached in get_style."),
         }
+    }
+
+    pub fn git_config(&self) -> Option<&GitConfig> {
+        self.git_config.as_ref()
     }
 }
 
@@ -266,7 +269,6 @@ impl From<cli::Opt> for Config {
             hunk_label,
             file_style: styles["file-style"],
             git_config: opt.git_config,
-            git_config_entries: opt.git_config_entries,
             grep_context_line_style: styles["grep-context-line-style"],
             grep_file_style: styles["grep-file-style"],
             grep_line_number_style: styles["grep-line-number-style"],

@@ -11,7 +11,7 @@ By default, side-by-side view has line-numbers activated, and has syntax highlig
 
 To activate and deactivate side-by-side view from the command line, consider using the [`DELTA_FEATURES`](./features-named-groups-of-settings.md) environment variable. For example:
 
-```
+```sh
 export DELTA_FEATURES=+side-by-side # activate
 export DELTA_FEATURES=+             # deactivate
 ```
