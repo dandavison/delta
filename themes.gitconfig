@@ -385,12 +385,10 @@
     merge-conflict-ours-diff-header-decoration-style = ''
     merge-conflict-theirs-diff-header-decoration-style = ''
 
-[delta "discord-dark"]
-    # author: https://github.com/ILikePlayingGames
-    dark                          = true
+[delta "discord"]
     commit-style                  = omit
     file-style                    = 34 ul
-    file-decoration-style         =
+    file-decoration-style         = none
     hunk-header-style             = omit
     minus-style                   = 31
     minus-non-emph-style          = 31
@@ -400,26 +398,15 @@
     plus-style                    = 32
     plus-non-emph-style           = 32
     plus-emph-style               = 40
-    plus-empty-line-marker-style  =
     grep-file-style               = 34
     grep-line-number-style        = 34
     whitespace-error-style        = 41
     blame-code-style              = omit
     true-color                    = never
-    file-added-label              = added:
     file-modified-label           = changed:
-    file-removed-label            = deleted:
-    file-renamed-label            = renamed:
     right-arrow                   = >
     hyperlinks                    = false
-    inspect-raw-lines             = true
     keep-plus-minus-markers       = true
-    line-numbers                  = false
-    line-fill-method              = ansi
-    navigate                      = false
-    navigate-regex                =
-    pager                         = none
-    paging                        = never
-    side-by-side                  = false
+    diff-stat-align-width         = 10
     syntax-theme                  = none
     width                         = variable
