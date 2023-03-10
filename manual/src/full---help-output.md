@@ -1,6 +1,6 @@
 # Full --help output
 
-```
+```txt
 delta 0.15.0
 A viewer for git and diff output
 
