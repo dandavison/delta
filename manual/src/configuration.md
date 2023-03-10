@@ -46,7 +46,7 @@ All git commands that display diff output should now display syntax-highlighted 
 
 To change your delta options in a one-off git command, use `git -c`. For example
 
-```
+```sh
 git -c delta.line-numbers=false show
 ```
 

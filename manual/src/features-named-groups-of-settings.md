@@ -30,12 +30,12 @@ The environment variable `DELTA_FEATURES` can used to enable features from the c
 If you precede this with a `+` symbol, then the features are _added_ to those configured elsewhere, instead of replacing them.
 This is very useful, for example to temporarily switch delta to side-by-side mode you can do
 
-```
+```sh
 export DELTA_FEATURES=+side-by-side
 ```
 
 and to undo that:
 
-```
+```sh
 export DELTA_FEATURES=+
 ```
