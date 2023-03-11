@@ -21,7 +21,7 @@ release:
 	@make -f release.Makefile release
 
 version:
-	@grep version Cargo.toml | head -n1 | sed -E 's,.*version = "([^"]+)",\1,'
+	@grep ^version Cargo.toml | head -n1 | sed -E 's,.*version = "([^"]+)",\1,'
 
 hash:
 	@version=$$(make version) && \
