@@ -1,6 +1,6 @@
 use std::collections::{HashMap, HashSet};
 use std::ffi::OsString;
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 
 use bat::assets::HighlightingAssets;
 use clap::{ColorChoice, CommandFactory, FromArgMatches, Parser};
@@ -1142,7 +1142,8 @@ impl Opt {
 
         if let Some(path) = matches.get_one::<String>("config") {
             if !path.is_empty() {
-                final_config = Some(GitConfig::try_create_from_path(&env, path));
+                let path = Path::new(path);
+                final_config = Some(GitConfig::from_path(&env, path, true));
             }
         }
 

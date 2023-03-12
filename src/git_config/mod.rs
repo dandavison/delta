@@ -64,13 +64,15 @@ impl GitConfig {
         }
     }
 
-    #[cfg(not(test))]
-    pub fn try_create_from_path(env: &DeltaEnv, path: &String) -> Self {
+    #[cfg(test)]
+    pub fn try_create(_env: &DeltaEnv) -> Option<Self> {
+        unreachable!("GitConfig::try_create() is not available when testing");
+    }
+
+    pub fn from_path(env: &DeltaEnv, path: &Path, honor_env_var: bool) -> Self {
         use crate::fatal;
 
-        let config = git2::Config::open(Path::new(path));
-
-        match config {
+        match git2::Config::open(path) {
             Ok(mut config) => {
                 let config = config.snapshot().unwrap_or_else(|err| {
                     fatal(format!("Failed to read git config: {err}"));
@@ -78,39 +80,20 @@ impl GitConfig {
 
                 Self {
                     config,
-                    config_from_env_var: parse_config_from_env_var(env),
+                    config_from_env_var: if honor_env_var {
+                        parse_config_from_env_var(env)
+                    } else {
+                        HashMap::new()
+                    },
                     repo: None,
                     enabled: true,
+                    #[cfg(test)]
+                    path: path.into(),
                 }
             }
             Err(e) => {
                 fatal(format!("Failed to read git config: {}", e.message()));
             }
-        }
-    }
-
-    #[cfg(test)]
-    pub fn try_create(_env: &DeltaEnv) -> Option<Self> {
-        unreachable!("GitConfig::try_create() is not available when testing");
-    }
-
-    #[cfg(test)]
-    pub fn try_create_from_path(_env: &DeltaEnv, _path: &String) -> Self {
-        unreachable!("GitConfig::try_create_from_path() is not available when testing");
-    }
-
-    #[cfg(test)]
-    pub fn from_path(env: &DeltaEnv, path: &Path, honor_env_var: bool) -> Self {
-        Self {
-            config: git2::Config::open(path).unwrap(),
-            config_from_env_var: if honor_env_var {
-                parse_config_from_env_var(env)
-            } else {
-                HashMap::new()
-            },
-            repo: None,
-            enabled: true,
-            path: path.into(),
         }
     }
 
