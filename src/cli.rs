@@ -26,11 +26,7 @@ use crate::utils::bat::output::PagingMode;
 GIT CONFIG
 ----------
 
-By default, delta takes settings from a section named \"delta\" in git config files, if one is
-present. The git config file to use for delta options will usually be ~/.gitconfig, but delta
-follows the rules given in https://git-scm.com/docs/git-config#FILES. Most delta options can be
-given in a git config file, using the usual option names but without the initial '--'. An example
-is
+By default, delta takes settings from a section named \"delta\" in git config files, if one is present. The git config file to use for delta options will usually be ~/.gitconfig, but delta follows the rules given in https://git-scm.com/docs/git-config#FILES. Most delta options can be given in a git config file, using the usual option names but without the initial '--'. An example is
 
 [delta]
     line-numbers = true
@@ -57,9 +53,7 @@ If more than one feature sets the same option, the last one wins.
 
 If an option is present in the [delta] section, then features are not considered at all.
 
-If you want an option to be fully overridable by a feature and also have a non default value when
-no features are used, then you need to define a \"default\" feature and include it in the main
-delta configuration.
+If you want an option to be fully overridable by a feature and also have a non default value when no features are used, then you need to define a \"default\" feature and include it in the main delta configuration.
 
 For instance:
 
@@ -69,71 +63,53 @@ feature = default-feature
 [delta \"default-feature\"]
 width = 123
 
-At this point, you can override features set in the command line or in the environment variables
-and the \"last one wins\" rules will apply as expected.
+At this point, you can override features set in the command line or in the environment variables and the \"last one wins\" rules will apply as expected.
 
 STYLES
 ------
 
-All options that have a name like --*-style work the same way. It is very similar to how
-colors/styles are specified in a gitconfig file:
-https://git-scm.com/docs/git-config#Documentation/git-config.txt-color
+All options that have a name like --*-style work the same way. It is very similar to how colors/styles are specified in a gitconfig file: https://git-scm.com/docs/git-config#Documentation/git-config.txt-color
 
 Here is an example:
 
 --minus-style 'red bold ul \"#ffeeee\"'
 
-That means: For removed lines, set the foreground (text) color to 'red', make it bold and
-            underlined, and set the background color to '#ffeeee'.
+That means: For removed lines, set the foreground (text) color to 'red', make it bold and underlined, and set the background color to '#ffeeee'.
 
-See the COLORS section below for how to specify a color. In addition to real colors, there are 4
-special color names: 'auto', 'normal', 'raw', and 'syntax'.
+See the COLORS section below for how to specify a color. In addition to real colors, there are 4 special color names: 'auto', 'normal', 'raw', and 'syntax'.
 
 Here is an example of using special color names together with a single attribute:
 
 --minus-style 'syntax bold auto'
 
-That means: For removed lines, syntax-highlight the text, and make it bold, and do whatever delta
-            normally does for the background.
+That means: For removed lines, syntax-highlight the text, and make it bold, and do whatever delta normally does for the background.
 
-The available attributes are: 'blink', 'bold', 'dim', 'hidden', 'italic', 'reverse', 'strike',
-and 'ul' (or 'underline').
+The available attributes are: 'blink', 'bold', 'dim', 'hidden', 'italic', 'reverse', 'strike', and 'ul' (or 'underline').
 
-The attribute 'omit' is supported by commit-style, file-style, and hunk-header-style, meaning to
-remove the element entirely from the output.
+The attribute 'omit' is supported by commit-style, file-style, and hunk-header-style, meaning to remove the element entirely from the output.
 
 A complete description of the style string syntax follows:
 
-- If the input that delta is receiving already has colors, and you want delta to output those
-  colors unchanged, then use the special style string 'raw'. Otherwise, delta will strip any colors
-  from its input.
+- If the input that delta is receiving already has colors, and you want delta to output those colors unchanged, then use the special style string 'raw'. Otherwise, delta will strip any colors from its input.
 
-- A style string consists of 0, 1, or 2 colors, together with an arbitrary number of style
-  attributes, all separated by spaces.
+- A style string consists of 0, 1, or 2 colors, together with an arbitrary number of style attributes, all separated by spaces.
 
-- The first color is the foreground (text) color. The second color is the background color.
-  Attributes can go in any position.
+- The first color is the foreground (text) color. The second color is the background color. Attributes can go in any position.
 
-- This means that in order to specify a background color you must also specify a foreground (text)
-  color.
+- This means that in order to specify a background color you must also specify a foreground (text) color.
 
-- If you want delta to choose one of the colors automatically, then use the special color 'auto'.
-  This can be used for both foreground and background.
+- If you want delta to choose one of the colors automatically, then use the special color 'auto'. This can be used for both foreground and background.
 
-- If you want the foreground/background color to be your terminal's foreground/background color,
-  then use the special color 'normal'.
+- If you want the foreground/background color to be your terminal's foreground/background color, then use the special color 'normal'.
 
-- If you want the foreground text to be syntax-highlighted according to its language, then use the
-  special foreground color 'syntax'. This can only be used for the foreground (text).
+- If you want the foreground text to be syntax-highlighted according to its language, then use the special foreground color 'syntax'. This can only be used for the foreground (text).
 
-- The minimal style specification is the empty string ''. This means: do not apply any colors or
-  styling to the element in question.
+- The minimal style specification is the empty string ''. This means: do not apply any colors or styling to the element in question.
 
 COLORS
 ------
 
-There are four ways to specify a color (this section applies to foreground and background colors
-within a style string):
+There are four ways to specify a color (this section applies to foreground and background colors within a style string):
 
 1. CSS color name
 
@@ -155,11 +131,7 @@ within a style string):
    An example of using an ANSI color name is:
    --file-style=\"green\"
 
-   Unlike RGB hex codes, ANSI color names are just names: you can choose the exact color that each
-   name corresponds to in the settings of your terminal application (the application you use to
-   enter commands at a shell prompt). This means that if you use ANSI color names, and you change
-   the color theme used by your terminal, then delta's colors will respond automatically, without
-   needing to change the delta command line.
+   Unlike RGB hex codes, ANSI color names are just names: you can choose the exact color that each name corresponds to in the settings of your terminal application (the application you use to enter commands at a shell prompt). This means that if you use ANSI color names, and you change the color theme used by your terminal, then delta's colors will respond automatically, without needing to change the delta command line.
 
    \"purple\" is accepted as a synonym for \"magenta\". Color names and codes are case-insensitive.
 
@@ -168,10 +140,7 @@ within a style string):
    An example of using an ANSI color number is:
    --file-style=28
 
-   There are 256 ANSI color numbers: 0-255. The first 16 are the same as the colors described in
-   the \"ANSI color name\" section above. See https://en.wikipedia.org/wiki/ANSI_escape_code#8-bit.
-   Specifying colors like this is useful if your terminal only supports 256 colors (i.e. doesn\'t
-   support 24-bit color).
+   There are 256 ANSI color numbers: 0-255. The first 16 are the same as the colors described in the \"ANSI color name\" section above. See https://en.wikipedia.org/wiki/ANSI_escape_code#8-bit. Specifying colors like this is useful if your terminal only supports 256 colors (i.e. doesn\'t support 24-bit color).
 
 
 LINE NUMBERS
@@ -185,9 +154,7 @@ Line numbers are displayed in two columns. Here's what it looks like by default:
   2 ⋮    │ removed line
     ⋮  2 │ added line
 
-In that output, the line numbers for the old (minus) version of the file appear in the left column,
-and the line numbers for the new (plus) version of the file appear in the right column. In an
-unchanged (zero) line, both columns contain a line number.
+In that output, the line numbers for the old (minus) version of the file appear in the left column, and the line numbers for the new (plus) version of the file appear in the right column. In an unchanged (zero) line, both columns contain a line number.
 
 The following options allow the line number display to be customized:
 
@@ -199,26 +166,16 @@ The following options allow the line number display to be customized:
 --line-numbers-zero-style:   Change the style applied to line numbers in unchanged lines
 --line-numbers-plus-style:   Change the style applied to line numbers in plus lines
 
-Options --line-numbers-left-format and --line-numbers-right-format allow you to change the contents
-of the line number columns. Their values are arbitrary format strings, which are allowed to contain
-the placeholders {nm} for the line number associated with the old version of the file and {np} for
-the line number associated with the new version of the file. The placeholders support a subset of
-the string formatting syntax documented here: https://doc.rust-lang.org/std/fmt/#formatting-parameters.
-Specifically, you can use the alignment and width syntax.
+Options --line-numbers-left-format and --line-numbers-right-format allow you to change the contents of the line number columns. Their values are arbitrary format strings, which are allowed to contain the placeholders {nm} for the line number associated with the old version of the file and {np} for the line number associated with the new version of the file. The placeholders support a subset of the string formatting syntax documented here: https://doc.rust-lang.org/std/fmt/#formatting-parameters. Specifically, you can use the alignment and width syntax.
 
-For example, the default value of --line-numbers-left-format is '{nm:^4}⋮'. This means that the
-left column should display the minus line number (nm), center-aligned, padded with spaces to a
-width of 4 characters, followed by a unicode dividing-line character (⋮).
+For example, the default value of --line-numbers-left-format is '{nm:^4}⋮'. This means that the left column should display the minus line number (nm), center-aligned, padded with spaces to a width of 4 characters, followed by a unicode dividing-line character (⋮).
 
-Similarly, the default value of --line-numbers-right-format is '{np:^4}│'. This means that the
-right column should display the plus line number (np), center-aligned, padded with spaces to a
-width of 4 characters, followed by a unicode dividing-line character (│).
+Similarly, the default value of --line-numbers-right-format is '{np:^4}│'. This means that the right column should display the plus line number (np), center-aligned, padded with spaces to a width of 4 characters, followed by a unicode dividing-line character (│).
 
 Use '<' for left-align, '^' for center-align, and '>' for right-align.
 
 
-If something isn't working correctly, or you have a feature request, please open an issue at
-https://github.com/dandavison/delta/issues.
+If something isn't working correctly, or you have a feature request, please open an issue at https://github.com/dandavison/delta/issues.
 
 For a short help summary, please use delta -h.
 "
