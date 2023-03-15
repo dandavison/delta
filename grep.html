@@ -139,6 +139,14 @@
 If you don't need special features of <code>git grep</code>, then for best results pipe <code>rg --json</code> output to delta: this avoids parsing ambiguities that are inevitable with the output of <code>git grep</code> and <code>grep</code>.
 To customize the colors and syntax highlighting, see <code>grep-match-line-style</code>, <code>grep-match-word-style</code>, <code>grep-context-line-style</code>, <code>grep-file-style</code>, <code>grep-line-number-style</code>.
 Note that <code>git grep</code> can display the &quot;function context&quot; for matches and that delta handles this output specially: see the <code>-p</code> and <code>-W</code> options of <code>git grep</code>.</p>
+<pre><code class="language-sh">rg --json handle | delta
+</code></pre>
+<table><tr><td><img width=400px src="https://user-images.githubusercontent.com/52205/225271024-a01367f0-af1b-466a-9b9e-b1ced7f80031.png" alt="image" /></td></tr></table>
+<p>If you enable hyperlinks then grep hits will be formatted as <a href="https://gist.github.com/egmontkob/eb114294efbcd5adb1944c9f3cb5feda">OSC8 hyperlinks</a> in terminal emulators that support the feature. It is then possible to make your OS handle a click on those links by opening your editor at the correct file and line number (e.g. via <a href="https://github.com/dandavison/open-in-editor/">https://github.com/dandavison/open-in-editor/</a>).</p>
+<pre><code class="language-gitconfig">[delta]
+   hyperlinks = true
+   hyperlinks-file-link-format = &quot;file-line://{path}:{line}&quot;
+</code></pre>
 
                     </main>
 
