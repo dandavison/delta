@@ -180,6 +180,12 @@ Side-by-side view wraps long lines automatically:
 
 <table><tr><td><img width=600px src="https://user-images.githubusercontent.com/52205/141891376-1fdb87dc-1d9c-4ad6-9d72-eeb19a8aeb0b.png" alt="image" /></td></tr></table>
 
+### Ripgrep, git grep
+
+[[User manual](https://dandavison.github.io/delta/grep.html)]
+
+<table><tr><td><img width=400px src="https://user-images.githubusercontent.com/52205/225271024-a01367f0-af1b-466a-9b9e-b1ced7f80031.png" alt="image" /></td></tr></table>
+
 ### Installation and usage
 
 Please see the [user manual](https://dandavison.github.io/delta/) and `delta --help`.
