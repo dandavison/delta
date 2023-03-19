@@ -27,4 +27,5 @@
 - [mookid/diffr](https://github.com/mookid/diffr)
 - [nkouevda/pdiff](https://github.com/nkouevda/pdiff)
 - [so-fancy/diff-so-fancy](https://github.com/so-fancy/diff-so-fancy)
+- [walles/riff](https://github.com/walles/riff)
 - [Wilfred/difftastic](https://github.com/Wilfred/difftastic)
