@@ -82,6 +82,14 @@ Note that the package is often called `git-delta`, but the executable installed 
       <sup>If you are using Ubuntu <= 19.10 or are mixing apt sources, please read <a href="https://github.com/dandavison/delta/issues/504">#504</a>.</sup>
     </td>
   </tr>
+  <tr>
+    <td><a href="https://anaconda.org/conda-forge/git-delta">conda</a></td>
+    <td>
+      <code>conda install git-delta -c conda-forge</code>
+      <br>
+      <code>mamba install git-delta -c conda-forge</code>
+    </td>
+  </tr>
 </table>
 
 Users of older MacOS versions (e.g. 10.11 El Capitan) should install using Homebrew, Cargo, or MacPorts: the binaries on the release page will not work.
