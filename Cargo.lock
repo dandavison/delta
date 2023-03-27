@@ -84,22 +84,24 @@ checksum = "a4a4ddaa51a5bc52a6948f74c06d20aaaddb71924eab79b8c97a8c556e942d6a"
 
 [[package]]
 name = "bat"
-version = "0.22.1"
+version = "0.23.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "fbfdea7507f0848118a3be1a76643a92705a9ff675796f9cadb309b7e95ab65d"
+checksum = "fd4b13b0233143ae151a66e0135d715b65f631d1028c40502cc88182bcb9f4fa"
 dependencies = [
  "ansi_colours",
- "ansi_term",
  "bincode",
  "bytesize",
  "clircle",
  "console",
  "content_inspector",
+ "dirs 5.0.0",
  "encoding",
  "flate2",
  "globset",
+ "nu-ansi-term",
  "once_cell",
  "path_abs",
+ "plist",
  "semver",
  "serde",
  "serde_yaml",
@@ -371,7 +373,16 @@ version = "4.0.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "ca3aa72a6f96ea37bbc5aa912f6788242832f75369bdfdadcb0e38423f100059"
 dependencies = [
- "dirs-sys",
+ "dirs-sys 0.3.7",
+]
+
+[[package]]
+name = "dirs"
+version = "5.0.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "dece029acd3353e3a58ac2e3eb3c8d6c35827a892edc6cc4138ef9c33df46ecd"
+dependencies = [
+ "dirs-sys 0.4.0",
 ]
 
 [[package]]
@@ -383,6 +394,17 @@ dependencies = [
  "libc",
  "redox_users",
  "winapi",
+]
+
+[[package]]
+name = "dirs-sys"
+version = "0.4.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "04414300db88f70d74c5ff54e50f9e1d1737d9a5b90f53fcf2e95ca2a9ab554b"
+dependencies = [
+ "libc",
+ "redox_users",
+ "windows-sys 0.45.0",
 ]
 
 [[package]]
@@ -641,7 +663,7 @@ dependencies = [
  "clap",
  "console",
  "ctrlc",
- "dirs",
+ "dirs 4.0.0",
  "error-chain",
  "git2",
  "grep-cli",
@@ -940,6 +962,15 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "bc51db7b362b205941f71232e56c625156eb9a929f8cf74a428fd5bc094a4afc"
 dependencies = [
  "winapi",
+]
+
+[[package]]
+name = "nu-ansi-term"
+version = "0.47.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "1df031e117bca634c262e9bd3173776844b6c17a90b3741c9163663b4385af76"
+dependencies = [
+ "windows-sys 0.45.0",
 ]
 
 [[package]]
@@ -1810,7 +1841,7 @@ version = "2.4.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "0c4583db5cbd4c4c0303df2d15af80f0539db703fa1c68802d4cbbd2dd0f88f6"
 dependencies = [
- "dirs",
+ "dirs 4.0.0",
 ]
 
 [[package]]
