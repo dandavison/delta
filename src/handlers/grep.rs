@@ -48,7 +48,8 @@ impl<'a> StateMachine<'a> {
         let try_parse = matches!(&self.state, State::Grep | State::Unknown);
 
         if try_parse {
-            if let Some(mut grep_line) = parse_grep_line(&self.line) {
+            let line = self.line.clone(); // TODO: avoid clone
+            if let Some(mut grep_line) = parse_grep_line(&line) {
                 if matches!(grep_line.line_type, LineType::Ignore) {
                     handled_line = true;
                     return Ok(handled_line);
@@ -77,113 +78,118 @@ impl<'a> StateMachine<'a> {
                         &grep_line.path,
                         self.config,
                     )?,
-                    _ => {
-                        if self.config.navigate {
-                            write!(
-                                self.painter.writer,
-                                "{}",
-                                match (
-                                    &grep_line.line_type,
-                                    OUTPUT_CONFIG.add_navigate_marker_to_matches
-                                ) {
-                                    (LineType::Match, true) => "• ",
-                                    (_, true) => "  ",
-                                    _ => "",
-                                }
-                            )?
-                        }
-                        // Emit file & line-number
-                        let separator = if self.config.grep_separator_symbol == "keep" {
-                            // grep, rg, and git grep use ":" for matching lines
-                            // and "-" for non-matching lines (and `git grep -W`
-                            // uses "=" for a context header line).
-                            match grep_line.line_type {
-                                LineType::Match => ":",
-                                LineType::Context => "-",
-                                LineType::ContextHeader => "=",
-                                LineType::Ignore => "",
-                            }
-                        } else {
-                            // But ":" results in a "file/path:number:"
-                            // construct that terminal emulators are more likely
-                            // to recognize and render as a clickable link. If
-                            // navigate is enabled then there is already a good
-                            // visual indicator of match lines (in addition to
-                            // the grep-match-style highlighting) and so we use
-                            // ":" for matches and non-matches alike.
-                            &self.config.grep_separator_symbol
-                        };
-                        write!(
-                            self.painter.writer,
-                            "{}",
-                            paint::paint_file_path_with_line_number(
-                                grep_line.line_number,
-                                &grep_line.path,
-                                OUTPUT_CONFIG.pad_line_number,
-                                separator,
-                                true,
-                                Some(self.config.grep_file_style),
-                                Some(self.config.grep_line_number_style),
-                                self.config
-                            )
-                        )?;
-
-                        // Emit code line
-                        let code_style_sections =
-                            match (&grep_line.line_type, &grep_line.submatches) {
-                                (LineType::Match, Some(submatches)) => {
-                                    // We expand tabs at this late stage because
-                                    // the tabs are escaped in the JSON, so
-                                    // expansion must come after JSON parsing.
-                                    // (At the time of writing, we are in this
-                                    // arm iff we are handling `ripgrep --json`
-                                    // output.)
-                                    grep_line.code =
-                                        tabs::expand(&grep_line.code, &self.config.tab_cfg).into();
-                                    make_style_sections(
-                                        &grep_line.code,
-                                        submatches,
-                                        self.config.grep_match_word_style,
-                                        self.config.grep_match_line_style,
-                                    )
-                                }
-                                (LineType::Match, None) => {
-                                    // HACK: We need tabs expanded, and we need
-                                    // the &str passed to
-                                    // `get_code_style_sections` to live long
-                                    // enough. But at the point it is guaranteed
-                                    // that this handler is going to handle this
-                                    // line, so mutating it is acceptable.
-                                    self.raw_line =
-                                        tabs::expand(&self.raw_line, &self.config.tab_cfg);
-                                    get_code_style_sections(
-                                        &self.raw_line,
-                                        self.config.grep_match_word_style,
-                                        self.config.grep_match_line_style,
-                                        &grep_line,
-                                    )
-                                    .unwrap_or(
-                                        StyleSectionSpecifier::Style(
-                                            self.config.grep_match_line_style,
-                                        ),
-                                    )
-                                }
-                                _ => StyleSectionSpecifier::Style(
-                                    self.config.grep_context_line_style,
-                                ),
-                            };
-                        self.painter.syntax_highlight_and_paint_line(
-                            &format!("{}\n", grep_line.code),
-                            code_style_sections,
-                            self.state.clone(),
-                            BgShouldFill::default(),
-                        )
-                    }
+                    _ => self._handle_grep_line(&mut grep_line)?,
                 }
                 handled_line = true
             }
         }
         Ok(handled_line)
+    }
+
+    fn _handle_grep_line(&mut self, grep_line: &mut GrepLine) -> std::io::Result<()> {
+        if self.config.navigate {
+            write!(
+                self.painter.writer,
+                "{}",
+                match (
+                    &grep_line.line_type,
+                    OUTPUT_CONFIG.add_navigate_marker_to_matches
+                ) {
+                    (LineType::Match, true) => "• ",
+                    (_, true) => "  ",
+                    _ => "",
+                }
+            )?
+        }
+        self._emit_file_and_line_number(grep_line)?;
+        self._emit_code(grep_line)?;
+        Ok(())
+    }
+
+    fn _emit_file_and_line_number(&mut self, grep_line: &GrepLine) -> std::io::Result<()> {
+        let separator = if self.config.grep_separator_symbol == "keep" {
+            // grep, rg, and git grep use ":" for matching lines
+            // and "-" for non-matching lines (and `git grep -W`
+            // uses "=" for a context header line).
+            match grep_line.line_type {
+                LineType::Match => ":",
+                LineType::Context => "-",
+                LineType::ContextHeader => "=",
+                LineType::Ignore | LineType::FileHeader => "",
+            }
+        } else {
+            // But ":" results in a "file/path:number:"
+            // construct that terminal emulators are more likely
+            // to recognize and render as a clickable link. If
+            // navigate is enabled then there is already a good
+            // visual indicator of match lines (in addition to
+            // the grep-match-style highlighting) and so we use
+            // ":" for matches and non-matches alike.
+            &self.config.grep_separator_symbol
+        };
+        write!(
+            self.painter.writer,
+            "{}",
+            paint::paint_file_path_with_line_number(
+                grep_line.line_number,
+                &grep_line.path,
+                OUTPUT_CONFIG.pad_line_number,
+                separator,
+                true,
+                Some(self.config.grep_file_style),
+                Some(self.config.grep_line_number_style),
+                self.config
+            )
+        )?;
+        Ok(())
+    }
+
+    fn _emit_code(&mut self, grep_line: &mut GrepLine) -> std::io::Result<()> {
+        let code_style_sections = match (&grep_line.line_type, &grep_line.submatches) {
+            (LineType::Match, Some(submatches)) => {
+                // We expand tabs at this late stage because
+                // the tabs are escaped in the JSON, so
+                // expansion must come after JSON parsing.
+                // (At the time of writing, we are in this
+                // arm iff we are handling `ripgrep --json`
+                // output.)
+                grep_line.code =
+                    paint::expand_tabs(grep_line.code.graphemes(true), self.config.tab_width)
+                        .into();
+                make_style_sections(
+                    &grep_line.code,
+                    submatches,
+                    self.config.grep_match_word_style,
+                    self.config.grep_match_line_style,
+                )
+            }
+            (LineType::Match, None) => {
+                // HACK: We need tabs expanded, and we need
+                // the &str passed to
+                // `get_code_style_sections` to live long
+                // enough. But at the point it is guaranteed
+                // that this handler is going to handle this
+                // line, so mutating it is acceptable.
+                self.raw_line = expand_tabs(self.raw_line.graphemes(true), self.config.tab_width);
+                get_code_style_sections(
+                    &self.raw_line,
+                    self.config.grep_match_word_style,
+                    self.config.grep_match_line_style,
+                    grep_line,
+                )
+                .unwrap_or(StyleSectionSpecifier::Style(
+                    self.config.grep_match_line_style,
+                ))
+            }
+            _ => StyleSectionSpecifier::Style(self.config.grep_context_line_style),
+        };
+        self.painter.syntax_highlight_and_paint_line(
+            &format!("{}\n", grep_line.code),
+            code_style_sections,
+            self.state.clone(),
+            BgShouldFill::default(),
+        );
+        Ok(())
     }
 }
 
