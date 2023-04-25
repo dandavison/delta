@@ -6,4 +6,9 @@ If you're using tmux, it's worth checking that 24 bit color is working correctly
 set -ga terminal-overrides ",xterm-256color:Tc"
 ```
 
-and you may then need to quit tmux completely for it to take effect.
+and you may then need to quit tmux completely for it to take effect. Note that you may need to explicitly enable true color, either by using `--true-color=always` or by adding the following to your configuration file:
+
+```gitconfig
+[delta]
+    true-color = always
+```
