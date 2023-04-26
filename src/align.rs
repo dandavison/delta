@@ -4,7 +4,7 @@ use std::collections::VecDeque;
 const DELETION_COST: usize = 2;
 const INSERTION_COST: usize = 2;
 // extra cost for starting a new group of changed tokens
-const INITIAL_MISMATCH_PENALITY: usize = 1;
+const INITIAL_MISMATCH_PENALTY: usize = 1;
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum Operation {
@@ -61,14 +61,14 @@ impl<'a> Alignment<'a> {
             self.table[i] = Cell {
                 parent: 0,
                 operation: Deletion,
-                cost: i * DELETION_COST + INITIAL_MISMATCH_PENALITY,
+                cost: i * DELETION_COST + INITIAL_MISMATCH_PENALTY,
             };
         }
         for j in 1..self.dim[0] {
             self.table[j * self.dim[1]] = Cell {
                 parent: 0,
                 operation: Insertion,
-                cost: j * INSERTION_COST + INITIAL_MISMATCH_PENALITY,
+                cost: j * INSERTION_COST + INITIAL_MISMATCH_PENALTY,
             };
         }
 
@@ -118,7 +118,7 @@ impl<'a> Alignment<'a> {
         self.table[parent].cost
             + basic_cost
             + if self.table[parent].operation == NoOp {
-                INITIAL_MISMATCH_PENALITY
+                INITIAL_MISMATCH_PENALTY
             } else {
                 0
             }

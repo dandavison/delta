@@ -366,7 +366,7 @@ fn gather_features(
     }
 
     // Gather builtin feature flags supplied on command line.
-    // TODO: Iterate over programatically-obtained names of builtin features.
+    // TODO: Iterate over programmatically-obtained names of builtin features.
     if opt.raw {
         gather_builtin_features_recursively("raw", &mut features, builtin_features, opt);
     }
