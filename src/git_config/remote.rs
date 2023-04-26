@@ -129,7 +129,7 @@ impl FromStr for GitRemoteRepo {
                 ),
             })
         } else {
-            Err("Not a GitHub, GitLab, SourceHut or Codeberg repo.".into())
+            Err(anyhow!("Not a GitHub, GitLab, SourceHut or Codeberg repo."))
         }
     }
 }
