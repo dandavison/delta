@@ -49,13 +49,7 @@ where
 }
 
 pub mod errors {
-    error_chain::error_chain! {
-        foreign_links {
-            Io(::std::io::Error);
-            SyntectError(::syntect::LoadingError);
-            ParseIntError(::std::num::ParseIntError);
-        }
-    }
+    pub use anyhow::{anyhow, Context, Error, Result};
 }
 
 #[cfg(not(tarpaulin_include))]

@@ -20,6 +20,7 @@ chrono = "0.4.23"
 chrono-humanize = "0.2.2"
 ansi_colours = "1.2.1"
 ansi_term = "0.12.1"
+anyhow = "1.0.70"
 atty = "0.2.14"
 bitflags = "2.2.1"
 box_drawing = "0.1.2"
@@ -52,11 +53,6 @@ features = []
 [dependencies.sysinfo]
 version = "0.28.2"
 # no default features to disable the use of threads
-default-features = false
-features = []
-
-[dependencies.error-chain]
-version = "0.12.4"
 default-features = false
 features = []
 

@@ -74,8 +74,7 @@ impl OutputType {
             .or(pager_from_env)
             .unwrap_or_else(|| String::from("less"));
 
-        let pagerflags =
-            shell_words::split(&pager).chain_err(|| "Could not parse pager command.")?;
+        let pagerflags = shell_words::split(&pager).context("Could not parse pager command.")?;
 
         Ok(match pagerflags.split_first() {
             Some((pager_name, args)) => {
@@ -117,7 +116,7 @@ impl OutputType {
             OutputType::Pager(ref mut command) => command
                 .stdin
                 .as_mut()
-                .chain_err(|| "Could not open stdin for pager")?,
+                .context("Could not open stdin for pager")?,
             OutputType::Stdout(ref mut handle) => handle,
         })
     }
