@@ -66,6 +66,7 @@ impl Style {
 }
 
 bitflags! {
+    #[derive(Clone, Copy, Debug, PartialEq)]
     struct DecorationAttributes: u8 {
         const EMPTY = 0b00000000;
         const BOX = 0b00000001;
