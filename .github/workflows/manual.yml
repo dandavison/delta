@@ -4,29 +4,53 @@ on:
   push:
     branches:
       - master
+    paths:
+      - "manual/**"
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
 
 jobs:
-  deploy:
-    runs-on: ubuntu-20.04
-    concurrency:
-      group: ${{ github.workflow }}-${{ github.ref }}
+  build:
+    permissions:
+      contents: read
+
+    runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v3
-
       - uses: dtolnay/rust-toolchain@stable
-      - run: cargo doc
+
+      - run: cargo doc --no-deps
 
       - name: Setup mdBook
-        uses: peaceiris/actions-mdbook@v1
+        uses: taiki-e/install-action@v2
         with:
-          mdbook-version: '0.4.14'
+          tool: mdbook@0.4.14
 
       - name: Build manual
         run: mdbook build
         working-directory: manual
 
-      - name: Deploy to GitHub pages
-        uses: JamesIves/github-pages-deploy-action@4.1.6
+      - name: Upload artifact
+        uses: actions/upload-pages-artifact@v1
         with:
-          branch: gh-pages
-          folder: manual/book
+          path: manual/book
+
+  deploy:
+    needs: build
+
+    permissions:
+      pages: write
+      id-token: write
+
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+
+    runs-on: ubuntu-latest
+    steps:
+      - name: Configure GitHub Pages
+        uses: actions/configure-pages@v3
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v2
