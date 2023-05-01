@@ -28,7 +28,7 @@ bytelines = "=2.2.2" # Pin version until its tokio and futures dependencies are 
 clap = { version = "4.1.8", features = ["derive", "help", "usage", "error-context", "wrap_help"] }
 console = "0.15.0"
 ctrlc = "3.2.5"
-dirs = "4.0.0"
+dirs = "5.0.1"
 grep-cli = "0.1.7"
 itertools = "0.10.5"
 lazy_static = "1.4"
