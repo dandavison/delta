@@ -396,17 +396,51 @@ pub struct Opt {
     /// See STYLES section. Defaults to zero-style.
     pub grep_context_line_style: Option<String>,
 
-    #[arg(long = "grep-file-style", value_name = "STYLE")]
+    #[arg(
+        long = "grep-file-style",
+        default_value = "magenta",
+        value_name = "STYLE"
+    )]
     /// Style string for file paths in grep output.
     ///
-    /// See STYLES section. Defaults to hunk-header-file-path-style.
-    pub grep_file_style: Option<String>,
+    /// See STYLES section.
+    pub grep_file_style: String,
 
-    #[arg(long = "grep-line-number-style", value_name = "STYLE")]
+    #[arg(long = "grep-header-decoration-style", value_name = "STYLE")]
+    /// Style string for the header decoration in grep output.
+    ///
+    /// Default is "none" when grep-ouput-type-is "ripgrep", otherwise defaults
+    /// to value of header-decoration-style. See hunk-header-decoration-style.
+    pub grep_header_decoration_style: Option<String>,
+
+    #[arg(long = "grep-header-file-style", value_name = "STYLE")]
+    /// Style string for the file path part of the header in grep output.
+    ///
+    /// See hunk_header_file_style.
+    pub grep_header_file_style: Option<String>,
+
+    #[arg(long = "grep-header-style", value_name = "STYLE")]
+    /// Style string for the header in grep output.
+    ///
+    /// See hunk-header-style.
+    pub grep_header_style: Option<String>,
+
+    #[arg(
+        long = "grep-line-number-style",
+        default_value = "green",
+        value_name = "STYLE"
+    )]
     /// Style string for line numbers in grep output.
     ///
-    /// See STYLES section. Defaults to hunk-header-line-number-style.
-    pub grep_line_number_style: Option<String>,
+    /// See STYLES section.
+    pub grep_line_number_style: String,
+
+    #[arg(long = "grep-output-type", value_name = "OUTPUT_TYPE")]
+    /// Grep output format. Possible values:
+    /// "ripgrep" - file name printed once, followed by matching lines within that file, each preceded by a line number.
+    /// "classic" - file name:line number, followed by matching line.
+    /// Default is "ripgrep" if `rg --json` format is detected, otherwise "classic".
+    pub grep_output_type: Option<String>,
 
     #[arg(long = "grep-match-line-style", value_name = "STYLE")]
     /// Style string for matching lines of grep output.

@@ -323,6 +323,30 @@ fn make_commit_file_hunk_header_styles(opt: &cli::Opt, styles: &mut HashMap<&str
             ),
         ),
         (
+            "classic-grep-header-style",
+            style_from_str_with_handling_of_special_decoration_attributes(
+                opt.grep_header_style
+                    .as_deref()
+                    .unwrap_or(opt.hunk_header_style.as_str()),
+                None,
+                opt.grep_header_decoration_style
+                    .as_deref()
+                    .or(Some(opt.hunk_header_decoration_style.as_str())),
+                true_color,
+                opt.git_config(),
+            ),
+        ),
+        (
+            "ripgrep-header-style",
+            style_from_str_with_handling_of_special_decoration_attributes(
+                opt.grep_header_style.as_deref().unwrap_or("file syntax"),
+                None,
+                Some("none"),
+                true_color,
+                opt.git_config(),
+            ),
+        ),
+        (
             "hunk-header-style",
             style_from_str_with_handling_of_special_decoration_attributes(
                 &opt.hunk_header_style,
@@ -336,6 +360,28 @@ fn make_commit_file_hunk_header_styles(opt: &cli::Opt, styles: &mut HashMap<&str
             "hunk-header-file-style",
             style_from_str_with_handling_of_special_decoration_attributes(
                 &opt.hunk_header_file_style,
+                None,
+                None,
+                true_color,
+                opt.git_config(),
+            ),
+        ),
+        (
+            "classic-grep-header-file-style",
+            style_from_str_with_handling_of_special_decoration_attributes(
+                opt.grep_header_file_style
+                    .as_deref()
+                    .unwrap_or(opt.hunk_header_file_style.as_str()),
+                None,
+                None,
+                true_color,
+                opt.git_config(),
+            ),
+        ),
+        (
+            "ripgrep-header-file-style",
+            style_from_str_with_handling_of_special_decoration_attributes(
+                opt.grep_header_file_style.as_deref().unwrap_or("magenta"),
                 None,
                 None,
                 true_color,
@@ -410,19 +456,23 @@ fn make_grep_styles(opt: &cli::Opt, styles: &mut HashMap<&str, StyleReference>) 
         ),
         (
             "grep-file-style",
-            if let Some(s) = &opt.grep_file_style {
-                style_from_str(s, None, None, opt.computed.true_color, opt.git_config())
-            } else {
-                StyleReference::Reference("hunk-header-file-style".to_owned())
-            },
+            style_from_str(
+                &opt.grep_file_style,
+                None,
+                None,
+                opt.computed.true_color,
+                opt.git_config(),
+            ),
         ),
         (
             "grep-line-number-style",
-            if let Some(s) = &opt.grep_line_number_style {
-                style_from_str(s, None, None, opt.computed.true_color, opt.git_config())
-            } else {
-                StyleReference::Reference("hunk-header-line-number-style".to_owned())
-            },
+            style_from_str(
+                &opt.grep_line_number_style,
+                None,
+                None,
+                opt.computed.true_color,
+                opt.git_config(),
+            ),
         ),
     ])
 }

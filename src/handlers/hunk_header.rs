@@ -25,15 +25,20 @@ use lazy_static::lazy_static;
 use regex::Regex;
 
 use super::draw;
-use crate::config::Config;
+use crate::config::{Config, HunkHeaderIncludeFilePath, HunkHeaderIncludeLineNumber};
 use crate::delta::{self, DiffType, InMergeConflict, MergeParents, State, StateMachine};
 use crate::paint::{self, BgShouldFill, Painter, StyleSectionSpecifier};
-use crate::style::DecorationStyle;
+use crate::style::{DecorationStyle, Style};
 
 #[derive(Clone, Default, Debug, PartialEq, Eq)]
 pub struct ParsedHunkHeader {
     code_fragment: String,
     line_numbers_and_hunk_lengths: Vec<(usize, usize)>,
+}
+
+pub enum HunkHeaderIncludeHunkLabel {
+    Yes,
+    No,
 }
 
 impl<'a> StateMachine<'a> {
@@ -111,9 +116,10 @@ impl<'a> StateMachine<'a> {
                 writeln!(self.painter.writer)?;
             }
 
-            write_hunk_header(
+            write_line_of_code_with_optional_path_and_line_number(
                 code_fragment,
                 line_numbers_and_hunk_lengths,
+                None,
                 &mut self.painter,
                 line,
                 if self.plus_file == "/dev/null" {
@@ -121,6 +127,13 @@ impl<'a> StateMachine<'a> {
                 } else {
                     &self.plus_file
                 },
+                self.config.hunk_header_style.decoration_style,
+                &self.config.hunk_header_file_style,
+                &self.config.hunk_header_line_number_style,
+                &self.config.hunk_header_style_include_file_path,
+                &self.config.hunk_header_style_include_line_number,
+                &HunkHeaderIncludeHunkLabel::Yes,
+                ":",
                 self.config,
             )?;
         };
@@ -202,16 +215,24 @@ fn write_hunk_header_raw(
     Ok(())
 }
 
-pub fn write_hunk_header(
+#[allow(clippy::too_many_arguments)]
+pub fn write_line_of_code_with_optional_path_and_line_number(
     code_fragment: &str,
     line_numbers_and_hunk_lengths: &[(usize, usize)],
+    style_sections: Option<StyleSectionSpecifier>,
     painter: &mut Painter,
     line: &str,
     plus_file: &str,
+    decoration_style: DecorationStyle,
+    file_style: &Style,
+    line_number_style: &Style,
+    include_file_path: &HunkHeaderIncludeFilePath,
+    include_line_number: &HunkHeaderIncludeLineNumber,
+    include_hunk_label: &HunkHeaderIncludeHunkLabel,
+    file_path_separator: &str,
     config: &Config,
 ) -> std::io::Result<()> {
-    let (mut draw_fn, _, decoration_ansi_term_style) =
-        draw::get_draw_function(config.hunk_header_style.decoration_style);
+    let (mut draw_fn, _, decoration_ansi_term_style) = draw::get_draw_function(decoration_style);
     let line = if config.color_only {
         line.to_string()
     } else if !code_fragment.is_empty() {
@@ -221,11 +242,27 @@ pub fn write_hunk_header(
     };
 
     let plus_line_number = line_numbers_and_hunk_lengths[line_numbers_and_hunk_lengths.len() - 1].0;
-    let file_with_line_number =
-        paint_file_path_with_line_number(Some(plus_line_number), plus_file, config);
+    let file_with_line_number = paint_file_path_with_line_number(
+        Some(plus_line_number),
+        plus_file,
+        file_style,
+        line_number_style,
+        include_file_path,
+        include_line_number,
+        file_path_separator,
+        config,
+    );
 
     if !line.is_empty() || !file_with_line_number.is_empty() {
-        write_to_output_buffer(&file_with_line_number, line, painter, config);
+        write_to_output_buffer(
+            &file_with_line_number,
+            file_path_separator,
+            line,
+            style_sections,
+            include_hunk_label,
+            painter,
+            config,
+        );
         draw_fn(
             painter.writer,
             &painter.output_buffer,
@@ -241,22 +278,27 @@ pub fn write_hunk_header(
     Ok(())
 }
 
+#[allow(clippy::too_many_arguments)]
 fn paint_file_path_with_line_number(
     line_number: Option<usize>,
     plus_file: &str,
+    file_style: &Style,
+    line_number_style: &Style,
+    include_file_path: &HunkHeaderIncludeFilePath,
+    include_line_number: &HunkHeaderIncludeLineNumber,
+    separator: &str,
     config: &Config,
 ) -> String {
-    let file_style = if config.hunk_header_style_include_file_path {
-        Some(config.hunk_header_file_style)
-    } else {
-        None
+    let file_style = match include_file_path {
+        HunkHeaderIncludeFilePath::Yes => Some(*file_style),
+        HunkHeaderIncludeFilePath::No => None,
     };
-    let line_number_style = if config.hunk_header_style_include_line_number
+    let line_number_style = if matches!(include_line_number, HunkHeaderIncludeLineNumber::Yes)
+        && line_number.is_some()
         && !config.hunk_header_style.is_raw
         && !config.color_only
-        && line_number.is_some()
     {
-        Some(config.hunk_header_line_number_style)
+        Some(*line_number_style)
     } else {
         None
     };
@@ -265,7 +307,7 @@ fn paint_file_path_with_line_number(
         line_number,
         plus_file,
         false,
-        ":",
+        separator,
         false,
         file_style,
         line_number_style,
@@ -275,11 +317,16 @@ fn paint_file_path_with_line_number(
 
 fn write_to_output_buffer(
     file_with_line_number: &str,
+    file_path_separator: &str,
     line: String,
+    style_sections: Option<StyleSectionSpecifier>,
+    include_hunk_label: &HunkHeaderIncludeHunkLabel,
     painter: &mut Painter,
     config: &Config,
 ) {
-    if !config.hunk_label.is_empty() {
+    if matches!(include_hunk_label, HunkHeaderIncludeHunkLabel::Yes)
+        && !config.hunk_label.is_empty()
+    {
         let _ = write!(
             &mut painter.output_buffer,
             "{} ",
@@ -292,13 +339,13 @@ fn write_to_output_buffer(
         let space = if line.is_empty() { " " } else { "" };
         let _ = write!(
             &mut painter.output_buffer,
-            "{file_with_line_number}:{space}",
+            "{file_with_line_number}{file_path_separator}{space}",
         );
     }
     if !line.is_empty() {
         painter.syntax_highlight_and_paint_line(
             &line,
-            StyleSectionSpecifier::Style(config.hunk_header_style),
+            style_sections.unwrap_or(StyleSectionSpecifier::Style(config.hunk_header_style)),
             delta::State::HunkHeader(
                 DiffType::Unified,
                 ParsedHunkHeader::default(),
@@ -392,7 +439,16 @@ pub mod tests {
         // This test confirms that `paint_file_path_with_line_number` returns a painted line number.
         let config = integration_test_utils::make_config_from_args(&[]);
 
-        let result = paint_file_path_with_line_number(Some(3), "some-file", &config);
+        let result = paint_file_path_with_line_number(
+            Some(3),
+            "some-file",
+            &config.hunk_header_style,
+            &config.hunk_header_line_number_style,
+            &config.hunk_header_style_include_file_path,
+            &config.hunk_header_style_include_line_number,
+            ":",
+            &config,
+        );
 
         assert_eq!(result, "\u{1b}[34m3\u{1b}[0m");
     }
@@ -413,8 +469,16 @@ pub mod tests {
         let config = integration_test_utils::make_config_from_args(&["--features", "hyperlinks"]);
         let relative_path = PathBuf::from_iter(["some-dir", "some-file"]);
 
-        let result =
-            paint_file_path_with_line_number(Some(3), &relative_path.to_string_lossy(), &config);
+        let result = paint_file_path_with_line_number(
+            Some(3),
+            &relative_path.to_string_lossy(),
+            &config.hunk_header_style,
+            &config.hunk_header_line_number_style,
+            &config.hunk_header_style_include_file_path,
+            &config.hunk_header_style_include_line_number,
+            ":",
+            &config,
+        );
 
         assert_eq!(
             result,
@@ -438,8 +502,19 @@ pub mod tests {
             "omit",
         ]);
 
-        let result = paint_file_path_with_line_number(Some(3), "some-file", &config);
+        let result = paint_file_path_with_line_number(
+            Some(3),
+            "some-file",
+            &config.hunk_header_style,
+            &config.hunk_header_line_number_style,
+            &config.hunk_header_style_include_file_path,
+            &config.hunk_header_style_include_line_number,
+            ":",
+            &config,
+        );
 
+        // result is
+        // "\u{1b}[1msome-file\u{1b}[0m:\u{1b}[34m3\u{1b}[0m"
         assert_eq!(result, "");
     }
 
@@ -458,7 +533,16 @@ pub mod tests {
             "hyperlinks",
         ]);
 
-        let result = paint_file_path_with_line_number(Some(3), "some-file", &config);
+        let result = paint_file_path_with_line_number(
+            Some(3),
+            "some-file",
+            &config.hunk_header_style,
+            &config.hunk_header_line_number_style,
+            &config.hunk_header_style_include_file_path,
+            &config.hunk_header_style_include_line_number,
+            ":",
+            &config,
+        );
 
         assert_eq!(result, "");
     }
@@ -473,8 +557,19 @@ pub mod tests {
             "--navigate",
         ]);
 
-        let result = paint_file_path_with_line_number(Some(3), "δ some-file", &config);
+        let result = paint_file_path_with_line_number(
+            Some(3),
+            "δ some-file",
+            &config.hunk_header_style,
+            &config.hunk_header_line_number_style,
+            &config.hunk_header_style_include_file_path,
+            &config.hunk_header_style_include_line_number,
+            ":",
+            &config,
+        );
 
+        // result is
+        // "\u{1b}[1mδ some-file\u{1b}[0m:\u{1b}[34m3\u{1b}[0m"
         assert_eq!(result, "");
     }
 

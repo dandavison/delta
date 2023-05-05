@@ -184,7 +184,9 @@ Side-by-side view wraps long lines automatically:
 
 [[User manual](https://dandavison.github.io/delta/grep.html)]
 
-<table><tr><td><img width=400px src="https://user-images.githubusercontent.com/52205/225271024-a01367f0-af1b-466a-9b9e-b1ced7f80031.png" alt="image" /></td></tr></table>
+<table><tr><td>
+<img width="600px" alt="image" src="https://github.com/dandavison/open-in-editor/assets/52205/d203d380-5acb-4296-aeb9-e38c73d6c27f">
+</td></tr></table>
 
 ### Installation and usage
 

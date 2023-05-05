@@ -1,18 +1,25 @@
 use std::borrow::Cow;
+use std::fmt::Write;
 
 use lazy_static::lazy_static;
 use regex::Regex;
 use serde::Deserialize;
 
 use crate::ansi;
+use crate::config::{
+    delta_unreachable, GrepType, HunkHeaderIncludeFilePath, HunkHeaderIncludeLineNumber,
+};
 use crate::delta::{State, StateMachine};
 use crate::handlers::{self, ripgrep_json};
 use crate::paint::{self, BgShouldFill, StyleSectionSpecifier};
 use crate::style::Style;
 use crate::utils::{process, tabs};
 
+use super::hunk_header::HunkHeaderIncludeHunkLabel;
+
 #[derive(Debug, PartialEq, Eq)]
 pub struct GrepLine<'b> {
+    pub grep_type: GrepType,
     pub path: Cow<'b, str>,
     pub line_number: Option<usize>,
     pub line_type: LineType,
@@ -25,6 +32,7 @@ pub struct GrepLine<'b> {
 pub enum LineType {
     ContextHeader,
     Context,
+    FileHeader,
     Match,
     Ignore,
 }
@@ -39,84 +47,228 @@ lazy_static! {
     static ref OUTPUT_CONFIG: GrepOutputConfig = make_output_config();
 }
 
+impl LineType {
+    fn file_path_separator(&self) -> &str {
+        // grep, rg, and git grep use ":" for matching lines
+        // and "-" for non-matching lines (and `git grep -W`
+        // uses "=" for a context header line).
+        match self {
+            LineType::Match => ":",
+            LineType::Context => "-",
+            LineType::ContextHeader => "=",
+            LineType::Ignore | LineType::FileHeader => "",
+        }
+    }
+}
+
 impl<'a> StateMachine<'a> {
     // If this is a line of git grep output then render it accordingly.
     pub fn handle_grep_line(&mut self) -> std::io::Result<bool> {
         self.painter.emit()?;
+
+        let (previous_path, previous_line_type, previous_line, try_parse) = match &self.state {
+            State::Grep(_, line_type, path, line_number) => {
+                (Some(path.clone()), Some(line_type), line_number, true)
+            }
+            State::Unknown => (None, None, &None, true),
+            _ => (None, None, &None, false),
+        };
+
         let mut handled_line = false;
-
-        let try_parse = matches!(&self.state, State::Grep | State::Unknown);
-
         if try_parse {
             let line = self.line.clone(); // TODO: avoid clone
-            if let Some(mut grep_line) = parse_grep_line(&line) {
+            if let Some(grep_line) = parse_grep_line(&line) {
                 if matches!(grep_line.line_type, LineType::Ignore) {
                     handled_line = true;
                     return Ok(handled_line);
                 }
-
-                // Emit syntax-highlighted code
-                // TODO: Determine the language less frequently, e.g. only when the file changes.
-                if let Some(lang) = handlers::diff_header::get_extension(&grep_line.path)
-                    .or(self.config.default_language.as_deref())
-                {
-                    self.painter.set_syntax(Some(lang));
-                    self.painter.set_highlighter();
+                let first_path = previous_path.is_none();
+                let new_path = first_path || previous_path.as_deref() != Some(&grep_line.path);
+                // Emit a '--' section separator when output contains context lines (i.e. *grep option -A, -B, -C is in effect).
+                let new_section = !new_path
+                    && (previous_line_type == Some(&LineType::Context)
+                        || grep_line.line_type == LineType::Context)
+                    && previous_line < &grep_line.line_number.as_ref().map(|n| n - 1);
+                self.state = State::Grep(
+                    self.config
+                        .grep_output_type
+                        .clone()
+                        .unwrap_or_else(|| grep_line.grep_type.clone()),
+                    grep_line.line_type,
+                    grep_line.path.to_string(),
+                    grep_line.line_number,
+                );
+                if new_path {
+                    if let Some(lang) = handlers::diff_header::get_extension(&grep_line.path)
+                        .or(self.config.default_language.as_deref())
+                    {
+                        self.painter.set_syntax(Some(lang));
+                        self.painter.set_highlighter();
+                    }
                 }
-                self.state = State::Grep;
-
-                match (
-                    &grep_line.line_type,
-                    OUTPUT_CONFIG.render_context_header_as_hunk_header,
-                ) {
-                    // Emit context header line
-                    (LineType::ContextHeader, true) => handlers::hunk_header::write_hunk_header(
-                        &grep_line.code,
-                        &[(grep_line.line_number.unwrap_or(0), 0)],
-                        &mut self.painter,
-                        &self.line,
-                        &grep_line.path,
-                        self.config,
-                    )?,
-                    _ => self._handle_grep_line(&mut grep_line)?,
-                }
+                match &self.state {
+                    State::Grep(GrepType::Ripgrep, _, _, _) => self.emit_ripgrep_format_grep_line(
+                        grep_line,
+                        new_path,
+                        first_path,
+                        new_section,
+                    ),
+                    State::Grep(GrepType::Classic, _, _, _) => {
+                        self.emit_classic_format_grep_line(grep_line)
+                    }
+                    _ => delta_unreachable("Impossible state while handling grep line."),
+                }?;
                 handled_line = true
             }
         }
         Ok(handled_line)
     }
 
-    fn _handle_grep_line(&mut self, grep_line: &mut GrepLine) -> std::io::Result<()> {
-        if self.config.navigate {
-            write!(
-                self.painter.writer,
-                "{}",
-                match (
-                    &grep_line.line_type,
-                    OUTPUT_CONFIG.add_navigate_marker_to_matches
-                ) {
-                    (LineType::Match, true) => "• ",
-                    (_, true) => "  ",
-                    _ => "",
-                }
+    // Emulate ripgrep output: each section of hits from the same path has a header line,
+    // and sections are separated by a blank line. Set language whenever path changes.
+    fn emit_ripgrep_format_grep_line(
+        &mut self,
+        mut grep_line: GrepLine,
+        new_path: bool,
+        first_path: bool,
+        new_section: bool,
+    ) -> std::io::Result<()> {
+        if new_path {
+            // Emit new path header line
+            if !first_path {
+                let _ = self.painter.output_buffer.write_char('\n');
+            }
+            handlers::hunk_header::write_line_of_code_with_optional_path_and_line_number(
+                "",
+                &[(0, 0)],
+                None,
+                &mut self.painter,
+                &self.line,
+                &grep_line.path,
+                self.config.ripgrep_header_style.decoration_style,
+                &self.config.grep_file_style,
+                &self.config.grep_line_number_style,
+                &HunkHeaderIncludeFilePath::Yes,
+                &HunkHeaderIncludeLineNumber::No,
+                &HunkHeaderIncludeHunkLabel::Yes,
+                "",
+                self.config,
             )?
         }
-        self._emit_file_and_line_number(grep_line)?;
-        self._emit_code(grep_line)?;
+        if new_section {
+            let _ = self.painter.output_buffer.write_str("--\n");
+        }
+        // Emit the actual grep hit line
+        let code_style_sections = match (&grep_line.line_type, &grep_line.submatches) {
+            (LineType::Match, Some(submatches)) => {
+                // We expand tabs at this late stage because
+                // the tabs are escaped in the JSON, so
+                // expansion must come after JSON parsing.
+                // (At the time of writing, we are in this
+                // arm iff we are handling `ripgrep --json`
+                // output.)
+                grep_line.code = tabs::expand(&grep_line.code, &self.config.tab_cfg).into();
+                make_style_sections(
+                    &grep_line.code,
+                    submatches,
+                    self.config.grep_match_word_style,
+                    self.config.grep_match_line_style,
+                )
+            }
+            (LineType::Match, None) => {
+                // HACK: We need tabs expanded, and we need
+                // the &str passed to
+                // `get_code_style_sections` to live long
+                // enough. But at this point it is guaranteed
+                // that this handler is going to handle this
+                // line, so mutating it is acceptable.
+                self.raw_line = tabs::expand(&self.raw_line, &self.config.tab_cfg);
+                get_code_style_sections(
+                    &self.raw_line,
+                    self.config.grep_match_word_style,
+                    self.config.grep_match_line_style,
+                    &grep_line,
+                )
+                .unwrap_or(StyleSectionSpecifier::Style(
+                    self.config.grep_match_line_style,
+                ))
+            }
+            _ => StyleSectionSpecifier::Style(self.config.grep_context_line_style),
+        };
+        handlers::hunk_header::write_line_of_code_with_optional_path_and_line_number(
+            &grep_line.code,
+            &[(grep_line.line_number.unwrap_or(0), 0)],
+            Some(code_style_sections),
+            &mut self.painter,
+            &self.line,
+            &grep_line.path,
+            crate::style::DecorationStyle::NoDecoration,
+            &self.config.grep_file_style,
+            &self.config.grep_line_number_style,
+            &HunkHeaderIncludeFilePath::No,
+            if grep_line.line_number.is_some() {
+                &HunkHeaderIncludeLineNumber::Yes
+            } else {
+                &HunkHeaderIncludeLineNumber::No
+            },
+            &HunkHeaderIncludeHunkLabel::No,
+            grep_line.line_type.file_path_separator(),
+            self.config,
+        )
+    }
+
+    fn emit_classic_format_grep_line(&mut self, grep_line: GrepLine) -> std::io::Result<()> {
+        match (
+            &grep_line.line_type,
+            OUTPUT_CONFIG.render_context_header_as_hunk_header,
+        ) {
+            // Emit context header line (`git grep -W`)
+            (LineType::ContextHeader, true) => {
+                handlers::hunk_header::write_line_of_code_with_optional_path_and_line_number(
+                    &grep_line.code,
+                    &[(grep_line.line_number.unwrap_or(0), 0)],
+                    None,
+                    &mut self.painter,
+                    &self.line,
+                    &grep_line.path,
+                    self.config.classic_grep_header_style.decoration_style,
+                    &self.config.classic_grep_header_file_style,
+                    &self.config.grep_line_number_style,
+                    &self.config.hunk_header_style_include_file_path,
+                    &self.config.hunk_header_style_include_line_number,
+                    &HunkHeaderIncludeHunkLabel::Yes,
+                    grep_line.line_type.file_path_separator(),
+                    self.config,
+                )?
+            }
+            _ => {
+                if self.config.navigate {
+                    write!(
+                        self.painter.writer,
+                        "{}",
+                        match (
+                            &grep_line.line_type,
+                            OUTPUT_CONFIG.add_navigate_marker_to_matches
+                        ) {
+                            (LineType::Match, true) => "• ",
+                            (_, true) => "  ",
+                            _ => "",
+                        }
+                    )?
+                }
+                self._emit_classic_format_file_and_line_number(&grep_line)?;
+                self._emit_classic_format_code(grep_line)?;
+            }
+        }
         Ok(())
     }
 
-    fn _emit_file_and_line_number(&mut self, grep_line: &GrepLine) -> std::io::Result<()> {
+    fn _emit_classic_format_file_and_line_number(
+        &mut self,
+        grep_line: &GrepLine,
+    ) -> std::io::Result<()> {
         let separator = if self.config.grep_separator_symbol == "keep" {
-            // grep, rg, and git grep use ":" for matching lines
-            // and "-" for non-matching lines (and `git grep -W`
-            // uses "=" for a context header line).
-            match grep_line.line_type {
-                LineType::Match => ":",
-                LineType::Context => "-",
-                LineType::ContextHeader => "=",
-                LineType::Ignore | LineType::FileHeader => "",
-            }
+            grep_line.line_type.file_path_separator()
         } else {
             // But ":" results in a "file/path:number:"
             // construct that terminal emulators are more likely
@@ -144,7 +296,7 @@ impl<'a> StateMachine<'a> {
         Ok(())
     }
 
-    fn _emit_code(&mut self, grep_line: &mut GrepLine) -> std::io::Result<()> {
+    fn _emit_classic_format_code(&mut self, mut grep_line: GrepLine) -> std::io::Result<()> {
         let code_style_sections = match (&grep_line.line_type, &grep_line.submatches) {
             (LineType::Match, Some(submatches)) => {
                 // We expand tabs at this late stage because
@@ -153,9 +305,7 @@ impl<'a> StateMachine<'a> {
                 // (At the time of writing, we are in this
                 // arm iff we are handling `ripgrep --json`
                 // output.)
-                grep_line.code =
-                    paint::expand_tabs(grep_line.code.graphemes(true), self.config.tab_width)
-                        .into();
+                grep_line.code = tabs::expand(&grep_line.code, &self.config.tab_cfg).into();
                 make_style_sections(
                     &grep_line.code,
                     submatches,
@@ -170,12 +320,12 @@ impl<'a> StateMachine<'a> {
                 // enough. But at the point it is guaranteed
                 // that this handler is going to handle this
                 // line, so mutating it is acceptable.
-                self.raw_line = expand_tabs(self.raw_line.graphemes(true), self.config.tab_width);
+                self.raw_line = tabs::expand(&self.raw_line, &self.config.tab_cfg);
                 get_code_style_sections(
                     &self.raw_line,
                     self.config.grep_match_word_style,
                     self.config.grep_match_line_style,
-                    grep_line,
+                    &grep_line,
                 )
                 .unwrap_or(StyleSectionSpecifier::Style(
                     self.config.grep_match_line_style,
@@ -278,13 +428,13 @@ fn make_output_config() -> GrepOutputConfig {
             GrepOutputConfig {
                 render_context_header_as_hunk_header: true,
                 add_navigate_marker_to_matches: false,
-                pad_line_number: false,
+                pad_line_number: true,
             }
         }
         _ => GrepOutputConfig {
             render_context_header_as_hunk_header: true,
             add_navigate_marker_to_matches: false,
-            pad_line_number: false,
+            pad_line_number: true,
         },
     }
 }
@@ -347,8 +497,8 @@ fn make_grep_line_regex(regex_variant: GrepLineRegex) -> Regex {
         (                        # 1. file name (colons not allowed)
             [^:|\ ]                 # try to be strict about what a file path can start with
             [^:]*                   # anything
-            [^\ ]\.[^.\ :=-]{1,10}   # extension
-        )    
+            [^\ ]\.[^.\ :=-]{1,10}  # extension
+        )
         "
         }
         GrepLineRegex::WithFileExtensionNoSpaces => {
@@ -356,7 +506,7 @@ fn make_grep_line_regex(regex_variant: GrepLineRegex) -> Regex {
         (                        # 1. file name (colons not allowed)
             [^:|\ ]+                # try to be strict about what a file path can start with
             [^\ ]\.[^.\ :=-]{1,6}   # extension
-        )    
+        )
         "
         }
         GrepLineRegex::WithoutSeparatorCharacters => {
@@ -365,7 +515,7 @@ fn make_grep_line_regex(regex_variant: GrepLineRegex) -> Regex {
             [^:|\ =-]               # try to be strict about what a file path can start with
             [^:=-]*                 # anything except separators
             [^:\ ]                  # a file name cannot end with whitespace
-        )    
+        )
         "
         }
     };
@@ -385,7 +535,7 @@ fn make_grep_line_regex(regex_variant: GrepLineRegex) -> Regex {
         )
         |
         (
-            =                # 6. match marker
+            =                # 6. context header marker
             ([0-9]+)=        # 7. line number followed by second header marker
         )
     )
@@ -394,7 +544,7 @@ fn make_grep_line_regex(regex_variant: GrepLineRegex) -> Regex {
         _ => {
             r#"
     (?:
-        (                    
+        (
             :                # 2. match marker
             (?:([0-9]+):)?   # 3. optional: line number followed by second match marker
         )
@@ -405,7 +555,7 @@ fn make_grep_line_regex(regex_variant: GrepLineRegex) -> Regex {
         )
         |
         (
-            =                # 6. match marker
+            =                # 6. context header marker
             (?:([0-9]+)=)?   # 7. optional: line number followed by second header marker
         )
     )
@@ -418,7 +568,7 @@ fn make_grep_line_regex(regex_variant: GrepLineRegex) -> Regex {
 ^
 {file_path}
 {separator}
-(.*)                     # 8. code (i.e. line contents)
+(.*)                         # 8. code (i.e. line contents)
 $
 ",
     ))
@@ -464,6 +614,7 @@ pub fn _parse_grep_line<'b>(regex: &Regex, line: &'b str) -> Option<GrepLine<'b>
     let code = caps.get(8).unwrap().as_str().into();
 
     Some(GrepLine {
+        grep_type: GrepType::Classic,
         path: file,
         line_number: *line_number,
         line_type: *line_type,
@@ -474,7 +625,7 @@ pub fn _parse_grep_line<'b>(regex: &Regex, line: &'b str) -> Option<GrepLine<'b>
 
 #[cfg(test)]
 mod tests {
-    use crate::handlers::grep::{parse_grep_line, GrepLine, LineType};
+    use crate::handlers::grep::{parse_grep_line, GrepLine, GrepType, LineType};
     use crate::utils::process::tests::FakeParentArgs;
 
     #[test]
@@ -485,6 +636,7 @@ mod tests {
         assert_eq!(
             parse_grep_line("src/co-7-fig.rs:xxx"),
             Some(GrepLine {
+                grep_type: GrepType::Classic,
                 path: "src/co-7-fig.rs".into(),
                 line_number: None,
                 line_type: LineType::Match,
@@ -496,6 +648,7 @@ mod tests {
         assert_eq!(
             parse_grep_line("src/config.rs:use crate::minusplus::MinusPlus;"),
             Some(GrepLine {
+                grep_type: GrepType::Classic,
                 path: "src/config.rs".into(),
                 line_number: None,
                 line_type: LineType::Match,
@@ -509,6 +662,7 @@ mod tests {
                 "src/config.rs:    pub line_numbers_style_minusplus: MinusPlus<Style>,"
             ),
             Some(GrepLine {
+                grep_type: GrepType::Classic,
                 path: "src/config.rs".into(),
                 line_number: None,
                 line_type: LineType::Match,
@@ -520,6 +674,7 @@ mod tests {
         assert_eq!(
             parse_grep_line("src/con-fig.rs:use crate::minusplus::MinusPlus;"),
             Some(GrepLine {
+                grep_type: GrepType::Classic,
                 path: "src/con-fig.rs".into(),
                 line_number: None,
                 line_type: LineType::Match,
@@ -533,6 +688,7 @@ mod tests {
                 "src/con-fig.rs:    pub line_numbers_style_minusplus: MinusPlus<Style>,"
             ),
             Some(GrepLine {
+                grep_type: GrepType::Classic,
                 path: "src/con-fig.rs".into(),
                 line_number: None,
                 line_type: LineType::Match,
@@ -546,7 +702,8 @@ mod tests {
                 "src/de lta.rs:pub fn delta<I>(lines: ByteLines<I>, writer: &mut dyn Write, config: &Config) -> std::io::Result<()>"
             ),
             Some(GrepLine {
-                path: "src/de lta.rs".into(),
+                grep_type: GrepType::Classic,
+                                path: "src/de lta.rs".into(),
                 line_number: None,
                 line_type: LineType::Match,
                 code: "pub fn delta<I>(lines: ByteLines<I>, writer: &mut dyn Write, config: &Config) -> std::io::Result<()>".into(),
@@ -559,7 +716,8 @@ mod tests {
                 "src/de lta.rs:    pub fn new(writer: &'a mut dyn Write, config: &'a Config) -> Self {"
             ),
             Some(GrepLine {
-                path: "src/de lta.rs".into(),
+                grep_type: GrepType::Classic,
+                                path: "src/de lta.rs".into(),
                 line_number: None,
                 line_type: LineType::Match,
                 code: "    pub fn new(writer: &'a mut dyn Write, config: &'a Config) -> Self {".into(),
@@ -577,6 +735,7 @@ mod tests {
         assert_eq!(
             parse_grep_line("src/co-7-fig.rs:7:xxx"),
             Some(GrepLine {
+                grep_type: GrepType::Classic,
                 path: "src/co-7-fig.rs".into(),
                 line_number: Some(7),
                 line_type: LineType::Match,
@@ -588,6 +747,7 @@ mod tests {
         assert_eq!(
             parse_grep_line("src/config.rs:21:use crate::minusplus::MinusPlus;"),
             Some(GrepLine {
+                grep_type: GrepType::Classic,
                 path: "src/config.rs".into(),
                 line_number: Some(21),
                 line_type: LineType::Match,
@@ -601,6 +761,7 @@ mod tests {
                 "src/config.rs:95:    pub line_numbers_style_minusplus: MinusPlus<Style>,"
             ),
             Some(GrepLine {
+                grep_type: GrepType::Classic,
                 path: "src/config.rs".into(),
                 line_number: Some(95),
                 line_type: LineType::Match,
@@ -612,6 +773,7 @@ mod tests {
         assert_eq!(
             parse_grep_line("Makefile:10:test: unit-test end-to-end-test"),
             Some(GrepLine {
+                grep_type: GrepType::Classic,
                 path: "Makefile".into(),
                 line_number: Some(10),
                 line_type: LineType::Match,
@@ -625,6 +787,7 @@ mod tests {
                 "Makefile:16:    ./tests/test_raw_output_matches_git_on_full_repo_history"
             ),
             Some(GrepLine {
+                grep_type: GrepType::Classic,
                 path: "Makefile".into(),
                 line_number: Some(16),
                 line_type: LineType::Match,
@@ -646,6 +809,7 @@ mod tests {
         assert_eq!(
             parse_grep_line("etc/examples/119-within-line-edits:4:repo=$(mktemp -d)"),
             Some(GrepLine {
+                grep_type: GrepType::Classic,
                 path: "etc/examples/119-within-line-edits".into(),
                 line_number: Some(4),
                 line_type: LineType::Match,
@@ -664,6 +828,7 @@ mod tests {
         assert_eq!(
             parse_grep_line("etc/META-INF/foo.properties:4:value=hi-there"),
             Some(GrepLine {
+                grep_type: GrepType::Classic,
                 path: "etc/META-INF/foo.properties".into(),
                 line_number: Some(4),
                 line_type: LineType::Match,
@@ -682,6 +847,7 @@ mod tests {
         assert_eq!(
             parse_grep_line("src/co-7-fig.rs-xxx"),
             Some(GrepLine {
+                grep_type: GrepType::Classic,
                 path: "src/co-7-fig.rs".into(),
                 line_number: None,
                 line_type: LineType::Context,
@@ -693,6 +859,7 @@ mod tests {
         assert_eq!(
             parse_grep_line("src/config.rs-    pub available_terminal_width: usize,"),
             Some(GrepLine {
+                grep_type: GrepType::Classic,
                 path: "src/config.rs".into(),
                 line_number: None,
                 line_type: LineType::Context,
@@ -704,6 +871,7 @@ mod tests {
         assert_eq!(
             parse_grep_line("src/con-fig.rs-use crate::minusplus::MinusPlus;"),
             Some(GrepLine {
+                grep_type: GrepType::Classic,
                 path: "src/con-fig.rs".into(),
                 line_number: None,
                 line_type: LineType::Context,
@@ -715,6 +883,7 @@ mod tests {
         assert_eq!(
             parse_grep_line("de-lta.rs-            if self.source == Source::Unknown {"),
             Some(GrepLine {
+                grep_type: GrepType::Classic,
                 path: "de-lta.rs".into(),
                 line_number: None,
                 line_type: LineType::Context,
@@ -726,6 +895,7 @@ mod tests {
         assert_eq!(
             parse_grep_line(r#"aaa/bbb.scala-              s"xxx.yyy.zzz: $ccc ddd""#),
             Some(GrepLine {
+                grep_type: GrepType::Classic,
                 path: "aaa/bbb.scala".into(),
                 line_number: None,
                 line_type: LineType::Context,
@@ -737,6 +907,7 @@ mod tests {
         assert_eq!(
             parse_grep_line(r#"aaa/bbb.scala-  val atRegex = Regex.compile("(@.*)|(-shdw@.*)""#),
             Some(GrepLine {
+                grep_type: GrepType::Classic,
                 path: "aaa/bbb.scala".into(),
                 line_number: None,
                 line_type: LineType::Context,
@@ -756,6 +927,7 @@ mod tests {
         assert_eq!(
             parse_grep_line("src/co-7-fig.rs-7-xxx"),
             Some(GrepLine {
+                grep_type: GrepType::Classic,
                 path: "src/co-7-fig.rs".into(),
                 line_number: Some(7),
                 line_type: LineType::Context,
@@ -767,6 +939,7 @@ mod tests {
         assert_eq!(
             parse_grep_line("src/config.rs-58-    pub available_terminal_width: usize,"),
             Some(GrepLine {
+                grep_type: GrepType::Classic,
                 path: "src/config.rs".into(),
                 line_number: Some(58),
                 line_type: LineType::Context,
@@ -778,6 +951,7 @@ mod tests {
         assert_eq!(
             parse_grep_line(r#"foo.rs-12-  .x-"#),
             Some(GrepLine {
+                grep_type: GrepType::Classic,
                 path: "foo.rs".into(),
                 line_number: Some(12),
                 line_type: LineType::Context,
@@ -789,6 +963,7 @@ mod tests {
         assert_eq!(
             parse_grep_line(r#"foo.rs-12-.x-"#),
             Some(GrepLine {
+                grep_type: GrepType::Classic,
                 path: "foo.rs".into(),
                 line_number: Some(12),
                 line_type: LineType::Context,
@@ -807,6 +982,7 @@ mod tests {
         assert_eq!(
             parse_grep_line("Makefile:xxx"),
             Some(GrepLine {
+                grep_type: GrepType::Classic,
                 path: "Makefile".into(),
                 line_number: None,
                 line_type: LineType::Match,
@@ -825,6 +1001,7 @@ mod tests {
         assert_eq!(
             parse_grep_line("Makefile:7:xxx"),
             Some(GrepLine {
+                grep_type: GrepType::Classic,
                 path: "Makefile".into(),
                 line_number: Some(7),
                 line_type: LineType::Match,
@@ -845,6 +1022,7 @@ mod tests {
         assert_eq!(
             parse_grep_line("src/config.rs=pub struct Config {"), // match
             Some(GrepLine {
+                grep_type: GrepType::Classic,
                 path: "src/config.rs".into(),
                 line_number: None,
                 line_type: LineType::ContextHeader,
@@ -865,6 +1043,7 @@ mod tests {
         assert_eq!(
             parse_grep_line("src/config.rs=57=pub struct Config {"),
             Some(GrepLine {
+                grep_type: GrepType::Classic,
                 path: "src/config.rs".into(),
                 line_number: Some(57),
                 line_type: LineType::ContextHeader,

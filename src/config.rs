@@ -65,15 +65,19 @@ pub struct Config {
     pub git_plus_style: Style,
     pub grep_context_line_style: Style,
     pub grep_file_style: Style,
+    pub classic_grep_header_file_style: Style,
+    pub classic_grep_header_style: Style,
+    pub ripgrep_header_style: Style,
     pub grep_line_number_style: Style,
     pub grep_match_line_style: Style,
     pub grep_match_word_style: Style,
+    pub grep_output_type: Option<GrepType>,
     pub grep_separator_symbol: String,
     pub handle_merge_conflicts: bool,
     pub hunk_header_file_style: Style,
     pub hunk_header_line_number_style: Style,
-    pub hunk_header_style_include_file_path: bool,
-    pub hunk_header_style_include_line_number: bool,
+    pub hunk_header_style_include_file_path: HunkHeaderIncludeFilePath,
+    pub hunk_header_style_include_line_number: HunkHeaderIncludeLineNumber,
     pub hunk_header_style: Style,
     pub hunk_label: String,
     pub hyperlinks_commit_link_format: Option<String>,
@@ -129,6 +133,24 @@ pub struct Config {
     pub zero_style: Style,
 }
 
+#[derive(Debug, Eq, PartialEq, Clone)]
+pub enum GrepType {
+    Ripgrep,
+    Classic,
+}
+
+#[cfg_attr(test, derive(Clone))]
+pub enum HunkHeaderIncludeFilePath {
+    Yes,
+    No,
+}
+
+#[cfg_attr(test, derive(Clone))]
+pub enum HunkHeaderIncludeLineNumber {
+    Yes,
+    No,
+}
+
 impl Config {
     pub fn get_style(&self, state: &State) -> &Style {
         match state {
@@ -137,6 +159,7 @@ impl Config {
             State::HunkPlus(_, _) => &self.plus_style,
             State::CommitMeta => &self.commit_style,
             State::DiffHeader(_) => &self.file_style,
+            State::Grep(GrepType::Ripgrep, _, _, _) => &self.classic_grep_header_style,
             State::HunkHeader(_, _, _, _) => &self.hunk_header_style,
             State::SubmoduleLog => &self.file_style,
             _ => delta_unreachable("Unreachable code reached in get_style."),
@@ -222,6 +245,13 @@ impl From<cli::Opt> for Config {
             opt.navigate_regex
         };
 
+        let grep_output_type = match opt.grep_output_type.as_deref() {
+            Some("ripgrep") => Some(GrepType::Ripgrep),
+            Some("classic") => Some(GrepType::Classic),
+            None => None,
+            _ => fatal("Invalid option for grep-output-type: Expected \"ripgrep\" or \"classic\"."),
+        };
+
         #[cfg(not(test))]
         let cwd_of_delta_process = opt.env.current_dir;
         #[cfg(test)]
@@ -271,22 +301,36 @@ impl From<cli::Opt> for Config {
             git_config: opt.git_config,
             grep_context_line_style: styles["grep-context-line-style"],
             grep_file_style: styles["grep-file-style"],
+            classic_grep_header_file_style: styles["classic-grep-header-file-style"],
+            classic_grep_header_style: styles["classic-grep-header-style"],
+            ripgrep_header_style: styles["ripgrep-header-style"],
             grep_line_number_style: styles["grep-line-number-style"],
             grep_match_line_style: styles["grep-match-line-style"],
             grep_match_word_style: styles["grep-match-word-style"],
+            grep_output_type,
             grep_separator_symbol: opt.grep_separator_symbol,
             handle_merge_conflicts: !opt.raw,
             hunk_header_file_style: styles["hunk-header-file-style"],
             hunk_header_line_number_style: styles["hunk-header-line-number-style"],
             hunk_header_style: styles["hunk-header-style"],
-            hunk_header_style_include_file_path: opt
+            hunk_header_style_include_file_path: if opt
                 .hunk_header_style
                 .split(' ')
-                .any(|s| s == "file"),
-            hunk_header_style_include_line_number: opt
+                .any(|s| s == "file")
+            {
+                HunkHeaderIncludeFilePath::Yes
+            } else {
+                HunkHeaderIncludeFilePath::No
+            },
+            hunk_header_style_include_line_number: if opt
                 .hunk_header_style
                 .split(' ')
-                .any(|s| s == "line-number"),
+                .any(|s| s == "line-number")
+            {
+                HunkHeaderIncludeLineNumber::Yes
+            } else {
+                HunkHeaderIncludeLineNumber::No
+            },
             hyperlinks: opt.hyperlinks,
             hyperlinks_commit_link_format: opt.hyperlinks_commit_link_format,
             hyperlinks_file_link_format: opt.hyperlinks_file_link_format,
