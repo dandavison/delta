@@ -8,7 +8,9 @@ use bytelines::ByteLines;
 use crate::ansi;
 use crate::config::delta_unreachable;
 use crate::config::Config;
+use crate::config::GrepType;
 use crate::features;
+use crate::handlers::grep;
 use crate::handlers::hunk_header::ParsedHunkHeader;
 use crate::handlers::{self, merge_conflict};
 use crate::paint::Painter;
@@ -28,7 +30,7 @@ pub enum State {
     SubmoduleShort(String), // In a submodule section, with gitconfig diff.submodule = short
     Blame(String), // In a line of `git blame` output (key).
     GitShowFile,  // In a line of `git show $revision:./path/to/file.ext` output
-    Grep,         // In a line of `git grep` output
+    Grep(GrepType, grep::LineType, String, Option<usize>), // In a line of `git grep` output (grep_type, line_type, path, line_number)
     Unknown,
     // The following elements are created when a line is wrapped to display it:
     HunkZeroWrapped,  // Wrapped unchanged line

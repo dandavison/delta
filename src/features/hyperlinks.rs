@@ -332,6 +332,8 @@ __path__:  some matching line
                 "raw",
                 "--grep-line-number-style",
                 "raw",
+                "--grep-output-type",
+                "classic",
                 "--hunk-header-file-style",
                 "raw",
                 "--hunk-header-line-number-style",

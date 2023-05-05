@@ -22,6 +22,7 @@ pub fn parse_line(line: &str) -> Option<grep::GrepLine> {
                 }
             }
             Some(grep::GrepLine {
+                grep_type: crate::config::GrepType::Ripgrep,
                 line_type: ripgrep_line._type,
                 line_number: ripgrep_line.data.line_number,
                 path: Cow::from(ripgrep_line.data.path.text),
@@ -44,6 +45,7 @@ pub fn parse_line(line: &str) -> Option<grep::GrepLine> {
                         // ripgrep --json also emits these metadata lines at
                         // file boundaries. We emit nothing but signal that the
                         // line has been handled.
+                        grep_type: crate::config::GrepType::Ripgrep,
                         line_type: grep::LineType::Ignore,
                         line_number: None,
                         path: "".into(),
