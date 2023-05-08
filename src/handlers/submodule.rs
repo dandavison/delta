@@ -51,7 +51,7 @@ impl<'a> StateMachine<'a> {
 
 lazy_static! {
     static ref SUBMODULE_SHORT_LINE_REGEX: Regex =
-        Regex::new("^[-+]Subproject commit ([0-9a-f]{40})$").unwrap();
+        Regex::new("^[-+]Subproject commit ([0-9a-f]{40})(-dirty)?$").unwrap();
 }
 
 pub fn get_submodule_short_commit(line: &str) -> Option<&str> {

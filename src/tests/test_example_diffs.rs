@@ -194,6 +194,20 @@ mod tests {
     }
 
     #[test]
+    fn test_simple_dirty_submodule_diff() {
+        DeltaTest::with_args(&["--width", "30"])
+            .with_input(SUBMODULE_DIRTY)
+            .inspect()
+            .expect_after_skip(
+                1,
+                r#"
+            some_submodule
+            ──────────────────────────────
+            ca030fd..803be42"#,
+            );
+    }
+
+    #[test]
     fn test_submodule_diff_log() {
         // See etc/examples/662-submodules
         // diff.submodule = log
@@ -1934,6 +1948,16 @@ This is a regular file that contains:
  Some text here
 -Some text with a minus
 +Some text with a plus
+";
+
+    const SUBMODULE_DIRTY: &str = "\
+diff --git a/some_submodule b/some_submodule
+index ca030fd1a0..803be42ca4 160000
+--- a/some_submodule
++++ b/some_submodule
+@@ -1 +1 @@
+-Subproject commit ca030fd1a02225a6fc1a834c480276d9c97a8c6f
++Subproject commit 803be42ca46af0fbc65b54a9abfb499389516939-dirty
 ";
 
     // See etc/examples/662-submodules
