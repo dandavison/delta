@@ -125,6 +125,16 @@ impl Style {
         }
     }
 
+    #[cfg(test)]
+    pub fn get_matching_substring<'a>(&self, s: &'a str) -> Option<&'a str> {
+        for (parsed_style, parsed_str) in ansi::parse_style_sections(s) {
+            if ansi_term_style_equality(parsed_style, self.ansi_term_style) {
+                return Some(parsed_str);
+            }
+        }
+        None
+    }
+
     pub fn to_painted_string(self) -> ansi_term::ANSIGenericString<'static, str> {
         self.paint(self.to_string())
     }
