@@ -20,7 +20,6 @@ pub fn strip_ansi_codes(s: &str) -> String {
 }
 
 pub fn measure_text_width(s: &str) -> usize {
-    // TODO: how should e.g. '\n' be handled?
     ansi_strings_iterator(s).fold(0, |acc, (element, is_ansi)| {
         acc + if is_ansi { 0 } else { element.width() }
     })
@@ -54,9 +53,6 @@ pub fn truncate_str<'a>(s: &'a str, display_width: usize, tail: &str) -> Cow<'a,
             for g in t.graphemes(true) {
                 let w = g.width();
                 if used + w > display_width {
-                    // use space to fill the gap left by truncate. Need another
-                    // option to custom this or just use `WrapOption.wrap_right_prefix_symbol`
-                    // in the future.
                     result.push_str(&" ".repeat(display_width.saturating_sub(used)));
                     break;
                 }

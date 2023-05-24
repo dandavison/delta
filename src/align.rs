@@ -142,73 +142,9 @@ impl<'a> Alignment<'a> {
         run_length_encode(self.operations())
     }
 
-    /// Compute custom distance metric from the filled table. The distance metric is
-    ///
-    /// (total length of edits) / (total length of longer string)
-    ///
-    /// where length is measured in number of unicode grapheme clusters.
-    #[allow(dead_code)]
-    pub fn distance(&self) -> f64 {
-        let (numer, denom) = self.distance_parts();
-        (numer as f64) / (denom as f64)
-    }
-
-    #[allow(dead_code)]
-    pub fn distance_parts(&self) -> (usize, usize) {
-        let (mut numer, mut denom) = (0, 0);
-        for op in self.operations() {
-            if op != NoOp {
-                numer += 1;
-            }
-            denom += 1;
-        }
-        (numer, denom)
-    }
-
-    /// Compute levenshtein distance from the filled table.
-    #[allow(dead_code)]
-    pub fn levenshtein_distance(&self) -> usize {
-        self.table[self.index(self.x.len(), self.y.len())].cost
-    }
-
     // Row-major storage of 2D array.
     fn index(&self, i: usize, j: usize) -> usize {
         j * self.dim[1] + i
-    }
-
-    #[allow(dead_code)]
-    fn format_cell(&self, cell: &Cell) -> String {
-        let parent = &self.table[cell.parent];
-        let op = match cell.operation {
-            Deletion => "-",
-            Insertion => "+",
-            NoOp => ".",
-        };
-        format!("{}{}{}", parent.cost, op, cell.cost)
-    }
-
-    #[allow(dead_code)]
-    fn print(&self) {
-        println!("x: {:?}", self.x);
-        println!("y: {:?}", self.y);
-        println!();
-        print!("      ");
-        for j in 0..self.dim[1] {
-            print!("{}     ", if j > 0 { self.x[j - 1] } else { " " })
-        }
-        println!();
-
-        for i in 0..self.dim[0] {
-            for j in 0..self.dim[1] {
-                if j == 0 {
-                    print!("{}     ", if i > 0 { self.y[i - 1] } else { " " })
-                }
-                let cell = &self.table[self.index(j, i)];
-                print!("{}   ", self.format_cell(cell));
-            }
-            println!();
-        }
-        println!();
     }
 }
 
@@ -453,5 +389,58 @@ mod tests {
             y.graphemes(true).collect::<Vec<&str>>(),
         );
         Alignment::new(x, y).operations()
+    }
+
+    impl<'a> Alignment<'a> {
+        pub fn distance_parts(&self) -> (usize, usize) {
+            let (mut numer, mut denom) = (0, 0);
+            for op in self.operations() {
+                if op != NoOp {
+                    numer += 1;
+                }
+                denom += 1;
+            }
+            (numer, denom)
+        }
+
+        /// Compute levenshtein distance from the filled table.
+        pub fn levenshtein_distance(&self) -> usize {
+            self.table[self.index(self.x.len(), self.y.len())].cost
+        }
+
+        #[allow(dead_code)]
+        fn format_cell(&self, cell: &Cell) -> String {
+            let parent = &self.table[cell.parent];
+            let op = match cell.operation {
+                Deletion => "-",
+                Insertion => "+",
+                NoOp => ".",
+            };
+            format!("{}{}{}", parent.cost, op, cell.cost)
+        }
+
+        #[allow(dead_code)]
+        fn print(&self) {
+            println!("x: {:?}", self.x);
+            println!("y: {:?}", self.y);
+            println!();
+            print!("      ");
+            for j in 0..self.dim[1] {
+                print!("{}     ", if j > 0 { self.x[j - 1] } else { " " })
+            }
+            println!();
+
+            for i in 0..self.dim[0] {
+                for j in 0..self.dim[1] {
+                    if j == 0 {
+                        print!("{}     ", if i > 0 { self.y[i - 1] } else { " " })
+                    }
+                    let cell = &self.table[self.index(j, i)];
+                    print!("{}   ", self.format_cell(cell));
+                }
+                println!();
+            }
+            println!();
+        }
     }
 }
