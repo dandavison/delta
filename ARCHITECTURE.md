@@ -18,6 +18,48 @@ Delta [parses input](https://github.com/dandavison/delta/blob/1e1bd6b6b96a3515fd
 the states correspond to semantically distinct sections of the input (e.g. `HunkMinus` means that we are in a removed line in a diff hunk).
 The core dispatching loop is [here](https://github.com/dandavison/delta/blob/1e1bd6b6b96a3515fd7c70d6b252a25eb9807dc7/src/delta.rs#L115-L129).
 
+```rust
+pub fn delta<I>(lines: ByteLines<I>, writer: &mut dyn Write, config: &Config) -> std::io::Result<()>
+where
+    I: BufRead,
+{
+    StateMachine::new(writer, config).consume(lines)
+}
+
+pub enum State {
+    DiffHeader(DiffType),
+    HunkHeader(DiffType, ParsedHunkHeader, String, String),
+    HunkZero(DiffType, Option<String>),
+    HunkMinus(DiffType, Option<String>),
+    HunkPlus(DiffType, Option<String>),
+    Unknown,
+}
+
+
+impl<'a> StateMachine<'a> {
+    fn consume<I>(&mut self, mut lines: ByteLines<I>) -> std::io::Result<()>
+    where
+        I: BufRead,
+    {
+        while let Some(Ok(raw_line_bytes)) = lines.next() {
+            self.ingest_line(raw_line_bytes);
+
+            // Every method named handle_* must return std::io::Result<bool>.
+            // The bool indicates whether the line has been handled by that
+            // method (in which case no subsequent handlers are permitted to
+            // handle it).
+            let _ = self.handle_commit_meta_header_line()?
+                || self.handle_diff_stat_line()?
+                || self.handle_hunk_header_line()?
+                || self.handle_hunk_line()?
+                || self.emit_line_unchanged()?;
+        }
+        self.painter.paint_buffered_minus_and_plus_lines();
+        Ok(())
+    }
+}
+```
+
 ### Output
 
 Delta [creates](https://github.com/dandavison/delta/blob/114ae670223520657208501a3245a3b4261c1093/src/main.rs#L125) a child pager process (`less`) and writes its output to the stdin of the pager process.
@@ -38,6 +80,10 @@ Delta's `navigate` feature is implemented by constructing an appropriate regex a
 Here we will follow one code path in detail: [handling diff hunk lines](https://github.com/dandavison/delta/blob/1e1bd6b6b96a3515fd7c70d6b252a25eb9807dc7/src/handlers/hunk.rs#L27) (removed/unchanged/added).
 This is the most important, and most complex, code path.
 
+<table><tr><td>
+<img width="1709" alt="image" src="https://github.com/dandavison/delta/assets/52205/06e868c2-c113-4946-827f-d7a78534d2ba">
+</td></tr></table>
+
 Recall that git diff output contains multiple diff "hunks".
 A hunk is a sequence of diff lines describing the changes among some lines of code that are close together in the same file.
 A git diff may have many hunks, from multiple files (and therefore multiple languages).
@@ -45,21 +91,21 @@ Within a hunk, there are sequences of consecutive removed and/or added lines ("s
 (The term "hunk" is standard; the term "subhunk" is specific to delta.)
 
 The handler function that is called when delta process a hunk line is [`handle_hunk_line`](https://github.com/dandavison/delta/blob/1e1bd6b6b96a3515fd7c70d6b252a25eb9807dc7/src/handlers/hunk.rs#L27).
-This function stores the line in a buffer (one buffer for minus lines and one for plus lines): the processing work is not done until we get to the end of the subhunk.
+This function [stores the line in a buffer](https://github.com/dandavison/delta/blob/1e1bd6b6b96a3515fd7c70d6b252a25eb9807dc7/src/handlers/hunk.rs#L60-L62) (one buffer for minus lines and one for plus lines): the processing work is not done until we get to the end of the subhunk.
 
 Now, we are at the end of a subhunk, and we have a sequence of minus lines, and a sequence of plus lines.
 
 <table><tr><td><img width=1000px src="https://user-images.githubusercontent.com/52205/143171872-64f41fe1-9968-48c7-86e8-dba9303a54e2.png" alt="image" /></td></tr></table>
 
-Delta [processes a subhunk](https://github.com/dandavison/delta/blob/1e1bd6b6b96a3515fd7c70d6b252a25eb9807dc7/src/paint.rs#L163) as follows:
+Delta [processes a subhunk](https://github.com/dandavison/delta/blob/d92c3ead769326461ea082632e3aa15ca7700d4e/src/paint.rs#L598) (`paint_minus_and_plus_lines`) as follows:
 
-1. **Compute syntax styles for the subhunk**
+1. **Compute syntax (foreground) styles for the subhunk**
 
-   We [call](https://github.com/dandavison/delta/blob/1e1bd6b6b96a3515fd7c70d6b252a25eb9807dc7/src/paint.rs#L164-L173) the [syntect](https://github.com/trishume/syntect) library to compute syntax highlighting styles for each of the minus lines, and each of the plus lines, if the minus/plus styles specify syntax highlighting.
+   We [call](https://github.com/dandavison/delta/blob/d92c3ead769326461ea082632e3aa15ca7700d4e/src/paint.rs#L605-L608) the [syntect](https://github.com/trishume/syntect) library to compute syntax highlighting styles for each of the minus lines, and each of the plus lines, if the minus/plus styles specify syntax highlighting.
    The language used for syntax-highlighting is determined by the filename in the diff.
    For a single line, the result is an array of `(style, substring)` pairs. Each pair specifies the foreground (text) color to be applied to a substring of the line (for example, a language keyword, or a string literal).
 
-2. **Compute diff styles for the subhunk**
+2. **Compute diff (background) styles for the subhunk**
 
    Again, the [call](https://github.com/dandavison/delta/blob/1e1bd6b6b96a3515fd7c70d6b252a25eb9807dc7/src/paint.rs#L174-L175) yields, for each line, an array of `(style, substring)` pairs.
    Each pair represents foreground and background colors to be applied to a substring of the line, as specified by delta's `*-style` options.
@@ -72,12 +118,12 @@ Delta [processes a subhunk](https://github.com/dandavison/delta/blob/1e1bd6b6b96
 
 3. **Process subhunk lines for side-by-side or unified output**
 
-   At this point we have a collection of lines corresponding to a subhunk and, for each line, a specification of how syntax styles and diff styles are applied to substrings of the line. These data structures are [processed differently](https://github.com/dandavison/delta/blob/3e21f00765794f7a4e955826a1612b49f1723bfd/src/paint.rs#L177-L230) according to whether unified or side-by-side diff display has been requested.
+   At this point we have a collection of lines corresponding to a subhunk and, for each line, a specification of how syntax styles and diff styles are applied to substrings of the line. These data structures are [processed differently](https://github.com/dandavison/delta/blob/master/src/paint.rs#L635-L674) according to whether unified or side-by-side diff display has been requested.
 
 4. **Superimpose syntax and diff styles for a line**
 
    Before we can output a line of code we need to take the two arrays of `(style, substring)` pairs and compute a single output array of `(style, substring)` pairs, such that the output array represents the diff styles, but with foreground colors taken from the syntax highlighting, where appropriate.
-   The call is [here](https://github.com/dandavison/delta/blob/1e1bd6b6b96a3515fd7c70d6b252a25eb9807dc7/src/paint.rs#L490-L495).
+   The call is [here](https://github.com/dandavison/delta/blob/1e1bd6b6b96a3515fd7c70d6b252a25eb9807dc7/src/paint.rs#L490-L495) (`superimpose_style_sections`).
 
 5. **Output a line with styles converted to ANSI color escape sequences**
 
