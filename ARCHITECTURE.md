@@ -80,10 +80,6 @@ Delta's `navigate` feature is implemented by constructing an appropriate regex a
 Here we will follow one code path in detail: [handling diff hunk lines](https://github.com/dandavison/delta/blob/1e1bd6b6b96a3515fd7c70d6b252a25eb9807dc7/src/handlers/hunk.rs#L27) (removed/unchanged/added).
 This is the most important, and most complex, code path.
 
-<table><tr><td>
-<img width="1709" alt="image" src="https://github.com/dandavison/delta/assets/52205/06e868c2-c113-4946-827f-d7a78534d2ba">
-</td></tr></table>
-
 Recall that git diff output contains multiple diff "hunks".
 A hunk is a sequence of diff lines describing the changes among some lines of code that are close together in the same file.
 A git diff may have many hunks, from multiple files (and therefore multiple languages).
@@ -98,6 +94,10 @@ Now, we are at the end of a subhunk, and we have a sequence of minus lines, and 
 <table><tr><td><img width=1000px src="https://user-images.githubusercontent.com/52205/143171872-64f41fe1-9968-48c7-86e8-dba9303a54e2.png" alt="image" /></td></tr></table>
 
 Delta [processes a subhunk](https://github.com/dandavison/delta/blob/d92c3ead769326461ea082632e3aa15ca7700d4e/src/paint.rs#L598) (`paint_minus_and_plus_lines`) as follows:
+
+<table><tr><td>
+<img width="1709" alt="image" src="https://github.com/dandavison/delta/assets/52205/06e868c2-c113-4946-827f-d7a78534d2ba">
+</td></tr></table>
 
 1. **Compute syntax (foreground) styles for the subhunk**
 
