@@ -43,15 +43,28 @@ where
     let mut annotated_plus_lines = Vec::<Vec<(EditOperation, &str)>>::new();
     let mut line_alignment = Vec::<(Option<usize>, Option<usize>)>::new();
 
+    let tokenized_minus_lines = minus_lines
+        .iter()
+        .map(|line| tokenize(line, tokenization_regex));
+
+    let tokenized_plus_lines: Vec<Vec<&str>> = plus_lines
+        .iter()
+        .map(|line| tokenize(line, tokenization_regex))
+        .collect();
+
     let mut plus_index = 0; // plus lines emitted so far
 
-    'minus_lines_loop: for (minus_index, minus_line) in minus_lines.iter().enumerate() {
+    'minus_lines_loop: for ((minus_index, minus_line), tokenized_minus_line) in
+        minus_lines.iter().enumerate().zip(tokenized_minus_lines)
+    {
         let mut considered = 0; // plus lines considered so far as match for minus_line
-        for plus_line in &plus_lines[plus_index..] {
+        for (plus_offset, plus_line) in plus_lines[plus_index..].iter().enumerate() {
+            // Compute edit operations transforming minus line into plus line
             let alignment = align::Alignment::new(
-                tokenize(minus_line, tokenization_regex),
-                tokenize(plus_line, tokenization_regex),
+                tokenized_minus_line.clone(),
+                tokenized_plus_lines[plus_index + plus_offset].clone(),
             );
+            // Use edit operations to annotate minus and plus line
             let (annotated_minus_line, annotated_plus_line, distance) = annotate(
                 alignment,
                 noop_deletions[minus_index],

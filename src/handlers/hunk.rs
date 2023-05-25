@@ -75,8 +75,12 @@ impl<'a> StateMachine<'a> {
         {
             self.painter.paint_buffered_minus_and_plus_lines();
         }
-        if let State::HunkHeader(_, parsed_hunk_header, line, raw_line) = &self.state.clone() {
-            self.emit_hunk_header_line(parsed_hunk_header, line, raw_line)?;
+        if let State::HunkHeader(_, parsed_hunk_header, line, raw_line) = &self.state {
+            self.emit_hunk_header_line(
+                &parsed_hunk_header.clone(),
+                &line.clone(),
+                &raw_line.clone(),
+            )?;
         }
         self.state = match new_line_state(&self.line, &self.raw_line, &self.state, self.config) {
             Some(HunkMinus(diff_type, raw_line)) => {
