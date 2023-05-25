@@ -20,7 +20,7 @@ use crate::minusplus::*;
 use crate::paint::superimpose_style_sections::superimpose_style_sections;
 use crate::style::Style;
 use crate::{ansi, style};
-use crate::{edits, utils};
+use crate::{edits, utils, utils::tabs};
 
 pub type LineSections<'a, S> = Vec<(S, &'a str)>;
 
@@ -262,7 +262,7 @@ impl<'p> Painter<'p> {
         background_color_extends_to_terminal_width: BgShouldFill,
     ) {
         let lines = vec![(
-            expand_tabs(line.graphemes(true), self.config.tab_width),
+            tabs::expand(line.graphemes(true), self.config.tab_width),
             state,
         )];
         let syntax_style_sections =
@@ -562,7 +562,7 @@ pub fn prepare(line: &str, prefix_length: usize, config: &config::Config) -> Str
         // are not present during syntax highlighting or wrapping. If --keep-plus-minus-markers
         // is in effect the prefix is re-inserted in Painter::paint_line.
         let line = line.graphemes(true).skip(prefix_length);
-        format!("{}\n", expand_tabs(line, config.tab_width))
+        format!("{}\n", tabs::expand(line, config.tab_width))
     } else {
         "\n".to_string()
     }
@@ -574,25 +574,10 @@ pub fn prepare_raw_line(raw_line: &str, prefix_length: usize, config: &config::C
     format!(
         "{}\n",
         ansi::ansi_preserving_slice(
-            &expand_tabs(raw_line.graphemes(true), config.tab_width),
+            &tabs::expand(raw_line.graphemes(true), config.tab_width),
             prefix_length
         ),
     )
-}
-
-/// Expand tabs as spaces.
-/// tab_width = 0 is documented to mean do not replace tabs.
-pub fn expand_tabs<'a, I>(line: I, tab_width: usize) -> String
-where
-    I: Iterator<Item = &'a str>,
-{
-    if tab_width > 0 {
-        let tab_replacement = " ".repeat(tab_width);
-        line.map(|s| if s == "\t" { &tab_replacement } else { s })
-            .collect::<String>()
-    } else {
-        line.collect::<String>()
-    }
 }
 
 pub fn paint_minus_and_plus_lines(
