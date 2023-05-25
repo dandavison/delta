@@ -3,7 +3,6 @@ use std::borrow::Cow;
 use lazy_static::lazy_static;
 use regex::Regex;
 use serde::Deserialize;
-use unicode_segmentation::UnicodeSegmentation;
 
 use crate::ansi;
 use crate::delta::{State, StateMachine};
@@ -139,11 +138,8 @@ impl<'a> StateMachine<'a> {
                                     // (At the time of writing, we are in this
                                     // arm iff we are handling `ripgrep --json`
                                     // output.)
-                                    grep_line.code = tabs::expand(
-                                        grep_line.code.graphemes(true),
-                                        &self.config.tab_cfg,
-                                    )
-                                    .into();
+                                    grep_line.code =
+                                        tabs::expand(&grep_line.code, &self.config.tab_cfg).into();
                                     make_style_sections(
                                         &grep_line.code,
                                         submatches,
@@ -158,10 +154,8 @@ impl<'a> StateMachine<'a> {
                                     // enough. But at the point it is guaranteed
                                     // that this handler is going to handle this
                                     // line, so mutating it is acceptable.
-                                    self.raw_line = tabs::expand(
-                                        self.raw_line.graphemes(true),
-                                        &self.config.tab_cfg,
-                                    );
+                                    self.raw_line =
+                                        tabs::expand(&self.raw_line, &self.config.tab_cfg);
                                     get_code_style_sections(
                                         &self.raw_line,
                                         self.config.grep_match_word_style,
