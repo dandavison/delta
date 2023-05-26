@@ -203,7 +203,7 @@ mod tests {
                 r#"
             some_submodule
             ──────────────────────────────
-            ca030fd..803be42"#,
+            ca030fd1a022..803be42ca46a"#,
             );
     }
 
