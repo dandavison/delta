@@ -38,10 +38,10 @@ impl<'a> StateMachine<'a> {
                     "{}..{}",
                     self.config
                         .minus_style
-                        .paint(minus_commit.chars().take(7).collect::<String>()),
+                        .paint(minus_commit.chars().take(12).collect::<String>()),
                     self.config
                         .plus_style
-                        .paint(commit.chars().take(7).collect::<String>()),
+                        .paint(commit.chars().take(12).collect::<String>()),
                 )?;
             }
         }
