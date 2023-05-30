@@ -121,7 +121,7 @@ impl<'a> StateMachine<'a> {
                 self.painter.paint_buffered_minus_and_plus_lines();
                 self.painter.output_buffer.push_str(&tabs::expand(
                     self.raw_line.graphemes(true),
-                    self.config.tab_width,
+                    &self.config.tab_cfg,
                 ));
                 self.painter.output_buffer.push('\n');
                 State::HunkZero(Unified, None)

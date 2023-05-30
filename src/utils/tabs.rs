@@ -1,12 +1,29 @@
+#[derive(Debug, Clone)]
+pub struct TabCfg {
+    replacement: String,
+}
+
+impl TabCfg {
+    pub fn new(width: usize) -> Self {
+        TabCfg {
+            replacement: " ".repeat(width),
+        }
+    }
+    pub fn width(&self) -> usize {
+        self.replacement.len()
+    }
+    pub fn replace(&self) -> bool {
+        !self.replacement.is_empty()
+    }
+}
+
 /// Expand tabs as spaces.
-/// tab_width = 0 is documented to mean do not replace tabs.
-pub fn expand<'a, I>(line: I, tab_width: usize) -> String
+pub fn expand<'a, I>(line: I, tab_cfg: &TabCfg) -> String
 where
     I: Iterator<Item = &'a str>,
 {
-    if tab_width > 0 {
-        let tab_replacement = " ".repeat(tab_width);
-        line.map(|s| if s == "\t" { &tab_replacement } else { s })
+    if tab_cfg.replace() {
+        line.map(|s| if s == "\t" { &tab_cfg.replacement } else { s })
             .collect::<String>()
     } else {
         line.collect::<String>()

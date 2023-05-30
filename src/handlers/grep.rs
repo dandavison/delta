@@ -141,7 +141,7 @@ impl<'a> StateMachine<'a> {
                                     // output.)
                                     grep_line.code = tabs::expand(
                                         grep_line.code.graphemes(true),
-                                        self.config.tab_width,
+                                        &self.config.tab_cfg,
                                     )
                                     .into();
                                     make_style_sections(
@@ -160,7 +160,7 @@ impl<'a> StateMachine<'a> {
                                     // line, so mutating it is acceptable.
                                     self.raw_line = tabs::expand(
                                         self.raw_line.graphemes(true),
-                                        self.config.tab_width,
+                                        &self.config.tab_cfg,
                                     );
                                     get_code_style_sections(
                                         &self.raw_line,

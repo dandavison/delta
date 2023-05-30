@@ -262,7 +262,7 @@ impl<'p> Painter<'p> {
         background_color_extends_to_terminal_width: BgShouldFill,
     ) {
         let lines = vec![(
-            tabs::expand(line.graphemes(true), self.config.tab_width),
+            tabs::expand(line.graphemes(true), &self.config.tab_cfg),
             state,
         )];
         let syntax_style_sections =
@@ -562,7 +562,7 @@ pub fn prepare(line: &str, prefix_length: usize, config: &config::Config) -> Str
         // are not present during syntax highlighting or wrapping. If --keep-plus-minus-markers
         // is in effect the prefix is re-inserted in Painter::paint_line.
         let line = line.graphemes(true).skip(prefix_length);
-        let mut line = tabs::expand(line, config.tab_width);
+        let mut line = tabs::expand(line, &config.tab_cfg);
         line.push('\n');
         line
     } else {
@@ -573,7 +573,7 @@ pub fn prepare(line: &str, prefix_length: usize, config: &config::Config) -> Str
 // Remove initial -/+ characters, expand tabs as spaces, retaining ANSI sequences. Terminate with
 // newline character.
 pub fn prepare_raw_line(raw_line: &str, prefix_length: usize, config: &config::Config) -> String {
-    let mut line = tabs::expand(raw_line.graphemes(true), config.tab_width);
+    let mut line = tabs::expand(raw_line.graphemes(true), &config.tab_cfg);
     line.push('\n');
     ansi::ansi_preserving_slice(&line, prefix_length)
 }
