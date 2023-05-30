@@ -935,7 +935,7 @@ pub struct Opt {
     /// syntax highlighting.
     pub syntax_theme: Option<String>,
 
-    #[arg(long = "tabs", default_value = "4", value_name = "N")]
+    #[arg(long = "tabs", default_value = "8", value_name = "N")]
     /// The number of spaces to replace tab characters with.
     ///
     /// Use --tabs=0 to pass tab characters through directly, but note that in that case delta will
