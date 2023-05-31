@@ -158,7 +158,7 @@ pub fn show_config(config: &config::Config, writer: &mut dyn Write) -> std::io::
             cli::Width::Fixed(width) => width.to_string(),
             cli::Width::Variable => "variable".to_string(),
         },
-        tab_width = config.tab_width,
+        tab_width = config.tab_cfg.width(),
         tokenization_regex = format_option_value(config.tokenization_regex.to_string()),
     )?;
     Ok(())

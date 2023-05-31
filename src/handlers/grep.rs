@@ -3,14 +3,13 @@ use std::borrow::Cow;
 use lazy_static::lazy_static;
 use regex::Regex;
 use serde::Deserialize;
-use unicode_segmentation::UnicodeSegmentation;
 
 use crate::ansi;
 use crate::delta::{State, StateMachine};
 use crate::handlers::{self, ripgrep_json};
-use crate::paint::{self, expand_tabs, BgShouldFill, StyleSectionSpecifier};
+use crate::paint::{self, BgShouldFill, StyleSectionSpecifier};
 use crate::style::Style;
-use crate::utils::process;
+use crate::utils::{process, tabs};
 
 #[derive(Debug, PartialEq, Eq)]
 pub struct GrepLine<'b> {
@@ -139,11 +138,8 @@ impl<'a> StateMachine<'a> {
                                     // (At the time of writing, we are in this
                                     // arm iff we are handling `ripgrep --json`
                                     // output.)
-                                    grep_line.code = paint::expand_tabs(
-                                        grep_line.code.graphemes(true),
-                                        self.config.tab_width,
-                                    )
-                                    .into();
+                                    grep_line.code =
+                                        tabs::expand(&grep_line.code, &self.config.tab_cfg).into();
                                     make_style_sections(
                                         &grep_line.code,
                                         submatches,
@@ -158,10 +154,8 @@ impl<'a> StateMachine<'a> {
                                     // enough. But at the point it is guaranteed
                                     // that this handler is going to handle this
                                     // line, so mutating it is acceptable.
-                                    self.raw_line = expand_tabs(
-                                        self.raw_line.graphemes(true),
-                                        self.config.tab_width,
-                                    );
+                                    self.raw_line =
+                                        tabs::expand(&self.raw_line, &self.config.tab_cfg);
                                     get_code_style_sections(
                                         &self.raw_line,
                                         self.config.grep_match_word_style,

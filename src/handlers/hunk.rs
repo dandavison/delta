@@ -5,10 +5,10 @@ use lazy_static::lazy_static;
 use crate::cli;
 use crate::config::{delta_unreachable, Config};
 use crate::delta::{DiffType, InMergeConflict, MergeParents, State, StateMachine};
-use crate::paint::{expand_tabs, prepare, prepare_raw_line};
+use crate::paint::{prepare, prepare_raw_line};
 use crate::style;
 use crate::utils::process::{self, CallingProcess};
-use unicode_segmentation::UnicodeSegmentation;
+use crate::utils::tabs;
 
 // HACK: WordDiff should probably be a distinct top-level line state
 pub fn is_word_diff() -> bool {
@@ -118,10 +118,9 @@ impl<'a> StateMachine<'a> {
                 // is not a hunk line, but the parser does not have a more accurate state corresponding
                 // to this.
                 self.painter.paint_buffered_minus_and_plus_lines();
-                self.painter.output_buffer.push_str(&expand_tabs(
-                    self.raw_line.graphemes(true),
-                    self.config.tab_width,
-                ));
+                self.painter
+                    .output_buffer
+                    .push_str(&tabs::expand(&self.raw_line, &self.config.tab_cfg));
                 self.painter.output_buffer.push('\n');
                 State::HunkZero(Unified, None)
             }

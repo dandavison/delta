@@ -7,7 +7,6 @@ use itertools::Itertools;
 use syntect::easy::HighlightLines;
 use syntect::highlighting::Style as SyntectStyle;
 use syntect::parsing::{SyntaxReference, SyntaxSet};
-use unicode_segmentation::UnicodeSegmentation;
 
 use crate::config::{self, delta_unreachable, Config};
 use crate::delta::{DiffType, InMergeConflict, MergeParents, State};
@@ -20,7 +19,7 @@ use crate::minusplus::*;
 use crate::paint::superimpose_style_sections::superimpose_style_sections;
 use crate::style::Style;
 use crate::{ansi, style};
-use crate::{edits, utils};
+use crate::{edits, utils, utils::tabs};
 
 pub type LineSections<'a, S> = Vec<(S, &'a str)>;
 
@@ -261,10 +260,7 @@ impl<'p> Painter<'p> {
         state: State,
         background_color_extends_to_terminal_width: BgShouldFill,
     ) {
-        let lines = vec![(
-            expand_tabs(line.graphemes(true), self.config.tab_width),
-            state,
-        )];
+        let lines = vec![(tabs::expand(line, &self.config.tab_cfg), state)];
         let syntax_style_sections =
             get_syntax_style_sections_for_lines(&lines, self.highlighter.as_mut(), self.config);
         let diff_style_sections = match style_sections {
@@ -561,8 +557,9 @@ pub fn prepare(line: &str, prefix_length: usize, config: &config::Config) -> Str
         // The prefix contains -/+/space characters, added by git. We removes them now so they
         // are not present during syntax highlighting or wrapping. If --keep-plus-minus-markers
         // is in effect the prefix is re-inserted in Painter::paint_line.
-        let line = line.graphemes(true).skip(prefix_length);
-        format!("{}\n", expand_tabs(line, config.tab_width))
+        let mut line = tabs::remove_prefix_and_expand(prefix_length, line, &config.tab_cfg);
+        line.push('\n');
+        line
     } else {
         "\n".to_string()
     }
@@ -571,28 +568,9 @@ pub fn prepare(line: &str, prefix_length: usize, config: &config::Config) -> Str
 // Remove initial -/+ characters, expand tabs as spaces, retaining ANSI sequences. Terminate with
 // newline character.
 pub fn prepare_raw_line(raw_line: &str, prefix_length: usize, config: &config::Config) -> String {
-    format!(
-        "{}\n",
-        ansi::ansi_preserving_slice(
-            &expand_tabs(raw_line.graphemes(true), config.tab_width),
-            prefix_length
-        ),
-    )
-}
-
-/// Expand tabs as spaces.
-/// tab_width = 0 is documented to mean do not replace tabs.
-pub fn expand_tabs<'a, I>(line: I, tab_width: usize) -> String
-where
-    I: Iterator<Item = &'a str>,
-{
-    if tab_width > 0 {
-        let tab_replacement = " ".repeat(tab_width);
-        line.map(|s| if s == "\t" { &tab_replacement } else { s })
-            .collect::<String>()
-    } else {
-        line.collect::<String>()
-    }
+    let mut line = tabs::expand(raw_line, &config.tab_cfg);
+    line.push('\n');
+    ansi::ansi_preserving_slice(&line, prefix_length)
 }
 
 pub fn paint_minus_and_plus_lines(
