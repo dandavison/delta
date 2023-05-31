@@ -16,7 +16,7 @@ path = "src/main.rs"
 
 [dependencies]
 bat = { version = "0.22.1", default-features = false, features = ["regex-onig"] }
-chrono = "0.4.23"
+chrono = "0.4.26"
 chrono-humanize = "0.2.2"
 ansi_colours = "1.2.1"
 ansi_term = "0.12.1"
