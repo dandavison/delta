@@ -173,12 +173,34 @@ Options:
       --grep-file-style <STYLE>
           Style string for file paths in grep output.
 
-          See STYLES section. Defaults to hunk-header-file-path-style.
+          See STYLES section.
+
+          [default: magenta]
+
+      --grep-header-decoration-style <STYLE>
+          Style string for the header decoration in grep output.
+
+          Default is "none" when grep-ouput-type-is "ripgrep", otherwise defaults to value of header-decoration-style. See hunk-header-decoration-style.
+
+      --grep-header-file-style <STYLE>
+          Style string for the file path part of the header in grep output.
+
+          See hunk_header_file_style.
+
+      --grep-header-style <STYLE>
+          Style string for the header in grep output.
+
+          See hunk-header-style.
 
       --grep-line-number-style <STYLE>
           Style string for line numbers in grep output.
 
-          See STYLES section. Defaults to hunk-header-line-number-style.
+          See STYLES section.
+
+          [default: green]
+
+      --grep-output-type <OUTPUT_TYPE>
+          Grep output format. Possible values: "ripgrep" - file name printed once, followed by matching lines within that file, each preceded by a line number. "classic" - file name:line number, followed by matching line. Default is "ripgrep" if `rg --json` format is detected, otherwise "classic"
 
       --grep-match-line-style <STYLE>
           Style string for matching lines of grep output.
