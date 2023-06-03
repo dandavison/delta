@@ -4,11 +4,6 @@
 
 The `GIT_PAGER` environment variable must either not be set at all, or set to the value `delta` (you can add argument here if you want; this env var plays the same role as the `core.pager` config entry).
 
-Unfortunately, delta does not currently honor all relevant [git environment variables](https://git-scm.com/docs/git-config#_environment).
-For example, it does not honor `GIT_CONFIG_GLOBAL`.
-This is because delta uses [libgit2](https://github.com/libgit2/libgit2) to read git config, whereas git uses its own code.
-(libgit2 is a project run by volunteers; if this affects you, please do consider contributing the required features to libgit2!)
-
 ## Pager environment variables
 
 A pager is a program that accepts many lines of text as input, and displays them one screenful at a time.

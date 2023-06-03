@@ -52,4 +52,3 @@ git -c delta.line-numbers=false show
 
 There are several important environment variables that affect delta configuration and which can be used to configure delta dynamically.
 Please see [Environment variables](./environment-variables.md).
-In particular, note that delta does not currently honor all relevant [git environment variables](https://git-scm.com/docs/git-config#_environment), since delta uses [libgit2](https://github.com/libgit2/libgit2) to read git config.
