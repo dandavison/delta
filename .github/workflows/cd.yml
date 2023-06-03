@@ -24,6 +24,18 @@ jobs:
           - os: ubuntu-latest
             target: x86_64-unknown-linux-gnu
             use-cross: false
+          - os: ubuntu-latest
+            target: x86_64-unknown-linux-musl
+            use-cross: true
+          - os: ubuntu-latest
+            target: i686-unknown-linux-gnu
+            use-cross: true
+          - os: ubuntu-latest
+            target: arm-unknown-linux-gnueabihf
+            use-cross: true
+          - os: ubuntu-latest
+            target: aarch64-unknown-linux-gnu
+            use-cross: true
 
     steps:
       - name: Installing Rust toolchain
@@ -42,7 +54,7 @@ jobs:
           MACOSX_DEPLOYMENT_TARGET: 10.7
         shell: bash
         run: |
-          if [[ "${{ matrix.job.cross }}" == "true" ]]; then
+          if [[ "${{ matrix.job.use-cross }}" == "true" ]]; then
             cross build --release --target ${{ matrix.job.target }}
           else
             cargo build --release --target ${{ matrix.job.target }}
