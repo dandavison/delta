@@ -42,7 +42,7 @@ jobs:
           MACOSX_DEPLOYMENT_TARGET: 10.7
         shell: bash
         run: |
-          if [[ "${{ matrix.job.cross }}" == "true" ]]; then
+          if [[ "${{ matrix.job.use-cross }}" == "true" ]]; then
             cross build --release --target ${{ matrix.job.target }}
           else
             cargo build --release --target ${{ matrix.job.target }}
