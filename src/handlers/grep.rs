@@ -1,5 +1,4 @@
 use std::borrow::Cow;
-use std::fmt::Write;
 
 use lazy_static::lazy_static;
 use regex::Regex;
@@ -136,7 +135,7 @@ impl<'a> StateMachine<'a> {
         if new_path {
             // Emit new path header line
             if !first_path {
-                let _ = self.painter.output_buffer.write_char('\n');
+                writeln!(self.painter.writer)?;
             }
             handlers::hunk_header::write_line_of_code_with_optional_path_and_line_number(
                 "",
@@ -156,7 +155,7 @@ impl<'a> StateMachine<'a> {
             )?
         }
         if new_section {
-            let _ = self.painter.output_buffer.write_str("--\n");
+            writeln!(self.painter.writer, "--")?;
         }
         // Emit the actual grep hit line
         let code_style_sections = match (&grep_line.line_type, &grep_line.submatches) {
