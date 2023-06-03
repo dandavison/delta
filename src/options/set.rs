@@ -154,7 +154,6 @@ pub fn set_options(
             grep_file_style,
             grep_header_decoration_style,
             grep_header_file_style,
-            grep_header_style,
             grep_output_type,
             grep_line_number_style,
             grep_match_line_style,

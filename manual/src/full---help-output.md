@@ -187,11 +187,6 @@ Options:
 
           See hunk_header_file_style.
 
-      --grep-header-style <STYLE>
-          Style string for the header in grep output.
-
-          See hunk-header-style.
-
       --grep-line-number-style <STYLE>
           Style string for line numbers in grep output.
 

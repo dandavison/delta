@@ -325,9 +325,7 @@ fn make_commit_file_hunk_header_styles(opt: &cli::Opt, styles: &mut HashMap<&str
         (
             "classic-grep-header-style",
             style_from_str_with_handling_of_special_decoration_attributes(
-                opt.grep_header_style
-                    .as_deref()
-                    .unwrap_or(opt.hunk_header_style.as_str()),
+                opt.hunk_header_style.as_str(),
                 None,
                 opt.grep_header_decoration_style
                     .as_deref()
@@ -339,7 +337,7 @@ fn make_commit_file_hunk_header_styles(opt: &cli::Opt, styles: &mut HashMap<&str
         (
             "ripgrep-header-style",
             style_from_str_with_handling_of_special_decoration_attributes(
-                opt.grep_header_style.as_deref().unwrap_or("file"),
+                "file",
                 None,
                 opt.grep_header_decoration_style.as_deref().or(Some("none")),
                 true_color,

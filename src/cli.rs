@@ -419,12 +419,6 @@ pub struct Opt {
     /// See hunk_header_file_style.
     pub grep_header_file_style: Option<String>,
 
-    #[arg(long = "grep-header-style", value_name = "STYLE")]
-    /// Style string for the header in grep output.
-    ///
-    /// See hunk-header-style.
-    pub grep_header_style: Option<String>,
-
     #[arg(
         long = "grep-line-number-style",
         default_value = "green",
