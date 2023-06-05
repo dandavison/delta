@@ -22,7 +22,7 @@ ansi_colours = "1.2.1"
 ansi_term = "0.12.1"
 anyhow = "1.0.70"
 atty = "0.2.14"
-bitflags = "2.2.1"
+bitflags = "2.3.1"
 box_drawing = "0.1.2"
 bytelines = "=2.2.2" # Pin version until its tokio and futures dependencies are optional.
 clap = { version = "4.1.11", features = ["derive", "help", "usage", "error-context", "wrap_help"] }
