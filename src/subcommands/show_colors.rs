@@ -15,7 +15,12 @@ pub fn show_colors() -> std::io::Result<()> {
 
     let assets = utils::bat::assets::load_highlighting_assets();
     let env = DeltaEnv::default();
-    let opt = cli::Opt::from_args_and_git_config(&env, assets);
+
+    let opt = match cli::Opt::from_args_and_git_config(&env, assets) {
+        cli::Call::Delta(opt) => opt,
+        _ => panic!("non-Delta Call variant should not occur here"),
+    };
+
     let config = config::Config::from(opt);
     let pagercfg = (&config).into();
 
