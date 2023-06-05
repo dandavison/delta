@@ -27,7 +27,7 @@ box_drawing = "0.1.2"
 bytelines = "=2.2.2" # Pin version until its tokio and futures dependencies are optional.
 clap = { version = "4.1.11", features = ["derive", "help", "usage", "error-context", "wrap_help"] }
 console = "0.15.0"
-ctrlc = "3.2.5"
+ctrlc = "3.4.0"
 dirs = "5.0.1"
 grep-cli = "0.1.7"
 itertools = "0.10.5"
