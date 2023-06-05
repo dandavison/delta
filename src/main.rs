@@ -29,6 +29,7 @@ use std::process;
 
 use bytelines::ByteLinesReader;
 
+use crate::cli::Call;
 use crate::delta::delta;
 use crate::utils::bat::assets::list_languages;
 use crate::utils::bat::output::OutputType;
@@ -81,6 +82,14 @@ fn run_app() -> std::io::Result<i32> {
         git_config::GitConfig::try_create(&env),
         assets,
     );
+
+    let opt = match opt {
+        Call::Help(msg) | Call::Version(msg) => {
+            OutputType::oneshot_write(msg)?;
+            return Ok(0);
+        }
+        Call::Delta(opt) => opt,
+    };
 
     let subcommand_result = if opt.list_languages {
         Some(list_languages())
