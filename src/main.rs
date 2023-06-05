@@ -29,6 +29,7 @@ use std::process;
 
 use bytelines::ByteLinesReader;
 
+use crate::cli::Call;
 use crate::delta::delta;
 use crate::utils::bat::assets::list_languages;
 use crate::utils::bat::output::OutputType;
@@ -77,6 +78,14 @@ fn run_app() -> std::io::Result<i32> {
     let assets = utils::bat::assets::load_highlighting_assets();
     let env = env::DeltaEnv::init();
     let opt = cli::Opt::from_args_and_git_config(&env, assets);
+
+    let opt = match opt {
+        Call::Help(msg) | Call::Version(msg) => {
+            OutputType::oneshot_write(msg)?;
+            return Ok(0);
+        }
+        Call::Delta(opt) => opt,
+    };
 
     let subcommand_result = if let Some(shell) = opt.generate_completion {
         Some(subcommands::generate_completion::generate_completion_file(

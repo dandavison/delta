@@ -55,6 +55,7 @@ unicode-width = "0.1.10"
 xdg = "2.4.1"
 clap_complete = "4.4.4"
 terminal-colorsaurus = "0.4.1"
+textwrap = { version = "0.16.0", default-features = false, features = [] }
 
 [dependencies.git2]
 version = "0.18.2"
