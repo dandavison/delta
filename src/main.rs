@@ -121,8 +121,9 @@ fn run_app() -> std::io::Result<i32> {
         return Ok(0);
     }
 
+    let pager_cfg = (&config).into();
     let mut output_type =
-        OutputType::from_mode(&env, config.paging_mode, config.pager.clone(), &config).unwrap();
+        OutputType::from_mode(&env, config.paging_mode, config.pager.clone(), &pager_cfg).unwrap();
     let mut writer = output_type.handle().unwrap();
 
     if let (Some(minus_file), Some(plus_file)) = (&config.minus_file, &config.plus_file) {

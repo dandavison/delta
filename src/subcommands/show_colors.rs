@@ -17,9 +17,10 @@ pub fn show_colors() -> std::io::Result<()> {
     let env = DeltaEnv::default();
     let opt = cli::Opt::from_args_and_git_config(&env, assets);
     let config = config::Config::from(opt);
+    let pagercfg = (&config).into();
 
     let mut output_type =
-        OutputType::from_mode(&env, PagingMode::QuitIfOneScreen, None, &config).unwrap();
+        OutputType::from_mode(&env, PagingMode::QuitIfOneScreen, None, &pagercfg).unwrap();
     let writer = output_type.handle().unwrap();
 
     let mut painter = paint::Painter::new(writer, &config);

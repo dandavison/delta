@@ -40,8 +40,13 @@ pub fn show_themes(dark: bool, light: bool, computed_theme_is_light: bool) -> st
         &["delta", "--navigate", "--show-themes"],
         git_config,
     );
-    let mut output_type =
-        OutputType::from_mode(&env, PagingMode::Always, None, &config::Config::from(opt)).unwrap();
+    let mut output_type = OutputType::from_mode(
+        &env,
+        PagingMode::Always,
+        None,
+        &config::Config::from(opt).into(),
+    )
+    .unwrap();
     let title_style = ansi_term::Style::new().bold();
     let writer = output_type.handle().unwrap();
 
