@@ -51,6 +51,14 @@ pub enum OutputType {
     Stdout(io::Stdout),
 }
 
+impl Drop for OutputType {
+    fn drop(&mut self) {
+        if let OutputType::Pager(ref mut command) = *self {
+            let _ = command.wait();
+        }
+    }
+}
+
 impl OutputType {
     /// Create a pager and write all data into it. Waits until the pager exits.
     /// The expectation is that the program will exit afterwards.
@@ -239,13 +247,5 @@ delta is not an appropriate value for $PAGER \
         Some(p)
     } else {
         None
-    }
-}
-
-impl Drop for OutputType {
-    fn drop(&mut self) {
-        if let OutputType::Pager(ref mut command) = *self {
-            let _ = command.wait();
-        }
     }
 }
