@@ -137,9 +137,9 @@ checksum = "bef38d45163c2f1dde094a7dfd33ccf595c92905c8f8f4fdc18d06fb1037718a"
 
 [[package]]
 name = "bitflags"
-version = "2.2.1"
+version = "2.3.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "24a6904aef64d73cf10ab17ebace7befb918b82164785cb89907993be7f83813"
+checksum = "6dbe3c979c178231552ecba20214a8272df4e09f232a87aef4320cf06539aded"
 
 [[package]]
 name = "box_drawing"
@@ -228,7 +228,7 @@ version = "4.1.11"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "42dfd32784433290c51d92c438bb72ea5063797fc3cc9a21a8c4346bebbb2098"
 dependencies = [
- "bitflags 2.2.1",
+ "bitflags 2.3.2",
  "clap_derive",
  "clap_lex",
  "is-terminal",
@@ -562,7 +562,7 @@ dependencies = [
  "anyhow",
  "atty",
  "bat",
- "bitflags 2.2.1",
+ "bitflags 2.3.2",
  "box_drawing",
  "bytelines",
  "chrono",
