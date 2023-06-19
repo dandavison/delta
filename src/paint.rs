@@ -918,19 +918,86 @@ mod superimpose_style_sections {
         exploded
     }
 
+    // Do not panic in release builds, instead try to produce some output.
+    // Always panic in debug builds, if an env var is set, or the delta binary is
+    // running from target/*/delta.
+    #[inline(never)]
+    #[allow(clippy::type_complexity)]
+    fn on_superimpose_error(
+        char_1: char,
+        char_2: char,
+        style_section_pairs: Vec<(&(SyntectStyle, char), (Style, char))>,
+    ) -> Vec<((SyntectStyle, Style), char)> {
+        let mut errormsg: Vec<((SyntectStyle, Style), char)> = Vec::new();
+        let errorstyle = Style {
+            ansi_term_style: ansi_term::Style::new().fg(ansi_term::Color::Red).bold(),
+            ..Default::default()
+        };
+
+        for prefix in " !!<delta bug 1450> ".chars() {
+            errormsg.push(((SyntectStyle::default(), errorstyle), prefix));
+        }
+        let to_text = |
+            syntax_or_diff: fn(&(&(SyntectStyle, char), (Style, char))) -> char,
+        | -> (String, String) {
+            let text_raw: String = style_section_pairs.iter().map(syntax_or_diff).collect();
+            let text = crate::ansi::strip_ansi_codes(&text_raw);
+            let text = text.trim().to_string();
+            (text_raw, text)
+        };
+
+        let (syn_raw, syn) = to_text(|((_syn, c1), (_style, _c2))| *c1);
+        let (style_raw, style) = to_text(|((_syn, _c1), (_style, c2))| *c2);
+
+        let longer = if syn.len() > style.len() {
+            &syn
+        } else {
+            &style
+        };
+        for c in longer.chars() {
+            errormsg.push(((SyntectStyle::default(), Style::default()), c));
+        }
+        for suffix in " !please report! ".chars() {
+            errormsg.push(((SyntectStyle::default(), errorstyle), suffix));
+        }
+
+        let in_worktree = || {
+            let arg0 = std::env::args_os().next().unwrap_or("".into());
+            let arg0 = arg0.to_str().unwrap_or("");
+            let arg0 = arg0.strip_suffix(".exe").unwrap_or(arg0);
+            let arg0 = std::path::Path::new(&arg0);
+            arg0.ends_with("target/debug/delta") || arg0.ends_with("target/release/delta")
+        };
+
+        #[cfg(debug_assertions)]
+        let release = false;
+        #[cfg(not(debug_assertions))]
+        let release = true;
+
+        if std::env::var(crate::utils::workarounds::NO_WORKAROUNDS).is_err()
+            && release
+            && !in_worktree()
+        {
+            return errormsg;
+        }
+
+        panic!(
+           "String mismatch encountered while superimposing style sections: '{}' vs '{}'. Syntect {:?} vs Style {:?}",
+           char_1, char_2, syn_raw, style_raw,
+        );
+    }
+
     #[allow(clippy::type_complexity)]
     fn superimpose(
         style_section_pairs: Vec<(&(SyntectStyle, char), (Style, char))>,
     ) -> Vec<((SyntectStyle, Style), char)> {
         let mut superimposed: Vec<((SyntectStyle, Style), char)> = Vec::new();
-        for ((syntax_style, char_1), (style, char_2)) in style_section_pairs {
-            if *char_1 != char_2 {
-                panic!(
-                    "String mismatch encountered while superimposing style sections: '{}' vs '{}'",
-                    *char_1, char_2
-                )
+        for ((syntax_style, char_1), (style, char_2)) in style_section_pairs.iter() {
+            if *char_1 == *char_2 {
+                superimposed.push(((*syntax_style, *style), *char_1));
+            } else {
+                return on_superimpose_error(*char_1, *char_2, style_section_pairs);
             }
-            superimposed.push(((*syntax_style, style), *char_1));
         }
         superimposed
     }
@@ -1098,6 +1165,15 @@ mod superimpose_style_sections {
                 superimpose(pairs),
                 vec![((*SYNTAX_STYLE, *SYNTAX_HIGHLIGHTED_STYLE), 'a')]
             );
+        }
+
+        #[test]
+        #[should_panic]
+        #[cfg(debug_assertions)]
+        fn test_superimpose_panic() {
+            let x = (*SYNTAX_STYLE, 'a');
+            let pairs = vec![(&x, (*SYNTAX_HIGHLIGHTED_STYLE, 'b'))];
+            superimpose(pairs);
         }
     }
 }
