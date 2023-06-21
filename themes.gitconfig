@@ -413,6 +413,7 @@
 
 [delta "mellow-barbet"]
     # author: https://github.com/kvrohit
+    # To configure terminal colors see https://github.com/kvrohit/mellow.nvim#terminals
     dark = true
     syntax-theme = base16
     line-numbers = true
