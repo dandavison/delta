@@ -2,6 +2,7 @@ use chrono::{DateTime, FixedOffset};
 use lazy_static::lazy_static;
 use regex::Regex;
 use std::borrow::Cow;
+use unicode_width::UnicodeWidthStr;
 
 use crate::ansi::measure_text_width;
 use crate::color;
@@ -281,9 +282,12 @@ pub fn format_blame_metadata(
             _ => unreachable!("Unexpected `git blame` input"),
         };
         if let Some(field) = field {
+            // Unicode modifier should not be counted as character to allow a consistent padding
+            let unicode_modifier_width =
+                field.as_ref().chars().count() - UnicodeWidthStr::width(field.as_ref());
             s.push_str(&format::pad(
                 &field,
-                width,
+                width + unicode_modifier_width,
                 alignment_spec,
                 placeholder.precision,
             ))
@@ -411,10 +415,7 @@ mod tests {
 
     #[test]
     fn test_format_blame_metadata_with_default_timestamp_output_format() {
-        let format_data = format::FormatStringPlaceholderData {
-            placeholder: Some(Placeholder::Str("timestamp")),
-            ..Default::default()
-        };
+        let format_data = make_format_data_with_placeholder("timestamp");
         let blame = make_blame_line_with_time("1996-12-19T16:39:57-08:00");
         let config = integration_test_utils::make_config_from_args(&[]);
         let regex = Regex::new(r"^\d+ years ago$").unwrap();
@@ -424,16 +425,33 @@ mod tests {
 
     #[test]
     fn test_format_blame_metadata_with_custom_timestamp_output_format() {
-        let format_data = format::FormatStringPlaceholderData {
-            placeholder: Some(Placeholder::Str("timestamp")),
-            ..Default::default()
-        };
+        let format_data = make_format_data_with_placeholder("timestamp");
         let blame = make_blame_line_with_time("1996-12-19T16:39:57-08:00");
         let config = integration_test_utils::make_config_from_args(&[
             "--blame-timestamp-output-format=%Y-%m-%d %H:%M",
         ]);
         let result = format_blame_metadata(&[format_data], &blame, &config);
         assert_eq!(result.trim(), "1996-12-19 16:39");
+    }
+
+    #[test]
+    fn test_format_blame_metadata_with_accent_in_name() {
+        let config = integration_test_utils::make_config_from_args(&[]);
+
+        let count_trailing_spaces = |s: String| s.chars().rev().filter(|&c| c == ' ').count();
+
+        let format_data1 = make_format_data_with_placeholder("author");
+        let blame1 = make_blame_line_with_author("E\u{301}dith Piaf");
+        let result1 = format_blame_metadata(&[format_data1], &blame1, &config);
+
+        let format_data2 = make_format_data_with_placeholder("author");
+        let blame2 = make_blame_line_with_author("Edith Piaf");
+        let result2 = format_blame_metadata(&[format_data2], &blame2, &config);
+
+        assert_eq!(
+            count_trailing_spaces(result1),
+            count_trailing_spaces(result2)
+        );
     }
 
     #[test]
@@ -532,6 +550,23 @@ mod tests {
             commit: "",
             author: "",
             time,
+            line_number: 0,
+            code: "",
+        }
+    }
+
+    fn make_format_data_with_placeholder(placeholder: &str) -> format::FormatStringPlaceholderData {
+        format::FormatStringPlaceholderData {
+            placeholder: Some(Placeholder::Str(placeholder)),
+            ..Default::default()
+        }
+    }
+
+    fn make_blame_line_with_author(author: &str) -> BlameLine {
+        BlameLine {
+            commit: "",
+            author,
+            time: chrono::DateTime::default(),
             line_number: 0,
             code: "",
         }
