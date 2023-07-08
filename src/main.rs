@@ -112,12 +112,16 @@ fn run_app() -> std::io::Result<i32> {
     };
 
     let _show_config = opt.show_config;
+    let _map_line_numbers = opt.map_line_numbers;
     let config = config::Config::from(opt);
 
     if _show_config {
         let stdout = io::stdout();
         let mut stdout = stdout.lock();
         subcommands::show_config::show_config(&config, &mut stdout)?;
+        return Ok(0);
+    } else if _map_line_numbers {
+        subcommands::map_line_numbers::map_line_numbers(&config)?;
         return Ok(0);
     }
 

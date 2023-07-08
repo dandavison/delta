@@ -120,6 +120,12 @@ pub fn format_and_paint_line_numbers<'a>(
     };
 
     if emit_left {
+        if config.map_line_numbers {
+            assert!(config.side_by_side && config.wrap_config.max_lines == 1);
+            if let Some(n) = line_numbers[Minus] {
+                print!("{},{}", line_numbers_data.plus_file, n)
+            }
+        }
         formatted_numbers.extend(format_and_paint_line_number_field(
             line_numbers_data,
             Minus,
@@ -130,6 +136,15 @@ pub fn format_and_paint_line_numbers<'a>(
     }
 
     if emit_right {
+        if config.map_line_numbers && line_numbers[Minus].is_some() {
+            println!(
+                ",{}",
+                line_numbers[Plus]
+                    .map(|n| n.to_string())
+                    .as_deref()
+                    .unwrap_or("null")
+            )
+        }
         formatted_numbers.extend(format_and_paint_line_number_field(
             line_numbers_data,
             Plus,

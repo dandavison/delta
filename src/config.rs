@@ -94,6 +94,7 @@ pub struct Config {
     pub line_numbers_zero_style: Style,
     pub line_numbers: bool,
     pub styles_map: Option<HashMap<style::AnsiTermStyleEqualityKey, Style>>,
+    pub map_line_numbers: bool,
     pub max_line_distance_for_naively_paired_lines: f64,
     pub max_line_distance: f64,
     pub max_line_length: usize,
@@ -345,7 +346,8 @@ impl From<cli::Opt> for Config {
             } else {
                 line_fill_method
             },
-            line_numbers: opt.line_numbers && !handlers::hunk::is_word_diff(),
+            line_numbers: (opt.line_numbers || opt.map_line_numbers)
+                && !handlers::hunk::is_word_diff(),
             line_numbers_format: LeftRight::new(
                 opt.line_numbers_left_format,
                 opt.line_numbers_right_format,
@@ -360,6 +362,7 @@ impl From<cli::Opt> for Config {
             ),
             line_numbers_zero_style: styles["line-numbers-zero-style"],
             line_buffer_size: opt.line_buffer_size,
+            map_line_numbers: opt.map_line_numbers,
             max_line_distance: opt.max_line_distance,
             max_line_distance_for_naively_paired_lines,
             max_line_length: if opt.side_by_side {
@@ -395,7 +398,8 @@ impl From<cli::Opt> for Config {
             git_plus_style: styles["git-plus-style"],
             relative_paths: opt.relative_paths,
             show_themes: opt.show_themes,
-            side_by_side: opt.side_by_side && !handlers::hunk::is_word_diff(),
+            side_by_side: (opt.side_by_side || opt.map_line_numbers)
+                && !handlers::hunk::is_word_diff(),
             side_by_side_data,
             styles_map,
             syntax_dummy_theme: SyntaxTheme::default(),

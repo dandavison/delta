@@ -1,5 +1,6 @@
 pub mod diff;
 pub mod list_syntax_themes;
+pub mod map_line_numbers;
 pub mod parse_ansi;
 mod sample_diff;
 pub mod show_colors;
