@@ -6,7 +6,7 @@ use crate::options::theme::is_light_syntax_theme;
 use crate::utils;
 use crate::utils::bat::output::{OutputType, PagingMode};
 use clap::Parser;
-use std::io::{self, ErrorKind, Read, Write};
+use std::io::{self, ErrorKind, IsTerminal, Read, Write};
 
 #[cfg(not(tarpaulin_include))]
 pub fn show_syntax_themes() -> std::io::Result<()> {
@@ -21,7 +21,7 @@ pub fn show_syntax_themes() -> std::io::Result<()> {
     .unwrap();
     let mut writer = output_type.handle().unwrap();
 
-    let stdin_data = if !atty::is(atty::Stream::Stdin) {
+    let stdin_data = if !io::stdin().is_terminal() {
         let mut buf = Vec::new();
         io::stdin().lock().read_to_end(&mut buf)?;
         if !buf.is_empty() {

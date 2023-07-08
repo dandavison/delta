@@ -24,7 +24,7 @@ mod subcommands;
 
 mod tests;
 
-use std::io::{self, ErrorKind};
+use std::io::{self, ErrorKind, IsTerminal};
 use std::process;
 
 use bytelines::ByteLinesReader;
@@ -130,7 +130,7 @@ fn run_app() -> std::io::Result<i32> {
         return Ok(exit_code);
     }
 
-    if atty::is(atty::Stream::Stdin) {
+    if io::stdin().is_terminal() {
         eprintln!(
             "\
     The main way to use delta is to configure it as the pager for git: \

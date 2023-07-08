@@ -1,4 +1,4 @@
-use std::io::{self, ErrorKind, Read};
+use std::io::{self, ErrorKind, IsTerminal, Read};
 
 use crate::cli;
 use crate::config;
@@ -17,7 +17,7 @@ pub fn show_themes(dark: bool, light: bool, computed_theme_is_light: bool) -> st
 
     let mut input = DIFF.to_vec();
 
-    if !atty::is(atty::Stream::Stdin) {
+    if !io::stdin().is_terminal() {
         let mut buf = Vec::new();
         io::stdin().lock().read_to_end(&mut buf)?;
         if !buf.is_empty() {
