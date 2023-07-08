@@ -1,4 +1,4 @@
-use std::io::{self, Write};
+use std::io::{self, IsTerminal, Write};
 
 use itertools::Itertools;
 
@@ -8,7 +8,7 @@ use crate::{options::theme::is_light_syntax_theme, utils};
 pub fn list_syntax_themes() -> std::io::Result<()> {
     let stdout = io::stdout();
     let mut stdout = stdout.lock();
-    if atty::is(atty::Stream::Stdout) {
+    if stdout.is_terminal() {
         _list_syntax_themes_for_humans(&mut stdout)
     } else {
         _list_syntax_themes_for_machines(&mut stdout)
