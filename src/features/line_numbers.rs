@@ -142,7 +142,8 @@ pub fn format_and_paint_line_numbers<'a>(
 }
 
 lazy_static! {
-    static ref LINE_NUMBERS_PLACEHOLDER_REGEX: Regex = format::make_placeholder_regex(&["nm", "np"]);
+    static ref LINE_NUMBERS_PLACEHOLDER_REGEX: Regex =
+        format::make_placeholder_regex(&["nm", "np"]);
 }
 
 #[derive(Default, Debug)]
