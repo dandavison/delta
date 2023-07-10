@@ -12,6 +12,7 @@ use crate::features::OptionValueFunction;
 use crate::format::{self, Align, Placeholder};
 use crate::minusplus::*;
 use crate::style::Style;
+use crate::subcommands::map_line_numbers;
 use crate::utils;
 
 pub fn make_feature() -> Vec<(String, OptionValueFunction)> {
@@ -120,6 +121,12 @@ pub fn format_and_paint_line_numbers<'a>(
     };
 
     if emit_left {
+        if config.map_line_numbers {
+            if let Some(n) = line_numbers[Minus] {
+                map_line_numbers::set_file_name(line_numbers_data.plus_file.clone());
+                map_line_numbers::set_minus_line_number(n);
+            }
+        }
         formatted_numbers.extend(format_and_paint_line_number_field(
             line_numbers_data,
             Minus,
@@ -130,6 +137,10 @@ pub fn format_and_paint_line_numbers<'a>(
     }
 
     if emit_right {
+        if config.map_line_numbers && line_numbers[Minus].is_some() {
+            map_line_numbers::set_plus_line_number(line_numbers[Plus]);
+            map_line_numbers::emit_map_entry();
+        }
         formatted_numbers.extend(format_and_paint_line_number_field(
             line_numbers_data,
             Plus,
@@ -142,7 +153,8 @@ pub fn format_and_paint_line_numbers<'a>(
 }
 
 lazy_static! {
-    static ref LINE_NUMBERS_PLACEHOLDER_REGEX: Regex = format::make_placeholder_regex(&["nm", "np"]);
+    static ref LINE_NUMBERS_PLACEHOLDER_REGEX: Regex =
+        format::make_placeholder_regex(&["nm", "np"]);
 }
 
 #[derive(Default, Debug)]

@@ -697,6 +697,14 @@ pub struct Opt {
     /// An example is --map-styles='bold purple => red "#eeeeee", bold cyan => syntax "#eeeeee"'
     pub map_styles: Option<String>,
 
+    #[arg(long = "map-line-numbers")]
+    /// Output a line numbers map instead of the usual delta output.
+    ///
+    /// The output attempts to identify, for each file, for each line in the old
+    /// version of the file, the number of the corresponding line in the new
+    /// version of the file. 0 means no corresponding line was identified.
+    pub map_line_numbers: bool,
+
     #[arg(long = "max-line-distance", default_value = "0.6", value_name = "DIST")]
     /// Maximum line pair distance parameter in within-line diff algorithm.
     ///

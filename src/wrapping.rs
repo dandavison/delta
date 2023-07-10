@@ -59,7 +59,11 @@ impl WrapConfig {
                     fatal("Invalid value for wrap-right-percent, not between 0 and 100.")
                 }
             },
-            max_lines: adapt_wrap_max_lines_argument(opt.wrap_max_lines.clone()),
+            max_lines: adapt_wrap_max_lines_argument(if opt.map_line_numbers {
+                "0".to_string()
+            } else {
+                opt.wrap_max_lines.clone()
+            }),
             inline_hint_syntect_style: SyntectStyle::from_delta_style(inline_hint_style),
         }
     }
