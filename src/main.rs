@@ -82,31 +82,24 @@ fn run_app() -> std::io::Result<i32> {
         assets,
     );
 
-    let subcommand_result = if opt.list_languages {
-        Some(list_languages())
+    if let Err(error) = if opt.list_languages {
+        list_languages()
     } else if opt.list_syntax_themes {
-        Some(subcommands::list_syntax_themes::list_syntax_themes())
+        subcommands::list_syntax_themes::list_syntax_themes()
     } else if opt.show_syntax_themes {
-        Some(subcommands::show_syntax_themes::show_syntax_themes())
+        subcommands::show_syntax_themes::show_syntax_themes()
     } else if opt.show_themes {
-        Some(subcommands::show_themes::show_themes(
-            opt.dark,
-            opt.light,
-            opt.computed.is_light_mode,
-        ))
+        subcommands::show_themes::show_themes(opt.dark, opt.light, opt.computed.is_light_mode)
     } else if opt.show_colors {
-        Some(subcommands::show_colors::show_colors())
+        subcommands::show_colors::show_colors()
     } else if opt.parse_ansi {
-        Some(subcommands::parse_ansi::parse_ansi())
+        subcommands::parse_ansi::parse_ansi()
     } else {
-        None
-    };
-    if let Some(result) = subcommand_result {
-        if let Err(error) = result {
-            match error.kind() {
-                ErrorKind::BrokenPipe => {}
-                _ => fatal(format!("{error}")),
-            }
+        Ok(())
+    } {
+        match error.kind() {
+            ErrorKind::BrokenPipe => {}
+            _ => fatal(format!("{error}")),
         }
         return Ok(0);
     };
@@ -114,10 +107,17 @@ fn run_app() -> std::io::Result<i32> {
     let _show_config = opt.show_config;
     let config = config::Config::from(opt);
 
-    if _show_config {
+    if let Err(error) = if _show_config {
         let stdout = io::stdout();
         let mut stdout = stdout.lock();
-        subcommands::show_config::show_config(&config, &mut stdout)?;
+        subcommands::show_config::show_config(&config, &mut stdout)
+    } else {
+        Ok(())
+    } {
+        match error.kind() {
+            ErrorKind::BrokenPipe => {}
+            _ => fatal(format!("{error}")),
+        }
         return Ok(0);
     }
 
