@@ -615,9 +615,9 @@ dependencies = [
 
 [[package]]
 name = "grep-cli"
-version = "0.1.8"
+version = "0.1.9"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "a174e093eaf510f24dae4b4dd996787d6e299069f05af7437996e91b029a8f8d"
+checksum = "8fe4bdbf4300c8b039f5d7eec7fbc6760d2c85bb15ac7499c4d235667f6d747a"
 dependencies = [
  "bstr",
  "globset",
