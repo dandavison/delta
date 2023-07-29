@@ -838,9 +838,9 @@ pub struct Opt {
     #[arg(long = "pager", value_name = "CMD")]
     /// Which pager to use.
     ///
-    /// The default pager is `less`. You can also change pager by setting the environment variables
-    /// DELTA_PAGER, BAT_PAGER, or PAGER (and that is their order of priority). This option
-    /// overrides all environment variables above.
+    /// The default pager is `less`. You can also change pager by setting the
+    /// environment variable DELTA_PAGER, or PAGER. This option overrides these
+    /// environment variables.
     pub pager: Option<String>,
 
     #[arg(
