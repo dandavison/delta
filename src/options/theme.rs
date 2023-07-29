@@ -17,10 +17,17 @@ pub fn set__is_light_mode__syntax_theme__syntax_set(
     assets: HighlightingAssets,
 ) {
     let syntax_theme_name_from_bat_theme = &opt.env.bat_theme;
+    let light_mode = if opt.light {
+        Some(true)
+    } else if opt.dark {
+        Some(false)
+    } else {
+        None
+    };
     let (is_light_mode, syntax_theme_name) = get_is_light_mode_and_syntax_theme_name(
         opt.syntax_theme.as_ref(),
         syntax_theme_name_from_bat_theme.as_ref(),
-        opt.light,
+        light_mode,
     );
     opt.computed.is_light_mode = is_light_mode;
 
@@ -83,17 +90,31 @@ fn is_no_syntax_highlighting_syntax_theme_name(theme_name: &str) -> bool {
 fn get_is_light_mode_and_syntax_theme_name(
     theme_arg: Option<&String>,
     bat_theme_env_var: Option<&String>,
-    light_mode_arg: bool,
+    light_mode_arg: Option<bool>,
 ) -> (bool, String) {
     match (theme_arg, bat_theme_env_var, light_mode_arg) {
-        (None, None, false) => (false, DEFAULT_DARK_SYNTAX_THEME.to_string()),
-        (Some(theme_name), _, false) => (is_light_syntax_theme(theme_name), theme_name.to_string()),
-        (None, Some(theme_name), false) => {
+        (None, None, None) => get_default_theme(),
+        (None, None, Some(false)) => (false, DEFAULT_DARK_SYNTAX_THEME.to_string()),
+        (Some(theme_name), _, Some(false)) => (is_light_syntax_theme(theme_name), theme_name.to_string()),
+        (None, Some(theme_name), Some(false)) => {
             (is_light_syntax_theme(theme_name), theme_name.to_string())
         }
-        (None, None, true) => (true, DEFAULT_LIGHT_SYNTAX_THEME.to_string()),
-        (Some(theme_name), _, is_light_mode) => (is_light_mode, theme_name.to_string()),
-        (None, Some(theme_name), is_light_mode) => (is_light_mode, theme_name.to_string()),
+        (None, None, Some(true)) => (true, DEFAULT_LIGHT_SYNTAX_THEME.to_string()),
+        (Some(theme_name), _, is_light_mode) => (is_light_mode.unwrap_or_default(), theme_name.to_string()),
+        (None, Some(theme_name), is_light_mode) => (is_light_mode.unwrap_or_default(), theme_name.to_string()),
+    }
+}
+
+fn get_default_theme() -> (bool, String) {
+    // Obtain a default theme based on whether the terminal background is light
+    // or dark. The result is not always reliable and may be wrong (especially
+    // when delta is connected to a stdin/stdout pipe) but it's slightly better
+    // than assuming a dark terminal background.
+    let timeout = std::time::Duration::from_millis(100);
+    match termbg::theme(timeout) {
+        Ok(termbg::Theme::Dark) => (false, DEFAULT_DARK_SYNTAX_THEME.to_string()),
+        Ok(termbg::Theme::Light) => (true, DEFAULT_LIGHT_SYNTAX_THEME.to_string()),
+        Err(_) => (false, DEFAULT_DARK_SYNTAX_THEME.to_string()), // default to a dark theme
     }
 }
 
