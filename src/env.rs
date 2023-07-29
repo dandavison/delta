@@ -10,7 +10,7 @@ const DELTA_EXPERIMENTAL_MAX_LINE_DISTANCE_FOR_NAIVELY_PAIRED_LINES: &str =
     "DELTA_EXPERIMENTAL_MAX_LINE_DISTANCE_FOR_NAIVELY_PAIRED_LINES";
 const DELTA_PAGER: &str = "DELTA_PAGER";
 const BAT_PAGER: &str = "BAT_PAGER";
-const PAGER: &str = "PAGER";
+// const PAGER: &str = "PAGER";
 
 #[derive(Default, Clone)]
 pub struct DeltaEnv {
@@ -41,7 +41,11 @@ impl DeltaEnv {
         let pagers = (
             env::var(DELTA_PAGER).ok(),
             env::var(BAT_PAGER).ok(),
-            env::var(PAGER).ok(),
+            // We're using `bar::config::get_pager_executable` here instead of just returning
+            // the pager from the environment variables, because we want to make sure 
+            // that the pager is a valid pager from env and handle the case of 
+            // the PAGER being set to something invalid like "most" and "more".
+            bat::config::get_pager_executable(None),
         );
 
         Self {
@@ -69,5 +73,26 @@ pub mod tests {
         env::set_var("DELTA_FEATURES", feature);
         let env = DeltaEnv::init();
         assert_eq!(env.features, Some(feature.into()));
+    }
+
+    #[test]
+    fn test_env_parsing_with_pager_set_to_bat() {
+        env::set_var("PAGER", "bat");
+        let env = DeltaEnv::init();
+        assert_eq!(env.pagers.2, Some("bat".into()));
+    }
+
+    #[test]
+    fn test_env_parsing_with_pager_set_to_more() {
+        env::set_var("PAGER", "more");
+        let env = DeltaEnv::init();
+        assert_eq!(env.pagers.2, Some("less".into()));
+    }
+
+    #[test]
+    fn test_env_parsing_with_pager_set_to_most() {
+        env::set_var("PAGER", "most");
+        let env = DeltaEnv::init();
+        assert_eq!(env.pagers.2, Some("less".into()));
     }
 }
