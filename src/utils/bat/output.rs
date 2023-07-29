@@ -53,9 +53,8 @@ impl OutputType {
         let mut replace_arguments_to_less = false;
 
         let pager_from_env = match env.pagers.clone() {
-            (Some(delta_pager), _, _) => Some(delta_pager),
-            (_, Some(bat_pager), _) => Some(bat_pager),
-            (_, _, Some(pager)) => {
+            (Some(delta_pager), _) => Some(delta_pager),
+            (_, Some(pager)) => {
                 // less needs to be called with the '-R' option in order to properly interpret ANSI
                 // color sequences. If someone has set PAGER="less -F", we therefore need to
                 // overwrite the arguments and add '-R'.
