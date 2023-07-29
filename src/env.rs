@@ -41,7 +41,7 @@ impl DeltaEnv {
         let pagers = (
             env::var(DELTA_PAGER).ok(),
             env::var(BAT_PAGER).ok(),
-            // We're using `bar::config::get_pager_executable` here instead of just returning
+            // We're using `bat::config::get_pager_executable` here instead of just returning
             // the pager from the environment variables, because we want to make sure 
             // that the pager is a valid pager from env and handle the case of 
             // the PAGER being set to something invalid like "most" and "more".
