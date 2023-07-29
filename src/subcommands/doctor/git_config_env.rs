@@ -48,12 +48,12 @@ impl Diagnostic for GitConfigEnvVars {
     }
 
     fn diagnose(&self) -> Health {
-        let diagnosis_is_healthy = self.report();
+        let (description, is_healthy) = self.report();
         let remedy = "Unset `GIT_CONFIG_*` environment variables.".to_string();
 
-        match diagnosis_is_healthy.1 {
-            true => Unhealthy(diagnosis_is_healthy.0, remedy),
-            false => Healthy,
+        match is_healthy {
+            false => Unhealthy(description, remedy),
+            true => Healthy,
         }
     }
 

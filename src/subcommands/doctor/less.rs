@@ -36,8 +36,8 @@ impl Diagnostic for Less {
             ),
             Some(n) if n >= self.min_version => (
                 format!(
-                    "`less` version >= {} is required (your version: {})",
-                    MIN_LESS_VERSION, n
+                    "Your less version ({}) is >= {} as required",
+                    n, self.min_version
                 ),
                 true,
             ),
@@ -46,12 +46,12 @@ impl Diagnostic for Less {
     }
 
     fn diagnose(&self) -> Health {
-        let diagnosis_is_healthy = self.report();
+        let (description, is_healthy) = self.report();
         let remedy = format!("Install `less` version >= {}", MIN_LESS_VERSION);
 
-        match diagnosis_is_healthy.1 {
-            true => Unhealthy(diagnosis_is_healthy.0, remedy),
-            false => Healthy,
+        match is_healthy {
+            false => Unhealthy(description, remedy),
+            true => Healthy,
         }
     }
 
