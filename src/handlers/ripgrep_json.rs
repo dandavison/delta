@@ -19,9 +19,11 @@ pub fn parse_line(line: &str) -> Option<grep::GrepLine> {
             // delta's code highlighting does not expect a trailing newline.
             // Therefore, remove the trailing newline if it is not part of the
             // match.
-            let newline_match_end = ripgrep_line.data.submatches.iter().any(|m| {
-                code.ends_with(&m._match.text) && m._match.text.ends_with('\n')
-            });
+            let newline_match_end = ripgrep_line
+                .data
+                .submatches
+                .iter()
+                .any(|m| code.ends_with(&m._match.text) && m._match.text.ends_with('\n'));
             if !newline_match_end && code.ends_with('\n') {
                 code.truncate(code.len() - 1);
                 if code.ends_with('\r') {
