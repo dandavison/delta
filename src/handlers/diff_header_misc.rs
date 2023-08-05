@@ -19,7 +19,7 @@ impl<'a> StateMachine<'a> {
             return Ok(false);
         }
 
-        if is_binary {            
+        if is_binary {
             match (self.minus_file.as_str(), self.plus_file.as_str()) {
                 ("", "") => {
                     return self.handle_additional_cases(match self.state {
@@ -29,14 +29,14 @@ impl<'a> StateMachine<'a> {
                 }
                 ("/dev/null", _) => self.plus_file.push_str(" (binary file)"),
                 (_, "/dev/null") => self.minus_file.push_str(" (binary file)"),
-                (_, _) => ()
+                (_, _) => (),
             };
             return Ok(true);
         }
 
-        return self.handle_additional_cases(match self.state {
+        self.handle_additional_cases(match self.state {
             State::DiffHeader(_) => self.state.clone(),
             _ => State::DiffHeader(DiffType::Unified),
-        });
+        })
     }
 }
