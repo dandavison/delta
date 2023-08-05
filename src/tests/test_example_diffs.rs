@@ -240,7 +240,23 @@ mod tests {
         let config = integration_test_utils::make_config_from_args(&[]);
         let output = integration_test_utils::run_delta(BINARY_FILES_DIFFER, &config);
         let output = strip_ansi_codes(&output);
-        assert!(output.contains("Binary files /dev/null and b/foo differ\n"));
+        assert!(output.contains("Binary files a/foo and b/foo differ\n"));
+    }
+
+    #[test]
+    fn test_binary_file_added() {
+        let config = integration_test_utils::make_config_from_args(&[]);
+        let output = integration_test_utils::run_delta(BINARY_FILE_ADDED, &config);
+        let output = strip_ansi_codes(&output);
+        assert!(output.contains("added: foo (binary file)\n"));
+    }
+
+    #[test]
+    fn test_binary_file_removed() {
+        let config = integration_test_utils::make_config_from_args(&[]);
+        let output = integration_test_utils::run_delta(BINARY_FILE_REMOVED, &config);
+        let output = strip_ansi_codes(&output);
+        assert!(output.contains("removed: foo (binary file)\n"));
     }
 
     #[test]
@@ -2241,16 +2257,41 @@ index ba28bfd..0000000
 ";
 
     const BINARY_FILES_DIFFER: &str = "
-commit ad023698217b086f1bef934be62b4523c95f64d9 (HEAD -> master)
-Author: Dan Davison <dandavison7@gmail.com>
-Date:   Wed Feb 12 08:05:53 2020 -0600
+commit 7d58b736b09788d65392cef1bf3dcc647165f7e7 (HEAD -> main)
+Author: Sondeyy <nils.boettcher@posteo.de>
+Date:   Sat Aug 5 16:22:38 2023 +0200
 
-    .
+    modified bin file
+
+diff --git a/foo b/foo
+index c9bbb35..5fc172d 100644
+Binary files a/foo and b/foo differ
+";
+
+    const BINARY_FILE_ADDED: &str = "
+commit 7d58b736b09788d65392cef1bf3dcc647165f7e7 (HEAD -> main)
+Author: Sondeyy <nils.boettcher@posteo.de>
+Date:   Sat Aug 5 16:22:38 2023 +0200
+
+    added binary file
 
 diff --git a/foo b/foo
 new file mode 100644
-index 0000000..b572921
+index c9bbb35..5fc172d 100644
 Binary files /dev/null and b/foo differ
+";
+
+    const BINARY_FILE_REMOVED: &str = "
+commit 7d58b736b09788d65392cef1bf3dcc647165f7e7 (HEAD -> main)
+Author: Sondeyy <nils.boettcher@posteo.de>
+Date:   Sat Aug 5 16:22:38 2023 +0200
+
+    removed binary file
+
+diff --git a/foo b/foo
+deleted file mode 100644
+index c9bbb35..5fc172d 100644
+Binary files a/foo and /dev/null differ
 ";
 
     const GIT_DIFF_WITH_COPIED_FILE: &str = "
