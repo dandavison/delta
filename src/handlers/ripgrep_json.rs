@@ -130,14 +130,14 @@ mod tests {
 
     #[test]
     fn test_match_text_ends_with_newline() {
-        let line = r#"{"type":"match","data":{"path":{"text":"src/cli.rs"},"lines":{"text":"    fn from_clap_and_git_config(config\n"},"line_number":null,"absolute_offset":35837,"submatches":[{"match":{"text":"config\n"},"start":4,"end":7}]}}"#;
+        let line = r#"{"type":"match","data":{"path":{"text":"src/cli.rs"},"lines":{"text":"    fn from_clap_and_git_config(config\n"},"line_number":null,"absolute_offset":35837,"submatches":[{"match":{"text":"config\n"},"start":33,"end":39}]}}"#;
         let grep_line = parse_line(line).unwrap();
         assert_eq!(grep_line.code.chars().last(), Some('\n'));
     }
 
     #[test]
     fn test_match_text_without_newline() {
-        let line = r#"{"type":"match","data":{"path":{"text":"src/cli.rs"},"lines":{"text":"    fn from_clap_and_git_config(\n"},"line_number":null,"absolute_offset":35837,"submatches":[{"match":{"text":"config"},"start":4,"end":6}]}}"#;
+        let line = r#"{"type":"match","data":{"path":{"text":"src/cli.rs"},"lines":{"text":"    fn from_clap_and_git_config(\n"},"line_number":null,"absolute_offset":35837,"submatches":[{"match":{"text":"config"},"start":25,"end":31}]}}"#;
         let grep_line = parse_line(line).unwrap();
         assert_eq!(grep_line.code.chars().last(), Some('('));
     }
