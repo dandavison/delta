@@ -208,7 +208,6 @@
     #author: https://github.com/2kabhishek
     dark = true
     side-by-side = true
-    navigate = true
     keep-plus-minus-markers = true
     hyperlinks = true
     file-added-label = [+]
@@ -243,7 +242,6 @@
     #author: https://github.com/2kabhishek
     dark = true
     side-by-side = true
-    navigate = true
     keep-plus-minus-markers = true
     file-added-label = [+]
     file-copied-label = [==]
