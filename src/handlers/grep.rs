@@ -26,6 +26,20 @@ pub struct GrepLine<'b> {
     pub submatches: Option<Vec<(usize, usize)>>,
 }
 
+impl<'b> GrepLine<'b> {
+    fn expand_tabs(&mut self, tab_cfg: &tabs::TabCfg) {
+        let old_len = self.code.len();
+        self.code = tabs::expand(&self.code, tab_cfg).into();
+        let shift = self.code.len().saturating_sub(old_len);
+        self.submatches = self.submatches.as_ref().map(|submatches| {
+            submatches
+                .iter()
+                .map(|(a, b)| (a + shift, b + shift))
+                .collect()
+        });
+    }
+}
+
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Deserialize)]
 #[serde(rename_all = "lowercase")]
 pub enum LineType {
@@ -159,21 +173,14 @@ impl<'a> StateMachine<'a> {
         }
         // Emit the actual grep hit line
         let code_style_sections = match (&grep_line.line_type, &grep_line.submatches) {
-            (LineType::Match, Some(submatches)) => {
+            (LineType::Match, Some(_)) => {
                 // We expand tabs at this late stage because
                 // the tabs are escaped in the JSON, so
                 // expansion must come after JSON parsing.
                 // (At the time of writing, we are in this
                 // arm iff we are handling `ripgrep --json`
                 // output.)
-                let (expanded_code, shift) = expand_tabs(&grep_line.code, &self.config.tab_cfg);
-                grep_line.code = expanded_code.into();
-                grep_line.submatches = Some(
-                    submatches
-                        .iter()
-                        .map(|(a, b)| (a + shift, b + shift))
-                        .collect(),
-                );
+                grep_line.expand_tabs(&self.config.tab_cfg);
                 make_style_sections(
                     &grep_line.code,
                     &grep_line.submatches.unwrap(),
@@ -305,21 +312,14 @@ impl<'a> StateMachine<'a> {
 
     fn _emit_classic_format_code(&mut self, mut grep_line: GrepLine) -> std::io::Result<()> {
         let code_style_sections = match (&grep_line.line_type, &grep_line.submatches) {
-            (LineType::Match, Some(submatches)) => {
+            (LineType::Match, Some(_)) => {
                 // We expand tabs at this late stage because
                 // the tabs are escaped in the JSON, so
                 // expansion must come after JSON parsing.
                 // (At the time of writing, we are in this
                 // arm iff we are handling `ripgrep --json`
                 // output.)
-                let (expanded_code, shift) = expand_tabs(&grep_line.code, &self.config.tab_cfg);
-                grep_line.code = expanded_code.into();
-                grep_line.submatches = Some(
-                    submatches
-                        .iter()
-                        .map(|(a, b)| (a + shift, b + shift))
-                        .collect(),
-                );
+                grep_line.expand_tabs(&self.config.tab_cfg);
                 make_style_sections(
                     &grep_line.code,
                     &grep_line.submatches.unwrap(),
@@ -1163,13 +1163,4 @@ mod tests {
             ]))
         );
     }
-}
-
-/// Expand tabs as spaces.
-/// Return new string, and change in string length.
-fn expand_tabs(s: &str, tab_cfg: &tabs::TabCfg) -> (String, usize) {
-    let old_len = s.len();
-    let new_s = tabs::expand(s, tab_cfg);
-    let shift = new_s.len().saturating_sub(old_len);
-    (new_s, shift)
 }
