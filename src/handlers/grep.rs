@@ -166,11 +166,17 @@ impl<'a> StateMachine<'a> {
                 // (At the time of writing, we are in this
                 // arm iff we are handling `ripgrep --json`
                 // output.)
-                let (new_code, shift) = expand_tabs(&grep_line.code, &self.config.tab_cfg);
-                grep_line.code = new_code.into();
+                let (expanded_code, shift) = expand_tabs(&grep_line.code, &self.config.tab_cfg);
+                grep_line.code = expanded_code.into();
+                grep_line.submatches = Some(
+                    submatches
+                        .iter()
+                        .map(|(a, b)| (a + shift, b + shift))
+                        .collect(),
+                );
                 make_style_sections(
                     &grep_line.code,
-                    &mut submatches.iter().map(|(a, b)| (a + shift, b + shift)),
+                    &grep_line.submatches.unwrap(),
                     self.config.grep_match_word_style,
                     self.config.grep_match_line_style,
                 )
@@ -305,11 +311,17 @@ impl<'a> StateMachine<'a> {
                 // (At the time of writing, we are in this
                 // arm iff we are handling `ripgrep --json`
                 // output.)
-                let (new_code, shift) = expand_tabs(&grep_line.code, &self.config.tab_cfg);
-                grep_line.code = new_code.into();
+                let (expanded_code, shift) = expand_tabs(&grep_line.code, &self.config.tab_cfg);
+                grep_line.code = expanded_code.into();
+                grep_line.submatches = Some(
+                    submatches
+                        .iter()
+                        .map(|(a, b)| (a + shift, b + shift))
+                        .collect(),
+                );
                 make_style_sections(
                     &grep_line.code,
-                    &mut submatches.iter().map(|(a, b)| (a + shift, b + shift)),
+                    &grep_line.submatches.unwrap(),
                     self.config.grep_match_word_style,
                     self.config.grep_match_line_style,
                 )
@@ -346,13 +358,14 @@ impl<'a> StateMachine<'a> {
 
 fn make_style_sections<'a>(
     line: &'a str,
-    submatches: &mut dyn Iterator<Item = (usize, usize)>,
+    submatches: &[(usize, usize)],
     match_style: Style,
     non_match_style: Style,
 ) -> StyleSectionSpecifier<'a> {
     let mut sections = Vec::new();
     let mut curr = 0;
-    for (start, end) in submatches {
+    for (start_, end_) in submatches {
+        let (start, end) = (*start_, *end_);
         if start > curr {
             sections.push((non_match_style, &line[curr..start]))
         };
