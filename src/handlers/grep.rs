@@ -193,7 +193,8 @@ impl<'a> StateMachine<'a> {
                     &self.raw_line,
                     self.config.grep_match_word_style,
                     self.config.grep_match_line_style,
-                    &grep_line,
+                    &grep_line.path,
+                    grep_line.line_number,
                 )
                 .unwrap_or(StyleSectionSpecifier::Style(
                     self.config.grep_match_line_style,
@@ -338,7 +339,8 @@ impl<'a> StateMachine<'a> {
                     &self.raw_line,
                     self.config.grep_match_word_style,
                     self.config.grep_match_line_style,
-                    &grep_line,
+                    &grep_line.path,
+                    grep_line.line_number,
                 )
                 .unwrap_or(StyleSectionSpecifier::Style(
                     self.config.grep_match_line_style,
@@ -383,13 +385,14 @@ fn get_code_style_sections<'b>(
     raw_line: &'b str,
     match_style: Style,
     non_match_style: Style,
-    grep: &GrepLine,
+    path: &str,
+    line_number: Option<usize>,
 ) -> Option<StyleSectionSpecifier<'b>> {
     if let Some(prefix_end) = ansi::ansi_preserving_index(
         raw_line,
-        match grep.line_number {
-            Some(n) => format!("{}:{}:", grep.path, n).len() - 1,
-            None => grep.path.len(),
+        match line_number {
+            Some(n) => format!("{}:{}:", path, n).len() - 1,
+            None => path.len(),
         },
     ) {
         let match_style_sections = ansi::parse_style_sections(&raw_line[(prefix_end + 1)..])
@@ -1115,7 +1118,7 @@ mod tests {
         let grep = parse_grep_line(&stripped).unwrap();
 
         assert_eq!(
-            get_code_style_sections(&working_example, hit, miss, &grep),
+            get_code_style_sections(&working_example, hit, miss, &grep.path, grep.line_number),
             Some(StyleSectionSpecifier::StyleSections(vec![
                 (miss, "  - "),
                 (hit, "kind: Service"),
@@ -1128,7 +1131,13 @@ mod tests {
         let broken_grep = parse_grep_line(&broken_stripped).unwrap();
 
         assert_eq!(
-            get_code_style_sections(&broken_example, hit, miss, &broken_grep),
+            get_code_style_sections(
+                &broken_example,
+                hit,
+                miss,
+                &broken_grep.path,
+                broken_grep.line_number
+            ),
             Some(StyleSectionSpecifier::StyleSections(vec![(
                 hit,
                 "kind: Service"
@@ -1140,7 +1149,13 @@ mod tests {
         let plus_grep = parse_grep_line(&plus_stripped).unwrap();
 
         assert_eq!(
-            get_code_style_sections(&plus_example, hit, miss, &plus_grep),
+            get_code_style_sections(
+                &plus_example,
+                hit,
+                miss,
+                &plus_grep.path,
+                plus_grep.line_number
+            ),
             Some(StyleSectionSpecifier::StyleSections(vec![
                 (miss, " +        let (style, non_emph_style) = "),
                 (hit, "match"),
