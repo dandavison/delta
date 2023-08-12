@@ -166,10 +166,11 @@ impl<'a> StateMachine<'a> {
                 // (At the time of writing, we are in this
                 // arm iff we are handling `ripgrep --json`
                 // output.)
-                grep_line.code = tabs::expand(&grep_line.code, &self.config.tab_cfg).into();
+                let (new_code, shift) = expand_tabs(&grep_line.code, &self.config.tab_cfg);
+                grep_line.code = new_code.into();
                 make_style_sections(
                     &grep_line.code,
-                    submatches,
+                    &mut submatches.iter().map(|(a, b)| (a + shift, b + shift)),
                     self.config.grep_match_word_style,
                     self.config.grep_match_line_style,
                 )
@@ -304,10 +305,11 @@ impl<'a> StateMachine<'a> {
                 // (At the time of writing, we are in this
                 // arm iff we are handling `ripgrep --json`
                 // output.)
-                grep_line.code = tabs::expand(&grep_line.code, &self.config.tab_cfg).into();
+                let (new_code, shift) = expand_tabs(&grep_line.code, &self.config.tab_cfg);
+                grep_line.code = new_code.into();
                 make_style_sections(
                     &grep_line.code,
-                    submatches,
+                    &mut submatches.iter().map(|(a, b)| (a + shift, b + shift)),
                     self.config.grep_match_word_style,
                     self.config.grep_match_line_style,
                 )
@@ -344,14 +346,13 @@ impl<'a> StateMachine<'a> {
 
 fn make_style_sections<'a>(
     line: &'a str,
-    submatches: &[(usize, usize)],
+    submatches: &mut dyn Iterator<Item = (usize, usize)>,
     match_style: Style,
     non_match_style: Style,
 ) -> StyleSectionSpecifier<'a> {
     let mut sections = Vec::new();
     let mut curr = 0;
-    for (start_, end_) in submatches {
-        let (start, end) = (*start_, *end_);
+    for (start, end) in submatches {
         if start > curr {
             sections.push((non_match_style, &line[curr..start]))
         };
@@ -1134,4 +1135,13 @@ mod tests {
             ]))
         );
     }
+}
+
+/// Expand tabs as spaces.
+/// Return new string, and change in string length.
+fn expand_tabs(s: &str, tab_cfg: &tabs::TabCfg) -> (String, usize) {
+    let old_len = s.len();
+    let new_s = tabs::expand(s, tab_cfg);
+    let shift = new_s.len().saturating_sub(old_len);
+    (new_s, shift)
 }
