@@ -37,7 +37,7 @@ lazy_static! {
     static ref GITHUB_REMOTE_URL: Regex = Regex::new(
         r"(?x)
         ^
-        (?:https://|git@)? # Support both HTTPS and SSH URLs, SSH URLs optionally omitting the git@
+        (?:https://|[^@]+@)? # Support both HTTPS and SSH URLs
         github\.com
         [:/]              # This separator differs between SSH and HTTPS URLs
         ([^/]+)           # Capture the user/org name
