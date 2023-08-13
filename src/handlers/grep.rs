@@ -31,6 +31,10 @@ impl<'b> GrepLine<'b> {
         let old_len = self.code.len();
         self.code = tabs::expand(&self.code, tab_cfg).into();
         let shift = self.code.len().saturating_sub(old_len);
+        // HACK: it is not necessarily the case that all submatch coordinates
+        // should be shifted in this way. It should be true in a common case of:
+        // (a) the only tabs were at the beginning of the line, and (b) the user
+        // was not searching for tabs.
         self.submatches = self.submatches.as_ref().map(|submatches| {
             submatches
                 .iter()
