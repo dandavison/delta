@@ -29,6 +29,7 @@ use std::process;
 
 use bytelines::ByteLinesReader;
 
+use crate::cli::Call;
 use crate::delta::delta;
 use crate::utils::bat::assets::list_languages;
 use crate::utils::bat::output::OutputType;
@@ -82,6 +83,14 @@ fn run_app() -> std::io::Result<i32> {
         assets,
     );
 
+    let opt = match opt {
+        Call::Help(msg) | Call::Version(msg) => {
+            OutputType::oneshot_write(msg)?;
+            return Ok(0);
+        }
+        Call::Delta(opt) => opt,
+    };
+
     let subcommand_result = if opt.list_languages {
         Some(list_languages())
     } else if opt.list_syntax_themes {
@@ -121,8 +130,9 @@ fn run_app() -> std::io::Result<i32> {
         return Ok(0);
     }
 
+    let pager_cfg = (&config).into();
     let mut output_type =
-        OutputType::from_mode(&env, config.paging_mode, config.pager.clone(), &config).unwrap();
+        OutputType::from_mode(&env, config.paging_mode, config.pager.clone(), &pager_cfg).unwrap();
     let mut writer = output_type.handle().unwrap();
 
     if let (Some(minus_file), Some(plus_file)) = (&config.minus_file, &config.plus_file) {

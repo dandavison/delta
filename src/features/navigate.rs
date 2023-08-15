@@ -3,8 +3,8 @@ use std::io::Write;
 use std::io::{Error, ErrorKind};
 use std::path::PathBuf;
 
-use crate::config::Config;
 use crate::features::OptionValueFunction;
+use crate::utils::bat::output::PagerCfg;
 
 pub fn make_feature() -> Vec<(String, OptionValueFunction)> {
     builtin_feature!([
@@ -68,7 +68,9 @@ pub fn make_navigate_regex(
 // current implementation, no writes to the delta less history file are propagated back to the real
 // history file so, for example, a (non-navigate) search performed in the delta less process will
 // not be stored in history.
-pub fn copy_less_hist_file_and_append_navigate_regex(config: &Config) -> std::io::Result<PathBuf> {
+pub fn copy_less_hist_file_and_append_navigate_regex(
+    config: &PagerCfg,
+) -> std::io::Result<PathBuf> {
     let delta_less_hist_file = get_delta_less_hist_file()?;
     let initial_contents = ".less-history-file:\n".to_string();
     let mut contents = if let Some(hist_file) = get_less_hist_file() {
