@@ -100,7 +100,7 @@ jobs:
 
   publish-to-winget:
     name: Publish to WinGet
-    runs-on: windows-latest # Action can only be run on windows
+    runs-on: ubuntu-latest
     needs: publish
     steps:
       - uses: vedantmgoyal2009/winget-releaser@v2
