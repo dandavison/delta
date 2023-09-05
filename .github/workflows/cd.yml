@@ -43,7 +43,7 @@ jobs:
         with:
           targets: ${{ matrix.job.target }}
       - name: Checkout repository
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
       - name: Install cross
         if: matrix.job.use-cross
         uses: taiki-e/install-action@v2
@@ -94,7 +94,7 @@ jobs:
     name: Publishing to Cargo
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
       - uses: dtolnay/rust-toolchain@stable
       - run: cargo publish --token ${{ secrets.CARGO_API_KEY }} --allow-dirty
 
@@ -114,7 +114,7 @@ jobs:
     runs-on: macos-latest
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
       - name: Bump Homebrew formulae
         uses: dawidd6/action-homebrew-bump-formula@v3
         with:
