@@ -1367,7 +1367,7 @@ src/align.rs:71: impl<'a> Alignment<'a> { │
             11,
             4,
             "impl<'a> Alignment<'a> { ",
-            "rs",
+            "a.rs",
             State::HunkHeader(
                 DiffType::Unified,
                 ParsedHunkHeader::default(),
@@ -1703,7 +1703,7 @@ src/align.rs:71: impl<'a> Alignment<'a> { │
             12,
             1,
             "        for (i, x_i) in self.x.iter().enumerate() {",
-            "rs",
+            "align.rs",
             State::HunkZero(DiffType::Unified, None),
             &config,
         );

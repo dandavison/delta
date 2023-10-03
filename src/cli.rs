@@ -286,12 +286,12 @@ pub struct Opt {
     /// For more control, see the style options and --syntax-theme.
     pub dark: bool,
 
-    #[arg(long = "default-language", value_name = "LANG")]
-    /// Default language used for syntax highlighting.
+    #[arg(long = "default-language", value_name = "LANG", default_value = "txt")]
+    /// Default language used for syntax highlighting as a fallback.
     ///
     /// Used when the language cannot be inferred from a filename. It will typically make sense to
     /// set this in per-repository git config (.git/config)
-    pub default_language: Option<String>,
+    pub default_language: String,
 
     #[arg(long = "diff-highlight")]
     /// Emulate diff-highlight.

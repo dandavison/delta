@@ -77,13 +77,9 @@ impl<'a> StateMachine<'a> {
 
                 // Emit syntax-highlighted code
                 if matches!(self.state, State::Unknown) {
-                    if let Some(lang) = utils::process::git_blame_filename_extension()
-                        .as_ref()
-                        .or(self.config.default_language.as_ref())
-                    {
-                        self.painter.set_syntax(Some(lang));
-                        self.painter.set_highlighter();
-                    }
+                    self.painter
+                        .set_syntax(utils::process::git_blame_filename().as_deref());
+                    self.painter.set_highlighter();
                 }
                 self.state = State::Blame(key);
                 self.painter.syntax_highlight_and_paint_line(

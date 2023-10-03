@@ -70,7 +70,11 @@ pub enum StyleSectionSpecifier<'l> {
 
 impl<'p> Painter<'p> {
     pub fn new(writer: &'p mut dyn Write, config: &'p config::Config) -> Self {
-        let default_syntax = Self::get_syntax(&config.syntax_set, None);
+        let default_syntax = Self::get_syntax(
+            &config.syntax_set,
+            None,
+            crate::config::SYNTAX_FALLBACK_LANG,
+        );
 
         let panel_width_fix = ansifill::UseFullPanelWidth::new(config);
 
@@ -103,19 +107,47 @@ impl<'p> Painter<'p> {
         }
     }
 
-    pub fn set_syntax(&mut self, extension: Option<&str>) {
-        self.syntax = Painter::get_syntax(&self.config.syntax_set, extension);
+    pub fn set_syntax(&mut self, filename: Option<&str>) {
+        self.syntax = Painter::get_syntax(
+            &self.config.syntax_set,
+            filename,
+            &self.config.default_language,
+        );
     }
 
-    fn get_syntax<'a>(syntax_set: &'a SyntaxSet, extension: Option<&str>) -> &'a SyntaxReference {
-        if let Some(extension) = extension {
-            if let Some(syntax) = syntax_set.find_syntax_by_extension(extension) {
-                return syntax;
+    fn get_syntax<'a>(
+        syntax_set: &'a SyntaxSet,
+        filename: Option<&str>,
+        fallback: &str,
+    ) -> &'a SyntaxReference {
+        if let Some(filename) = filename {
+            let path = std::path::Path::new(filename);
+            let file_name = path.file_name().and_then(|n| n.to_str()).unwrap_or("");
+            let extension = path.extension().and_then(|x| x.to_str()).unwrap_or("");
+            // Like syntect's `find_syntax_for_file`, without looking into files, plus:
+            // If the file has no extension then only look up the whole filename as a
+            // syntax definition if it is longer than 4 bytes.
+            // This means 1-4 short files which match an extension from "classic" 8.[34]
+            // file formats will not get highlighted, but Make/Rake/Dockerfiles etc will.
+            if !extension.is_empty() || file_name.len() > 4 {
+                if let Some(syntax) = syntax_set
+                    .find_syntax_by_extension(file_name)
+                    .or_else(|| syntax_set.find_syntax_by_extension(extension))
+                {
+                    return syntax;
+                }
             }
         }
-        syntax_set
-            .find_syntax_by_extension("txt")
-            .unwrap_or_else(|| delta_unreachable("Failed to find any language syntax definitions."))
+
+        if let Some(syntax) = syntax_set.find_syntax_for_file(fallback).unwrap_or(None) {
+            syntax
+        } else {
+            syntax_set
+                .find_syntax_by_extension(crate::config::SYNTAX_FALLBACK_LANG)
+                .unwrap_or_else(|| {
+                    delta_unreachable("Failed to find any language syntax definitions.")
+                })
+        }
     }
 
     pub fn set_highlighter(&mut self) {
