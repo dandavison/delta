@@ -121,7 +121,7 @@ pub mod ansi_test_utils {
         line_number: usize,
         substring_begin: usize,
         expected_substring: &str,
-        language_extension: &str,
+        filename_for_highlighting: &str,
         state: State,
         config: &Config,
     ) {
@@ -129,7 +129,7 @@ pub mod ansi_test_utils {
         let substring_end = substring_begin + expected_substring.len();
         let substring = &ansi::strip_ansi_codes(line)[substring_begin..substring_end];
         assert_eq!(substring, expected_substring);
-        let painted_substring = paint_line(substring, language_extension, state, config);
+        let painted_substring = paint_line(substring, filename_for_highlighting, state, config);
         // remove trailing newline appended by paint::paint_lines.
         assert!(line.contains(painted_substring.trim_end()));
     }
@@ -162,7 +162,7 @@ pub mod ansi_test_utils {
 
     pub fn paint_line(
         line: &str,
-        language_extension: &str,
+        filename_for_highlighting: &str,
         state: State,
         config: &Config,
     ) -> String {
@@ -173,7 +173,7 @@ pub mod ansi_test_utils {
             is_syntax_highlighted: true,
             ..Style::new()
         };
-        painter.set_syntax(Some(language_extension));
+        painter.set_syntax(Some(filename_for_highlighting));
         painter.set_highlighter();
         let lines = vec![(line.to_string(), state)];
         let syntax_style_sections = paint::get_syntax_style_sections_for_lines(
