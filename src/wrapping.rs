@@ -362,7 +362,7 @@ where
     if must_wrap {
         wrapped.append(&mut wrap_line(
             config,
-            input_vec.into_iter(),
+            input_vec,
             line_width,
             fill_style,
             inline_hint_style,
