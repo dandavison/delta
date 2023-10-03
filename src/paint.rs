@@ -70,9 +70,7 @@ pub enum StyleSectionSpecifier<'l> {
 
 impl<'p> Painter<'p> {
     pub fn new(writer: &'p mut dyn Write, config: &'p config::Config) -> Self {
-        let default_syntax =
-            Self::get_syntax(&config.syntax_set, None, config.default_language.as_deref());
-
+        let default_syntax = Self::get_syntax(&config.syntax_set, None, &config.default_language);
         let panel_width_fix = ansifill::UseFullPanelWidth::new(config);
 
         let line_numbers_data = if config.line_numbers {
@@ -104,27 +102,50 @@ impl<'p> Painter<'p> {
         }
     }
 
-    pub fn set_syntax(&mut self, extension: Option<&str>) {
+    pub fn set_syntax(&mut self, filename: Option<&str>) {
         self.syntax = Painter::get_syntax(
             &self.config.syntax_set,
-            extension,
-            self.config.default_language.as_deref(),
+            filename,
+            &self.config.default_language,
         );
     }
 
     fn get_syntax<'a>(
         syntax_set: &'a SyntaxSet,
-        extension: Option<&str>,
-        fallback_extension: Option<&str>,
+        filename: Option<&str>,
+        fallback: &str,
     ) -> &'a SyntaxReference {
-        for extension in [extension, fallback_extension].iter().flatten() {
-            if let Some(syntax) = syntax_set.find_syntax_by_extension(extension) {
-                return syntax;
+        if let Some(filename) = filename {
+            let path = std::path::Path::new(filename);
+            let file_name = path.file_name().and_then(|n| n.to_str()).unwrap_or("");
+            let extension = path.extension().and_then(|x| x.to_str()).unwrap_or("");
+
+            // Like syntect's `find_syntax_for_file`, without inspecting the file content, plus:
+            // If the file has NO extension then look up the whole filename as a
+            // syntax definition (if it is longer than 4 bytes).
+            // This means file formats like Makefile/Dockerfile/Rakefile etc. will get highlighted,
+            // but 1-4 short filenames will not -- even if they, as a whole, match an extension:
+            // 'rs' will not get highlighted, while 'x.rs' will.
+            if !extension.is_empty() || file_name.len() > 4 {
+                if let Some(syntax) = syntax_set
+                    .find_syntax_by_extension(file_name)
+                    .or_else(|| syntax_set.find_syntax_by_extension(extension))
+                {
+                    return syntax;
+                }
             }
         }
-        syntax_set
-            .find_syntax_by_extension("txt")
-            .unwrap_or_else(|| delta_unreachable("Failed to find any language syntax definitions."))
+
+        // Nothing found, try the user provided fallback, or the internal fallback.
+        if let Some(syntax) = syntax_set.find_syntax_for_file(fallback).unwrap_or(None) {
+            syntax
+        } else {
+            syntax_set
+                .find_syntax_by_extension(config::SYNTAX_FALLBACK_LANG)
+                .unwrap_or_else(|| {
+                    delta_unreachable("Failed to find any language syntax definitions.")
+                })
+        }
     }
 
     pub fn set_highlighter(&mut self) {

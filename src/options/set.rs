@@ -735,7 +735,7 @@ pub mod tests {
         assert_eq!(opt.commit_decoration_style, "black black");
         assert_eq!(opt.commit_style, "black black");
         assert!(!opt.dark);
-        assert_eq!(opt.default_language, Some("rs".to_owned()));
+        assert_eq!(opt.default_language, "rs".to_owned());
         // TODO: should set_options not be called on any feature flags?
         // assert_eq!(opt.diff_highlight, true);
         // assert_eq!(opt.diff_so_fancy, true);

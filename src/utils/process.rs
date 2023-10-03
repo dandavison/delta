@@ -10,7 +10,7 @@ pub type DeltaPid = u32;
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub enum CallingProcess {
     GitDiff(CommandLine),
-    GitShow(CommandLine, Option<String>), // element 2 is file extension
+    GitShow(CommandLine, Option<String>), // element 2 is filename
     GitLog(CommandLine),
     GitReflog(CommandLine),
     GitGrep(CommandLine),
@@ -110,11 +110,11 @@ pub enum ProcessArgs<T> {
     OtherProcess,
 }
 
-pub fn git_blame_filename_extension() -> Option<String> {
-    calling_process_cmdline(ProcInfo::new(), guess_git_blame_filename_extension)
+pub fn git_blame_filename() -> Option<String> {
+    calling_process_cmdline(ProcInfo::new(), guess_git_blame_filename)
 }
 
-pub fn guess_git_blame_filename_extension(args: &[String]) -> ProcessArgs<String> {
+pub fn guess_git_blame_filename(args: &[String]) -> ProcessArgs<String> {
     let all_args = args.iter().map(|s| s.as_str());
 
     // See git(1) and git-blame(1). Some arguments separate their parameter with space or '=', e.g.
@@ -126,10 +126,15 @@ pub fn guess_git_blame_filename_extension(args: &[String]) -> ProcessArgs<String
         skip_uninteresting_args(all_args, git_blame_options_with_parameter.split(' '));
 
     match selected_args.as_slice() {
-        [git, "blame", .., last_arg] if is_git_binary(git) => match last_arg.split('.').last() {
-            Some(arg) => ProcessArgs::Args(arg.to_string()),
-            None => ProcessArgs::ArgError,
-        },
+        [git, "blame", .., last_arg] if is_git_binary(git) => {
+            match Path::new(last_arg)
+                .file_name()
+                .map(|filename| filename.to_string_lossy().to_string())
+            {
+                Some(filename) => ProcessArgs::Args(filename),
+                None => ProcessArgs::ArgError,
+            }
+        }
         [git, "blame"] if is_git_binary(git) => ProcessArgs::ArgError,
         _ => ProcessArgs::OtherProcess,
     }
@@ -158,17 +163,17 @@ pub fn describe_calling_process(args: &[String]) -> ProcessArgs<CallingProcess> 
                     }
                     Some("show") => {
                         let command_line = parse_command_line(args);
-                        let extension = if let Some(last_arg) = &command_line.last_arg {
+                        let filename = if let Some(last_arg) = &command_line.last_arg {
                             match last_arg.split_once(':') {
-                                Some((_, suffix)) => {
-                                    suffix.split('.').last().map(|s| s.to_string())
-                                }
+                                Some((_, filename)) => Path::new(filename)
+                                    .file_name()
+                                    .map(|f| f.to_string_lossy().to_string()),
                                 None => None,
                             }
                         } else {
                             None
                         };
-                        ProcessArgs::Args(CallingProcess::GitShow(command_line, extension))
+                        ProcessArgs::Args(CallingProcess::GitShow(command_line, filename))
                     }
                     Some("log") => {
                         ProcessArgs::Args(CallingProcess::GitLog(parse_command_line(args)))
@@ -682,17 +687,14 @@ pub mod tests {
     }
 
     #[test]
-    fn test_guess_git_blame_filename_extension() {
+    fn test_guess_git_blame_filename() {
         use ProcessArgs::Args;
 
         fn make_string_vec(args: &[&str]) -> Vec<String> {
             args.iter().map(|&x| x.to_owned()).collect::<Vec<String>>()
         }
         let args = make_string_vec(&["git", "blame", "hello", "world.txt"]);
-        assert_eq!(
-            guess_git_blame_filename_extension(&args),
-            Args("txt".into())
-        );
+        assert_eq!(guess_git_blame_filename(&args), Args("world.txt".into()));
 
         let args = make_string_vec(&[
             "git",
@@ -704,46 +706,31 @@ pub mod tests {
             "--date",
             "now",
         ]);
-        assert_eq!(
-            guess_git_blame_filename_extension(&args),
-            Args("txt".into())
-        );
+        assert_eq!(guess_git_blame_filename(&args), Args("hello.txt".into()));
 
         let args = make_string_vec(&["git", "blame", "-s", "-f", "--", "hello.txt"]);
-        assert_eq!(
-            guess_git_blame_filename_extension(&args),
-            Args("txt".into())
-        );
+        assert_eq!(guess_git_blame_filename(&args), Args("hello.txt".into()));
 
         let args = make_string_vec(&["git", "blame", "--", "--not.an.argument"]);
         assert_eq!(
-            guess_git_blame_filename_extension(&args),
-            Args("argument".into())
+            guess_git_blame_filename(&args),
+            Args("--not.an.argument".into())
         );
 
         let args = make_string_vec(&["foo", "bar", "-a", "--123", "not.git"]);
-        assert_eq!(
-            guess_git_blame_filename_extension(&args),
-            ProcessArgs::OtherProcess
-        );
+        assert_eq!(guess_git_blame_filename(&args), ProcessArgs::OtherProcess);
 
         let args = make_string_vec(&["git", "blame", "--help.txt"]);
-        assert_eq!(
-            guess_git_blame_filename_extension(&args),
-            ProcessArgs::ArgError
-        );
+        assert_eq!(guess_git_blame_filename(&args), ProcessArgs::ArgError);
 
         let args = make_string_vec(&["git", "-c", "a=b", "blame", "main.rs"]);
-        assert_eq!(guess_git_blame_filename_extension(&args), Args("rs".into()));
+        assert_eq!(guess_git_blame_filename(&args), Args("main.rs".into()));
 
         let args = make_string_vec(&["git", "blame", "README"]);
-        assert_eq!(
-            guess_git_blame_filename_extension(&args),
-            Args("README".into())
-        );
+        assert_eq!(guess_git_blame_filename(&args), Args("README".into()));
 
         let args = make_string_vec(&["git", "blame", ""]);
-        assert_eq!(guess_git_blame_filename_extension(&args), Args("".into()));
+        assert_eq!(guess_git_blame_filename(&args), ProcessArgs::ArgError);
     }
 
     #[derive(Debug, Default)]
@@ -830,27 +817,22 @@ pub mod tests {
         {
             let _args = FakeParentArgs::once("git blame hello");
             assert_eq!(
-                calling_process_cmdline(ProcInfo::new(), guess_git_blame_filename_extension),
+                calling_process_cmdline(ProcInfo::new(), guess_git_blame_filename),
                 Some("hello".into())
             );
         }
         {
             let _args = FakeParentArgs::once("git blame world.txt");
             assert_eq!(
-                calling_process_cmdline(ProcInfo::new(), guess_git_blame_filename_extension),
-                Some("txt".into())
+                calling_process_cmdline(ProcInfo::new(), guess_git_blame_filename),
+                Some("world.txt".into())
             );
         }
         {
             let _args = FakeParentArgs::for_scope("git blame hello world.txt");
             assert_eq!(
-                calling_process_cmdline(ProcInfo::new(), guess_git_blame_filename_extension),
-                Some("txt".into())
-            );
-
-            assert_eq!(
-                calling_process_cmdline(ProcInfo::new(), guess_git_blame_filename_extension),
-                Some("txt".into())
+                calling_process_cmdline(ProcInfo::new(), guess_git_blame_filename),
+                Some("world.txt".into())
             );
         }
     }
@@ -860,11 +842,11 @@ pub mod tests {
     fn test_process_testing_assert() {
         let _args = FakeParentArgs::once("git blame do.not.panic");
         assert_eq!(
-            calling_process_cmdline(ProcInfo::new(), guess_git_blame_filename_extension),
-            Some("panic".into())
+            calling_process_cmdline(ProcInfo::new(), guess_git_blame_filename),
+            Some("do.not.panic".into())
         );
 
-        calling_process_cmdline(ProcInfo::new(), guess_git_blame_filename_extension);
+        calling_process_cmdline(ProcInfo::new(), guess_git_blame_filename);
     }
 
     #[test]
@@ -886,12 +868,12 @@ pub mod tests {
     fn test_process_testing_n_times_panic() {
         let _args = FakeParentArgs::with(&["git blame once", "git blame twice"]);
         assert_eq!(
-            calling_process_cmdline(ProcInfo::new(), guess_git_blame_filename_extension),
+            calling_process_cmdline(ProcInfo::new(), guess_git_blame_filename),
             Some("once".into())
         );
 
         assert_eq!(
-            calling_process_cmdline(ProcInfo::new(), guess_git_blame_filename_extension),
+            calling_process_cmdline(ProcInfo::new(), guess_git_blame_filename),
             Some("twice".into())
         );
     }
@@ -907,7 +889,7 @@ pub mod tests {
     fn test_process_testing_n_times_underused() {
         let _args = FakeParentArgs::with(&["git blame once", "git blame twice"]);
         assert_eq!(
-            calling_process_cmdline(ProcInfo::new(), guess_git_blame_filename_extension),
+            calling_process_cmdline(ProcInfo::new(), guess_git_blame_filename),
             Some("once".into())
         );
     }
@@ -918,11 +900,11 @@ pub mod tests {
     fn test_process_testing_n_times_overused() {
         let _args = FakeParentArgs::with(&["git blame once"]);
         assert_eq!(
-            calling_process_cmdline(ProcInfo::new(), guess_git_blame_filename_extension),
+            calling_process_cmdline(ProcInfo::new(), guess_git_blame_filename),
             Some("once".into())
         );
         // ignored: dropping causes a panic while panicking, so can't test
-        calling_process_cmdline(ProcInfo::new(), guess_git_blame_filename_extension);
+        calling_process_cmdline(ProcInfo::new(), guess_git_blame_filename);
     }
 
     #[test]
@@ -934,7 +916,7 @@ pub mod tests {
             (5, 100, "delta", Some(4)),
         ]);
         assert_eq!(
-            calling_process_cmdline(two_trees, guess_git_blame_filename_extension),
+            calling_process_cmdline(two_trees, guess_git_blame_filename),
             None
         );
     }
@@ -943,7 +925,7 @@ pub mod tests {
     fn test_process_blame_info_with_parent() {
         let no_processes = MockProcInfo::with(&[]);
         assert_eq!(
-            calling_process_cmdline(no_processes, guess_git_blame_filename_extension),
+            calling_process_cmdline(no_processes, guess_git_blame_filename),
             None
         );
 
@@ -953,8 +935,8 @@ pub mod tests {
             (4, 100, "delta", Some(3)),
         ]);
         assert_eq!(
-            calling_process_cmdline(parent, guess_git_blame_filename_extension),
-            Some("txt".into())
+            calling_process_cmdline(parent, guess_git_blame_filename),
+            Some("hello.txt".into())
         );
 
         let grandparent = MockProcInfo::with(&[
@@ -964,8 +946,8 @@ pub mod tests {
             (5, 100, "delta", Some(4)),
         ]);
         assert_eq!(
-            calling_process_cmdline(grandparent, guess_git_blame_filename_extension),
-            Some("rs".into())
+            calling_process_cmdline(grandparent, guess_git_blame_filename),
+            Some("main.rs".into())
         );
     }
 
@@ -978,8 +960,8 @@ pub mod tests {
             (5, 100, "delta", Some(3)),
         ]);
         assert_eq!(
-            calling_process_cmdline(sibling, guess_git_blame_filename_extension),
-            Some("rs".into())
+            calling_process_cmdline(sibling, guess_git_blame_filename),
+            Some("main.rs".into())
         );
 
         let indirect_sibling = MockProcInfo::with(&[
@@ -996,8 +978,8 @@ pub mod tests {
             (20, 100, "delta", Some(5)),
         ]);
         assert_eq!(
-            calling_process_cmdline(indirect_sibling, guess_git_blame_filename_extension),
-            Some("abc".into())
+            calling_process_cmdline(indirect_sibling, guess_git_blame_filename),
+            Some("main.abc".into())
         );
 
         let indirect_sibling2 = MockProcInfo::with(&[
@@ -1009,8 +991,8 @@ pub mod tests {
             (20, 100, "delta", Some(5)),
         ]);
         assert_eq!(
-            calling_process_cmdline(indirect_sibling2, guess_git_blame_filename_extension),
-            Some("def".into())
+            calling_process_cmdline(indirect_sibling2, guess_git_blame_filename),
+            Some("main.def".into())
         );
 
         // 3 blame processes, 2 with matching start times, pick the one with lower
@@ -1028,11 +1010,8 @@ pub mod tests {
             (20, 100, "delta", Some(5)),
         ]);
         assert_eq!(
-            calling_process_cmdline(
-                indirect_sibling_start_times,
-                guess_git_blame_filename_extension
-            ),
-            Some("this".into())
+            calling_process_cmdline(indirect_sibling_start_times, guess_git_blame_filename),
+            Some("main.this".into())
         );
     }
 
@@ -1122,7 +1101,7 @@ pub mod tests {
         for (command, expected_extension) in [
             (
                 "/usr/local/bin/git show --abbrev-commit -w 775c3b84:./src/hello.rs",
-                "rs",
+                "hello.rs",
             ),
             (
                 "/usr/local/bin/git show --abbrev-commit -w HEAD~1:Makefile",
@@ -1130,7 +1109,7 @@ pub mod tests {
             ),
             (
                 "git -c x.y=z show --abbrev-commit -w 775c3b84:./src/hello.bye.R",
-                "R",
+                "hello.bye.R",
             ),
         ] {
             let parent = MockProcInfo::with(&[
@@ -1138,12 +1117,12 @@ pub mod tests {
                 (3, 100, command, Some(2)),
                 (4, 100, "delta", Some(3)),
             ]);
-            if let Some(CallingProcess::GitShow(cmd_line, ext)) =
+            if let Some(CallingProcess::GitShow(cmd_line, filename)) =
                 calling_process_cmdline(parent, describe_calling_process)
             {
                 assert_eq!(cmd_line.long_options, set(&["--abbrev-commit"]));
                 assert_eq!(cmd_line.short_options, set(&["-w"]));
-                assert_eq!(ext, Some(expected_extension.to_string()));
+                assert_eq!(filename, Some(expected_extension.to_string()));
             } else {
                 unreachable!();
             }

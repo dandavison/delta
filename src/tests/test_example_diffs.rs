@@ -111,7 +111,7 @@ mod tests {
             12,
             1,
             "    rsync -avu --delete $src/ $dst",
-            "bash",
+            "abc.bash",
             State::HunkZero(DiffType::Unified, None),
             &config,
         );
@@ -126,15 +126,47 @@ mod tests {
             "bash",
         ]);
         let output = integration_test_utils::run_delta(MODIFIED_BASH_AND_CSHARP_FILES, &config);
+        eprintln!("{}", &output);
         ansi_test_utils::assert_line_has_syntax_highlighted_substring(
             &output,
             19,
             1,
             "        static void Main(string[] args)",
-            "cs",
+            "abc.cs",
             State::HunkZero(DiffType::Unified, None),
             &config,
         );
+    }
+
+    #[test]
+    fn test_full_filename_used_to_detect_language() {
+        let config = integration_test_utils::make_config_from_args(&[
+            "--color-only",
+            "--default-language",
+            "txt",
+        ]);
+        let output = integration_test_utils::run_delta(MODIFIED_DOCKER_AND_RS_FILES, &config);
+        let ansi = ansi::explain_ansi(&output, false);
+
+        // Ensure presence and absence of highlighting. Do not use `assert_line_has_syntax_highlighted_substring`
+        // because it uses the same code path as the one to be tested here.
+        let expected = r"(normal)diff --git a/Dockerfile b/Dockerfile
+index 0123456..1234567 100644
+--- a/Dockerfile
++++ b/Dockerfile
+@@ -0,0 +2 @@
+(normal 22)+(203)FROM(231) foo(normal)
+(normal 22)+(203)COPY(231) bar baz(normal)
+diff --git a/rs b/rs
+index 0123456..1234567 100644
+--- a/rs
++++ b/rs
+@@ -0,0 +2 @@
+(normal 22)+(231)fn foobar() -> i8 {(normal)
+(normal 22)+(231)    8(normal)
+(normal 22)+(231)}(normal)
+";
+        assert_eq!(expected, ansi);
     }
 
     #[test]
@@ -1461,7 +1493,7 @@ src/align.rs:71: impl<'a> Alignment<'a> { │
             11,
             4,
             "impl<'a> Alignment<'a> { ",
-            "rs",
+            "a.rs",
             State::HunkHeader(
                 DiffType::Unified,
                 ParsedHunkHeader::default(),
@@ -1797,7 +1829,7 @@ src/align.rs:71: impl<'a> Alignment<'a> { │
             12,
             1,
             "        for (i, x_i) in self.x.iter().enumerate() {",
-            "rs",
+            "align.rs",
             State::HunkZero(DiffType::Unified, None),
             &config,
         );
@@ -2165,6 +2197,24 @@ index 2e73468..8d8b89d 100644
  
              Console.WriteLine(message);
          }
+";
+
+    const MODIFIED_DOCKER_AND_RS_FILES: &str = "\
+diff --git a/Dockerfile b/Dockerfile
+index 0123456..1234567 100644
+--- a/Dockerfile
++++ b/Dockerfile
+@@ -0,0 +2 @@
++FROM foo
++COPY bar baz
+diff --git a/rs b/rs
+index 0123456..1234567 100644
+--- a/rs
++++ b/rs
+@@ -0,0 +2 @@
++fn foobar() -> i8 {
++    8
++}
 ";
 
     const RENAMED_FILE_INPUT: &str = "\

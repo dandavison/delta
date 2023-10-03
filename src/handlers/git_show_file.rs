@@ -9,11 +9,11 @@ impl<'a> StateMachine<'a> {
         self.painter.emit()?;
         let mut handled_line = false;
         if matches!(self.state, State::Unknown) {
-            if let process::CallingProcess::GitShow(_, Some(extension)) =
+            if let process::CallingProcess::GitShow(_, Some(filename)) =
                 &*process::calling_process()
             {
                 self.state = State::GitShowFile;
-                self.painter.set_syntax(Some(extension));
+                self.painter.set_syntax(Some(filename));
             } else {
                 return Ok(handled_line);
             }

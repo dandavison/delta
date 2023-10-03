@@ -287,12 +287,12 @@ pub struct Opt {
     /// For more control, see the style options and --syntax-theme.
     pub dark: bool,
 
-    #[arg(long = "default-language", value_name = "LANG")]
+    #[arg(long = "default-language", value_name = "LANG", default_value = "txt")]
     /// Default language used for syntax highlighting.
     ///
-    /// Used when the language cannot be inferred from a filename. It will typically make sense to
-    /// set this in per-repository git config (.git/config)
-    pub default_language: Option<String>,
+    /// Used as a fallback when the language cannot be inferred from a filename. It will
+    /// typically make sense to set this in the per-repository config file '.git/config'.
+    pub default_language: String,
 
     /// Detect whether or not the terminal is dark or light by querying for its colors.
     ///
