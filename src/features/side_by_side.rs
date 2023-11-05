@@ -651,8 +651,8 @@ pub mod tests {
         .explain_ansi()
         .with_input(TWO_PLUS_LINES_DIFF)
         .expect_after_header(r#"
-        (blue)│(88)    (blue)│(normal)              (blue)│(28)  1 (blue)│(231 22)a (203)=(231) (141)1(normal 22)         (normal)
-        (blue)│(88)    (blue)│(normal)              (blue)│(28)  2 (blue)│(231 22)b (203)=(231) (141)234567(normal 22)    (normal)"#);
+        (blue)│(28)    (blue)│(normal)              (blue)│(28)  1 (blue)│(231 22)a (203)=(231) (141)1(normal 22)         (normal)
+        (blue)│(28)    (blue)│(normal)              (blue)│(28)  2 (blue)│(231 22)b (203)=(231) (141)234567(normal 22)    (normal)"#);
 
         DeltaTest::with_args(&[
             "--side-by-side",
@@ -663,8 +663,8 @@ pub mod tests {
         .explain_ansi()
         .with_input(TWO_PLUS_LINES_DIFF)
         .expect_after_header(r#"
-        (blue)│(88)    (blue)│(normal)              (blue) │(28)  1 (blue)│(231 22)a (203)=(231) (141)1(normal)
-        (blue)│(88)    (blue)│(normal)              (blue) │(28)  2 (blue)│(231 22)b (203)=(231) (141)234567(normal)"#);
+        (blue)│(28)    (blue)│(normal)              (blue) │(28)  1 (blue)│(231 22)a (203)=(231) (141)1(normal)
+        (blue)│(28)    (blue)│(normal)              (blue) │(28)  2 (blue)│(231 22)b (203)=(231) (141)234567(normal)"#);
     }
 
     #[test]
