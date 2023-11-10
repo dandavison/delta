@@ -4,6 +4,7 @@ use std::path::{Path, PathBuf};
 
 use bat::assets::HighlightingAssets;
 use clap::{ColorChoice, CommandFactory, FromArgMatches, Parser};
+use clap_complete::Shell;
 use lazy_static::lazy_static;
 use syntect::highlighting::Theme as SyntaxTheme;
 use syntect::parsing::SyntaxSet;
@@ -389,6 +390,10 @@ pub struct Opt {
     #[arg(long = "file-transformation", value_name = "SED_CMD")]
     /// Sed-style command transforming file paths for display.
     pub file_regex_replacement: Option<String>,
+
+    #[arg(long = "generate-completion")]
+    /// Print completion file for the given shell.
+    pub generate_completion: Option<Shell>,
 
     #[arg(long = "grep-context-line-style", value_name = "STYLE")]
     /// Style string for non-matching lines of grep output.
@@ -1194,6 +1199,7 @@ impl Opt {
 // pseudo-flag commands such as --list-languages
 lazy_static! {
     static ref IGNORED_OPTION_NAMES: HashSet<&'static str> = vec![
+        "generate-completion",
         "list-languages",
         "list-syntax-themes",
         "show-config",
