@@ -409,7 +409,7 @@ pub struct Opt {
     #[arg(long = "grep-header-decoration-style", value_name = "STYLE")]
     /// Style string for the header decoration in grep output.
     ///
-    /// Default is "none" when grep-ouput-type-is "ripgrep", otherwise defaults
+    /// Default is "none" when grep-output-type-is "ripgrep", otherwise defaults
     /// to value of header-decoration-style. See hunk-header-decoration-style.
     pub grep_header_decoration_style: Option<String>,
 
