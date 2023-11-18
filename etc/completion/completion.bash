@@ -138,7 +138,7 @@ _delta() {
                     return 0
                     ;;
                 --grep-output-type)
-                    COMPREPLY=($(compgen -f "${cur}"))
+                    COMPREPLY=($(compgen -W "ripgrep classic" -- "${cur}"))
                     return 0
                     ;;
                 --grep-match-line-style)
@@ -186,7 +186,7 @@ _delta() {
                     return 0
                     ;;
                 --inspect-raw-lines)
-                    COMPREPLY=($(compgen -f "${cur}"))
+                    COMPREPLY=($(compgen -W "true false" -- "${cur}"))
                     return 0
                     ;;
                 --line-buffer-size)
@@ -194,7 +194,7 @@ _delta() {
                     return 0
                     ;;
                 --line-fill-method)
-                    COMPREPLY=($(compgen -f "${cur}"))
+                    COMPREPLY=($(compgen -W "ansi spaces" -- "${cur}"))
                     return 0
                     ;;
                 --line-numbers-left-format)
@@ -286,7 +286,7 @@ _delta() {
                     return 0
                     ;;
                 --paging)
-                    COMPREPLY=($(compgen -f "${cur}"))
+                    COMPREPLY=($(compgen -W "auto always never" -- "${cur}"))
                     return 0
                     ;;
                 --plus-emph-style)
@@ -318,7 +318,7 @@ _delta() {
                     return 0
                     ;;
                 --true-color)
-                    COMPREPLY=($(compgen -f "${cur}"))
+                    COMPREPLY=($(compgen -W "auto always never" -- "${cur}"))
                     return 0
                     ;;
                 --whitespace-error-style)
@@ -362,7 +362,7 @@ _delta() {
                     return 0
                     ;;
                 --24-bit-color)
-                    COMPREPLY=($(compgen -f "${cur}"))
+                    COMPREPLY=($(compgen -W "auto always never" -- "${cur}"))
                     return 0
                     ;;
                 *)

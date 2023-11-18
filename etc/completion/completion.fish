@@ -5,7 +5,7 @@ complete -c delta -l blame-separator-format -d 'Separator between the blame form
 complete -c delta -l blame-separator-style -d 'Style string for the blame-separator-format' -r
 complete -c delta -l blame-timestamp-format -d 'Format of `git blame` timestamp in raw git output received by delta' -r
 complete -c delta -l blame-timestamp-output-format -d 'Format string for git blame timestamp output' -r
-complete -c delta -l config -d 'Load the config file at PATH instead of ~/.gitconfig' -r
+complete -c delta -l config -d 'Load the config file at PATH instead of ~/.gitconfig' -r -F
 complete -c delta -l commit-decoration-style -d 'Style string for the commit hash decoration' -r
 complete -c delta -l commit-regex -d 'Regular expression used to identify the commit line when parsing git output' -r
 complete -c delta -l commit-style -d 'Style string for the commit hash line' -r
@@ -26,7 +26,7 @@ complete -c delta -l grep-file-style -d 'Style string for file paths in grep out
 complete -c delta -l grep-header-decoration-style -d 'Style string for the header decoration in grep output' -r
 complete -c delta -l grep-header-file-style -d 'Style string for the file path part of the header in grep output' -r
 complete -c delta -l grep-line-number-style -d 'Style string for line numbers in grep output' -r
-complete -c delta -l grep-output-type -d 'Grep output format. Possible values: "ripgrep" - file name printed once, followed by matching lines within that file, each preceded by a line number. "classic" - file name:line number, followed by matching line. Default is "ripgrep" if `rg --json` format is detected, otherwise "classic"' -r
+complete -c delta -l grep-output-type -d 'Grep output format. Possible values: "ripgrep" - file name printed once, followed by matching lines within that file, each preceded by a line number. "classic" - file name:line number, followed by matching line. Default is "ripgrep" if `rg --json` format is detected, otherwise "classic"' -r -f -a "{ripgrep	'',classic	''}"
 complete -c delta -l grep-match-line-style -d 'Style string for matching lines of grep output' -r
 complete -c delta -l grep-match-word-style -d 'Style string for the matching substrings within a matching line of grep output' -r
 complete -c delta -l grep-separator-symbol -d 'Separator symbol printed after the file path and line number in grep output' -r
@@ -38,9 +38,9 @@ complete -c delta -l hunk-label -d 'Text to display before a hunk header' -r
 complete -c delta -l hyperlinks-commit-link-format -d 'Format string for commit hyperlinks (requires --hyperlinks)' -r
 complete -c delta -l hyperlinks-file-link-format -d 'Format string for file hyperlinks (requires --hyperlinks)' -r
 complete -c delta -l inline-hint-style -d 'Style string for short inline hint text' -r
-complete -c delta -l inspect-raw-lines -d 'Kill-switch for --color-moved support' -r
+complete -c delta -l inspect-raw-lines -d 'Kill-switch for --color-moved support' -r -f -a "{true	'',false	''}"
 complete -c delta -l line-buffer-size -d 'Size of internal line buffer' -r
-complete -c delta -l line-fill-method -d 'Line-fill method in side-by-side mode' -r
+complete -c delta -l line-fill-method -d 'Line-fill method in side-by-side mode' -r -f -a "{ansi spaces	''}"
 complete -c delta -l line-numbers-left-format -d 'Format string for the left column of line numbers' -r
 complete -c delta -l line-numbers-left-style -d 'Style string for the left column of line numbers' -r
 complete -c delta -l line-numbers-minus-style -d 'Style string for line numbers in the old (minus) version of the file' -r
@@ -63,7 +63,7 @@ complete -c delta -l minus-non-emph-style -d 'Style string for non-emphasized se
 complete -c delta -l minus-style -d 'Style string for removed lines' -r
 complete -c delta -l navigate-regex -d 'Regular expression defining navigation stop points' -r
 complete -c delta -l pager -d 'Which pager to use' -r
-complete -c delta -l paging -d 'Whether to use a pager when displaying output' -r
+complete -c delta -l paging -d 'Whether to use a pager when displaying output' -r -f -a "{auto	'',always	'',never	''}"
 complete -c delta -l plus-emph-style -d 'Style string for emphasized sections of added lines' -r
 complete -c delta -l plus-empty-line-marker-style -d 'Style string for added empty line marker' -r
 complete -c delta -l plus-non-emph-style -d 'Style string for non-emphasized sections of added lines that have an emphasized section' -r
@@ -71,7 +71,7 @@ complete -c delta -l plus-style -d 'Style string for added lines' -r
 complete -c delta -l right-arrow -d 'Text to display with a changed file path' -r
 complete -c delta -l syntax-theme -d 'The syntax-highlighting theme to use' -r
 complete -c delta -l tabs -d 'The number of spaces to replace tab characters with' -r
-complete -c delta -l true-color -d 'Whether to emit 24-bit ("true color") RGB color codes' -r
+complete -c delta -l true-color -d 'Whether to emit 24-bit ("true color") RGB color codes' -r -f -a "{auto	'',always	'',never	''}"
 complete -c delta -l whitespace-error-style -d 'Style string for whitespace errors' -r
 complete -c delta -s w -l width -d 'The width of underline/overline decorations' -r
 complete -c delta -l word-diff-regex -d 'Regular expression defining a \'word\' in within-line diff algorithm' -r
@@ -81,7 +81,7 @@ complete -c delta -l wrap-right-percent -d 'Threshold for right-aligning wrapped
 complete -c delta -l wrap-right-prefix-symbol -d 'Pre-wrapped content symbol (right-aligned)' -r
 complete -c delta -l wrap-right-symbol -d 'End-of-line wrapped content symbol (right-aligned)' -r
 complete -c delta -l zero-style -d 'Style string for unchanged lines' -r
-complete -c delta -l 24-bit-color -d 'Deprecated: use --true-color' -r
+complete -c delta -l 24-bit-color -d 'Deprecated: use --true-color' -r -f -a "{auto	'',always	'',never	''}"
 complete -c delta -l color-only -d 'Do not alter the input structurally in any way'
 complete -c delta -l dark -d 'Use default colors appropriate for a dark terminal background'
 complete -c delta -l diff-highlight -d 'Emulate diff-highlight'

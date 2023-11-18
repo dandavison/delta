@@ -22,7 +22,7 @@ _delta() {
 '--blame-separator-style=[Style string for the blame-separator-format]:STYLE: ' \
 '--blame-timestamp-format=[Format of \`git blame\` timestamp in raw git output received by delta]:FMT: ' \
 '--blame-timestamp-output-format=[Format string for git blame timestamp output]:FMT: ' \
-'--config=[Load the config file at PATH instead of ~/.gitconfig]:PATH: ' \
+'--config=[Load the config file at PATH instead of ~/.gitconfig]:PATH:_files' \
 '--commit-decoration-style=[Style string for the commit hash decoration]:STYLE: ' \
 '--commit-regex=[Regular expression used to identify the commit line when parsing git output]:REGEX: ' \
 '--commit-style=[Style string for the commit hash line]:STYLE: ' \
@@ -43,7 +43,7 @@ _delta() {
 '--grep-header-decoration-style=[Style string for the header decoration in grep output]:STYLE: ' \
 '--grep-header-file-style=[Style string for the file path part of the header in grep output]:STYLE: ' \
 '--grep-line-number-style=[Style string for line numbers in grep output]:STYLE: ' \
-'--grep-output-type=[Grep output format. Possible values\: "ripgrep" - file name printed once, followed by matching lines within that file, each preceded by a line number. "classic" - file name\:line number, followed by matching line. Default is "ripgrep" if \`rg --json\` format is detected, otherwise "classic"]:OUTPUT_TYPE: ' \
+'--grep-output-type=[Grep output format. Possible values\: "ripgrep" - file name printed once, followed by matching lines within that file, each preceded by a line number. "classic" - file name\:line number, followed by matching line. Default is "ripgrep" if \`rg --json\` format is detected, otherwise "classic"]:OUTPUT_TYPE:(ripgrep classic)' \
 '--grep-match-line-style=[Style string for matching lines of grep output]:STYLE: ' \
 '--grep-match-word-style=[Style string for the matching substrings within a matching line of grep output]:STYLE: ' \
 '--grep-separator-symbol=[Separator symbol printed after the file path and line number in grep output]:STRING: ' \
@@ -55,9 +55,9 @@ _delta() {
 '--hyperlinks-commit-link-format=[Format string for commit hyperlinks (requires --hyperlinks)]:FMT: ' \
 '--hyperlinks-file-link-format=[Format string for file hyperlinks (requires --hyperlinks)]:FMT: ' \
 '--inline-hint-style=[Style string for short inline hint text]:STYLE: ' \
-'--inspect-raw-lines=[Kill-switch for --color-moved support]:true|false: ' \
+'--inspect-raw-lines=[Kill-switch for --color-moved support]:true|false:(true false)' \
 '--line-buffer-size=[Size of internal line buffer]:N: ' \
-'--line-fill-method=[Line-fill method in side-by-side mode]:STRING: ' \
+'--line-fill-method=[Line-fill method in side-by-side mode]:STRING:(ansi spaces)' \
 '--line-numbers-left-format=[Format string for the left column of line numbers]:FMT: ' \
 '--line-numbers-left-style=[Style string for the left column of line numbers]:STYLE: ' \
 '--line-numbers-minus-style=[Style string for line numbers in the old (minus) version of the file]:STYLE: ' \
@@ -80,7 +80,7 @@ _delta() {
 '--minus-style=[Style string for removed lines]:STYLE: ' \
 '--navigate-regex=[Regular expression defining navigation stop points]:REGEX: ' \
 '--pager=[Which pager to use]:CMD: ' \
-'--paging=[Whether to use a pager when displaying output]:auto|always|never: ' \
+'--paging=[Whether to use a pager when displaying output]:auto|always|never:(auto always never)' \
 '--plus-emph-style=[Style string for emphasized sections of added lines]:STYLE: ' \
 '--plus-empty-line-marker-style=[Style string for added empty line marker]:STYLE: ' \
 '--plus-non-emph-style=[Style string for non-emphasized sections of added lines that have an emphasized section]:STYLE: ' \
@@ -88,7 +88,7 @@ _delta() {
 '--right-arrow=[Text to display with a changed file path]:STRING: ' \
 '--syntax-theme=[The syntax-highlighting theme to use]:SYNTAX_THEME: ' \
 '--tabs=[The number of spaces to replace tab characters with]:N: ' \
-'--true-color=[Whether to emit 24-bit ("true color") RGB color codes]:auto|always|never: ' \
+'--true-color=[Whether to emit 24-bit ("true color") RGB color codes]:auto|always|never:(auto always never)' \
 '--whitespace-error-style=[Style string for whitespace errors]:STYLE: ' \
 '-w+[The width of underline/overline decorations]:N: ' \
 '--width=[The width of underline/overline decorations]:N: ' \
@@ -99,7 +99,7 @@ _delta() {
 '--wrap-right-prefix-symbol=[Pre-wrapped content symbol (right-aligned)]:STRING: ' \
 '--wrap-right-symbol=[End-of-line wrapped content symbol (right-aligned)]:STRING: ' \
 '--zero-style=[Style string for unchanged lines]:STYLE: ' \
-'--24-bit-color=[Deprecated\: use --true-color]:auto|always|never: ' \
+'--24-bit-color=[Deprecated\: use --true-color]:auto|always|never:(auto always never)' \
 '--color-only[Do not alter the input structurally in any way]' \
 '--dark[Use default colors appropriate for a dark terminal background]' \
 '--diff-highlight[Emulate diff-highlight]' \
