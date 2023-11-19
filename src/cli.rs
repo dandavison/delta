@@ -601,7 +601,7 @@ pub struct Opt {
     /// affect delta's performance when entire files are added/removed.
     pub line_buffer_size: usize,
 
-    #[arg(long = "line-fill-method", value_name = "STRING", value_parser = ["ansi spaces"])]
+    #[arg(long = "line-fill-method", value_name = "STRING", value_parser = ["ansi", "spaces"])]
     /// Line-fill method in side-by-side mode.
     ///
     /// How to extend the background color to the end of the line in side-by-side mode. Can be ansi
