@@ -1,4 +1,5 @@
 pub mod diff;
+pub mod generate_completion;
 pub mod list_syntax_themes;
 pub mod parse_ansi;
 mod sample_diff;

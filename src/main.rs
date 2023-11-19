@@ -82,7 +82,11 @@ fn run_app() -> std::io::Result<i32> {
         assets,
     );
 
-    let subcommand_result = if opt.list_languages {
+    let subcommand_result = if let Some(shell) = opt.generate_completion {
+        Some(subcommands::generate_completion::generate_completion_file(
+            shell,
+        ))
+    } else if opt.list_languages {
         Some(list_languages())
     } else if opt.list_syntax_themes {
         Some(subcommands::list_syntax_themes::list_syntax_themes())

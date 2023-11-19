@@ -3,7 +3,8 @@ use std::ffi::OsString;
 use std::path::{Path, PathBuf};
 
 use bat::assets::HighlightingAssets;
-use clap::{ColorChoice, CommandFactory, FromArgMatches, Parser};
+use clap::{ColorChoice, CommandFactory, FromArgMatches, Parser, ValueHint};
+use clap_complete::Shell;
 use lazy_static::lazy_static;
 use syntect::highlighting::Theme as SyntaxTheme;
 use syntect::parsing::SyntaxSet;
@@ -250,7 +251,7 @@ pub struct Opt {
     /// intended for other tools that use delta.
     pub color_only: bool,
 
-    #[arg(long = "config", default_value = "", value_name = "PATH")]
+    #[arg(long = "config", default_value = "", value_name = "PATH", value_hint = ValueHint::FilePath)]
     /// Load the config file at PATH instead of ~/.gitconfig.
     pub config: String,
 
@@ -390,6 +391,10 @@ pub struct Opt {
     /// Sed-style command transforming file paths for display.
     pub file_regex_replacement: Option<String>,
 
+    #[arg(long = "generate-completion")]
+    /// Print completion file for the given shell.
+    pub generate_completion: Option<Shell>,
+
     #[arg(long = "grep-context-line-style", value_name = "STYLE")]
     /// Style string for non-matching lines of grep output.
     ///
@@ -429,7 +434,7 @@ pub struct Opt {
     /// See STYLES section.
     pub grep_line_number_style: String,
 
-    #[arg(long = "grep-output-type", value_name = "OUTPUT_TYPE")]
+    #[arg(long = "grep-output-type", value_name = "OUTPUT_TYPE", value_parser = ["ripgrep", "classic"])]
     /// Grep output format. Possible values:
     /// "ripgrep" - file name printed once, followed by matching lines within that file, each preceded by a line number.
     /// "classic" - file name:line number, followed by matching line.
@@ -563,7 +568,8 @@ pub struct Opt {
     #[arg(
         long = "inspect-raw-lines",
         default_value = "true",
-        value_name = "true|false"
+        value_name = "true|false",
+        value_parser = ["true", "false"],
     )]
     /// Kill-switch for --color-moved support.
     ///
@@ -595,7 +601,7 @@ pub struct Opt {
     /// affect delta's performance when entire files are added/removed.
     pub line_buffer_size: usize,
 
-    #[arg(long = "line-fill-method", value_name = "STRING")]
+    #[arg(long = "line-fill-method", value_name = "STRING", value_parser = ["ansi", "spaces"])]
     /// Line-fill method in side-by-side mode.
     ///
     /// How to extend the background color to the end of the line in side-by-side mode. Can be ansi
@@ -846,7 +852,8 @@ pub struct Opt {
     #[arg(
         long = "paging",
         default_value = "auto",
-        value_name = "auto|always|never"
+        value_name = "auto|always|never",
+        value_parser = ["auto", "always", "never"],
     )]
     /// Whether to use a pager when displaying output.
     ///
@@ -975,7 +982,8 @@ pub struct Opt {
     #[arg(
         long = "true-color",
         default_value = "auto",
-        value_name = "auto|always|never"
+        value_name = "auto|always|never",
+        value_parser = ["auto", "always", "never"],
     )]
     /// Whether to emit 24-bit ("true color") RGB color codes.
     ///
@@ -1066,7 +1074,7 @@ pub struct Opt {
     /// See STYLES section.
     pub zero_style: String,
 
-    #[arg(long = "24-bit-color", value_name = "auto|always|never")]
+    #[arg(long = "24-bit-color", value_name = "auto|always|never", value_parser = ["auto", "always", "never"])]
     /// Deprecated: use --true-color.
     pub _24_bit_color: Option<String>,
 
@@ -1194,6 +1202,7 @@ impl Opt {
 // pseudo-flag commands such as --list-languages
 lazy_static! {
     static ref IGNORED_OPTION_NAMES: HashSet<&'static str> = vec![
+        "generate-completion",
         "list-languages",
         "list-syntax-themes",
         "show-config",
