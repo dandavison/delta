@@ -175,7 +175,7 @@
     blame-format = "{author:<18} ({commit:>7}) ┊{timestamp:^16}┊ "
     blame-palette = "#101010 #200020 #002800 #000028 #202000 #280000 #002020 #002800 #202020"
 
-[delta "pablospe"]
+[delta "colibri"]
     # author: https://github.com/pablospe
     # Based on woolly-mammoth: https://github.com/Kr1ss-XD.
     commit-decoration-style = 130 box
@@ -187,9 +187,7 @@
     file-removed-label = [⛌]
     file-renamed-label = [→]
     file-style = 232 bold 184
-    # hunk-header-decoration-style = none
     hunk-header-style = syntax bold italic 237
-
     line-numbers = true
     line-numbers-left-format = "{nm:>1}┊"
     line-numbers-left-style = red
@@ -198,22 +196,14 @@
     line-numbers-right-format = " {np:>1}┊"
     line-numbers-right-style = green
     line-numbers-zero-style = "#545474" italic
-
     minus-emph-style = normal "#80002a"
     minus-style = normal "#5e0000"
-    # minus-non-emph-style = syntax "#300000"
-
     plus-emph-style = syntax bold "#007e5e"
     plus-style = syntax "#003500"
-    # plus-style = syntax "#003000"
-    # plus-non-emph-style = syntax "#003000"
-
     syntax-theme = OneHalfDark
     whitespace-error-style = "#80002a" reverse
     zero-style = syntax
     blame-format = "{author:<18} ({commit:>7}) ┊{timestamp:^16}┊ "
-    # blame-palette = "#101010 #200020 #002800 #000028 #202000 #280000 #002020 #002800 #202020"
-
 
 [delta "calochortus-lyallii"]
     # author: https://github.com/manojkarthick
