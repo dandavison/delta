@@ -6,7 +6,8 @@ use serde::Deserialize;
 
 use crate::ansi;
 use crate::config::{
-    delta_unreachable, GrepType, HunkHeaderIncludeFilePath, HunkHeaderIncludeLineNumber,
+    delta_unreachable, GrepType, HunkHeaderIncludeCodeFragment, HunkHeaderIncludeFilePath,
+    HunkHeaderIncludeLineNumber,
 };
 use crate::delta::{State, StateMachine};
 use crate::handlers::{self, ripgrep_json};
@@ -168,6 +169,7 @@ impl<'a> StateMachine<'a> {
                 &HunkHeaderIncludeFilePath::Yes,
                 &HunkHeaderIncludeLineNumber::No,
                 &HunkHeaderIncludeHunkLabel::Yes,
+                &HunkHeaderIncludeCodeFragment::Yes,
                 "",
                 self.config,
             )?
@@ -230,6 +232,7 @@ impl<'a> StateMachine<'a> {
                 &HunkHeaderIncludeLineNumber::No
             },
             &HunkHeaderIncludeHunkLabel::No,
+            &HunkHeaderIncludeCodeFragment::Yes,
             grep_line.line_type.file_path_separator(),
             self.config,
         )
@@ -255,6 +258,7 @@ impl<'a> StateMachine<'a> {
                     &self.config.hunk_header_style_include_file_path,
                     &self.config.hunk_header_style_include_line_number,
                     &HunkHeaderIncludeHunkLabel::Yes,
+                    &HunkHeaderIncludeCodeFragment::Yes,
                     grep_line.line_type.file_path_separator(),
                     self.config,
                 )?
