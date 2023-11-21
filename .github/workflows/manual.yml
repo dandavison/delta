@@ -3,7 +3,7 @@ name: Deploy Manual
 on:
   push:
     branches:
-      - master
+      - main
     paths:
       - "manual/**"
 
