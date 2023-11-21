@@ -17,7 +17,7 @@ Note that the package is often called `git-delta`, but the executable installed 
 
 <table>
   <tr>
-    <td><a href="https://archlinux.org/packages/community/x86_64/git-delta/">Arch Linux</a></td>
+    <td><a href="https://archlinux.org/packages/extra/x86_64/git-delta/">Arch Linux</a></td>
     <td><code>pacman -S git-delta</code></td>
   </tr>
   <tr>
