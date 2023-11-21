@@ -6,6 +6,7 @@ on:
       - main
     paths:
       - "manual/**"
+  workflow_dispatch:
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
