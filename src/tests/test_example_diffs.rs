@@ -1092,6 +1092,21 @@ src/delta.rs:1: │
     }
 
     #[test]
+    fn test_hunk_header_omit_code_fragment() {
+        let config = integration_test_utils::make_config_from_args(&[
+            "--hunk-header-style",
+            "line-number omit-code-fragment",
+            "--hunk-header-decoration-style",
+            "none",
+        ]);
+        let output = strip_ansi_codes(&integration_test_utils::run_delta(
+            GIT_DIFF_SINGLE_HUNK,
+            &config,
+        ));
+        assert!(output.contains("\n71: \n"));
+    }
+
+    #[test]
     fn test_hunk_header_style_colored_input_color_is_stripped_under_normal() {
         let config = integration_test_utils::make_config_from_args(&[
             "--hunk-header-style",
