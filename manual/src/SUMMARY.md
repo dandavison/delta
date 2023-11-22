@@ -29,6 +29,7 @@
   - [Using Delta with Magit](./tips-and-tricks/using-delta-with-magit.md)
   - [Using Delta with tmux](./tips-and-tricks/using-delta-with-tmux.md)
   - [Using Delta with VSCode](./tips-and-tricks/using-delta-with-vscode.md)
+  - [Generating shell completion files](./tips-and-tricks/shell-completion.md)
 - [Comparisons with other tools](./comparisons-with-other-tools.md)
 - [Build delta from source](./build-delta-from-source.md)
 - [Related projects](./related-projects.md)

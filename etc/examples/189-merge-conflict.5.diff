@@ -4,7 +4,7 @@ index 888eee8b,7ea2e9d3..00000000
 +++ b/src/handlers/merge_conflict.rs
 @@@ -5,7 -5,7 +5,12 @@@ use crate::utils::process
   impl<'a> StateMachine<'a> {
-      pub fn handle_merge_confict_line(&mut self) -> std::io::Result<bool> {
+      pub fn handle_merge_conflict_line(&mut self) -> std::io::Result<bool> {
           self.painter.emit()?;
 ++<<<<<<< HEAD
  +        // hello

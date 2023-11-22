@@ -25,7 +25,9 @@ use lazy_static::lazy_static;
 use regex::Regex;
 
 use super::draw;
-use crate::config::{Config, HunkHeaderIncludeFilePath, HunkHeaderIncludeLineNumber};
+use crate::config::{
+    Config, HunkHeaderIncludeCodeFragment, HunkHeaderIncludeFilePath, HunkHeaderIncludeLineNumber,
+};
 use crate::delta::{self, DiffType, InMergeConflict, MergeParents, State, StateMachine};
 use crate::paint::{self, BgShouldFill, Painter, StyleSectionSpecifier};
 use crate::style::{DecorationStyle, Style};
@@ -133,6 +135,7 @@ impl<'a> StateMachine<'a> {
                 &self.config.hunk_header_style_include_file_path,
                 &self.config.hunk_header_style_include_line_number,
                 &HunkHeaderIncludeHunkLabel::Yes,
+                &self.config.hunk_header_style_include_code_fragment,
                 ":",
                 self.config,
             )?;
@@ -229,13 +232,16 @@ pub fn write_line_of_code_with_optional_path_and_line_number(
     include_file_path: &HunkHeaderIncludeFilePath,
     include_line_number: &HunkHeaderIncludeLineNumber,
     include_hunk_label: &HunkHeaderIncludeHunkLabel,
+    include_code_fragment: &HunkHeaderIncludeCodeFragment,
     file_path_separator: &str,
     config: &Config,
 ) -> std::io::Result<()> {
     let (mut draw_fn, _, decoration_ansi_term_style) = draw::get_draw_function(decoration_style);
     let line = if config.color_only {
         line.to_string()
-    } else if !code_fragment.is_empty() {
+    } else if matches!(include_code_fragment, HunkHeaderIncludeCodeFragment::Yes)
+        && !code_fragment.is_empty()
+    {
         format!("{code_fragment} ")
     } else {
         "".to_string()

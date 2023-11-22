@@ -76,7 +76,12 @@ pub mod tests {
     fn test_env_parsing_with_pager_set_to_bat() {
         env::set_var("PAGER", "bat");
         let env = DeltaEnv::init();
-        assert_eq!(env.pagers.1, Some("bat".into()));
+        assert_eq!(
+            env.pagers.1,
+            Some("bat".into()),
+            "Expected env.pagers.1 == Some(bat) but was {:?}",
+            env.pagers.1
+        );
     }
 
     #[test]

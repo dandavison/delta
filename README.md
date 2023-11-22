@@ -5,8 +5,8 @@
   <a href="https://github.com/dandavison/delta/actions">
     <img src="https://github.com/dandavison/delta/workflows/Continuous%20Integration/badge.svg" alt="CI">
   </a>
-  <a href="https://coveralls.io/github/dandavison/delta?branch=master">
-    <img src="https://coveralls.io/repos/github/dandavison/delta/badge.svg?branch=master" alt="Coverage Status">
+  <a href="https://coveralls.io/github/dandavison/delta?branch=main">
+    <img src="https://coveralls.io/repos/github/dandavison/delta/badge.svg?branch=main" alt="Coverage Status">
   </a>
   <a href="https://gitter.im/dandavison-delta/community?utm_source=badge&amp;utm_medium=badge&amp;utm_campaign=pr-badge">
     <img src="https://badges.gitter.im/dandavison-delta/community.svg" alt="Gitter">

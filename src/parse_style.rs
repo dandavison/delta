@@ -186,7 +186,7 @@ fn parse_ansi_term_style(
             style.is_strikethrough = true;
         } else if word == "ul" || word == "underline" {
             style.is_underline = true;
-        } else if word == "line-number" || word == "file" {
+        } else if word == "line-number" || word == "file" || word == "omit-code-fragment" {
             // Allow: these are meaningful in hunk-header-style.
         } else if !seen_foreground {
             if word == "syntax" {

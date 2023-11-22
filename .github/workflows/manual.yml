@@ -3,9 +3,10 @@ name: Deploy Manual
 on:
   push:
     branches:
-      - master
+      - main
     paths:
       - "manual/**"
+  workflow_dispatch:
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}

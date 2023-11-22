@@ -6,7 +6,8 @@ use serde::Deserialize;
 
 use crate::ansi;
 use crate::config::{
-    delta_unreachable, GrepType, HunkHeaderIncludeFilePath, HunkHeaderIncludeLineNumber,
+    delta_unreachable, GrepType, HunkHeaderIncludeCodeFragment, HunkHeaderIncludeFilePath,
+    HunkHeaderIncludeLineNumber,
 };
 use crate::delta::{State, StateMachine};
 use crate::handlers::{self, ripgrep_json};
@@ -24,6 +25,24 @@ pub struct GrepLine<'b> {
     pub line_type: LineType,
     pub code: Cow<'b, str>,
     pub submatches: Option<Vec<(usize, usize)>>,
+}
+
+impl<'b> GrepLine<'b> {
+    fn expand_tabs(&mut self, tab_cfg: &tabs::TabCfg) {
+        let old_len = self.code.len();
+        self.code = tabs::expand(&self.code, tab_cfg).into();
+        let shift = self.code.len().saturating_sub(old_len);
+        // HACK: it is not necessarily the case that all submatch coordinates
+        // should be shifted in this way. It should be true in a common case of:
+        // (a) the only tabs were at the beginning of the line, and (b) the user
+        // was not searching for tabs.
+        self.submatches = self.submatches.as_ref().map(|submatches| {
+            submatches
+                .iter()
+                .map(|(a, b)| (a + shift, b + shift))
+                .collect()
+        });
+    }
 }
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Deserialize)]
@@ -150,6 +169,7 @@ impl<'a> StateMachine<'a> {
                 &HunkHeaderIncludeFilePath::Yes,
                 &HunkHeaderIncludeLineNumber::No,
                 &HunkHeaderIncludeHunkLabel::Yes,
+                &HunkHeaderIncludeCodeFragment::Yes,
                 "",
                 self.config,
             )?
@@ -159,17 +179,17 @@ impl<'a> StateMachine<'a> {
         }
         // Emit the actual grep hit line
         let code_style_sections = match (&grep_line.line_type, &grep_line.submatches) {
-            (LineType::Match, Some(submatches)) => {
+            (LineType::Match, Some(_)) => {
                 // We expand tabs at this late stage because
                 // the tabs are escaped in the JSON, so
                 // expansion must come after JSON parsing.
                 // (At the time of writing, we are in this
                 // arm iff we are handling `ripgrep --json`
                 // output.)
-                grep_line.code = tabs::expand(&grep_line.code, &self.config.tab_cfg).into();
+                grep_line.expand_tabs(&self.config.tab_cfg);
                 make_style_sections(
                     &grep_line.code,
-                    submatches,
+                    &grep_line.submatches.unwrap(),
                     self.config.grep_match_word_style,
                     self.config.grep_match_line_style,
                 )
@@ -186,7 +206,8 @@ impl<'a> StateMachine<'a> {
                     &self.raw_line,
                     self.config.grep_match_word_style,
                     self.config.grep_match_line_style,
-                    &grep_line,
+                    &grep_line.path,
+                    grep_line.line_number,
                 )
                 .unwrap_or(StyleSectionSpecifier::Style(
                     self.config.grep_match_line_style,
@@ -211,6 +232,7 @@ impl<'a> StateMachine<'a> {
                 &HunkHeaderIncludeLineNumber::No
             },
             &HunkHeaderIncludeHunkLabel::No,
+            &HunkHeaderIncludeCodeFragment::Yes,
             grep_line.line_type.file_path_separator(),
             self.config,
         )
@@ -236,6 +258,7 @@ impl<'a> StateMachine<'a> {
                     &self.config.hunk_header_style_include_file_path,
                     &self.config.hunk_header_style_include_line_number,
                     &HunkHeaderIncludeHunkLabel::Yes,
+                    &HunkHeaderIncludeCodeFragment::Yes,
                     grep_line.line_type.file_path_separator(),
                     self.config,
                 )?
@@ -297,17 +320,17 @@ impl<'a> StateMachine<'a> {
 
     fn _emit_classic_format_code(&mut self, mut grep_line: GrepLine) -> std::io::Result<()> {
         let code_style_sections = match (&grep_line.line_type, &grep_line.submatches) {
-            (LineType::Match, Some(submatches)) => {
+            (LineType::Match, Some(_)) => {
                 // We expand tabs at this late stage because
                 // the tabs are escaped in the JSON, so
                 // expansion must come after JSON parsing.
                 // (At the time of writing, we are in this
                 // arm iff we are handling `ripgrep --json`
                 // output.)
-                grep_line.code = tabs::expand(&grep_line.code, &self.config.tab_cfg).into();
+                grep_line.expand_tabs(&self.config.tab_cfg);
                 make_style_sections(
                     &grep_line.code,
-                    submatches,
+                    &grep_line.submatches.unwrap(),
                     self.config.grep_match_word_style,
                     self.config.grep_match_line_style,
                 )
@@ -324,7 +347,8 @@ impl<'a> StateMachine<'a> {
                     &self.raw_line,
                     self.config.grep_match_word_style,
                     self.config.grep_match_line_style,
-                    &grep_line,
+                    &grep_line.path,
+                    grep_line.line_number,
                 )
                 .unwrap_or(StyleSectionSpecifier::Style(
                     self.config.grep_match_line_style,
@@ -369,13 +393,14 @@ fn get_code_style_sections<'b>(
     raw_line: &'b str,
     match_style: Style,
     non_match_style: Style,
-    grep: &GrepLine,
+    path: &str,
+    line_number: Option<usize>,
 ) -> Option<StyleSectionSpecifier<'b>> {
     if let Some(prefix_end) = ansi::ansi_preserving_index(
         raw_line,
-        match grep.line_number {
-            Some(n) => format!("{}:{}:", grep.path, n).len() - 1,
-            None => grep.path.len(),
+        match line_number {
+            Some(n) => format!("{}:{}:", path, n).len() - 1,
+            None => path.len(),
         },
     ) {
         let match_style_sections = ansi::parse_style_sections(&raw_line[(prefix_end + 1)..])
@@ -1101,7 +1126,7 @@ mod tests {
         let grep = parse_grep_line(&stripped).unwrap();
 
         assert_eq!(
-            get_code_style_sections(&working_example, hit, miss, &grep),
+            get_code_style_sections(&working_example, hit, miss, &grep.path, grep.line_number),
             Some(StyleSectionSpecifier::StyleSections(vec![
                 (miss, "  - "),
                 (hit, "kind: Service"),
@@ -1114,7 +1139,13 @@ mod tests {
         let broken_grep = parse_grep_line(&broken_stripped).unwrap();
 
         assert_eq!(
-            get_code_style_sections(&broken_example, hit, miss, &broken_grep),
+            get_code_style_sections(
+                &broken_example,
+                hit,
+                miss,
+                &broken_grep.path,
+                broken_grep.line_number
+            ),
             Some(StyleSectionSpecifier::StyleSections(vec![(
                 hit,
                 "kind: Service"
@@ -1126,7 +1157,13 @@ mod tests {
         let plus_grep = parse_grep_line(&plus_stripped).unwrap();
 
         assert_eq!(
-            get_code_style_sections(&plus_example, hit, miss, &plus_grep),
+            get_code_style_sections(
+                &plus_example,
+                hit,
+                miss,
+                &plus_grep.path,
+                plus_grep.line_number
+            ),
             Some(StyleSectionSpecifier::StyleSections(vec![
                 (miss, " +        let (style, non_emph_style) = "),
                 (hit, "match"),

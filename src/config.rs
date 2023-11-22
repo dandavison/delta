@@ -78,6 +78,7 @@ pub struct Config {
     pub hunk_header_line_number_style: Style,
     pub hunk_header_style_include_file_path: HunkHeaderIncludeFilePath,
     pub hunk_header_style_include_line_number: HunkHeaderIncludeLineNumber,
+    pub hunk_header_style_include_code_fragment: HunkHeaderIncludeCodeFragment,
     pub hunk_header_style: Style,
     pub hunk_label: String,
     pub hyperlinks_commit_link_format: Option<String>,
@@ -147,6 +148,12 @@ pub enum HunkHeaderIncludeFilePath {
 
 #[cfg_attr(test, derive(Clone))]
 pub enum HunkHeaderIncludeLineNumber {
+    Yes,
+    No,
+}
+
+#[cfg_attr(test, derive(Clone))]
+pub enum HunkHeaderIncludeCodeFragment {
     Yes,
     No,
 }
@@ -330,6 +337,15 @@ impl From<cli::Opt> for Config {
                 HunkHeaderIncludeLineNumber::Yes
             } else {
                 HunkHeaderIncludeLineNumber::No
+            },
+            hunk_header_style_include_code_fragment: if opt
+                .hunk_header_style
+                .split(' ')
+                .any(|s| s == "omit-code-fragment")
+            {
+                HunkHeaderIncludeCodeFragment::No
+            } else {
+                HunkHeaderIncludeCodeFragment::Yes
             },
             hyperlinks: opt.hyperlinks,
             hyperlinks_commit_link_format: opt.hyperlinks_commit_link_format,

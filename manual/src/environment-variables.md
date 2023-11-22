@@ -19,15 +19,17 @@ Therefore:
 The exact command that `delta` uses to start its pager is taken from one of the following environment variables (in this order):
 
 - `DELTA_PAGER`
+- `BAT_PAGER`
 - `PAGER`
+
+Delta does not use `bat` when it is running, and delta users do not need to
+install bat. (Delta does use the `bat` Rust library for its syntax highlighting
+themes and language definitions, and for launching the pager, which is why the
+`BAT_PAGER` environment variable is honored).
 
 If none of these is set, delta uses `less -R`, and you should always include `-R` if you are setting these environment variables yourself.
 
 In addition to those `*PAGER` environment variables, the behavior of `less` is also affected by the `LESS` environment variable (see `man less` or [online documentation](https://linux.die.net/man/1/less)). This env var can contain command line options and/or interactive less-commands (prefixed by a leading `+` sign; these are executed every time right after less is launched).
-
-In addition to `DELTA_PAGER`, and `PAGER`, delta currently also consults `$BAT_PAGER` (with priority between the two).
-However, this is deprecated: please use `DELTA_PAGER` instead.
-No other [`bat`](https://github.com/sharkdp/bat) environment variables are used by delta, and delta does not use `bat` when it is running (it does use some code from the excellent `bat` project, but users don't need to be aware of this).
 
 ## Delta-specific environment variables
 

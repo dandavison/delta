@@ -180,7 +180,7 @@ Options:
       --grep-header-decoration-style <STYLE>
           Style string for the header decoration in grep output.
 
-          Default is "none" when grep-ouput-type-is "ripgrep", otherwise defaults to value of header-decoration-style. See hunk-header-decoration-style.
+          Default is "none" when grep-output-type-is "ripgrep", otherwise defaults to value of header-decoration-style. See hunk-header-decoration-style.
 
       --grep-header-file-style <STYLE>
           Style string for the file path part of the header in grep output.
@@ -238,7 +238,7 @@ Options:
       --hunk-header-style <STYLE>
           Style string for the hunk-header.
 
-          See STYLES section. Special attributes 'file' and 'line-number' can be used to include the file path, and number of first hunk line, in the hunk header. The style 'omit' can be used to remove the hunk header section from the output.
+          See STYLES section. Special attributes 'file' and 'line-number' can be used to include the file path, and number of first hunk line, in the hunk header. The special attribute 'omit-code-fragment' can be used to remove the code fragment in the hunk header. The style 'omit' can be used to remove the entire hunk header section from the output.
 
           [default: "line-number syntax"]
 
