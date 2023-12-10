@@ -56,7 +56,7 @@ pub fn relativize_path_in_diff_stat_line(
     let relative_path = relative_path.to_str()?;
     let formatted_path = match (
         config.hyperlinks,
-        utils::path::absolute_path(path_relative_to_repo_root, config),
+        utils::path::absolute_path(relative_path, config),
     ) {
         (true, Some(absolute_path)) => features::hyperlinks::format_osc8_file_hyperlink(
             absolute_path,
