@@ -39,14 +39,15 @@ pub fn show_syntax_themes() -> std::io::Result<()> {
         opt
     };
     let opt = make_opt();
+    let stdin_slice = stdin_data.as_ref().map(|v| v.as_slice());
 
     if !(opt.dark || opt.light) {
-        _show_syntax_themes(opt, false, &mut writer, stdin_data.as_ref())?;
-        _show_syntax_themes(make_opt(), true, &mut writer, stdin_data.as_ref())?;
+        _show_syntax_themes(opt, false, &mut writer, stdin_slice)?;
+        _show_syntax_themes(make_opt(), true, &mut writer, stdin_slice)?;
     } else if opt.light {
-        _show_syntax_themes(opt, true, &mut writer, stdin_data.as_ref())?;
+        _show_syntax_themes(opt, true, &mut writer, stdin_slice)?;
     } else {
-        _show_syntax_themes(opt, false, &mut writer, stdin_data.as_ref())?
+        _show_syntax_themes(opt, false, &mut writer, stdin_slice)?
     };
     Ok(())
 }
@@ -55,14 +56,12 @@ fn _show_syntax_themes(
     mut opt: cli::Opt,
     is_light_mode: bool,
     writer: &mut dyn Write,
-    stdin: Option<&Vec<u8>>,
+    stdin: Option<&[u8]>,
 ) -> std::io::Result<()> {
     use bytelines::ByteLines;
     use std::io::BufReader;
-    let input = match stdin {
-        Some(stdin_data) => &stdin_data[..],
-        None => {
-            b"\
+    let input = stdin.unwrap_or(
+        b"\
 diff --git a/example.rs b/example.rs
 index f38589a..0f1bb83 100644
 --- a/example.rs
@@ -76,10 +75,8 @@ index f38589a..0f1bb83 100644
 +fn print_cube(num: f64) {
 +    let result = f64::powf(num, 3.0);
 +    println!(\"The cube of {:.2} is {:.2}.\", num, result);
-"
-        }
-    };
-
+",
+    );
     opt.computed.is_light_mode = is_light_mode;
     let mut config = config::Config::from(opt);
     let title_style = ansi_term::Style::new().bold();
