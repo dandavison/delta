@@ -15,6 +15,15 @@ pub fn show_themes(dark: bool, light: bool, computed_theme_is_light: bool) -> st
 
     use super::sample_diff::DIFF;
 
+    let env = DeltaEnv::default();
+    let themes = get_themes(git_config::GitConfig::try_create(&env));
+    if themes.is_empty() {
+        return Err(std::io::Error::new(
+            ErrorKind::NotFound,
+            "No themes found. Please see https://dandavison.github.io/delta/custom-themes.html.",
+        ));
+    }
+
     let mut input = DIFF.to_vec();
 
     if !io::stdin().is_terminal() {
@@ -25,7 +34,6 @@ pub fn show_themes(dark: bool, light: bool, computed_theme_is_light: bool) -> st
         }
     };
 
-    let env = DeltaEnv::default();
     let git_config = git_config::GitConfig::try_create(&env);
     let opt = cli::Opt::from_iter_and_git_config(
         env.clone(),
@@ -37,7 +45,7 @@ pub fn show_themes(dark: bool, light: bool, computed_theme_is_light: bool) -> st
     let title_style = ansi_term::Style::new().bold();
     let writer = output_type.handle().unwrap();
 
-    for theme in &get_themes(git_config::GitConfig::try_create(&env)) {
+    for theme in &themes {
         let git_config = git_config::GitConfig::try_create(&env);
         let opt = cli::Opt::from_iter_and_git_config(
             env.clone(),
