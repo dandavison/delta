@@ -116,6 +116,9 @@ impl<'a> StateMachine<'a> {
                     grep_line.path.to_string(),
                     grep_line.line_number,
                 );
+                if new_section {
+                    self.painter.set_highlighter()
+                }
                 if new_path {
                     if let Some(lang) = handlers::diff_header::get_extension(&grep_line.path)
                         .or(self.config.default_language.as_deref())
