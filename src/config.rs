@@ -31,6 +31,9 @@ use crate::wrapping::WrapConfig;
 
 pub const INLINE_SYMBOL_WIDTH_1: usize = 1;
 
+// Used if an invalid default-language was specified.
+pub const SYNTAX_FALLBACK_LANG: &str = "txt";
+
 #[cfg_attr(test, derive(Clone))]
 pub struct Config {
     pub available_terminal_width: usize,
@@ -49,7 +52,7 @@ pub struct Config {
     pub cwd_of_user_shell_process: Option<PathBuf>,
     pub cwd_relative_to_repo_root: Option<String>,
     pub decorations_width: cli::Width,
-    pub default_language: Option<String>,
+    pub default_language: String,
     pub diff_stat_align_width: usize,
     pub error_exit_code: i32,
     pub file_added_label: String,

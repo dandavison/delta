@@ -28,7 +28,7 @@ pub fn show_colors() -> std::io::Result<()> {
     let writer = output_type.handle().unwrap();
 
     let mut painter = paint::Painter::new(writer, &config);
-    painter.set_syntax(Some("ts"));
+    painter.set_syntax(Some("a.ts"));
     painter.set_highlighter();
 
     let title_style = ansi_term::Style::new().bold();
