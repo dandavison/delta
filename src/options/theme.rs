@@ -8,6 +8,7 @@
 /// default is selected.
 use bat;
 use bat::assets::HighlightingAssets;
+use terminal_colorsaurus::Preconditions;
 
 use crate::cli;
 
@@ -114,7 +115,15 @@ fn detect_light_mode() -> bool {
         return value;
     }
 
-    color_scheme(QueryOptions::default())
+    let options = {
+        let mut o = QueryOptions::default();
+        // Only query the terminal if we're not piped to a pager
+        // otherwise we get a race condition since the pager is also reading/writing from
+        // the terminal and enabling/disabling raw mode.
+        o.preconditions = Preconditions::stdout_not_piped();
+        o
+    };
+    color_scheme(options)
         .map(|c| c.is_dark_on_light())
         .unwrap_or_default()
 }
