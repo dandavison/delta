@@ -447,6 +447,9 @@ pub struct Opt {
     /// See STYLES section. Defaults to plus-style.
     pub grep_match_line_style: Option<String>,
 
+    #[arg(short = 'U', value_name = "U")]
+    pub context_lines: Option<usize>,
+
     #[arg(long = "grep-match-word-style", value_name = "STYLE")]
     /// Style string for the matching substrings within a matching line of grep output.
     ///

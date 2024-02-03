@@ -33,6 +33,7 @@ pub const INLINE_SYMBOL_WIDTH_1: usize = 1;
 
 #[cfg_attr(test, derive(Clone))]
 pub struct Config {
+    pub context_lines: Option<usize>,
     pub available_terminal_width: usize,
     pub background_color_extends_to_terminal_width: bool,
     pub blame_code_style: Option<Style>,
@@ -272,6 +273,7 @@ impl From<cli::Opt> for Config {
         );
 
         Self {
+            context_lines: opt.context_lines,
             available_terminal_width: opt.computed.available_terminal_width,
             background_color_extends_to_terminal_width: opt
                 .computed
