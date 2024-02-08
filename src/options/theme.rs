@@ -1,3 +1,5 @@
+use std::io::{stdout, IsTerminal};
+
 /// Delta doesn't have a formal concept of a "theme". What it has is
 /// (a) the choice of syntax-highlighting theme
 /// (b) the choice of light-background-mode vs dark-background-mode, which determine certain
@@ -8,9 +10,8 @@
 /// default is selected.
 use bat;
 use bat::assets::HighlightingAssets;
-use terminal_colorsaurus::Preconditions;
 
-use crate::cli;
+use crate::cli::{self, DetectDarkLight};
 
 #[allow(non_snake_case)]
 pub fn set__is_light_mode__syntax_theme__syntax_set(
@@ -18,17 +19,10 @@ pub fn set__is_light_mode__syntax_theme__syntax_set(
     assets: HighlightingAssets,
 ) {
     let syntax_theme_name_from_bat_theme = &opt.env.bat_theme;
-    let light = if opt.light {
-        Some(true)
-    } else if opt.dark {
-        Some(false)
-    } else {
-        None
-    };
     let (is_light_mode, syntax_theme_name) = get_is_light_mode_and_syntax_theme_name(
         opt.syntax_theme.as_ref(),
         syntax_theme_name_from_bat_theme.as_ref(),
-        light,
+        get_is_light(opt),
     );
     opt.computed.is_light_mode = is_light_mode;
 
@@ -92,9 +86,8 @@ fn is_no_syntax_highlighting_syntax_theme_name(theme_name: &str) -> bool {
 fn get_is_light_mode_and_syntax_theme_name(
     theme_arg: Option<&String>,
     bat_theme_env_var: Option<&String>,
-    light_mode_arg: Option<bool>,
+    light_mode: bool,
 ) -> (bool, String) {
-    let light_mode = light_mode_arg.unwrap_or_else(detect_light_mode);
     match (theme_arg, bat_theme_env_var, light_mode) {
         (None, None, false) => (false, DEFAULT_DARK_SYNTAX_THEME.to_string()),
         (Some(theme_name), _, false) => (is_light_syntax_theme(theme_name), theme_name.to_string()),
@@ -107,6 +100,41 @@ fn get_is_light_mode_and_syntax_theme_name(
     }
 }
 
+fn get_is_light(opt: &cli::Opt) -> bool {
+    get_is_light_opt(opt)
+        .or_else(|| should_detect_dark_light(opt).then(detect_light_mode))
+        .unwrap_or_default()
+}
+
+fn get_is_light_opt(opt: &cli::Opt) -> Option<bool> {
+    if opt.light {
+        Some(true)
+    } else if opt.dark {
+        Some(false)
+    } else {
+        None
+    }
+}
+
+fn should_detect_dark_light(opt: &cli::Opt) -> bool {
+    match opt.detect_dark_light {
+        // Querying the terminal for its colors requires "exclusive" access
+        // to the terminal since we read/write from the terminal and enable/disable raw mode.
+        // This causes race conditions with pagers such as less when they are attached to the
+        // same terminal as us.
+        //
+        // This is just an issue when the user manually pipes the output to less, e.g. `git diff | delta | less`.
+        // If we're the ones to start less, there's no race condition since less is started *after* we're done here.
+        //
+        // The second condition here tries to detect cases where the output of delta is redirected.
+        // This can happen when we're called via interactive.diffFilter (e.g. by `git add --patch`).
+        // In this case --color-only is usually also specified.
+        DetectDarkLight::Auto => opt.color_only || stdout().is_terminal(),
+        DetectDarkLight::Always => true,
+        DetectDarkLight::Never => false,
+    }
+}
+
 fn detect_light_mode() -> bool {
     use terminal_colorsaurus::{color_scheme, QueryOptions};
 
@@ -115,15 +143,7 @@ fn detect_light_mode() -> bool {
         return value;
     }
 
-    let options = {
-        let mut o = QueryOptions::default();
-        // Only query the terminal if we're not piped to a pager
-        // otherwise we get a race condition since the pager is also reading/writing from
-        // the terminal and enabling/disabling raw mode.
-        o.preconditions = Preconditions::stdout_not_piped();
-        o
-    };
-    color_scheme(options)
+    color_scheme(QueryOptions::default())
         .map(|c| c.is_dark_on_light())
         .unwrap_or_default()
 }
