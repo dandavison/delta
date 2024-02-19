@@ -68,7 +68,7 @@ mod tests {
         let rr = RegexReplacement::from_sed_command(command).unwrap();
         assert_eq!(rr.regex.as_str(), "foo");
         assert_eq!(rr.replacement, "bar");
-        assert_eq!(rr.replace_all, false);
+        assert!(!rr.replace_all);
         assert_eq!(rr.execute("foo"), "bar");
     }
 

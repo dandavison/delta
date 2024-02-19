@@ -315,7 +315,7 @@ where
 
             right_aligned_line.push((symbol_style, &wrap_config.right_prefix_symbol));
 
-            right_aligned_line.extend(curr_line.line_segments.into_iter());
+            right_aligned_line.extend(curr_line.line_segments);
 
             curr_line.line_segments = right_aligned_line;
 

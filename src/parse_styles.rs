@@ -590,8 +590,10 @@ mod tests {
     #[test]
     fn test_resolve_style_references_1() {
         let style_1 = Style::default();
-        let mut style_2 = Style::default();
-        style_2.is_syntax_highlighted = !style_1.is_syntax_highlighted;
+        let style_2 = style::Style {
+            is_syntax_highlighted: !style_1.is_syntax_highlighted,
+            ..Default::default()
+        };
 
         let edges: HashMap<&str, StyleReference> = [
             ("a", StyleReference::Style(style_1)),
@@ -613,8 +615,10 @@ mod tests {
     #[test]
     fn test_resolve_style_references_2() {
         let style_1 = Style::default();
-        let mut style_2 = Style::default();
-        style_2.is_syntax_highlighted = !style_1.is_syntax_highlighted;
+        let style_2 = style::Style {
+            is_syntax_highlighted: !style_1.is_syntax_highlighted,
+            ..Default::default()
+        };
 
         let edges: HashMap<&str, StyleReference> = [
             ("a", StyleReference::Reference("b".to_string())),

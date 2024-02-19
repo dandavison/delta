@@ -113,7 +113,7 @@ pub mod tests {
         let true_location_of_file_relative_to_repo_root = PathBuf::from("a");
         let git_prefix_env_var = Some("");
 
-        for (delta_relative_paths_option, calling_cmd) in vec![
+        for (delta_relative_paths_option, calling_cmd) in [
             (false, Some("git diff")),
             (false, Some("git diff --relative")),
             (true, Some("git diff")),
@@ -474,10 +474,7 @@ __path__:  some matching line
                 .with_input(&GIT_GREP_OUTPUT.replace("__path__", test_case.path_in_delta_input)),
         };
         let make_expected_hyperlink = |text| {
-            format_osc8_hyperlink(
-                &PathBuf::from(test_case.expected_hyperlink_path()).to_string_lossy(),
-                text,
-            )
+            format_osc8_hyperlink(&test_case.expected_hyperlink_path().to_string_lossy(), text)
         };
         match test_case.calling_process() {
             CallingProcess::GitDiff(_) => {
