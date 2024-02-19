@@ -10,6 +10,7 @@ pub const TESTING: bool = false;
 pub const TESTING: bool = true;
 
 #[test]
+#[allow(clippy::assertions_on_constants)]
 fn am_testing() {
     assert!(TESTING);
 }

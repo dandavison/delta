@@ -361,7 +361,7 @@ pub fn parse_blame_line_numbers(arg: &str) -> BlameLineNumbers {
 
     match f.fmt_type.as_str() {
         t if t.is_empty() || t == "every" => BlameLineNumbers::On(set_defaults(f.into_simple())),
-        t if t == "block" => BlameLineNumbers::PerBlock(set_defaults(f.into_simple())),
+        "block" => BlameLineNumbers::PerBlock(set_defaults(f.into_simple())),
         every_n if every_n.starts_with("every-") => {
             let n = every_n["every-".len()..]
                 .parse::<usize>()

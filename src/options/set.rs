@@ -578,7 +578,7 @@ fn parse_width_specifier(width_arg: &str, terminal_width: usize) -> Result<usize
 
     let width = match width_arg.find('-') {
         None => parse(width_arg, false, false)?.try_into().unwrap(),
-        Some(index) if index == 0 => (terminal_width as isize + parse(width_arg, true, false)?)
+        Some(0) => (terminal_width as isize + parse(width_arg, true, false)?)
             .try_into()
             .map_err(|_| {
                 format!(
@@ -730,10 +730,10 @@ pub mod tests {
         );
 
         assert_eq!(opt.true_color, "never");
-        assert_eq!(opt.color_only, false);
+        assert!(!opt.color_only);
         assert_eq!(opt.commit_decoration_style, "black black");
         assert_eq!(opt.commit_style, "black black");
-        assert_eq!(opt.dark, false);
+        assert!(!opt.dark);
         assert_eq!(opt.default_language, Some("rs".to_owned()));
         // TODO: should set_options not be called on any feature flags?
         // assert_eq!(opt.diff_highlight, true);
@@ -753,9 +753,9 @@ pub mod tests {
         assert_eq!(opt.file_regex_replacement, Some("s/foo/bar/".to_string()));
         assert_eq!(opt.hunk_header_decoration_style, "black black");
         assert_eq!(opt.hunk_header_style, "black black");
-        assert_eq!(opt.keep_plus_minus_markers, true);
-        assert_eq!(opt.light, true);
-        assert_eq!(opt.line_numbers, true);
+        assert!(opt.keep_plus_minus_markers);
+        assert!(opt.light);
+        assert!(opt.line_numbers);
         assert_eq!(opt.line_numbers_left_format, "xxxyyyzzz");
         assert_eq!(opt.line_numbers_left_style, "black black");
         assert_eq!(opt.line_numbers_minus_style, "black black");
@@ -769,15 +769,15 @@ pub mod tests {
         assert_eq!(opt.minus_empty_line_marker_style, "black black");
         assert_eq!(opt.minus_non_emph_style, "black black");
         assert_eq!(opt.minus_style, "black black");
-        assert_eq!(opt.navigate, true);
+        assert!(opt.navigate);
         assert_eq!(opt.navigate_regex, Some("xxxyyyzzz".to_string()));
         assert_eq!(opt.paging_mode, "never");
         assert_eq!(opt.plus_emph_style, "black black");
         assert_eq!(opt.plus_empty_line_marker_style, "black black");
         assert_eq!(opt.plus_non_emph_style, "black black");
         assert_eq!(opt.plus_style, "black black");
-        assert_eq!(opt.raw, true);
-        assert_eq!(opt.side_by_side, true);
+        assert!(opt.raw);
+        assert!(opt.side_by_side);
         assert_eq!(opt.syntax_theme, Some("xxxyyyzzz".to_string()));
         assert_eq!(opt.tab_width, 77);
         assert_eq!(opt.true_color, "never");

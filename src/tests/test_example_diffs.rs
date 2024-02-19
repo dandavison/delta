@@ -154,7 +154,7 @@ mod tests {
 
     #[test]
     fn test_certain_bugs_are_not_present() {
-        for input in vec![
+        for input in [
             DIFF_EXHIBITING_PARSE_FILE_NAME_BUG,
             DIFF_EXHIBITING_STATE_MACHINE_PARSER_BUG,
             DIFF_EXHIBITING_TRUNCATION_BUG,
@@ -168,7 +168,7 @@ mod tests {
 
     #[test]
     fn test_delta_paints_diff_when_there_is_unrecognized_initial_content() {
-        for input in vec![
+        for input in [
             DIFF_WITH_UNRECOGNIZED_PRECEDING_MATERIAL_1,
             DIFF_WITH_UNRECOGNIZED_PRECEDING_MATERIAL_2,
         ] {
@@ -594,7 +594,7 @@ commit 94907c0f136f46dc46ffae2dc92dca9af7eb7c2e
             "omit",
         ]);
         let output = integration_test_utils::run_delta(GIT_DIFF_SINGLE_HUNK, &config);
-        for (i, line) in vec![
+        for (i, line) in [
             "diff --git a/src/align.rs b/src/align.rs",
             "index 8e37a9e..6ce4863 100644",
             "--- a/src/align.rs",
@@ -642,7 +642,7 @@ index 8e37a9e..6ce4863 100644
             GIT_DIFF_SINGLE_HUNK_WITH_ANSI_ESCAPE_SEQUENCES,
             &config,
         );
-        for (i, line) in vec![
+        for (i, line) in [
             "diff --git a/src/align.rs b/src/align.rs",
             "index 8e37a9e..6ce4863 100644",
             "--- a/src/align.rs",

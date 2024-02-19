@@ -484,9 +484,9 @@ pub mod tests {
             Some(git_config_contents),
             Some(git_config_path),
         );
-        assert_eq!(config.true_color, false);
+        assert!(!config.true_color);
         assert_eq!(config.decorations_width, cli::Width::Fixed(100));
-        assert_eq!(config.background_color_extends_to_terminal_width, true);
+        assert!(config.background_color_extends_to_terminal_width);
         assert_eq!(config.inspect_raw_lines, cli::InspectRawLines::True);
         assert_eq!(config.paging_mode, PagingMode::Never);
         assert!(config.syntax_theme.is_none());

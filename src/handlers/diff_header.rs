@@ -390,7 +390,7 @@ fn _parse_file_path(s: &str, git_diff_name: bool) -> String {
     // ---·a/a·b├──┤␊
     // +++·b/c·d├──┤␊
     let path = match s.strip_suffix('\t').unwrap_or(s) {
-        path if path == "/dev/null" => "/dev/null",
+        "/dev/null" => "/dev/null",
         path if git_diff_name && DIFF_PREFIXES.iter().any(|s| path.starts_with(s)) => &path[2..],
         path if git_diff_name => path,
         path => path.split('\t').next().unwrap_or(""),

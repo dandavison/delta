@@ -746,23 +746,13 @@ pub mod tests {
         assert_eq!(guess_git_blame_filename_extension(&args), Args("".into()));
     }
 
-    #[derive(Debug)]
+    #[derive(Debug, Default)]
     struct FakeProc {
         #[allow(dead_code)]
         pid: DeltaPid,
         start_time: u64,
         cmd: Vec<String>,
         ppid: Option<DeltaPid>,
-    }
-    impl Default for FakeProc {
-        fn default() -> Self {
-            Self {
-                pid: 0,
-                start_time: 0,
-                cmd: Vec::new(),
-                ppid: None,
-            }
-        }
     }
     impl FakeProc {
         fn new(pid: DeltaPid, start_time: u64, cmd: Vec<String>, ppid: Option<DeltaPid>) -> Self {
@@ -790,18 +780,10 @@ pub mod tests {
         }
     }
 
-    #[derive(Debug)]
+    #[derive(Debug, Default)]
     struct MockProcInfo {
         delta_pid: DeltaPid,
         info: HashMap<Pid, FakeProc>,
-    }
-    impl Default for MockProcInfo {
-        fn default() -> Self {
-            Self {
-                delta_pid: 0,
-                info: HashMap::new(),
-            }
-        }
     }
     impl MockProcInfo {
         fn with(processes: &[(DeltaPid, u64, &str, Option<DeltaPid>)]) -> Self {

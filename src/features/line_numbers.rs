@@ -142,7 +142,8 @@ pub fn format_and_paint_line_numbers<'a>(
 }
 
 lazy_static! {
-    static ref LINE_NUMBERS_PLACEHOLDER_REGEX: Regex = format::make_placeholder_regex(&["nm", "np"]);
+    static ref LINE_NUMBERS_PLACEHOLDER_REGEX: Regex =
+        format::make_placeholder_regex(&["nm", "np"]);
 }
 
 #[derive(Default, Debug)]
@@ -618,7 +619,7 @@ pub mod tests {
         assert_eq!(data.formatted_width(), MinusPlus::new(32, 0));
     }
 
-    fn _get_capture<'a>(i: usize, j: usize, caps: &'a Vec<Captures>) -> &'a str {
+    fn _get_capture<'a>(i: usize, j: usize, caps: &'a [Captures]) -> &'a str {
         caps[i].get(j).map_or("", |m| m.as_str())
     }
 

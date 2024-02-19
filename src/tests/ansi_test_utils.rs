@@ -1,4 +1,5 @@
 #[cfg(test)]
+#[allow(clippy::module_inception)]
 pub mod ansi_test_utils {
     use ansi_term;
 
