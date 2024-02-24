@@ -95,9 +95,18 @@ impl<'a> StateMachine<'a> {
             return Ok(false);
         }
 
-        let line = self.line.clone(); // TODO: avoid clone
-        let Some(grep_line) = parse_grep_line(&line) else {
-            return Ok(false);
+        // Try parse_raw_grep_line on raw_line, and fall back to parse_grep_line
+        let raw_line = self.raw_line.clone(); // TODO: avoid clone
+        let line;
+        let grep_line = if let Some(grep_line) = parse_raw_grep_line(&raw_line) {
+            grep_line
+        } else {
+            line = self.line.clone(); // TODO: avoid clone
+            if let Some(grep_line) = parse_grep_line(&line) {
+                grep_line
+            } else {
+                return Ok(false);
+            }
         };
 
         if matches!(grep_line.line_type, LineType::Ignore) {
@@ -464,10 +473,16 @@ fn make_output_config() -> GrepOutputConfig {
 }
 
 enum GrepLineRegex {
+    WithColor,
     WithFileExtensionAndLineNumber,
     WithFileExtension,
     WithFileExtensionNoSpaces,
     WithoutSeparatorCharacters,
+}
+
+lazy_static! {
+    static ref GREP_LINE_REGEX_ASSUMING_COLOR: Regex =
+        make_grep_line_regex(GrepLineRegex::WithColor);
 }
 
 lazy_static! {
@@ -516,6 +531,15 @@ fn make_grep_line_regex(regex_variant: GrepLineRegex) -> Regex {
     // Make-7-file-7-xxx
 
     let file_path = match regex_variant {
+        GrepLineRegex::WithColor => {
+            r"
+            \x1b\[35m               # starts with ANSI color sequence
+        (                        # 1. file name
+            [^\x1b]*                # anything
+        )
+            \x1b\[m                 # ends with ANSI color reset
+        "
+        }
         GrepLineRegex::WithFileExtensionAndLineNumber | GrepLineRegex::WithFileExtension => {
             r"
         (                        # 1. file name (colons not allowed)
@@ -545,6 +569,51 @@ fn make_grep_line_regex(regex_variant: GrepLineRegex) -> Regex {
     };
 
     let separator = match regex_variant {
+        GrepLineRegex::WithColor => {
+            r#"
+            \x1b\[36m        # starts with ANSI color sequence for separator
+    (?:
+        (
+            :                # 2. match marker
+            \x1b\[m          # ANSI color reset
+            (?:              # optional: line number followed by second match marker
+                \x1b\[32m        # ANSI color sequence for line number
+                ([0-9]+)         # 3. line number
+                \x1b\[m          # ANSI color reset
+                \x1b\[36m        # ANSI color sequence for separator
+                :                # second match marker
+                \x1b\[m          # ANSI color reset
+            )?
+        )
+        |
+        (
+            -                # 4. nomatch marker
+            \x1b\[m          # ANSI color reset
+            (?:              # optional: line number followed by second nomatch marker
+                \x1b\[32m        # ANSI color sequence for line number
+                ([0-9]+)         # 5. line number
+                \x1b\[m          # ANSI color reset
+                \x1b\[36m        # ANSI color sequence for separator
+                -                # second nomatch marker
+                \x1b\[m          # ANSI color reset
+            )?
+        )
+        |
+        (
+            =                # 6. context header marker
+            \x1b\[m          # ANSI color reset
+            (?:              # optional: line number followed by second context header marker
+                \x1b\[32m        # ANSI color sequence for line number
+                ([0-9]+)         # 7. line number
+                \x1b\[m          # ANSI color reset
+                \x1b\[36m        # ANSI color sequence for separator
+                =                # second context header marker
+                \x1b\[m          # ANSI color reset
+            )?
+        )
+    )
+            "#
+        }
         GrepLineRegex::WithFileExtensionAndLineNumber => {
             r#"
     (?:
@@ -617,6 +686,23 @@ pub fn parse_grep_line(line: &str) -> Option<GrepLine> {
     }
 }
 
+pub fn parse_raw_grep_line(raw_line: &str) -> Option<GrepLine> {
+    // Early exit if we don't have an escape sequence
+    if !raw_line.starts_with("\x1b") {
+        return None;
+    }
+    if !matches!(
+        &*process::calling_process(),
+        process::CallingProcess::GitGrep(_) | process::CallingProcess::OtherGrep
+    ) {
+        return None;
+    }
+    _parse_grep_line(&GREP_LINE_REGEX_ASSUMING_COLOR, raw_line).map(|mut grep_line| {
+        grep_line.code = ansi::strip_ansi_codes(&grep_line.code).into();
+        grep_line
+    })
+}
+
 pub fn _parse_grep_line<'b>(regex: &Regex, line: &'b str) -> Option<GrepLine<'b>> {
     let caps = regex.captures(line)?;
     let file = caps.get(1).unwrap().as_str().into();
@@ -649,7 +735,9 @@ pub fn _parse_grep_line<'b>(regex: &Regex, line: &'b str) -> Option<GrepLine<'b>
 
 #[cfg(test)]
 mod tests {
-    use crate::handlers::grep::{parse_grep_line, GrepLine, GrepType, LineType};
+    use crate::handlers::grep::{
+        parse_grep_line, parse_raw_grep_line, GrepLine, GrepType, LineType,
+    };
     use crate::utils::process::tests::FakeParentArgs;
 
     #[test]
@@ -857,6 +945,42 @@ mod tests {
                 line_number: Some(4),
                 line_type: LineType::Match,
                 code: "value=hi-there".into(),
+                submatches: None,
+            })
+        );
+    }
+
+    #[test]
+    fn test_parse_grep_color() {
+        let fake_parent_grep_command =
+            "/usr/local/bin/git --doesnt-matter grep --nor-this nor_this -- nor_this";
+        let _args = FakeParentArgs::for_scope(fake_parent_grep_command);
+
+        let e = "\x1B";
+        assert_eq!(
+            parse_raw_grep_line(&format!(
+                r#"{e}[35msrc/zlib-ng/configure{e}[m{e}[36m:{e}[m    -a*=* | -{e}[1;32m-arch{e}[ms=*) ARCHS=$(echo $1 | sed 's/.*=//'); shift ;;"#
+            )),
+            Some(GrepLine {
+                grep_type: GrepType::Classic,
+                path: "src/zlib-ng/configure".into(),
+                line_number: None,
+                line_type: LineType::Match,
+                code: r#"    -a*=* | --archs=*) ARCHS=$(echo $1 | sed 's/.*=//'); shift ;;"#.into(),
+                submatches: None,
+            })
+        );
+
+        assert_eq!(
+            parse_raw_grep_line(&format!(
+                r#"{e}[35msrc/zlib-ng/configure{e}[m{e}[36m:{e}[m{e}[32m214{e}[m{e}[36m:{e}[m    -a*=* | -{e}[1;32m-arch{e}[ms=*) ARCHS=$(echo $1 | sed 's/.*=//'); shift ;;"#
+            )),
+            Some(GrepLine {
+                grep_type: GrepType::Classic,
+                path: "src/zlib-ng/configure".into(),
+                line_number: Some(214),
+                line_type: LineType::Match,
+                code: r#"    -a*=* | --archs=*) ARCHS=$(echo $1 | sed 's/.*=//'); shift ;;"#.into(),
                 submatches: None,
             })
         );
