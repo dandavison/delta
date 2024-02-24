@@ -91,58 +91,55 @@ impl<'a> StateMachine<'a> {
             State::Unknown => (None, None, &None, true),
             _ => (None, None, &None, false),
         };
+        if !try_parse {
+            return Ok(false);
+        }
 
-        let mut handled_line = false;
-        if try_parse {
-            let line = self.line.clone(); // TODO: avoid clone
-            if let Some(grep_line) = parse_grep_line(&line) {
-                if matches!(grep_line.line_type, LineType::Ignore) {
-                    handled_line = true;
-                    return Ok(handled_line);
-                }
-                let first_path = previous_path.is_none();
-                let new_path = first_path || previous_path.as_deref() != Some(&grep_line.path);
-                // Emit a '--' section separator when output contains context lines (i.e. *grep option -A, -B, -C is in effect).
-                let new_section = !new_path
-                    && (previous_line_type == Some(&LineType::Context)
-                        || grep_line.line_type == LineType::Context)
-                    && previous_line < &grep_line.line_number.as_ref().map(|n| n - 1);
-                self.state = State::Grep(
-                    self.config
-                        .grep_output_type
-                        .clone()
-                        .unwrap_or_else(|| grep_line.grep_type.clone()),
-                    grep_line.line_type,
-                    grep_line.path.to_string(),
-                    grep_line.line_number,
-                );
-                if new_section {
-                    self.painter.set_highlighter()
-                }
-                if new_path {
-                    if let Some(lang) = handlers::diff_header::get_extension(&grep_line.path)
-                        .or(self.config.default_language.as_deref())
-                    {
-                        self.painter.set_syntax(Some(lang));
-                        self.painter.set_highlighter();
-                    }
-                }
-                match &self.state {
-                    State::Grep(GrepType::Ripgrep, _, _, _) => self.emit_ripgrep_format_grep_line(
-                        grep_line,
-                        new_path,
-                        first_path,
-                        new_section,
-                    ),
-                    State::Grep(GrepType::Classic, _, _, _) => {
-                        self.emit_classic_format_grep_line(grep_line)
-                    }
-                    _ => delta_unreachable("Impossible state while handling grep line."),
-                }?;
-                handled_line = true
+        let line = self.line.clone(); // TODO: avoid clone
+        let Some(grep_line) = parse_grep_line(&line) else {
+            return Ok(false);
+        };
+
+        if matches!(grep_line.line_type, LineType::Ignore) {
+            return Ok(true);
+        }
+        let first_path = previous_path.is_none();
+        let new_path = first_path || previous_path.as_deref() != Some(&grep_line.path);
+        // Emit a '--' section separator when output contains context lines (i.e. *grep option -A, -B, -C is in effect).
+        let new_section = !new_path
+            && (previous_line_type == Some(&LineType::Context)
+                || grep_line.line_type == LineType::Context)
+            && previous_line < &grep_line.line_number.as_ref().map(|n| n - 1);
+        self.state = State::Grep(
+            self.config
+                .grep_output_type
+                .clone()
+                .unwrap_or_else(|| grep_line.grep_type.clone()),
+            grep_line.line_type,
+            grep_line.path.to_string(),
+            grep_line.line_number,
+        );
+        if new_section {
+            self.painter.set_highlighter()
+        }
+        if new_path {
+            if let Some(lang) = handlers::diff_header::get_extension(&grep_line.path)
+                .or(self.config.default_language.as_deref())
+            {
+                self.painter.set_syntax(Some(lang));
+                self.painter.set_highlighter();
             }
         }
-        Ok(handled_line)
+        match &self.state {
+            State::Grep(GrepType::Ripgrep, _, _, _) => {
+                self.emit_ripgrep_format_grep_line(grep_line, new_path, first_path, new_section)
+            }
+            State::Grep(GrepType::Classic, _, _, _) => {
+                self.emit_classic_format_grep_line(grep_line)
+            }
+            _ => delta_unreachable("Impossible state while handling grep line."),
+        }?;
+        Ok(true)
     }
 
     // Emulate ripgrep output: each section of hits from the same path has a header line,
