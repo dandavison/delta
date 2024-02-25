@@ -237,10 +237,11 @@ mod tests {
 
     #[test]
     fn test_binary_files_differ() {
-        let config = integration_test_utils::make_config_from_args(&[]);
+        let config =
+            integration_test_utils::make_config_from_args(&["--file-modified-label", "modified:"]);
         let output = integration_test_utils::run_delta(BINARY_FILES_DIFFER, &config);
         let output = strip_ansi_codes(&output);
-        assert!(output.contains("Binary files a/foo and b/foo differ\n"));
+        assert!(output.contains("\nmodified: foo (binary file)\n"));
     }
 
     #[test]
@@ -248,7 +249,7 @@ mod tests {
         let config = integration_test_utils::make_config_from_args(&[]);
         let output = integration_test_utils::run_delta(BINARY_FILE_ADDED, &config);
         let output = strip_ansi_codes(&output);
-        assert!(output.contains("added: foo (binary file)\n"));
+        assert!(output.contains("\nadded: foo (binary file)\n"));
     }
 
     #[test]
@@ -256,7 +257,17 @@ mod tests {
         let config = integration_test_utils::make_config_from_args(&[]);
         let output = integration_test_utils::run_delta(BINARY_FILE_REMOVED, &config);
         let output = strip_ansi_codes(&output);
-        assert!(output.contains("removed: foo (binary file)\n"));
+        assert!(output.contains("\nremoved: foo (binary file)\n"));
+    }
+
+    #[test]
+    fn test_binary_files_differ_after_other() {
+        let config =
+            integration_test_utils::make_config_from_args(&["--file-modified-label", "modified:"]);
+        let output = integration_test_utils::run_delta(BINARY_FILES_DIFFER_AFTER_OTHER, &config);
+        let output = strip_ansi_codes(&output);
+        assert!(output.contains("\nrenamed: foo ⟶   bar\n"));
+        assert!(output.contains("\nmodified: qux (binary file)\n"));
     }
 
     #[test]
@@ -266,6 +277,32 @@ mod tests {
         let output = strip_ansi_codes(&output);
         assert!(output.contains("\n---\n"));
         assert!(output.contains("\nSubject: [PATCH] Init\n"));
+    }
+
+    #[test]
+    fn test_standalone_diff_files_are_identical() {
+        let diff = "Files foo and bar are identical\n";
+        let config = integration_test_utils::make_config_from_args(&[]);
+        let output = integration_test_utils::run_delta(diff, &config);
+        assert_eq!(strip_ansi_codes(&output), diff);
+    }
+
+    #[test]
+    fn test_standalone_diff_binary_files_differ() {
+        let diff = "Binary files foo and bar differ\n";
+        let config = integration_test_utils::make_config_from_args(&[]);
+        let output = integration_test_utils::run_delta(diff, &config);
+        assert_eq!(strip_ansi_codes(&output), diff);
+    }
+
+    #[test]
+    fn test_diff_no_index_binary_files_differ() {
+        let config = integration_test_utils::make_config_from_args(&[]);
+        let output = integration_test_utils::run_delta(DIFF_NO_INDEX_BINARY_FILES_DIFFER, &config);
+        assert_eq!(
+            strip_ansi_codes(&output),
+            "Binary files foo bar and sub dir/foo bar baz differ\n"
+        );
     }
 
     #[test]
@@ -2307,6 +2344,22 @@ diff --git a/foo b/foo
 deleted file mode 100644
 index c9bbb35..5fc172d 100644
 Binary files a/foo and /dev/null differ
+";
+
+    const BINARY_FILES_DIFFER_AFTER_OTHER: &str = "
+diff --git a/foo b/bar
+similarity index 100%
+rename from foo
+rename to bar
+diff --git a/qux b/qux
+index 00de669..d47cd84 100644
+Binary files a/qux and b/qux differ
+";
+
+    const DIFF_NO_INDEX_BINARY_FILES_DIFFER: &str = "\
+diff --git foo bar sub dir/foo bar baz
+index 329fbf5..481817c 100644
+Binary files foo bar and sub dir/foo bar baz differ
 ";
 
     const GIT_DIFF_WITH_COPIED_FILE: &str = "
