@@ -28,7 +28,7 @@ clap = { version = "4.3.14", features = ["derive", "help", "usage", "error-conte
 console = "0.15.0"
 ctrlc = "3.2.5"
 dirs = "5.0.1"
-grep-cli = "0.1.8"
+grep-cli = "0.1.9"
 itertools = "0.10.5"
 lazy_static = "1.4"
 palette = "0.7.2"
