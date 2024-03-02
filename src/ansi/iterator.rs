@@ -1,14 +1,14 @@
+use anstyle_parse::{Params, ParamsIter};
 use core::str::Bytes;
 use std::convert::TryFrom;
 use std::iter;
-use vte::{Params, ParamsIter};
 
 pub struct AnsiElementIterator<'a> {
     // The input bytes
     bytes: Bytes<'a>,
 
     // The state machine
-    machine: vte::Parser,
+    machine: anstyle_parse::Parser,
 
     // Becomes non-None when the parser finishes parsing an ANSI sequence.
     // This is never Element::Text.
@@ -61,7 +61,7 @@ impl Element {
 impl<'a> AnsiElementIterator<'a> {
     pub fn new(s: &'a str) -> Self {
         Self {
-            machine: vte::Parser::new(),
+            machine: anstyle_parse::Parser::<anstyle_parse::DefaultCharAccumulator>::new(),
             bytes: s.bytes(),
             element: None,
             text_length: 0,
@@ -120,13 +120,13 @@ impl<'a> Iterator for AnsiElementIterator<'a> {
 }
 
 // Based on https://github.com/alacritty/vte/blob/v0.9.0/examples/parselog.rs
-impl vte::Perform for Performer {
-    fn csi_dispatch(&mut self, params: &Params, intermediates: &[u8], ignore: bool, c: char) {
+impl anstyle_parse::Perform for Performer {
+    fn csi_dispatch(&mut self, params: &Params, intermediates: &[u8], ignore: bool, byte: u8) {
         if ignore || intermediates.len() > 1 {
             return;
         }
 
-        let is_sgr = c == 'm' && intermediates.first().is_none();
+        let is_sgr = byte == b'm' && intermediates.first().is_none();
         let element = if is_sgr {
             if params.is_empty() {
                 // Attr::Reset
@@ -154,7 +154,7 @@ impl vte::Perform for Performer {
         }
     }
 
-    fn hook(&mut self, _params: &Params, _intermediates: &[u8], _ignore: bool, _c: char) {}
+    fn hook(&mut self, _params: &Params, _intermediates: &[u8], _ignore: bool, _byte: u8) {}
 
     fn put(&mut self, _byte: u8) {}
 
