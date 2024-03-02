@@ -12,25 +12,26 @@ impl<'a> StateMachine<'a> {
     }
 
     pub fn handle_diff_header_misc_line(&mut self) -> std::io::Result<bool> {
-        let is_binary: bool = self.test_diff_is_binary();
-        let file_missing: bool = self.test_diff_file_missing();
-
-        if !file_missing && !is_binary {
+        if !self.test_diff_file_missing() && !self.test_diff_is_binary() {
             return Ok(false);
         }
 
-        if is_binary {
-            match (self.minus_file.as_str(), self.plus_file.as_str()) {
-                ("", "") => {
-                    return self.handle_additional_cases(match self.state {
-                        State::DiffHeader(_) => self.state.clone(),
-                        _ => State::DiffHeader(DiffType::Unified),
-                    });
-                }
-                ("/dev/null", _) => self.plus_file.push_str(" (binary file)"),
-                (_, "/dev/null") => self.minus_file.push_str(" (binary file)"),
-                (_, _) => (),
-            };
+        if self.test_diff_is_binary() {
+            // Print the "Binary files" line verbatim, if there was no "diff" line, or it
+            // listed different files but was not followed by header minus and plus lines.
+            // This can happen in output of standalone diff or git diff --no-index.
+            if self.minus_file.is_empty() && self.plus_file.is_empty() {
+                self.emit_line_unchanged()?;
+                self.handled_diff_header_header_line_file_pair = self.current_file_pair.clone();
+                return Ok(true);
+            }
+
+            if self.minus_file != "/dev/null" {
+                self.minus_file.push_str(" (binary file)");
+            }
+            if self.plus_file != "/dev/null" {
+                self.plus_file.push_str(" (binary file)");
+            }
             return Ok(true);
         }
 
