@@ -15,7 +15,11 @@ name = "delta"
 path = "src/main.rs"
 
 [dependencies]
-bat = { version = "0.23.0", default-features = false, features = ["minimal-application", "paging", "regex-onig"] }
+bat = { version = "0.23.0", default-features = false, features = [
+    "minimal-application",
+    "paging",
+    "regex-onig",
+] }
 chrono = "0.4.26"
 chrono-humanize = "0.2.2"
 ansi_colours = "1.2.1"
@@ -25,7 +29,13 @@ anyhow = "1.0.70"
 bitflags = "2.2.1"
 box_drawing = "0.1.2"
 bytelines = { version = "2.5.0", default-features = false }
-clap = { version = "4.3.14", features = ["derive", "help", "usage", "error-context", "wrap_help"] }
+clap = { version = "4.3.14", features = [
+    "derive",
+    "help",
+    "usage",
+    "error-context",
+    "wrap_help",
+] }
 console = "0.15.0"
 ctrlc = "3.2.5"
 dirs = "5.0.1"
