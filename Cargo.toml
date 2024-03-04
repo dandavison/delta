@@ -56,7 +56,7 @@ xdg = "2.4.1"
 clap_complete = "4.4.4"
 
 [dependencies.git2]
-version = "0.17.2"
+version = "0.18.2"
 default-features = false
 features = []
 
