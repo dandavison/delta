@@ -688,7 +688,7 @@ pub fn parse_grep_line(line: &str) -> Option<GrepLine> {
 
 pub fn parse_raw_grep_line(raw_line: &str) -> Option<GrepLine> {
     // Early exit if we don't have an escape sequence
-    if !raw_line.starts_with("\x1b") {
+    if !raw_line.starts_with('\x1b') {
         return None;
     }
     if !matches!(
