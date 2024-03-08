@@ -297,6 +297,23 @@ pub struct Opt {
     /// Detect whether or not the terminal is dark or light by querying for its colors.
     ///
     /// Ignored if either `--dark` or `--light` is specified.
+    ///
+    /// Querying the terminal for its colors requires "exclusive" access
+    /// since delta reads/writes from the terminal and enables/disables raw mode.
+    /// This causes race conditions with pagers such as less when they are attached to the
+    /// same terminal as delta.
+    ///
+    /// This is usually only an issue when the output is manually piped to a pager.
+    /// For example: `git diff | delta | less`.
+    /// Otherwise, if delta starts the pager itself, then there's no race condition
+    /// since the pager is started *after* the color is detected.
+    ///
+    /// `auto` tries to account for these situations by testing if the output is redirected.
+    ///
+    /// The `--color-only` option is treated as an indicator that delta is used
+    /// as `interactive.diffFilter`. In this case the color is queried from the terminal even
+    /// though the output is redirected.
+    ///
     #[arg(long = "detect-dark-light", value_enum, default_value_t = DetectDarkLight::default())]
     pub detect_dark_light: DetectDarkLight,
 

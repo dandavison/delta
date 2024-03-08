@@ -116,19 +116,9 @@ fn get_is_light_opt(opt: &cli::Opt) -> Option<bool> {
     }
 }
 
+/// See [`cli::Opt::detect_dark_light`] for a detailed explanation.
 fn should_detect_dark_light(opt: &cli::Opt) -> bool {
     match opt.detect_dark_light {
-        // Querying the terminal for its colors requires "exclusive" access
-        // to the terminal since we read/write from the terminal and enable/disable raw mode.
-        // This causes race conditions with pagers such as less when they are attached to the
-        // same terminal as us.
-        //
-        // This is just an issue when the user manually pipes the output to less, e.g. `git diff | delta | less`.
-        // If we're the ones to start less, there's no race condition since less is started *after* we're done here.
-        //
-        // The second condition here tries to detect cases where the output of delta is redirected.
-        // This can happen when we're called via interactive.diffFilter (e.g. by `git add --patch`).
-        // In this case --color-only is usually also specified.
         DetectDarkLight::Auto => opt.color_only || stdout().is_terminal(),
         DetectDarkLight::Always => true,
         DetectDarkLight::Never => false,
