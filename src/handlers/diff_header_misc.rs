@@ -16,7 +16,8 @@ impl<'a> StateMachine<'a> {
             return Ok(false);
         }
 
-        if self.test_diff_is_binary() {
+        // Preserve the "Binary files" line when diff lines should be kept unchanged.
+        if !self.config.color_only && self.test_diff_is_binary() {
             // Print the "Binary files" line verbatim, if there was no "diff" line, or it
             // listed different files but was not followed by header minus and plus lines.
             // This can happen in output of standalone diff or git diff --no-index.
