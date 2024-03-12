@@ -509,3 +509,30 @@
     merge-conflict-ours-diff-header-decoration-style = "#5E81AC" box
     merge-conflict-theirs-diff-header-style = yellow bold
     merge-conflict-theirs-diff-header-decoration-style = "#5E81AC" box
+
+[delta "corvus"]
+    # author: https://github.com/evilwaveforms
+    dark = true
+    commit-style = "#949494"
+    file-style = omit
+    syntax-theme = none
+    hunk-header-decoration-style = "#949494" ul
+    hunk-header-file-style = "#949494"
+    hunk-header-style = "#949494"
+    line-numbers = true
+    line-numbers-left-style = "#949494"
+    line-numbers-right-style = "#949494"
+    line-numbers-left-format = "{nm:>2}|"
+    line-numbers-right-format = "{np:>3} "
+    line-numbers-plus-style = "#54c047"
+    line-numbers-minus-style = bold "#591102"
+    plus-style = "#54c047"
+    plus-emph-style = bold "#54c047"
+    plus-non-emph-style = dim "#54c047"
+    minus-style = normal "#591102"
+    minus-emph-style = normal "#591102"
+    minus-non-emph-style = bold "#591102"
+    blame-code-style = omit
+    blame-format = "{author:<18} {commit:<6} {timestamp:<15}"
+    blame-palette = "#000000" "#343434"
+    zero-style = dim
