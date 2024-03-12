@@ -1780,6 +1780,15 @@ src/align.rs:71: impl<'a> Alignment<'a> { │
         assert_eq!(output, input);
     }
 
+    #[test]
+    fn test_git_diff_binary_is_unchanged_under_color_only() {
+        let config = integration_test_utils::make_config_from_args(&["--color-only"]);
+        let input = BINARY_FILES_DIFFER_BETWEEN_OTHER;
+        let output = integration_test_utils::run_delta(input, &config);
+        let output = strip_ansi_codes(&output);
+        assert_eq!(output, input);
+    }
+
     // See https://github.com/dandavison/delta/issues/371#issuecomment-720173435
     #[test]
     fn test_keep_plus_minus_markers_under_inspect_raw_lines() {
@@ -2354,6 +2363,26 @@ rename to bar
 diff --git a/qux b/qux
 index 00de669..d47cd84 100644
 Binary files a/qux and b/qux differ
+";
+
+    const BINARY_FILES_DIFFER_BETWEEN_OTHER: &str = "\
+diff --git a/foo b/foo
+index 7b57bd29ea8a..4d3b8c11a4a2 100644
+--- a/foo
++++ b/foo
+@@ -1 +1 @@
+-abc
++def
+diff --git a/qux b/qux
+index 00de669..d47cd84 100644
+Binary files a/qux and b/qux differ
+diff --git a/bar b/bar
+index 7b57bd29ea8a..4d3b8c11a4a2 100644
+--- a/bar
++++ b/bar
+@@ -1 +1 @@
+-123
++456
 ";
 
     const DIFF_NO_INDEX_BINARY_FILES_DIFFER: &str = "\
