@@ -581,6 +581,7 @@ dependencies = [
  "smol_str",
  "syntect",
  "sysinfo",
+ "terminal-colorsaurus",
  "unicode-segmentation",
  "unicode-width",
  "xdg",
@@ -753,9 +754,9 @@ checksum = "e2abad23fbc42b3700f2f279844dc832adb2b2eb069b2df918f455c4e18cc646"
 
 [[package]]
 name = "libc"
-version = "0.2.151"
+version = "0.2.153"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "302d7ab3130588088d277783b1e2d2e10c9e9e4a16dd9050e6ec93fb3e7048f4"
+checksum = "9c198f91728a82281a64e1f4f9eeb25d82cb32a5de251c6bd1b5154d63a8e7bd"
 
 [[package]]
 name = "libgit2-sys"
@@ -832,6 +833,17 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "e7810e0be55b428ada41041c41f32c9f1a42817901b4ccf45fa3d4b6561e74c7"
 dependencies = [
  "adler",
+]
+
+[[package]]
+name = "mio"
+version = "0.8.11"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "a4a650543ca06a924e8b371db273b2756685faae30f8487da1b56505a8f78b0c"
+dependencies = [
+ "libc",
+ "wasi",
+ "windows-sys 0.48.0",
 ]
 
 [[package]]
@@ -1293,6 +1305,29 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "ff1bc3d3f05aff0403e8ac0d92ced918ec05b666a43f83297ccef5bea8a3d449"
 dependencies = [
  "winapi-util",
+]
+
+[[package]]
+name = "terminal-colorsaurus"
+version = "0.3.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "c374383f597b763eb3bd06bc4e18f85510a52d7f1ac762f0c7e413ce696079fc"
+dependencies = [
+ "libc",
+ "memchr",
+ "mio",
+ "terminal-trx",
+ "thiserror",
+]
+
+[[package]]
+name = "terminal-trx"
+version = "0.2.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "1a4af7c93f02d5bd5e120c812f7fb413003b7060e8a22d0ea90346f1be769210"
+dependencies = [
+ "libc",
+ "windows-sys 0.52.0",
 ]
 
 [[package]]

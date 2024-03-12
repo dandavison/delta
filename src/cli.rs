@@ -3,7 +3,7 @@ use std::ffi::OsString;
 use std::path::{Path, PathBuf};
 
 use bat::assets::HighlightingAssets;
-use clap::{ColorChoice, CommandFactory, FromArgMatches, Parser, ValueHint};
+use clap::{ColorChoice, CommandFactory, FromArgMatches, Parser, ValueEnum, ValueHint};
 use clap_complete::Shell;
 use lazy_static::lazy_static;
 use syntect::highlighting::Theme as SyntaxTheme;
@@ -293,6 +293,29 @@ pub struct Opt {
     /// Used when the language cannot be inferred from a filename. It will typically make sense to
     /// set this in per-repository git config (.git/config)
     pub default_language: Option<String>,
+
+    /// Detect whether or not the terminal is dark or light by querying for its colors.
+    ///
+    /// Ignored if either `--dark` or `--light` is specified.
+    ///
+    /// Querying the terminal for its colors requires "exclusive" access
+    /// since delta reads/writes from the terminal and enables/disables raw mode.
+    /// This causes race conditions with pagers such as less when they are attached to the
+    /// same terminal as delta.
+    ///
+    /// This is usually only an issue when the output is manually piped to a pager.
+    /// For example: `git diff | delta | less`.
+    /// Otherwise, if delta starts the pager itself, then there's no race condition
+    /// since the pager is started *after* the color is detected.
+    ///
+    /// `auto` tries to account for these situations by testing if the output is redirected.
+    ///
+    /// The `--color-only` option is treated as an indicator that delta is used
+    /// as `interactive.diffFilter`. In this case the color is queried from the terminal even
+    /// though the output is redirected.
+    ///
+    #[arg(long = "detect-dark-light", value_enum, default_value_t = DetectDarkLight::default())]
+    pub detect_dark_light: DetectDarkLight,
 
     #[arg(long = "diff-highlight")]
     /// Emulate diff-highlight.
@@ -1122,6 +1145,17 @@ pub enum InspectRawLines {
     True,
     #[default]
     False,
+}
+
+#[derive(Clone, Copy, Debug, Default, PartialEq, Eq, ValueEnum)]
+pub enum DetectDarkLight {
+    /// Only query the terminal for its colors if the output is not redirected.
+    #[default]
+    Auto,
+    /// Always query the terminal for its colors.
+    Always,
+    /// Never query the terminal for its colors.
+    Never,
 }
 
 impl Opt {

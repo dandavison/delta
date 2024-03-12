@@ -1,3 +1,5 @@
+use std::io::{stdout, IsTerminal};
+
 /// Delta doesn't have a formal concept of a "theme". What it has is
 /// (a) the choice of syntax-highlighting theme
 /// (b) the choice of light-background-mode vs dark-background-mode, which determine certain
@@ -9,7 +11,7 @@
 use bat;
 use bat::assets::HighlightingAssets;
 
-use crate::cli;
+use crate::cli::{self, DetectDarkLight};
 
 #[allow(non_snake_case)]
 pub fn set__is_light_mode__syntax_theme__syntax_set(
@@ -20,7 +22,7 @@ pub fn set__is_light_mode__syntax_theme__syntax_set(
     let (is_light_mode, syntax_theme_name) = get_is_light_mode_and_syntax_theme_name(
         opt.syntax_theme.as_ref(),
         syntax_theme_name_from_bat_theme.as_ref(),
-        opt.light,
+        get_is_light(opt),
     );
     opt.computed.is_light_mode = is_light_mode;
 
@@ -84,9 +86,9 @@ fn is_no_syntax_highlighting_syntax_theme_name(theme_name: &str) -> bool {
 fn get_is_light_mode_and_syntax_theme_name(
     theme_arg: Option<&String>,
     bat_theme_env_var: Option<&String>,
-    light_mode_arg: bool,
+    light_mode: bool,
 ) -> (bool, String) {
-    match (theme_arg, bat_theme_env_var, light_mode_arg) {
+    match (theme_arg, bat_theme_env_var, light_mode) {
         (None, None, false) => (false, DEFAULT_DARK_SYNTAX_THEME.to_string()),
         (Some(theme_name), _, false) => (is_light_syntax_theme(theme_name), theme_name.to_string()),
         (None, Some(theme_name), false) => {
@@ -98,8 +100,72 @@ fn get_is_light_mode_and_syntax_theme_name(
     }
 }
 
+fn get_is_light(opt: &cli::Opt) -> bool {
+    get_is_light_opt(opt)
+        .or_else(|| should_detect_dark_light(opt).then(detect_light_mode))
+        .unwrap_or_default()
+}
+
+fn get_is_light_opt(opt: &cli::Opt) -> Option<bool> {
+    if opt.light {
+        Some(true)
+    } else if opt.dark {
+        Some(false)
+    } else {
+        None
+    }
+}
+
+/// See [`cli::Opt::detect_dark_light`] for a detailed explanation.
+fn should_detect_dark_light(opt: &cli::Opt) -> bool {
+    match opt.detect_dark_light {
+        DetectDarkLight::Auto => opt.color_only || stdout().is_terminal(),
+        DetectDarkLight::Always => true,
+        DetectDarkLight::Never => false,
+    }
+}
+
+fn detect_light_mode() -> bool {
+    use terminal_colorsaurus::{color_scheme, QueryOptions};
+
+    #[cfg(test)]
+    if let Some(value) = test_utils::DETECT_LIGHT_MODE_OVERRIDE.get() {
+        return value;
+    }
+
+    color_scheme(QueryOptions::default())
+        .map(|c| c.is_dark_on_light())
+        .unwrap_or_default()
+}
+
+#[cfg(test)]
+pub(crate) mod test_utils {
+    thread_local! {
+        pub(super) static DETECT_LIGHT_MODE_OVERRIDE: std::cell::Cell<Option<bool>> = std::cell::Cell::new(None);
+    }
+
+    pub(crate) struct DetectLightModeOverride {
+        old_value: Option<bool>,
+    }
+
+    impl DetectLightModeOverride {
+        pub(crate) fn new(value: bool) -> Self {
+            let old_value = DETECT_LIGHT_MODE_OVERRIDE.get();
+            DETECT_LIGHT_MODE_OVERRIDE.set(Some(value));
+            DetectLightModeOverride { old_value }
+        }
+    }
+
+    impl Drop for DetectLightModeOverride {
+        fn drop(&mut self) {
+            DETECT_LIGHT_MODE_OVERRIDE.set(self.old_value)
+        }
+    }
+}
+
 #[cfg(test)]
 mod tests {
+    use super::test_utils::DetectLightModeOverride;
     use super::*;
     use crate::color;
     use crate::tests::integration_test_utils;
@@ -107,6 +173,8 @@ mod tests {
     // TODO: Test influence of BAT_THEME env var. E.g. see utils::process::tests::FakeParentArgs.
     #[test]
     fn test_syntax_theme_selection() {
+        let _override = DetectLightModeOverride::new(false);
+
         #[derive(PartialEq)]
         enum Mode {
             Light,
