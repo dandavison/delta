@@ -1,0 +1,59 @@
+build_oci_img() {
+  # RUN apk add --no-cache bash git
+  docker build "$@" - <<'EOF'
+  FROM ubuntu
+  RUN apt update && apt install -y bc curl gcc git
+  ENV CARGO_HOME=/usr/local
+  RUN curl -fsSL 'https://sh.rustup.rs' | sh -s -- -y --profile minimal
+  RUN /usr/local/bin/cargo install --version 0.11.3 git-delta && cp /usr/local/bin/delta /usr/local/bin/delta-0.11.3
+  RUN /usr/local/bin/cargo install --version 0.12.0 git-delta && cp /usr/local/bin/delta /usr/local/bin/delta-0.12.0
+  RUN echo "I've forgotten how to invalidate layer cache entries properly: 1" > /dev/null
+  RUN git clone https://github.com/th1000s/delta.git
+  WORKDIR delta
+  RUN git checkout query_ppids
+  RUN cargo build --release && cp ./target/release/delta /usr/local/bin/delta-dev
+EOF
+}
+
+build_oci_img
+docker run --rm -i "$(build_oci_img -q)" bash <<'EOF'
+benchmark-command() {
+  local num_runs="${1:-100}"
+  shift
+  local before
+  before=$(($(date +%s%N) / 1000000))
+  printf 'Running command "%s" %d times\n' "$*" "${num_runs}"
+  for _ in $(seq 1 "${num_runs}"); do
+    eval -- "$@" > /dev/null
+  done
+  local after
+  after=$(($(date +%s%N) / 1000000))
+  local per_run
+  per_run=$(bc < <(printf 'scale=2; %d/%d\n' $((after - before)) "${num_runs}"))
+  echo "${per_run} ms per run ($((after - before)) ms total)"
+}
+
+benchmark-delta-versions() {
+  for v in 0.11.3 0.12.0 dev; do
+    echo "Benchmarking version: $v"
+    delta-${v} --version
+    benchmark-command 10 "git diff --no-index a b | delta-${v} >| delta-${v}-result"
+  done
+}
+
+main() {
+  echo aaa > a
+  echo aab > b
+  git diff --no-index a b | delta
+  benchmark-delta-versions
+  echo "Spinning up 5000 processes"
+  for i in {1..5000}; do
+    nohup sleep 30 & &> /dev/null
+  done
+  echo "Process counts:"
+  ps --no-headers -e -o fname | sort | uniq -c
+  benchmark-delta-versions
+}
+
+main
+EOF
