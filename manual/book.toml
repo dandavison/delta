@@ -4,3 +4,7 @@ language = "en"
 multilingual = false
 src = "src"
 title = "delta"
+
+[output.html]
+git-repository-url = "https://github.com/dandavison/delta"
+git-repository-icon = "fa-github"
