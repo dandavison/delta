@@ -109,14 +109,3 @@ jobs:
           version: ${{ github.ref_name }}
           installers-regex: '-pc-windows-msvc\.zip$'
           token: ${{ secrets.WINGET_TOKEN }}
-
-  bump-homebrew-formula:
-    runs-on: macos-latest
-    steps:
-      - name: Checkout repository
-        uses: actions/checkout@v3
-      - name: Bump Homebrew formulae
-        uses: dawidd6/action-homebrew-bump-formula@v3
-        with:
-          formula: git-delta
-          token: ${{ secrets.HOMEBREW_GITHUB_API_TOKEN }}
