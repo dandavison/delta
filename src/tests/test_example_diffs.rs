@@ -96,6 +96,48 @@ mod tests {
     }
 
     #[test]
+    fn test_default_language_is_used_for_syntax_highlighting() {
+        // Note: default-language will be used for files with no extension, but also
+        // for files with an extension, but for which the language was not detected.
+        // Use color-only so that we can refer to the line numbers from the input diff.
+        let config = integration_test_utils::make_config_from_args(&[
+            "--color-only",
+            "--default-language",
+            "bash",
+        ]);
+        let output = integration_test_utils::run_delta(MODIFIED_BASH_AND_CSHARP_FILES, &config);
+        ansi_test_utils::assert_line_has_syntax_highlighted_substring(
+            &output,
+            12,
+            1,
+            "    rsync -avu --delete $src/ $dst",
+            "bash",
+            State::HunkZero(DiffType::Unified, None),
+            &config,
+        );
+    }
+
+    #[test]
+    fn test_default_language_is_not_used_when_other_language_is_detected() {
+        // Use color-only so that we can refer to the line numbers from the input diff.
+        let config = integration_test_utils::make_config_from_args(&[
+            "--color-only",
+            "--default-language",
+            "bash",
+        ]);
+        let output = integration_test_utils::run_delta(MODIFIED_BASH_AND_CSHARP_FILES, &config);
+        ansi_test_utils::assert_line_has_syntax_highlighted_substring(
+            &output,
+            19,
+            1,
+            "        static void Main(string[] args)",
+            "cs",
+            State::HunkZero(DiffType::Unified, None),
+            &config,
+        );
+    }
+
+    #[test]
     fn test_diff_unified_two_files() {
         let config =
             integration_test_utils::make_config_from_args(&["--file-modified-label", "comparing:"]);
@@ -2094,6 +2136,35 @@ index 0000000..84d55c5
 +++ b/with space/file1
 @@ -0,0 +1 @@
 +file1 contents
+";
+
+    const MODIFIED_BASH_AND_CSHARP_FILES: &str = "\
+diff --git a/a b/a
+index 8c4ae06..0a37de7 100644
+--- a/a
++++ b/a
+@@ -9,7 +9,7 @@ foobar()
+     dst=$(winpath $2)
+ 
+     # List the directory.
+-    ls -l $src
++    ls -la $src
+ 
+     echo $src '->' $dst
+     rsync -avu --delete $src/ $dst
+diff --git a/b.cs b/b.cs
+index 2e73468..8d8b89d 100644
+--- a/b.cs
++++ b/b.cs
+@@ -6,7 +6,7 @@ class Program
+     {
+         static void Main(string[] args)
+         {
+-            int message = 123;
++            int message = 456;
+ 
+             Console.WriteLine(message);
+         }
 ";
 
     const RENAMED_FILE_INPUT: &str = "\
