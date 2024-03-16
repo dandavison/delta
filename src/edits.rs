@@ -256,7 +256,7 @@ where
                 if let Some(non_whitespace) = get_contents_before_trailing_whitespace(plus_section)
                 {
                     annotated_plus_line.push((op, non_whitespace));
-                    annotated_plus_line.push((plus_op_prev, &plus_section[non_whitespace.len()..]));
+                    annotated_plus_line.push((op, &plus_section[non_whitespace.len()..]));
                 } else {
                     annotated_plus_line.push((op, plus_section));
                 }
@@ -832,7 +832,7 @@ mod tests {
                         (Insertion, " "),
                         (Insertion, "y"),
                         (PlusNoop, " c"),
-                        (Insertion, " "),
+                        (PlusNoop, " "),
                         (Insertion, "z"),
                         (PlusNoop, " "),
                     ],
@@ -885,7 +885,7 @@ mod tests {
                     (PlusNoop, ""),
                     (Insertion, "c "),
                     (PlusNoop, "a a a a a a"),
-                    (Insertion, " "),
+                    (PlusNoop, " "),
                     (Insertion, "c"),
                     (Insertion, " "),
                     (Insertion, "c"),
