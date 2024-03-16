@@ -26,7 +26,6 @@
 
 [delta]
     navigate = true    # use n and N to move between diff sections
-    light = false      # set to true if you're in a terminal w/ a light background color (e.g. the default macOS terminal)
 
 [merge]
     conflictstyle = diff3
@@ -55,6 +54,7 @@ Delta has many features and is very customizable; please see the [user manual](h
 - Stylable box/line decorations to draw attention to commit, file and hunk header sections.
 - Style strings (foreground color, background color, font attributes) are supported for >20 stylable elements, using the same color/style language as git
 - Handles traditional unified diff output in addition to git output
+- Automatic detection of light/dark terminal background
 
 ## A syntax-highlighting pager for git, diff, and grep output
 
