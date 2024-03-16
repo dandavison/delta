@@ -114,17 +114,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "atty"
-version = "0.2.14"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "d9b39be18770d11421cdb1b9947a45dd3f37e93092cbf377614828a319d5fee8"
-dependencies = [
- "hermit-abi",
- "libc",
- "winapi",
-]
-
-[[package]]
 name = "autocfg"
 version = "1.1.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -138,23 +127,23 @@ checksum = "35636a1494ede3b646cc98f74f8e62c773a38a659ebc777a2cf26b9b74171df9"
 
 [[package]]
 name = "bat"
-version = "0.23.0"
+version = "0.24.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "fd4b13b0233143ae151a66e0135d715b65f631d1028c40502cc88182bcb9f4fa"
+checksum = "9dcc9e5637c2330d8eb7b920f2aa5d9e184446c258466f825ea1412c7614cc86"
 dependencies = [
  "ansi_colours",
- "atty",
  "bincode",
  "bytesize",
  "clap",
  "clircle",
  "console",
  "content_inspector",
- "dirs",
- "encoding",
+ "encoding_rs",
+ "etcetera",
  "flate2",
  "globset",
  "grep-cli",
+ "home",
  "nu-ansi-term",
  "once_cell",
  "path_abs",
@@ -322,9 +311,9 @@ checksum = "702fc72eb24e5a1e48ce58027a675bc24edd52096d5397d4aea7c6dd9eca0bd1"
 
 [[package]]
 name = "clircle"
-version = "0.3.0"
+version = "0.4.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "e68bbd985a63de680ab4d1ad77b6306611a8f961b282c8b5ab513e6de934e396"
+checksum = "c8e87cbed5354f17bd8ca8821a097fb62599787fe8f611743fad7ee156a0a600"
 dependencies = [
  "cfg-if",
  "libc",
@@ -428,68 +417,13 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "a357d28ed41a50f9c765dbfe56cbc04a64e53e5fc58ba79fbc34c10ef3df831f"
 
 [[package]]
-name = "encoding"
-version = "0.2.33"
+name = "encoding_rs"
+version = "0.8.33"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "6b0d943856b990d12d3b55b359144ff341533e516d94098b1d3fc1ac666d36ec"
+checksum = "7268b386296a025e474d5140678f75d6de9493ae55a5d709eeb9dd08149945e1"
 dependencies = [
- "encoding-index-japanese",
- "encoding-index-korean",
- "encoding-index-simpchinese",
- "encoding-index-singlebyte",
- "encoding-index-tradchinese",
+ "cfg-if",
 ]
-
-[[package]]
-name = "encoding-index-japanese"
-version = "1.20141219.5"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "04e8b2ff42e9a05335dbf8b5c6f7567e5591d0d916ccef4e0b1710d32a0d0c91"
-dependencies = [
- "encoding_index_tests",
-]
-
-[[package]]
-name = "encoding-index-korean"
-version = "1.20141219.5"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "4dc33fb8e6bcba213fe2f14275f0963fd16f0a02c878e3095ecfdf5bee529d81"
-dependencies = [
- "encoding_index_tests",
-]
-
-[[package]]
-name = "encoding-index-simpchinese"
-version = "1.20141219.5"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "d87a7194909b9118fc707194baa434a4e3b0fb6a5a757c73c3adb07aa25031f7"
-dependencies = [
- "encoding_index_tests",
-]
-
-[[package]]
-name = "encoding-index-singlebyte"
-version = "1.20141219.5"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "3351d5acffb224af9ca265f435b859c7c01537c0849754d3db3fdf2bfe2ae84a"
-dependencies = [
- "encoding_index_tests",
-]
-
-[[package]]
-name = "encoding-index-tradchinese"
-version = "1.20141219.5"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "fd0e20d5688ce3cab59eb3ef3a2083a5c77bf496cb798dc6fcdb75f323890c18"
-dependencies = [
- "encoding_index_tests",
-]
-
-[[package]]
-name = "encoding_index_tests"
-version = "0.1.4"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "a246d82be1c9d791c5dfde9a2bd045fc3cbba3fa2b11ad558f27d01712f00569"
 
 [[package]]
 name = "equivalent"
@@ -505,6 +439,17 @@ checksum = "a258e46cdc063eb8519c00b9fc845fc47bcfca4130e2f08e88665ceda8474245"
 dependencies = [
  "libc",
  "windows-sys 0.52.0",
+]
+
+[[package]]
+name = "etcetera"
+version = "0.8.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "136d1b5283a1ab77bd9257427ffd09d8667ced0570b6f938942bc7568ed5b943"
+dependencies = [
+ "cfg-if",
+ "home",
+ "windows-sys 0.48.0",
 ]
 
 [[package]]
@@ -635,12 +580,6 @@ dependencies = [
 
 [[package]]
 name = "hashbrown"
-version = "0.12.3"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "8a9ee70c43aaf417c914396645a0fa852624801b24ebb7ae78fe8272889ac888"
-
-[[package]]
-name = "hashbrown"
 version = "0.14.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "290f1a1d9242c78d09ce40a5e87e7554ee637af1351968159f4952f028f75604"
@@ -652,12 +591,12 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "95505c38b4572b2d910cecb0281560f54b440a19336cbbcb27bf6ce6adc6f5a8"
 
 [[package]]
-name = "hermit-abi"
-version = "0.1.19"
+name = "home"
+version = "0.5.9"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "62b467343b94ba476dcb2500d242dadbb39557df889310ac77c5d99100aaac33"
+checksum = "e3d1354bf6b7235cb4a0576c2619fd4ed18183f689b12b006a0ee7329eeff9a5"
 dependencies = [
- "libc",
+ "windows-sys 0.52.0",
 ]
 
 [[package]]
@@ -695,22 +634,12 @@ dependencies = [
 
 [[package]]
 name = "indexmap"
-version = "1.9.3"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "bd070e393353796e801d209ad339e89596eb4c8d430d18ede6a1cced8fafbd99"
-dependencies = [
- "autocfg",
- "hashbrown 0.12.3",
-]
-
-[[package]]
-name = "indexmap"
 version = "2.1.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "d530e1a18b1cb4c484e6e34556a0d948706958449fca0cab753d649f2bce3d1f"
 dependencies = [
  "equivalent",
- "hashbrown 0.14.3",
+ "hashbrown",
 ]
 
 [[package]]
@@ -868,11 +797,11 @@ dependencies = [
 
 [[package]]
 name = "nu-ansi-term"
-version = "0.47.0"
+version = "0.49.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "1df031e117bca634c262e9bd3173776844b6c17a90b3741c9163663b4385af76"
+checksum = "c073d3c1930d0751774acf49e66653acecb416c3a54c6ec095a9b11caddb5a68"
 dependencies = [
- "windows-sys 0.45.0",
+ "windows-sys 0.48.0",
 ]
 
 [[package]]
@@ -1017,7 +946,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "e5699cc8a63d1aa2b1ee8e12b9ad70ac790d65788cd36101fa37f87ea46c4cef"
 dependencies = [
  "base64",
- "indexmap 2.1.0",
+ "indexmap",
  "line-wrap",
  "quick-xml",
  "serde",
@@ -1209,14 +1138,15 @@ dependencies = [
 
 [[package]]
 name = "serde_yaml"
-version = "0.8.26"
+version = "0.9.30"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "578a7433b776b56a35785ed5ce9a7e777ac0598aac5a6dd1b4b18a307c7fc71b"
+checksum = "b1bf28c79a99f70ee1f1d83d10c875d2e70618417fda01ad1785e027579d9d38"
 dependencies = [
- "indexmap 1.9.3",
+ "indexmap",
+ "itoa",
  "ryu",
  "serde",
- "yaml-rust",
+ "unsafe-libyaml",
 ]
 
 [[package]]
@@ -1436,6 +1366,12 @@ name = "unicode-width"
 version = "0.1.11"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "e51733f11c9c4f72aa0c160008246859e340b00807569a0da0e7a1079b27ba85"
+
+[[package]]
+name = "unsafe-libyaml"
+version = "0.2.10"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "ab4c90930b95a82d00dc9e9ac071b4991924390d46cbd0dfe566148667605e4b"
 
 [[package]]
 name = "url"
