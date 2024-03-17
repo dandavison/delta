@@ -1,4 +1,5 @@
 use std::borrow::Cow;
+use std::collections::HashSet;
 use std::fmt;
 use std::hash::{Hash, Hasher};
 
@@ -118,6 +119,7 @@ impl Style {
         }
     }
 
+    #[cfg(test)]
     pub fn is_applied_to(&self, s: &str) -> bool {
         match ansi::parse_first_style(s) {
             Some(parsed_style) => ansi_term_style_equality(parsed_style, self.ansi_term_style),
@@ -203,6 +205,7 @@ impl fmt::Display for Style {
     }
 }
 
+#[cfg(test)]
 pub fn ansi_term_style_equality(a: ansi_term::Style, b: ansi_term::Style) -> bool {
     let a_attrs = ansi_term::Style {
         foreground: None,
@@ -306,6 +309,7 @@ impl fmt::Debug for AnsiTermStyleEqualityKey {
     }
 }
 
+#[cfg(test)]
 fn ansi_term_color_equality(a: Option<ansi_term::Color>, b: Option<ansi_term::Color>) -> bool {
     match (a, b) {
         (None, None) => true,
@@ -321,6 +325,7 @@ fn ansi_term_color_equality(a: Option<ansi_term::Color>, b: Option<ansi_term::Co
     }
 }
 
+#[cfg(test)]
 fn ansi_term_16_color_equality(a: ansi_term::Color, b: ansi_term::Color) -> bool {
     matches!(
         (a, b),
@@ -367,15 +372,16 @@ lazy_static! {
 }
 
 pub fn line_has_style_other_than(line: &str, styles: &[Style]) -> bool {
-    if !ansi::string_starts_with_ansi_style_sequence(line) {
-        return false;
-    }
-    for style in styles {
-        if style.is_applied_to(line) {
-            return false;
+    let style_keys: HashSet<AnsiTermStyleEqualityKey> = styles
+        .iter()
+        .map(|s| ansi_term_style_equality_key(s.ansi_term_style))
+        .collect();
+    for line_style in ansi::ansi_styles_iterator(line) {
+        if !style_keys.contains(&ansi_term_style_equality_key(line_style)) {
+            return true;
         }
     }
-    true
+    false
 }
 
 #[cfg(test)]

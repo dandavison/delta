@@ -67,6 +67,18 @@ pub fn truncate_str<'a>(s: &'a str, display_width: usize, tail: &str) -> Cow<'a,
     Cow::from(format!("{result}{result_tail}"))
 }
 
+pub fn ansi_styles_iterator<'a>(s: &'a str) -> impl Iterator<Item = ansi_term::Style> + 'a {
+    let mut curr_style = Style::default();
+    AnsiElementIterator::new(s).filter_map(move |el| match el {
+        Element::Text(_, _) => Some(curr_style),
+        Element::Sgr(style, _, _) => {
+            curr_style = style;
+            None
+        }
+        _ => None,
+    })
+}
+
 pub fn parse_style_sections(s: &str) -> Vec<(ansi_term::Style, &str)> {
     let mut sections = Vec::new();
     let mut curr_style = Style::default();
@@ -81,6 +93,7 @@ pub fn parse_style_sections(s: &str) -> Vec<(ansi_term::Style, &str)> {
 }
 
 // Return the first CSI element, if any, as an `ansi_term::Style`.
+#[cfg(test)]
 pub fn parse_first_style(s: &str) -> Option<ansi_term::Style> {
     AnsiElementIterator::new(s).find_map(|el| match el {
         Element::Sgr(style, _, _) => Some(style),
@@ -88,6 +101,7 @@ pub fn parse_first_style(s: &str) -> Option<ansi_term::Style> {
     })
 }
 
+#[cfg(test)]
 pub fn string_starts_with_ansi_style_sequence(s: &str) -> bool {
     AnsiElementIterator::new(s)
         .next()
