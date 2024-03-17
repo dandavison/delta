@@ -12,7 +12,7 @@ jobs:
     strategy:
       matrix:
         job:
-          - os: macos-latest 
+          - os: macos-latest
             target: x86_64-apple-darwin
             use-cross: false
           - os: macos-latest
