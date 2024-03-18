@@ -314,6 +314,8 @@ pub struct Opt {
     /// as `interactive.diffFilter`. In this case the color is queried from the terminal even
     /// though the output is redirected.
     ///
+    /// `system-global` does not check the terminal, but checks the system-wide theme
+    /// appearance instead. Currently only supported on macOS.
     #[arg(long = "detect-dark-light", value_enum, default_value_t = DetectDarkLight::default())]
     pub detect_dark_light: DetectDarkLight,
 
@@ -1152,6 +1154,8 @@ pub enum DetectDarkLight {
     /// Only query the terminal for its colors if the output is not redirected.
     #[default]
     Auto,
+    /// Instead of querying the terminal, query the system-wide theme appearance (assuming the terminal matches the theme).
+    SystemGlobal,
     /// Always query the terminal for its colors.
     Always,
     /// Never query the terminal for its colors.

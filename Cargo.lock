@@ -511,6 +511,7 @@ dependencies = [
  "clap",
  "clap_complete",
  "console",
+ "core-foundation-sys",
  "ctrlc",
  "dirs",
  "git2",
