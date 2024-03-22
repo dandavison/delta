@@ -27,6 +27,10 @@
 [delta]
     navigate = true    # use n and N to move between diff sections
 
+    # delta detects terminal colors automatically; set one of these to disable auto-detection
+    # dark = true
+    # light = true
+
 [merge]
     conflictstyle = diff3
 
