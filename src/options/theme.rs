@@ -102,7 +102,12 @@ fn get_is_light_mode_and_syntax_theme_name(
 
 fn get_is_light(opt: &cli::Opt) -> bool {
     get_is_light_opt(opt)
-        .or_else(|| should_detect_dark_light(opt).then(detect_light_mode))
+        .or_else(|| should_detect_dark_light_terminal(opt).then(detect_light_mode_terminal))
+        .or_else(|| {
+            should_detect_dark_light_system_global(opt)
+                .then(detect_light_mode_system_global)
+                .flatten()
+        })
         .unwrap_or_default()
 }
 
@@ -117,15 +122,21 @@ fn get_is_light_opt(opt: &cli::Opt) -> Option<bool> {
 }
 
 /// See [`cli::Opt::detect_dark_light`] for a detailed explanation.
-fn should_detect_dark_light(opt: &cli::Opt) -> bool {
+fn should_detect_dark_light_terminal(opt: &cli::Opt) -> bool {
     match opt.detect_dark_light {
         DetectDarkLight::Auto => opt.color_only || stdout().is_terminal(),
+        DetectDarkLight::SystemGlobal => false,
         DetectDarkLight::Always => true,
         DetectDarkLight::Never => false,
     }
 }
 
-fn detect_light_mode() -> bool {
+/// See [`cli::Opt::detect_dark_light`] for a detailed explanation.
+fn should_detect_dark_light_system_global(opt: &cli::Opt) -> bool {
+    opt.detect_dark_light == DetectDarkLight::SystemGlobal
+}
+
+fn detect_light_mode_terminal() -> bool {
     use terminal_colorsaurus::{color_scheme, QueryOptions};
 
     #[cfg(test)]
@@ -136,6 +147,58 @@ fn detect_light_mode() -> bool {
     color_scheme(QueryOptions::default())
         .map(|c| c.is_dark_on_light())
         .unwrap_or_default()
+}
+
+fn detect_light_mode_system_global() -> Option<bool> {
+    #[cfg(target_vendor = "apple")]
+    return self::apple::detect_light_mode_system_global();
+
+    #[cfg(not(target_vendor = "apple"))]
+    return None;
+}
+
+#[cfg(target_vendor = "apple")]
+mod apple {
+    use core_foundation_sys::base::kCFAllocatorNull;
+    use core_foundation_sys::base::CFRelease;
+    use core_foundation_sys::preferences::kCFPreferencesAnyApplication;
+    use core_foundation_sys::preferences::CFPreferencesCopyAppValue;
+    use core_foundation_sys::string::kCFStringEncodingASCII;
+    use core_foundation_sys::string::CFStringCreateWithBytesNoCopy;
+    use core_foundation_sys::string::CFStringHasPrefix;
+    use core_foundation_sys::string::CFStringRef;
+
+    unsafe fn ascii_cf_string(string: &'static str) -> Option<CFStringRef> {
+        Some(CFStringCreateWithBytesNoCopy(
+            std::ptr::null_mut(),
+            string.as_ptr(),
+            string.len() as _,
+            kCFStringEncodingASCII,
+            false as _,
+            kCFAllocatorNull,
+        ))
+        .filter(|p| !p.is_null())
+    }
+
+    // This is `defaults read -g AppleInterfaceStyle`
+    pub fn detect_light_mode_system_global() -> Option<bool> {
+        unsafe {
+            let interface_style = ascii_cf_string("AppleInterfaceStyle")?;
+            let value = CFPreferencesCopyAppValue(interface_style, kCFPreferencesAnyApplication);
+            CFRelease(interface_style.cast());
+
+            // Unset means default (Aqua) theme
+            value.is_null().then_some(true).or_else(|| {
+                let res = ascii_cf_string("Dark").map(|dark| {
+                    let res = CFStringHasPrefix(value.cast(), dark);
+                    CFRelease(dark.cast());
+                    res == 0
+                });
+                CFRelease(value.cast());
+                res
+            })
+        }
+    }
 }
 
 #[cfg(test)]

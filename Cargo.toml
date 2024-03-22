@@ -67,5 +67,8 @@ version = "0.29.0"
 default-features = false
 features = []
 
+[target.'cfg(target_vendor = "apple")'.dependencies]
+core-foundation-sys = "0.8.6"
+
 [profile.test]
 opt-level = 2
