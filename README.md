@@ -32,7 +32,7 @@
     # light = true
 
 [merge]
-    conflictstyle = diff3
+    conflictStyle = zdiff3
 
 [diff]
     colorMoved = default
