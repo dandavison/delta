@@ -62,10 +62,17 @@ impl DeltaEnv {
 #[cfg(test)]
 pub mod tests {
     use super::DeltaEnv;
+    use lazy_static::lazy_static;
     use std::env;
+    use std::sync::{Arc, Mutex};
+
+    lazy_static! {
+        static ref ENV_ACCESS: Arc<Mutex<()>> = Arc::new(Mutex::new(()));
+    }
 
     #[test]
     fn test_env_parsing() {
+        let _guard = ENV_ACCESS.lock().unwrap();
         let feature = "Awesome Feature";
         env::set_var("DELTA_FEATURES", feature);
         let env = DeltaEnv::init();
@@ -74,6 +81,7 @@ pub mod tests {
 
     #[test]
     fn test_env_parsing_with_pager_set_to_bat() {
+        let _guard = ENV_ACCESS.lock().unwrap();
         env::set_var("PAGER", "bat");
         let env = DeltaEnv::init();
         assert_eq!(
@@ -86,6 +94,7 @@ pub mod tests {
 
     #[test]
     fn test_env_parsing_with_pager_set_to_more() {
+        let _guard = ENV_ACCESS.lock().unwrap();
         env::set_var("PAGER", "more");
         let env = DeltaEnv::init();
         assert_eq!(env.pagers.1, Some("less".into()));
@@ -93,6 +102,7 @@ pub mod tests {
 
     #[test]
     fn test_env_parsing_with_pager_set_to_most() {
+        let _guard = ENV_ACCESS.lock().unwrap();
         env::set_var("PAGER", "most");
         let env = DeltaEnv::init();
         assert_eq!(env.pagers.1, Some("less".into()));
