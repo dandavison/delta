@@ -588,7 +588,7 @@ pub mod tests {
     use std::rc::Rc;
 
     thread_local! {
-        static FAKE_ARGS: RefCell<TlsState<Vec<String>>> = RefCell::new(TlsState::None);
+        static FAKE_ARGS: RefCell<TlsState<Vec<String>>> = const { RefCell::new(TlsState::None) };
     }
 
     #[derive(Debug, PartialEq)]

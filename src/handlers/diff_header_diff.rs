@@ -25,7 +25,7 @@ impl<'a> StateMachine<'a> {
             };
         self.handle_pending_line_with_diff_name()?;
         self.handled_diff_header_header_line_file_pair = None;
-        self.diff_line = self.line.clone();
+        self.diff_line.clone_from(&self.line);
 
         // Pre-fill header fields from the diff line. For added, removed or renamed files
         // these are updated precisely on actual header minus and header plus lines.
@@ -33,8 +33,8 @@ impl<'a> StateMachine<'a> {
         // are no minus and plus lines. Without the code below, in such cases the file names
         // would remain unchanged from the previous diff, or empty for the very first diff.
         let name = get_repeated_file_path_from_diff_line(&self.line).unwrap_or_default();
-        self.minus_file = name.clone();
-        self.plus_file = name.clone();
+        self.minus_file.clone_from(&name);
+        self.plus_file.clone_from(&name);
         self.minus_file_event = FileEvent::Change;
         self.plus_file_event = FileEvent::Change;
         self.current_file_pair = Some((self.minus_file.clone(), self.plus_file.clone()));

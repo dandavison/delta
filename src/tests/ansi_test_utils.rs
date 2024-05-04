@@ -127,7 +127,7 @@ pub mod ansi_test_utils {
         config: &Config,
     ) {
         assert!(
-            filename_for_highlighting.contains("."),
+            filename_for_highlighting.contains('.'),
             "expecting filename, not just a file extension"
         );
         let line = output.lines().nth(line_number).unwrap();
