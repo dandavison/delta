@@ -36,7 +36,7 @@ clap = { version = "4.3.14", features = [
     "error-context",
     "wrap_help",
 ] }
-console = "0.15.0"
+console = "0.15.8"
 ctrlc = "3.2.5"
 dirs = "5.0.1"
 grep-cli = "0.1.8"
