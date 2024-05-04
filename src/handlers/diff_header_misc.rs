@@ -23,7 +23,8 @@ impl<'a> StateMachine<'a> {
             // This can happen in output of standalone diff or git diff --no-index.
             if self.minus_file.is_empty() && self.plus_file.is_empty() {
                 self.emit_line_unchanged()?;
-                self.handled_diff_header_header_line_file_pair = self.current_file_pair.clone();
+                self.handled_diff_header_header_line_file_pair
+                    .clone_from(&self.current_file_pair);
                 return Ok(true);
             }
 

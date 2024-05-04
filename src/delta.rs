@@ -192,7 +192,7 @@ impl<'a> StateMachine<'a> {
                     self.config.max_line_length,
                 );
                 self.raw_line = raw_line[..truncated_len].to_string();
-                self.line = self.raw_line.clone();
+                self.line.clone_from(&self.raw_line);
             }
         }
     }

@@ -141,7 +141,7 @@ fn detect_light_mode() -> bool {
 #[cfg(test)]
 pub(crate) mod test_utils {
     thread_local! {
-        pub(super) static DETECT_LIGHT_MODE_OVERRIDE: std::cell::Cell<Option<bool>> = std::cell::Cell::new(None);
+        pub(super) static DETECT_LIGHT_MODE_OVERRIDE: std::cell::Cell<Option<bool>> = const { std::cell::Cell::new(None) };
     }
 
     pub(crate) struct DetectLightModeOverride {

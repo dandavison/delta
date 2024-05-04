@@ -79,7 +79,7 @@ pub fn set_options(
     }
     opt.navigate = opt.navigate || opt.env.navigate.is_some();
     if opt.syntax_theme.is_none() {
-        opt.syntax_theme = opt.env.bat_theme.clone();
+        opt.syntax_theme.clone_from(&opt.env.bat_theme);
     }
 
     let option_names = cli::Opt::get_argument_and_option_names();
@@ -632,7 +632,7 @@ fn set_true_color(opt: &mut cli::Opt) {
         // It's equal to its default, so the user might be using the deprecated
         // --24-bit-color option.
         if let Some(_24_bit_color) = opt._24_bit_color.as_ref() {
-            opt.true_color = _24_bit_color.clone();
+            opt.true_color.clone_from(_24_bit_color);
         }
     }
 

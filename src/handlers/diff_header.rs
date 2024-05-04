@@ -142,7 +142,8 @@ impl<'a> StateMachine<'a> {
         {
             self.painter.emit()?;
             self._handle_diff_header_header_line(self.source == Source::DiffUnified)?;
-            self.handled_diff_header_header_line_file_pair = self.current_file_pair.clone();
+            self.handled_diff_header_header_line_file_pair
+                .clone_from(&self.current_file_pair);
         }
         Ok(handled_line)
     }
@@ -255,7 +256,8 @@ impl<'a> StateMachine<'a> {
             && self.handled_diff_header_header_line_file_pair != self.current_file_pair
         {
             self._handle_diff_header_header_line(self.source == Source::DiffUnified)?;
-            self.handled_diff_header_header_line_file_pair = self.current_file_pair.clone();
+            self.handled_diff_header_header_line_file_pair
+                .clone_from(&self.current_file_pair);
             Ok(())
         } else {
             Ok(())
