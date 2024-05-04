@@ -37,7 +37,7 @@ clap = { version = "4.3.14", features = [
     "wrap_help",
 ] }
 console = "0.15.0"
-ctrlc = "3.2.5"
+ctrlc = "3.4.4"
 dirs = "5.0.1"
 grep-cli = "0.1.8"
 itertools = "0.10.5"
