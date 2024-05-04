@@ -95,10 +95,10 @@ impl<'a> StateMachine<'a> {
         if self.source == Source::DiffUnified {
             self.state = State::DiffHeader(DiffType::Unified);
             self.painter
-                .set_syntax(get_file_extension_from_marker_line(&self.line));
+                .set_syntax(get_filename_from_marker_line(&self.line));
         } else {
             self.painter
-                .set_syntax(get_file_extension_from_diff_header_line_file_path(
+                .set_syntax(get_filename_from_diff_header_line_file_path(
                     &self.minus_file,
                 ));
         }
@@ -129,7 +129,7 @@ impl<'a> StateMachine<'a> {
             .unwrap_or(path_or_mode);
         self.plus_file_event = file_event;
         self.painter
-            .set_syntax(get_file_extension_from_diff_header_line_file_path(
+            .set_syntax(get_filename_from_diff_header_line_file_path(
                 &self.plus_file,
             ));
         self.current_file_pair = Some((self.minus_file.clone(), self.plus_file.clone()));
@@ -300,30 +300,23 @@ pub fn write_generic_diff_header_header_line(
 
 #[allow(clippy::tabs_in_doc_comments)]
 /// Given input like
-/// "--- one.rs	2019-11-20 06:16:08.000000000 +0100"
-/// Return "rs"
-fn get_file_extension_from_marker_line(line: &str) -> Option<&str> {
+/// "--- a/zero/one.rs	2019-11-20 06:16:08.000000000 +0100"
+/// Return "one.rs"
+fn get_filename_from_marker_line(line: &str) -> Option<&str> {
     line.split('\t')
         .next()
         .and_then(|column| column.split(' ').nth(1))
-        .and_then(|file| file.split('.').last())
+        .and_then(get_filename_from_diff_header_line_file_path)
 }
 
-fn get_file_extension_from_diff_header_line_file_path(path: &str) -> Option<&str> {
-    if path.is_empty() || path == "/dev/null" {
-        None
-    } else {
-        get_extension(path).map(|ex| ex.trim())
-    }
-}
-
-/// Attempt to parse input as a file path and return extension as a &str.
-pub fn get_extension(s: &str) -> Option<&str> {
-    let path = Path::new(s);
-    path.extension()
-        .and_then(|e| e.to_str())
-        // E.g. 'Makefile' is the file name and also the extension
-        .or_else(|| path.file_name().and_then(|s| s.to_str()))
+fn get_filename_from_diff_header_line_file_path(path: &str) -> Option<&str> {
+    Path::new(path).file_name().and_then(|filename| {
+        if path != "/dev/null" {
+            filename.to_str()
+        } else {
+            None
+        }
+    })
 }
 
 fn parse_diff_header_line(line: &str, git_diff_name: bool) -> (String, FileEvent) {
@@ -477,51 +470,49 @@ mod tests {
     use super::*;
 
     #[test]
-    fn test_get_file_extension_from_marker_line() {
+    fn test_get_filename_from_marker_line() {
         assert_eq!(
-            get_file_extension_from_marker_line(
-                "--- src/one.rs	2019-11-20 06:47:56.000000000 +0100"
-            ),
-            Some("rs")
+            get_filename_from_marker_line("--- src/one.rs	2019-11-20 06:47:56.000000000 +0100"),
+            Some("one.rs")
         );
     }
 
     #[test]
-    fn test_get_file_extension_from_diff_header_line() {
+    fn test_get_filename_from_diff_header_line() {
         assert_eq!(
-            get_file_extension_from_diff_header_line_file_path("a/src/parse.rs"),
-            Some("rs")
+            get_filename_from_diff_header_line_file_path("a/src/parse.rs"),
+            Some("parse.rs")
         );
         assert_eq!(
-            get_file_extension_from_diff_header_line_file_path("b/src/pa rse.rs"),
-            Some("rs")
+            get_filename_from_diff_header_line_file_path("b/src/pa rse.rs"),
+            Some("pa rse.rs")
         );
         assert_eq!(
-            get_file_extension_from_diff_header_line_file_path("src/pa rse.rs"),
-            Some("rs")
+            get_filename_from_diff_header_line_file_path("src/pa rse.rs"),
+            Some("pa rse.rs")
         );
         assert_eq!(
-            get_file_extension_from_diff_header_line_file_path("wat hello.rs"),
-            Some("rs")
+            get_filename_from_diff_header_line_file_path("wat hello.rs"),
+            Some("wat hello.rs")
         );
         assert_eq!(
-            get_file_extension_from_diff_header_line_file_path("/dev/null"),
+            get_filename_from_diff_header_line_file_path("/dev/null"),
             None
         );
         assert_eq!(
-            get_file_extension_from_diff_header_line_file_path("Dockerfile"),
+            get_filename_from_diff_header_line_file_path("Dockerfile"),
             Some("Dockerfile")
         );
         assert_eq!(
-            get_file_extension_from_diff_header_line_file_path("Makefile"),
+            get_filename_from_diff_header_line_file_path("Makefile"),
             Some("Makefile")
         );
         assert_eq!(
-            get_file_extension_from_diff_header_line_file_path("a/src/Makefile"),
+            get_filename_from_diff_header_line_file_path("a/src/Makefile"),
             Some("Makefile")
         );
         assert_eq!(
-            get_file_extension_from_diff_header_line_file_path("src/Makefile"),
+            get_filename_from_diff_header_line_file_path("src/Makefile"),
             Some("Makefile")
         );
     }

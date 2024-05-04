@@ -132,12 +132,8 @@ impl<'a> StateMachine<'a> {
             self.painter.set_highlighter()
         }
         if new_path {
-            if let Some(lang) = handlers::diff_header::get_extension(&grep_line.path)
-                .or(self.config.default_language.as_deref())
-            {
-                self.painter.set_syntax(Some(lang));
-                self.painter.set_highlighter();
-            }
+            self.painter.set_syntax(Some(grep_line.path.as_ref()));
+            self.painter.set_highlighter();
         }
         match &self.state {
             State::Grep(GrepType::Ripgrep, _, _, _) => {
