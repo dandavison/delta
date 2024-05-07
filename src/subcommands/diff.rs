@@ -24,12 +24,14 @@ pub fn diff(
         |f: &Path| f.starts_with("/proc/self/fd/") || f.starts_with("/dev/fd/");
 
     let diff_cmd = if via_process_substitution(minus_file) || via_process_substitution(plus_file) {
-        ["diff", "-u", "--"].as_slice()
+        format!("diff -u {} --", config.diff_args)
     } else {
-        ["git", "diff", "--no-index", "--color", "--"].as_slice()
+        format!("git diff --no-index --color {} --", config.diff_args)
     };
 
-    let diff_bin = diff_cmd[0];
+    let mut diff_cmd = diff_cmd.split_whitespace();
+    let diff_bin = diff_cmd.next().unwrap();
+
     let diff_path = match grep_cli::resolve_binary(PathBuf::from(diff_bin)) {
         Ok(path) => path,
         Err(err) => {
@@ -39,7 +41,7 @@ pub fn diff(
     };
 
     let diff_process = process::Command::new(diff_path)
-        .args(&diff_cmd[1..])
+        .args(diff_cmd)
         .args([minus_file, plus_file])
         .stdout(process::Stdio::piped())
         .spawn();
