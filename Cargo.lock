@@ -1239,9 +1239,9 @@ dependencies = [
 
 [[package]]
 name = "terminal-colorsaurus"
-version = "0.3.1"
+version = "0.4.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "c374383f597b763eb3bd06bc4e18f85510a52d7f1ac762f0c7e413ce696079fc"
+checksum = "fc3b74af7c844e628c5dafa421ec59283e9f0bed5cb49956439316ec6d8728f1"
 dependencies = [
  "libc",
  "memchr",
