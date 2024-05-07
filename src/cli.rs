@@ -166,6 +166,21 @@ pub struct Opt {
     #[arg(long = "detect-dark-light", value_enum, default_value_t = DetectDarkLight::default())]
     pub detect_dark_light: DetectDarkLight,
 
+    #[arg(
+        long = "diff-args",
+        short = '@',
+        default_value = "",
+        value_name = "STRING"
+    )]
+    /// Arguments to pass to `git diff` when using delta to diff two files.
+    ///
+    /// E.g. `delta --diff-args=-U999 file_1 file_2` is equivalent to
+    /// `git diff -U999 --no-index --color file_1 file_2 | delta`.
+    ///
+    /// However, if you use process substitution instead of real file paths, it falls back to `diff -u` instead of `git
+    /// diff`.
+    pub diff_args: String,
+
     #[arg(long = "diff-highlight")]
     /// Emulate diff-highlight.
     ///
@@ -960,12 +975,12 @@ pub struct Opt {
     /// Deprecated: use --true-color.
     pub _24_bit_color: Option<String>,
 
-    /// First file to be compared when delta is being used in diff mode
+    /// First file to be compared when delta is being used to diff two files.
     ///
     /// `delta file1 file2` is equivalent to `diff -u file1 file2 | delta`.
     pub minus_file: Option<PathBuf>,
 
-    /// Second file to be compared when delta is being used in diff mode.
+    /// Second file to be compared when delta is being used to diff two files.
     pub plus_file: Option<PathBuf>,
 
     #[arg(skip)]
