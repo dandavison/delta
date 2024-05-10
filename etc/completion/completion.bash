@@ -375,4 +375,9 @@ _delta() {
     esac
 }
 
-complete -F _delta -o nosort -o bashdefault -o default delta
+# nosort isn't supported for bash less than < 4.4
+if [[ ${BASH_VERSINFO[0]} -lt 4 || ( ${BASH_VERSINFO[0]} -eq 4 && ${BASH_VERSINFO[1]} -lt 4 ) ]]; then
+    complete -F _delta -o bashdefault -o default delta
+else
+    complete -F _delta -o bashdefault -o default -o nosort delta 
+fi
