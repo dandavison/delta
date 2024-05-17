@@ -8,4 +8,4 @@ If you need to force delta to be invoked when git itself would not invoke it, th
 For example, `git diff | delta | something-that-expects-delta-output-with-colors` (in this example, git's output is being sent to a pipe, so git itself will not invoke delta).
 In general however, delta's output is intended for humans, not machines.
 
-If you are interested in the implementation of delta, please see [ARCHITECTURE.md](https://github.com/dandavison/delta/blob/master/ARCHITECTURE.md).
+If you are interested in the implementation of delta, please see [ARCHITECTURE.md](https://github.com/dandavison/delta/blob/main/ARCHITECTURE.md).
