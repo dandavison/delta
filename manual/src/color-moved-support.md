@@ -20,7 +20,7 @@ This feature allows all of git's color-moved options to be rendered using delta 
     map-styles = bold purple => syntax magenta, bold cyan => syntax blue
 ```
 
-There is a pair of features provided in [themes.config](https://github.com/dandavison/delta/blob/master/themes.gitconfig) called `zebra-dark` and `zebra-light` which utilise the moved colors by displaying them as a faint background color on the affected lines while keeping syntax highlighting as the foreground color. You can enable one of these features by stacking it upon the theme you are using, like as follows
+There is a pair of features provided in [themes.config](https://github.com/dandavison/delta/blob/main/themes.gitconfig) called `zebra-dark` and `zebra-light` which utilise the moved colors by displaying them as a faint background color on the affected lines while keeping syntax highlighting as the foreground color. You can enable one of these features by stacking it upon the theme you are using, like as follows
 
 ```gitconfig
 [delta]
@@ -54,7 +54,7 @@ To help with that, delta now has a `--parse-ansi` mode. E.g. `git show --color=a
 <table><tr><td><img width=300px src="https://user-images.githubusercontent.com/52205/143238872-58a40754-ae50-4a9e-ba72-07e330e520e6.png" alt="image" /></td></tr></table>
 
 As you see above, we can now define named styles in gitconfig and refer to them in places where a style string is expected.
-We can also define custom named colors in git config, and styles can reference other styles; see the [hoopoe theme](https://github.com/dandavison/delta/blob/master/themes.gitconfig#L76-L91) for an example:
+We can also define custom named colors in git config, and styles can reference other styles; see the [hoopoe theme](https://github.com/dandavison/delta/blob/main/themes.gitconfig#L76-L91) for an example:
 
 ```gitconfig
 [delta "hoopoe"]
