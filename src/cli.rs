@@ -1159,18 +1159,19 @@ pub enum DetectDarkLight {
 }
 
 impl Opt {
-    pub fn from_args_and_git_config(
-        env: DeltaEnv,
-        git_config: Option<GitConfig>,
-        assets: HighlightingAssets,
-    ) -> Self {
-        let mut final_config = git_config;
+    pub fn from_args_and_git_config(env: &DeltaEnv, assets: HighlightingAssets) -> Self {
         let matches = Self::command().get_matches();
+
+        let mut final_config = if *matches.get_one::<bool>("no_gitconfig").unwrap_or(&false) {
+            None
+        } else {
+            GitConfig::try_create(env)
+        };
 
         if let Some(path) = matches.get_one::<String>("config") {
             if !path.is_empty() {
                 let path = Path::new(path);
-                final_config = Some(GitConfig::from_path(&env, path, true));
+                final_config = Some(GitConfig::from_path(env, path, true));
             }
         }
 
@@ -1178,7 +1179,7 @@ impl Opt {
     }
 
     pub fn from_iter_and_git_config<I>(
-        env: DeltaEnv,
+        env: &DeltaEnv,
         iter: I,
         git_config: Option<GitConfig>,
     ) -> Self
@@ -1196,14 +1197,14 @@ impl Opt {
     }
 
     fn from_clap_and_git_config(
-        env: DeltaEnv,
+        env: &DeltaEnv,
         arg_matches: clap::ArgMatches,
         mut git_config: Option<GitConfig>,
         assets: HighlightingAssets,
     ) -> Self {
         let mut opt = Opt::from_arg_matches(&arg_matches)
             .unwrap_or_else(|_| delta_unreachable("Opt::from_arg_matches failed"));
-        opt.env = env;
+        opt.env = env.clone();
         options::set::set_options(&mut opt, &mut git_config, &arg_matches, assets);
         opt.git_config = git_config;
         opt

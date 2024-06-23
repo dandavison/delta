@@ -4,7 +4,6 @@ use crate::colors;
 use crate::config;
 use crate::delta;
 use crate::env::DeltaEnv;
-use crate::git_config;
 use crate::paint;
 use crate::paint::BgShouldFill;
 use crate::style;
@@ -16,11 +15,7 @@ pub fn show_colors() -> std::io::Result<()> {
 
     let assets = utils::bat::assets::load_highlighting_assets();
     let env = DeltaEnv::default();
-    let opt = cli::Opt::from_args_and_git_config(
-        env.clone(),
-        git_config::GitConfig::try_create(&env),
-        assets,
-    );
+    let opt = cli::Opt::from_args_and_git_config(&env, assets);
     let config = config::Config::from(opt);
 
     let mut output_type =

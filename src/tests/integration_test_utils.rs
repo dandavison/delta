@@ -66,7 +66,7 @@ fn _make_options_from_args_and_git_config(
             None
         }
     };
-    cli::Opt::from_iter_and_git_config(env, args, git_config)
+    cli::Opt::from_iter_and_git_config(&env, args, git_config)
 }
 
 pub fn make_options_from_args(args: &[&str]) -> cli::Opt {
