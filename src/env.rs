@@ -77,6 +77,8 @@ pub mod tests {
         env::set_var("DELTA_FEATURES", feature);
         let env = DeltaEnv::init();
         assert_eq!(env.features, Some(feature.into()));
+        // otherwise `current_dir` is not used in the test cfg:
+        assert_eq!(env.current_dir, env::current_dir().ok());
     }
 
     #[test]
