@@ -76,11 +76,7 @@ fn main() -> std::io::Result<()> {
 fn run_app() -> std::io::Result<i32> {
     let assets = utils::bat::assets::load_highlighting_assets();
     let env = env::DeltaEnv::init();
-    let opt = cli::Opt::from_args_and_git_config(
-        env.clone(),
-        git_config::GitConfig::try_create(&env),
-        assets,
-    );
+    let opt = cli::Opt::from_args_and_git_config(&env, assets);
 
     let subcommand_result = if let Some(shell) = opt.generate_completion {
         Some(subcommands::generate_completion::generate_completion_file(
