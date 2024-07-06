@@ -594,16 +594,19 @@ pub mod tests {
     use crate::features::line_numbers::tests::*;
     use crate::options::theme;
     use crate::tests::integration_test_utils::{make_config_from_args, run_delta, DeltaTest};
+    use insta::assert_snapshot;
 
     #[test]
-    fn test_two_minus_lines() {
-        DeltaTest::with_args(&["--side-by-side", "--width", "40"])
+    fn test_two_fitting_minus_lines() {
+        // rustfmt ignores the assert macro arguments, so do the setup outside
+        let result = DeltaTest::with_args(&["--side-by-side", "--width", "40"])
             .with_input(TWO_MINUS_LINES_DIFF)
-            .expect_after_header(
-                r#"
-                │  1 │a = 1         │    │
-                │  2 │b = 23456     │    │"#,
-            );
+            .skip_header();
+        assert_snapshot!(result, @r###"
+        │  1 │a = 1         │    │
+        │  2 │b = 23456     │    │
+        "###
+        );
     }
 
     #[test]
