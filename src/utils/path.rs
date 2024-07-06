@@ -25,16 +25,24 @@ pub fn absolute_path(relative_path: &str, config: &Config) -> Option<PathBuf> {
     .map(normalize_path)
 }
 
-/// Relativize path if delta config demands that and paths are not already relativized by git.
-pub fn relativize_path_maybe(path: &str, config: &Config) -> Option<PathBuf> {
-    if config.relative_paths && !calling_process().paths_in_input_are_relative_to_cwd() {
-        if let Some(base) = config.cwd_relative_to_repo_root.as_deref() {
-            pathdiff::diff_paths(path, base)
-        } else {
-            None
+/// Relativize `path` if delta `config` demands that and paths are not already relativized by git.
+pub fn relativize_path_maybe(path: &mut String, config: &Config) {
+    let mut inner_relativize = || -> Option<()> {
+        let base = config.cwd_relative_to_repo_root.as_deref()?;
+        let relative_path = pathdiff::diff_paths(&path, base)?;
+        if relative_path.is_relative() {
+            #[cfg(target_os = "windows")]
+            // '/dev/null' is converted to '\dev\null' and considered relative. Work
+            // around that by leaving all paths like that untouched:
+            if relative_path.starts_with(Path::new(r"\")) {
+                return None;
+            }
+            *path = relative_path.to_string_lossy().into_owned();
         }
-    } else {
-        None
+        Some(())
+    };
+    if config.relative_paths && !calling_process().paths_in_input_are_relative_to_cwd() {
+        let _ = inner_relativize();
     }
 }
 

@@ -84,12 +84,11 @@ impl<'a> StateMachine<'a> {
             return Ok(false);
         }
 
-        let (path_or_mode, file_event) =
+        let (mut path_or_mode, file_event) =
             parse_diff_header_line(&self.line, self.source == Source::GitDiff);
 
-        self.minus_file = utils::path::relativize_path_maybe(&path_or_mode, self.config)
-            .map(|p| p.to_string_lossy().into_owned())
-            .unwrap_or(path_or_mode);
+        utils::path::relativize_path_maybe(&mut path_or_mode, self.config);
+        self.minus_file = path_or_mode;
         self.minus_file_event = file_event;
 
         if self.source == Source::DiffUnified {
@@ -121,12 +120,11 @@ impl<'a> StateMachine<'a> {
             return Ok(false);
         }
         let mut handled_line = false;
-        let (path_or_mode, file_event) =
+        let (mut path_or_mode, file_event) =
             parse_diff_header_line(&self.line, self.source == Source::GitDiff);
 
-        self.plus_file = utils::path::relativize_path_maybe(&path_or_mode, self.config)
-            .map(|p| p.to_string_lossy().into_owned())
-            .unwrap_or(path_or_mode);
+        utils::path::relativize_path_maybe(&mut path_or_mode, self.config);
+        self.plus_file = path_or_mode;
         self.plus_file_event = file_event;
         self.painter
             .set_syntax(get_filename_from_diff_header_line_file_path(
