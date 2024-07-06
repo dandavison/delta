@@ -67,5 +67,14 @@ version = "0.29.0"
 default-features = false
 features = []
 
+[dev-dependencies]
+insta = { version = "1.*", features = ["colors"] }
+
 [profile.test]
 opt-level = 2
+
+[profile.dev.package.insta]
+opt-level = 3
+
+[profile.dev.package.similar]
+opt-level = 3
