@@ -8,6 +8,7 @@ mod tests {
     use crate::tests::ansi_test_utils::ansi_test_utils;
     use crate::tests::integration_test_utils;
     use crate::tests::integration_test_utils::DeltaTest;
+    use insta::assert_snapshot;
 
     #[test]
     fn test_added_file() {
@@ -126,7 +127,6 @@ mod tests {
             "bash",
         ]);
         let output = integration_test_utils::run_delta(MODIFIED_BASH_AND_CSHARP_FILES, &config);
-        eprintln!("{}", &output);
         ansi_test_utils::assert_line_has_syntax_highlighted_substring(
             &output,
             19,
@@ -311,37 +311,55 @@ index 0123456..1234567 100644
 
     #[test]
     fn test_binary_files_differ() {
-        let config =
-            integration_test_utils::make_config_from_args(&["--file-modified-label", "modified:"]);
-        let output = integration_test_utils::run_delta(BINARY_FILES_DIFFER, &config);
-        let output = strip_ansi_codes(&output);
-        assert!(output.contains("\nmodified: foo (binary file)\n"));
+        let output = DeltaTest::with_args(&["--file-modified-label", "modified:"])
+            .with_input(BINARY_FILES_DIFFER)
+            .skip_header();
+
+        assert_snapshot!(output, @r###"
+
+        modified: foo (binary file)
+        ───────────────────────────────────────────
+        "###);
     }
 
     #[test]
     fn test_binary_file_added() {
-        let config = integration_test_utils::make_config_from_args(&[]);
-        let output = integration_test_utils::run_delta(BINARY_FILE_ADDED, &config);
-        let output = strip_ansi_codes(&output);
-        assert!(output.contains("\nadded: foo (binary file)\n"));
+        let output = DeltaTest::with_args(&[])
+            .with_input(BINARY_FILE_ADDED)
+            .skip_header();
+        assert_snapshot!(output, @r###"
+
+        added: foo (binary file)
+        ───────────────────────────────────────────
+        "###);
     }
 
     #[test]
     fn test_binary_file_removed() {
-        let config = integration_test_utils::make_config_from_args(&[]);
-        let output = integration_test_utils::run_delta(BINARY_FILE_REMOVED, &config);
-        let output = strip_ansi_codes(&output);
-        assert!(output.contains("\nremoved: foo (binary file)\n"));
+        let output = DeltaTest::with_args(&[])
+            .with_input(BINARY_FILE_REMOVED)
+            .skip_header();
+        assert_snapshot!(output, @r###"
+
+        removed: foo (binary file)
+        ───────────────────────────────────────────
+        "###);
     }
 
     #[test]
     fn test_binary_files_differ_after_other() {
-        let config =
-            integration_test_utils::make_config_from_args(&["--file-modified-label", "modified:"]);
-        let output = integration_test_utils::run_delta(BINARY_FILES_DIFFER_AFTER_OTHER, &config);
-        let output = strip_ansi_codes(&output);
-        assert!(output.contains("\nrenamed: foo ⟶   bar\n"));
-        assert!(output.contains("\nmodified: qux (binary file)\n"));
+        let output = DeltaTest::with_args(&["--file-modified-label", "modified:"])
+            .with_input(BINARY_FILES_DIFFER_AFTER_OTHER)
+            .output;
+        assert_snapshot!(output, @r###"
+
+
+        renamed: foo ⟶   bar
+        ───────────────────────────────────────────
+
+        modified: qux (binary file)
+        ───────────────────────────────────────────
+        "###);
     }
 
     #[test]

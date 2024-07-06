@@ -68,7 +68,7 @@ default-features = false
 features = []
 
 [dev-dependencies]
-insta = { version = "1.*", features = ["colors"] }
+insta = { version = "1.*", features = ["colors", "filters"] }
 
 [profile.test]
 opt-level = 2
