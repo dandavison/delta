@@ -522,6 +522,7 @@ commit 94907c0f136f46dc46ffae2dc92dca9af7eb7c2e
             "blue",
             "--commit-decoration-style",
             "blue box ul",
+            "--width=64",
         ]);
     }
 
@@ -644,6 +645,7 @@ commit 94907c0f136f46dc46ffae2dc92dca9af7eb7c2e │
             "raw",
             "--commit-decoration-style",
             "box ul",
+            "--width=64",
         ]);
         let output = integration_test_utils::run_delta(GIT_DIFF_SINGLE_HUNK, &config);
         ansi_test_utils::assert_line_has_no_color(

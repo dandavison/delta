@@ -617,10 +617,20 @@ fn set_widths_and_isatty(opt: &mut cli::Opt) {
                 .unwrap_or_else(|err| fatal(format!("Invalid value for width: {err}")));
             (cli::Width::Fixed(width), true)
         }
-        None => (
-            cli::Width::Fixed(opt.computed.available_terminal_width),
-            true,
-        ),
+        None => {
+            #[cfg(test)]
+            {
+                // instead of passing `--width=..` to all tests, set it here:
+                (cli::Width::Fixed(tests::TERMINAL_WIDTH_IN_TESTS), true)
+            }
+            #[cfg(not(test))]
+            {
+                (
+                    cli::Width::Fixed(opt.computed.available_terminal_width),
+                    true,
+                )
+            }
+        }
     };
     opt.computed.decorations_width = decorations_width;
     opt.computed.background_color_extends_to_terminal_width =
@@ -663,6 +673,8 @@ pub mod tests {
     use crate::cli;
     use crate::tests::integration_test_utils;
     use crate::utils::bat::output::PagingMode;
+
+    pub const TERMINAL_WIDTH_IN_TESTS: usize = 43;
 
     #[test]
     fn test_options_can_be_set_in_git_config() {
