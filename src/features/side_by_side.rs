@@ -599,12 +599,12 @@ pub mod tests {
     #[test]
     fn test_two_fitting_minus_lines() {
         // rustfmt ignores the assert macro arguments, so do the setup outside
-        let result = DeltaTest::with_args(&["--side-by-side", "--width", "40"])
+        let result = DeltaTest::with_args(&["--side-by-side"])
             .with_input(TWO_MINUS_LINES_DIFF)
             .skip_header();
         assert_snapshot!(result, @r###"
-        │  1 │a = 1         │    │
-        │  2 │b = 23456     │    │
+        │  1 │a = 1           │    │
+        │  2 │b = 23456       │    │
         "###
         );
     }
