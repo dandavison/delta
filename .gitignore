@@ -5,3 +5,7 @@ performance/index.html
 src/junk.rs
 **/*.rs.bk
 /target
+
+# insta: unreviewed inline data, and separate snapshot files
+*.pending-snap
+**/snapshots/*.snap.new
