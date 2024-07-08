@@ -21,6 +21,7 @@
   - [Git blame](./git-blame.md)
   - [Supported languages and themes](./supported-languages-and-themes.md)
 - [Tips & tricks](./tips-and-tricks.md)
+  - [Toggling side-by-side and other delta features](./tips-and-tricks/toggling-delta-features.md)
   - [24 bit color (truecolor)](./tips-and-tricks/24-bit-color-truecolor.md)
   - [Mouse scrolling](./tips-and-tricks/mouse-scrolling.md)
   - [Save output with colors to HTML/PDF etc](./tips-and-tricks/export-to-html.md)
