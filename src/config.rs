@@ -214,6 +214,10 @@ impl From<cli::Opt> for Config {
 
         let blame_palette = make_blame_palette(opt.blame_palette, opt.computed.is_light_mode);
 
+        if blame_palette.is_empty() {
+            fatal("Option 'blame-palette' must not be empty.")
+        }
+
         let file_added_label = opt.file_added_label;
         let file_copied_label = opt.file_copied_label;
         let file_modified_label = opt.file_modified_label;
