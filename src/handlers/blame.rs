@@ -172,7 +172,6 @@ impl<'a> StateMachine<'a> {
     fn get_next_color(&self, other_than_color: Option<&str>) -> String {
         let n_keys = self.blame_key_colors.len();
         let n_colors = self.config.blame_palette.len();
-
         let color = self.config.blame_palette[n_keys % n_colors].clone();
         if Some(color.as_str()) != other_than_color {
             color
