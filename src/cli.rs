@@ -851,7 +851,7 @@ pub struct Opt {
     /// Activate diff navigation.
     ///
     /// Use n to jump forwards and N to jump backwards. To change the file labels used see
-    /// --file-modified-label, --file-removed-label, --file-added-label, --file-renamed-label.
+    /// --file-added-label, --file-copied-label, --file-modified-label, --file-removed-label, , --file-renamed-label.
     pub navigate: bool,
 
     #[arg(long = "navigate-regex", value_name = "REGEX")]
