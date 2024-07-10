@@ -734,12 +734,22 @@ pub struct Opt {
     /// insertion operations transforming one into the other.
     pub max_line_distance: f64,
 
-    #[arg(long = "max-line-length", default_value = "512", value_name = "N")]
+    #[arg(
+        long = "max-syntax-highlighting-length",
+        default_value = "400",
+        value_name = "N"
+    )]
+    /// Stop syntax highlighting lines after this many characters.
+    ///
+    /// To always highlight entire lines, set to zero - but note that delta will be slow on very
+    /// long lines (e.g. minified .js).
+    pub max_syntax_length: usize,
+
+    #[arg(long = "max-line-length", default_value = "3000", value_name = "N")]
     /// Truncate lines longer than this.
     ///
-    /// To prevent any truncation, set to zero. Note that delta will be slow on very long lines
-    /// (e.g. minified .js) if truncation is disabled. When wrapping lines it is automatically set
-    /// to fit at least all visible characters.
+    /// To prevent any truncation, set to zero. When wrapping lines this does nothing as it is
+    /// overwritten to fit at least all visible characters, see `--wrap-max-lines`.
     pub max_line_length: usize,
 
     #[arg(

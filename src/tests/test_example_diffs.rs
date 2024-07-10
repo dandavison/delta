@@ -1994,6 +1994,149 @@ src/align.rs:71: impl<'a> Alignment<'a> { │
             .expect_after_header("#partial\n\nremoved: a");
     }
 
+    #[test]
+    fn test_lines_with_syntax_width_limit() {
+        let result = DeltaTest::with_args(&[
+            "--max-line-length=42",
+            "--max-syntax-highlighting-length=18",
+        ])
+        .explain_ansi()
+        .with_input(GIT_DIFF_SINGLE_HUNK);
+        assert_snapshot!(result.output, @r###"
+        (normal)commit 94907c0f136f46dc46ffae2dc92dca9af7(reverse normal)→(normal)
+        Author: Dan Davison <dandavison7@gmail.co(reverse normal)→(normal)
+        Date:   Thu May 14 11:13:17 2020 -0400
+
+            rustfmt
+
+
+        (blue)src/align.rs(normal)
+        (blue)───────────────────────────────────────────(normal)
+
+        (blue)─────────────────────────────(blue)┐(normal)
+        (blue)71(normal):(231) (81)impl(231)<(203)'a(231)> (149)Alignmen(normal)t<'a> { (blue)│(normal)
+        (blue)─────────────────────────────(blue)┘(normal)
+
+        (231)        (203)for(231) (i, x_(normal)i) in self.x.iter().en→
+        (231)            (203)for(231) (j(normal), y_j) in self.y.iter(→
+        (normal 52)                let (left, diag, up) =(normal 124) ((normal)
+        (normal 52)                    self.index(i, j + 1(normal 124)),(normal)
+        (normal 52)                    self.index(i, j),(normal)
+        (normal 52)                    self.index(i + 1, j),(normal)
+        (normal 52)                );(normal)
+        (231 22)                le(normal 22)t (left, diag, up) =(normal)
+        (231 22)                  (normal 22)  (normal 28)((normal 22)self.index(i, j + 1(normal 28)→(normal)
+        (231)                le(normal)t candidates = [
+        (231)                  (normal)  Cell {
+        (231)                  (normal)      parent: left,
+        "###);
+    }
+
+    #[test]
+    fn test_lines_with_syntax_width_limit_wrapping() {
+        let result = DeltaTest::with_args(&[
+            "--side-by-side",
+            "--width=55",
+            "--wrap-max-lines=1",
+            "--max-line-length=10", // this gets ignored!
+            "--max-syntax-highlighting-length=22",
+        ])
+        .explain_ansi()
+        .with_input(GIT_DIFF_SINGLE_HUNK);
+
+        // eprintln!("{}", result.raw_output);
+        assert_snapshot!(result.output, @r###"
+        (normal)commit 94907c0f136f46dc46ffae2dc92dca9af7eb7c2e
+        Author: Dan Davison <dandavison7@gmail.com>
+        Date:   Thu May 14 11:13:17 2020 -0400
+
+            rustfmt
+
+
+        (blue)src/align.rs(normal)
+        (blue)───────────────────────────────────────────────────────(normal)
+
+        (blue)─────────────────────────────(blue)┐(normal)
+        (blue)71(normal):(231) (81)impl(231)<(203)'a(231)> (149)Alignment(231)<(203)'a(normal)> { (blue)│(normal)
+        (blue)─────────────────────────────(blue)┘(normal)
+
+        (blue)│(238) 71 (blue)│(231)        (203)for(231) (i, x_i)(blue)↵(blue) │(238) 71 (blue)│(231)        (203)for(231) (i, x_i)(blue)↵(normal)
+        (blue)│(238)    (blue)│(231) i(normal)n self.x.iter().en(reverse normal)→(blue) │(238)    (blue)│(231) i(normal)n self.x.iter().en(reverse normal)→(normal)
+        (blue)│(238) 72 (blue)│(231)            (203)for(231) (j, (blue)↵(blue) │(238) 72 (blue)│(231)            (203)for(231) (j, (blue)↵(normal)
+        (blue)│(238)    (blue)│(231)y_(normal)j) in self.y.iter((reverse normal)→(blue) │(238)    (blue)│(231)y_(normal)j) in self.y.iter((reverse normal)→(normal)
+        (blue)│(88) 73 (blue)│(231 52)                (81)let(231) (blue)↵(blue) │(28) 73 (blue)│(231 22)                (81)let(231) (blue)↵(normal)
+        (blue)│(88)    (blue)│(231 52)(l(normal 52)eft, diag, up) =(normal 124) ((normal 52) (blue) │(28)    (blue)│(231 22)(l(normal 22)eft, diag, up) =(normal)
+        (blue)│(88) 74 (blue)│(231 52)                    (blue)↵(blue) │(28) 74 (blue)│(231 22)                    (blue)↵(normal)
+        (blue)│(88)    (blue)│(231 52)se(normal 52)lf.index(i, j + 1),(blue) │(28)    (blue)│(231 28)((normal 22)s(normal 22)elf.index(i, j + 1(reverse normal)→(normal)
+        (blue)│(88) 75 (blue)│(231 52)                    (blue)↵(blue) │(28)    (blue)│(normal)
+        (blue)│(88)    (blue)│(231 52)se(normal 52)lf.index(i, j),(normal 52)    (blue) │(28)    (blue)│(normal)
+        (blue)│(88) 76 (blue)│(231 52)                    (blue)↵(blue) │(28)    (blue)│(normal)
+        (blue)│(88)    (blue)│(231 52)se(normal 52)lf.index(i + 1, j),(blue) │(28)    (blue)│(normal)
+        (blue)│(88) 77 (blue)│(231 52)                );(normal 52)   (blue) │(28)    (blue)│(normal)
+        (blue)│(238) 78 (blue)│(231)                (81)let(231) (blue)↵(blue) │(238) 75 (blue)│(231)                (81)let(231) (blue)↵(normal)
+        (blue)│(238)    (blue)│(231)ca(normal)ndidates = [       (blue) │(238)    (blue)│(231)ca(normal)ndidates = [
+        (blue)│(238) 79 (blue)│(231)                    (blue)↵(blue) │(238) 76 (blue)│(231)                    (blue)↵(normal)
+        (blue)│(238)    (blue)│(231)Ce(normal)ll {               (blue) │(238)    (blue)│(231)Ce(normal)ll {
+        (blue)│(238) 80 (blue)│(231)                    (blue)↵(blue) │(238) 77 (blue)│(231)                    (blue)↵(normal)
+        (blue)│(238)    (blue)│(231)  (normal)  parent: left,    (blue) │(238)    (blue)│(231)  (normal)  parent: left,
+        "###);
+    }
+
+    #[test]
+    fn test_lines_with_syntax_width_unicode() {
+        let result = DeltaTest::with_args(&["--max-syntax-highlighting-length=11"])
+            .explain_ansi()
+            .with_input(GIT_DIFF_ALL_UNICODE_W_FULLWIDTH);
+
+        assert_snapshot!(result.output, @r###"
+        (normal)
+
+        (blue)src/a(normal)
+        (blue)───────────────────────────────────────────(normal)
+
+        (blue)───(blue)┐(normal)
+        (blue)1(normal): (blue)│(normal)
+        (blue)───(blue)┘(normal)
+        (231)一æäöø€ÆÄÖ(normal)〇Øß一
+        (231)一æäöø€ÆÄÖ(normal)〇Øß一
+        (normal 52)二æäöø(normal 124)¢(normal 52)ÆÄÖ〇Øß二(normal)
+        (normal 52)二æäöø(normal 124)¢(normal 52)ÆÄÖ〇Øß二(normal)
+        (231 22)二æäöø(normal 28)€(normal 22)ÆÄÖ(normal 22)〇Øß二(normal)
+        (231 22)二æäöø(normal 28)€(normal 22)ÆÄÖ(normal 22)〇Øß二(normal)
+        (231)三æäöø€ÆÄÖ(normal)〇Øß三
+        (231)三æäöø€ÆÄÖ(normal)〇Øß三
+        (231)¶(normal)
+        "###);
+
+        let result = DeltaTest::with_args(&[
+            "--max-syntax-highlighting-length=10",
+            "--max-line-length=16",
+        ])
+        .explain_ansi()
+        .with_input(GIT_DIFF_ALL_UNICODE_W_FULLWIDTH);
+
+        // eprintln!("{}", result.raw_output);
+        assert_snapshot!(result.output, @r###"
+        (normal)
+
+        (blue)src/a(normal)
+        (blue)───────────────────────────────────────────(normal)
+
+        (blue)───(blue)┐(normal)
+        (blue)1(normal): (blue)│(normal)
+        (blue)───(blue)┘(normal)
+        (231)一æäöø€ÆÄÖ(normal)〇Øß→
+        (231)一æäöø€ÆÄÖ(normal)〇Øß→
+        (normal 52)二æäöø(normal 124)¢(normal 52)ÆÄÖ〇Øß→(normal)
+        (normal 52)二æäöø(normal 124)¢(normal 52)ÆÄÖ〇Øß→(normal)
+        (231 22)二æäöø(normal 28)€(normal 22)ÆÄÖ(normal 22)〇Øß→(normal)
+        (231 22)二æäöø(normal 28)€(normal 22)ÆÄÖ(normal 22)〇Øß→(normal)
+        (231)三æäöø€ÆÄÖ(normal)〇Øß→
+        (231)三æäöø€ÆÄÖ(normal)〇Øß→
+        (231)¶(normal)
+        "###);
+    }
+
     const GIT_DIFF_SINGLE_HUNK: &str = "\
 commit 94907c0f136f46dc46ffae2dc92dca9af7eb7c2e
 Author: Dan Davison <dandavison7@gmail.com>
@@ -2964,5 +3107,22 @@ Date:   Tue Jun 21 14:48:20 2022 +0200
 diff --git a a
 new file mode 100644
 index 0000000..e69de29
+";
+
+    const GIT_DIFF_ALL_UNICODE_W_FULLWIDTH: &str = "
+diff --git a/src/a b/src/a
+index 53f98b6..14d6caa 100644
+--- a/src/a
++++ b/src/a
+@@ -1,7 +1,7 @@
+ 一æäöø€ÆÄÖ〇Øß一
+ 一æäöø€ÆÄÖ〇Øß一
+-二æäöø¢ÆÄÖ〇Øß二
+-二æäöø¢ÆÄÖ〇Øß二
++二æäöø€ÆÄÖ〇Øß二
++二æäöø€ÆÄÖ〇Øß二
+ 三æäöø€ÆÄÖ〇Øß三
+ 三æäöø€ÆÄÖ〇Øß三
+ ¶
 ";
 }
