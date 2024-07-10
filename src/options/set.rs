@@ -174,6 +174,7 @@ pub fn set_options(
             map_styles,
             max_line_distance,
             max_line_length,
+            max_syntax_length,
             // Hack: minus-style must come before minus-*emph-style because the latter default
             // dynamically to the value of the former.
             merge_conflict_begin_symbol,

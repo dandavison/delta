@@ -696,11 +696,40 @@ pub fn get_syntax_style_sections_for_lines<'a>(
     ) {
         (Some(highlighter), true) => {
             for (line, _) in lines.iter() {
-                line_sections.push(
-                    highlighter
-                        .highlight_line(line, &config.syntax_set)
-                        .unwrap(),
-                );
+                // Fast but simple length comparison. Overcounts non-printable ansi
+                // characters or wider UTF-8, but `truncate_str_short` in the
+                // else branch corrects that.
+                if line.len() < config.max_syntax_length || config.max_syntax_length == 0 {
+                    line_sections.push(
+                        highlighter
+                            .highlight_line(line, &config.syntax_set)
+                            .unwrap(),
+                    );
+                } else {
+                    let line_syntax = ansi::truncate_str_short(line, config.max_syntax_length);
+                    // Re-split to get references into `line` with correct lifetimes.
+                    // SAFETY: slicing the string is safe because `truncate_str_short` always
+                    // returns a prefix of the input and only cuts at grapheme borders.
+                    let (with_syntax, plain) = line.split_at(line_syntax.len());
+                    // Note: splitting a line and only feeding one half to the highlighter may
+                    // result in wrong highlighting until it is reset the next hunk.
+                    //
+                    // Also, as lines are no longer newline terminated they might not be
+                    // highlighted correctly, and because of lifetimes inserting '\n' here is not
+                    // possible, also see `prepare()`.
+                    line_sections.push(
+                        highlighter
+                            .highlight_line(with_syntax, &config.syntax_set)
+                            .unwrap(),
+                    );
+
+                    if !plain.is_empty() {
+                        line_sections
+                            .last_mut()
+                            .unwrap()
+                            .push((config.null_syntect_style, plain));
+                    }
+                }
             }
         }
         _ => {
