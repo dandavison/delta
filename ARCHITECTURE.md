@@ -118,7 +118,7 @@ Delta [processes a subhunk](https://github.com/dandavison/delta/blob/d92c3ead769
 
 3. **Process subhunk lines for side-by-side or unified output**
 
-   At this point we have a collection of lines corresponding to a subhunk and, for each line, a specification of how syntax styles and diff styles are applied to substrings of the line. These data structures are [processed differently](https://github.com/dandavison/delta/blob/master/src/paint.rs#L635-L674) according to whether unified or side-by-side diff display has been requested.
+   At this point we have a collection of lines corresponding to a subhunk and, for each line, a specification of how syntax styles and diff styles are applied to substrings of the line. These data structures are [processed differently](https://github.com/dandavison/delta/blob/main/src/paint.rs#L635-L674) according to whether unified or side-by-side diff display has been requested.
 
 4. **Superimpose syntax and diff styles for a line**
 
@@ -140,7 +140,7 @@ The inferred pairing is the one with the smallest edit distance.
 ## Features
 
 Delta features such as `line-numbers`, `side-by-side`, `diff-so-fancy`, etc can be considered to consist of (a) some feature-specific implementation code, and (b) a collection of key-value pairs specifying the values that certain delta options should take if that feature is enabled.
-Accordingly, each such "feature" is implemented by a separate module under [`src/features/`](https://github.com/dandavison/delta/tree/master/src/features).
+Accordingly, each such "feature" is implemented by a separate module under [`src/features/`](https://github.com/dandavison/delta/tree/main/src/features).
 Each of these modules must export a function named `make_feature` whose job is to return key-value pairs for updating the user options.
 
 ## Common terms used in the code

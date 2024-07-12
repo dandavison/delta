@@ -2,11 +2,11 @@
 
 A "theme" in delta is just a collection of settings grouped together in a named [feature](./features-named-groups-of-settings.md). One of the available settings is `syntax-theme`: this dictates the colors and styles that are applied to foreground text by the syntax highlighter. Thus the concept of "theme" in delta encompasses not just the foreground syntax-highlighting color theme, but also background colors, decorations such as boxes and under/overlines, etc.
 
-The delta git repo contains a [collection of themes](https://github.com/dandavison/delta/blob/master/themes.gitconfig) created by users. These focus on the visual appearance: colors etc. If you want features like `side-by-side` or `navigate`, you would set that yourself, after selecting the color theme.
+The delta git repo contains a [collection of themes](https://github.com/dandavison/delta/blob/main/themes.gitconfig) created by users. These focus on the visual appearance: colors etc. If you want features like `side-by-side` or `navigate`, you would set that yourself, after selecting the color theme.
 
-To browse themes, use `delta --show-themes`, or browse the list of theme PRs: https://github.com/dandavison/delta/commits/master/themes.gitconfig. (The PRs nearly always have screenshots in them.)
+To browse themes, use `delta --show-themes`, or browse the list of theme PRs: <https://github.com/dandavison/delta/commits/main/themes.gitconfig>. (The PRs nearly always have screenshots in them.)
 
-To use the delta themes, clone the delta repo (or [download](https://raw.githubusercontent.com/dandavison/delta/master/themes.gitconfig) the raw `themes.gitconfig` file) and add the following entry in your gitconfig:
+To use the delta themes, clone the delta repo (or [download](https://raw.githubusercontent.com/dandavison/delta/main/themes.gitconfig) the raw `themes.gitconfig` file) and add the following entry in your gitconfig:
 
 ```gitconfig
 [include]
