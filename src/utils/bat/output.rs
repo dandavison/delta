@@ -21,6 +21,7 @@ pub enum PagingMode {
     #[default]
     Never,
 }
+const LESSUTFCHARDEF: &str = "LESSUTFCHARDEF";
 use crate::errors::*;
 
 pub enum OutputType {
@@ -156,8 +157,22 @@ fn _make_process_from_less_path(
         } else {
             p.args(args);
         }
+
+        // less >= 633 (from May 2023) prints any characters from the Private Use Area of Unicode
+        // as control characters (e.g. <U+E012> instead of hoping that the terminal can render it).
+        // This means any Nerd Fonts will not be displayed properly. Previous versions of less just
+        // passed these characters through, and terminals usually fall back to a less obtrusive
+        // box. Use this new env var less introduced to restore the previous behavior. This sets all
+        // chars to single width (':p', see less manual). If a user provided env var is present,
+        // use do not override it.
+        // Also see delta issue 1616 and nerd-fonts/issues/1337
+        if std::env::var(LESSUTFCHARDEF).is_err() {
+            p.env(LESSUTFCHARDEF, "E000-F8FF:p,F0000-FFFFD:p,100000-10FFFD:p");
+        }
+
         p.env("LESSCHARSET", "UTF-8");
         p.env("LESSANSIENDCHARS", "mK");
+
         if config.navigate {
             if let Ok(hist_file) = navigate::copy_less_hist_file_and_append_navigate_regex(config) {
                 p.env("LESSHISTFILE", hist_file);
