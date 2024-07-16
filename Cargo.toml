@@ -54,7 +54,7 @@ unicode-segmentation = "1.10.1"
 unicode-width = "0.1.10"
 xdg = "2.4.1"
 clap_complete = "4.4.4"
-terminal-colorsaurus = "0.3.1"
+terminal-colorsaurus = "0.4.1"
 
 [dependencies.git2]
 version = "0.18.2"

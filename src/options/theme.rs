@@ -126,16 +126,14 @@ fn should_detect_dark_light(opt: &cli::Opt) -> bool {
 }
 
 fn detect_light_mode() -> bool {
-    use terminal_colorsaurus::{color_scheme, QueryOptions};
+    use terminal_colorsaurus::{color_scheme, ColorScheme, QueryOptions};
 
     #[cfg(test)]
     if let Some(value) = test_utils::DETECT_LIGHT_MODE_OVERRIDE.get() {
         return value;
     }
 
-    color_scheme(QueryOptions::default())
-        .map(|c| c.is_dark_on_light())
-        .unwrap_or_default()
+    color_scheme(QueryOptions::default()).unwrap_or_default() == ColorScheme::Light
 }
 
 #[cfg(test)]

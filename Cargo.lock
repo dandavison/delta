@@ -1259,23 +1259,24 @@ dependencies = [
 
 [[package]]
 name = "terminal-colorsaurus"
-version = "0.3.1"
+version = "0.4.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "c374383f597b763eb3bd06bc4e18f85510a52d7f1ac762f0c7e413ce696079fc"
+checksum = "f25695f34d6f2acfa6c9dc41348e9a38d66cda2a78a010d5eafee6df69d8cc69"
 dependencies = [
+ "cfg-if",
  "libc",
  "memchr",
  "mio",
  "terminal-trx",
- "thiserror",
 ]
 
 [[package]]
 name = "terminal-trx"
-version = "0.2.0"
+version = "0.2.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "1a4af7c93f02d5bd5e120c812f7fb413003b7060e8a22d0ea90346f1be769210"
+checksum = "6d4c86910e10c782a02d3b7606de43cf7ebd80e1fafdca8e49a0db2b0d4611f0"
 dependencies = [
+ "cfg-if",
  "libc",
  "windows-sys 0.52.0",
 ]
