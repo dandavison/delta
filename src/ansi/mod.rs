@@ -25,24 +25,19 @@ pub fn measure_text_width(s: &str) -> usize {
     })
 }
 
-/// Truncate string such that `tail` is present as a suffix, preceded by as much of `s` as can be
-/// displayed in the requested width.
-// Return string constructed as follows:
-// 1. `display_width` characters are available. If the string fits, return it.
-//
-// 2. Contribute graphemes and ANSI escape sequences from `tail` until either (1) `tail` is
-//    exhausted, or (2) the display width of the result would exceed `display_width`.
-//
-// 3. If tail was exhausted, then contribute graphemes and ANSI escape sequences from `s` until the
-//    display_width of the result would exceed `display_width`.
-pub fn truncate_str<'a>(s: &'a str, display_width: usize, tail: &str) -> Cow<'a, str> {
+fn truncate_str_impl<'a>(
+    s: &'a str,
+    display_width: usize,
+    tail: &str,
+    fill2w: Option<char>,
+) -> Cow<'a, str> {
     let items = ansi_strings_iterator(s).collect::<Vec<(&str, bool)>>();
     let width = strip_ansi_codes_from_strings_iterator(items.iter().copied()).width();
     if width <= display_width {
         return Cow::from(s);
     }
     let result_tail = if !tail.is_empty() {
-        truncate_str(tail, display_width, "").to_string()
+        truncate_str_impl(tail, display_width, "", fill2w).to_string()
     } else {
         String::new()
     };
@@ -51,20 +46,60 @@ pub fn truncate_str<'a>(s: &'a str, display_width: usize, tail: &str) -> Cow<'a,
     for (t, is_ansi) in items {
         if !is_ansi {
             for g in t.graphemes(true) {
-                let w = g.width();
-                if used + w > display_width {
-                    result.push_str(&" ".repeat(display_width.saturating_sub(used)));
+                let width_of_grapheme = g.width();
+                if used + width_of_grapheme > display_width {
+                    // Handle case "2." mentioned in `truncate_str` docs and fill the
+                    // hole left by double-width (2w) truncation.
+                    if let Some(fillchar) = fill2w {
+                        if width_of_grapheme == 2 && used < display_width {
+                            result.push(fillchar);
+                        } else if width_of_grapheme > 2 {
+                            // Should not happen, this means either unicode_segmentation
+                            // graphemes are too wide, or the unicode_width is calculated wrong.
+                            // Fallback:
+                            debug_assert!(width_of_grapheme <= 2, "strange grapheme width");
+                            for _ in 0..display_width.saturating_sub(used) {
+                                result.push(fillchar);
+                            }
+                        }
+                    }
                     break;
                 }
                 result.push_str(g);
-                used += w;
+                used += width_of_grapheme;
             }
         } else {
             result.push_str(t);
         }
     }
 
-    Cow::from(format!("{result}{result_tail}"))
+    result.push_str(&result_tail);
+    Cow::from(result)
+}
+
+/// Truncate string such that `tail` is present as a suffix, preceded by as much of `s` as can be
+/// displayed in the requested width. Even with `tail` empty the result may not be a prefix of `s`.
+// Return string constructed as follows:
+// 1. `display_width` characters are available. If the string fits, return it.
+//
+// 2. If a double-width (fullwidth) grapheme has to be cut in the following steps, replace the first
+//    half with a space (' '). If this happens the result is no longer a prefix of the input.
+//
+// 3. Contribute graphemes and ANSI escape sequences from `tail` until either (1) `tail` is
+//    exhausted, or (2) the display width of the result would exceed `display_width`.
+//
+// 4. If tail was exhausted, then contribute graphemes and ANSI escape sequences from `s` until the
+//    display_width of the result would exceed `display_width`.
+pub fn truncate_str<'a>(s: &'a str, display_width: usize, tail: &str) -> Cow<'a, str> {
+    truncate_str_impl(s, display_width, tail, Some(' '))
+}
+
+/// Truncate string `s` so it fits into `display_width`, ignoring any ANSI escape sequences when
+/// calculating the width. If a double-width ("fullwidth") grapheme has to be cut, it is omitted and
+/// the resulting string is *shorter* than `display_width`. But this way the result is always a
+/// prefix of the input `s`.
+pub fn truncate_str_short(s: &str, display_width: usize) -> Cow<str> {
+    truncate_str_impl(s, display_width, "", None)
 }
 
 pub fn parse_style_sections(s: &str) -> Vec<(ansi_term::Style, &str)> {
@@ -180,12 +215,12 @@ pub fn explain_ansi(line: &str, colorful: bool) -> String {
 
 #[cfg(test)]
 mod tests {
-    use crate::ansi::ansi_preserving_index;
+    use unicode_width::UnicodeWidthStr;
 
     // Note that src/ansi/console_tests.rs contains additional test coverage for this module.
     use super::{
-        ansi_preserving_slice, measure_text_width, parse_first_style,
-        string_starts_with_ansi_style_sequence, strip_ansi_codes, truncate_str,
+        ansi_preserving_index, ansi_preserving_slice, measure_text_width, parse_first_style,
+        string_starts_with_ansi_style_sequence, strip_ansi_codes, truncate_str, truncate_str_short,
     };
 
     #[test]
@@ -291,5 +326,40 @@ mod tests {
         assert_eq!(truncate_str("123", 2, "s"), "1s");
         assert_eq!(truncate_str("123", 2, "→"), "1→");
         assert_eq!(truncate_str("12ݶ", 1, "ݶ"), "ݶ");
+    }
+
+    #[test]
+    fn test_truncate_str_at_double_width_grapheme() {
+        let one_double_four = "1＃4";
+        let double = "／";
+        assert_eq!(one_double_four.width(), 4);
+        assert_eq!(double.width(), 2);
+
+        assert_eq!(truncate_str(one_double_four, 1, ""), "1");
+        assert_eq!(truncate_str(one_double_four, 2, ""), "1 ");
+        assert_eq!(truncate_str(one_double_four, 3, ""), "1＃");
+        assert_eq!(truncate_str(one_double_four, 4, ""), "1＃4");
+
+        assert_eq!(truncate_str_short(one_double_four, 1), "1");
+        assert_eq!(truncate_str_short(one_double_four, 2), "1"); // !!
+        assert_eq!(truncate_str_short(one_double_four, 3), "1＃");
+        assert_eq!(truncate_str_short(one_double_four, 4), "1＃4");
+
+        assert_eq!(truncate_str(one_double_four, 1, double), " ");
+        assert_eq!(truncate_str(one_double_four, 2, double), "／");
+        assert_eq!(truncate_str(one_double_four, 3, double), "1／");
+        assert_eq!(truncate_str(one_double_four, 4, double), "1＃4");
+
+        assert_eq!(truncate_str(one_double_four, 0, ""), "");
+        assert_eq!(truncate_str(one_double_four, 0, double), "");
+        assert_eq!(truncate_str_short(one_double_four, 0), "");
+
+        assert_eq!(truncate_str(double, 0, double), "");
+        assert_eq!(truncate_str(double, 1, double), " ");
+        assert_eq!(truncate_str(double, 2, double), double);
+
+        assert_eq!(truncate_str_short(double, 0), "");
+        assert_eq!(truncate_str_short(double, 1), "");
+        assert_eq!(truncate_str_short(double, 2), double);
     }
 }
