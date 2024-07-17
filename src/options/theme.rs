@@ -125,45 +125,22 @@ fn should_detect_dark_light(opt: &cli::Opt) -> bool {
     }
 }
 
+#[cfg(not(test))]
 fn detect_light_mode() -> bool {
     use terminal_colorsaurus::{color_scheme, ColorScheme, QueryOptions};
-
-    #[cfg(test)]
-    if let Some(value) = test_utils::DETECT_LIGHT_MODE_OVERRIDE.get() {
-        return value;
-    }
-
     color_scheme(QueryOptions::default()).unwrap_or_default() == ColorScheme::Light
 }
 
 #[cfg(test)]
-pub(crate) mod test_utils {
-    thread_local! {
-        pub(super) static DETECT_LIGHT_MODE_OVERRIDE: std::cell::Cell<Option<bool>> = const { std::cell::Cell::new(None) };
-    }
-
-    pub(crate) struct DetectLightModeOverride {
-        old_value: Option<bool>,
-    }
-
-    impl DetectLightModeOverride {
-        pub(crate) fn new(value: bool) -> Self {
-            let old_value = DETECT_LIGHT_MODE_OVERRIDE.get();
-            DETECT_LIGHT_MODE_OVERRIDE.set(Some(value));
-            DetectLightModeOverride { old_value }
-        }
-    }
-
-    impl Drop for DetectLightModeOverride {
-        fn drop(&mut self) {
-            DETECT_LIGHT_MODE_OVERRIDE.set(self.old_value)
-        }
-    }
+fn detect_light_mode() -> bool {
+    LIGHT_MODE_IN_TESTS
 }
 
 #[cfg(test)]
+pub(crate) const LIGHT_MODE_IN_TESTS: bool = false;
+
+#[cfg(test)]
 mod tests {
-    use super::test_utils::DetectLightModeOverride;
     use super::*;
     use crate::color;
     use crate::tests::integration_test_utils;
@@ -171,8 +148,6 @@ mod tests {
     // TODO: Test influence of BAT_THEME env var. E.g. see utils::process::tests::FakeParentArgs.
     #[test]
     fn test_syntax_theme_selection() {
-        let _override = DetectLightModeOverride::new(false);
-
         #[derive(PartialEq)]
         enum Mode {
             Light,
