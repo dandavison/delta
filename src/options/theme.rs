@@ -39,13 +39,13 @@ pub fn is_light_syntax_theme(theme: &str) -> bool {
 }
 
 const LIGHT_SYNTAX_THEMES: [&str; 7] = [
+    "catppuccin-latte",
     "GitHub",
     "gruvbox-light",
     "gruvbox-white",
     "Monokai Extended Light",
     "OneHalfLight",
     "Solarized (light)",
-    "Catppuccin-latte",
 ];
 
 const DEFAULT_LIGHT_SYNTAX_THEME: &str = "GitHub";
