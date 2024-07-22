@@ -7,7 +7,8 @@ use bytelines::ByteLinesReader;
 use crate::config::{self, delta_unreachable};
 use crate::delta;
 
-/// Run `git diff` on the files provided on the command line and display the output.
+/// Run `git diff` on the files provided on the command line and display the output. Fall back to
+/// `diff` if the supplied "files" use process substitution.
 pub fn diff(
     minus_file: &Path,
     plus_file: &Path,
@@ -23,15 +24,34 @@ pub fn diff(
     let via_process_substitution =
         |f: &Path| f.starts_with("/proc/self/fd/") || f.starts_with("/dev/fd/");
 
-    let diff_cmd = if via_process_substitution(minus_file) || via_process_substitution(plus_file) {
-        format!("diff -U3 {} --", config.diff_args)
-    } else {
-        format!("git diff --no-index --color {} --", config.diff_args)
+    let diff_args = match shell_words::split(&config.diff_args) {
+        Ok(words) => words,
+        Err(err) => {
+            eprintln!("Failed to parse diff args: {}: {err}", config.diff_args);
+            return config.error_exit_code;
+        }
     };
 
-    let mut diff_args = diff_cmd.split_whitespace();
-    let diff_bin = diff_args.next().unwrap();
+    // https://stackoverflow.com/questions/22706714/why-does-git-diff-not-work-with-process-substitution
+    // TODO: git >= 2.42 supports process substitution
+    let use_git_diff =
+        !via_process_substitution(minus_file) && !via_process_substitution(plus_file);
+    let mut diff_cmd = if use_git_diff {
+        vec!["git", "diff", "--no-index", "--color"]
+    } else if diff_args_set_unified_context(&diff_args) {
+        vec!["diff"]
+    } else {
+        vec!["diff", "-U3"]
+    };
+    diff_cmd.extend(
+        diff_args
+            .iter()
+            .filter(|s| !s.is_empty())
+            .map(String::as_str),
+    );
+    diff_cmd.push("--");
 
+    let (diff_bin, diff_cmd) = diff_cmd.split_first().unwrap();
     let diff_path = match grep_cli::resolve_binary(PathBuf::from(diff_bin)) {
         Ok(path) => path,
         Err(err) => {
@@ -40,8 +60,8 @@ pub fn diff(
         }
     };
 
-    let diff_process = process::Command::new(diff_path)
-        .args(diff_args)
+    let diff_process = process::Command::new(&diff_path)
+        .args(diff_cmd)
         .args([minus_file, plus_file])
         .stdout(process::Stdio::piped())
         .spawn();
@@ -80,11 +100,42 @@ pub fn diff(
             config.error_exit_code
         });
     if code >= 2 {
-        eprintln!("'{diff_bin}' process failed with exit status {code}. Command was {diff_cmd}");
+        eprintln!(
+            "'{diff_bin}' process failed with exit status {code}. Command was: {}",
+            format_args!(
+                "{} {} {} {}",
+                diff_path.display(),
+                diff_cmd.join(" "),
+                minus_file.display(),
+                plus_file.display()
+            )
+        );
         config.error_exit_code
     } else {
         code
     }
+}
+
+/// Do the user-supplied `diff` args set the unified context?
+fn diff_args_set_unified_context<I, S>(args: I) -> bool
+where
+    I: IntoIterator<Item = S>,
+    S: AsRef<str>,
+{
+    // This function is applied to `diff` args; not `git diff`.
+    for arg in args {
+        let arg = arg.as_ref();
+        if arg == "-u" || arg == "-U" {
+            // diff allows a space after -U (git diff does not)
+            return true;
+        }
+        if (arg.starts_with("-U") || arg.starts_with("-u"))
+            && arg.split_at(2).1.parse::<u32>().is_ok()
+        {
+            return true;
+        }
+    }
+    false
 }
 
 #[cfg(test)]
@@ -92,8 +143,26 @@ mod main_tests {
     use std::io::{Cursor, Read, Seek};
     use std::path::PathBuf;
 
-    use super::diff;
+    use super::{diff, diff_args_set_unified_context};
     use crate::tests::integration_test_utils;
+
+    use rstest::rstest;
+
+    #[rstest]
+    #[case(&["-u"], true)]
+    #[case(&["-u7"], true)]
+    #[case(&["-u77"], true)]
+    #[case(&["-ux"], false)]
+    #[case(&["-U"], true)]
+    #[case(&["-U7"], true)]
+    #[case(&["-U77"], true)]
+    #[case(&["-Ux"], false)]
+    fn test_unified_diff_arg_is_detected_in_diff_args(
+        #[case] diff_args: &[&str],
+        #[case] expected: bool,
+    ) {
+        assert_eq!(diff_args_set_unified_context(diff_args), expected)
+    }
 
     #[test]
     #[ignore] // https://github.com/dandavison/delta/pull/546
@@ -120,15 +189,23 @@ mod main_tests {
     }
 
     fn _do_diff_test(file_a: &str, file_b: &str, expect_diff: bool) {
-        let config = integration_test_utils::make_config_from_args(&[]);
-        let mut writer = Cursor::new(vec![]);
-        let exit_code = diff(
-            &PathBuf::from(file_a),
-            &PathBuf::from(file_b),
-            &config,
-            &mut writer,
-        );
-        assert_eq!(exit_code, if expect_diff { 1 } else { 0 });
+        for args in [
+            vec![],
+            vec!["-@''"],
+            vec!["-@-u"],
+            vec!["-@-U99"],
+            vec!["-@-U0"],
+        ] {
+            let config = integration_test_utils::make_config_from_args(&args);
+            let mut writer = Cursor::new(vec![]);
+            let exit_code = diff(
+                &PathBuf::from(file_a),
+                &PathBuf::from(file_b),
+                &config,
+                &mut writer,
+            );
+            assert_eq!(exit_code, if expect_diff { 1 } else { 0 });
+        }
     }
 
     fn _read_to_string(cursor: &mut Cursor<Vec<u8>>) -> String {
