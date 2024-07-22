@@ -18,7 +18,7 @@ pub fn show_colors() -> std::io::Result<()> {
     let assets = utils::bat::assets::load_highlighting_assets();
 
     let opt = match cli::Opt::from_args_and_git_config(args, &env, assets) {
-        cli::Call::Delta(opt) => opt,
+        (cli::Call::Delta(_), Some(opt)) => opt,
         _ => panic!("non-Delta Call variant should not occur here"),
     };
 
