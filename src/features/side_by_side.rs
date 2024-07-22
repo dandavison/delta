@@ -592,7 +592,6 @@ pub mod ansifill {
 pub mod tests {
     use crate::ansi::strip_ansi_codes;
     use crate::features::line_numbers::tests::*;
-    use crate::options::theme;
     use crate::tests::integration_test_utils::{make_config_from_args, run_delta, DeltaTest};
     use insta::assert_snapshot;
 
@@ -646,7 +645,6 @@ pub mod tests {
 
     #[test]
     fn test_two_plus_lines_spaces_and_ansi() {
-        let _override = theme::test_utils::DetectLightModeOverride::new(false);
         DeltaTest::with_args(&[
             "--side-by-side",
             "--width",
