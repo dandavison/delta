@@ -24,7 +24,7 @@ mod subcommands;
 
 mod tests;
 
-use std::ffi::OsString;
+use std::ffi::{OsStr, OsString};
 use std::io::{self, BufRead, Cursor, ErrorKind, IsTerminal, Write};
 use std::process::{self, Command, Stdio};
 
@@ -91,6 +91,15 @@ pub fn run_app(
     } else if let Call::Help(msg) = call {
         OutputType::oneshot_write(msg)?;
         return Ok(0);
+    } else if let Call::SubCommand(_, cmd) = &call {
+        // Set before creating the Config, which already asks for the calling process
+        // (not required for Call::DeltaDiff)
+        utils::process::set_calling_process(
+            &cmd.args
+                .iter()
+                .map(|arg| OsStr::to_string_lossy(arg).to_string())
+                .collect::<Vec<_>>(),
+        );
     }
     let opt = opt.unwrap_or_else(|| delta_unreachable("Opt is set"));
 
