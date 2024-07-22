@@ -1,9 +1,12 @@
 use std::collections::{HashMap, HashSet};
 use std::path::Path;
+use std::sync::atomic::AtomicUsize;
 use std::sync::{Arc, Condvar, Mutex, MutexGuard};
 
 use lazy_static::lazy_static;
 use sysinfo::{Pid, PidExt, Process, ProcessExt, ProcessRefreshKind, SystemExt};
+
+use crate::utils::DELTA_ATOMIC_ORDERING;
 
 pub type DeltaPid = u32;
 
@@ -19,7 +22,13 @@ pub enum CallingProcess {
     None,      // no matching process could be found
     Pending,   // calling process is currently being determined
 }
-// TODO: Git blame is currently handled differently
+
+// The information where the calling process info comes from *should* be inside
+// `CallingProcess`, but that is handed out (within a MutexGuard) to callers.
+// To keep the interface simple, store it here:
+static CALLER_INFO_SOURCE: AtomicUsize = AtomicUsize::new(CALLER_GUESSED);
+const CALLER_GUESSED: usize = 1;
+const CALLER_KNOWN: usize = 2;
 
 impl CallingProcess {
     pub fn paths_in_input_are_relative_to_cwd(&self) -> bool {
@@ -47,6 +56,8 @@ lazy_static! {
         Arc::new((Mutex::new(CallingProcess::Pending), Condvar::new()));
 }
 
+// delta was called by this process (or called by something which called delta and it),
+// try looking up this information in the process tree.
 pub fn start_determining_calling_process_in_thread() {
     // The handle is neither kept nor returned nor joined but dropped, so the main
     // thread can exit early if it does not need to know its parent process.
@@ -58,10 +69,26 @@ pub fn start_determining_calling_process_in_thread() {
             let (caller_mutex, determine_done) = &**CALLER;
 
             let mut caller = caller_mutex.lock().unwrap();
-            *caller = calling_process;
+
+            if CALLER_INFO_SOURCE.load(DELTA_ATOMIC_ORDERING) <= CALLER_GUESSED {
+                *caller = calling_process;
+            }
+
             determine_done.notify_all();
         })
         .unwrap();
+}
+
+// delta starts the process, so it is known.
+pub fn set_calling_process(args: &[String]) {
+    if let ProcessArgs::Args(result) = describe_calling_process(args) {
+        let (caller_mutex, determine_done) = &**CALLER;
+
+        let mut caller = caller_mutex.lock().unwrap();
+        *caller = result;
+        CALLER_INFO_SOURCE.store(CALLER_KNOWN, DELTA_ATOMIC_ORDERING);
+        determine_done.notify_all();
+    }
 }
 
 #[cfg(not(test))]
