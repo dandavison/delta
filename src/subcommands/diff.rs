@@ -29,8 +29,8 @@ pub fn diff(
         format!("git diff --no-index --color {} --", config.diff_args)
     };
 
-    let mut diff_cmd = diff_cmd.split_whitespace();
-    let diff_bin = diff_cmd.next().unwrap();
+    let mut diff_args = diff_cmd.split_whitespace();
+    let diff_bin = diff_args.next().unwrap();
 
     let diff_path = match grep_cli::resolve_binary(PathBuf::from(diff_bin)) {
         Ok(path) => path,
@@ -41,7 +41,7 @@ pub fn diff(
     };
 
     let diff_process = process::Command::new(diff_path)
-        .args(diff_cmd)
+        .args(diff_args)
         .args([minus_file, plus_file])
         .stdout(process::Stdio::piped())
         .spawn();
@@ -68,8 +68,8 @@ pub fn diff(
 
     // Return the exit code from the diff process, so that the exit code
     // contract of `delta file_A file_B` is the same as that of `diff file_A
-    // file_B` (i.e. 0 if same, 1 if different, 2 if error).
-    diff_process
+    // file_B` (i.e. 0 if same, 1 if different, >= 2 if error).
+    let code = diff_process
         .wait()
         .unwrap_or_else(|_| {
             delta_unreachable(&format!("'{diff_bin}' process not running."));
@@ -78,7 +78,13 @@ pub fn diff(
         .unwrap_or_else(|| {
             eprintln!("'{diff_bin}' process terminated without exit status.");
             config.error_exit_code
-        })
+        });
+    if code >= 2 {
+        eprintln!("'{diff_bin}' process failed with exit status {code}. Command was {diff_cmd}");
+        config.error_exit_code
+    } else {
+        code
+    }
 }
 
 #[cfg(test)]
