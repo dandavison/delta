@@ -3,6 +3,7 @@ use std::ffi::OsString;
 use std::path::{Path, PathBuf};
 
 use bat::assets::HighlightingAssets;
+use clap::error::Error;
 use clap::{ArgMatches, ColorChoice, CommandFactory, FromArgMatches, Parser, ValueEnum, ValueHint};
 use clap_complete::Shell;
 use console::Term;
@@ -974,6 +975,11 @@ pub struct Opt {
 
     #[arg(skip)]
     pub env: DeltaEnv,
+
+    #[arg(skip)]
+    // foreign subcommand which is unknown to this parser, only filled if
+    // normal parsing fails
+    pub subcmd: Vec<OsString>,
 }
 
 #[allow(non_snake_case)]
@@ -1209,6 +1215,7 @@ pub enum DetectDarkLight {
 #[derive(Debug)]
 pub enum Call<T> {
     Delta(T),
+    SubCommand(T, Vec<OsString>),
     Help(String),
     Version(String),
 }
@@ -1220,6 +1227,7 @@ impl<A> Call<A> {
         use Call::*;
         match self {
             Delta(_) => None,
+            SubCommand(_, _) => None,
             Help(help) => Some(Help(help)),
             Version(ver) => Some(Version(ver)),
         }
@@ -1251,18 +1259,50 @@ impl Opt {
                     Call::Help(format!("{}", help_text))
                 }
             }
-            Err(e) => {
-                e.exit();
-            }
+            Err(e) => Opt::try_subcmds(args, e),
             Ok(matches) => Call::Delta(matches),
         }
+    }
+
+    pub(crate) fn try_subcmds(args: &[OsString], orig_error: Error) -> Call<ArgMatches> {
+        for (i, arg) in args.iter().enumerate() {
+            if arg == "rg" || arg == "show" {
+                // on help and version the subcommand could ALSO be called
+                match Self::command().try_get_matches_from(&args[..i]) {
+                    Err(ref e) if e.kind() == clap::error::ErrorKind::DisplayVersion => {
+                        unreachable!("handled by caller");
+                    }
+                    Err(ref e) if e.kind() == clap::error::ErrorKind::DisplayHelp => {
+                        unreachable!("handled by caller");
+                    }
+                    Ok(matches) => {
+                        let mut subcmd = vec![arg.into()];
+                        if arg == "rg" {
+                            subcmd.push("--json".into());
+                        } else if arg == "show" {
+                            subcmd.insert(0, "git".into());
+                            subcmd.push("--color=always".into());
+                        }
+                        subcmd.extend(args[i + 1..].iter().map(|arg| arg.into()));
+                        return Call::SubCommand(matches, subcmd);
+                    }
+                    Err(_) => {
+                        // part before the subcommand failed to parse, report that error
+                        orig_error.exit()
+                    }
+                }
+            }
+        }
+        // no valid subcommand found, exit with the original error
+        orig_error.exit();
     }
 
     pub fn from_args_and_git_config(env: &DeltaEnv, assets: HighlightingAssets) -> Call<Self> {
         let args = std::env::args_os().collect::<Vec<_>>();
 
-        let matches = match Self::handle_help_and_version(&args) {
-            Call::Delta(t) => t,
+        let (matches, subcmd) = match Self::handle_help_and_version(&args) {
+            Call::Delta(t) => (t, None),
+            Call::SubCommand(t, cmd) => (t, Some(cmd)),
             msg => {
                 return msg
                     .try_convert()
@@ -1283,12 +1323,12 @@ impl Opt {
             }
         }
 
-        Call::Delta(Self::from_clap_and_git_config(
-            env,
-            matches,
-            final_config,
-            assets,
-        ))
+        let opt = Self::from_clap_and_git_config(env, matches, final_config, assets);
+        if let Some(subcmd) = subcmd {
+            Call::SubCommand(opt, subcmd)
+        } else {
+            Call::Delta(opt)
+        }
     }
 
     pub fn from_iter_and_git_config<I>(

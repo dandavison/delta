@@ -85,6 +85,10 @@ fn run_app() -> std::io::Result<i32> {
             return Ok(0);
         }
         Call::Delta(opt) => opt,
+        Call::SubCommand(mut opt, subcmd) => {
+            opt.subcmd = subcmd;
+            opt
+        }
     };
 
     let subcommand_result = if let Some(shell) = opt.generate_completion {
@@ -121,7 +125,12 @@ fn run_app() -> std::io::Result<i32> {
     };
 
     let _show_config = opt.show_config;
-    let config = config::Config::from(opt);
+
+    let (config, subcmd) = {
+        let mut opt = opt;
+        let subcmd = std::mem::take(&mut opt.subcmd);
+        (config::Config::from(opt), subcmd)
+    };
 
     if _show_config {
         let stdout = io::stdout();
@@ -135,22 +144,39 @@ fn run_app() -> std::io::Result<i32> {
         OutputType::from_mode(&env, config.paging_mode, config.pager.clone(), &pager_cfg).unwrap();
     let mut writer = output_type.handle().unwrap();
 
-    if let (Some(minus_file), Some(plus_file)) = (&config.minus_file, &config.plus_file) {
-        let exit_code = subcommands::diff::diff(minus_file, plus_file, &config, &mut writer);
-        return Ok(exit_code);
-    }
+    let subcmd =
+        if let (Some(minus_file), Some(plus_file)) = (&config.minus_file, &config.plus_file) {
+            subcommands::diff::diff(minus_file, plus_file, &config)
+        } else {
+            subcmd
+        };
 
-    if io::stdin().is_terminal() {
-        eprintln!(
-            "\
+    let res = if subcmd.is_empty() {
+        if io::stdin().is_terminal() {
+            eprintln!(
+                "\
     The main way to use delta is to configure it as the pager for git: \
     see https://github.com/dandavison/delta#get-started. \
     You can also use delta to diff two files: `delta file_A file_B`."
-        );
-        return Ok(config.error_exit_code);
-    }
+            );
+            return Ok(config.error_exit_code);
+        }
+        delta(io::stdin().lock().byte_lines(), &mut writer, &config)
+    } else {
+        use std::process::{Command, Stdio};
 
-    if let Err(error) = delta(io::stdin().lock().byte_lines(), &mut writer, &config) {
+        let cmd = Command::new(&subcmd[0])
+            .args(&subcmd[1..])
+            .stdout(Stdio::piped())
+            .spawn()
+            .expect("Failed to start");
+
+        let cmd_stdout = cmd.stdout.expect("Failed to open stdout");
+        let cmd_stdout_buf = io::BufReader::new(cmd_stdout);
+        delta(cmd_stdout_buf.byte_lines(), &mut writer, &config)
+    };
+
+    if let Err(error) = res {
         match error.kind() {
             ErrorKind::BrokenPipe => return Ok(0),
             _ => eprintln!("{error}"),
