@@ -172,13 +172,13 @@ pub struct Opt {
         default_value = "",
         value_name = "STRING"
     )]
-    /// Arguments to pass to `git diff` when using delta to diff two files.
+    /// Extra arguments to pass to `git diff` when using delta to diff two files.
     ///
     /// E.g. `delta --diff-args=-U999 file_1 file_2` is equivalent to
-    /// `git diff -U999 --no-index --color file_1 file_2 | delta`.
+    /// `git diff --no-index --color -U999 file_1 file_2 | delta`.
     ///
-    /// However, if you use process substitution instead of real file paths, it falls back to `diff -u` instead of `git
-    /// diff`.
+    /// However, if you use process substitution (`delta <(command_1) <(command_2)`)
+    /// instead of real file paths, it falls back to `diff -U3` instead of `git diff`.
     pub diff_args: String,
 
     #[arg(long = "diff-highlight")]

@@ -24,7 +24,7 @@ pub fn diff(
         |f: &Path| f.starts_with("/proc/self/fd/") || f.starts_with("/dev/fd/");
 
     let diff_cmd = if via_process_substitution(minus_file) || via_process_substitution(plus_file) {
-        format!("diff -u {} --", config.diff_args)
+        format!("diff -U3 {} --", config.diff_args)
     } else {
         format!("git diff --no-index --color {} --", config.diff_args)
     };
