@@ -53,7 +53,7 @@ syntect = "5.0.0"
 unicode-segmentation = "1.10.1"
 unicode-width = "0.1.10"
 xdg = "2.4.1"
-clap_complete = "4.4.4"
+clap_complete = "4.5.9"
 terminal-colorsaurus = "0.4.1"
 
 [dependencies.git2]
