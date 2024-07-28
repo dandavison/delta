@@ -13,6 +13,28 @@ use crate::env::DeltaEnv;
 use crate::fatal;
 use crate::features::navigate;
 
+#[derive(Debug, Default)]
+pub struct PagerCfg {
+    pub navigate: bool,
+    pub show_themes: bool,
+    pub navigate_regex: Option<String>,
+}
+
+impl From<&config::Config> for PagerCfg {
+    fn from(cfg: &config::Config) -> Self {
+        PagerCfg {
+            navigate: cfg.navigate,
+            show_themes: cfg.show_themes,
+            navigate_regex: cfg.navigate_regex.clone(),
+        }
+    }
+}
+impl From<config::Config> for PagerCfg {
+    fn from(cfg: config::Config) -> Self {
+        (&cfg).into()
+    }
+}
+
 #[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
 #[allow(dead_code)]
 pub enum PagingMode {
@@ -29,12 +51,34 @@ pub enum OutputType {
     Stdout(io::Stdout),
 }
 
+impl Drop for OutputType {
+    fn drop(&mut self) {
+        if let OutputType::Pager(ref mut command) = *self {
+            let _ = command.wait();
+        }
+    }
+}
+
 impl OutputType {
+    /// Create a pager and write all data into it. Waits until the pager exits.
+    /// The expectation is that the program will exit afterwards.
+    pub fn oneshot_write(data: String) -> io::Result<()> {
+        let mut output_type = OutputType::from_mode(
+            &DeltaEnv::init(),
+            PagingMode::QuitIfOneScreen,
+            None,
+            &PagerCfg::default(),
+        )
+        .unwrap();
+        let mut writer = output_type.handle().unwrap();
+        write!(&mut writer, "{}", data)
+    }
+
     pub fn from_mode(
         env: &DeltaEnv,
         mode: PagingMode,
         pager: Option<String>,
-        config: &config::Config,
+        config: &PagerCfg,
     ) -> Result<Self> {
         use self::PagingMode::*;
         Ok(match mode {
@@ -49,7 +93,7 @@ impl OutputType {
         env: &DeltaEnv,
         quit_if_one_screen: bool,
         pager_from_config: Option<String>,
-        config: &config::Config,
+        config: &PagerCfg,
     ) -> Result<Self> {
         let mut replace_arguments_to_less = false;
 
@@ -127,7 +171,7 @@ fn _make_process_from_less_path(
     args: &[String],
     replace_arguments_to_less: bool,
     quit_if_one_screen: bool,
-    config: &config::Config,
+    config: &PagerCfg,
 ) -> Option<Command> {
     if let Ok(less_path) = grep_cli::resolve_binary(less_path) {
         let mut p = Command::new(less_path);
@@ -203,13 +247,5 @@ delta is not an appropriate value for $PAGER \
         Some(p)
     } else {
         None
-    }
-}
-
-impl Drop for OutputType {
-    fn drop(&mut self) {
-        if let OutputType::Pager(ref mut command) = *self {
-            let _ = command.wait();
-        }
     }
 }
