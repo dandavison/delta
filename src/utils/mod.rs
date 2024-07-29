@@ -1,5 +1,6 @@
 #[cfg(not(tarpaulin_include))]
 pub mod bat;
+pub mod helpwrap;
 pub mod path;
 pub mod process;
 pub mod regex_replacement;
