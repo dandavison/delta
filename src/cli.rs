@@ -90,7 +90,7 @@ pub struct Opt {
     /// the `strftime` format syntax specification. If it is not present, the timestamps will
     /// be formatted in a human-friendly but possibly less accurate form.
     ///
-    /// See: (https://docs.rs/chrono/latest/chrono/format/strftime/index.html)
+    /// See: <https://docs.rs/chrono/latest/chrono/format/strftime/index.html>
     pub blame_timestamp_output_format: Option<String>,
 
     #[arg(long = "color-only")]
@@ -169,13 +169,13 @@ pub struct Opt {
     #[arg(long = "diff-highlight")]
     /// Emulate diff-highlight.
     ///
-    /// (https://github.com/git/git/tree/master/contrib/diff-highlight)
+    /// <https://github.com/git/git/tree/master/contrib/diff-highlight>
     pub diff_highlight: bool,
 
     #[arg(long = "diff-so-fancy")]
     /// Emulate diff-so-fancy.
     ///
-    /// (https://github.com/so-fancy/diff-so-fancy)
+    /// <https://github.com/so-fancy/diff-so-fancy>
     pub diff_so_fancy: bool,
 
     #[arg(long = "diff-stat-align-width", default_value = "48", value_name = "N")]
@@ -392,14 +392,14 @@ pub struct Opt {
     /// Render commit hashes, file names, and line numbers as hyperlinks.
     ///
     /// Following the hyperlink spec for terminal emulators:
-    /// https://gist.github.com/egmontkob/eb114294efbcd5adb1944c9f3cb5feda. By default, file names
+    /// <https://gist.github.com/egmontkob/eb114294efbcd5adb1944c9f3cb5feda>. By default, file names
     /// and line numbers link to the local file using a file URL, whereas commit hashes link to the
     /// commit in GitHub, if the remote repository is hosted by GitHub. See
     /// --hyperlinks-file-link-format for full control over the file URLs emitted. Hyperlinks are
     /// supported by several common terminal emulators. To make them work, you must use less version
     /// >= 581 with the -R flag (or use -r with older less versions, but this will break e.g.
     /// --navigate). If you use tmux, then you will also need a patched fork of tmux (see
-    /// https://github.com/dandavison/tmux).
+    /// <https://github.com/dandavison/tmux>).
     pub hyperlinks: bool,
 
     #[arg(long = "hyperlinks-commit-link-format", value_name = "FMT")]
@@ -423,7 +423,7 @@ pub struct Opt {
     /// to open the file at the correct line number, you could use a custom URL format such as
     /// "file-line://{path}:{line}" and register an application to handle the custom "file-line" URL
     /// scheme by opening the file in your editor/IDE at the indicated line number. See
-    /// https://github.com/dandavison/open-in-editor for an example.
+    /// <https://github.com/dandavison/open-in-editor> for an example.
     pub hyperlinks_file_link_format: String,
 
     #[arg(
@@ -833,7 +833,7 @@ pub struct Opt {
     /// Show example diff for available delta themes.
     ///
     /// A delta theme is a delta named feature (see --features) that sets either `light` or `dark`.
-    /// See https://github.com/dandavison/delta#custom-color-themes. If diff output is supplied on
+    /// See <https://github.com/dandavison/delta#custom-color-themes>. If diff output is supplied on
     /// standard input then this will be used for the demo. For example: `git show | delta
     /// --show-themes`. By default shows dark or light themes only, according to whether delta is in
     /// dark or light mode (as set by the user or inferred from BAT_THEME). To control the themes
@@ -1000,7 +1000,7 @@ fn get_after_long_help(is_term: bool, no_indent: &str, no_wrap: &str) -> String 
 
 {i0}{H_}Git config{_H}
 
-By default, delta takes settings from a section named "delta" in git config files, if one is present. The git config file to use for delta options will usually be ~/.gitconfig, but delta follows the rules given in https://git-scm.com/docs/git-config#FILES. Most delta options can be given in a git config file, using the usual option names but without the initial '--'. An example is
+By default, delta takes settings from a section named "delta" in git config files, if one is present. The git config file to use for delta options will usually be ~/.gitconfig, but delta follows the rules given in <https://git-scm.com/docs/git-config#FILES>. Most delta options can be given in a git config file, using the usual option names but without the initial '--'. An example is
 
 [delta]
     line-numbers = true
@@ -1043,7 +1043,7 @@ At this point, you can override features set in the command line or in the envir
 
 {i0}{H_}Styles{_H}
 
-All options that have a name like --*-style work the same way. It is very similar to how colors/styles are specified in a gitconfig file: https://git-scm.com/docs/git-config#Documentation/git-config.txt-color
+All options that have a name like --*-style work the same way. It is very similar to how colors/styles are specified in a gitconfig file: <https://git-scm.com/docs/git-config#Documentation/git-config.txt-color>
 
 Here is an example:
 
@@ -1088,7 +1088,7 @@ There are four ways to specify a color (this section applies to foreground and b
 
 1. CSS color name
 
-   Any of the 140 color names used in CSS: https://www.w3schools.com/colors/colors_groups.asp
+   Any of the 140 color names used in CSS: <https://www.w3schools.com/colors/colors_groups.asp>
 
 2. RGB hex code
 
@@ -1115,7 +1115,7 @@ There are four ways to specify a color (this section applies to foreground and b
    An example of using an ANSI color number is:
    --file-style=28
 
-   There are 256 ANSI color numbers: 0-255. The first 16 are the same as the colors described in the "ANSI color name" section above. See https://en.wikipedia.org/wiki/ANSI_escape_code#8-bit. Specifying colors like this is useful if your terminal only supports 256 colors (i.e. doesn't support 24-bit color).
+   There are 256 ANSI color numbers: 0-255. The first 16 are the same as the colors described in the "ANSI color name" section above. See <https://en.wikipedia.org/wiki/ANSI_escape_code#8-bit>. Specifying colors like this is useful if your terminal only supports 256 colors (i.e. doesn't support 24-bit color).
 
 
 {i0}{H_}Line Numbers{_H}
@@ -1140,7 +1140,7 @@ The following options allow the line number display to be customized:
 --line-numbers-zero-style:   Change the style applied to line numbers in unchanged lines
 --line-numbers-plus-style:   Change the style applied to line numbers in plus lines
 
-Options --line-numbers-left-format and --line-numbers-right-format allow you to change the contents of the line number columns. Their values are arbitrary format strings, which are allowed to contain the placeholders {{nm}} for the line number associated with the old version of the file and {{np}} for the line number associated with the new version of the file. The placeholders support a subset of the string formatting syntax documented here: https://doc.rust-lang.org/std/fmt/#formatting-parameters. Specifically, you can use the alignment and width syntax.
+Options --line-numbers-left-format and --line-numbers-right-format allow you to change the contents of the line number columns. Their values are arbitrary format strings, which are allowed to contain the placeholders {{nm}} for the line number associated with the old version of the file and {{np}} for the line number associated with the new version of the file. The placeholders support a subset of the string formatting syntax documented here: <https://doc.rust-lang.org/std/fmt/#formatting-parameters>. Specifically, you can use the alignment and width syntax.
 
 For example, the default value of --line-numbers-left-format is '{{nm:^4}}⋮'. This means that the left column should display the minus line number (nm), center-aligned, padded with spaces to a width of 4 characters, followed by a unicode dividing-line character (⋮).
 
@@ -1151,7 +1151,7 @@ Use '<' for left-align, '^' for center-align, and '>' for right-align.
 
 {i0}{H_}Support{_H}
 
-If something isn't working correctly, or you have a feature request, please open an issue at https://github.com/dandavison/delta/issues.
+If something isn't working correctly, or you have a feature request, please open an issue at <https://github.com/dandavison/delta/issues>.
 
 For a short help summary, please use delta -h.
 "##
