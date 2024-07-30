@@ -25,6 +25,7 @@ pub fn absolute_path(relative_path: &str, config: &Config) -> Option<PathBuf> {
     .map(normalize_path)
 }
 
+#[allow(clippy::needless_borrows_for_generic_args)] // Lint has known problems, &path != path
 /// Relativize `path` if delta `config` demands that and paths are not already relativized by git.
 pub fn relativize_path_maybe(path: &mut String, config: &Config) {
     let mut inner_relativize = || -> Option<()> {
