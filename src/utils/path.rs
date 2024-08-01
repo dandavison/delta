@@ -29,7 +29,8 @@ pub fn absolute_path(relative_path: &str, config: &Config) -> Option<PathBuf> {
 pub fn relativize_path_maybe(path: &mut String, config: &Config) {
     let mut inner_relativize = || -> Option<()> {
         let base = config.cwd_relative_to_repo_root.as_deref()?;
-        let relative_path = pathdiff::diff_paths(&path, base)?;
+        let path_clone = path.clone();
+        let relative_path = pathdiff::diff_paths(&path_clone, base)?;
         if relative_path.is_relative() {
             #[cfg(target_os = "windows")]
             // '/dev/null' is converted to '\dev\null' and considered relative. Work
