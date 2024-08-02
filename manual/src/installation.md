@@ -49,6 +49,10 @@ Note that the package is often called `git-delta`, but the executable installed 
     <td><code>nix-env -iA nixpkgs.delta</code>
   </tr>
   <tr>
+    <td><a href="https://github.com/getsolus/packages/tree/main/packages/d/delta">Solus</a></td>
+    <td><code>eopkg install delta</code></td>
+  </tr>
+  <tr>
     <td><a href="https://cvsweb.openbsd.org/ports/textproc/delta/">OpenBSD</a></td>
     <td><code>pkg_add delta</code></td>
   </tr>
