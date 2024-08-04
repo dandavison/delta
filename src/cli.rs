@@ -177,8 +177,8 @@ pub struct Opt {
     /// E.g. `delta --diff-args=-U999 file_1 file_2` is equivalent to
     /// `git diff --no-index --color -U999 file_1 file_2 | delta`.
     ///
-    /// However, if you use process substitution (`delta <(command_1) <(command_2)`)
-    /// instead of real file paths, it falls back to `diff -U3` instead of `git diff`.
+    /// If you use process substitution (`delta <(command_1) <(command_2)`) and your git version
+    /// doesn't support it, then delta will fall back to `diff` instead of `git diff`.
     pub diff_args: String,
 
     #[arg(long = "diff-highlight")]
