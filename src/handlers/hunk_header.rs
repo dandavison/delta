@@ -72,6 +72,16 @@ impl<'a> StateMachine<'a> {
                 | HunkPlus(diff_type, _) => diff_type.clone(),
                 _ => Unified,
             };
+
+            if self.minus_line_counter.must_count() {
+                if let &[(_, minus_lines), (_, _plus_lines), ..] =
+                    parsed_hunk_header.line_numbers_and_hunk_lengths.as_slice()
+                {
+                    self.minus_line_counter =
+                        delta::AmbiguousDiffMinusCounter::count_from(minus_lines);
+                }
+            }
+
             self.state = HunkHeader(
                 diff_type,
                 parsed_hunk_header,

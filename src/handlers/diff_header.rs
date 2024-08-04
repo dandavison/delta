@@ -73,7 +73,7 @@ impl<'a> StateMachine<'a> {
     #[inline]
     fn test_diff_header_minus_line(&self) -> bool {
         (matches!(self.state, State::DiffHeader(_)) || self.source == Source::DiffUnified)
-            && (self.line.starts_with("--- ")
+            && ((self.line.starts_with("--- ") && self.minus_line_counter.three_dashes_expected())
                 || self.line.starts_with("rename from ")
                 || self.line.starts_with("copy from "))
     }
@@ -677,5 +677,190 @@ index 0000000..323fae0
             │    │                │  1 │plain text
             "###)
         });
+    }
+
+    pub const DIFF_AMBIGUOUS_HEADER_3X_MINUS: &str = r#"--- a.lua
++++ b.lua
+@@ -1,5 +1,4 @@
+ #!/usr/bin/env lua
+ 
+ print("Hello")
+--- World?
+ print("..")
+"#;
+    pub const DIFF_AMBIGUOUS_HEADER_3X_MINUS_LAST_LINE: &str = r#"--- c.lua
++++ d.lua
+@@ -1,4 +1,3 @@
+ #!/usr/bin/env lua
+ 
+ print("Hello")
+--- World?
+"#;
+
+    pub const DIFF_AMBIGUOUS_HEADER_MULTIPLE_HUNKS: &str = r#"--- e.lua	2024-08-04 20:50:27.257726606 +0200
++++ f.lua	2024-08-04 20:50:35.345795405 +0200
+@@ -3,3 +3,2 @@
+ print("Hello")
+--- World?
+ print("")
+@@ -7,2 +6,3 @@
+ print("")
++print("World")
+ print("")
+@@ -10,2 +10 @@
+ print("")
+--- End
+"#;
+
+    #[test]
+    fn test_diff_header_ambiguous_3x_minus() {
+        // check ansi output to ensure output is highlighted
+        let result = DeltaTest::with_args(&[])
+            .explain_ansi()
+            .with_input(DIFF_AMBIGUOUS_HEADER_3X_MINUS);
+
+        assert_snapshot!(result.output, @r###"
+        (normal)
+        (blue)a.lua ⟶   b.lua(normal)
+        (blue)───────────────────────────────────────────(normal)
+
+        (blue)───(blue)┐(normal)
+        (blue)1(normal): (blue)│(normal)
+        (blue)───(blue)┘(normal)
+        (203)#(231)!(203)/(231)usr(203)/(231)bin(203)/(231)env lua(normal)
+
+        (81)print(231)((186)"Hello"(231))(normal)
+        (normal 52)-- World?(normal)
+        (81)print(231)((186)".."(231))(normal)
+
+        "###);
+    }
+
+    #[test]
+    fn test_diff_header_ambiguous_3x_minus_concatenated() {
+        let result = DeltaTest::with_args(&[])
+            .explain_ansi()
+            .with_input(&format!(
+                "{}{}{}",
+                DIFF_AMBIGUOUS_HEADER_MULTIPLE_HUNKS,
+                DIFF_AMBIGUOUS_HEADER_3X_MINUS,
+                DIFF_AMBIGUOUS_HEADER_3X_MINUS_LAST_LINE
+            ));
+
+        assert_snapshot!(result.output, @r###"
+        (normal)
+        (blue)e.lua ⟶   f.lua(normal)
+        (blue)───────────────────────────────────────────(normal)
+
+        (blue)───(blue)┐(normal)
+        (blue)3(normal): (blue)│(normal)
+        (blue)───(blue)┘(normal)
+        (81)print(231)((186)"Hello"(231))(normal)
+        (normal 52)-- World?(normal)
+        (81)print(231)((186)""(231))(normal)
+
+        (blue)───(blue)┐(normal)
+        (blue)6(normal): (blue)│(normal)
+        (blue)───(blue)┘(normal)
+        (81)print(231)((186)""(231))(normal)
+        (81 22)print(231)((186)"World"(231))(normal)
+        (81)print(231)((186)""(231))(normal)
+
+        (blue)────(blue)┐(normal)
+        (blue)10(normal): (blue)│(normal)
+        (blue)────(blue)┘(normal)
+        (81)print(231)((186)""(231))(normal)
+        (normal 52)-- End(normal)
+
+        (blue)a.lua ⟶   b.lua(normal)
+        (blue)───────────────────────────────────────────(normal)
+
+        (blue)───(blue)┐(normal)
+        (blue)1(normal): (blue)│(normal)
+        (blue)───(blue)┘(normal)
+        (203)#(231)!(203)/(231)usr(203)/(231)bin(203)/(231)env lua(normal)
+
+        (81)print(231)((186)"Hello"(231))(normal)
+        (normal 52)-- World?(normal)
+        (81)print(231)((186)".."(231))(normal)
+
+        (blue)c.lua ⟶   d.lua(normal)
+        (blue)───────────────────────────────────────────(normal)
+
+        (blue)───(blue)┐(normal)
+        (blue)1(normal): (blue)│(normal)
+        (blue)───(blue)┘(normal)
+        (203)#(231)!(203)/(231)usr(203)/(231)bin(203)/(231)env lua(normal)
+
+        (81)print(231)((186)"Hello"(231))(normal)
+        (normal 52)-- World?(normal)
+        "###);
+    }
+
+    #[test]
+    fn test_diff_header_ambiguous_3x_minus_extra_and_concatenated() {
+        let result = DeltaTest::with_args(&[])
+            .explain_ansi()
+            .with_input(&format!(
+                "extra 1\n\n{}\nextra 2\n{}\nextra 3\n{}",
+                DIFF_AMBIGUOUS_HEADER_MULTIPLE_HUNKS,
+                DIFF_AMBIGUOUS_HEADER_3X_MINUS,
+                DIFF_AMBIGUOUS_HEADER_3X_MINUS_LAST_LINE
+            ));
+
+        assert_snapshot!(result.output, @r###"
+        (normal)extra 1
+
+
+        (blue)e.lua ⟶   f.lua(normal)
+        (blue)───────────────────────────────────────────(normal)
+
+        (blue)───(blue)┐(normal)
+        (blue)3(normal): (blue)│(normal)
+        (blue)───(blue)┘(normal)
+        (81)print(231)((186)"Hello"(231))(normal)
+        (normal 52)-- World?(normal)
+        (81)print(231)((186)""(231))(normal)
+
+        (blue)───(blue)┐(normal)
+        (blue)6(normal): (blue)│(normal)
+        (blue)───(blue)┘(normal)
+        (81)print(231)((186)""(231))(normal)
+        (81 22)print(231)((186)"World"(231))(normal)
+        (81)print(231)((186)""(231))(normal)
+
+        (blue)────(blue)┐(normal)
+        (blue)10(normal): (blue)│(normal)
+        (blue)────(blue)┘(normal)
+        (81)print(231)((186)""(231))(normal)
+        (normal 52)-- End(normal)
+
+        extra 2
+
+        (blue)a.lua ⟶   b.lua(normal)
+        (blue)───────────────────────────────────────────(normal)
+
+        (blue)───(blue)┐(normal)
+        (blue)1(normal): (blue)│(normal)
+        (blue)───(blue)┘(normal)
+        (203)#(231)!(203)/(231)usr(203)/(231)bin(203)/(231)env lua(normal)
+
+        (81)print(231)((186)"Hello"(231))(normal)
+        (normal 52)-- World?(normal)
+        (81)print(231)((186)".."(231))(normal)
+
+        extra 3
+
+        (blue)c.lua ⟶   d.lua(normal)
+        (blue)───────────────────────────────────────────(normal)
+
+        (blue)───(blue)┐(normal)
+        (blue)1(normal): (blue)│(normal)
+        (blue)───(blue)┘(normal)
+        (203)#(231)!(203)/(231)usr(203)/(231)bin(203)/(231)env lua(normal)
+
+        (81)print(231)((186)"Hello"(231))(normal)
+        (normal 52)-- World?(normal)
+        "###);
     }
 }
