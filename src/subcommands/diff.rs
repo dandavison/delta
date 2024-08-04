@@ -1,4 +1,4 @@
-use std::io::{ErrorKind, Write};
+use std::io::{BufRead, ErrorKind, Write};
 use std::path::{Path, PathBuf};
 use std::process;
 
@@ -64,6 +64,7 @@ pub fn diff(
         .args(diff_cmd)
         .args([minus_file, plus_file])
         .stdout(process::Stdio::piped())
+        .stderr(process::Stdio::piped())
         .spawn();
 
     if let Err(err) = diff_process {
@@ -100,12 +101,20 @@ pub fn diff(
             config.error_exit_code
         });
     if code >= 2 {
+        for line in BufReader::new(diff_process.stderr.unwrap()).lines() {
+            eprintln!("{}", line.unwrap_or("<delta: could not parse line>".into()));
+            if code == 129 && use_git_diff {
+                // `git diff` unknown option: print first line (which is an error message) but not
+                // the remainder (which is the entire --help text).
+                break;
+            }
+        }
         eprintln!(
             "'{diff_bin}' process failed with exit status {code}. Command was: {}",
             format_args!(
                 "{} {} {} {}",
                 diff_path.display(),
-                diff_cmd.join(" "),
+                shell_words::join(diff_cmd),
                 minus_file.display(),
                 plus_file.display()
             )
