@@ -7,6 +7,11 @@ use bytelines::ByteLinesReader;
 use crate::config::{self, delta_unreachable};
 use crate::delta;
 
+enum Differ {
+    GitDiff,
+    Diff,
+}
+
 /// Run `git diff` on the files provided on the command line and display the output. Fall back to
 /// `diff` if the supplied "files" use process substitution.
 pub fn diff(
@@ -34,15 +39,22 @@ pub fn diff(
 
     // https://stackoverflow.com/questions/22706714/why-does-git-diff-not-work-with-process-substitution
     // TODO: git >= 2.42 supports process substitution
-    let use_git_diff =
-        !via_process_substitution(minus_file) && !via_process_substitution(plus_file);
-    let mut diff_cmd = if use_git_diff {
-        vec!["git", "diff", "--no-index", "--color"]
-    } else if diff_args_set_unified_context(&diff_args) {
-        vec!["diff"]
-    } else {
-        vec!["diff", "-U3"]
-    };
+    let (differ, mut diff_cmd) =
+        if !via_process_substitution(minus_file) && !via_process_substitution(plus_file) {
+            (
+                Differ::GitDiff,
+                vec!["git", "diff", "--no-index", "--color"],
+            )
+        } else {
+            (
+                Differ::Diff,
+                if diff_args_set_unified_context(&diff_args) {
+                    vec!["diff"]
+                } else {
+                    vec!["diff", "-U3"]
+                },
+            )
+        };
     diff_cmd.extend(
         diff_args
             .iter()
@@ -103,7 +115,7 @@ pub fn diff(
     if code >= 2 {
         for line in BufReader::new(diff_process.stderr.unwrap()).lines() {
             eprintln!("{}", line.unwrap_or("<delta: could not parse line>".into()));
-            if code == 129 && use_git_diff {
+            if code == 129 && matches!(differ, Differ::GitDiff) {
                 // `git diff` unknown option: print first line (which is an error message) but not
                 // the remainder (which is the entire --help text).
                 break;
