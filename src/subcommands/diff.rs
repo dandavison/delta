@@ -21,8 +21,6 @@ pub fn diff(
     // diff of the filenames which were created by the process substitution and does not read their
     // content, so fall back to plain `diff` which simply opens the given input as files.
     // This fallback ignores git settings, but is better than nothing.
-    let via_process_substitution =
-        |f: &Path| f.starts_with("/proc/self/fd/") || f.starts_with("/dev/fd/");
 
     let diff_args = match shell_words::split(&config.diff_args) {
         Ok(words) => words,
@@ -34,8 +32,7 @@ pub fn diff(
 
     // https://stackoverflow.com/questions/22706714/why-does-git-diff-not-work-with-process-substitution
     // TODO: git >= 2.42 supports process substitution
-    let use_git_diff =
-        !via_process_substitution(minus_file) && !via_process_substitution(plus_file);
+    let use_git_diff = true;
     let mut diff_cmd = if use_git_diff {
         vec!["git", "diff", "--no-index", "--color"]
     } else if diff_args_set_unified_context(&diff_args) {
