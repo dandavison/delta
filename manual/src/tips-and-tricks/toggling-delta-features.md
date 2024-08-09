@@ -2,7 +2,7 @@ To toggle features such as `side-by-side` on and off, one solution is to use thi
 
 ```sh
 delta-toggle() {
-    eval "export DELTA_FEATURES=$(-delta-features-toggle $1 | tee /dev/stderr)"
+    eval "export DELTA_FEATURES='$(-delta-features-toggle $1 | tee /dev/stderr)'"
 }
 ```
 where `-delta-features-toggle` is this Python script:
