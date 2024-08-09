@@ -53,6 +53,7 @@ pub struct Config {
     pub cwd_relative_to_repo_root: Option<String>,
     pub decorations_width: cli::Width,
     pub default_language: String,
+    pub diff_args: String,
     pub diff_stat_align_width: usize,
     pub error_exit_code: i32,
     pub file_added_label: String,
@@ -298,6 +299,7 @@ impl From<cli::Opt> for Config {
             cwd_relative_to_repo_root,
             decorations_width: opt.computed.decorations_width,
             default_language: opt.default_language,
+            diff_args: opt.diff_args,
             diff_stat_align_width: opt.diff_stat_align_width,
             error_exit_code: 2, // Use 2 for error because diff uses 0 and 1 for non-error.
             file_added_label,
