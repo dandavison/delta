@@ -1227,15 +1227,17 @@ impl Opt {
             }
             Err(e) if e.kind() == clap::error::ErrorKind::DisplayHelp => {
                 let term = Term::stdout();
-                // find out if short or long version of --help was used:
-                let long_help = !args.iter().any(|arg| arg == "-h");
-                let help_clap = if long_help {
-                    Self::command().render_long_help()
-                } else {
-                    Self::command().render_help()
-                };
+                // No wrapping if short -h instead of --help was used:
+                if args.iter().any(|arg| arg == "-h") {
+                    let help_clap = Self::command().render_help();
+                    return Call::Help(if term.is_term() {
+                        help_clap.ansi().to_string()
+                    } else {
+                        help_clap.to_string()
+                    });
+                }
 
-                let is_term = term.is_term();
+                let help_clap = Self::command().render_long_help();
                 let (help_clap, wrap_width) = if term.is_term() {
                     (
                         help_clap.ansi().to_string(),
@@ -1250,19 +1252,17 @@ impl Opt {
                     wrap_width.clamp(TERM_FALLBACK_WIDTH - 22, TERM_FALLBACK_WIDTH + 22) - 2;
 
                 let mut help = utils::helpwrap::wrap(&help_clap, wrap_width, "", "", "");
-                if long_help {
-                    let indent_with = "  ";
-                    let no_indent = ":no_Indent:";
-                    let no_wrap = ":no_Wrap:";
-                    let after_help = utils::helpwrap::wrap(
-                        &get_after_long_help(is_term, no_indent, no_wrap),
-                        wrap_width,
-                        indent_with,
-                        no_indent,
-                        no_wrap,
-                    );
-                    help.push_str(&after_help);
-                }
+                let indent_with = "  ";
+                let no_indent = ":no_Indent:";
+                let no_wrap = ":no_Wrap:";
+                let after_help = utils::helpwrap::wrap(
+                    &get_after_long_help(term.is_term(), no_indent, no_wrap),
+                    wrap_width,
+                    indent_with,
+                    no_indent,
+                    no_wrap,
+                );
+                help.push_str(&after_help);
 
                 Call::Help(help)
             }
