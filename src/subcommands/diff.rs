@@ -202,7 +202,7 @@ mod main_tests {
 
     #[rstest]
     #[cfg_attr(target_os = "windows", ignore)]
-    #[case("/dev/null", "/dev/null", ExpectDiff::No)]
+    // #[case("/dev/null", "/dev/null", ExpectDiff::No)] https://github.com/dandavison/delta/pull/546#issuecomment-835852373
     #[case("/etc/group", "/etc/passwd", ExpectDiff::Yes)]
     #[case("/dev/null", "/etc/passwd", ExpectDiff::Yes)]
     #[case("/etc/passwd", "/etc/passwd", ExpectDiff::No)]
