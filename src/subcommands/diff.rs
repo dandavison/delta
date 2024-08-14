@@ -196,48 +196,40 @@ mod main_tests {
         assert_eq!(diff_args_set_unified_context(diff_args), expected)
     }
 
-    #[test]
-    #[ignore] // https://github.com/dandavison/delta/pull/546
-    fn test_diff_same_empty_file() {
-        _do_diff_test("/dev/null", "/dev/null", false);
+    enum ExpectDiff {
+        Yes,
+        No,
     }
 
-    #[test]
+    #[rstest]
     #[cfg_attr(target_os = "windows", ignore)]
-    fn test_diff_same_non_empty_file() {
-        _do_diff_test("/etc/passwd", "/etc/passwd", false);
-    }
-
-    #[test]
-    #[cfg_attr(target_os = "windows", ignore)]
-    fn test_diff_empty_vs_non_empty_file() {
-        _do_diff_test("/dev/null", "/etc/passwd", true);
-    }
-
-    #[test]
-    #[cfg_attr(target_os = "windows", ignore)]
-    fn test_diff_two_non_empty_files() {
-        _do_diff_test("/etc/group", "/etc/passwd", true);
-    }
-
-    fn _do_diff_test(file_a: &str, file_b: &str, expect_diff: bool) {
-        for args in [
-            vec![],
-            vec!["-@''"],
-            vec!["-@-u"],
-            vec!["-@-U99"],
-            vec!["-@-U0"],
-        ] {
-            let config = integration_test_utils::make_config_from_args(&args);
-            let mut writer = Cursor::new(vec![]);
-            let exit_code = diff(
-                &PathBuf::from(file_a),
-                &PathBuf::from(file_b),
-                &config,
-                &mut writer,
-            );
-            assert_eq!(exit_code, if expect_diff { 1 } else { 0 });
-        }
+    #[case("/dev/null", "/dev/null", ExpectDiff::No)]
+    #[case("/etc/group", "/etc/passwd", ExpectDiff::Yes)]
+    #[case("/dev/null", "/etc/passwd", ExpectDiff::Yes)]
+    #[case("/etc/passwd", "/etc/passwd", ExpectDiff::No)]
+    fn test_diff_real_files(
+        #[case] file_a: &str,
+        #[case] file_b: &str,
+        #[case] expect_diff: ExpectDiff,
+        #[values(vec![], vec!["-@''"], vec!["-@-u"], vec!["-@-U99"], vec!["-@-U0"])] args: Vec<
+            &str,
+        >,
+    ) {
+        let config = integration_test_utils::make_config_from_args(&args);
+        let mut writer = Cursor::new(vec![]);
+        let exit_code = diff(
+            &PathBuf::from(file_a),
+            &PathBuf::from(file_b),
+            &config,
+            &mut writer,
+        );
+        assert_eq!(
+            exit_code,
+            match expect_diff {
+                ExpectDiff::Yes => 1,
+                ExpectDiff::No => 0,
+            }
+        );
     }
 
     fn _read_to_string(cursor: &mut Cursor<Vec<u8>>) -> String {
