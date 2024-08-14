@@ -6,19 +6,19 @@ use bytelines::ByteLinesReader;
 
 use crate::config::{self, delta_unreachable};
 use crate::delta;
+use crate::utils::git::retrieve_git_version;
 
-pub enum Differ {
+#[derive(Debug, PartialEq)]
+enum Differ {
     GitDiff,
     Diff,
 }
 
-/// Run either `git diff` or `diff` on the files provided on the command line and display the
-/// output. Try again with `diff` if `git diff` seems to have failed due to lack of support for
-/// process substitution.
+/// Run `git diff` on the files provided on the command line and display the output. Fall back to
+/// `diff` if the supplied "files" use process substitution.
 pub fn diff(
     minus_file: &Path,
     plus_file: &Path,
-    differ: Differ,
     config: &config::Config,
     writer: &mut dyn Write,
 ) -> i32 {
@@ -32,17 +32,31 @@ pub fn diff(
         }
     };
 
-    let mut diff_cmd = match differ {
-        Differ::GitDiff => vec!["git", "diff", "--no-index", "--color"],
-        Differ::Diff => {
+    let via_process_substitution =
+        |f: &Path| f.starts_with("/proc/self/fd/") || f.starts_with("/dev/fd/");
+
+    // https://stackoverflow.com/questions/22706714/why-does-git-diff-not-work-with-process-substitution
+    // git <2.42 does not support process substitution
+    let (differ, mut diff_cmd) = if !via_process_substitution(minus_file)
+        && !via_process_substitution(plus_file)
+        || retrieve_git_version()
+            .map(|v| v >= (2, 42))
+            .unwrap_or(false)
+    {
+        (
+            Differ::GitDiff,
+            vec!["git", "diff", "--no-index", "--color"],
+        )
+    } else {
+        (
+            Differ::Diff,
             if diff_args_set_unified_context(&diff_args) {
                 vec!["diff"]
             } else {
                 vec!["diff", "-U3"]
-            }
-        }
+            },
+        )
     };
-
     diff_cmd.extend(
         diff_args
             .iter()
@@ -100,43 +114,26 @@ pub fn diff(
             eprintln!("'{diff_bin}' process terminated without exit status.");
             config.error_exit_code
         });
-
     if code >= 2 {
-        let via_process_substitution =
-            |f: &Path| f.starts_with("/proc/self/fd/") || f.starts_with("/dev/fd/");
-        let is_git_diff = matches!(differ, Differ::GitDiff);
-        if is_git_diff
-            && code == 128
-            && (via_process_substitution(minus_file) || via_process_substitution(plus_file))
-        {
-            // https://stackoverflow.com/questions/22706714/why-does-git-diff-not-work-with-process-substitution
-            // When called as `delta <(echo foo) <(echo bar)`, then git < 2.42 just prints the diff of the
-            // filenames which were created by the process substitution and does not read their content.
-
-            // It looks like `git diff` failed due to lack of process substitution (version <2.42);
-            // try again with `diff`.
-            diff(minus_file, plus_file, Differ::Diff, config, writer)
-        } else {
-            for line in BufReader::new(diff_process.stderr.unwrap()).lines() {
-                eprintln!("{}", line.unwrap_or("<delta: could not parse line>".into()));
-                if code == 129 && is_git_diff {
-                    // `git diff` unknown option: print first line (which is an error message) but not
-                    // the remainder (which is the entire --help text).
-                    break;
-                }
+        for line in BufReader::new(diff_process.stderr.unwrap()).lines() {
+            eprintln!("{}", line.unwrap_or("<delta: could not parse line>".into()));
+            if code == 129 && differ == Differ::GitDiff {
+                // `git diff` unknown option: print first line (which is an error message) but not
+                // the remainder (which is the entire --help text).
+                break;
             }
-            eprintln!(
-                "'{diff_bin}' process failed with exit status {code}. Command was: {}",
-                format_args!(
-                    "{} {} {} {}",
-                    diff_path.display(),
-                    shell_words::join(diff_cmd),
-                    minus_file.display(),
-                    plus_file.display()
-                )
-            );
-            config.error_exit_code
         }
+        eprintln!(
+            "'{diff_bin}' process failed with exit status {code}. Command was: {}",
+            format_args!(
+                "{} {} {} {}",
+                diff_path.display(),
+                shell_words::join(diff_cmd),
+                minus_file.display(),
+                plus_file.display()
+            )
+        );
+        config.error_exit_code
     } else {
         code
     }
@@ -169,7 +166,7 @@ mod main_tests {
     use std::io::{Cursor, Read, Seek};
     use std::path::PathBuf;
 
-    use super::{diff, diff_args_set_unified_context, Differ};
+    use super::{diff, diff_args_set_unified_context};
     use crate::tests::integration_test_utils;
 
     use rstest::rstest;
@@ -227,7 +224,6 @@ mod main_tests {
             let exit_code = diff(
                 &PathBuf::from(file_a),
                 &PathBuf::from(file_b),
-                Differ::GitDiff,
                 &config,
                 &mut writer,
             );

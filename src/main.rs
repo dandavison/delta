@@ -136,13 +136,7 @@ fn run_app() -> std::io::Result<i32> {
     let mut writer = output_type.handle().unwrap();
 
     if let (Some(minus_file), Some(plus_file)) = (&config.minus_file, &config.plus_file) {
-        let exit_code = subcommands::diff::diff(
-            minus_file,
-            plus_file,
-            subcommands::diff::Differ::GitDiff,
-            &config,
-            &mut writer,
-        );
+        let exit_code = subcommands::diff::diff(minus_file, plus_file, &config, &mut writer);
         return Ok(exit_code);
     }
 
