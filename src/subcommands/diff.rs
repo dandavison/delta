@@ -45,26 +45,27 @@ pub fn diff(
 
     // https://stackoverflow.com/questions/22706714/why-does-git-diff-not-work-with-process-substitution
     // git <2.42 does not support process substitution
-    let (differ, mut diff_cmd) = if !via_process_substitution(minus_file)
-        && !via_process_substitution(plus_file)
-        || retrieve_git_version()
-            .map(|v| v >= (2, 42))
-            .unwrap_or(false)
-    {
-        (
-            Differ::GitDiff,
-            vec!["git", "diff", "--no-index", "--color"],
-        )
-    } else {
-        (
+    let (differ, mut diff_cmd) = match retrieve_git_version() {
+        Some(version)
+            if version >= (2, 42)
+                || !(via_process_substitution(minus_file)
+                    || via_process_substitution(plus_file)) =>
+        {
+            (
+                Differ::GitDiff,
+                vec!["git", "diff", "--no-index", "--color"],
+            )
+        }
+        _ => (
             Differ::Diff,
             if diff_args_set_unified_context(&diff_args) {
                 vec!["diff"]
             } else {
                 vec!["diff", "-U3"]
             },
-        )
+        ),
     };
+
     diff_cmd.extend(
         diff_args
             .iter()
