@@ -24,7 +24,7 @@ pub fn diff(
 ) -> i32 {
     use std::io::BufReader;
 
-    let mut diff_args = match shell_words::split(&config.diff_args.trim()) {
+    let mut diff_args = match shell_words::split(config.diff_args.trim()) {
         Ok(words) => words,
         Err(err) => {
             eprintln!("Failed to parse diff args: {}: {err}", config.diff_args);
@@ -33,8 +33,7 @@ pub fn diff(
     };
     // Permit e.g. -@U1
     if diff_args
-        .iter()
-        .nth(0)
+        .first()
         .map(|arg| !arg.is_empty() && !arg.starts_with('-'))
         .unwrap_or(false)
     {
