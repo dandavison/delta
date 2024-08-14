@@ -172,7 +172,7 @@ where
 
 #[cfg(test)]
 mod main_tests {
-    use std::io::{Cursor, Read, Seek};
+    use std::io::Cursor;
     use std::path::PathBuf;
 
     use super::{diff, diff_args_set_unified_context};
@@ -230,12 +230,5 @@ mod main_tests {
                 ExpectDiff::No => 0,
             }
         );
-    }
-
-    fn _read_to_string(cursor: &mut Cursor<Vec<u8>>) -> String {
-        let mut s = String::new();
-        cursor.rewind().unwrap();
-        cursor.read_to_string(&mut s).unwrap();
-        s
     }
 }
