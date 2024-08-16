@@ -7,12 +7,14 @@ Usage: delta [OPTIONS] [MINUS_FILE] [PLUS_FILE]
 
 Arguments:
   [MINUS_FILE]
-          First file to be compared when delta is being used in diff mode
+          First file to be compared when delta is being used to diff two
+          files.
 
           `delta file1 file2` is equivalent to `diff -u file1 file2 | delta`.
 
   [PLUS_FILE]
-          Second file to be compared when delta is being used in diff mode
+          Second file to be compared when delta is being used to diff two
+          files
 
 Options:
       --blame-code-style <STYLE>
@@ -152,6 +154,19 @@ Options:
             not redirected
           - always: Always query the terminal for its colors
           - never:  Never query the terminal for its colors
+
+  -@, --diff-args <STRING>
+          Extra arguments to pass to `git diff` when using delta to diff two
+          files.
+
+          E.g. `delta --diff-args=-U999 file_1 file_2` is equivalent to `git
+          diff --no-index --color -U999 file_1 file_2 | delta`.
+
+          If you use process substitution (`delta <(command_1) <(command_2)`)
+          and your git version doesn't support it, then delta will fall back
+          to `diff` instead of `git diff`.
+
+          [default: ]
 
       --diff-highlight
           Emulate diff-highlight.
