@@ -8,8 +8,7 @@ release: \
 	check-environment \
 	bump-version \
 	create-github-release \
-	bump-version-in-documentation-links \
-	bump-private-homebrew-formula
+	bump-version-in-documentation-links
 
 
 clean:
