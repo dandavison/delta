@@ -198,5 +198,5 @@ Please see the [user manual](https://dandavison.github.io/delta/) and `delta --h
 
 ### Maintainers
 
-- @dandavison
-- @th1000s
+- [@dandavison](https://github.com/dandavison)
+- [@th1000s](https://github.com/th1000s)
