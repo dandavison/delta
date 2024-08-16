@@ -195,3 +195,8 @@ Side-by-side view wraps long lines automatically:
 ### Installation and usage
 
 Please see the [user manual](https://dandavison.github.io/delta/) and `delta --help`.
+
+### Maintainers
+
+- @dandavison
+- @th1000s
