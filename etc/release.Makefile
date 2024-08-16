@@ -56,17 +56,6 @@ $(BUMP_VERSION_IN_DOCUMENTATION_LINKS_SENTINEL):
 	touch $(BUMP_VERSION_IN_DOCUMENTATION_LINKS_SENTINEL)
 
 
-BUMP_PRIVATE_HOMEBREW_FORMULA_SENTINEL=.make-sentinels/bump-private-homebrew-formula
-bump-private-homebrew-formula: $(BUMP_PRIVATE_HOMEBREW_FORMULA_SENTINEL)
-$(BUMP_PRIVATE_HOMEBREW_FORMULA_SENTINEL):
-	sed -i -E "s,$$DELTA_OLD_VERSION,$$DELTA_NEW_VERSION,g" HomeBrewFormula/git-delta.rb
-	make hash
-	@echo \# modify hashes in HomeBrewFormula/git-delta.rb
-	git add HomeBrewFormula/git-delta.rb
-	git commit -m "Bump version in private Homebrew formula"
-	touch $(BUMP_PRIVATE_HOMEBREW_FORMULA_SENTINEL)
-
-
 .PHONY: \
 	clean \
 	release	\
