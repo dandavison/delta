@@ -1,5 +1,5 @@
 # TODO:
-# - Update binary assets from bat
+# - Check for a bat upgrade as it might bring new language support/themes
 # - Update README prior to release
 # - Update help text in README, with BAT_THEME unset
 
