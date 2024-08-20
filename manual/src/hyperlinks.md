@@ -40,17 +40,22 @@ If your editor does not have its own URL protocol, then there are still many pos
     from subprocess import call
     from urllib.parse import parse_qs, urlparse
 
+
     class OpenInEditor(BaseHTTPRequestHandler):
         def do_GET(self):
             if self.path.startswith("/open-in-editor"):
                 query = parse_qs(urlparse(self.path).query)
                 [path], [line] = query["path"], query["line"]
+                # TODO: You might need to change this to construct the correct root directory for the
+                # project that the file is in, so that your IDE opens in the project workspace.
+                cwd = Path(path).parent
                 # TODO: Replace with the appropriate command for your editor
-                call(["code", "-g", f"{path}:{line}"], cwd=Path(path).parent)
+                call(["code", "-g", f"{path}:{line}"], cwd=cwd)
                 self.send_response(200)
             else:
                 self.send_response(404)
             self.end_headers()
+
 
     print("Starting httpd server on port 8000...")
     HTTPServer(("", 8000), OpenInEditor).serve_forever()
