@@ -14,21 +14,4 @@ rg --json -C 2 handle | delta
 <img width="600px" alt="image" src="https://github.com/dandavison/open-in-editor/assets/52205/d203d380-5acb-4296-aeb9-e38c73d6c27f">
 </td></tr></table>
 
-If you enable hyperlinks then grep hits will be formatted as [OSC8 hyperlinks](https://gist.github.com/egmontkob/eb114294efbcd5adb1944c9f3cb5feda) in terminal emulators that support the feature. If you're using VSCode, IntelliJ, or PyCharm, then use the dedicated URL handlers. I.e. one of the following lines:
-
-```gitconfig
-[delta]
-    hyperlinks = true
-    hyperlinks-file-link-format = "vscode://file/{path}:{line}"
-    # or: hyperlinks-file-link-format = "idea://open?file={path}&line={line}"
-    # or: hyperlinks-file-link-format = "pycharm://open?file={path}&line={line}"
-```
-
-For editors that don't have special URL handlers, it is possible to use a tool like <https://github.com/dandavison/open-in-editor/> to make your OS handle a click on those links by opening your editor at the correct file and line number, e.g.
-
-```gitconfig
-[delta]
-   hyperlinks = true
-   hyperlinks-file-link-format = "file-line://{path}:{line}"
-   # Now configure your OS to handle "file-line" URLs
-```
+With `hyperlinks` enabled, the line numbers in the grep output will be clickable links. See [hyperlinks](./hyperlinks.md).
