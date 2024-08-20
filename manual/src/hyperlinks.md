@@ -29,10 +29,31 @@ If your editor does not have its own URL protocol, then there are still many pos
     ```gitconfig
     [delta]
     hyperlinks = true
-    hyperlinks-file-link-format = "http://localhost:8000/open-file?file={path}&line={line}"
+    hyperlinks-file-link-format = "http://localhost:8000/open-in-editor?path={path}&line={line}"
     # Now write an HTTP server that handles those requests by opening your editor at the file and line
     ```
 
+    Here's some Python code that could be used as a starting point:
+    ```python
+    from http.server import BaseHTTPRequestHandler, HTTPServer
+    from subprocess import call
+    from urllib.parse import parse_qs, urlparse
+
+    class OpenInEditor(BaseHTTPRequestHandler):
+        def do_GET(self):
+            if self.path.startswith("/open-in-editor"):
+                query = parse_qs(urlparse(self.path).query)
+                [path], [line] = query["path"], query["line"]
+                # Replace with the right command for your editor
+                call(["code", "-g", f"{path}:{line}"])
+                self.send_response(200)
+            else:
+                self.send_response(404)
+            self.end_headers()
+
+    print("Starting httpd server on port 8000...")
+    HTTPServer(("", 8000), OpenInEditor).serve_forever()
+    ```
 
 - Another possibility is to register a custom protocol with your OS (like VSCode does) that invokes a script to open the file. [dandavison/open-in-editor](https://github.com/dandavison/open-in-editor) is a project that aimed to do that and may be helpful. However, registering the protocol with your OS can be frustrating, depending on your appetite for such things. If you go this route, your delta configuration would look like
     ```gitconfig
