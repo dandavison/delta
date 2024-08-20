@@ -1,6 +1,6 @@
 # Hyperlinks
 
-Delta uses [terminal hyperlinks](https://gist.github.com/egmontkob/eb114294efbcd5adb1944c9f3cb5feda) to turn line numbers, file paths, commit hashes, etc into clickable links, as long as your terminal emulator supports the feature. Enable the feature with
+Delta uses [terminal hyperlinks](https://gist.github.com/egmontkob/eb114294efbcd5adb1944c9f3cb5feda) to turn line numbers, file paths, commit hashes, etc into clickable links, as long as your terminal emulator supports it. Enable the feature with
 
 ```gitconfig
 [delta]
