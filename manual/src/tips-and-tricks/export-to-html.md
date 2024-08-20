@@ -11,4 +11,4 @@ git show \
 
 Now open `/tmp/diff.html` in a web browser, print to PDF, etc.
 
-Remove the `--no-gitconfig` above to use your own delta style, but not that `ansifilter` does not handle hyperlinks or decoration boxes etc.
+Remove the `--no-gitconfig` above to use your own delta style, but note that `ansifilter` does not handle hyperlinks or decoration boxes etc.
