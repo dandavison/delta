@@ -36,6 +36,7 @@ If your editor does not have its own URL protocol, then there are still many pos
     Here's some Python code that could be used as a starting point:
     ```python
     from http.server import BaseHTTPRequestHandler, HTTPServer
+    from pathlib import Path
     from subprocess import call
     from urllib.parse import parse_qs, urlparse
 
@@ -44,8 +45,10 @@ If your editor does not have its own URL protocol, then there are still many pos
             if self.path.startswith("/open-in-editor"):
                 query = parse_qs(urlparse(self.path).query)
                 [path], [line] = query["path"], query["line"]
-                # Replace with the right command for your editor
-                call(["code", "-g", f"{path}:{line}"])
+                # TODO: Replace with the appropriate command for your editor
+                cwd = Path(path).parent
+                print("cwd", cwd)
+                call(["code", "-g", f"{path}:{line}"], cwd=cwd)
                 self.send_response(200)
             else:
                 self.send_response(404)
