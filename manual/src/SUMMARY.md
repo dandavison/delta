@@ -10,6 +10,7 @@
 - [Usage](./usage.md)
   - [Choosing colors (styles)](./choosing-colors-styles.md)
   - [Line numbers](./line-numbers.md)
+  - [Hyperlinks](./hyperlinks.md)
   - [Side-by-side view](./side-by-side-view.md)
   - [Grep](./grep.md)
   - ["Features": named groups of settings](./features-named-groups-of-settings.md)

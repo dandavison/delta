@@ -11,3 +11,5 @@ To format file links for opening in VSCode from other terminal emulators, use th
 ```
 
 (To use VSCode Insiders, change that to `vscode-insiders://file/{path}:{line}`).
+
+ See [hyperlinks](./hyperlinks.md).
