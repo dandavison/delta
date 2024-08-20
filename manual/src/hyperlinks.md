@@ -57,7 +57,7 @@ If your editor does not have its own URL protocol, then there are still many pos
             self.end_headers()
 
 
-    print("Starting httpd server on port 8000...")
+    print("Starting open-in-editor server on port 8000...")
     HTTPServer(("", 8000), OpenInEditor).serve_forever()
     ```
 
