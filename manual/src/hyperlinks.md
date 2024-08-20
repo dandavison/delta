@@ -17,8 +17,8 @@ For VSCode and JetBrains IDEs this is easy, since they support their own special
 [delta]
     hyperlinks = true
     hyperlinks-file-link-format = "vscode://file/{path}:{line}"
-    # or: hyperlinks-file-link-format = "idea://open?file={path}&line={line}"
-    # or: hyperlinks-file-link-format = "pycharm://open?file={path}&line={line}"
+    # hyperlinks-file-link-format = "idea://open?file={path}&line={line}"
+    # hyperlinks-file-link-format = "pycharm://open?file={path}&line={line}"
 ```
 
 Zed also supports its own URL protocol, and probably others.
