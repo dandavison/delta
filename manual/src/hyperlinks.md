@@ -46,9 +46,7 @@ If your editor does not have its own URL protocol, then there are still many pos
                 query = parse_qs(urlparse(self.path).query)
                 [path], [line] = query["path"], query["line"]
                 # TODO: Replace with the appropriate command for your editor
-                cwd = Path(path).parent
-                print("cwd", cwd)
-                call(["code", "-g", f"{path}:{line}"], cwd=cwd)
+                call(["code", "-g", f"{path}:{line}"], cwd=Path(path).parent)
                 self.send_response(200)
             else:
                 self.send_response(404)
