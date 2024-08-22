@@ -542,6 +542,7 @@
     dark = true
     side-by-side = true
     hyperlinks = true
+    true-color = always
     file-added-label = [+]
     file-copied-label = [==]
     file-modified-label = [M]
