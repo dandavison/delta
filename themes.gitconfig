@@ -541,7 +541,6 @@
     # Author: https://github.com/sarpuser
     dark = true
     side-by-side = true
-    hyperlinks = true
     true-color = always
     file-added-label = [+]
     file-copied-label = [==]
