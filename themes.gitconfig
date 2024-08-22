@@ -551,8 +551,7 @@
     file-decoration-style = "#ea00ff" box ul
     zero-style = syntax
     syntax-theme = Solarized (dark)
-    commit-decoration-style ="#11ce16" box
-    commit-style = "#ffd21a" bold italic
+    commit-decoration-style ="#ea00ff" ul
     hunk-header-decoration-style = omit
     hunk-header-file-style = "#ff9b00" ul bold
     hunk-header-line-number-style = "#ffd21a" bold
