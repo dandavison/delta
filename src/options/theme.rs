@@ -86,21 +86,23 @@ fn is_no_syntax_highlighting_syntax_theme_name(theme_name: &str) -> bool {
 fn get_is_light_mode_and_syntax_theme_name(
     theme_arg: Option<&String>,
     bat_theme_env_var: Option<&String>,
-    light_mode: bool,
+    light_mode: Option<bool>,
 ) -> (bool, String) {
     let theme_arg = theme_arg.or(bat_theme_env_var);
     match (theme_arg, light_mode) {
-        (None, false) => (false, DEFAULT_DARK_SYNTAX_THEME.to_string()),
-        (Some(theme_name), false) => (is_light_syntax_theme(theme_name), theme_name.to_string()),
-        (None, true) => (true, DEFAULT_LIGHT_SYNTAX_THEME.to_string()),
-        (Some(theme_name), is_light_mode) => (is_light_mode, theme_name.to_string()),
+        (Some(theme_name), None) => (is_light_syntax_theme(theme_name), theme_name.to_string()),
+        (Some(theme_name), Some(is_light_mode)) => (is_light_mode, theme_name.to_string()),
+        (None, None | Some(false)) => (false, DEFAULT_DARK_SYNTAX_THEME.to_string()),
+        (None, Some(true)) => (true, DEFAULT_LIGHT_SYNTAX_THEME.to_string()),
     }
 }
 
-fn get_is_light(opt: &cli::Opt) -> bool {
-    get_is_light_opt(opt)
-        .or_else(|| should_detect_dark_light(opt).then(detect_light_mode))
-        .unwrap_or_default()
+fn get_is_light(opt: &cli::Opt) -> Option<bool> {
+    get_is_light_opt(opt).or_else(|| {
+        should_detect_dark_light(opt)
+            .then(detect_light_mode)
+            .flatten()
+    })
 }
 
 fn get_is_light_opt(opt: &cli::Opt) -> Option<bool> {
@@ -123,18 +125,17 @@ fn should_detect_dark_light(opt: &cli::Opt) -> bool {
 }
 
 #[cfg(not(test))]
-fn detect_light_mode() -> bool {
+fn detect_light_mode() -> Option<bool> {
     use terminal_colorsaurus::{color_scheme, ColorScheme, QueryOptions};
-    color_scheme(QueryOptions::default()).unwrap_or_default() == ColorScheme::Light
+    color_scheme(QueryOptions::default())
+        .ok()
+        .map(|color_scheme| color_scheme == ColorScheme::Light)
 }
 
 #[cfg(test)]
-fn detect_light_mode() -> bool {
-    LIGHT_MODE_IN_TESTS
+fn detect_light_mode() -> Option<bool> {
+    None
 }
-
-#[cfg(test)]
-pub(crate) const LIGHT_MODE_IN_TESTS: bool = false;
 
 #[cfg(test)]
 mod tests {
@@ -163,7 +164,7 @@ mod tests {
             (None, Some(Dark), DEFAULT_DARK_SYNTAX_THEME, Dark),
             (None, Some(Light), DEFAULT_LIGHT_SYNTAX_THEME, Light),
             (Some("GitHub"), Some(Light), "GitHub", Light),
-            (Some("GitHub"), Some(Dark), "GitHub", Light), // TODO: This should be Dark.
+            (Some("GitHub"), Some(Dark), "GitHub", Dark),
             (Some("Nord"), Some(Light), "Nord", Light),
             (Some("Nord"), Some(Dark), "Nord", Dark),
             (Some("none"), None, "none", Dark),
