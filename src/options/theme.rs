@@ -88,15 +88,12 @@ fn get_is_light_mode_and_syntax_theme_name(
     bat_theme_env_var: Option<&String>,
     light_mode: bool,
 ) -> (bool, String) {
-    match (theme_arg, bat_theme_env_var, light_mode) {
-        (None, None, false) => (false, DEFAULT_DARK_SYNTAX_THEME.to_string()),
-        (Some(theme_name), _, false) => (is_light_syntax_theme(theme_name), theme_name.to_string()),
-        (None, Some(theme_name), false) => {
-            (is_light_syntax_theme(theme_name), theme_name.to_string())
-        }
-        (None, None, true) => (true, DEFAULT_LIGHT_SYNTAX_THEME.to_string()),
-        (Some(theme_name), _, is_light_mode) => (is_light_mode, theme_name.to_string()),
-        (None, Some(theme_name), is_light_mode) => (is_light_mode, theme_name.to_string()),
+    let theme_arg = theme_arg.or(bat_theme_env_var);
+    match (theme_arg, light_mode) {
+        (None, false) => (false, DEFAULT_DARK_SYNTAX_THEME.to_string()),
+        (Some(theme_name), false) => (is_light_syntax_theme(theme_name), theme_name.to_string()),
+        (None, true) => (true, DEFAULT_LIGHT_SYNTAX_THEME.to_string()),
+        (Some(theme_name), is_light_mode) => (is_light_mode, theme_name.to_string()),
     }
 }
 
