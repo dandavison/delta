@@ -162,7 +162,12 @@ mod tests {
             (Some("Nord"), None, "Nord", Dark),
             (None, Some(Dark), DEFAULT_DARK_SYNTAX_THEME, Dark),
             (None, Some(Light), DEFAULT_LIGHT_SYNTAX_THEME, Light),
+            (Some("GitHub"), Some(Light), "GitHub", Light),
+            (Some("GitHub"), Some(Dark), "GitHub", Light), // TODO: This should be Dark.
+            (Some("Nord"), Some(Light), "Nord", Light),
+            (Some("Nord"), Some(Dark), "Nord", Dark),
             (Some("none"), None, "none", Dark),
+            (Some("none"), Some(Dark), "none", Dark),
             (Some("None"), Some(Light), "none", Light),
         ] {
             let mut args = vec![];
