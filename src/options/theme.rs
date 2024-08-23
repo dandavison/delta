@@ -162,11 +162,8 @@ mod tests {
         ) in vec![
             (None, None, DEFAULT_DARK_SYNTAX_THEME, Dark),
             (Some("GitHub"), None, "GitHub", Light),
-            (Some("GitHub"), None, "GitHub", Light),
-            (None, Some(Light), DEFAULT_LIGHT_SYNTAX_THEME, Light),
             (None, Some(Dark), DEFAULT_DARK_SYNTAX_THEME, Dark),
             (None, Some(Light), DEFAULT_LIGHT_SYNTAX_THEME, Light),
-            (None, Some(Light), "GitHub", Light),
             (Some("none"), None, "none", Dark),
             (Some("None"), Some(Light), "none", Light),
         ] {
