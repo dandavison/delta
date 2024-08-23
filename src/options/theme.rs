@@ -148,6 +148,7 @@ mod tests {
     // TODO: Test influence of BAT_THEME env var. E.g. see utils::process::tests::FakeParentArgs.
     #[test]
     fn test_syntax_theme_selection() {
+        use Mode::*;
         #[derive(PartialEq)]
         enum Mode {
             Light,
@@ -159,30 +160,15 @@ mod tests {
             expected_syntax_theme,
             expected_mode,
         ) in vec![
-            (None, None, DEFAULT_DARK_SYNTAX_THEME, Mode::Dark),
-            (Some("GitHub"), None, "GitHub", Mode::Light),
-            (Some("GitHub"), None, "GitHub", Mode::Light),
-            (
-                None,
-                Some(Mode::Light),
-                DEFAULT_LIGHT_SYNTAX_THEME,
-                Mode::Light,
-            ),
-            (
-                None,
-                Some(Mode::Dark),
-                DEFAULT_DARK_SYNTAX_THEME,
-                Mode::Dark,
-            ),
-            (
-                None,
-                Some(Mode::Light),
-                DEFAULT_LIGHT_SYNTAX_THEME,
-                Mode::Light,
-            ),
-            (None, Some(Mode::Light), "GitHub", Mode::Light),
-            (Some("none"), None, "none", Mode::Dark),
-            (Some("None"), Some(Mode::Light), "none", Mode::Light),
+            (None, None, DEFAULT_DARK_SYNTAX_THEME, Dark),
+            (Some("GitHub"), None, "GitHub", Light),
+            (Some("GitHub"), None, "GitHub", Light),
+            (None, Some(Light), DEFAULT_LIGHT_SYNTAX_THEME, Light),
+            (None, Some(Dark), DEFAULT_DARK_SYNTAX_THEME, Dark),
+            (None, Some(Light), DEFAULT_LIGHT_SYNTAX_THEME, Light),
+            (None, Some(Light), "GitHub", Light),
+            (Some("none"), None, "none", Dark),
+            (Some("None"), Some(Light), "none", Light),
         ] {
             let mut args = vec![];
             if let Some(syntax_theme) = syntax_theme {
@@ -198,10 +184,10 @@ mod tests {
                 args.push("never");
             }
             match mode {
-                Some(Mode::Light) => {
+                Some(Light) => {
                     args.push("--light");
                 }
-                Some(Mode::Dark) => {
+                Some(Dark) => {
                     args.push("--dark");
                 }
                 None => {}
