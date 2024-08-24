@@ -1,6 +1,5 @@
 use std::borrow::Cow;
 use std::collections::HashMap;
-use std::convert::TryInto;
 use std::io::{self, BufRead, IsTerminal, Write};
 
 use bytelines::ByteLines;
@@ -11,7 +10,7 @@ use crate::config::Config;
 use crate::config::GrepType;
 use crate::features;
 use crate::handlers::grep;
-use crate::handlers::hunk_header::ParsedHunkHeader;
+use crate::handlers::hunk_header::{AmbiguousDiffMinusCounter, ParsedHunkHeader};
 use crate::handlers::{self, merge_conflict};
 use crate::paint::Painter;
 use crate::style::DecorationStyle;
@@ -76,61 +75,6 @@ pub enum Source {
     GitDiff,     // Coming from a `git diff` command
     DiffUnified, // Coming from a `diff -u` command
     Unknown,
-}
-
-// The output of `diff -u file1 file2` does not contain a header before the
-// `--- old.lua` / `+++ new.lua` block, and the hunk can of course contain lines
-// starting with '-- '. To avoid interpreting '--- lua comment' as a new header,
-// count the minus lines in a hunk (provided by the '@@ -1,4 +1,3 @@' header).
-// `diff` itself can not generate two diffs in this ambiguous format, so a second header
-// could just be ignored. But concatenated diffs exist and are accepted by `patch`.
-#[derive(Debug)]
-pub struct AmbiguousDiffMinusCounter(isize);
-
-impl AmbiguousDiffMinusCounter {
-    // The internal isize representation avoids calling `if let Some(..)` on every line. For
-    // nearly all input the counter is not needed, in this case it is decremented but ignored.
-    // [min, COUNTER_RELEVANT_IF_GT]   unambiguous diff
-    // (COUNTER_RELEVANT_IF_GT, 0]     handle next '--- ' like a header, and set counter in next @@ block
-    // [1, max]                        counting minus lines in ambiguous header
-    const COUNTER_RELEVANT_IF_GREATER_THAN: isize = -4096; // -1 works too, but be defensive
-    const EXPECT_DIFF_3DASH_HEADER: isize = 0;
-    pub fn not_needed() -> Self {
-        Self(Self::COUNTER_RELEVANT_IF_GREATER_THAN)
-    }
-    pub fn count_from(lines: usize) -> Self {
-        Self(
-            lines
-                .try_into()
-                .unwrap_or(Self::COUNTER_RELEVANT_IF_GREATER_THAN),
-        )
-    }
-    pub fn prepare_to_count() -> Self {
-        Self(Self::EXPECT_DIFF_3DASH_HEADER)
-    }
-    pub fn three_dashes_expected(&self) -> bool {
-        if self.0 > Self::COUNTER_RELEVANT_IF_GREATER_THAN {
-            self.0 <= Self::EXPECT_DIFF_3DASH_HEADER
-        } else {
-            true
-        }
-    }
-    #[allow(clippy::needless_bool)]
-    pub fn must_count(&mut self) -> bool {
-        let relevant = self.0 > Self::COUNTER_RELEVANT_IF_GREATER_THAN;
-        if relevant {
-            true
-        } else {
-            #[cfg(target_pointer_width = "32")]
-            {
-                self.0 = Self::COUNTER_RELEVANT_IF_GREATER_THAN;
-            }
-            false
-        }
-    }
-    pub fn count_line(&mut self) {
-        self.0 -= 1;
-    }
 }
 
 // Possible transitions, with actions on entry:
