@@ -24,7 +24,7 @@ mod subcommands;
 
 mod tests;
 
-use std::io::{self, ErrorKind, IsTerminal};
+use std::io::{self, ErrorKind, IsTerminal, Write};
 use std::process;
 
 use bytelines::ByteLinesReader;
@@ -80,7 +80,11 @@ fn run_app() -> std::io::Result<i32> {
     let opt = cli::Opt::from_args_and_git_config(&env, assets);
 
     let opt = match opt {
-        Call::Help(msg) | Call::Version(msg) => {
+        Call::Version(msg) => {
+            writeln!(std::io::stdout(), "{}", msg.trim_end())?;
+            return Ok(0);
+        }
+        Call::Help(msg) => {
             OutputType::oneshot_write(msg)?;
             return Ok(0);
         }
