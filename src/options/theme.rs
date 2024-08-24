@@ -39,7 +39,7 @@ pub fn is_light_syntax_theme(theme: &str) -> bool {
 }
 
 const LIGHT_SYNTAX_THEMES: [&str; 7] = [
-    "catppuccin-latte",
+    "Catppuccin Latte",
     "GitHub",
     "gruvbox-light",
     "gruvbox-white",
