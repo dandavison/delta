@@ -7,8 +7,8 @@ release: \
 	clean \
 	check-environment \
 	bump-version \
-	create-github-release \
-	bump-version-in-documentation-links
+	bump-version-in-documentation-links \
+	create-github-release
 
 
 clean:
