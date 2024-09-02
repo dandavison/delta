@@ -374,7 +374,11 @@ fn remove_surrounding_quotes(path: &str) -> &str {
     }
 }
 
-fn _parse_file_path(s: &str, git_diff_name: bool) -> String {
+fn _parse_file_path(path: &str, git_diff_name: bool) -> String {
+    // When git config 'core.quotepath = true' (the default), and `path` contains
+    // non-ASCII characters, a backslash, or a quote; then it is quoted, so remove
+    // these quotes. Characters may also be escaped, but these are left as-is.
+    let path = remove_surrounding_quotes(path);
     // It appears that, if the file name contains a space, git appends a tab
     // character in the diff metadata lines, e.g.
     // $ git diff --no-index "a b" "c d" | cat -A
@@ -382,15 +386,13 @@ fn _parse_file_path(s: &str, git_diff_name: bool) -> String {
     // index·d00491f..0cfbf08·100644␊
     // ---·a/a·b├──┤␊
     // +++·b/c·d├──┤␊
-    let path = match s.strip_suffix('\t').unwrap_or(s) {
+    match path.strip_suffix('\t').unwrap_or(path) {
         "/dev/null" => "/dev/null",
         path if git_diff_name && DIFF_PREFIXES.iter().any(|s| path.starts_with(s)) => &path[2..],
         path if git_diff_name => path,
         path => path.split('\t').next().unwrap_or(""),
-    };
-    // When a path contains non-ASCII characters, a backslash, or a quote then it is quoted,
-    // so remove these quotes. Characters may also be escaped, but these are left as-is.
-    remove_surrounding_quotes(path).to_string()
+    }
+    .to_string()
 }
 
 pub fn get_file_change_description_from_file_paths(
@@ -637,6 +639,10 @@ mod tests {
             get_repeated_file_path_from_diff_line(
                 "diff --git a/.config/Code - Insiders/User/settings.json b/.config/Code - Insiders/User/settings.json"),
             Some(".config/Code - Insiders/User/settings.json".to_string())
+        );
+        assert_eq!(
+            get_repeated_file_path_from_diff_line(r#"diff --git "a/quoted" "b/quoted""#),
+            Some("quoted".to_string())
         );
     }
 
