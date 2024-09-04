@@ -59,51 +59,30 @@ pub fn make_navigate_regex(
     }
 }
 
-// Create a less history file to be used by delta's child less process. This file is initialized
-// with the contents of user's real less hist file, to which the navigate regex is appended. This
-// has the effect that 'n' or 'N' in delta's less process will search for the navigate regex,
-// without the undesirable aspects of using --pattern, yet without polluting the user's less search
-// history with delta's navigate regex. See
-// https://github.com/dandavison/delta/issues/237#issuecomment-780654036. Note that with the
-// current implementation, no writes to the delta less history file are propagated back to the real
-// history file so, for example, a (non-navigate) search performed in the delta less process will
-// not be stored in history.
+// Append the navigate regex to the user's less history file. This has the
+// effect that 'n' or 'N' in delta's less process will search for the navigate
+// regex, without the undesirable aspects of using --pattern. See
+// https://github.com/dandavison/delta/issues/237#issuecomment-780654036. Note
+// that with the current implementation, delta's automatically-added navigate
+// regexp will be stored in less history.
 pub fn copy_less_hist_file_and_append_navigate_regex(
     config: &PagerCfg,
 ) -> std::io::Result<PathBuf> {
-    let delta_less_hist_file = get_delta_less_hist_file()?;
-    let initial_contents = ".less-history-file:\n".to_string();
-    let mut contents = if let Some(hist_file) = get_less_hist_file() {
-        std::fs::read_to_string(hist_file).unwrap_or(initial_contents)
-    } else {
-        initial_contents
-    };
+    let less_hist_file = get_less_hist_file().ok_or_else(|| {
+        std::io::Error::new(std::io::ErrorKind::NotFound, "Can't find less hist file")
+    })?;
+    let mut contents = std::fs::read_to_string(&less_hist_file)
+        .unwrap_or_else(|_| ".less-history-file:\n".to_string());
     if !contents.ends_with(".search\n") {
         contents = format!("{contents}.search\n");
     }
     writeln!(
-        std::fs::File::create(&delta_less_hist_file)?,
+        std::fs::File::create(&less_hist_file)?,
         "{}\"{}",
         contents,
         config.navigate_regex.as_ref().unwrap(),
     )?;
-    Ok(delta_less_hist_file)
-}
-
-#[cfg(target_os = "windows")]
-fn get_delta_less_hist_file() -> std::io::Result<PathBuf> {
-    let mut path = dirs::data_local_dir()
-        .ok_or_else(|| Error::new(ErrorKind::NotFound, "Can't find AppData\\Local folder"))?;
-    path.push("delta");
-    std::fs::create_dir_all(&path)?;
-    path.push("delta.lesshst");
-    Ok(path)
-}
-
-#[cfg(not(target_os = "windows"))]
-fn get_delta_less_hist_file() -> std::io::Result<PathBuf> {
-    let dir = xdg::BaseDirectories::with_prefix("delta")?;
-    dir.place_data_file("lesshst")
+    Ok(less_hist_file)
 }
 
 // LESSHISTFILE
