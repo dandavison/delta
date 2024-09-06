@@ -1,13 +1,16 @@
+//! Delta doesn't have a formal concept of a "theme". What it has is
+//!
+//! * (a) the choice of syntax-highlighting theme
+//! * (b) the choice of light-background-mode vs dark-background-mode, which determine certain
+//!     default color choices
+//!
+//! This module sets those options. If the light/dark background mode choice is not made explicitly
+//! by the user, it is determined by the classification of the syntax theme into light-background
+//! vs dark-background syntax themes. If the user didn't choose a syntax theme, a dark-background
+//! default is selected.
+
 use std::io::{stdout, IsTerminal};
 
-/// Delta doesn't have a formal concept of a "theme". What it has is
-/// (a) the choice of syntax-highlighting theme
-/// (b) the choice of light-background-mode vs dark-background-mode, which determine certain
-///     default color choices
-/// This module sets those options. If the light/dark background mode choice is not made explicitly
-/// by the user, it is determined by the classification of the syntax theme into light-background
-/// vs dark-background syntax themes. If the user didn't choose a syntax theme, a dark-background
-/// default is selected.
 use bat;
 use bat::assets::HighlightingAssets;
 #[cfg(not(test))]
