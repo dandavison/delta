@@ -103,7 +103,7 @@ pub fn wrap(text: &str, width: usize, indent_with: &str, no_indent: &str, no_wra
     }
 
     #[cfg(test)]
-    if result.find("no-sanity").is_none() {
+    if !result.contains("no-sanity") {
         // sanity check
         let stripped_input = text
             .replace(" ", "")
