@@ -10,6 +10,8 @@ use std::io::{stdout, IsTerminal};
 /// default is selected.
 use bat;
 use bat::assets::HighlightingAssets;
+#[cfg(not(test))]
+use terminal_colorsaurus::{color_scheme, ColorScheme, QueryOptions};
 
 use crate::cli::{self, DetectDarkLight};
 
@@ -120,7 +122,6 @@ fn should_detect_dark_light(opt: &cli::Opt) -> bool {
 
 #[cfg(not(test))]
 fn detect_light_mode() -> Option<bool> {
-    use terminal_colorsaurus::{color_scheme, ColorScheme, QueryOptions};
     color_scheme(QueryOptions::default())
         .ok()
         .map(|color_scheme| color_scheme == ColorScheme::Light)
