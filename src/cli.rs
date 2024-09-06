@@ -11,6 +11,7 @@ use syntect::highlighting::Theme as SyntaxTheme;
 use syntect::parsing::SyntaxSet;
 
 use crate::ansi::{ANSI_SGR_BOLD, ANSI_SGR_RESET, ANSI_SGR_UNDERLINE};
+use crate::color::ColorMode;
 use crate::config::delta_unreachable;
 use crate::env::DeltaEnv;
 use crate::git_config::GitConfig;
@@ -1180,7 +1181,7 @@ pub struct ComputedValues {
     pub background_color_extends_to_terminal_width: bool,
     pub decorations_width: Width,
     pub inspect_raw_lines: InspectRawLines,
-    pub is_light_mode: bool,
+    pub color_mode: ColorMode,
     pub paging_mode: PagingMode,
     pub syntax_set: SyntaxSet,
     pub syntax_theme: Option<SyntaxTheme>,

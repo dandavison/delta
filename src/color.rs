@@ -8,6 +8,7 @@ use syntect::highlighting::Color as SyntectColor;
 use crate::fatal;
 use crate::git_config::GitConfig;
 use crate::utils;
+use ColorMode::*;
 
 pub fn parse_color(s: &str, true_color: bool, git_config: Option<&GitConfig>) -> Option<Color> {
     if s == "normal" {
@@ -105,39 +106,50 @@ fn ansi_16_color_number_to_name(n: u8) -> Option<&'static str> {
     None
 }
 
-pub fn get_minus_background_color_default(is_light_mode: bool, is_true_color: bool) -> Color {
-    match (is_light_mode, is_true_color) {
-        (true, true) => LIGHT_THEME_MINUS_COLOR,
-        (true, false) => LIGHT_THEME_MINUS_COLOR_256,
-        (false, true) => DARK_THEME_MINUS_COLOR,
-        (false, false) => DARK_THEME_MINUS_COLOR_256,
+/// The color mode determines some default color choices
+/// such as the diff background color or the palette used for blame.
+#[derive(Default, Clone, Copy, Debug, PartialEq, Eq)]
+pub enum ColorMode {
+    #[default]
+    /// Dark background with light text.
+    Dark,
+    /// Light background with dark text.
+    Light,
+}
+
+pub fn get_minus_background_color_default(mode: ColorMode, is_true_color: bool) -> Color {
+    match (mode, is_true_color) {
+        (Light, true) => LIGHT_THEME_MINUS_COLOR,
+        (Light, false) => LIGHT_THEME_MINUS_COLOR_256,
+        (Dark, true) => DARK_THEME_MINUS_COLOR,
+        (Dark, false) => DARK_THEME_MINUS_COLOR_256,
     }
 }
 
-pub fn get_minus_emph_background_color_default(is_light_mode: bool, is_true_color: bool) -> Color {
-    match (is_light_mode, is_true_color) {
-        (true, true) => LIGHT_THEME_MINUS_EMPH_COLOR,
-        (true, false) => LIGHT_THEME_MINUS_EMPH_COLOR_256,
-        (false, true) => DARK_THEME_MINUS_EMPH_COLOR,
-        (false, false) => DARK_THEME_MINUS_EMPH_COLOR_256,
+pub fn get_minus_emph_background_color_default(mode: ColorMode, is_true_color: bool) -> Color {
+    match (mode, is_true_color) {
+        (Light, true) => LIGHT_THEME_MINUS_EMPH_COLOR,
+        (Light, false) => LIGHT_THEME_MINUS_EMPH_COLOR_256,
+        (Dark, true) => DARK_THEME_MINUS_EMPH_COLOR,
+        (Dark, false) => DARK_THEME_MINUS_EMPH_COLOR_256,
     }
 }
 
-pub fn get_plus_background_color_default(is_light_mode: bool, is_true_color: bool) -> Color {
-    match (is_light_mode, is_true_color) {
-        (true, true) => LIGHT_THEME_PLUS_COLOR,
-        (true, false) => LIGHT_THEME_PLUS_COLOR_256,
-        (false, true) => DARK_THEME_PLUS_COLOR,
-        (false, false) => DARK_THEME_PLUS_COLOR_256,
+pub fn get_plus_background_color_default(mode: ColorMode, is_true_color: bool) -> Color {
+    match (mode, is_true_color) {
+        (Light, true) => LIGHT_THEME_PLUS_COLOR,
+        (Light, false) => LIGHT_THEME_PLUS_COLOR_256,
+        (Dark, true) => DARK_THEME_PLUS_COLOR,
+        (Dark, false) => DARK_THEME_PLUS_COLOR_256,
     }
 }
 
-pub fn get_plus_emph_background_color_default(is_light_mode: bool, is_true_color: bool) -> Color {
-    match (is_light_mode, is_true_color) {
-        (true, true) => LIGHT_THEME_PLUS_EMPH_COLOR,
-        (true, false) => LIGHT_THEME_PLUS_EMPH_COLOR_256,
-        (false, true) => DARK_THEME_PLUS_EMPH_COLOR,
-        (false, false) => DARK_THEME_PLUS_EMPH_COLOR_256,
+pub fn get_plus_emph_background_color_default(mode: ColorMode, is_true_color: bool) -> Color {
+    match (mode, is_true_color) {
+        (Light, true) => LIGHT_THEME_PLUS_EMPH_COLOR,
+        (Light, false) => LIGHT_THEME_PLUS_EMPH_COLOR_256,
+        (Dark, true) => DARK_THEME_PLUS_EMPH_COLOR,
+        (Dark, false) => DARK_THEME_PLUS_EMPH_COLOR_256,
     }
 }
 

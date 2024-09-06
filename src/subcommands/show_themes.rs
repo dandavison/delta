@@ -1,6 +1,7 @@
 use std::io::{self, ErrorKind, IsTerminal, Read};
 
 use crate::cli;
+use crate::color::ColorMode;
 use crate::config;
 use crate::delta;
 use crate::env::DeltaEnv;
@@ -8,7 +9,7 @@ use crate::git_config;
 use crate::options::get::get_themes;
 use crate::utils::bat::output::{OutputType, PagingMode};
 
-pub fn show_themes(dark: bool, light: bool, computed_theme_is_light: bool) -> std::io::Result<()> {
+pub fn show_themes(dark: bool, light: bool, color_mode: ColorMode) -> std::io::Result<()> {
     use std::io::BufReader;
 
     use bytelines::ByteLines;
@@ -58,8 +59,8 @@ pub fn show_themes(dark: bool, light: bool, computed_theme_is_light: bool) -> st
         let is_light_theme = opt.light;
         let config = config::Config::from(opt);
 
-        if (!computed_theme_is_light && is_dark_theme)
-            || (computed_theme_is_light && is_light_theme)
+        if (color_mode == ColorMode::Dark && is_dark_theme)
+            || (color_mode == ColorMode::Light && is_light_theme)
             || (dark && light)
         {
             writeln!(writer, "\n\nTheme: {}\n", title_style.paint(theme))?;

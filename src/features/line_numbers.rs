@@ -3,6 +3,7 @@ use std::cmp::max;
 use lazy_static::lazy_static;
 use regex::Regex;
 
+use crate::color::ColorMode::*;
 use crate::config;
 use crate::delta::State;
 use crate::features::hyperlinks;
@@ -38,26 +39,27 @@ pub fn make_feature() -> Vec<(String, OptionValueFunction)> {
             "line-numbers-minus-style",
             String,
             None,
-            opt => if opt.computed.is_light_mode {
-                "red".to_string()
-            } else {
-                "88".to_string()
+            opt => match opt.computed.color_mode {
+                Light => "red",
+                Dark => "88",
             }
         ),
         (
             "line-numbers-zero-style",
             String,
             None,
-            opt => if opt.computed.is_light_mode {"#dddddd"} else {"#444444"}
+            opt => match opt.computed.color_mode {
+                Light => "#dddddd",
+                Dark => "#444444",
+            }
         ),
         (
             "line-numbers-plus-style",
             String,
             None,
-            opt => if opt.computed.is_light_mode {
-                "green".to_string()
-            } else {
-                "28".to_string()
+            opt => match opt.computed.color_mode {
+                Light => "green",
+                Dark => "28",
             }
         )
     ])
