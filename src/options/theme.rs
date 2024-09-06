@@ -98,20 +98,14 @@ fn get_is_light_mode_and_syntax_theme_name(
 }
 
 fn get_is_light(opt: &cli::Opt) -> Option<bool> {
-    get_is_light_opt(opt).or_else(|| {
-        should_detect_dark_light(opt)
-            .then(detect_light_mode)
-            .flatten()
-    })
-}
-
-fn get_is_light_opt(opt: &cli::Opt) -> Option<bool> {
     if opt.light {
         Some(true)
     } else if opt.dark {
         Some(false)
     } else {
-        None
+        should_detect_dark_light(opt)
+            .then(detect_light_mode)
+            .flatten()
     }
 }
 
