@@ -1,8 +1,9 @@
 use crate::cli;
+use crate::color::{ColorMode, ColorMode::*};
 use crate::config;
 use crate::delta;
 use crate::env::DeltaEnv;
-use crate::options::theme::is_light_syntax_theme;
+use crate::options::theme::color_mode_from_syntax_theme;
 use crate::utils;
 use crate::utils::bat::output::{OutputType, PagingMode};
 use clap::Parser;
@@ -41,19 +42,19 @@ pub fn show_syntax_themes() -> std::io::Result<()> {
     let opt = make_opt();
 
     if !(opt.dark || opt.light) {
-        _show_syntax_themes(opt, false, &mut writer, stdin_data.as_ref())?;
-        _show_syntax_themes(make_opt(), true, &mut writer, stdin_data.as_ref())?;
+        _show_syntax_themes(opt, Dark, &mut writer, stdin_data.as_ref())?;
+        _show_syntax_themes(make_opt(), Light, &mut writer, stdin_data.as_ref())?;
     } else if opt.light {
-        _show_syntax_themes(opt, true, &mut writer, stdin_data.as_ref())?;
+        _show_syntax_themes(opt, Light, &mut writer, stdin_data.as_ref())?;
     } else {
-        _show_syntax_themes(opt, false, &mut writer, stdin_data.as_ref())?
+        _show_syntax_themes(opt, Dark, &mut writer, stdin_data.as_ref())?
     };
     Ok(())
 }
 
 fn _show_syntax_themes(
     mut opt: cli::Opt,
-    is_light_mode: bool,
+    color_mode: ColorMode,
     writer: &mut dyn Write,
     stdin: Option<&Vec<u8>>,
 ) -> std::io::Result<()> {
@@ -80,14 +81,14 @@ index f38589a..0f1bb83 100644
         }
     };
 
-    opt.computed.is_light_mode = is_light_mode;
+    opt.computed.color_mode = color_mode;
     let mut config = config::Config::from(opt);
     let title_style = ansi_term::Style::new().bold();
     let assets = utils::bat::assets::load_highlighting_assets();
 
     for syntax_theme in assets
         .themes()
-        .filter(|t| is_light_syntax_theme(t) == is_light_mode)
+        .filter(|t| color_mode_from_syntax_theme(t) == color_mode)
     {
         writeln!(
             writer,
@@ -121,7 +122,7 @@ mod tests {
         let opt = integration_test_utils::make_options_from_args(&[]);
 
         let mut writer = Cursor::new(vec![0; 1024]);
-        _show_syntax_themes(opt, true, &mut writer, None).unwrap();
+        _show_syntax_themes(opt, Light, &mut writer, None).unwrap();
         let mut s = String::new();
         writer.rewind().unwrap();
         writer.read_to_string(&mut s).unwrap();

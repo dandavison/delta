@@ -115,15 +115,14 @@ fn parse_as_reference_to_git_config(style_string: &str, opt: &cli::Opt) -> Style
 }
 
 fn make_hunk_styles<'a>(opt: &'a cli::Opt, styles: &'a mut HashMap<&str, StyleReference>) {
-    let is_light_mode = opt.computed.is_light_mode;
+    let color_mode = opt.computed.color_mode;
     let true_color = opt.computed.true_color;
     let minus_style = style_from_str(
         &opt.minus_style,
         Some(Style::from_colors(
             None,
             Some(color::get_minus_background_color_default(
-                is_light_mode,
-                true_color,
+                color_mode, true_color,
             )),
         )),
         None,
@@ -136,8 +135,7 @@ fn make_hunk_styles<'a>(opt: &'a cli::Opt, styles: &'a mut HashMap<&str, StyleRe
         Some(Style::from_colors(
             None,
             Some(color::get_minus_emph_background_color_default(
-                is_light_mode,
-                true_color,
+                color_mode, true_color,
             )),
         )),
         None,
@@ -160,8 +158,7 @@ fn make_hunk_styles<'a>(opt: &'a cli::Opt, styles: &'a mut HashMap<&str, StyleRe
         Some(Style::from_colors(
             None,
             Some(color::get_minus_background_color_default(
-                is_light_mode,
-                true_color,
+                color_mode, true_color,
             )),
         )),
         None,
@@ -176,8 +173,7 @@ fn make_hunk_styles<'a>(opt: &'a cli::Opt, styles: &'a mut HashMap<&str, StyleRe
         Some(Style::from_colors(
             None,
             Some(color::get_plus_background_color_default(
-                is_light_mode,
-                true_color,
+                color_mode, true_color,
             )),
         )),
         None,
@@ -190,8 +186,7 @@ fn make_hunk_styles<'a>(opt: &'a cli::Opt, styles: &'a mut HashMap<&str, StyleRe
         Some(Style::from_colors(
             None,
             Some(color::get_plus_emph_background_color_default(
-                is_light_mode,
-                true_color,
+                color_mode, true_color,
             )),
         )),
         None,
@@ -214,8 +209,7 @@ fn make_hunk_styles<'a>(opt: &'a cli::Opt, styles: &'a mut HashMap<&str, StyleRe
         Some(Style::from_colors(
             None,
             Some(color::get_plus_background_color_default(
-                is_light_mode,
-                true_color,
+                color_mode, true_color,
             )),
         )),
         None,

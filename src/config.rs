@@ -9,7 +9,7 @@ use syntect::parsing::SyntaxSet;
 
 use crate::ansi;
 use crate::cli;
-use crate::color;
+use crate::color::{self, ColorMode};
 use crate::delta::State;
 use crate::fatal;
 use crate::features::navigate;
@@ -214,7 +214,7 @@ impl From<cli::Opt> for Config {
             ));
         });
 
-        let blame_palette = make_blame_palette(opt.blame_palette, opt.computed.is_light_mode);
+        let blame_palette = make_blame_palette(opt.blame_palette, opt.computed.color_mode);
 
         if blame_palette.is_empty() {
             fatal("Option 'blame-palette' must not be empty.")
@@ -437,17 +437,17 @@ impl From<cli::Opt> for Config {
     }
 }
 
-fn make_blame_palette(blame_palette: Option<String>, is_light_mode: bool) -> Vec<String> {
-    match (blame_palette, is_light_mode) {
+fn make_blame_palette(blame_palette: Option<String>, mode: ColorMode) -> Vec<String> {
+    match (blame_palette, mode) {
         (Some(string), _) => string
             .split_whitespace()
             .map(|s| s.to_owned())
             .collect::<Vec<String>>(),
-        (None, true) => color::LIGHT_THEME_BLAME_PALETTE
+        (None, ColorMode::Light) => color::LIGHT_THEME_BLAME_PALETTE
             .iter()
             .map(|s| s.to_string())
             .collect::<Vec<String>>(),
-        (None, false) => color::DARK_THEME_BLAME_PALETTE
+        (None, ColorMode::Dark) => color::DARK_THEME_BLAME_PALETTE
             .iter()
             .map(|s| s.to_string())
             .collect::<Vec<String>>(),

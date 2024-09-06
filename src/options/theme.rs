@@ -14,22 +14,20 @@ use std::io::{stdout, IsTerminal};
 use bat;
 use bat::assets::HighlightingAssets;
 #[cfg(not(test))]
-use terminal_colorsaurus::{color_scheme, ColorScheme, QueryOptions};
+use terminal_colorsaurus::{color_scheme, QueryOptions};
 
 use crate::cli::{self, DetectDarkLight};
+use crate::color::{ColorMode, ColorMode::*};
 
 #[allow(non_snake_case)]
-pub fn set__is_light_mode__syntax_theme__syntax_set(
-    opt: &mut cli::Opt,
-    assets: HighlightingAssets,
-) {
+pub fn set__color_mode__syntax_theme__syntax_set(opt: &mut cli::Opt, assets: HighlightingAssets) {
     let syntax_theme_name_from_bat_theme = &opt.env.bat_theme;
-    let (is_light_mode, syntax_theme_name) = get_is_light_mode_and_syntax_theme_name(
+    let (color_mode, syntax_theme_name) = get_color_mode_and_syntax_theme_name(
         opt.syntax_theme.as_ref(),
         syntax_theme_name_from_bat_theme.as_ref(),
-        get_is_light(opt),
+        get_color_mode(opt),
     );
-    opt.computed.is_light_mode = is_light_mode;
+    opt.computed.color_mode = color_mode;
 
     opt.computed.syntax_theme = if is_no_syntax_highlighting_syntax_theme_name(&syntax_theme_name) {
         None
@@ -41,6 +39,14 @@ pub fn set__is_light_mode__syntax_theme__syntax_set(
 
 pub fn is_light_syntax_theme(theme: &str) -> bool {
     LIGHT_SYNTAX_THEMES.contains(&theme) || theme.to_lowercase().contains("light")
+}
+
+pub fn color_mode_from_syntax_theme(theme: &str) -> ColorMode {
+    if is_light_syntax_theme(theme) {
+        ColorMode::Light
+    } else {
+        ColorMode::Dark
+    }
 }
 
 const LIGHT_SYNTAX_THEMES: [&str; 7] = [
@@ -88,34 +94,34 @@ fn is_no_syntax_highlighting_syntax_theme_name(theme_name: &str) -> bool {
 /// | -          | -          | yes            | default light/dark theme, light/dark mode                                  |
 /// | some_theme | (IGNORED)  | yes            | some_theme, light/dark mode (even if some_theme conflicts with light/dark) |
 /// | -          | BAT_THEME  | yes            | BAT_THEME, light/dark mode (even if BAT_THEME conflicts with light/dark)   |
-fn get_is_light_mode_and_syntax_theme_name(
+fn get_color_mode_and_syntax_theme_name(
     theme_arg: Option<&String>,
     bat_theme_env_var: Option<&String>,
-    light_mode: Option<bool>,
-) -> (bool, String) {
+    mode: Option<ColorMode>,
+) -> (ColorMode, String) {
     let theme_arg = theme_arg.or(bat_theme_env_var);
-    match (theme_arg, light_mode) {
-        (Some(theme_name), None) => (is_light_syntax_theme(theme_name), theme_name.to_string()),
-        (Some(theme_name), Some(is_light_mode)) => (is_light_mode, theme_name.to_string()),
-        (None, None | Some(false)) => (false, DEFAULT_DARK_SYNTAX_THEME.to_string()),
-        (None, Some(true)) => (true, DEFAULT_LIGHT_SYNTAX_THEME.to_string()),
+    match (theme_arg, mode) {
+        (Some(theme), None) => (color_mode_from_syntax_theme(theme), theme.to_string()),
+        (Some(theme), Some(mode)) => (mode, theme.to_string()),
+        (None, None | Some(Dark)) => (Dark, DEFAULT_DARK_SYNTAX_THEME.to_string()),
+        (None, Some(Light)) => (Light, DEFAULT_LIGHT_SYNTAX_THEME.to_string()),
     }
 }
 
-fn get_is_light(opt: &cli::Opt) -> Option<bool> {
+fn get_color_mode(opt: &cli::Opt) -> Option<ColorMode> {
     if opt.light {
-        Some(true)
+        Some(Light)
     } else if opt.dark {
-        Some(false)
+        Some(Dark)
+    } else if should_detect_color_mode(opt) {
+        detect_color_mode()
     } else {
-        should_detect_dark_light(opt)
-            .then(detect_light_mode)
-            .flatten()
+        None
     }
 }
 
 /// See [`cli::Opt::detect_dark_light`] for a detailed explanation.
-fn should_detect_dark_light(opt: &cli::Opt) -> bool {
+fn should_detect_color_mode(opt: &cli::Opt) -> bool {
     match opt.detect_dark_light {
         DetectDarkLight::Auto => opt.color_only || stdout().is_terminal(),
         DetectDarkLight::Always => true,
@@ -124,14 +130,23 @@ fn should_detect_dark_light(opt: &cli::Opt) -> bool {
 }
 
 #[cfg(not(test))]
-fn detect_light_mode() -> Option<bool> {
+fn detect_color_mode() -> Option<ColorMode> {
     color_scheme(QueryOptions::default())
         .ok()
-        .map(|color_scheme| color_scheme == ColorScheme::Light)
+        .map(ColorMode::from)
+}
+
+impl From<terminal_colorsaurus::ColorScheme> for ColorMode {
+    fn from(value: terminal_colorsaurus::ColorScheme) -> Self {
+        match value {
+            terminal_colorsaurus::ColorScheme::Dark => ColorMode::Dark,
+            terminal_colorsaurus::ColorScheme::Light => ColorMode::Light,
+        }
+    }
 }
 
 #[cfg(test)]
-fn detect_light_mode() -> Option<bool> {
+fn detect_color_mode() -> Option<ColorMode> {
     None
 }
 
@@ -144,12 +159,6 @@ mod tests {
     // TODO: Test influence of BAT_THEME env var. E.g. see utils::process::tests::FakeParentArgs.
     #[test]
     fn test_syntax_theme_selection() {
-        use Mode::*;
-        #[derive(PartialEq)]
-        enum Mode {
-            Light,
-            Dark,
-        }
         for (
             syntax_theme,
             mode, // (--light, --dark)
@@ -210,31 +219,19 @@ mod tests {
             }
             assert_eq!(
                 config.minus_style.ansi_term_style.background.unwrap(),
-                color::get_minus_background_color_default(
-                    expected_mode == Mode::Light,
-                    is_true_color
-                )
+                color::get_minus_background_color_default(expected_mode, is_true_color)
             );
             assert_eq!(
                 config.minus_emph_style.ansi_term_style.background.unwrap(),
-                color::get_minus_emph_background_color_default(
-                    expected_mode == Mode::Light,
-                    is_true_color
-                )
+                color::get_minus_emph_background_color_default(expected_mode, is_true_color)
             );
             assert_eq!(
                 config.plus_style.ansi_term_style.background.unwrap(),
-                color::get_plus_background_color_default(
-                    expected_mode == Mode::Light,
-                    is_true_color
-                )
+                color::get_plus_background_color_default(expected_mode, is_true_color)
             );
             assert_eq!(
                 config.plus_emph_style.ansi_term_style.background.unwrap(),
-                color::get_plus_emph_background_color_default(
-                    expected_mode == Mode::Light,
-                    is_true_color
-                )
+                color::get_plus_emph_background_color_default(expected_mode, is_true_color)
             );
         }
     }

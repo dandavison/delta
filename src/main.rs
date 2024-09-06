@@ -105,7 +105,7 @@ fn run_app() -> std::io::Result<i32> {
         Some(subcommands::show_themes::show_themes(
             opt.dark,
             opt.light,
-            opt.computed.is_light_mode,
+            opt.computed.color_mode,
         ))
     } else if opt.show_colors {
         Some(subcommands::show_colors::show_colors())
