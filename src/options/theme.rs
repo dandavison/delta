@@ -1,13 +1,17 @@
 //! Delta doesn't have a formal concept of a "theme". What it has is
 //!
-//! * (a) the choice of syntax-highlighting theme
-//! * (b) the choice of light-background-mode vs dark-background-mode, which determine certain
-//!     default color choices
+//! 1. The choice of "theme". This is the language syntax highlighting theme; you have to make this
+//!    choice when using `bat` also.
+//! 2. The choice of "light vs dark mode". This determines whether the background colors should be
+//!    chosen for a light or dark terminal background. (`bat` has no equivalent.)
 //!
-//! This module sets those options. If the light/dark background mode choice is not made explicitly
-//! by the user, it is determined by the classification of the syntax theme into light-background
-//! vs dark-background syntax themes. If the user didn't choose a syntax theme, a dark-background
-//! default is selected.
+//! Basically:
+//! 1. The theme is specified by the `--syntax-theme` option. If this isn't supplied then it is specified
+//!    by the `BAT_THEME` environment variable.
+//! 2. Light vs dark mode is specified by the `--light` or `--dark` options. If these aren't
+//!    supplied then it detected from the terminal. If this fails it is inferred from the chosen theme.
+//!
+//! In the absence of other factors, the default assumes a dark terminal background.
 
 use std::io::{stdout, IsTerminal};
 
@@ -62,34 +66,8 @@ fn is_no_syntax_highlighting_syntax_theme_name(theme_name: &str) -> bool {
     theme_name.to_lowercase() == "none"
 }
 
-/// Return a (theme_name, is_light_mode) tuple.
+/// Return a (theme_name, color_mode) tuple.
 /// theme_name == None in return value means syntax highlighting is disabled.
-///
-/// There are two types of color choices that have to be made:
-
-/// 1. The choice of "theme". This is the language syntax highlighting theme; you have to make this
-///    choice when using `bat` also.
-/// 2. The choice of "light vs dark mode". This determines whether the background colors should be
-///    chosen for a light or dark terminal background. (`bat` has no equivalent.)
-///
-/// Basically:
-/// 1. The theme is specified by the `--syntax-theme` option. If this isn't supplied then it is specified
-///    by the `BAT_THEME` environment variable.
-/// 2. Light vs dark mode is specified by the `--light` or `--dark` options. If these aren't
-///    supplied then it is inferred from the chosen theme.
-///
-/// In the absence of other factors, the default assumes a dark terminal background.
-///
-/// Specifically, the rules are as follows:
-///
-/// | --theme    | $BAT_THEME | --light/--dark | Behavior                                                                   |
-/// |------------|------------|----------------|----------------------------------------------------------------------------|
-/// | -          | -          | -              | default dark theme, dark mode                                              |
-/// | some_theme | (IGNORED)  | -              | some_theme with light/dark mode inferred accordingly                       |
-/// | -          | BAT_THEME  | -              | BAT_THEME, with light/dark mode inferred accordingly                       |
-/// | -          | -          | yes            | default light/dark theme, light/dark mode                                  |
-/// | some_theme | (IGNORED)  | yes            | some_theme, light/dark mode (even if some_theme conflicts with light/dark) |
-/// | -          | BAT_THEME  | yes            | BAT_THEME, light/dark mode (even if BAT_THEME conflicts with light/dark)   |
 fn get_color_mode_and_syntax_theme_name(
     syntax_theme: Option<&String>,
     mode: Option<ColorMode>,
