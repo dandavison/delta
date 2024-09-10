@@ -598,6 +598,7 @@ pub mod tests {
         With(usize, Rc<Vec<T>>),
         None,
         Invalid,
+        ErrorAlreadyHandled,
     }
 
     // When calling `FakeParentArgs::get()`, it can return `Some(values)` which were set earlier
@@ -648,24 +649,39 @@ pub mod tests {
                     TlsState::With(n, args) => TlsState::With(*n + 1, Rc::clone(args)),
                     TlsState::None => TlsState::None,
                     TlsState::Invalid => TlsState::Invalid,
+                    TlsState::ErrorAlreadyHandled => TlsState::ErrorAlreadyHandled,
                 });
 
                 match old_value {
                     TlsState::Once(args) | TlsState::Scope(args) => Some(args),
                     TlsState::With(n, args) if n < args.len() => Some(args[n].clone()),
                     TlsState::None => None,
-                    TlsState::Invalid | TlsState::With(_, _) => Self::error("get"),
+                    TlsState::Invalid | TlsState::With(_, _) | TlsState::ErrorAlreadyHandled => {
+                        Self::error("get");
+                        None
+                    }
                 }
             })
         }
         pub fn are_set() -> bool {
-            FAKE_ARGS.with(|a| *a.borrow() != TlsState::None)
+            FAKE_ARGS.with(|a| {
+                *a.borrow() != TlsState::None && *a.borrow() != TlsState::ErrorAlreadyHandled
+            })
         }
-        fn error(where_: &str) -> ! {
-            panic!(
-                "test logic error (in {}): wrong FakeParentArgs scope?",
-                where_
-            );
+        fn error(where_: &str) {
+            FAKE_ARGS.with(|a| {
+                let old_value = a.replace(TlsState::ErrorAlreadyHandled);
+
+                match old_value {
+                    TlsState::ErrorAlreadyHandled => (),
+                    _ => {
+                        panic!(
+                            "test logic error (in {}): wrong FakeParentArgs scope?",
+                            where_
+                        );
+                    }
+                }
+            });
         }
     }
     impl Drop for FakeParentArgs {
@@ -680,7 +696,7 @@ pub mod tests {
                         }
                     }
                     TlsState::Once(_) | TlsState::None => Self::error("drop"),
-                    TlsState::Scope(_) | TlsState::Invalid => {}
+                    TlsState::Scope(_) | TlsState::Invalid | TlsState::ErrorAlreadyHandled => {}
                 }
             });
         }
@@ -838,7 +854,7 @@ pub mod tests {
     }
 
     #[test]
-    #[should_panic]
+    #[should_panic(expected = "test logic error (in get): wrong FakeParentArgs scope?")]
     fn test_process_testing_assert() {
         let _args = FakeParentArgs::once("git blame do.not.panic");
         assert_eq!(
@@ -850,13 +866,23 @@ pub mod tests {
     }
 
     #[test]
-    #[should_panic]
-    fn test_process_testing_assert_never_used() {
+    #[should_panic(expected = "test logic error (in drop): wrong FakeParentArgs scope?")]
+    fn test_process_testing_assert_once_never_used() {
         let _args = FakeParentArgs::once("never used");
+    }
 
-        // causes a panic while panicking, so can't test:
-        // let _args = FakeParentArgs::for_scope(&"never used");
-        // let _args = FakeParentArgs::once(&"never used");
+    #[test]
+    #[should_panic(expected = "test logic error (in once): wrong FakeParentArgs scope?")]
+    fn test_process_testing_assert_for_scope_never_used() {
+        let _args = FakeParentArgs::for_scope(&"never used");
+        let _args = FakeParentArgs::once(&"never used");
+    }
+
+    #[test]
+    #[should_panic(expected = "test logic error (in for_scope): wrong FakeParentArgs scope?")]
+    fn test_process_testing_assert_once_never_used2() {
+        let _args = FakeParentArgs::once(&"never used");
+        let _args = FakeParentArgs::for_scope(&"never used");
     }
 
     #[test]
@@ -879,13 +905,13 @@ pub mod tests {
     }
 
     #[test]
-    #[should_panic]
+    #[should_panic(expected = "test logic error (in drop with): wrong FakeParentArgs scope?")]
     fn test_process_testing_n_times_unused() {
         let _args = FakeParentArgs::with(&["git blame once", "git blame twice"]);
     }
 
     #[test]
-    #[should_panic]
+    #[should_panic(expected = "test logic error (in drop with): wrong FakeParentArgs scope?")]
     fn test_process_testing_n_times_underused() {
         let _args = FakeParentArgs::with(&["git blame once", "git blame twice"]);
         assert_eq!(
@@ -895,15 +921,13 @@ pub mod tests {
     }
 
     #[test]
-    #[should_panic]
-    #[ignore]
+    #[should_panic(expected = "test logic error (in get): wrong FakeParentArgs scope?")]
     fn test_process_testing_n_times_overused() {
         let _args = FakeParentArgs::with(&["git blame once"]);
         assert_eq!(
             calling_process_cmdline(ProcInfo::new(), guess_git_blame_filename),
             Some("once".into())
         );
-        // ignored: dropping causes a panic while panicking, so can't test
         calling_process_cmdline(ProcInfo::new(), guess_git_blame_filename);
     }
 
