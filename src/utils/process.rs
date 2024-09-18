@@ -13,8 +13,8 @@ pub enum CallingProcess {
     GitShow(CommandLine, Option<String>), // element 2 is filename
     GitLog(CommandLine),
     GitReflog(CommandLine),
-    GitGrep(CommandLine),
     GitBlame(CommandLine),
+    GitGrep(CommandLine),
     OtherGrep, // rg, grep, ag, ack, etc
     None,      // no matching process could be found
     Pending,   // calling process is currently being determined
@@ -27,8 +27,8 @@ impl CallingProcess {
             CallingProcess::GitDiff(cmd) if cmd.long_options.contains("--relative") => true,
             CallingProcess::GitShow(cmd, _) if cmd.long_options.contains("--relative") => true,
             CallingProcess::GitLog(cmd) if cmd.long_options.contains("--relative") => true,
-            CallingProcess::GitGrep(_)
-            | CallingProcess::GitBlame(_)
+            CallingProcess::GitBlame(_)
+            | CallingProcess::GitGrep(_)
             | CallingProcess::OtherGrep => true,
             _ => false,
         }
@@ -210,13 +210,13 @@ fn parse_command_line<'a>(args: impl Iterator<Item = &'a str>) -> CommandLine {
     let mut long_options = HashSet::new();
     let mut short_options = HashSet::new();
     let mut last_arg = None;
-    let mut in_pos_args = false;
+    let mut after_double_dash = false;
 
     for s in args {
-        if in_pos_args {
+        if after_double_dash {
             last_arg = Some(s);
         } else if s == "--" {
-            in_pos_args = true;
+            after_double_dash = true;
         } else if s.starts_with("--") {
             long_options.insert(s.split('=').next().unwrap().to_owned());
         } else if let Some(suffix) = s.strip_prefix('-') {
@@ -863,7 +863,6 @@ pub mod tests {
                 last_arg: Some("once".into())
             }))
         );
-        // ignored: dropping causes a panic while panicking, so can't test
         calling_process_cmdline(ProcInfo::new(), describe_calling_process);
     }
 
@@ -886,7 +885,7 @@ pub mod tests {
             None
         );
 
-        let empty_command_line = CommandLine {
+        let no_options_command_line = CommandLine {
             long_options: [].into(),
             short_options: [].into(),
             last_arg: Some("hello.txt".to_string()),
@@ -898,7 +897,7 @@ pub mod tests {
         ]);
         assert_eq!(
             calling_process_cmdline(parent, describe_calling_process),
-            Some(CallingProcess::GitBlame(empty_command_line.clone()))
+            Some(CallingProcess::GitBlame(no_options_command_line.clone()))
         );
 
         let parent = MockProcInfo::with(&[
@@ -908,7 +907,49 @@ pub mod tests {
         ]);
         assert_eq!(
             calling_process_cmdline(parent, describe_calling_process),
-            Some(CallingProcess::GitBlame(empty_command_line.clone()))
+            Some(CallingProcess::GitBlame(no_options_command_line.clone()))
+        );
+
+        let parent = MockProcInfo::with(&[
+            (2, 100, "-shell", None),
+            (3, 100, "git blame -- --not.an.argument", Some(2)),
+            (4, 100, "delta", Some(3)),
+        ]);
+        assert_eq!(
+            calling_process_cmdline(parent, describe_calling_process),
+            Some(CallingProcess::GitBlame(CommandLine {
+                long_options: [].into(),
+                short_options: [].into(),
+                last_arg: Some("--not.an.argument".to_string()),
+            }))
+        );
+
+        let parent = MockProcInfo::with(&[
+            (2, 100, "-shell", None),
+            (3, 100, "git blame --help.txt", Some(2)),
+            (4, 100, "delta", Some(3)),
+        ]);
+        assert_eq!(
+            calling_process_cmdline(parent, describe_calling_process),
+            Some(CallingProcess::GitBlame(CommandLine {
+                long_options: ["--help.txt".into()].into(),
+                short_options: [].into(),
+                last_arg: None,
+            }))
+        );
+
+        let parent = MockProcInfo::with(&[
+            (2, 100, "-shell", None),
+            (3, 100, "git blame --", Some(2)),
+            (4, 100, "delta", Some(3)),
+        ]);
+        assert_eq!(
+            calling_process_cmdline(parent, describe_calling_process),
+            Some(CallingProcess::GitBlame(CommandLine {
+                long_options: [].into(),
+                short_options: [].into(),
+                last_arg: None,
+            }))
         );
 
         let parent = MockProcInfo::with(&[
@@ -918,7 +959,7 @@ pub mod tests {
         ]);
         assert_eq!(
             calling_process_cmdline(parent, describe_calling_process),
-            Some(CallingProcess::GitBlame(empty_command_line))
+            Some(CallingProcess::GitBlame(no_options_command_line.clone()))
         );
 
         let git_blame_command =

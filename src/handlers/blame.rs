@@ -76,7 +76,7 @@ impl<'a> StateMachine<'a> {
                 )?;
 
                 // Emit syntax-highlighted code
-                if matches!(self.state, State::Unknown) {
+                if self.state == State::Unknown {
                     self.painter.set_syntax(self.get_filename().as_deref());
                     self.painter.set_highlighter();
                 }
