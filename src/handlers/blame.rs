@@ -14,7 +14,7 @@ use crate::format::{self, FormatStringSimple, Placeholder};
 use crate::format::{make_placeholder_regex, parse_line_number_format};
 use crate::paint::{self, BgShouldFill, StyleSectionSpecifier};
 use crate::style::Style;
-use crate::utils;
+use crate::utils::process;
 
 #[derive(Clone, Debug)]
 pub enum BlameLineNumbers {
@@ -76,9 +76,8 @@ impl<'a> StateMachine<'a> {
                 )?;
 
                 // Emit syntax-highlighted code
-                if matches!(self.state, State::Unknown) {
-                    self.painter
-                        .set_syntax(utils::process::git_blame_filename().as_deref());
+                if self.state == State::Unknown {
+                    self.painter.set_syntax(self.get_filename().as_deref());
                     self.painter.set_highlighter();
                 }
                 self.state = State::Blame(key);
@@ -92,6 +91,13 @@ impl<'a> StateMachine<'a> {
             }
         }
         Ok(handled_line)
+    }
+
+    fn get_filename(&self) -> Option<String> {
+        match &*process::calling_process() {
+            process::CallingProcess::GitBlame(command_line) => command_line.last_arg.clone(),
+            _ => None,
+        }
     }
 
     fn blame_metadata_style(
