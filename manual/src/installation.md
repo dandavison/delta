@@ -75,8 +75,16 @@ Note that the package is often called `git-delta`, but the executable installed 
   <tr>
     <td>Debian / Ubuntu</td>
     <td>
-      <code>dpkg -i file.deb</code>
-      <br>
+      <ul>
+        <li>Ubuntu 24.04 LTS and newer:
+          <br>
+          <code>apt install git-delta</code>
+        </li>
+        <li>Other:
+          <br>
+          <code>dpkg -i file.deb</code>
+        </li>
+      </ul>
       .deb files are on the <a href="https://github.com/dandavison/delta/releases">releases</a> page.
       <br>
       <sup>If you are using Ubuntu <= 19.10 or are mixing apt sources, please read <a href="https://github.com/dandavison/delta/issues/504">#504</a>.</sup>
