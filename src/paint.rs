@@ -261,7 +261,9 @@ impl<'p> Painter<'p> {
                 line.push_str(
                     #[allow(clippy::unnecessary_to_owned)]
                     &fill_style
-                        .paint(" ".repeat(config.available_terminal_width - text_width))
+                        .paint(
+                            " ".repeat(config.available_terminal_width.saturating_sub(text_width)),
+                        )
                         .to_string(),
                 );
             } else if line_is_empty {
