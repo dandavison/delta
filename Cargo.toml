@@ -30,7 +30,7 @@ bytelines = { version = "2.5.0", default-features = false }
 chrono = "0.4.26"
 chrono-humanize = "0.2.2"
 clap_complete = "4.4.4"
-clap = { version = "4.3.14", features = [
+clap = { version = "4.5.18", features = [
     "derive",
     "help",
     "usage",
