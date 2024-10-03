@@ -37,7 +37,7 @@ clap = { version = "4.3.14", features = [
     "error-context",
 ] }
 console = "0.15.0"
-ctrlc = "3.2.5"
+ctrlc = "3.4.5"
 dirs = "5.0.1"
 git2 = { version = "0.18.2", default-features = false, features = [] }
 grep-cli = "0.1.8"
