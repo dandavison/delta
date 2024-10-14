@@ -11,22 +11,20 @@ The most convenient way to configure delta is with a `[delta]` section in `~/.gi
     pager = delta
 
 [interactive]
-    diffFilter = delta --color-only --features=interactive
+    diffFilter = delta --color-only
 
 [delta]
-    features = decorations
+    navigate = true    # use n and N to move between diff sections
 
-[delta "interactive"]
-    keep-plus-minus-markers = false
+    # delta detects terminal colors automatically; set one of these to disable auto-detection
+    # dark = true
+    # light = true
 
-[delta "decorations"]
-    commit-decoration-style = blue ol
-    commit-style = raw
-    file-style = omit
-    hunk-header-decoration-style = blue box
-    hunk-header-file-style = red
-    hunk-header-line-number-style = "#067a00"
-    hunk-header-style = file line-number syntax
+[merge]
+    conflictstyle = diff3
+
+[diff]
+    colorMoved = default
 ```
 
 </sub>
