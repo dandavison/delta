@@ -80,7 +80,7 @@ impl LineType {
 }
 
 impl<'a> StateMachine<'a> {
-    // If this is a line of git grep output then render it accordingly.
+    // If this is a line of grep output then render it accordingly.
     pub fn handle_grep_line(&mut self) -> std::io::Result<bool> {
         self.painter.emit()?;
 
@@ -114,11 +114,18 @@ impl<'a> StateMachine<'a> {
         }
         let first_path = previous_path.is_none();
         let new_path = first_path || previous_path.as_deref() != Some(&grep_line.path);
+        let line_number_jump = previous_line < &grep_line.line_number.as_ref().map(|n| n - 1);
         // Emit a '--' section separator when output contains context lines (i.e. *grep option -A, -B, -C is in effect).
         let new_section = !new_path
             && (previous_line_type == Some(&LineType::Context)
                 || grep_line.line_type == LineType::Context)
-            && previous_line < &grep_line.line_number.as_ref().map(|n| n - 1);
+            && line_number_jump;
+        if new_path {
+            self.painter.set_syntax(Some(grep_line.path.as_ref()));
+        }
+        if new_path || new_section {
+            self.painter.set_highlighter()
+        }
         self.state = State::Grep(
             self.config
                 .grep_output_type
@@ -128,13 +135,6 @@ impl<'a> StateMachine<'a> {
             grep_line.path.to_string(),
             grep_line.line_number,
         );
-        if new_section {
-            self.painter.set_highlighter()
-        }
-        if new_path {
-            self.painter.set_syntax(Some(grep_line.path.as_ref()));
-            self.painter.set_highlighter();
-        }
         match &self.state {
             State::Grep(GrepType::Ripgrep, _, _, _) => {
                 self.emit_ripgrep_format_grep_line(grep_line, new_path, first_path, new_section)
