@@ -33,9 +33,6 @@
 
 [merge]
     conflictstyle = diff3
-
-[diff]
-    colorMoved = default
 ```
 
 Delta has many features and is very customizable; please see the [user manual](https://dandavison.github.io/delta/).
