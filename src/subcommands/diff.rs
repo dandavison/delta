@@ -172,11 +172,10 @@ where
 
 #[cfg(test)]
 mod main_tests {
+    use std::ffi::OsString;
     use std::io::Cursor;
-    use std::path::PathBuf;
 
-    use super::{diff, diff_args_set_unified_context};
-    use crate::tests::integration_test_utils;
+    use super::diff_args_set_unified_context;
 
     use rstest::rstest;
 
@@ -215,19 +214,23 @@ mod main_tests {
             &str,
         >,
     ) {
-        let config = integration_test_utils::make_config_from_args(&args);
         let mut writer = Cursor::new(vec![]);
-        let exit_code = diff(
-            &PathBuf::from(file_a),
-            &PathBuf::from(file_b),
-            &config,
-            &mut writer,
-        );
+        let mut runargs = vec![OsString::from(file_a), OsString::from(file_b)];
+        runargs.extend(args.iter().map(OsString::from));
+        let exit_code = crate::run_app(runargs, Some(&mut writer));
+
         assert_eq!(
-            exit_code,
+            exit_code.unwrap(),
             match expect_diff {
                 ExpectDiff::Yes => 1,
                 ExpectDiff::No => 0,
+            }
+        );
+        assert_eq!(
+            std::str::from_utf8(writer.get_ref()).unwrap() != "",
+            match expect_diff {
+                ExpectDiff::Yes => true,
+                ExpectDiff::No => false,
             }
         );
     }

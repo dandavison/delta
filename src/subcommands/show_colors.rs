@@ -13,10 +13,11 @@ use crate::utils::bat::output::{OutputType, PagingMode};
 pub fn show_colors() -> std::io::Result<()> {
     use crate::{delta::DiffType, utils};
 
-    let assets = utils::bat::assets::load_highlighting_assets();
+    let args = std::env::args_os().collect::<Vec<_>>();
     let env = DeltaEnv::default();
+    let assets = utils::bat::assets::load_highlighting_assets();
 
-    let opt = match cli::Opt::from_args_and_git_config(&env, assets) {
+    let opt = match cli::Opt::from_args_and_git_config(args, &env, assets) {
         cli::Call::Delta(opt) => opt,
         _ => panic!("non-Delta Call variant should not occur here"),
     };

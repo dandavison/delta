@@ -24,7 +24,8 @@ mod subcommands;
 
 mod tests;
 
-use std::io::{self, ErrorKind, IsTerminal, Write};
+use std::ffi::OsString;
+use std::io::{self, Cursor, ErrorKind, IsTerminal, Write};
 use std::process;
 
 use bytelines::ByteLinesReader;
@@ -32,7 +33,7 @@ use bytelines::ByteLinesReader;
 use crate::cli::Call;
 use crate::delta::delta;
 use crate::utils::bat::assets::list_languages;
-use crate::utils::bat::output::OutputType;
+use crate::utils::bat::output::{OutputType, PagingMode};
 
 pub fn fatal<T>(errmsg: T) -> !
 where
@@ -65,7 +66,7 @@ fn main() -> std::io::Result<()> {
     // See https://github.com/dandavison/delta/issues/681
     ctrlc::set_handler(|| {})
         .unwrap_or_else(|err| eprintln!("Failed to set ctrl-c handler: {err}"));
-    let exit_code = run_app()?;
+    let exit_code = run_app(std::env::args_os().collect::<Vec<_>>(), None)?;
     // when you call process::exit, no destructors are called, so we want to do it only once, here
     process::exit(exit_code);
 }
@@ -74,10 +75,13 @@ fn main() -> std::io::Result<()> {
 // An Ok result contains the desired process exit code. Note that 1 is used to
 // report that two files differ when delta is called with two positional
 // arguments and without standard input; 2 is used to report a real problem.
-fn run_app() -> std::io::Result<i32> {
-    let assets = utils::bat::assets::load_highlighting_assets();
+pub fn run_app(
+    args: Vec<OsString>,
+    capture_output: Option<&mut Cursor<Vec<u8>>>,
+) -> std::io::Result<i32> {
     let env = env::DeltaEnv::init();
-    let opt = cli::Opt::from_args_and_git_config(&env, assets);
+    let assets = utils::bat::assets::load_highlighting_assets();
+    let opt = cli::Opt::from_args_and_git_config(args, &env, assets);
 
     let opt = match opt {
         Call::Version(msg) => {
@@ -134,10 +138,20 @@ fn run_app() -> std::io::Result<i32> {
         return Ok(0);
     }
 
+    // The following block structure is because of `writer` and related lifetimes:
     let pager_cfg = (&config).into();
+    let paging_mode = if capture_output.is_some() {
+        PagingMode::Capture
+    } else {
+        config.paging_mode
+    };
     let mut output_type =
-        OutputType::from_mode(&env, config.paging_mode, config.pager.clone(), &pager_cfg).unwrap();
-    let mut writer = output_type.handle().unwrap();
+        OutputType::from_mode(&env, paging_mode, config.pager.clone(), &pager_cfg).unwrap();
+    let mut writer: &mut dyn Write = if paging_mode == PagingMode::Capture {
+        &mut capture_output.unwrap()
+    } else {
+        output_type.handle().unwrap()
+    };
 
     if let (Some(minus_file), Some(plus_file)) = (&config.minus_file, &config.plus_file) {
         let exit_code = subcommands::diff::diff(minus_file, plus_file, &config, &mut writer);

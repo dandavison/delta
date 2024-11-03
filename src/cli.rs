@@ -1289,9 +1289,18 @@ impl Opt {
         }
     }
 
-    pub fn from_args_and_git_config(env: &DeltaEnv, assets: HighlightingAssets) -> Call<Self> {
-        let args = std::env::args_os().collect::<Vec<_>>();
-
+    pub fn from_args_and_git_config(
+        args: Vec<OsString>,
+        env: &DeltaEnv,
+        assets: HighlightingAssets,
+    ) -> Call<Self> {
+        #[cfg(test)]
+        // Set argv[0] when called in tests:
+        let args = {
+            let mut args = args;
+            args.insert(0, OsString::from("delta"));
+            args
+        };
         let matches = match Self::handle_help_and_version(&args) {
             Call::Delta(t) => t,
             msg => {

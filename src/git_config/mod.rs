@@ -66,7 +66,8 @@ impl GitConfig {
 
     #[cfg(test)]
     pub fn try_create(_env: &DeltaEnv) -> Option<Self> {
-        unreachable!("GitConfig::try_create() is not available when testing");
+        // Do not read local git configs when testing
+        None
     }
 
     pub fn from_path(env: &DeltaEnv, path: &Path, honor_env_var: bool) -> Self {
