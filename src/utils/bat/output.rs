@@ -42,6 +42,7 @@ pub enum PagingMode {
     QuitIfOneScreen,
     #[default]
     Never,
+    Capture,
 }
 const LESSUTFCHARDEF: &str = "LESSUTFCHARDEF";
 use crate::errors::*;
@@ -49,6 +50,7 @@ use crate::errors::*;
 pub enum OutputType {
     Pager(Child),
     Stdout(io::Stdout),
+    Capture,
 }
 
 impl Drop for OutputType {
@@ -84,6 +86,7 @@ impl OutputType {
         Ok(match mode {
             Always => OutputType::try_pager(env, false, pager, config)?,
             QuitIfOneScreen => OutputType::try_pager(env, true, pager, config)?,
+            Capture => OutputType::Capture,
             _ => OutputType::stdout(),
         })
     }
@@ -162,6 +165,7 @@ impl OutputType {
                 .as_mut()
                 .context("Could not open stdin for pager")?,
             OutputType::Stdout(ref mut handle) => handle,
+            OutputType::Capture => unreachable!("capture can not be set"),
         })
     }
 }
