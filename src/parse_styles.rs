@@ -28,8 +28,15 @@ pub fn parse_styles(opt: &cli::Opt) -> HashMap<String, Style> {
     make_misc_styles(opt, &mut styles);
 
     let mut resolved_styles = resolve_style_references(styles, opt);
-    resolved_styles.get_mut("minus-emph-style").unwrap().is_emph = true;
-    resolved_styles.get_mut("plus-emph-style").unwrap().is_emph = true;
+    resolved_styles
+        .get_mut("minus-emph-style")
+        .unwrap_or_else(|| panic!("minus-emph-style not found in resolved styles"))
+        .is_emph = true;
+
+    resolved_styles
+        .get_mut("plus-emph-style")
+        .unwrap_or_else(|| panic!("plus-emph-style not found in resolved styles"))
+        .is_emph = true;
     resolved_styles
 }
 
@@ -114,7 +121,7 @@ fn parse_as_reference_to_git_config(style_string: &str, opt: &cli::Opt) -> Style
     }
 }
 
-fn make_hunk_styles<'a>(opt: &'a cli::Opt, styles: &'a mut HashMap<&str, StyleReference>) {
+fn make_hunk_styles(opt: &cli::Opt, styles: &mut HashMap<&str, StyleReference>) {
     let color_mode = opt.computed.color_mode;
     let true_color = opt.computed.true_color;
     let minus_style = style_from_str(

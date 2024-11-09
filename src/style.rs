@@ -307,17 +307,11 @@ impl fmt::Debug for AnsiTermStyleEqualityKey {
 }
 
 fn ansi_term_color_equality(a: Option<ansi_term::Color>, b: Option<ansi_term::Color>) -> bool {
-    match (a, b) {
-        (None, None) => true,
-        (None, Some(_)) => false,
-        (Some(_), None) => false,
-        (Some(a), Some(b)) => {
-            if a == b {
-                true
-            } else {
-                ansi_term_16_color_equality(a, b) || ansi_term_16_color_equality(b, a)
-            }
+    match a.zip(b) {
+        Some((a, b)) => {
+            a == b || ansi_term_16_color_equality(a, b) || ansi_term_16_color_equality(b, a)
         }
+        None => a.is_none() && b.is_none(),
     }
 }
 
