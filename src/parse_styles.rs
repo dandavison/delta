@@ -30,11 +30,12 @@ pub fn parse_styles(opt: &cli::Opt) -> HashMap<String, Style> {
     let mut resolved_styles = resolve_style_references(styles, opt);
     resolved_styles
         .get_mut("minus-emph-style")
-        .expect("minus-emph-style not found in resolved styles")
+        .unwrap_or_else(|| panic!("minus-emph-style not found in resolved styles"))
         .is_emph = true;
+
     resolved_styles
         .get_mut("plus-emph-style")
-        .expect("plus-emph-style not found in resolved styles")
+        .unwrap_or_else(|| panic!("plus-emph-style not found in resolved styles"))
         .is_emph = true;
     resolved_styles
 }
