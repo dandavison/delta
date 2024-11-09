@@ -116,7 +116,7 @@ Here's what `git show` can look like with git configured to use delta:
 **All the syntax-highlighting color themes that are available with [bat](https://github.com/sharkdp/bat/) are available with delta:**
 
 <br>
-<table align="center">
+<table>
   <tr>
     <td>
       <img width=400px style="border: 1px solid black"
@@ -152,11 +152,11 @@ Here's what `git show` can look like with git configured to use delta:
 
 By default, side-by-side view has line-numbers activated, and has syntax highlighting in both the left and right panels: [[config](#side-by-side-view-1)]
 
-<table align="center"><tr><td><img width=800px src="https://user-images.githubusercontent.com/52205/87230973-412eb900-c381-11ea-8aec-cc200290bd1b.png" alt="image" /></td></tr></table>
+<table><tr><td><img width=800px src="https://user-images.githubusercontent.com/52205/87230973-412eb900-c381-11ea-8aec-cc200290bd1b.png" alt="image" /></td></tr></table>
 
 Side-by-side view wraps long lines automatically:
 
-<table align="center"><tr><td><img width=600px src="https://user-images.githubusercontent.com/52205/139064537-f8479504-16d3-429a-b4f6-d0122438adaa.png" alt="image" /></td></tr></table>
+<table><tr><td><img width=600px src="https://user-images.githubusercontent.com/52205/139064537-f8479504-16d3-429a-b4f6-d0122438adaa.png" alt="image" /></td></tr></table>
 
 ### Line numbers
 
@@ -167,25 +167,27 @@ Side-by-side view wraps long lines automatically:
     line-numbers = true
 ```
 
-<table align="center"><tr><td><img width=400px src="https://user-images.githubusercontent.com/52205/86275526-76792100-bba1-11ea-9e78-6be9baa80b29.png" alt="image" /></td></tr></table>
+<table><tr><td><img width=400px src="https://user-images.githubusercontent.com/52205/86275526-76792100-bba1-11ea-9e78-6be9baa80b29.png" alt="image" /></td></tr></table>
 
 ### Merge conflicts
 
 [[User manual](https://dandavison.github.io/delta/merge-conflicts.html)]
 
-<table align="center"><tr><td><img width=500px src="https://user-images.githubusercontent.com/52205/144783121-bb549100-69d8-41b8-ac62-1704f1f7b43e.png" alt="image" /></td></tr></table>
+<table><tr><td><img width=500px src="https://user-images.githubusercontent.com/52205/144783121-bb549100-69d8-41b8-ac62-1704f1f7b43e.png" alt="image" /></td></tr></table>
 
 ### Git blame
 
 [[User manual](https://dandavison.github.io/delta/git-blame.html)]
 
-<table align="center"><tr><td><img width=600px src="https://user-images.githubusercontent.com/52205/141891376-1fdb87dc-1d9c-4ad6-9d72-eeb19a8aeb0b.png" alt="image" /></td></tr></table>
+<table><tr><td><img width=600px src="https://user-images.githubusercontent.com/52205/141891376-1fdb87dc-1d9c-4ad6-9d72-eeb19a8aeb0b.png" alt="image" /></td></tr></table>
 
 ### Ripgrep, git grep
 
 [[User manual](https://dandavison.github.io/delta/grep.html)]
 
-<table align="center"><tr><td><img width=600px alt="image" src="https://github.com/dandavison/open-in-editor/assets/52205/d203d380-5acb-4296-aeb9-e38c73d6c27f"></td></tr></table>
+<table><tr><td>
+<img width="600px" alt="image" src="https://github.com/dandavison/open-in-editor/assets/52205/d203d380-5acb-4296-aeb9-e38c73d6c27f">
+</td></tr></table>
 
 ### Installation and usage
 
