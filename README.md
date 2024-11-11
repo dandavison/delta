@@ -35,6 +35,15 @@
     conflictstyle = zdiff3
 ```
 
+Or run:
+
+```sh
+git config --global core.pager delta
+git config --global interactive.diffFilter 'delta --color-only'
+git config --global delta.navigate true
+git config --global merge.conflictStyle zdiff3
+```
+
 Delta has many features and is very customizable; please see the [user manual](https://dandavison.github.io/delta/).
 
 ## Features
