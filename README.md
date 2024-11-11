@@ -44,7 +44,7 @@ git config --global delta.navigate true
 git config --global merge.conflictStyle zdiff3
 ```
 
-Delta has many features and is very customizable; please see the [user manual](https://dandavison.github.io/delta/).
+Delta has many features and is very customizable; please see `delta -h` (short help) or `delta --help` (full manual), or the [online user manual](https://dandavison.github.io/delta/).
 
 ## Features
 
