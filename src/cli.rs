@@ -432,14 +432,14 @@ pub struct Opt {
     )]
     /// Format string for file hyperlinks (requires --hyperlinks).
     ///
-    /// The placeholders "{path}" and "{line}" will be replaced by the absolute file path and the
-    /// line number, respectively. The default value of this option creates hyperlinks using
-    /// standard file URLs; your operating system should open these in the application registered
-    /// for that file type. However, these do not make use of the line number. In order for the link
-    /// to open the file at the correct line number, you could use a custom URL format such as
-    /// "file-line://{path}:{line}" and register an application to handle the custom "file-line" URL
-    /// scheme by opening the file in your editor/IDE at the indicated line number. See
-    /// <https://github.com/dandavison/open-in-editor> for an example.
+    /// The placeholders "{host}", "{path}", and "{line}" will be replaced by the hostname,
+    /// absolute file path and the line number, respectively. The default value of this option
+    /// creates hyperlinks using standard file URLs; your operating system should open these in the
+    /// application registered for that file type. However, these do not make use of the line
+    /// number. In order for the link to open the file at the correct line number, you could use a
+    /// custom URL format such as "file-line://{path}:{line}" and register an application to handle
+    /// the custom "file-line" URL scheme by opening the file in your editor/IDE at the indicated
+    /// line number. See <https://github.com/dandavison/open-in-editor> for an example.
     pub hyperlinks_file_link_format: String,
 
     #[arg(

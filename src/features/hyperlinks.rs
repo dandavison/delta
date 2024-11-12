@@ -56,6 +56,9 @@ where
     let mut url = config
         .hyperlinks_file_link_format
         .replace("{path}", &absolute_path.as_ref().to_string_lossy());
+    if let Some(host) = &config.hostname {
+        url = url.replace("{host}", host)
+    }
     if let Some(n) = line_number {
         url = url.replace("{line}", &format!("{n}"))
     } else {
