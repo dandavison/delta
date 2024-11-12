@@ -25,11 +25,8 @@
     diffFilter = delta --color-only
 
 [delta]
-    navigate = true    # use n and N to move between diff sections
-
-    # delta detects terminal colors automatically; set one of these to disable auto-detection
-    # dark = true
-    # light = true
+    navigate = true  # use n and N to move between diff sections
+    dark = true      # or light = true, or omit for auto-detection
 
 [merge]
     conflictstyle = zdiff3
