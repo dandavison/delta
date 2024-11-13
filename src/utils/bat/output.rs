@@ -117,15 +117,16 @@ impl OutputType {
             replace_arguments_to_less = false;
         }
 
-        let pager = pager_from_config
-            .or(pager_from_env)
-            .unwrap_or_else(|| String::from("less"));
+        let pager_cmd = shell_words::split(
+            &pager_from_config
+                .or(pager_from_env)
+                .unwrap_or_else(|| String::from("less")),
+        )
+        .context("Could not parse pager command.")?;
 
-        let pagerflags = shell_words::split(&pager).context("Could not parse pager command.")?;
-
-        Ok(match pagerflags.split_first() {
-            Some((pager_name, args)) => {
-                let pager_path = PathBuf::from(pager_name);
+        Ok(match pager_cmd.split_first() {
+            Some((pager_path, args)) => {
+                let pager_path = PathBuf::from(pager_path);
 
                 let is_less = pager_path.file_stem() == Some(&OsString::from("less"));
 
