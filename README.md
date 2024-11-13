@@ -25,17 +25,23 @@
     diffFilter = delta --color-only
 
 [delta]
-    navigate = true    # use n and N to move between diff sections
-
-    # delta detects terminal colors automatically; set one of these to disable auto-detection
-    # dark = true
-    # light = true
+    navigate = true  # use n and N to move between diff sections
+    dark = true      # or light = true, or omit for auto-detection
 
 [merge]
     conflictstyle = zdiff3
 ```
 
-Delta has many features and is very customizable; please see the [user manual](https://dandavison.github.io/delta/).
+Or run:
+
+```sh
+git config --global core.pager delta
+git config --global interactive.diffFilter 'delta --color-only'
+git config --global delta.navigate true
+git config --global merge.conflictStyle zdiff3
+```
+
+Delta has many features and is very customizable; please see `delta -h` (short help) or `delta --help` (full manual), or the [online user manual](https://dandavison.github.io/delta/).
 
 ## Features
 
@@ -61,22 +67,22 @@ Delta has many features and is very customizable; please see the [user manual](h
 
 Code evolves, and we all spend time studying diffs. Delta aims to make this both efficient and enjoyable: it allows you to make extensive changes to the layout and styling of diffs, as well as allowing you to stay arbitrarily close to the default git/diff output.
 
-<table>
+<table align="center">
   <tr>
     <td>
       <img width=400px src="https://user-images.githubusercontent.com/52205/86275526-76792100-bba1-11ea-9e78-6be9baa80b29.png" alt="image" />
       <br>
-      <sub>delta with <code>line-numbers</code> activated</sub>
+      <p align="center"><sub>delta with <code>line-numbers</code> activated</sub></p>
     </td>
   </tr>
 </table>
 
-<table>
+<table align="center">
   <tr>
     <td>
       <img width=800px src="https://user-images.githubusercontent.com/52205/87230973-412eb900-c381-11ea-8aec-cc200290bd1b.png" alt="image" />
       <br>
-      <sub>delta with <code>side-by-side</code> and <code>line-numbers</code> activated</sub>
+      <p align="center"><sub>delta with <code>side-by-side</code> and <code>line-numbers</code> activated</sub></p>
     </td>
   </tr>
 </table>
@@ -85,7 +91,7 @@ Here's what `git show` can look like with git configured to use delta:
 
 <br>
 
-<table>
+<table align="center">
   <tr>
     <td>
       <img width=500px style="border: 1px solid black"
