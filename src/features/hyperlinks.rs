@@ -19,6 +19,18 @@ pub fn make_feature() -> Vec<(String, OptionValueFunction)> {
     ])
 }
 
+#[cfg(test)]
+pub fn remote_from_config(_: &Option<&GitConfig>) -> Option<GitRemoteRepo> {
+    Some(GitRemoteRepo::GitHub {
+        slug: "dandavison/delta".to_string(),
+    })
+}
+
+#[cfg(not(test))]
+pub fn remote_from_config(cfg: &Option<&GitConfig>) -> Option<GitRemoteRepo> {
+    cfg.and_then(GitConfig::get_remote_url)
+}
+
 pub fn format_commit_line_with_osc8_commit_hyperlink<'a>(
     line: &'a str,
     config: &Config,
@@ -32,7 +44,7 @@ pub fn format_commit_line_with_osc8_commit_hyperlink<'a>(
                 format_osc8_hyperlink(&commit_link_format.replace("{commit}", commit), commit);
             format!("{prefix}{formatted_commit}{suffix}")
         })
-    } else if let Some(repo) = config.git_config().and_then(GitConfig::get_remote_url) {
+    } else if let Some(repo) = remote_from_config(&config.git_config()) {
         COMMIT_LINE_REGEX.replace(line, |captures: &Captures| {
             format_commit_line_captures_with_osc8_commit_hyperlink(captures, &repo)
         })
