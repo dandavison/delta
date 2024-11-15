@@ -178,7 +178,7 @@ fn _make_process_from_less_path(
     config: &PagerCfg,
 ) -> Option<Command> {
     if let Ok(less_path) = grep_cli::resolve_binary(less_path) {
-        let mut p = Command::new(less_path);
+        let mut p = Command::new(less_path.clone());
         if args.is_empty() || replace_arguments_to_less {
             p.args(vec!["--RAW-CONTROL-CHARS"]);
 
@@ -189,7 +189,7 @@ fn _make_process_from_less_path(
             //
             // For newer versions (530 or 558 on Windows), we omit '--no-init' as it
             // is not needed anymore.
-            match retrieve_less_version() {
+            match retrieve_less_version(less_path) {
                 None => {
                     p.arg("--no-init");
                 }
