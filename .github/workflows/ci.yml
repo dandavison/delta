@@ -53,9 +53,9 @@ jobs:
         shell: bash
         run: |
           if [[ "${{ matrix.job.use-cross }}" == "true" ]]; then
-            cross test --target ${{ matrix.job.target }} --verbose -- --nocapture
+            cross test --target ${{ matrix.job.target }} -- --nocapture
           else
-            cargo test --target ${{ matrix.job.target }} --verbose -- --nocapture
+            cargo test --target ${{ matrix.job.target }} -- --nocapture
           fi
 
   integration_tests:

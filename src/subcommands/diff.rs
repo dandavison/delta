@@ -1,34 +1,28 @@
-use std::io::{BufRead, ErrorKind, Write};
-use std::path::{Path, PathBuf};
-use std::process;
+use std::path::Path;
 
-use bytelines::ByteLinesReader;
+use crate::config::{self};
 
-use crate::config::{self, delta_unreachable};
-use crate::delta;
 use crate::utils::git::retrieve_git_version;
 
-#[derive(Debug, PartialEq)]
-enum Differ {
-    GitDiff,
-    Diff,
-}
+use crate::subcommands::{SubCmdKind, SubCommand};
+use std::ffi::OsString;
 
-/// Run `git diff` on the files provided on the command line and display the output. Fall back to
+/// Build `git diff` command for the files provided on the command line. Fall back to
 /// `diff` if the supplied "files" use process substitution.
-pub fn diff(
+pub fn build_diff_cmd(
     minus_file: &Path,
     plus_file: &Path,
     config: &config::Config,
-    writer: &mut dyn Write,
-) -> i32 {
-    use std::io::BufReader;
+) -> Result<SubCommand, i32> {
+    // suppress `dead_code` warning, values are accessed via `get_one::<PathBuf>("plus/minus_file")`
+    debug_assert!(config.minus_file.as_ref().unwrap() == minus_file);
+    debug_assert!(config.plus_file.as_ref().unwrap() == plus_file);
 
     let mut diff_args = match shell_words::split(config.diff_args.trim()) {
         Ok(words) => words,
         Err(err) => {
             eprintln!("Failed to parse diff args: {}: {err}", config.diff_args);
-            return config.error_exit_code;
+            return Err(config.error_exit_code);
         }
     };
     // Permit e.g. -@U1
@@ -52,12 +46,12 @@ pub fn diff(
                     || via_process_substitution(plus_file)) =>
         {
             (
-                Differ::GitDiff,
+                SubCmdKind::GitDiff,
                 vec!["git", "diff", "--no-index", "--color"],
             )
         }
         _ => (
-            Differ::Diff,
+            SubCmdKind::Diff,
             if diff_args_set_unified_context(&diff_args) {
                 vec!["diff"]
             } else {
@@ -73,79 +67,11 @@ pub fn diff(
             .map(String::as_str),
     );
     diff_cmd.push("--");
+    let mut diff_cmd = diff_cmd.iter().map(OsString::from).collect::<Vec<_>>();
+    diff_cmd.push(minus_file.into());
+    diff_cmd.push(plus_file.into());
 
-    let (diff_bin, diff_cmd) = diff_cmd.split_first().unwrap();
-    let diff_path = match grep_cli::resolve_binary(PathBuf::from(diff_bin)) {
-        Ok(path) => path,
-        Err(err) => {
-            eprintln!("Failed to resolve command '{diff_bin}': {err}");
-            return config.error_exit_code;
-        }
-    };
-
-    let diff_process = process::Command::new(&diff_path)
-        .args(diff_cmd)
-        .args([minus_file, plus_file])
-        .stdout(process::Stdio::piped())
-        .stderr(process::Stdio::piped())
-        .spawn();
-
-    if let Err(err) = diff_process {
-        eprintln!("Failed to execute the command '{diff_bin}': {err}");
-        return config.error_exit_code;
-    }
-    let mut diff_process = diff_process.unwrap();
-
-    if let Err(error) = delta::delta(
-        BufReader::new(diff_process.stdout.take().unwrap()).byte_lines(),
-        writer,
-        config,
-    ) {
-        match error.kind() {
-            ErrorKind::BrokenPipe => return 0,
-            _ => {
-                eprintln!("{error}");
-                return config.error_exit_code;
-            }
-        }
-    };
-
-    // Return the exit code from the diff process, so that the exit code contract of `delta file1
-    // file2` is the same as that of `diff file1 file2` (i.e. 0 if same, 1 if different, >= 2 if
-    // error).
-    let code = diff_process
-        .wait()
-        .unwrap_or_else(|_| {
-            delta_unreachable(&format!("'{diff_bin}' process not running."));
-        })
-        .code()
-        .unwrap_or_else(|| {
-            eprintln!("'{diff_bin}' process terminated without exit status.");
-            config.error_exit_code
-        });
-    if code >= 2 {
-        for line in BufReader::new(diff_process.stderr.unwrap()).lines() {
-            eprintln!("{}", line.unwrap_or("<delta: could not parse line>".into()));
-            if code == 129 && differ == Differ::GitDiff {
-                // `git diff` unknown option: print first line (which is an error message) but not
-                // the remainder (which is the entire --help text).
-                break;
-            }
-        }
-        eprintln!(
-            "'{diff_bin}' process failed with exit status {code}. Command was: {}",
-            format_args!(
-                "{} {} {} {}",
-                diff_path.display(),
-                shell_words::join(diff_cmd),
-                minus_file.display(),
-                plus_file.display()
-            )
-        );
-        config.error_exit_code
-    } else {
-        code
-    }
+    Ok(SubCommand::new(differ, diff_cmd))
 }
 
 /// Do the user-supplied `diff` args set the unified context?
