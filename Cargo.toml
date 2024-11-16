@@ -57,6 +57,7 @@ terminal-colorsaurus = "0.4.1"
 unicode-segmentation = "1.10.1"
 unicode-width = "=0.1.12"
 xdg = "2.4.1"
+tabled = "0.13.0"
 
 [lints.rust]
 unexpected_cfgs = { level = "warn", check-cfg = ['cfg(tarpaulin_include)'] }
