@@ -432,14 +432,12 @@ pub struct Opt {
     )]
     /// Format string for file hyperlinks (requires --hyperlinks).
     ///
-    /// The placeholders "{path}" and "{line}" will be replaced by the absolute file path and the
-    /// line number, respectively. The default value of this option creates hyperlinks using
-    /// standard file URLs; your operating system should open these in the application registered
-    /// for that file type. However, these do not make use of the line number. In order for the link
-    /// to open the file at the correct line number, you could use a custom URL format such as
-    /// "file-line://{path}:{line}" and register an application to handle the custom "file-line" URL
-    /// scheme by opening the file in your editor/IDE at the indicated line number. See
-    /// <https://github.com/dandavison/open-in-editor> for an example.
+    /// Placeholders "{path}" and "{line}" will be replaced by the absolute file path and the line
+    /// number; "{host}" with the hostname delta is currently running on. The default is to create
+    /// a hyperlink containing a standard file URI with only the filename, which your terminal or
+    /// OS should handle. You can specify any scheme, such as "file-line://{path}:{line}" and
+    /// register an application to handle it. See
+    /// <https://dandavison.github.io/delta/hyperlinks.html> for details.
     pub hyperlinks_file_link_format: String,
 
     #[arg(

@@ -19,6 +19,7 @@ pub struct DeltaEnv {
     pub features: Option<String>,
     pub git_config_parameters: Option<String>,
     pub git_prefix: Option<String>,
+    pub hostname: Option<String>,
     pub navigate: Option<String>,
     pub pagers: (Option<String>, Option<String>),
 }
@@ -33,6 +34,7 @@ impl DeltaEnv {
         let features = env::var(DELTA_FEATURES).ok();
         let git_config_parameters = env::var(GIT_CONFIG_PARAMETERS).ok();
         let git_prefix = env::var(GIT_PREFIX).ok();
+        let hostname = hostname();
         let navigate = env::var(DELTA_NAVIGATE).ok();
 
         let current_dir = env::current_dir().ok();
@@ -53,10 +55,15 @@ impl DeltaEnv {
             features,
             git_config_parameters,
             git_prefix,
+            hostname,
             navigate,
             pagers,
         }
     }
+}
+
+fn hostname() -> Option<String> {
+    grep_cli::hostname().ok()?.to_str().map(|s| s.to_string())
 }
 
 #[cfg(test)]
