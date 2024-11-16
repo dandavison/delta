@@ -60,5 +60,4 @@ $(BUMP_VERSION_IN_DOCUMENTATION_LINKS_SENTINEL):
 	check_environment \
 	bump-version \
 	create-github-release \
-	bump-version-in-documentation-links \
-	bump-private-homebrew-formula
+	bump-version-in-documentation-links
