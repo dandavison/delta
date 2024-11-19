@@ -22,6 +22,7 @@ use terminal_colorsaurus::{color_scheme, QueryOptions};
 
 use crate::cli::{self, DetectDarkLight};
 use crate::color::{ColorMode, ColorMode::*};
+use crate::utils;
 
 #[allow(non_snake_case)]
 pub fn set__color_mode__syntax_theme__syntax_set(opt: &mut cli::Opt, assets: HighlightingAssets) {
@@ -86,7 +87,7 @@ fn get_color_mode(opt: &cli::Opt) -> Option<ColorMode> {
     } else if opt.dark {
         Some(Dark)
     } else if should_detect_color_mode(opt) {
-        detect_color_mode()
+        utils::timing::measure_completion(detect_color_mode(), utils::timing::Measurement::Tty)
     } else {
         None
     }
