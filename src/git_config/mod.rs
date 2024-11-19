@@ -156,15 +156,21 @@ fn parse_config_from_env_var_value(s: &str) -> HashMap<String, String> {
     GIT_CONFIG_PARAMETERS_REGEX
         .captures_iter(s)
         .map(|captures| {
-            let key = captures
-                .get(1)
-                .or_else(|| captures.get(3))
-                .map_or("".to_string(), |m| m.as_str().to_string());
-            let value = captures
-                .get(2)
-                .or_else(|| captures.get(4))
-                .map_or("".to_string(), |m| m.as_str().to_string());
-            (key, value)
+            let (i, j) = match (
+                captures.get(1),
+                captures.get(2),
+                captures.get(3),
+                captures.get(4),
+            ) {
+                (Some(_), Some(_), None, None) => (1, 2),
+                (None, None, Some(_), Some(_)) => (3, 4),
+                _ => (0, 0),
+            };
+            if (i, j) == (0, 0) {
+                ("".to_string(), "".to_string())
+            } else {
+                (captures[i].to_string(), captures[j].to_string())
+            }
         })
         .collect()
 }
