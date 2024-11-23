@@ -233,15 +233,15 @@ $
 pub fn parse_git_blame_line<'a>(line: &'a str, timestamp_format: &str) -> Option<BlameLine<'a>> {
     let caps = BLAME_LINE_REGEX.captures(line)?;
 
-    let commit = caps.get(1)?.as_str();
-    let author = caps.get(2)?.as_str();
-    let timestamp = caps.get(3)?.as_str();
+    let commit = caps.get(1).unwrap().as_str();
+    let author = caps.get(2).unwrap().as_str();
+    let timestamp = caps.get(3).unwrap().as_str();
 
     let time = DateTime::parse_from_str(timestamp, timestamp_format).ok()?;
 
-    let line_number = caps.get(4)?.as_str().parse::<usize>().ok()?;
+    let line_number = caps.get(4).unwrap().as_str().parse::<usize>().ok()?;
 
-    let code = caps.get(5)?.as_str();
+    let code = caps.get(5).unwrap().as_str();
 
     Some(BlameLine {
         commit,
