@@ -164,6 +164,19 @@ lazy_static! {
     .unwrap();
 }
 
+// git config settings which are relevant for delta:
+pub static GIT_CONFIG_KEYS_FOR_DELTA_REGEX: &str = r"(?x)   # Multi-line regex
+    ^(?i:                   # Non-capturing group, ignore case
+        diff\..*
+      | core\.quotepath
+      | core\.pager
+      | core\.colormoved
+      | core\.context
+      | interactive\..*
+      | color\.*
+      | delta\..*
+    )";
+
 fn parse_config_from_env_var_value(s: &str) -> HashMap<String, String> {
     GIT_CONFIG_PARAMETERS_REGEX
         .captures_iter(s)
