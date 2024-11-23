@@ -43,7 +43,7 @@ where
 {
     #[cfg(not(test))]
     {
-        eprintln!("{errmsg}");
+        eprintln!("delta: {errmsg}");
         // As in Config::error_exit_code: use 2 for error
         // because diff uses 0 and 1 for non-error.
         process::exit(2);
@@ -81,6 +81,7 @@ pub fn run_app(
     args: Vec<OsString>,
     capture_output: Option<&mut Cursor<Vec<u8>>>,
 ) -> std::io::Result<i32> {
+    let _panic_printer = utils::PrintNoticeOnPanic::new();
     let env = env::DeltaEnv::init();
     let assets = utils::bat::assets::load_highlighting_assets();
     let (call, opt) = cli::Opt::from_args_and_git_config(args, &env, assets);
