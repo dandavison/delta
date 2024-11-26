@@ -189,6 +189,10 @@ pub fn run_app(
 
         let res = delta(io::stdin().lock().byte_lines(), &mut writer, &config);
 
+        if config.test_panic {
+            panic!("A panic before the exit as requested by --test-panic");
+        }
+
         if let Err(error) = res {
             match error.kind() {
                 ErrorKind::BrokenPipe => return Ok(0),

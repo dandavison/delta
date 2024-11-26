@@ -984,6 +984,13 @@ pub struct Opt {
     /// Second file to be compared when delta is being used to diff two files.
     pub plus_file: Option<PathBuf>,
 
+    /*
+    Panic on purpose. When a `diff -u a b` (without a `git diff` header) is encountered
+    then panic early, otherwise panic after processing all input.
+     */
+    #[arg(hide = true, long = "test-panic")]
+    pub test_panic: bool,
+
     #[arg(skip)]
     pub computed: ComputedValues,
 

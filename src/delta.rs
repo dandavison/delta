@@ -161,6 +161,9 @@ impl<'a> StateMachine<'a> {
                 // to introduce and handle a Source::DiffUnifiedAmbiguous variant everywhere.
                 if self.line.starts_with("--- ") {
                     self.minus_line_counter = AmbiguousDiffMinusCounter::prepare_to_count();
+                    if self.config.test_panic {
+                        panic!("An early panic as requested by --test-panic");
+                    }
                 }
             }
 
