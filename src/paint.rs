@@ -204,7 +204,7 @@ impl<'p> Painter<'p> {
                 self.config,
                 &mut self.line_numbers_data.as_mut(),
                 None,
-                BgShouldFill::With(BgFillMethod::Spaces),
+                BgShouldFill::default(),
             );
         }
     }
