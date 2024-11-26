@@ -2137,6 +2137,36 @@ src/align.rs:71: impl<'a> Alignment<'a> { │
         "###);
     }
 
+    #[test]
+    fn test_color_only_diff_filter_zero_style_bg() {
+        let result =
+            DeltaTest::with_args(&["--color-only", r##"--zero-style='syntax "#1d1f21" dim'"##])
+                .set_config(|c| c.available_terminal_width = 80)
+                .explain_ansi()
+                .with_input(GIT_DIFF_OF_WIDTH_81);
+
+        assert_snapshot!(result.output, @r###"
+        (normal)
+        --- a.rs
+        +++ b.rs
+        @@ -1,3 +1,3 @@
+        (normal 22)+(231)  (203)if(231) (81)let(231) (149)Ok(231)(foo) { (242)//    Works fine with plus hunk lines which are longer     81(normal)
+        (normal 52)-//                            and it works fine with minus lines, however     81(normal)
+        (dim normal 234) (242)//         styled(!) zero lines can only be as long as the width fallback of 80(normal)
+        (dim normal 234) (231)panic!(); (242)/*     if no tty can be queried, and delta crashes on longer lines: 81(normal)
+        "###);
+    }
+
+    const GIT_DIFF_OF_WIDTH_81: &str = r#"
+--- a.rs
++++ b.rs
+@@ -1,3 +1,3 @@
++  if let Ok(foo) { //    Works fine with plus hunk lines which are longer     81
+-//                            and it works fine with minus lines, however     81
+ //         styled(!) zero lines can only be as long as the width fallback of 80
+ panic!(); /*     if no tty can be queried, and delta crashes on longer lines: 81
+"#;
+
     const GIT_DIFF_SINGLE_HUNK: &str = "\
 commit 94907c0f136f46dc46ffae2dc92dca9af7eb7c2e
 Author: Dan Davison <dandavison7@gmail.com>
