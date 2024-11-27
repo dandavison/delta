@@ -15,6 +15,7 @@ use crate::handlers::{self, merge_conflict};
 use crate::paint::Painter;
 use crate::style::DecorationStyle;
 use crate::utils;
+use crate::utils::RecordDeltaCall;
 
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub enum State {
@@ -147,7 +148,11 @@ impl<'a> StateMachine<'a> {
     where
         I: BufRead,
     {
+        let mut debug_helper = RecordDeltaCall::new(self.config);
+
         while let Some(Ok(raw_line_bytes)) = lines.next() {
+            debug_helper.write(raw_line_bytes);
+
             self.ingest_line(raw_line_bytes);
 
             if self.source == Source::Unknown {
@@ -156,6 +161,9 @@ impl<'a> StateMachine<'a> {
                 // to introduce and handle a Source::DiffUnifiedAmbiguous variant everywhere.
                 if self.line.starts_with("--- ") {
                     self.minus_line_counter = AmbiguousDiffMinusCounter::prepare_to_count();
+                    if self.config.test_panic {
+                        panic!("An early panic as requested by --test-panic");
+                    }
                 }
             }
 
