@@ -27,7 +27,7 @@ pub struct GrepLine<'b> {
     pub submatches: Option<Vec<(usize, usize)>>,
 }
 
-impl<'b> GrepLine<'b> {
+impl GrepLine<'_> {
     fn expand_tabs(&mut self, tab_cfg: &tabs::TabCfg) {
         let old_len = self.code.len();
         self.code = tabs::expand(&self.code, tab_cfg).into();
@@ -79,7 +79,7 @@ impl LineType {
     }
 }
 
-impl<'a> StateMachine<'a> {
+impl StateMachine<'_> {
     // If this is a line of grep output then render it accordingly.
     pub fn handle_grep_line(&mut self) -> std::io::Result<bool> {
         self.painter.emit()?;

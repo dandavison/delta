@@ -1,7 +1,7 @@
 use crate::delta::{DiffType, InMergeConflict, MergeParents, State, StateMachine};
 use crate::handlers::diff_header::{get_repeated_file_path_from_diff_line, FileEvent};
 
-impl<'a> StateMachine<'a> {
+impl StateMachine<'_> {
     #[inline]
     fn test_diff_header_diff_line(&self) -> bool {
         self.line.starts_with("diff ")

@@ -79,7 +79,7 @@ impl<'a> AnsiElementIterator<'a> {
     }
 }
 
-impl<'a> Iterator for AnsiElementIterator<'a> {
+impl Iterator for AnsiElementIterator<'_> {
     type Item = Element;
 
     fn next(&mut self) -> Option<Element> {

@@ -98,7 +98,7 @@ impl AmbiguousDiffMinusCounter {
     }
 }
 
-impl<'a> StateMachine<'a> {
+impl StateMachine<'_> {
     #[inline]
     fn test_hunk_header_line(&self) -> bool {
         self.line.starts_with("@@") &&

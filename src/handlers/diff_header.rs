@@ -22,7 +22,7 @@ pub enum FileEvent {
     NoEvent,
 }
 
-impl<'a> StateMachine<'a> {
+impl StateMachine<'_> {
     /// Check for the old mode|new mode lines and cache their info for later use.
     pub fn handle_diff_header_mode_line(&mut self) -> std::io::Result<bool> {
         let mut handled_line = false;

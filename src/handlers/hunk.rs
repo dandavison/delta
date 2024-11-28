@@ -40,7 +40,7 @@ fn compute_is_word_diff() -> bool {
     }
 }
 
-impl<'a> StateMachine<'a> {
+impl StateMachine<'_> {
     #[inline]
     fn test_hunk_line(&self) -> bool {
         matches!(

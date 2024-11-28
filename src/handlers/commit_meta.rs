@@ -4,7 +4,7 @@ use super::draw;
 use crate::delta::{State, StateMachine};
 use crate::features;
 
-impl<'a> StateMachine<'a> {
+impl StateMachine<'_> {
     #[inline]
     fn test_commit_meta_header_line(&self) -> bool {
         self.config.commit_regex.is_match(&self.line)

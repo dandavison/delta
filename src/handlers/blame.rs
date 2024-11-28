@@ -24,7 +24,7 @@ pub enum BlameLineNumbers {
     Every(usize, FormatStringSimple),
 }
 
-impl<'a> StateMachine<'a> {
+impl StateMachine<'_> {
     /// If this is a line of git blame output then render it accordingly. If
     /// this is the first blame line, then set the syntax-highlighter language
     /// according to delta.default-language.

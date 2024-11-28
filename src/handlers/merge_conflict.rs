@@ -28,7 +28,7 @@ pub type MergeConflictLines = MergeConflictCommits<Vec<(String, State)>>;
 
 pub type MergeConflictCommitNames = MergeConflictCommits<Option<String>>;
 
-impl<'a> StateMachine<'a> {
+impl StateMachine<'_> {
     pub fn handle_merge_conflict_line(&mut self) -> std::io::Result<bool> {
         use DiffType::*;
         use MergeConflictCommit::*;

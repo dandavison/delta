@@ -2,7 +2,7 @@ use crate::delta::{State, StateMachine};
 use crate::paint::{BgShouldFill, StyleSectionSpecifier};
 use crate::utils::process;
 
-impl<'a> StateMachine<'a> {
+impl StateMachine<'_> {
     // If this is a line of `git show $revision:/path/to/file.ext` output then
     // syntax-highlight it as language `ext`.
     pub fn handle_git_show_file_line(&mut self) -> std::io::Result<bool> {
