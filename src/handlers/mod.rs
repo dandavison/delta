@@ -17,7 +17,7 @@ pub mod submodule;
 
 use crate::delta::{State, StateMachine};
 
-impl<'a> StateMachine<'a> {
+impl StateMachine<'_> {
     pub fn handle_additional_cases(&mut self, to_state: State) -> std::io::Result<bool> {
         let mut handled_line = false;
 

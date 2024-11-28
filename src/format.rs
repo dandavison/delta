@@ -94,7 +94,7 @@ pub type FormatStringPlaceholderData<'a> =
 
 pub type FormatStringSimple = FormatStringPlaceholderDataAnyPlaceholder<()>;
 
-impl<'a> FormatStringPlaceholderData<'a> {
+impl FormatStringPlaceholderData<'_> {
     pub fn width(&self, hunk_max_line_number_width: usize) -> (usize, usize) {
         // Only if Some(placeholder) is present will there be a number formatted
         // by this placeholder, if not width is also None.
@@ -246,7 +246,7 @@ impl CenterRightNumbers for String {
     }
 }
 
-impl<'a> CenterRightNumbers for &std::borrow::Cow<'a, str> {
+impl CenterRightNumbers for &std::borrow::Cow<'_, str> {
     fn center_right_space(&self, alignment: Align, width: usize) -> &'static str {
         self.as_ref().center_right_space(alignment, width)
     }

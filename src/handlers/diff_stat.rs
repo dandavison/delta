@@ -7,7 +7,7 @@ use crate::delta::{State, StateMachine};
 use crate::features;
 use crate::utils;
 
-impl<'a> StateMachine<'a> {
+impl StateMachine<'_> {
     #[inline]
     fn test_diff_stat_line(&self) -> bool {
         (self.state == State::CommitMeta || self.state == State::Unknown)

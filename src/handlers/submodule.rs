@@ -3,7 +3,7 @@ use regex::Regex;
 
 use crate::delta::{State, StateMachine};
 
-impl<'a> StateMachine<'a> {
+impl StateMachine<'_> {
     #[inline]
     fn test_submodule_log(&self) -> bool {
         self.line.starts_with("Submodule ")

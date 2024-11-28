@@ -1,7 +1,7 @@
 use crate::delta::{DiffType, Source, State, StateMachine};
 use crate::utils::path::relativize_path_maybe;
 
-impl<'a> StateMachine<'a> {
+impl StateMachine<'_> {
     #[inline]
     fn test_diff_file_missing(&self) -> bool {
         self.source == Source::DiffUnified && self.line.starts_with("Only in ")
