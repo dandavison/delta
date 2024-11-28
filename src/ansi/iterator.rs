@@ -126,7 +126,7 @@ impl anstyle_parse::Perform for Performer {
             return;
         }
 
-        let is_sgr = byte == b'm' && intermediates.first().is_none();
+        let is_sgr = byte == b'm' && intermediates.is_empty();
         let element = if is_sgr {
             if params.is_empty() {
                 // Attr::Reset
