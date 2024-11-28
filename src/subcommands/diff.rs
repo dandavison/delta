@@ -94,6 +94,9 @@ pub fn diff(
         eprintln!("Failed to execute the command '{diff_bin}': {err}");
         return config.error_exit_code;
     }
+    // 1.83 false positive, see rust-lang/rust-clippy/issues/13748
+    #[allow(unknown_lints)]
+    #[allow(clippy::zombie_processes)]
     let mut diff_process = diff_process.unwrap();
 
     if let Err(error) = delta::delta(
