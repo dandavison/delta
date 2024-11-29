@@ -24,14 +24,16 @@ mod subcommands;
 
 mod tests;
 
-use std::ffi::OsString;
-use std::io::{self, Cursor, ErrorKind, IsTerminal, Write};
-use std::process;
+use std::ffi::{OsStr, OsString};
+use std::io::{self, BufRead, Cursor, ErrorKind, IsTerminal, Write};
+use std::process::{self, Command, Stdio};
 
 use bytelines::ByteLinesReader;
 
 use crate::cli::Call;
+use crate::config::delta_unreachable;
 use crate::delta::delta;
+use crate::subcommands::{SubCmdKind, SubCommand};
 use crate::utils::bat::assets::list_languages;
 use crate::utils::bat::output::{OutputType, PagingMode};
 
@@ -67,7 +69,7 @@ fn main() -> std::io::Result<()> {
     ctrlc::set_handler(|| {})
         .unwrap_or_else(|err| eprintln!("Failed to set ctrl-c handler: {err}"));
     let exit_code = run_app(std::env::args_os().collect::<Vec<_>>(), None)?;
-    // when you call process::exit, no destructors are called, so we want to do it only once, here
+    // when you call process::exit, no drop impls are called, so we want to do it only once, here
     process::exit(exit_code);
 }
 
@@ -81,19 +83,25 @@ pub fn run_app(
 ) -> std::io::Result<i32> {
     let env = env::DeltaEnv::init();
     let assets = utils::bat::assets::load_highlighting_assets();
-    let opt = cli::Opt::from_args_and_git_config(args, &env, assets);
+    let (call, opt) = cli::Opt::from_args_and_git_config(args, &env, assets);
 
-    let opt = match opt {
-        Call::Version(msg) => {
-            writeln!(std::io::stdout(), "{}", msg.trim_end())?;
-            return Ok(0);
-        }
-        Call::Help(msg) => {
-            OutputType::oneshot_write(msg)?;
-            return Ok(0);
-        }
-        Call::Delta(opt) => opt,
-    };
+    if let Call::Version(msg) = call {
+        writeln!(std::io::stdout(), "{}", msg.trim_end())?;
+        return Ok(0);
+    } else if let Call::Help(msg) = call {
+        OutputType::oneshot_write(msg)?;
+        return Ok(0);
+    } else if let Call::SubCommand(_, cmd) = &call {
+        // Set before creating the Config, which already asks for the calling process
+        // (not required for Call::DeltaDiff)
+        utils::process::set_calling_process(
+            &cmd.args
+                .iter()
+                .map(|arg| OsStr::to_string_lossy(arg).to_string())
+                .collect::<Vec<_>>(),
+        );
+    }
+    let opt = opt.unwrap_or_else(|| delta_unreachable("Opt is set"));
 
     let subcommand_result = if let Some(shell) = opt.generate_completion {
         Some(subcommands::generate_completion::generate_completion_file(
@@ -153,26 +161,145 @@ pub fn run_app(
         output_type.handle().unwrap()
     };
 
-    if let (Some(minus_file), Some(plus_file)) = (&config.minus_file, &config.plus_file) {
-        let exit_code = subcommands::diff::diff(minus_file, plus_file, &config, &mut writer);
-        return Ok(exit_code);
-    }
-
-    if io::stdin().is_terminal() {
-        eprintln!(
-            "\
-    The main way to use delta is to configure it as the pager for git: \
-    see https://github.com/dandavison/delta#get-started. \
-    You can also use delta to diff two files: `delta file_A file_B`."
-        );
-        return Ok(config.error_exit_code);
-    }
-
-    if let Err(error) = delta(io::stdin().lock().byte_lines(), &mut writer, &config) {
-        match error.kind() {
-            ErrorKind::BrokenPipe => return Ok(0),
-            _ => eprintln!("{error}"),
+    let subcmd = match call {
+        Call::DeltaDiff(_, minus, plus) => {
+            match subcommands::diff::build_diff_cmd(&minus, &plus, &config) {
+                Err(code) => return Ok(code),
+                Ok(val) => val,
+            }
         }
+        Call::SubCommand(_, subcmd) => subcmd,
+        Call::Delta(_) => SubCommand::none(),
+        Call::Help(_) | Call::Version(_) => delta_unreachable("help/version handled earlier"),
     };
-    Ok(0)
+
+    if subcmd.is_none() {
+        // Default delta run: read input from stdin, write to stdout or pager (pager started already^).
+
+        if io::stdin().is_terminal() {
+            eprintln!(
+                "\
+                    The main way to use delta is to configure it as the pager for git: \
+                    see https://github.com/dandavison/delta#get-started. \
+                    You can also use delta to diff two files: `delta file_A file_B`."
+            );
+            return Ok(config.error_exit_code);
+        }
+
+        let res = delta(io::stdin().lock().byte_lines(), &mut writer, &config);
+
+        if let Err(error) = res {
+            match error.kind() {
+                ErrorKind::BrokenPipe => return Ok(0),
+                _ => {
+                    eprintln!("{error}");
+                    return Ok(config.error_exit_code);
+                }
+            }
+        }
+
+        Ok(0)
+    } else {
+        // First start a subcommand, and pipe input from it to delta(). Also handle
+        // subcommand exit code and stderr (maybe truncate it, e.g. for git and diff logic).
+
+        let (subcmd_bin, subcmd_args) = subcmd.args.split_first().unwrap();
+        let subcmd_kind = subcmd.kind; // for easier {} formatting
+
+        let subcmd_bin_path = match grep_cli::resolve_binary(std::path::PathBuf::from(subcmd_bin)) {
+            Ok(path) => path,
+            Err(err) => {
+                eprintln!("Failed to resolve command {subcmd_bin:?}: {err}");
+                return Ok(config.error_exit_code);
+            }
+        };
+
+        let cmd = Command::new(subcmd_bin)
+            .args(subcmd_args.iter())
+            .stdout(Stdio::piped())
+            .stderr(Stdio::piped())
+            .spawn();
+
+        if let Err(err) = cmd {
+            eprintln!("Failed to execute the command {subcmd_bin:?}: {err}");
+            return Ok(config.error_exit_code);
+        }
+        let mut cmd = cmd.unwrap();
+
+        let cmd_stdout = cmd
+            .stdout
+            .as_mut()
+            .unwrap_or_else(|| panic!("Failed to open stdout"));
+        let cmd_stdout_buf = io::BufReader::new(cmd_stdout);
+
+        let res = delta(cmd_stdout_buf.byte_lines(), &mut writer, &config);
+
+        if let Err(error) = res {
+            let _ = cmd.wait(); // for clippy::zombie_processes
+            match error.kind() {
+                ErrorKind::BrokenPipe => return Ok(0),
+                _ => {
+                    eprintln!("{error}");
+                    return Ok(config.error_exit_code);
+                }
+            }
+        };
+
+        let subcmd_status = cmd
+            .wait()
+            .unwrap_or_else(|_| {
+                delta_unreachable(&format!("{subcmd_kind:?} process not running."));
+            })
+            .code()
+            .unwrap_or_else(|| {
+                eprintln!("delta: {subcmd_kind:?} process terminated without exit status.");
+                config.error_exit_code
+            });
+
+        let mut stderr_lines = io::BufReader::new(
+            cmd.stderr
+                .unwrap_or_else(|| panic!("Failed to open stderr")),
+        )
+        .lines();
+        if let Some(line1) = stderr_lines.next() {
+            // prefix the first error line with the called subcommand
+            eprintln!(
+                "{}: {}",
+                subcmd_kind,
+                line1.unwrap_or("<delta: could not parse stderr line>".into())
+            );
+        }
+
+        // On `git diff` unknown option error: stop after printing the first line above (which is
+        // an error message), because the entire --help text follows.
+        if !(subcmd_status == 129
+            && matches!(subcmd_kind, SubCmdKind::GitDiff | SubCmdKind::Git(_)))
+        {
+            for line in stderr_lines {
+                eprintln!(
+                    "{}",
+                    line.unwrap_or("<delta: could not parse stderr line>".into())
+                );
+            }
+        }
+
+        if matches!(subcmd_kind, SubCmdKind::GitDiff | SubCmdKind::Diff) && subcmd_status >= 2 {
+            eprintln!(
+                "{subcmd_kind:?} process failed with exit status {subcmd_status}. Command was: {}",
+                format_args!(
+                    "{} {}",
+                    subcmd_bin_path.display(),
+                    shell_words::join(
+                        subcmd_args
+                            .iter()
+                            .map(|arg0: &OsString| std::ffi::OsStr::to_string_lossy(arg0))
+                    ),
+                )
+            );
+        }
+
+        Ok(subcmd_status)
+    }
+
+    // `output_type` drop impl runs here
 }

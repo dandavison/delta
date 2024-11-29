@@ -3,6 +3,7 @@ use std::ffi::OsString;
 use std::path::{Path, PathBuf};
 
 use bat::assets::HighlightingAssets;
+use clap::error::Error;
 use clap::{ArgMatches, ColorChoice, CommandFactory, FromArgMatches, Parser, ValueEnum, ValueHint};
 use clap_complete::Shell;
 use console::Term;
@@ -16,6 +17,7 @@ use crate::config::delta_unreachable;
 use crate::env::DeltaEnv;
 use crate::git_config::GitConfig;
 use crate::options;
+use crate::subcommands;
 use crate::utils;
 use crate::utils::bat::output::PagingMode;
 
@@ -1215,21 +1217,10 @@ pub enum DetectDarkLight {
 #[derive(Debug)]
 pub enum Call<T> {
     Delta(T),
+    DeltaDiff(T, PathBuf, PathBuf),
+    SubCommand(T, subcommands::SubCommand),
     Help(String),
     Version(String),
-}
-
-// Custom conversion because a) generic TryFrom<A,B> is not possible and
-// b) the Delta(T) variant can't be converted.
-impl<A> Call<A> {
-    fn try_convert<B>(self) -> Option<Call<B>> {
-        use Call::*;
-        match self {
-            Delta(_) => None,
-            Help(help) => Some(Help(help)),
-            Version(ver) => Some(Version(ver)),
-        }
-    }
 }
 
 impl Opt {
@@ -1281,9 +1272,34 @@ impl Opt {
                 Call::Help(help)
             }
             Err(e) => {
-                e.exit();
+                // Calls `e.exit()` if error persists.
+                let (matches, subcmd) = subcommands::extract(args, e);
+                Call::SubCommand(matches, subcmd)
             }
-            Ok(matches) => Call::Delta(matches),
+            Ok(matches) => {
+                // subcommands take precedence over diffs
+                let minus_file = matches.get_one::<PathBuf>("minus_file").map(PathBuf::from);
+                if let Some(subcmd) = &minus_file {
+                    if let Some(arg) = subcmd.to_str() {
+                        if subcommands::SUBCOMMANDS.contains(&arg) {
+                            let unreachable_error =
+                                Error::new(clap::error::ErrorKind::InvalidSubcommand);
+                            let (matches, subcmd) = subcommands::extract(args, unreachable_error);
+                            return Call::SubCommand(matches, subcmd);
+                        }
+                    }
+                }
+
+                match (
+                    minus_file,
+                    matches.get_one::<PathBuf>("plus_file").map(PathBuf::from),
+                ) {
+                    (Some(minus_file), Some(plus_file)) => {
+                        Call::DeltaDiff(matches, minus_file, plus_file)
+                    }
+                    _ => Call::Delta(matches),
+                }
+            }
         }
     }
 
@@ -1291,7 +1307,7 @@ impl Opt {
         args: Vec<OsString>,
         env: &DeltaEnv,
         assets: HighlightingAssets,
-    ) -> Call<Self> {
+    ) -> (Call<()>, Option<Opt>) {
         #[cfg(test)]
         // Set argv[0] when called in tests:
         let args = {
@@ -1299,13 +1315,12 @@ impl Opt {
             args.insert(0, OsString::from("delta"));
             args
         };
-        let matches = match Self::handle_help_and_version(&args) {
-            Call::Delta(t) => t,
-            msg => {
-                return msg
-                    .try_convert()
-                    .unwrap_or_else(|| panic!("Call<_> conversion failed"))
-            }
+        let (matches, call) = match Self::handle_help_and_version(&args) {
+            Call::Delta(t) => (t, Call::Delta(())),
+            Call::DeltaDiff(t, a, b) => (t, Call::DeltaDiff((), a, b)),
+            Call::SubCommand(t, cmd) => (t, Call::SubCommand((), cmd)),
+            Call::Help(help) => return (Call::Help(help), None),
+            Call::Version(ver) => return (Call::Version(ver), None),
         };
 
         let mut final_config = if *matches.get_one::<bool>("no_gitconfig").unwrap_or(&false) {
@@ -1321,12 +1336,8 @@ impl Opt {
             }
         }
 
-        Call::Delta(Self::from_clap_and_git_config(
-            env,
-            matches,
-            final_config,
-            assets,
-        ))
+        let opt = Self::from_clap_and_git_config(env, matches, final_config, assets);
+        (call, Some(opt))
     }
 
     pub fn from_iter_and_git_config<I>(
@@ -1397,9 +1408,3 @@ lazy_static! {
     .into_iter()
     .collect();
 }
-
-//     Call::Help(format!(
-//     "foo\nbar\nbatz\n{}\n{}",
-//     help.replace("Options:", "well well\n\nOptions:"),
-//     h2
-// ))
