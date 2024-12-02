@@ -228,7 +228,7 @@ pub fn run_app(
 
         let cmd_stdout = cmd
             .stdout
-            .as_mut()
+            .take()
             .unwrap_or_else(|| panic!("Failed to open stdout"));
         let cmd_stdout_buf = io::BufReader::new(cmd_stdout);
 
