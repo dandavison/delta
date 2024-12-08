@@ -47,15 +47,28 @@ impl StateMachine<'_> {
             (Cow::from(&self.line), Cow::from(&self.raw_line))
         };
 
-        draw_fn(
-            self.painter.writer,
-            &format!("{}{}", formatted_line, if pad { " " } else { "" }),
-            &format!("{}{}", formatted_raw_line, if pad { " " } else { "" }),
-            "",
-            &self.config.decorations_width,
-            self.config.commit_style,
-            decoration_ansi_term_style,
-        )?;
+        if pad {
+            draw_fn(
+                self.painter.writer,
+                &format!("{formatted_line} "),
+                &format!("{formatted_raw_line} "),
+                "",
+                &self.config.decorations_width,
+                self.config.commit_style,
+                decoration_ansi_term_style,
+            )?;
+        } else {
+            draw_fn(
+                self.painter.writer,
+                &formatted_line,
+                &formatted_raw_line,
+                "",
+                &self.config.decorations_width,
+                self.config.commit_style,
+                decoration_ansi_term_style,
+            )?;
+        }
+
         Ok(())
     }
 }

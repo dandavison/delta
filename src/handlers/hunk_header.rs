@@ -270,15 +270,29 @@ fn write_hunk_header_raw(
     if config.hunk_header_style.decoration_style != DecorationStyle::NoDecoration {
         writeln!(painter.writer)?;
     }
-    draw_fn(
-        painter.writer,
-        &format!("{}{}", line, if pad { " " } else { "" }),
-        &format!("{}{}", raw_line, if pad { " " } else { "" }),
-        "",
-        &config.decorations_width,
-        config.hunk_header_style,
-        decoration_ansi_term_style,
-    )?;
+
+    if pad {
+        draw_fn(
+            painter.writer,
+            &format!("{line} "),
+            &format!("{raw_line} "),
+            "",
+            &config.decorations_width,
+            config.hunk_header_style,
+            decoration_ansi_term_style,
+        )?;
+    } else {
+        draw_fn(
+            painter.writer,
+            line,
+            raw_line,
+            "",
+            &config.decorations_width,
+            config.hunk_header_style,
+            decoration_ansi_term_style,
+        )?;
+    }
+
     Ok(())
 }
 
