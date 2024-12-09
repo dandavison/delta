@@ -197,12 +197,14 @@ pub fn run_app(
         let res = delta(io::stdin().lock().byte_lines(), &mut writer, &config);
 
         if let Err(error) = res {
-            match error.kind() {
-                ErrorKind::BrokenPipe => return Ok(0),
-                _ => {
-                    eprintln!("{error}");
-                    return Ok(config.error_exit_code);
-                }
+            if error.kind() == ErrorKind::BrokenPipe {
+                // Not the entire input was processed, so we should not return 0.
+                // Other unix utils with a default SIGPIPE handler would have their exit code
+                // set to this code by the shell, emulate it:
+                return Ok(128 + libc::SIGPIPE);
+            } else {
+                eprintln!("{error}");
+                return Ok(config.error_exit_code);
             }
         }
 
@@ -246,25 +248,45 @@ pub fn run_app(
 
         if let Err(error) = res {
             let _ = cmd.wait(); // for clippy::zombie_processes
-            match error.kind() {
-                ErrorKind::BrokenPipe => return Ok(0),
-                _ => {
-                    eprintln!("{error}");
-                    return Ok(config.error_exit_code);
-                }
+            if error.kind() == ErrorKind::BrokenPipe {
+                // (see non-subcommand block above)
+                return Ok(128 + libc::SIGPIPE);
+            } else {
+                eprintln!("{error}");
+                return Ok(config.error_exit_code);
             }
         };
 
-        let subcmd_status = cmd
-            .wait()
-            .unwrap_or_else(|_| {
-                delta_unreachable(&format!("{subcmd_kind:?} process not running."));
-            })
-            .code()
-            .unwrap_or_else(|| {
-                eprintln!("delta: {subcmd_kind:?} process terminated without exit status.");
-                config.error_exit_code
-            });
+        let subcmd_status = cmd.wait().unwrap_or_else(|_| {
+            delta_unreachable(&format!("{subcmd_kind} process not running."));
+        });
+
+        let subcmd_code = subcmd_status.code().unwrap_or_else(|| {
+            #[cfg(unix)]
+            {
+                // On unix no exit status usually means the process was terminated
+                // by a signal (not using MT-unsafe `libc::strsignal` to get its name).
+                use std::os::unix::process::ExitStatusExt;
+
+                if let Some(signal) = subcmd_status.signal() {
+                    // (note that by default the rust runtime blocks SIGPIPE)
+                    if signal != libc::SIGPIPE {
+                        eprintln!(
+                            "delta: {subcmd_kind:?} received signal {signal}{}",
+                            if subcmd_status.core_dumped() {
+                                " (core dumped)"
+                            } else {
+                                ""
+                            }
+                        );
+                    }
+                    // unix convention: 128 + signal
+                    return 128 + signal;
+                }
+            }
+            eprintln!("delta: {subcmd_kind:?} process terminated without exit status.");
+            config.error_exit_code
+        });
 
         let mut stderr_lines = io::BufReader::new(
             cmd.stderr
@@ -282,8 +304,7 @@ pub fn run_app(
 
         // On `git diff` unknown option error: stop after printing the first line above (which is
         // an error message), because the entire --help text follows.
-        if !(subcmd_status == 129
-            && matches!(subcmd_kind, SubCmdKind::GitDiff | SubCmdKind::Git(_)))
+        if !(subcmd_code == 129 && matches!(subcmd_kind, SubCmdKind::GitDiff | SubCmdKind::Git(_)))
         {
             for line in stderr_lines {
                 eprintln!(
@@ -293,9 +314,9 @@ pub fn run_app(
             }
         }
 
-        if matches!(subcmd_kind, SubCmdKind::GitDiff | SubCmdKind::Diff) && subcmd_status >= 2 {
+        if matches!(subcmd_kind, SubCmdKind::GitDiff | SubCmdKind::Diff) && subcmd_code >= 2 {
             eprintln!(
-                "{subcmd_kind:?} process failed with exit status {subcmd_status}. Command was: {}",
+                "delta: {subcmd_kind:?} process failed with exit status {subcmd_code}. Command was: {}",
                 format_args!(
                     "{} {}",
                     subcmd_bin_path.display(),
@@ -308,7 +329,7 @@ pub fn run_app(
             );
         }
 
-        Ok(subcmd_status)
+        Ok(subcmd_code)
     }
 
     // `output_type` drop impl runs here
