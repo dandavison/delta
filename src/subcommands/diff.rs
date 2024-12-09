@@ -29,7 +29,7 @@ pub fn build_diff_cmd(
         .map(|arg| !arg.is_empty() && !arg.starts_with('-'))
         .unwrap_or(false)
     {
-        diff_args[0] = format!("-{}", diff_args[0])
+        diff_args[0] = format!("-{}", diff_args[0]);
     }
 
     let via_process_substitution =

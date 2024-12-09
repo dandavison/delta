@@ -137,10 +137,10 @@ pub fn run_app(
         return Ok(0);
     };
 
-    let _show_config = opt.show_config;
+    let show_config = opt.show_config;
     let config = config::Config::from(opt);
 
-    if _show_config {
+    if show_config {
         let stdout = io::stdout();
         let mut stdout = stdout.lock();
         subcommands::show_config::show_config(&config, &mut stdout)?;

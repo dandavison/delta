@@ -40,7 +40,7 @@ impl std::fmt::Debug for SubCmdKind {
             SubCmdKind::Git(Some(arg)) => {
                 return formatter.write_fmt(format_args!("\"git {}\"", arg.escape_debug()))
             }
-            _ => format!("{}", self),
+            _ => format!("{self}"),
         };
         formatter.write_str("\"")?;
         formatter.write_str(&s)?;
@@ -164,7 +164,7 @@ impl SubCommand {
 /// Find the first arg that is a registered external subcommand and return a
 /// tuple containing:
 /// - The args prior to that point (delta can understand these)
-/// - A SubCommand representing the external subcommand and its subsequent args
+/// - A `SubCommand` representing the external subcommand and its subsequent args
 pub fn extract(args: &[OsString], orig_error: Error) -> (ArgMatches, SubCommand) {
     for (subcmd_pos, arg) in args.iter().filter_map(|a| a.to_str()).enumerate() {
         if SUBCOMMANDS.contains(&arg) {
@@ -188,7 +188,7 @@ pub fn extract(args: &[OsString], orig_error: Error) -> (ArgMatches, SubCommand)
                             .get(subcmd_args_index)
                             .and_then(|cmd| OsStr::to_str(cmd))
                             .and_then(|cmd| {
-                                if cmd.starts_with("-") {
+                                if cmd.starts_with('-') {
                                     None
                                 } else {
                                     Some(cmd.into())
