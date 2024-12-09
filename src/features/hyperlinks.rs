@@ -32,8 +32,10 @@ pub fn remote_from_config(cfg: &Option<&GitConfig>) -> Option<GitRemoteRepo> {
 }
 
 lazy_static! {
-    // note: pure numbers are filtered out later again
-    static ref COMMIT_HASH_REGEX: Regex = Regex::new(r"\b[0-9a-f]{8,40}\b").unwrap();
+    // Commit hashes can be abbreviated to 7 characters, these necessarily become longer
+    // when more objects are in a repository.
+    // Note: pure numbers are filtered out later again.
+    static ref COMMIT_HASH_REGEX: Regex = Regex::new(r"\b[0-9a-f]{7,40}\b").unwrap();
 }
 
 pub fn format_commit_line_with_osc8_commit_hyperlink<'a>(
