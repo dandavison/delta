@@ -1,7 +1,10 @@
-use crate::cli::Opt;
+use std::ffi::{OsStr, OsString};
+use std::process::{self, Command};
+
 use clap::CommandFactory;
 use clap::{ArgMatches, Error};
-use std::ffi::{OsStr, OsString};
+
+use crate::cli::Opt;
 
 const RG: &str = "rg";
 const GIT: &str = "git";
@@ -45,14 +48,52 @@ impl std::fmt::Debug for SubCmdKind {
     }
 }
 
+/// `SubCommand` call arguments, where an `Added()` argument was added by us for better
+/// delta compatibility. They are only used when the subcommand output is directly
+/// fed into `delta()`. If a subcommand is exec'ed these are omitted.
+#[derive(Debug)]
+pub enum SubCmdArg {
+    Original(OsString),
+    Added(OsString),
+}
+
+impl SubCmdArg {
+    fn original(&self) -> Option<&OsStr> {
+        match self {
+            Self::Original(arg) => Some(arg.as_ref()),
+            Self::Added(_) => None,
+        }
+    }
+}
+
+impl AsRef<OsStr> for SubCmdArg {
+    fn as_ref(&self) -> &OsStr {
+        match self {
+            Self::Original(arg) | Self::Added(arg) => arg.as_ref(),
+        }
+    }
+}
+
+impl From<&OsStr> for SubCmdArg {
+    fn from(value: &OsStr) -> Self {
+        Self::Original(value.to_owned())
+    }
+}
+
+impl From<&str> for SubCmdArg {
+    fn from(value: &str) -> Self {
+        Self::Original(OsString::from(value))
+    }
+}
+
 #[derive(Debug)]
 pub struct SubCommand {
     pub kind: SubCmdKind,
-    pub args: Vec<OsString>,
+    pub args: Vec<SubCmdArg>,
 }
 
 impl SubCommand {
-    pub fn new(kind: SubCmdKind, args: Vec<OsString>) -> Self {
+    pub fn new(kind: SubCmdKind, args: Vec<SubCmdArg>) -> Self {
         Self { kind, args }
     }
 
@@ -65,6 +106,58 @@ impl SubCommand {
 
     pub fn is_none(&self) -> bool {
         matches!(self.kind, SubCmdKind::None)
+    }
+
+    pub fn exec(self) -> ! {
+        debug_assert!(!self.is_none());
+
+        fn exec_cmd(subcmd_args: Vec<&OsStr>) {
+            let (subcmd_bin, subcmd_args) = subcmd_args.split_first().unwrap();
+
+            let subcmd_bin_path =
+                match grep_cli::resolve_binary(std::path::PathBuf::from(subcmd_bin)) {
+                    Ok(path) => path,
+                    Err(err) => {
+                        eprintln!("Failed to resolve command {subcmd_bin:?}: {err}");
+                        return;
+                    }
+                };
+
+            let mut cmd = Command::new(subcmd_bin_path);
+            cmd.args(subcmd_args.iter());
+
+            #[cfg(unix)]
+            {
+                use std::os::unix::process::CommandExt;
+                let err = cmd.exec();
+                eprintln!("Failed to start {subcmd_bin:?}: {err}");
+            }
+            #[cfg(windows)]
+            {
+                // there is no `exec` on windows, so emulate it:
+                match cmd.spawn() {
+                    Err(err) => {
+                        eprintln!("Failed to start {subcmd_bin:?}: {err}");
+                    }
+                    Ok(mut child) => match child.wait() {
+                        Ok(result) if result.code().is_some() => {
+                            process::exit(result.code().unwrap());
+                        }
+                        Err(err) => {
+                            eprintln!("Failed to wait for {subcmd_bin:?}: {err}");
+                        }
+                        _ => {}
+                    },
+                }
+            }
+        }
+
+        // Not using `config.error_exit_code` for better shell compatibility
+        const PROCESS_CREATION_ERROR: i32 = 127;
+
+        let subcmd_args: Vec<&OsStr> = self.args.iter().filter_map(|arg| arg.original()).collect();
+        exec_cmd(subcmd_args);
+        process::exit(PROCESS_CREATION_ERROR);
     }
 }
 
@@ -84,7 +177,11 @@ pub fn extract(args: &[OsString], orig_error: Error) -> (ArgMatches, SubCommand)
                 }
                 Ok(matches) => {
                     let (subcmd_args_index, kind, subcmd) = if arg == RG {
-                        (subcmd_pos + 1, SubCmdKind::Rg, vec![RG, "--json"])
+                        (
+                            subcmd_pos + 1,
+                            SubCmdKind::Rg,
+                            vec![RG.into(), SubCmdArg::Added("--json".into())],
+                        )
                     } else if arg == GIT {
                         let subcmd_args_index = subcmd_pos + 1;
                         let git_subcmd = args
@@ -102,7 +199,11 @@ pub fn extract(args: &[OsString], orig_error: Error) -> (ArgMatches, SubCommand)
                             SubCmdKind::Git(git_subcmd),
                             // git does not start the pager and sees that it does not write to a
                             // terminal, so by default it will not use colors. Override it:
-                            vec![GIT, "-c", "color.ui=always"],
+                            vec![
+                                GIT.into(),
+                                SubCmdArg::Added("-c".into()),
+                                SubCmdArg::Added("color.ui=always".into()),
+                            ],
                         )
                     } else {
                         unreachable!("arg must be in SUBCOMMANDS");
@@ -110,8 +211,11 @@ pub fn extract(args: &[OsString], orig_error: Error) -> (ArgMatches, SubCommand)
 
                     let subcmd = subcmd
                         .into_iter()
-                        .map(OsString::from)
-                        .chain(args[subcmd_args_index..].iter().map(OsString::from))
+                        .chain(
+                            args[subcmd_args_index..]
+                                .iter()
+                                .map(|s| s.as_os_str().into()),
+                        )
                         .collect();
 
                     return (matches, SubCommand::new(kind, subcmd));
@@ -140,6 +244,8 @@ pub fn extract(args: &[OsString], orig_error: Error) -> (ArgMatches, SubCommand)
 mod test {
     use super::RG;
     use crate::ansi::strip_ansi_codes;
+    use crate::subcommands::{SubCmdKind, SubCommand};
+    use crate::tests::integration_test_utils::make_config_from_args;
     use std::ffi::OsString;
     use std::io::Cursor;
 
@@ -158,6 +264,20 @@ mod test {
         ] {
             eprintln!("{0} / {0:?} ", s);
         }
+    }
+
+    #[test]
+    #[ignore] // to compile .exec() in test cfg. Never useful to run, so always return early.
+    fn leave_the_test_suite_via_exec() {
+        let c = make_config_from_args(&[]);
+        let bye = SubCommand::new(
+            SubCmdKind::Rg,
+            [format!("{:?}", c.stdout_is_term).as_str().into()].into(),
+        );
+        if !bye.is_none() {
+            return;
+        }
+        bye.exec();
     }
 
     #[test]

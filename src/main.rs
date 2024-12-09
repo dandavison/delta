@@ -70,6 +70,7 @@ fn main() -> std::io::Result<()> {
         .unwrap_or_else(|err| eprintln!("Failed to set ctrl-c handler: {err}"));
     let exit_code = run_app(std::env::args_os().collect::<Vec<_>>(), None)?;
     // when you call process::exit, no drop impls are called, so we want to do it only once, here
+    // (exception: a subcommand is exec'ed directly)
     process::exit(exit_code);
 }
 
@@ -97,7 +98,7 @@ pub fn run_app(
         utils::process::set_calling_process(
             &cmd.args
                 .iter()
-                .map(|arg| OsStr::to_string_lossy(arg).to_string())
+                .map(|arg| OsStr::to_string_lossy(arg.as_ref()).to_string())
                 .collect::<Vec<_>>(),
         );
     }
@@ -158,6 +159,13 @@ pub fn run_app(
         Call::Help(_) | Call::Version(_) => delta_unreachable("help/version handled earlier"),
     };
 
+    // Do the exec before the pager is set up.
+    // No subprocesses must exist (but other threads may), and no terminal queries must be outstanding.
+    #[cfg(not(test))]
+    if !subcmd.is_none() && !config.stdout_is_term {
+        subcmd.exec();
+    }
+
     // The following block structure is because of `writer` and related lifetimes:
     let pager_cfg = (&config).into();
     let paging_mode = if capture_output.is_some() {
@@ -203,7 +211,9 @@ pub fn run_app(
         // First start a subcommand, and pipe input from it to delta(). Also handle
         // subcommand exit code and stderr (maybe truncate it, e.g. for git and diff logic).
 
-        let (subcmd_bin, subcmd_args) = subcmd.args.split_first().unwrap();
+        let subcmd_args: Vec<&OsStr> = subcmd.args.iter().map(|arg| arg.as_ref()).collect();
+
+        let (subcmd_bin, subcmd_args) = subcmd_args.split_first().unwrap();
         let subcmd_kind = subcmd.kind; // for easier {} formatting
 
         let subcmd_bin_path = match grep_cli::resolve_binary(std::path::PathBuf::from(subcmd_bin)) {
@@ -292,7 +302,7 @@ pub fn run_app(
                     shell_words::join(
                         subcmd_args
                             .iter()
-                            .map(|arg0: &OsString| std::ffi::OsStr::to_string_lossy(arg0))
+                            .map(|arg0: &&OsStr| OsStr::to_string_lossy(arg0))
                     ),
                 )
             );
