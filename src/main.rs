@@ -146,6 +146,18 @@ pub fn run_app(
         return Ok(0);
     }
 
+    let subcmd = match call {
+        Call::DeltaDiff(_, minus, plus) => {
+            match subcommands::diff::build_diff_cmd(&minus, &plus, &config) {
+                Err(code) => return Ok(code),
+                Ok(val) => val,
+            }
+        }
+        Call::SubCommand(_, subcmd) => subcmd,
+        Call::Delta(_) => SubCommand::none(),
+        Call::Help(_) | Call::Version(_) => delta_unreachable("help/version handled earlier"),
+    };
+
     // The following block structure is because of `writer` and related lifetimes:
     let pager_cfg = (&config).into();
     let paging_mode = if capture_output.is_some() {
@@ -159,18 +171,6 @@ pub fn run_app(
         &mut capture_output.unwrap()
     } else {
         output_type.handle().unwrap()
-    };
-
-    let subcmd = match call {
-        Call::DeltaDiff(_, minus, plus) => {
-            match subcommands::diff::build_diff_cmd(&minus, &plus, &config) {
-                Err(code) => return Ok(code),
-                Ok(val) => val,
-            }
-        }
-        Call::SubCommand(_, subcmd) => subcmd,
-        Call::Delta(_) => SubCommand::none(),
-        Call::Help(_) | Call::Version(_) => delta_unreachable("help/version handled earlier"),
     };
 
     if subcmd.is_none() {
