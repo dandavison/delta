@@ -517,7 +517,7 @@ where
             // The full scan is expensive on Linux and rarely successful, so disable it by default.
             #[cfg(target_os = "linux")]
             let full_scan = std::env::var("DELTA_CALLING_PROCESS_QUERY_ALL")
-                .map_or(false, |v| !["0", "false", "no"].iter().any(|&n| n == v));
+                .is_ok_and(|v| !["0", "false", "no"].iter().any(|&n| n == v));
 
             if full_scan {
                 info.refresh_processes();
