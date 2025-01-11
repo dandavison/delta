@@ -6,7 +6,9 @@ use regex::{Match, Matches, Regex};
 
 use crate::config::Config;
 use crate::features::OptionValueFunction;
-use crate::git_config::{GitConfig, GitRemoteRepo};
+
+#[cfg(test)]
+use crate::git_config::GitConfig;
 
 pub fn make_feature() -> Vec<(String, OptionValueFunction)> {
     builtin_feature!([
@@ -17,18 +19,6 @@ pub fn make_feature() -> Vec<(String, OptionValueFunction)> {
             _opt => true
         )
     ])
-}
-
-#[cfg(test)]
-pub fn remote_from_config(_: &Option<&GitConfig>) -> Option<GitRemoteRepo> {
-    Some(GitRemoteRepo::GitHub {
-        slug: "dandavison/delta".to_string(),
-    })
-}
-
-#[cfg(not(test))]
-pub fn remote_from_config(cfg: &Option<&GitConfig>) -> Option<GitRemoteRepo> {
-    cfg.and_then(GitConfig::get_remote_url)
 }
 
 lazy_static! {
@@ -80,12 +70,14 @@ pub fn format_commit_line_with_osc8_commit_hyperlink<'a>(
                     .with_input(line, &first_match, &mut matches);
             return Cow::from(result);
         }
-    } else if let Some(repo) = remote_from_config(&config.git_config()) {
-        let mut matches = COMMIT_HASH_REGEX.find_iter(line);
-        if let Some(first_match) = matches.next() {
-            let result = HyperlinkCommits(|commit_hash| repo.format_commit_url(commit_hash))
-                .with_input(line, &first_match, &mut matches);
-            return Cow::from(result);
+    } else if let Some(config) = config.git_config() {
+        if let Some(repo) = config.get_remote_url() {
+            let mut matches = COMMIT_HASH_REGEX.find_iter(line);
+            if let Some(first_match) = matches.next() {
+                let result = HyperlinkCommits(|commit_hash| repo.format_commit_url(commit_hash))
+                    .with_input(line, &first_match, &mut matches);
+                return Cow::from(result);
+            }
         }
     }
     Cow::from(line)
