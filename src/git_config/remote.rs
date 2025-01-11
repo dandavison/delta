@@ -31,6 +31,13 @@ impl GitRemoteRepo {
             }
         }
     }
+
+    #[cfg(test)]
+    pub fn for_testing() -> Option<GitRemoteRepo> {
+        Some(GitRemoteRepo::GitHub {
+            slug: "dandavison/delta".to_string(),
+        })
+    }
 }
 
 lazy_static! {
