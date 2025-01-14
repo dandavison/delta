@@ -662,10 +662,15 @@ fn set_true_color(opt: &mut cli::Opt) {
 }
 
 fn is_truecolor_terminal(env: &DeltaEnv) -> bool {
-    env.colorterm
+    let rgb_cap = terminfo::Database::from_env()
+        .map(|db| db.raw("RGB").is_some())
+        .unwrap_or(false);
+    let colorterm = env
+        .colorterm
         .as_ref()
         .map(|colorterm| colorterm == "truecolor" || colorterm == "24bit")
-        .unwrap_or(false)
+        .unwrap_or(false);
+    rgb_cap || colorterm
 }
 
 #[cfg(test)]
