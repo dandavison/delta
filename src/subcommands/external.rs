@@ -216,7 +216,7 @@ mod test {
         }
 
         let mut writer = Cursor::new(vec![]);
-        let needle = format!("{}{}", "Y40ii4RihK6", "lHiK4BDsGS").to_string();
+        let needle = concat!("Y40ii4RihK6", "lHiK4BDsGS");
         // --minus-style has no effect, just for cmdline parsing
         let runargs = [
             "--minus-style",
