@@ -24,7 +24,7 @@ release:
 	@make -f release.Makefile release
 
 version:
-	@grep version Cargo.toml | head -n1 | sed -E 's,.*version = "([^"]+)",\1,'
+	@grep ^version Cargo.toml | head -n1 | sed -E 's,.*version = "([^"]+)",\1,'
 
 BENCHMARK_INPUT_FILE = /tmp/delta-benchmark-input.gitdiff
 BENCHMARK_COMMAND = git log -p 23c292d3f25c67082a2ba315a187268be1a9b0ab
