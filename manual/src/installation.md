@@ -97,3 +97,5 @@ Users of older MacOS versions (e.g. 10.11 El Capitan) should install using Homeb
 Behind the scenes, delta uses [`less`](https://www.greenwoodsoftware.com/less/) for paging.
 It's important to have a reasonably recent version of less installed.
 On MacOS, install `less` from Homebrew. For Windows, see [Using Delta on Windows](./tips-and-tricks/using-delta-on-windows.md).
+
+If you use [`bat`](https://github.com/sharkdp/bat) and are running `bat cache --build` to install custom themes or language syntaxes then you should install the same version of bat as specified in the [`Cargo.toml`](https://github.com/dandavison/delta/blob/main/Cargo.toml) for the delta release you're using, otherwise delta will crash with a [memory error](https://github.com/dandavison/delta/issues/1712). The current version of delta does not work with bat v0.18.3 or prior versions.
