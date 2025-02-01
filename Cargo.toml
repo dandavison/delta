@@ -19,7 +19,7 @@ ansi_colours = "1.2.1"
 ansi_term = "0.12.1"
 anstyle-parse = "0.2.3"
 anyhow = "1.0.70"
-bat = { version = "0.24.0", default-features = false, features = [
+bat = { version = "0.25.0", default-features = false, features = [
     "minimal-application",
     "paging",
     "regex-onig",
@@ -55,7 +55,7 @@ syntect = "5.0.0"
 sysinfo = { version = "0.29.0", default-features = false, features = [] }
 terminal-colorsaurus = "0.4.1"
 unicode-segmentation = "1.10.1"
-unicode-width = "=0.1.12"
+unicode-width = "=0.1.14"
 xdg = "2.4.1"
 
 [lints.rust]
