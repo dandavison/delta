@@ -35,6 +35,10 @@ impl Style {
         }
     }
 
+    pub fn null_style() -> Self {
+        Self::new()
+    }
+
     pub fn from_git_str(git_style_string: &str) -> Self {
         Self::from_str(git_style_string, None, None, true, None)
     }
