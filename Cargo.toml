@@ -65,7 +65,7 @@ unexpected_cfgs = { level = "warn", check-cfg = ['cfg(tarpaulin_include)'] }
 
 [dev-dependencies]
 insta = { version = "1.*", features = ["colors", "filters"] }
-rstest = "0.21.0"
+rstest = "0.24.0"
 pretty_assertions = "1.4"
 
 [profile.test]
