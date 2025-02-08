@@ -265,20 +265,21 @@ fn write_hunk_header_raw(
     raw_line: &str,
     config: &Config,
 ) -> std::io::Result<()> {
-    let (mut draw_fn, pad, decoration_ansi_term_style) =
-        draw::get_draw_function(config.hunk_header_style.decoration_style);
+    let draw_fn = draw::get_draw_function(config.hunk_header_style.decoration_style);
     if config.hunk_header_style.decoration_style != DecorationStyle::NoDecoration {
         writeln!(painter.writer)?;
     }
+
     draw_fn(
         painter.writer,
-        &format!("{}{}", line, if pad { " " } else { "" }),
-        &format!("{}{}", raw_line, if pad { " " } else { "" }),
+        line,
+        raw_line,
         "",
         &config.decorations_width,
         config.hunk_header_style,
-        decoration_ansi_term_style,
+        false,
     )?;
+
     Ok(())
 }
 
@@ -300,7 +301,7 @@ pub fn write_line_of_code_with_optional_path_and_line_number(
     file_path_separator: &str,
     config: &Config,
 ) -> std::io::Result<()> {
-    let (mut draw_fn, _, decoration_ansi_term_style) = draw::get_draw_function(decoration_style);
+    let draw_fn = draw::get_draw_function(decoration_style);
     let line = if config.color_only {
         line.to_string()
     } else if matches!(include_code_fragment, HunkHeaderIncludeCodeFragment::Yes)
@@ -340,7 +341,7 @@ pub fn write_line_of_code_with_optional_path_and_line_number(
             "",
             &config.decorations_width,
             config.null_style,
-            decoration_ansi_term_style,
+            true,
         )?;
         painter.output_buffer.clear();
     }
