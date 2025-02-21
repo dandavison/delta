@@ -2,7 +2,7 @@
 
 ## Git config file
 
-The most convenient way to configure delta is with a `[delta]` section in `~/.gitconfig`. Here's an example:
+Delta uses [git config](https://git-scm.com/docs/git-config#_configuration_file) (`~/.gitconfig`) for its configuration. Here's an example:
 
 <sub>
 
@@ -20,6 +20,20 @@ The most convenient way to configure delta is with a `[delta]` section in `~/.gi
 [merge]
     conflictstyle = zdiff3
 ```
+
+You do not even need to use git -- delta accepts `git diff` and unified diff formats and hence works with e.g. mercurial and jujutsu -- but you do need to use the git config format.
+
+If you want to store your delta config at a different location, use [[git docs](https://git-scm.com/docs/git-config#Documentation/git-config.txt-GITCONFIGGLOBAL)]
+```bash
+export GIT_CONFIG_GLOBAL=/path/to/my/delta/config
+```
+
+If you want to keep your delta and git config separate, use [[git docs](https://git-scm.com/docs/git-config#_includes)]
+```gitconfig
+[include]
+    path = ~/src/devenv/dotfiles/delta/delta.gitconfig
+```
+
 
 </sub>
 
