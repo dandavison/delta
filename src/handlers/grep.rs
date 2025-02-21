@@ -380,6 +380,7 @@ fn make_style_sections<'a>(
     let mut sections = Vec::new();
     let mut curr = 0;
     for (start_, end_) in submatches {
+        println!("start_: {}, end_: {}", start_, end_);
         let (start, end) = (*start_, *end_);
         if start > curr {
             sections.push((non_match_style, &line[curr..start]))
