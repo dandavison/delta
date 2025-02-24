@@ -741,14 +741,14 @@ pub fn _parse_grep_line<'b>(regex: &Regex, line: &'b str) -> Option<GrepLine<'b>
     })
 }
 
-fn tab_expand_in_code_and_raw<'a>(
-    code: &mut Cow<'a, str>,
+fn tab_expand_in_code_and_raw(
+    code: &mut Cow<'_, str>,
     raw_line: &mut String,
     tab_cfg: &TabCfg,
 ) {
-    if tabs::has_tab(&code) {
-        *code = tabs::expand_fixed(&code, &tab_cfg).into();
-        *raw_line = tabs::expand_fixed(&raw_line, &tab_cfg);
+    if tabs::has_tab(code) {
+        *code = tabs::expand_fixed(code, tab_cfg).into();
+        *raw_line = tabs::expand_fixed(raw_line, tab_cfg);
     }
 }
 

@@ -430,7 +430,7 @@ __path__:  some matching line
         Grep,
     }
 
-    impl<'a> FilePathsTestCase<'a> {
+    impl FilePathsTestCase<'_> {
         pub fn get_args(&self) -> Vec<String> {
             let mut args = vec![
                 "--navigate", // helps locate the file path in the output

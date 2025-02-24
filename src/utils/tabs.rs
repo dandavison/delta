@@ -144,7 +144,7 @@ pub mod tests {
     fn test_expand_raw() {
         let raw_line = "\x1b[32m+\x1b[m\x1b[32mpub\tfn\tfoo() -> bool {\x1b[m";
         let expected = "+pub   fn     foo() -> bool {";
-        let text_line = strip_ansi_codes(&raw_line);
+        let text_line = strip_ansi_codes(raw_line);
         let raw_result = expand_raw(raw_line, &TabCfg::new(7));
         let raw_result_noansi = strip_ansi_codes(&raw_result);
         let text_result = expand(&text_line, &TabCfg::new(7));
