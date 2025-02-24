@@ -820,15 +820,15 @@ pub mod tests {
     #[test]
     #[should_panic(expected = "test logic error (in once): wrong FakeParentArgs scope?")]
     fn test_process_testing_assert_for_scope_never_used() {
-        let _args = FakeParentArgs::for_scope("never used");
-        let _args = FakeParentArgs::once("never used");
+        let _args = FakeParentArgs::for_scope(&"never used");
+        let _args = FakeParentArgs::once(&"never used");
     }
 
     #[test]
     #[should_panic(expected = "test logic error (in for_scope): wrong FakeParentArgs scope?")]
     fn test_process_testing_assert_once_never_used2() {
-        let _args = FakeParentArgs::once("never used");
-        let _args = FakeParentArgs::for_scope("never used");
+        let _args = FakeParentArgs::once(&"never used");
+        let _args = FakeParentArgs::for_scope(&"never used");
     }
 
     #[test]

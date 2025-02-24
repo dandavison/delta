@@ -343,7 +343,7 @@ mod tests {
         operations: Vec<Operation>,
     }
 
-    impl TestCase<'_> {
+    impl<'a> TestCase<'a> {
         pub fn run(&self) {
             self.assert_string_distance_parts();
             assert_eq!(operations(self.before, self.after), self.operations);
@@ -391,7 +391,7 @@ mod tests {
         Alignment::new(x, y).operations()
     }
 
-    impl Alignment<'_> {
+    impl<'a> Alignment<'a> {
         pub fn distance_parts(&self) -> (usize, usize) {
             let (mut numer, mut denom) = (0, 0);
             for op in self.operations() {
