@@ -19,7 +19,7 @@ ansi_colours = "1.2.1"
 ansi_term = "0.12.1"
 anstyle-parse = "0.2.3"
 anyhow = "1.0.70"
-bat = { version = "0.24.0", default-features = false, features = [
+bat = { version = "0.25.0", default-features = false, features = [
     "minimal-application",
     "paging",
     "regex-onig",
