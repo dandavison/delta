@@ -29,7 +29,7 @@
     dark = true      # or light = true, or omit for auto-detection
 
 [merge]
-    conflictstyle = zdiff3
+    conflictStyle = zdiff3
 ```
 
 Or run:
