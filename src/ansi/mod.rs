@@ -380,24 +380,47 @@ mod tests {
         assert_eq!(ansi_preserving_index(s, 0), Some(0));
         assert_eq!(ansi_preserving_index(s, 6), Some(6));
         assert_eq!(ansi_preserving_index(s, 7), Some(12)); // Start of 'C'
-        assert_eq!(ansi_preserving_index(s, 19), Some(24)); // End of '5'
-
-        // Test the suspected failing case: index exactly at the end of a text segment
-        // before an ANSI code.
-        // We expect stripped index 20 to map to the original index *before* the space,
-        // which should be the same as the index for stripped 19, i.e., 24.
-        // The current implementation might incorrectly return the index *after* the  [0m.
-        assert_eq!(ansi_preserving_index(s, 20), Some(24), "Index at end of colored text");
+        assert_eq!(ansi_preserving_index(s, 19), Some(24)); // Corrected: '5' in ":15"
 
         // Test index after the reset code
-        assert_eq!(ansi_preserving_index(s, 21), Some(30), "Index for 'i' after reset");
+        assert_eq!(ansi_preserving_index(s, 20), Some(29)); // Corrected: ' ' starts at byte 29
 
         // Test end of string
-        // Need to use strip_ansi_codes from the current module
         let stripped_len = strip_ansi_codes(s).len();
         assert_eq!(ansi_preserving_index(s, stripped_len), Some(s.len()));
 
         // Test index out of bounds
         assert_eq!(ansi_preserving_index(s, stripped_len + 1), None);
+
+        assert_eq!(
+            ansi_preserving_index(s, 16),
+            Some(21), // Original index of 'l' in "Cargo.toml"
+            "Index at last char of colored text"
+        );
+        assert_eq!(
+            ansi_preserving_index(s, 19),
+            Some(24), // Corrected: '5' in ":15"
+            "Index within colored text (5)"
+        );
+        assert_eq!(
+            ansi_preserving_index(s, 20),
+            Some(29), // Corrected: ' ' starts at byte 29
+            "Index immediately after reset code (space)"
+        );
+        assert_eq!(
+            ansi_preserving_index(s, 21),
+            Some(30), // Corrected: 'i' starts at byte 30
+            "Index after reset code (i)"
+        );
+        assert_eq!(
+            ansi_preserving_index(s, 22),
+            Some(31), // Corrected: 's' starts at byte 31
+            "Index after reset code (s)"
+        );
+        assert_eq!(
+            ansi_preserving_index(s, 27),
+            Some(36), // Corrected: '.' starts at byte 36
+            "Index near end of string (.)"
+        );
     }
 }
