@@ -364,4 +364,40 @@ mod tests {
         assert_eq!(truncate_str_short(double, 1), "");
         assert_eq!(truncate_str_short(double, 2), double);
     }
+
+    #[test]
+    fn test_ansi_preserving_index_boundaries() {
+        let s = "Error: \x1b[31mCargo.toml:15\x1b[0m is bad.";
+        // Stripped: "Error: Cargo.toml:15 is bad."
+        // Indices:   01234567           ^19^20   ^27
+        // Original indices corresponding to stripped indices:
+        // Stripped 0 -> Original 0 ('E')
+        // Stripped 6 -> Original 6 (':')
+        // Stripped 7 -> Original 12 ('C') - Start of colored text
+        // Stripped 19 -> Original 24 ('5') - End of colored text
+        // Stripped 20 -> Original 29 (' ') - Start of text after color reset
+
+        assert_eq!(ansi_preserving_index(s, 0), Some(0));
+        assert_eq!(ansi_preserving_index(s, 6), Some(6));
+        assert_eq!(ansi_preserving_index(s, 7), Some(12)); // Start of 'C'
+        assert_eq!(ansi_preserving_index(s, 19), Some(24)); // End of '5'
+
+        // Test the suspected failing case: index exactly at the end of a text segment
+        // before an ANSI code.
+        // We expect stripped index 20 to map to the original index *before* the space,
+        // which should be the same as the index for stripped 19, i.e., 24.
+        // The current implementation might incorrectly return the index *after* the  [0m.
+        assert_eq!(ansi_preserving_index(s, 20), Some(24), "Index at end of colored text");
+
+        // Test index after the reset code
+        assert_eq!(ansi_preserving_index(s, 21), Some(30), "Index for 'i' after reset");
+
+        // Test end of string
+        // Need to use strip_ansi_codes from the current module
+        let stripped_len = strip_ansi_codes(s).len();
+        assert_eq!(ansi_preserving_index(s, stripped_len), Some(s.len()));
+
+        // Test index out of bounds
+        assert_eq!(ansi_preserving_index(s, stripped_len + 1), None);
+    }
 }
