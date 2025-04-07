@@ -166,16 +166,45 @@ pub fn ansi_preserving_slice(s: &str, start: usize) -> String {
 /// Return the byte index in `s` of the i-th text byte in `s`. I.e. `i` counts
 /// bytes in non-ANSI-escape-sequence content only.
 pub fn ansi_preserving_index(s: &str, i: usize) -> Option<usize> {
-    let mut index = 0;
+    let mut current_char_index = 0; // Current index in the stripped string (character count)
+
     for element in AnsiElementIterator::new(s) {
-        if let Element::Text(a, b) = element {
-            index += b - a;
-            if index > i {
-                return Some(b - (index - i));
+        match element {
+            Element::Text(a, b) => {
+                let t = &s[a..b];
+                let text_len_chars = t.chars().count(); // Character length
+                let text_len_bytes = t.len(); // Byte length
+
+                // If the target char index `i` falls within this text segment's char indices...
+                if i >= current_char_index && i < current_char_index + text_len_chars {
+                    // Calculate the target char offset within this text segment
+                    let char_offset_within_text = i - current_char_index;
+
+                    // Find the byte offset corresponding to this character offset
+                    let byte_offset_within_text = t.char_indices()
+                        .nth(char_offset_within_text)
+                        .map(|(byte_idx, _)| byte_idx)
+                        .unwrap_or(text_len_bytes); // Fallback to end byte length
+
+                    // The original byte index is the start byte index (`a`) plus the byte offset
+                    return Some(a + byte_offset_within_text);
+                }
+                // Otherwise, update the stripped *character* index
+                current_char_index += text_len_chars;
             }
+            // ANSI elements don't change the stripped index
+            Element::Sgr(_, _, _) => {}
+            Element::Csi(_, _) | Element::Esc(_, _) | Element::Osc(_, _) => {}
         }
     }
-    None
+
+    // Handle case where `i` is exactly the length of the stripped string (character count)
+    if i == current_char_index {
+        Some(s.len()) // Map to the total byte length of the original string
+    } else {
+        // `i` is out of bounds
+        None
+    }
 }
 
 fn ansi_strings_iterator(s: &str) -> impl Iterator<Item = (&str, bool)> {
