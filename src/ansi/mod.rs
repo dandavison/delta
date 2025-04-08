@@ -406,14 +406,20 @@ mod tests {
     #[test]
     fn test_ansi_preserving_index_boundaries() {
         let s = "Error: \x1b[31mCargo.toml:15\x1b[0m is bad.";
+        //       01234567   891111111111222222   22223333333333444
+        //                    0123456789012345   67890123456789012
+
         // Stripped: "Error: Cargo.toml:15 is bad."
-        // Indices:   01234567           ^19^20   ^27
+        // Indices:   0123456789111111111122222222
+        //                      012345678901234567
+
+
         // Original indices corresponding to stripped indices:
         // Stripped 0 -> Original 0 ('E')
-        // Stripped 6 -> Original 6 (':')
-        // Stripped 7 -> Original 12 ('C') - Start of colored text
-        // Stripped 19 -> Original 24 ('5') - End of colored text
-        // Stripped 20 -> Original 29 (' ') - Start of text after color reset
+        // Stripped 6 -> Original 6 (':') [dan: no, this is ' ']
+        // Stripped 7 -> Original 12 ('C') - Start of colored text [dan: correct]
+        // Stripped 19 -> Original 24 ('5') - End of colored text [dan: correct]
+        // Stripped 20 -> Original 29 (' ') - Start of text after color reset [dan: correct]
 
         assert_eq!(ansi_preserving_index(s, 0), Some(0));
         assert_eq!(ansi_preserving_index(s, 6), Some(6));
@@ -423,9 +429,13 @@ mod tests {
         // Test index after the reset code
         assert_eq!(ansi_preserving_index(s, 20), Some(29)); // Corrected: ' ' starts at byte 29
 
-        // Test end of string
+        // // Test end of string
         let stripped_len = strip_ansi_codes(s).len();
-        assert_eq!(ansi_preserving_index(s, stripped_len), Some(s.len()));
+
+        // I (Dan) am not yet convinced that we need to change ansi_preserving_index to
+        // make this assertion pass. I only intended the function to return a value for
+        // the valid 0-offset indices.
+        // assert_eq!(ansi_preserving_index(s, stripped_len), Some(s.len()));
 
         // Test index out of bounds
         assert_eq!(ansi_preserving_index(s, stripped_len + 1), None);
