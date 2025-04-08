@@ -293,6 +293,8 @@ mod tests {
         assert_eq!(ansi_preserving_index("0", 1), None);
 
         let raw_string = "\x1b[1;35m0123456789\x1b[0m";
+        //                0   12345678911111111   112
+        //                             01234567   890
         assert_eq!(
             ansi_preserving_slice(raw_string, 1),
             "\x1b[1;35m123456789\x1b[0m"
@@ -363,5 +365,41 @@ mod tests {
         assert_eq!(truncate_str_short(double, 0), "");
         assert_eq!(truncate_str_short(double, 1), "");
         assert_eq!(truncate_str_short(double, 2), double);
+    }
+
+    #[test]
+    fn test_ansi_preserving_index_simple_boundary() {
+        // Test string: "A" + BOLD + "B" + RESET + "C"
+        // Original Bytes: 1 + 4 + 1 + 4 + 1 = 11
+        // Stripped Chars: "ABC" (length 3)
+        let s = "A\x1b[1mB\x1b[0mC";
+
+        // Stripped 'A' (i=0) -> Original Byte 0
+        assert_eq!(ansi_preserving_index(s, 0), Some(0));
+
+        // Stripped 'B' (i=1) -> Original Byte 5 (after "A" and "\x1b[1m")
+        assert_eq!(ansi_preserving_index(s, 1), Some(5));
+
+        // Stripped 'C' (i=2) -> Original Byte 10 (after "A", "\x1b[1m", "B", "\x1b[0m")
+        // This tests the mapping immediately after a reset sequence.
+        assert_eq!(ansi_preserving_index(s, 2), Some(10));
+
+        // I (Dan) am not yet convinced that we need to change ansi_preserving_index to
+        // make this assertion pass. I only intended the function to return a value for
+        // the valid 0-offset indices.
+        // // Stripped end (i=3) -> Original end (Byte 11)
+        // assert_eq!(ansi_preserving_index(s, 3), Some(s.len()));
+
+        // Out of bounds
+        assert_eq!(ansi_preserving_index(s, 4), None);
+    }
+
+    #[test]
+    fn test_index_immediately_after_initial_ansi_minimal() {
+        // Minimal test case for Bug #1: Incorrect index mapping immediately after initial ANSI.
+        // Original code fails this assertion.
+        let s = "\x1b[1mB"; // Stripped: "B"
+        // Stripped 'B' (i=0) should map to Original Byte 4.
+        assert_eq!(ansi_preserving_index(s, 0), Some(4));
     }
 }
