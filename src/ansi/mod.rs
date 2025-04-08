@@ -471,4 +471,30 @@ mod tests {
             "Index near end of string (.)"
         );
     }
+
+    #[test]
+    fn test_index_with_multibyte_chars() {
+        // Demonstrates failure when mixing byte counts and char indices with multi-byte chars.
+        // Original code fails this test.
+        let s = "AバーB"; // Stripped: "AバーB" (char length 3)
+                      // Bytes: A=1, バー=6, B=1. Total=8
+                      // Original indices: A=0, バー=1..6, B=7
+
+        // Stripped 'A' (i=0) -> Original Byte 0
+        assert_eq!(ansi_preserving_index(s, 0), Some(0));
+
+        // Stripped 'バー' (i=1) -> Original Byte 1
+        assert_eq!(ansi_preserving_index(s, 1), Some(1));
+
+        // Stripped 'B' (i=2) -> Original Byte 7. 
+        // Original code incorrectly returns Some(2) due to byte vs char count mix-up.
+        assert_eq!(ansi_preserving_index(s, 2), Some(7));
+
+        // Stripped end (i=3) -> Original end (Byte 8)
+        // Commented out as per user request, but original code fails this too (returns None).
+        // assert_eq!(ansi_preserving_index(s, 3), Some(s.len())); 
+
+        // Out of bounds
+        assert_eq!(ansi_preserving_index(s, 4), None);
+    }
 }
