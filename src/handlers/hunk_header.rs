@@ -235,7 +235,7 @@ lazy_static! {
 fn parse_hunk_header(line: &str) -> Option<ParsedHunkHeader> {
     if let Some(caps) = HUNK_HEADER_REGEX.captures(line) {
         let file_coordinates = &caps[1];
-        let line_numbers_and_hunk_lengths = HUNK_HEADER_FILE_COORDINATE_REGEX
+        let line_numbers_and_hunk_lengths: Vec<(usize, usize)> = HUNK_HEADER_FILE_COORDINATE_REGEX
             .captures_iter(file_coordinates)
             .map(|caps| {
                 (
@@ -249,11 +249,15 @@ fn parse_hunk_header(line: &str) -> Option<ParsedHunkHeader> {
                 )
             })
             .collect();
-        let code_fragment = caps[2].to_string();
-        Some(ParsedHunkHeader {
-            code_fragment,
-            line_numbers_and_hunk_lengths,
-        })
+        if line_numbers_and_hunk_lengths.is_empty() {
+            None
+        } else {
+            let code_fragment = caps[2].to_string();
+            Some(ParsedHunkHeader {
+                code_fragment,
+                line_numbers_and_hunk_lengths,
+            })
+        }
     } else {
         None
     }
@@ -454,6 +458,12 @@ pub mod tests {
         assert_eq!(code_fragment, " pub fn delta(\n");
         assert_eq!(line_numbers_and_hunk_lengths[0], (74, 1),);
         assert_eq!(line_numbers_and_hunk_lengths[1], (75, 2),);
+    }
+
+    #[test]
+    fn test_parse_hunk_header_with_no_hunk_lengths() {
+        let result = parse_hunk_header("@@  @@\n");
+        assert_eq!(result, None);
     }
 
     #[test]
