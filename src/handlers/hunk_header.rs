@@ -379,7 +379,11 @@ fn paint_file_path_with_line_number(
 
     paint::paint_file_path_with_line_number(
         line_number,
-        plus_file,
+        config
+            .plus_file
+            .as_ref()
+            .and_then(|p| p.to_str())
+            .unwrap_or(plus_file),
         false,
         separator,
         false,
