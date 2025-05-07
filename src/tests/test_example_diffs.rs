@@ -2137,6 +2137,31 @@ src/align.rs:71: impl<'a> Alignment<'a> { │
         "###);
     }
 
+    #[test] #[ignore]
+    fn test_long_line_underflow() {
+        let output = DeltaTest::with_args(&["--width" , "111", "--zero-style", "syntax #FFFFFF"]).with_input(GIT_DIFF_LONG_LINE).skip_header();
+
+        assert_snapshot!(output, @r###"
+        foobar
+        ───────────────────────────────────────────────────────────────────────────────────────────────────────────────
+        
+        ────────────────────────────────┐
+        14: function UNDERFLOW_EXEC() { │
+        ────────────────────────────────┘
+           XX XX XX XX XX XX XX XX XX XX XX XX XX XX XX XX XX XX XX XX XX XX XX XX XX XX XX XX XX XX XX XX XX XX XX XX XX XX XX XX XX XX XX XX XX XX XX XX XX XX XX XX XX XX XX XX XX XX XX XX XX XX XX XX XX XX XX XX XX XX XX XX XX XX XX XX XX XX XX XX XX XX XX XX XX XX XX XX XX XX XX XX XX XX XX XX XX XX XX XX XX XX XX XX XX XX XX XX XX XX XX XX XX XX XX XX XX XX XX XX XX XX XX XX XX XX XX XX XX XX XX XX XX XX XX XX XX XX XX XX XX XX XX XX XX XX XX XX XX XX XX XX XX XX XX XX XX XX XX XX XX XX XX XX XX XX XX XX XX XX XX XX XX XX XX XX XX XX XX XX XX XX XX XX XX XX XX XX XX XX XX XX XX XX XX XX XX XX XX XX XX XX XX XX XX XX XX XX XX XX XX XX XX XX XX XX XX XX XX XX XX XX XX XX XX XX XX XX XX XX XX XX XX XX XX XX XX XX XX XX XX XX XX XX XX XX XX XX XX XX XX XX XX XX XX XX XX XX XX XX XX XX XX XX XX XX XX XX XX XX XX XX XX XX XX XX XX XX XX XX XX XX XX XX XX XX XX XX XX XX XX XX XX XX XX XX XX XX XX XX XX XX XX XX XX XX XX XX XX XX XX XX XX XX XX XX XX XX XX XX XX XX XX XX XX XX XX XX XX XX XX XX XX XX XX XX XX XX XX XX XX XX XX XX XX XX XX XX XX XX
+        }                                                                                                                                          
+        
+        
+        
+        echo "=== VALIDATE UNDERFLOW"
+        /usr/local/bin/check_underflow
+        
+        # this is an example of the underflow error                                                                                                
+        echo "=== UNDERFLOW_EXEC"                                                                                                                  
+        UNDERFLOW_EXEC -i foobar.yaml
+        "###);
+    }
+
     const GIT_DIFF_SINGLE_HUNK: &str = "\
 commit 94907c0f136f46dc46ffae2dc92dca9af7eb7c2e
 Author: Dan Davison <dandavison7@gmail.com>
@@ -3125,4 +3150,30 @@ index 53f98b6..14d6caa 100644
  三æäöø€ÆÄÖ〇Øß三
  ¶
 ";
+
+    const GIT_DIFF_LONG_LINE: &str = r#"\
+commit XXXXXXXXXXXXXXXXXXXXXXXXX
+Author: LUCIANO FURTADO <lrfurtado@gmail.com>
+Date:   Tue Jun 25 14:07:31 2024 -0500
+
+    Ref: https://github.com/dandavison/delta/issues/1760
+
+diff --git a/foobar b/foobar
+index 185a33cd5b..123f893935 100755
+--- a/foobar
++++ b/foobar
+@@ -14,6 +14,11 @@ function UNDERFLOW_EXEC() {
+    XX XX XX XX XX XX XX XX XX XX XX XX XX XX XX XX XX XX XX XX XX XX XX XX XX XX XX XX XX XX XX XX XX XX XX XX XX XX XX XX XX XX XX XX XX XX XX XX XX XX XX XX XX XX XX XX XX XX XX XX XX XX XX XX XX XX XX XX XX XX XX XX XX XX XX XX XX XX XX XX XX XX XX XX XX XX XX XX XX XX XX XX XX XX XX XX XX XX XX XX XX XX XX XX XX XX XX XX XX XX XX XX XX XX XX XX XX XX XX XX XX XX XX XX XX XX XX XX XX XX XX XX XX XX XX XX XX XX XX XX XX XX XX XX XX XX XX XX XX XX XX XX XX XX XX XX XX XX XX XX XX XX XX XX XX XX XX XX XX XX XX XX XX XX XX XX XX XX XX XX XX XX XX XX XX XX XX XX XX XX XX XX XX XX XX XX XX XX XX XX XX XX XX XX XX XX XX XX XX XX XX XX XX XX XX XX XX XX XX XX XX XX XX XX XX XX XX XX XX XX XX XX XX XX XX XX XX XX XX XX XX XX XX XX XX XX XX XX XX XX XX XX XX XX XX XX XX XX XX XX XX XX XX XX XX XX XX XX XX XX XX XX XX XX XX XX XX XX XX XX XX XX XX XX XX XX XX XX XX XX XX XX XX XX XX XX XX XX XX XX XX XX XX XX XX XX XX XX XX XX XX XX XX XX XX XX XX XX XX XX XX XX XX XX XX XX XX XX XX XX XX XX XX XX XX XX XX XX XX XX XX XX XX XX XX XX XX XX XX XX
+ }
+
++
++
++echo "=== VALIDATE UNDERFLOW"
++/usr/local/bin/check_underflow
++
+ # this is an example of the underflow error
+ echo "=== UNDERFLOW_EXEC"
+ UNDERFLOW_EXEC -i foobar.yaml
+
+"#;
 }
