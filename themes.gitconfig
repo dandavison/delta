@@ -576,90 +576,92 @@
     # See 'mirthful-willow' for light mode version.
     # Heavily inspired by the themes above. Thank you. <3
     # author: https://github.com/lvdh
+    # colors: `pastel list`
     dark = true
     right-arrow = >
     syntax-theme = Coldark-Dark
     # -- git
-    blame-format = "{author:<18} ({commit:>7}) ┊{timestamp:^16}┊ "
-    blame-palette = "purple darkmagenta darkviolet darkslateblue blueviolet rebeccapurple slateblue mediumpurple mediumslateblue"
+    blame-format = " ({commit:>7}) {author:<18} {timestamp:^13} "
+    blame-palette = "normal midnightblue indigo navy darkblue darkslateblue purple rebeccapurple darkviolet"
     commit-decoration-style = none
-    commit-style = bold white olive
+    commit-style = bold black orange
     # -- grep
     grep-file-style = olive
-    grep-line-number-style = orange
+    grep-line-number-style = olive
     # -- diff
     keep-plus-minus-markers = true
     line-numbers = true
     line-numbers-minus-style = red
     line-numbers-plus-style = green
-    line-numbers-left-style = grey
+    line-numbers-left-style = gray
     line-numbers-left-format = "{nm:>1}┊"
-    line-numbers-right-style = orange
+    line-numbers-right-style = gray
     line-numbers-right-format = "{np:>1}┊"
     line-numbers-zero-style = gray
-    minus-emph-style = lemonchiffon crimson underline
-    minus-empty-line-marker-style = normal maroon
+    minus-emph-style = ghostwhite crimson underline
+    minus-empty-line-marker-style = syntax maroon
     minus-style = syntax darkred
-    plus-emph-style = lemonchiffon olivedrab underline
-    plus-empty-line-marker-style = normal seagreen
+    plus-emph-style = ghostwhite olivedrab underline
+    plus-empty-line-marker-style = syntax seagreen
     plus-style = syntax darkgreen
-    whitespace-error-style = black white
+    whitespace-error-style = black ghostwhite
     zero-style = syntax
     # -- decorations
     file-decoration-style = olive overline
     file-added-label = [+]
-    file-copied-label = [=]
-    file-modified-label = [*]
+    file-copied-label = [*]
+    file-modified-label = [~]
     file-removed-label = [-]
     file-renamed-label = [>]
-    file-style = olive bold
+    file-style = orange bold
     hunk-header-decoration-style = none
     hunk-header-file-style = olive
     hunk-header-line-number-style = orange
-    hunk-header-style = file line-number purple
+    hunk-header-style = file line-number orchid
 
 [delta "mirthful-willow"]
     # See 'weeping-willow' for dark mode version.
     # Heavily inspired by the themes above. Thank you. <3
     # author: https://github.com/lvdh
+    # colors: `pastel list`
     light = true
     right-arrow = >
     syntax-theme = Coldark-Cold
     # -- git
-    blame-format = "{author:<18} ({commit:>7}) ┊{timestamp:^16}┊ "
-    blame-palette = "whitesmoke lavender palegreen powderblue khaki lightcoral silver palegreen gainsboro"
+    blame-format = " ({commit:>7}) {author:<18} {timestamp:^13} "
+    blame-palette = "powderblue papayawhip thistle skyblue lavender plum paleturquoise lightcyan violet"
     commit-decoration-style = none
-    commit-style = bold white darkgoldenrod
+    commit-style = bold black orange
     # -- grep
     grep-file-style = darkgoldenrod
-    grep-line-number-style = orange
+    grep-line-number-style = darkgoldenrod
     # -- diff
     keep-plus-minus-markers = true
     line-numbers = true
     line-numbers-minus-style = red
     line-numbers-plus-style = green
-    line-numbers-left-style = darkgrey
+    line-numbers-left-style = gray
     line-numbers-left-format = "{nm:>1}┊"
-    line-numbers-right-style = orange
+    line-numbers-right-style = gray
     line-numbers-right-format = "{np:>1}┊"
-    line-numbers-zero-style = darkgray
-    minus-emph-style = black tomato underline
-    minus-empty-line-marker-style = normal orangered
+    line-numbers-zero-style = gray
+    minus-emph-style = ghostwhite tomato underline
+    minus-empty-line-marker-style = syntax orangered
     minus-style = syntax lightpink
-    plus-emph-style = black limegreen underline
-    plus-empty-line-marker-style = normal forestgreen
+    plus-emph-style = ghostwhite limegreen underline
+    plus-empty-line-marker-style = syntax forestgreen
     plus-style = syntax lightgreen
-    whitespace-error-style = black white
+    whitespace-error-style = black ghostwhite
     zero-style = syntax
     # -- decorations
     file-decoration-style = darkgoldenrod overline
     file-added-label = [+]
-    file-copied-label = [=]
-    file-modified-label = [*]
+    file-copied-label = [*]
+    file-modified-label = [~]
     file-removed-label = [-]
     file-renamed-label = [>]
-    file-style = darkgoldenrod bold
+    file-style = orange bold
     hunk-header-decoration-style = none
     hunk-header-file-style = darkgoldenrod
     hunk-header-line-number-style = orange
-    hunk-header-style = file line-number purple
+    hunk-header-style = file line-number darkviolet
