@@ -21,7 +21,7 @@ impl TabCfg {
 
 /// Expand tabs as spaces.
 pub fn expand(line: &str, tab_cfg: &TabCfg) -> String {
-    if tab_cfg.replace() && line.as_bytes().iter().any(|c| *c == b'\t') {
+    if tab_cfg.replace() && line.as_bytes().contains(&b'\t') {
         itertools::join(line.split('\t'), &tab_cfg.replacement)
     } else {
         line.to_string()

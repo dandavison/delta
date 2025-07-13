@@ -404,7 +404,7 @@ fn get_code_style_sections<'b>(
     if let Some(prefix_end) = ansi::ansi_preserving_index(
         raw_line,
         match line_number {
-            Some(n) => format!("{}:{}:", path, n).len() - 1,
+            Some(n) => format!("{path}:{n}:").len() - 1,
             None => path.len(),
         },
     ) {
