@@ -17,5 +17,5 @@
     # light = true
 
 [merge]
-    conflictstyle = zdiff3
+    conflictStyle = zdiff3
 ```
