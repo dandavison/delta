@@ -15,7 +15,6 @@ Delta uses [git config](https://git-scm.com/docs/git-config#_configuration_file)
 
 [delta]
     navigate = true  # use n and N to move between diff sections
-    dark = true      # or light = true, or omit for auto-detection
 
 [merge]
     conflictstyle = zdiff3
