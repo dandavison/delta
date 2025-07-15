@@ -73,7 +73,7 @@ impl OutputType {
         )
         .unwrap();
         let mut writer = output_type.handle().unwrap();
-        write!(&mut writer, "{}", data)
+        write!(&mut writer, "{data}")
     }
 
     pub fn from_mode(
