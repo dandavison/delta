@@ -277,21 +277,22 @@ pub fn write_generic_diff_header_header_line(
     if config.file_style.is_omitted && !config.color_only {
         return Ok(());
     }
-    let (mut draw_fn, pad, decoration_ansi_term_style) =
-        draw::get_draw_function(config.file_style.decoration_style);
+    let draw_fn = draw::get_draw_function(config.file_style.decoration_style);
     if !config.color_only {
         // Maintain 1-1 correspondence between input and output lines.
         writeln!(painter.writer)?;
     }
+
     draw_fn(
         painter.writer,
-        &format!("{}{}", line, if pad { " " } else { "" }),
-        &format!("{}{}", raw_line, if pad { " " } else { "" }),
+        line,
+        raw_line,
         mode_info,
         &config.decorations_width,
         config.file_style,
-        decoration_ansi_term_style,
+        false,
     )?;
+
     if !mode_info.is_empty() {
         mode_info.truncate(0);
     }
