@@ -5,6 +5,7 @@ categories = ["command-line-utilities", "development-tools"]
 description = "A syntax-highlighting pager for git"
 documentation = "https://github.com/dandavison/delta"
 edition = "2018"
+rust-version = "1.64.0"
 homepage = "https://github.com/dandavison/delta"
 license = "MIT"
 repository = "https://github.com/dandavison/delta"
