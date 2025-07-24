@@ -36,7 +36,7 @@ clap = { version = "4.3.14", features = [
     "usage",
     "error-context",
 ] }
-console = "0.15.0"
+console = "0.16.0"
 ctrlc = "3.2.5"
 dirs = "5.0.1"
 git2 = { version = "0.20.0", default-features = false, features = [] }
