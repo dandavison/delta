@@ -13,6 +13,7 @@ impl StateMachine<'_> {
             return Ok(false);
         }
         self.painter.paint_buffered_minus_and_plus_lines();
+        self.painter.emit()?;
         self.state =
             if self.line.starts_with("diff --cc ") || self.line.starts_with("diff --combined ") {
                 // We will determine the number of parents when we see the hunk header.
