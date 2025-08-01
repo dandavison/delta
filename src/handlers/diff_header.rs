@@ -646,6 +646,74 @@ mod tests {
         );
     }
 
+    #[test]
+    fn test_diff_header_with_mode_change_in_last_hunk() {
+        let input = "\
+diff --git a/a.txt b/a.txt
+index 44371ed..e69de29 100644
+--- a/a.txt
++++ b/a.txt
+@@ -1 +0,0 @@
+-A-content
+diff --git a/b.txt b/b.txt
+old mode 100644
+new mode 100755
+";
+
+        let result = DeltaTest::with_args(&[]).with_input(input);
+
+        assert_snapshot!(result.output, @r"
+        a.txt
+        ───────────────────────────────────────────
+
+        ───┐
+        0: │
+        ───┘
+        A-content
+
+        b.txt (mode +x)
+        ───────────────────────────────────────────
+        ");
+    }
+
+    #[test]
+    fn test_diff_header_with_2x_mode_change() {
+        let input = "\
+diff --git a/a.txt b/a.txt
+index 44371ed..e69de29 100644
+--- a/a.txt
++++ b/a.txt
+@@ -1 +0,0 @@
+-A-content
+diff --git a/b.txt b/b.txt
+old mode 100644
+new mode 100755
+--- a/b.txt
++++ b/b.txt
+diff --git a/c.txt b/c.txt
+old mode 100644
+new mode 100755
+";
+
+        let result = DeltaTest::with_args(&[]).with_input(input);
+
+        assert_snapshot!(result.output, @r"
+        a.txt
+        ───────────────────────────────────────────
+
+        ───┐
+        0: │
+        ───┘
+        A-content
+
+        b.txt (mode +x)
+        ───────────────────────────────────────────
+
+        c.txt (mode +x)
+        ───────────────────────────────────────────
+        ");
+    }
+
     pub const BIN_AND_TXT_FILE_ADDED: &str = "\
 diff --git a/BIN b/BIN
 new file mode 100644
