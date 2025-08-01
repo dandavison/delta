@@ -1,11 +1,9 @@
 use std::path::Path;
 
 use crate::config::{self};
-
-use crate::utils::git::retrieve_git_version;
-
+use crate::subcommands::external::SubCmdArg;
 use crate::subcommands::{SubCmdKind, SubCommand};
-use std::ffi::OsString;
+use crate::utils::git::retrieve_git_version;
 
 /// Build `git diff` command for the files provided on the command line. Fall back to
 /// `diff` if the supplied "files" use process substitution.
@@ -31,7 +29,7 @@ pub fn build_diff_cmd(
         .map(|arg| !arg.is_empty() && !arg.starts_with('-'))
         .unwrap_or(false)
     {
-        diff_args[0] = format!("-{}", diff_args[0])
+        diff_args[0] = format!("-{}", diff_args[0]);
     }
 
     let via_process_substitution =
@@ -47,15 +45,20 @@ pub fn build_diff_cmd(
         {
             (
                 SubCmdKind::GitDiff,
-                vec!["git", "diff", "--no-index", "--color"],
+                vec![
+                    "git".into(),
+                    "diff".into(),
+                    "--no-index".into(),
+                    SubCmdArg::Added("--color".into()),
+                ],
             )
         }
         _ => (
             SubCmdKind::Diff,
             if diff_args_set_unified_context(&diff_args) {
-                vec!["diff"]
+                vec!["diff".into()]
             } else {
-                vec!["diff", "-U3"]
+                vec!["diff".into(), "-U3".into()]
             },
         ),
     };
@@ -63,13 +66,13 @@ pub fn build_diff_cmd(
     diff_cmd.extend(
         diff_args
             .iter()
-            .filter(|s| !s.is_empty())
-            .map(String::as_str),
+            .filter(|&s| !s.is_empty())
+            .map(|s| s.as_str().into()),
     );
-    diff_cmd.push("--");
-    let mut diff_cmd = diff_cmd.iter().map(OsString::from).collect::<Vec<_>>();
-    diff_cmd.push(minus_file.into());
-    diff_cmd.push(plus_file.into());
+    diff_cmd.push("--".into());
+
+    diff_cmd.push(minus_file.as_os_str().into());
+    diff_cmd.push(plus_file.as_os_str().into());
     Ok(SubCommand::new(differ, diff_cmd))
 }
 

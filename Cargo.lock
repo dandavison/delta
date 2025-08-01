@@ -619,6 +619,7 @@ dependencies = [
  "insta",
  "itertools",
  "lazy_static",
+ "libc",
  "palette",
  "pathdiff",
  "pretty_assertions",
