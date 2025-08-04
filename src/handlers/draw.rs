@@ -15,41 +15,104 @@ fn paint_text(text_style: Style, text: &str, addendum: &str) -> String {
     }
 }
 
-pub type DrawFunction = dyn FnMut(
-    &mut dyn Write,
-    &str,
-    &str,
-    &str,
-    &Width,
-    Style,
-    ansi_term::Style,
-) -> std::io::Result<()>;
+pub type DrawFunction =
+    dyn Fn(&mut dyn Write, &str, &str, &str, &Width, Style, bool) -> std::io::Result<()>;
 
-pub fn get_draw_function(
-    decoration_style: DecorationStyle,
-) -> (Box<DrawFunction>, bool, ansi_term::Style) {
-    match decoration_style {
-        DecorationStyle::Box(style) => (Box::new(write_boxed), true, style),
-        DecorationStyle::BoxWithUnderline(style) => {
-            (Box::new(write_boxed_with_underline), true, style)
-        }
-        DecorationStyle::BoxWithOverline(style) => {
-            // TODO: not implemented
-            (Box::new(write_boxed), true, style)
-        }
-        DecorationStyle::BoxWithUnderOverline(style) => {
-            // TODO: not implemented
-            (Box::new(write_boxed), true, style)
-        }
-        DecorationStyle::Underline(style) => (Box::new(write_underlined), false, style),
-        DecorationStyle::Overline(style) => (Box::new(write_overlined), false, style),
-        DecorationStyle::UnderOverline(style) => (Box::new(write_underoverlined), false, style),
-        DecorationStyle::NoDecoration => (
-            Box::new(write_no_decoration),
-            false,
-            ansi_term::Style::new(),
-        ),
-    }
+pub fn get_draw_function(decoration_style: DecorationStyle) -> Box<DrawFunction> {
+    Box::new(
+        move |writer, text, raw_text, addendum, line_width, text_style, never_pad| {
+            match decoration_style {
+                DecorationStyle::Box(style) => {
+                    if never_pad {
+                        write_boxed(
+                            writer, text, raw_text, addendum, line_width, text_style, style,
+                        )
+                    } else {
+                        write_boxed(
+                            writer,
+                            &format!("{text} "),
+                            &format!("{raw_text} "),
+                            addendum,
+                            line_width,
+                            text_style,
+                            style,
+                        )
+                    }
+                }
+                DecorationStyle::BoxWithUnderline(style) => {
+                    if never_pad {
+                        write_boxed_with_underline(
+                            writer, text, raw_text, addendum, line_width, text_style, style,
+                        )
+                    } else {
+                        write_boxed_with_underline(
+                            writer,
+                            &format!("{text} "),
+                            &format!("{raw_text} "),
+                            addendum,
+                            line_width,
+                            text_style,
+                            style,
+                        )
+                    }
+                }
+                // TODO: not implemented
+                DecorationStyle::BoxWithOverline(style) => {
+                    if never_pad {
+                        write_boxed_with_underline(
+                            writer, text, raw_text, addendum, line_width, text_style, style,
+                        )
+                    } else {
+                        write_boxed_with_underline(
+                            writer,
+                            &format!("{text} "),
+                            &format!("{raw_text} "),
+                            addendum,
+                            line_width,
+                            text_style,
+                            style,
+                        )
+                    }
+                }
+                // TODO: not implemented
+                DecorationStyle::BoxWithUnderOverline(style) => {
+                    if never_pad {
+                        write_boxed_with_underline(
+                            writer, text, raw_text, addendum, line_width, text_style, style,
+                        )
+                    } else {
+                        write_boxed_with_underline(
+                            writer,
+                            &format!("{text} "),
+                            &format!("{raw_text} "),
+                            addendum,
+                            line_width,
+                            text_style,
+                            style,
+                        )
+                    }
+                }
+                DecorationStyle::Underline(style) => write_underlined(
+                    writer, text, raw_text, addendum, line_width, text_style, style,
+                ),
+                DecorationStyle::Overline(style) => write_overlined(
+                    writer, text, raw_text, addendum, line_width, text_style, style,
+                ),
+                DecorationStyle::UnderOverline(style) => write_underoverlined(
+                    writer, text, raw_text, addendum, line_width, text_style, style,
+                ),
+                DecorationStyle::NoDecoration => write_no_decoration(
+                    writer,
+                    text,
+                    raw_text,
+                    addendum,
+                    line_width,
+                    text_style,
+                    ansi_term::Style::new(),
+                ),
+            }
+        },
+    )
 }
 
 fn write_no_decoration(

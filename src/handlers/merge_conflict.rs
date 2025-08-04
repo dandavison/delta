@@ -183,15 +183,13 @@ fn write_diff_header(
     painter: &mut paint::Painter,
     config: &config::Config,
 ) -> std::io::Result<()> {
-    let (mut draw_fn, pad, decoration_ansi_term_style) =
-        draw::get_draw_function(style.decoration_style);
+    let draw_fn = draw::get_draw_function(style.decoration_style);
     let derived_commit_name = &painter.merge_conflict_commit_names[derived_commit_type];
     let text = if let Some(_ancestral_commit) = &painter.merge_conflict_commit_names[Ancestral] {
         format!(
-            "ancestor {} {}{}",
+            "ancestor {} {}",
             config.right_arrow,
             derived_commit_name.as_deref().unwrap_or("?"),
-            if pad { " " } else { "" }
         )
     } else {
         derived_commit_name.as_deref().unwrap_or("?").to_string()
@@ -203,7 +201,7 @@ fn write_diff_header(
         "",
         &config.decorations_width,
         style,
-        decoration_ansi_term_style,
+        false,
     )?;
     Ok(())
 }

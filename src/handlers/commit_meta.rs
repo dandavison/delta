@@ -30,8 +30,7 @@ impl StateMachine<'_> {
         if self.config.commit_style.is_omitted {
             return Ok(());
         }
-        let (mut draw_fn, pad, decoration_ansi_term_style) =
-            draw::get_draw_function(self.config.commit_style.decoration_style);
+        let draw_fn = draw::get_draw_function(self.config.commit_style.decoration_style);
         let (formatted_line, formatted_raw_line) = if self.config.hyperlinks {
             (
                 features::hyperlinks::format_commit_line_with_osc8_commit_hyperlink(
@@ -49,13 +48,14 @@ impl StateMachine<'_> {
 
         draw_fn(
             self.painter.writer,
-            &format!("{}{}", formatted_line, if pad { " " } else { "" }),
-            &format!("{}{}", formatted_raw_line, if pad { " " } else { "" }),
+            &formatted_line,
+            &formatted_raw_line,
             "",
             &self.config.decorations_width,
             self.config.commit_style,
-            decoration_ansi_term_style,
+            false,
         )?;
+
         Ok(())
     }
 }
