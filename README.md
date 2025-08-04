@@ -121,6 +121,11 @@ Here's what `git show` can look like with git configured to use delta:
 
 **All the syntax-highlighting color themes that are available with [bat](https://github.com/sharkdp/bat/) are available with delta:**
 
+```gitconfig
+[delta]
+    syntax-theme = "GitHub"
+```
+
 <br>
 <table>
   <tr>
