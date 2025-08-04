@@ -56,8 +56,11 @@ pub mod errors {
     pub use anyhow::{anyhow, Context, Error, Result};
 }
 
+const DELTA_DEBUG_TIMING: &str = "DELTA_DEBUG_TIMING";
+
 #[cfg(not(tarpaulin_include))]
 fn main() -> std::io::Result<()> {
+    utils::timing::measure(utils::timing::Measurement::Start);
     // Do this first because both parsing all the input in `run_app()` and
     // listing all processes takes about 50ms on Linux.
     // It also improves the chance that the calling process is still around when
@@ -81,6 +84,7 @@ pub fn run_app(
     args: Vec<OsString>,
     capture_output: Option<&mut Cursor<Vec<u8>>>,
 ) -> std::io::Result<i32> {
+    let _timing_reporter = utils::timing::report_on_exit();
     let env = env::DeltaEnv::init();
     let assets = utils::bat::assets::load_highlighting_assets();
     let (call, opt) = cli::Opt::from_args_and_git_config(args, &env, assets);
@@ -102,6 +106,8 @@ pub fn run_app(
         );
     }
     let opt = opt.unwrap_or_else(|| delta_unreachable("Opt is set"));
+
+    utils::timing::measure(utils::timing::Measurement::ReadConfig);
 
     let subcommand_result = if let Some(shell) = opt.generate_completion {
         Some(subcommands::generate_completion::generate_completion_file(
