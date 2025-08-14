@@ -37,12 +37,10 @@ impl StateMachine<'_> {
                 features::hyperlinks::format_commit_line_with_osc8_commit_hyperlink(
                     &self.line,
                     self.config,
-                    &self.git_remote_repo,
                 ),
                 features::hyperlinks::format_commit_line_with_osc8_commit_hyperlink(
                     &self.raw_line,
                     self.config,
-                    &self.git_remote_repo,
                 ),
             )
         } else {

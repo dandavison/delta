@@ -12,7 +12,6 @@ use crate::delta::{self, State, StateMachine};
 use crate::fatal;
 use crate::format::{self, FormatStringSimple, Placeholder};
 use crate::format::{make_placeholder_regex, parse_line_number_format};
-use crate::git_config::GitRemoteRepo;
 use crate::paint::{self, BgShouldFill, StyleSectionSpecifier};
 use crate::style::Style;
 use crate::utils::process;
@@ -49,7 +48,7 @@ impl StateMachine<'_> {
                     false,
                 );
                 let mut formatted_blame_metadata =
-                    format_blame_metadata(&format_data, &blame, self.config, &self.git_remote_repo);
+                    format_blame_metadata(&format_data, &blame, self.config);
                 let key = formatted_blame_metadata.clone();
                 let is_repeat = previous_key.as_deref() == Some(&key);
                 if is_repeat {
@@ -263,7 +262,6 @@ pub fn format_blame_metadata(
     format_data: &[format::FormatStringPlaceholderData],
     blame: &BlameLine,
     config: &config::Config,
-    repo: &Option<GitRemoteRepo>,
 ) -> String {
     let mut s = String::new();
     let mut suffix = "";
@@ -281,9 +279,7 @@ pub fn format_blame_metadata(
                 }))
             }
             Some(Placeholder::Str("author")) => Some(Cow::from(blame.author)),
-            Some(Placeholder::Str("commit")) => {
-                Some(delta::format_raw_line(blame.commit, config, repo))
-            }
+            Some(Placeholder::Str("commit")) => Some(delta::format_raw_line(blame.commit, config)),
             None => None,
             _ => unreachable!("Unexpected `git blame` input"),
         };
@@ -425,8 +421,7 @@ mod tests {
         let blame = make_blame_line_with_time("1996-12-19T16:39:57-08:00");
         let config = integration_test_utils::make_config_from_args(&[]);
         let regex = Regex::new(r"^\d+ years ago$").unwrap();
-        let remote: Option<GitRemoteRepo> = None;
-        let result = format_blame_metadata(&[format_data], &blame, &config, &remote);
+        let result = format_blame_metadata(&[format_data], &blame, &config);
         assert!(regex.is_match(result.trim()));
     }
 
@@ -437,8 +432,7 @@ mod tests {
         let config = integration_test_utils::make_config_from_args(&[
             "--blame-timestamp-output-format=%Y-%m-%d %H:%M",
         ]);
-        let remote: Option<GitRemoteRepo> = None;
-        let result = format_blame_metadata(&[format_data], &blame, &config, &remote);
+        let result = format_blame_metadata(&[format_data], &blame, &config);
         assert_eq!(result.trim(), "1996-12-19 16:39");
     }
 
@@ -450,12 +444,11 @@ mod tests {
 
         let format_data1 = make_format_data_with_placeholder("author");
         let blame1 = make_blame_line_with_author("E\u{301}dith Piaf");
-        let remote: Option<GitRemoteRepo> = None;
-        let result1 = format_blame_metadata(&[format_data1], &blame1, &config, &remote);
+        let result1 = format_blame_metadata(&[format_data1], &blame1, &config);
 
         let format_data2 = make_format_data_with_placeholder("author");
         let blame2 = make_blame_line_with_author("Edith Piaf");
-        let result2 = format_blame_metadata(&[format_data2], &blame2, &config, &remote);
+        let result2 = format_blame_metadata(&[format_data2], &blame2, &config);
 
         assert_eq!(
             count_trailing_spaces(result1),

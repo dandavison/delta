@@ -6,7 +6,9 @@ use regex::{Match, Matches, Regex};
 
 use crate::config::Config;
 use crate::features::OptionValueFunction;
-use crate::git_config::{GitConfig, GitRemoteRepo};
+
+#[cfg(test)]
+use crate::git_config::GitConfig;
 
 pub fn make_feature() -> Vec<(String, OptionValueFunction)> {
     builtin_feature!([
@@ -19,16 +21,6 @@ pub fn make_feature() -> Vec<(String, OptionValueFunction)> {
     ])
 }
 
-#[cfg(test)]
-pub fn remote_from_config(_: &Option<&GitConfig>) -> Option<GitRemoteRepo> {
-    GitRemoteRepo::for_testing()
-}
-
-#[cfg(not(test))]
-pub fn remote_from_config(cfg: &Option<&GitConfig>) -> Option<GitRemoteRepo> {
-    cfg.and_then(GitConfig::get_remote_url)
-}
-
 lazy_static! {
     // Commit hashes can be abbreviated to 7 characters, these necessarily become longer
     // when more objects are in a repository.
@@ -39,7 +31,6 @@ lazy_static! {
 pub fn format_commit_line_with_osc8_commit_hyperlink<'a>(
     line: &'a str,
     config: &Config,
-    cached_repo: &Option<GitRemoteRepo>,
 ) -> Cow<'a, str> {
     // Given matches in a line, m = matches[0] and pos = 0: store line[pos..m.start()] first, then
     // store the T(line[m.start()..m.end()]) match transformation, then set pos = m.end().
@@ -79,12 +70,14 @@ pub fn format_commit_line_with_osc8_commit_hyperlink<'a>(
                     .with_input(line, &first_match, &mut matches);
             return Cow::from(result);
         }
-    } else if let Some(repo) = cached_repo {
-        let mut matches = COMMIT_HASH_REGEX.find_iter(line);
-        if let Some(first_match) = matches.next() {
-            let result = HyperlinkCommits(|commit_hash| repo.format_commit_url(commit_hash))
-                .with_input(line, &first_match, &mut matches);
-            return Cow::from(result);
+    } else if let Some(config) = config.git_config() {
+        if let Some(repo) = config.get_remote_url() {
+            let mut matches = COMMIT_HASH_REGEX.find_iter(line);
+            if let Some(first_match) = matches.next() {
+                let result = HyperlinkCommits(|commit_hash| repo.format_commit_url(commit_hash))
+                    .with_input(line, &first_match, &mut matches);
+                return Cow::from(result);
+            }
         }
     }
     Cow::from(line)
@@ -143,28 +136,27 @@ pub mod tests {
 
     #[test]
     fn test_formatted_hyperlinks() {
-        let remote = GitRemoteRepo::for_testing();
         let config = make_config_from_args(&["--hyperlinks-commit-link-format", "HERE:{commit}"]);
         let line = "001234abcdf";
 
-        let result = format_commit_line_with_osc8_commit_hyperlink(line, &config, &remote);
+        let result = format_commit_line_with_osc8_commit_hyperlink(line, &config);
         assert_eq!(
             result,
             "\u{1b}]8;;HERE:001234abcdf\u{1b}\\001234abcdf\u{1b}]8;;\u{1b}\\",
         );
 
         let line = "a2272718f0b398e48652ace17fca85c1962b3fc22"; // length: 41 > 40
-        let result = format_commit_line_with_osc8_commit_hyperlink(line, &config, &remote);
+        let result = format_commit_line_with_osc8_commit_hyperlink(line, &config);
         assert_eq!(result, "a2272718f0b398e48652ace17fca85c1962b3fc22",);
 
         let line = "a2272718f0+b398e48652ace17f,ca85c1962b3fc2";
-        let result = format_commit_line_with_osc8_commit_hyperlink(line, &config, &remote);
+        let result = format_commit_line_with_osc8_commit_hyperlink(line, &config);
         assert_eq!(result, "\u{1b}]8;;HERE:a2272718f0\u{1b}\\a2272718f0\u{1b}]8;;\u{1b}\\+\u{1b}]8;;\
         HERE:b398e48652ace17f\u{1b}\\b398e48652ace17f\u{1b}]8;;\u{1b}\\,\u{1b}]8;;HERE:ca85c1962b3fc2\
         \u{1b}\\ca85c1962b3fc2\u{1b}]8;;\u{1b}\\");
 
         let line = "This 01234abcdf Hash";
-        let result = format_commit_line_with_osc8_commit_hyperlink(line, &config, &remote);
+        let result = format_commit_line_with_osc8_commit_hyperlink(line, &config);
         assert_eq!(
             result,
             "This \u{1b}]8;;HERE:01234abcdf\u{1b}\\01234abcdf\u{1b}]8;;\u{1b}\\ Hash",
@@ -172,7 +164,7 @@ pub mod tests {
 
         let line =
             "Another 01234abcdf hash but also this one: dc623b084ad2dd14fe5d90189cacad5d49bfbfd3!";
-        let result = format_commit_line_with_osc8_commit_hyperlink(line, &config, &remote);
+        let result = format_commit_line_with_osc8_commit_hyperlink(line, &config);
         assert_eq!(
             result,
             "Another \u{1b}]8;;HERE:01234abcdf\u{1b}\\01234abcdf\u{1b}]8;;\u{1b}\\ hash but \
@@ -181,7 +173,7 @@ pub mod tests {
         );
 
         let line = "01234abcdf 03043baf30 12abcdef0 12345678";
-        let result = format_commit_line_with_osc8_commit_hyperlink(line, &config, &remote);
+        let result = format_commit_line_with_osc8_commit_hyperlink(line, &config);
         assert_eq!(
             result,
             "\u{1b}]8;;HERE:01234abcdf\u{1b}\\01234abcdf\u{1b}]8;;\u{1b}\\ \u{1b}]8;;\
@@ -194,10 +186,9 @@ pub mod tests {
     fn test_hyperlinks_to_repo() {
         let mut config = make_config_from_args(&["--hyperlinks"]);
         config.git_config = GitConfig::for_testing();
-        let remote = GitRemoteRepo::for_testing();
 
         let line = "This a589ff9debaefdd delta commit";
-        let result = format_commit_line_with_osc8_commit_hyperlink(line, &config, &remote);
+        let result = format_commit_line_with_osc8_commit_hyperlink(line, &config);
         assert_eq!(
             result,
             "This \u{1b}]8;;https://github.com/dandavison/delta/commit/a589ff9debaefdd\u{1b}\
@@ -206,7 +197,7 @@ pub mod tests {
 
         let line =
             "Another a589ff9debaefdd hash but also this one: c5696757c0827349a87daa95415656!";
-        let result = format_commit_line_with_osc8_commit_hyperlink(line, &config, &remote);
+        let result = format_commit_line_with_osc8_commit_hyperlink(line, &config);
         assert_eq!(
             result,
             "Another \u{1b}]8;;https://github.com/dandavison/delta/commit/a589ff9debaefdd\

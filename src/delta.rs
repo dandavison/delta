@@ -9,7 +9,6 @@ use crate::config::delta_unreachable;
 use crate::config::Config;
 use crate::config::GrepType;
 use crate::features;
-use crate::git_config::GitRemoteRepo;
 use crate::handlers::grep;
 use crate::handlers::hunk_header::{AmbiguousDiffMinusCounter, ParsedHunkHeader};
 use crate::handlers::{self, merge_conflict};
@@ -113,7 +112,6 @@ pub struct StateMachine<'a> {
     pub handled_diff_header_header_line_file_pair: Option<(String, String)>,
     pub blame_key_colors: HashMap<String, String>,
     pub minus_line_counter: AmbiguousDiffMinusCounter,
-    pub git_remote_repo: Option<GitRemoteRepo>,
 }
 
 pub fn delta<I>(lines: ByteLines<I>, writer: &mut dyn Write, config: &Config) -> std::io::Result<()>
@@ -142,7 +140,6 @@ impl<'a> StateMachine<'a> {
             config,
             blame_key_colors: HashMap::new(),
             minus_line_counter: AmbiguousDiffMinusCounter::not_needed(),
-            git_remote_repo: features::hyperlinks::remote_from_config(&config.git_config()),
         }
     }
 
@@ -251,7 +248,7 @@ impl<'a> StateMachine<'a> {
         writeln!(
             self.painter.writer,
             "{}",
-            format_raw_line(&self.raw_line, self.config, &self.git_remote_repo)
+            format_raw_line(&self.raw_line, self.config)
         )?;
         let handled_line = true;
         Ok(handled_line)
@@ -268,13 +265,9 @@ impl<'a> StateMachine<'a> {
 
 /// If output is going to a tty, emit hyperlinks if requested.
 // Although raw output should basically be emitted unaltered, we do this.
-pub fn format_raw_line<'a>(
-    line: &'a str,
-    config: &Config,
-    repo: &Option<GitRemoteRepo>,
-) -> Cow<'a, str> {
+pub fn format_raw_line<'a>(line: &'a str, config: &Config) -> Cow<'a, str> {
     if config.hyperlinks && io::stdout().is_terminal() {
-        features::hyperlinks::format_commit_line_with_osc8_commit_hyperlink(line, config, repo)
+        features::hyperlinks::format_commit_line_with_osc8_commit_hyperlink(line, config)
     } else {
         Cow::from(line)
     }

@@ -4,6 +4,7 @@ pub use remote::GitRemoteRepo;
 
 use crate::env::DeltaEnv;
 use regex::Regex;
+use std::cell::OnceCell;
 use std::collections::HashMap;
 use std::path::Path;
 
@@ -14,6 +15,7 @@ pub struct GitConfig {
     config_from_env_var: HashMap<String, String>,
     pub enabled: bool,
     repo: Option<git2::Repository>,
+    remote_url: OnceCell<Option<GitRemoteRepo>>,
     // To make GitConfig cloneable when testing (in turn to make Config cloneable):
     #[cfg(test)]
     path: std::path::PathBuf,
@@ -29,6 +31,7 @@ impl Clone for GitConfig {
             config_from_env_var: self.config_from_env_var.clone(),
             enabled: self.enabled,
             repo: None,
+            remote_url: OnceCell::new(),
             path: self.path.clone(),
         }
     }
@@ -57,6 +60,7 @@ impl GitConfig {
                     config_from_env_var: parse_config_from_env_var(env),
                     repo,
                     enabled: true,
+                    remote_url: OnceCell::new(),
                 })
             }
             None => None,
@@ -76,6 +80,7 @@ impl GitConfig {
             config_from_env_var: HashMap::new(),
             enabled: true,
             repo: None,
+            remote_url: OnceCell::new(),
             path: std::path::PathBuf::from("/invalid_null.git"),
         })
     }
@@ -98,6 +103,7 @@ impl GitConfig {
                     },
                     repo: None,
                     enabled: true,
+                    remote_url: OnceCell::new(),
                     #[cfg(test)]
                     path: path.into(),
                 }
@@ -119,8 +125,13 @@ impl GitConfig {
         }
     }
 
+    #[cfg(test)]
+    fn get_remote_url_impl(&self) -> Option<GitRemoteRepo> {
+        GitRemoteRepo::for_testing()
+    }
+
     #[cfg(not(test))]
-    pub fn get_remote_url(&self) -> Option<GitRemoteRepo> {
+    fn get_remote_url_impl(&self) -> Option<GitRemoteRepo> {
         use std::str::FromStr;
         self.repo
             .as_ref()?
@@ -128,6 +139,10 @@ impl GitConfig {
             .ok()?
             .url()
             .and_then(|url| GitRemoteRepo::from_str(url).ok())
+    }
+
+    pub fn get_remote_url(&self) -> &Option<GitRemoteRepo> {
+        self.remote_url.get_or_init(|| self.get_remote_url_impl())
     }
 
     pub fn for_each<F>(&self, regex: &str, mut f: F)
