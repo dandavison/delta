@@ -15,7 +15,16 @@ pub fn parse_line(line: &str) -> Option<grep::GrepLine> {
             // A real line of rg --json output, i.e. either of type "match" or
             // "context".
             let mut code = ripgrep_line.data.lines.text;
-            if code.ends_with('\n') {
+            // ripgrep --json emits a trailing newline for each match, but
+            // delta's code highlighting does not expect a trailing newline.
+            // Therefore, remove the trailing newline if it is not part of the
+            // match.
+            let newline_match_end = ripgrep_line
+                .data
+                .submatches
+                .iter()
+                .any(|m| code.ends_with(&m._match.text) && m._match.text.ends_with('\n'));
+            if !newline_match_end && code.ends_with('\n') {
                 code.truncate(code.len() - 1);
                 if code.ends_with('\r') {
                     code.truncate(code.len() - 1);
@@ -118,6 +127,20 @@ struct RipGrepLineSubmatch {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn test_match_text_ends_with_newline() {
+        let line = r#"{"type":"match","data":{"path":{"text":"src/cli.rs"},"lines":{"text":"    fn from_clap_and_git_config(config\n"},"line_number":null,"absolute_offset":35837,"submatches":[{"match":{"text":"config\n"},"start":33,"end":39}]}}"#;
+        let grep_line = parse_line(line).unwrap();
+        assert_eq!(grep_line.code.chars().last(), Some('\n'));
+    }
+
+    #[test]
+    fn test_match_text_without_newline() {
+        let line = r#"{"type":"match","data":{"path":{"text":"src/cli.rs"},"lines":{"text":"    fn from_clap_and_git_config(\n"},"line_number":null,"absolute_offset":35837,"submatches":[{"match":{"text":"config"},"start":25,"end":31}]}}"#;
+        let grep_line = parse_line(line).unwrap();
+        assert_eq!(grep_line.code.chars().last(), Some('('));
+    }
 
     #[test]
     fn test_deserialize() {
