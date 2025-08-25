@@ -63,6 +63,7 @@ impl StateMachine<'_> {
                 &mut self.painter,
                 &mut self.mode_info,
                 self.config,
+                &mut self.in_hunk,
             )?;
             Ok(true)
         } else {
@@ -206,6 +207,7 @@ impl StateMachine<'_> {
             &mut self.painter,
             &mut self.mode_info,
             self.config,
+            &mut self.in_hunk,
         )
     }
 
@@ -248,6 +250,7 @@ impl StateMachine<'_> {
                 &mut self.painter,
                 &mut self.mode_info,
                 self.config,
+                &mut self.in_hunk,
             )
         } else if !self.config.color_only
             && self.should_handle()
@@ -270,6 +273,7 @@ pub fn write_generic_diff_header_header_line(
     painter: &mut Painter,
     mode_info: &mut String,
     config: &Config,
+    in_hunk: &mut bool
 ) -> std::io::Result<()> {
     // If file_style is "omit", we'll skip the process and print nothing.
     // However in the case of color_only mode,
@@ -279,9 +283,9 @@ pub fn write_generic_diff_header_header_line(
     }
     let (mut draw_fn, pad, decoration_ansi_term_style) =
         draw::get_draw_function(config.file_style.decoration_style);
-    if !config.color_only {
-        // Maintain 1-1 correspondence between input and output lines.
+    if !config.color_only && *in_hunk && config.newline_after_diff {
         writeln!(painter.writer)?;
+        *in_hunk = false;
     }
     draw_fn(
         painter.writer,
@@ -292,6 +296,9 @@ pub fn write_generic_diff_header_header_line(
         config.file_style,
         decoration_ansi_term_style,
     )?;
+    if !config.color_only && config.newline_after_file {
+        writeln!(painter.writer)?;
+    }
     if !mode_info.is_empty() {
         mode_info.truncate(0);
     }
@@ -757,7 +764,7 @@ index 0000000..323fae0
 +++ b.lua
 @@ -1,5 +1,4 @@
  #!/usr/bin/env lua
- 
+
  print("Hello")
 --- World?
  print("..")
@@ -766,7 +773,7 @@ index 0000000..323fae0
 +++ d.lua
 @@ -1,4 +1,3 @@
  #!/usr/bin/env lua
- 
+
  print("Hello")
 --- World?
 "#;

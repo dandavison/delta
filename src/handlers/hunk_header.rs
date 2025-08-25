@@ -174,11 +174,12 @@ impl StateMachine<'_> {
         if self.config.hunk_header_style.is_raw {
             write_hunk_header_raw(&mut self.painter, line, raw_line, self.config)?;
         } else if self.config.hunk_header_style.is_omitted {
-            writeln!(self.painter.writer)?;
+            // TODO: I don't know how to avoid the stuttering here...
+            if !self.config.color_only && self.in_hunk && self.config.newline_after_diff {
+                writeln!(self.painter.writer)?;
+            }
         } else {
-            // Add a blank line below the hunk-header-line for readability, unless
-            // color_only mode is active.
-            if !self.config.color_only {
+            if !self.config.color_only && self.in_hunk && self.config.newline_after_diff {
                 writeln!(self.painter.writer)?;
             }
 
@@ -203,6 +204,12 @@ impl StateMachine<'_> {
                 ":",
                 self.config,
             )?;
+
+            // Add a blank line below the hunk-header-line for readability, unless
+            // color_only mode is active.
+            if !self.config.color_only && self.config.newline_after_hunk_header {
+                writeln!(self.painter.writer)?;
+            }
         };
         self.painter.set_highlighter();
         Ok(true)
