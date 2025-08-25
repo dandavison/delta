@@ -78,6 +78,7 @@ impl StateMachine<'_> {
         if let State::HunkHeader(_, parsed_hunk_header, line, raw_line) = &self.state.clone() {
             self.emit_hunk_header_line(parsed_hunk_header, line, raw_line)?;
         }
+        self.in_hunk = true;
         self.state = match new_line_state(&self.line, &self.raw_line, &self.state, self.config) {
             Some(HunkMinus(diff_type, raw_line)) => {
                 if let HunkPlus(_, _) = self.state {
