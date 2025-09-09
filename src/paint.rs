@@ -777,7 +777,7 @@ fn get_diff_style_sections<'a>(
     (diff_sections, line_alignment)
 }
 
-fn painted_prefix(state: State, config: &config::Config) -> Option<ANSIString> {
+fn painted_prefix(state: State, config: &config::Config) -> Option<ANSIString<'_>> {
     use DiffType::*;
     use State::*;
     match (state, config.keep_plus_minus_markers) {
