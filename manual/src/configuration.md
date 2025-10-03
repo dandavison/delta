@@ -58,3 +58,13 @@ git -c delta.line-numbers=false show
 
 There are several important environment variables that affect delta configuration and which can be used to configure delta dynamically.
 Please see [Environment variables](./environment-variables.md).
+
+## Jujutsu
+
+For [Jujutsu](https://github.com/jj-vcs/jj) users, add this to your `~/.config/jj/config.toml`:
+
+```toml
+[ui]
+pager = "delta"
+diff-formatter = ":git"
+```
