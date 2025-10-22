@@ -100,7 +100,7 @@ pub fn truncate_str<'a>(s: &'a str, display_width: usize, tail: &str) -> Cow<'a,
 /// calculating the width. If a double-width ("fullwidth") grapheme has to be cut, it is omitted and
 /// the resulting string is *shorter* than `display_width`. But this way the result is always a
 /// prefix of the input `s`.
-pub fn truncate_str_short(s: &str, display_width: usize) -> Cow<str> {
+pub fn truncate_str_short(s: &str, display_width: usize) -> Cow<'_, str> {
     truncate_str_impl(s, display_width, "", None)
 }
 

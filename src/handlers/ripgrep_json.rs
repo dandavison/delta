@@ -8,7 +8,7 @@ use crate::handlers::grep;
 use serde::Deserialize;
 use serde_json::Value;
 
-pub fn parse_line(line: &str) -> Option<grep::GrepLine> {
+pub fn parse_line(line: &str) -> Option<grep::GrepLine<'_>> {
     let ripgrep_line: Option<RipGrepLine> = serde_json::from_str(line).ok();
     match ripgrep_line {
         Some(ripgrep_line) => {
