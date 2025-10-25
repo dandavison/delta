@@ -191,6 +191,7 @@ pub fn set_options(
             minus_non_emph_style,
             navigate,
             navigate_regex,
+            newlines,
             line_fill_method,
             line_numbers,
             line_numbers_left_format,

@@ -14,6 +14,7 @@ impl StateMachine<'_> {
         if !self.test_commit_meta_header_line() {
             return Ok(false);
         }
+        self.in_hunk &= self.config.commit_style.is_omitted;
         let mut handled_line = false;
         self.painter.paint_buffered_minus_and_plus_lines();
         self.handle_pending_line_with_diff_name()?;
