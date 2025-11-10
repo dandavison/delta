@@ -1,5 +1,5 @@
 // env var which should disable workarounds
-const NO_WORKAROUNDS: &str = "DELTA_NO_WORKAROUNDS";
+pub const NO_WORKAROUNDS: &str = "DELTA_NO_WORKAROUNDS";
 
 // Work around a bug in the 'console' crate (inherited from 'terminal-size', #25): On Windows
 // it can not determine the width of an MSYS2 / MINGW64 terminal (e.g. from Git-Bash) correctly.
