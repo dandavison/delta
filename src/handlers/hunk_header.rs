@@ -305,14 +305,15 @@ pub fn write_line_of_code_with_optional_path_and_line_number(
     config: &Config,
 ) -> std::io::Result<()> {
     let (mut draw_fn, _, decoration_ansi_term_style) = draw::get_draw_function(decoration_style);
-    let line = if config.color_only {
-        line.to_string()
-    } else if matches!(include_code_fragment, HunkHeaderIncludeCodeFragment::Yes)
-        && !code_fragment.is_empty()
-    {
-        format!("{code_fragment} ")
-    } else {
-        "".to_string()
+    let line = match (config.color_only, include_code_fragment) {
+        (true, _) => line.to_string(),
+        // When called from a ripgrep json context: No " " added, as this would prevent
+        // identifying that a newline already exists, and so another would be added.
+        (_, HunkHeaderIncludeCodeFragment::YesNoSpace) => code_fragment.to_string(),
+        (_, HunkHeaderIncludeCodeFragment::Yes) if !code_fragment.is_empty() => {
+            format!("{code_fragment} ")
+        }
+        _ => "".to_string(),
     };
 
     let plus_line_number = line_numbers_and_hunk_lengths[line_numbers_and_hunk_lengths.len() - 1].0;

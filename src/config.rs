@@ -160,6 +160,7 @@ pub enum HunkHeaderIncludeLineNumber {
 #[cfg_attr(test, derive(Clone))]
 pub enum HunkHeaderIncludeCodeFragment {
     Yes,
+    YesNoSpace,
     No,
 }
 
