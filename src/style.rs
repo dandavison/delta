@@ -55,7 +55,7 @@ impl fmt::Debug for Style {
     }
 }
 
-#[derive(Clone, Copy, Debug, PartialEq)]
+#[derive(Clone, Copy, Debug, PartialEq, Default)]
 pub enum DecorationStyle {
     Box(ansi_term::Style),
     Underline(ansi_term::Style),
@@ -64,13 +64,8 @@ pub enum DecorationStyle {
     BoxWithUnderline(ansi_term::Style),
     BoxWithOverline(ansi_term::Style),
     BoxWithUnderOverline(ansi_term::Style),
+    #[default]
     NoDecoration,
-}
-
-impl Default for DecorationStyle {
-    fn default() -> Self {
-        Self::NoDecoration
-    }
 }
 
 impl Style {
