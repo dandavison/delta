@@ -49,13 +49,14 @@ pub fn color_mode_from_syntax_theme(theme: &str) -> ColorMode {
     }
 }
 
-const LIGHT_SYNTAX_THEMES: [&str; 7] = [
+const LIGHT_SYNTAX_THEMES: [&str; 8] = [
     "Catppuccin Latte",
     "GitHub",
     "gruvbox-light",
     "gruvbox-white",
     "Monokai Extended Light",
     "OneHalfLight",
+    "rose-pine-dawn",
     "Solarized (light)",
 ];
 
