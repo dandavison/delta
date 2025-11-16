@@ -73,13 +73,22 @@ Note that the package is often called `git-delta`, but the executable installed 
     <td><code>winget install dandavison.delta</code></td>
   </tr>
   <tr>
-    <td>Debian / Ubuntu</td>
+    <td>Debian</td>
     <td>
-      <code>dpkg -i file.deb</code>
-      <br>
-      .deb files are on the <a href="https://github.com/dandavison/delta/releases">releases</a> page.
-      <br>
-      <sup>If you are using Ubuntu <= 19.10 or are mixing apt sources, please read <a href="https://github.com/dandavison/delta/issues/504">#504</a>.</sup>
+      <ul>
+        <li>Debian Trixie or newer: <code>sudo apt install git-delta</code></li>
+        <li>Older versions of Debian or to get the newest version of delta: <code>dpkg -i file.deb</code> (.deb files are on the <a href="https://github.com/dandavison/delta/releases">releases</a> page)</li>
+      </ul>
+    </td>
+  </tr>
+  <tr>
+    <td>Ubuntu</td>
+    <td>
+      <ul>
+        <li>Ubuntu 24.04 or newer: <code>sudo apt install git-delta</code></li>
+        <li>Older versions of Ubuntu or to get the newest version of delta: <code>dpkg -i file.deb</code> (.deb files are on the <a href="https://github.com/dandavison/delta/releases">releases</a> page)</li>
+        <li>If you are using Ubuntu <= 19.10 or are mixing apt sources, please read <a href="https://github.com/dandavison/delta/issues/504">#504</a>.</li>
+      </ul>
     </td>
   </tr>
   <tr>
