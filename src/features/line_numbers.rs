@@ -313,7 +313,7 @@ fn format_line_number(
                 hyperlinks::format_osc8_file_hyperlink(absolute_path, line_number, &pad(n), config)
                     .to_string()
             }
-            None => file.to_owned(),
+            None => pad(n),
         },
         (Some(n), _, _) => pad(n),
     }
