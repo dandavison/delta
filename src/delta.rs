@@ -207,7 +207,7 @@ impl<'a> StateMachine<'a> {
     fn ingest_line_utf8(&mut self, raw_line: String) {
         self.raw_line = raw_line;
         // When a file has \r\n line endings, git sometimes adds ANSI escape sequences between the
-        // \r and \n, in which case byte_lines does not remove the \r. Remove it now.
+        // \r and \n, in which case byte_lines does not remove the \r. Remove it now. [EndCRLF]
         // TODO: Limit the number of characters we examine when looking for the \r?
         if let Some(cr_index) = self.raw_line.rfind('\r') {
             if ansi::measure_text_width(&self.raw_line[cr_index + 1..]) == 0 {
