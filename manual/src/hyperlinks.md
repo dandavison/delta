@@ -11,17 +11,18 @@ Commit hashes link to GitHub/GitLab/Bitbucket (use `hyperlinks-commit-link-forma
 
 The links on line numbers (in grep output, as well as diffs) are particularly interesting: with a little bit of effort, they can be made to open your editor or IDE at the correct line.
 Use `hyperlinks-file-link-format` to construct the correct URL for your system.
-For VSCode and JetBrains IDEs this is easy, since they support their own special URL protocols. Here are examples:
+For VSCode, Zed, and JetBrains IDEs this is easy, since they support their own special URL protocols. Here are examples:
 
 ```gitconfig
 [delta]
     hyperlinks = true
-    hyperlinks-file-link-format = "vscode://file/{path}:{line}"
+    hyperlinks-file-link-format = "vscode://file/{path}{:line}"
+    # hyperlinks-file-link-format = "zed://file/{path}{:line}"
     # hyperlinks-file-link-format = "idea://open?file={path}&line={line}"
     # hyperlinks-file-link-format = "pycharm://open?file={path}&line={line}"
 ```
 
-Zed also supports its own URL protocol, and probably others.
+Available placeholders: `{path}` (absolute file path), `{line}` (line number), `{:line}` (line number with leading colon), and `{host}` (hostname). The `{:line}` placeholder is useful to avoid trailing colons when no line number is present.
 
 If your editor does not have its own URL protocol, then there are still many possibilities, although they may be more work.
 

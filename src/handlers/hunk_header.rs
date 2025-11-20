@@ -629,6 +629,82 @@ pub mod tests {
     }
 
     #[test]
+    fn test_paint_file_path_with_line_number_hyperlinks_with_colon_line_placeholder() {
+        use std::{iter::FromIterator, path::PathBuf};
+
+        use crate::utils;
+
+        // This test confirms that the {:line} placeholder expands to include the colon and line
+        // number (e.g. ":3") when a line number is present. This is useful for URL schemes like
+        // zed:// that treat a path ending with a colon as filename that includes a colon
+        let config = integration_test_utils::make_config_from_args(&[
+            "--features",
+            "hyperlinks",
+            "--hyperlinks-file-link-format",
+            "zed://file/{path}{:line}",
+        ]);
+        let relative_path = PathBuf::from_iter(["some-dir", "some-file"]);
+
+        let result = paint_file_path_with_line_number(
+            Some(3),
+            &relative_path.to_string_lossy(),
+            &config.hunk_header_style,
+            &config.hunk_header_line_number_style,
+            &config.hunk_header_style_include_file_path,
+            &config.hunk_header_style_include_line_number,
+            ":",
+            &config,
+        );
+
+        assert_eq!(
+            result,
+            format!(
+                "\u{1b}]8;;zed://file/{}:3\u{1b}\\\u{1b}[34m3\u{1b}[0m\u{1b}]8;;\u{1b}\\",
+                utils::path::fake_delta_cwd_for_tests()
+                    .join(relative_path)
+                    .to_string_lossy()
+            )
+        );
+    }
+
+    #[test]
+    fn test_paint_file_path_with_line_number_hyperlinks_colon_line_placeholder_without_line() {
+        use std::{iter::FromIterator, path::PathBuf};
+
+        use crate::utils;
+
+        // This test confirms that the {:line} placeholder expands to an empty string when no line
+        // number is present, avoiding a trailing colon in the URL.
+        let config = integration_test_utils::make_config_from_args(&[
+            "--features",
+            "hyperlinks",
+            "--hyperlinks-file-link-format",
+            "zed://file/{path}{:line}",
+        ]);
+        let relative_path = PathBuf::from_iter(["some-dir", "some-file"]);
+
+        let result = paint_file_path_with_line_number(
+            None,
+            &relative_path.to_string_lossy(),
+            &config.hunk_header_style,
+            &config.hunk_header_line_number_style,
+            &config.hunk_header_style_include_file_path,
+            &config.hunk_header_style_include_line_number,
+            ":",
+            &config,
+        );
+
+        let path = utils::path::fake_delta_cwd_for_tests()
+            .join(relative_path)
+            .to_string_lossy()
+            .to_string();
+        assert!(
+            !result.contains(&format!("{}:", path)),
+            "URL should not have trailing colon"
+        );
+    }
+
+    #[test]
     fn test_paint_file_path_with_line_number_empty_navigate() {
         let config = integration_test_utils::make_config_from_args(&[
             "--hunk-header-style",
