@@ -434,11 +434,11 @@ pub struct Opt {
     )]
     /// Format string for file hyperlinks (requires --hyperlinks).
     ///
-    /// Placeholders "{path}" and "{line}" will be replaced by the absolute file path and the line
-    /// number; "{host}" with the hostname delta is currently running on. The default is to create
-    /// a hyperlink containing a standard file URI with only the filename, which your terminal or
-    /// OS should handle. You can specify any scheme, such as "file-line://{path}:{line}" and
-    /// register an application to handle it. See
+    /// Placeholders "{path}", "{line}", and "{:line}" (with colon prefix) will be replaced by the
+    /// absolute file path and line number; "{host}" with the hostname delta is currently running
+    /// on. The default is to create a hyperlink containing a standard file URI with only the
+    /// filename, which your terminal or OS should handle. You can specify any scheme, such as
+    /// "vscode://file/{path}{:line}" and register an application to handle it. See
     /// <https://dandavison.github.io/delta/hyperlinks.html> for details.
     pub hyperlinks_file_link_format: String,
 

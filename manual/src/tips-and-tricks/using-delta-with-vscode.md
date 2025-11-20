@@ -7,9 +7,9 @@ To format file links for opening in VSCode from other terminal emulators, use th
 ```gitconfig
 [delta]
    hyperlinks = true
-   hyperlinks-file-link-format = "vscode://file/{path}:{line}"
+   hyperlinks-file-link-format = "vscode://file/{path}{:line}"
 ```
 
-(To use VSCode Insiders, change that to `vscode-insiders://file/{path}:{line}`).
+(To use VSCode Insiders, change that to `vscode-insiders://file/{path}{:line}`).
 
  See [hyperlinks](../hyperlinks.md).

@@ -101,6 +101,13 @@ where
     if let Some(host) = &config.hostname {
         url = url.replace("{host}", host)
     }
+
+    if let Some(n) = line_number {
+        url = url.replace("{:line}", &format!(":{n}"))
+    } else {
+        url = url.replace("{:line}", "")
+    }
+
     if let Some(n) = line_number {
         url = url.replace("{line}", &format!("{n}"))
     } else {
