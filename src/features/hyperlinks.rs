@@ -101,11 +101,8 @@ where
     if let Some(host) = &config.hostname {
         url = url.replace("{host}", host)
     }
-    if let Some(n) = line_number {
-        url = url.replace("{line}", &format!("{n}"))
-    } else {
-        url = url.replace("{line}", "")
-    };
+    let n = line_number.unwrap_or(1);
+    url = url.replace("{line}", &format!("{n}"));
     Cow::from(format_osc8_hyperlink(&url, text))
 }
 
