@@ -48,15 +48,19 @@ const LESSUTFCHARDEF: &str = "LESSUTFCHARDEF";
 use crate::errors::*;
 
 pub enum OutputType {
-    Pager(Child),
+    Pager(Child, Option<(PathBuf, String)>), // Child process and optional (less history file, navigate regex) to clean up
     Stdout(io::Stdout),
     Capture,
 }
 
 impl Drop for OutputType {
     fn drop(&mut self) {
-        if let OutputType::Pager(ref mut command) = *self {
+        if let OutputType::Pager(ref mut command, ref less_hist_data) = *self {
             let _ = command.wait();
+            // Clean up the less history file after less exits
+            if let Some((hist_file, navigate_regex)) = less_hist_data {
+                navigate::cleanup_less_history_file(hist_file, navigate_regex);
+            }
         }
     }
 }
@@ -130,7 +134,7 @@ impl OutputType {
 
                 let is_less = pager_path.file_stem() == Some(&OsString::from("less"));
 
-                let process = if is_less {
+                let (process, less_hist_data) = if is_less {
                     _make_process_from_less_path(
                         pager_path,
                         args,
@@ -139,13 +143,13 @@ impl OutputType {
                         config,
                     )
                 } else {
-                    _make_process_from_pager_path(pager_path, args)
+                    (_make_process_from_pager_path(pager_path, args), None)
                 };
                 if let Some(mut process) = process {
                     process
                         .stdin(Stdio::piped())
                         .spawn()
-                        .map(OutputType::Pager)
+                        .map(|child| OutputType::Pager(child, less_hist_data))
                         .unwrap_or_else(|_| OutputType::stdout())
                 } else {
                     OutputType::stdout()
@@ -161,7 +165,7 @@ impl OutputType {
 
     pub fn handle(&mut self) -> Result<&mut dyn Write> {
         Ok(match *self {
-            OutputType::Pager(ref mut command) => command
+            OutputType::Pager(ref mut command, _) => command
                 .stdin
                 .as_mut()
                 .context("Could not open stdin for pager")?,
@@ -177,7 +181,7 @@ fn _make_process_from_less_path(
     replace_arguments_to_less: bool,
     quit_if_one_screen: bool,
     config: &PagerCfg,
-) -> Option<Command> {
+) -> (Option<Command>, Option<(PathBuf, String)>) {
     if let Ok(less_path) = grep_cli::resolve_binary(less_path) {
         let mut p = Command::new(less_path.clone());
         if args.is_empty() || replace_arguments_to_less {
@@ -222,17 +226,21 @@ fn _make_process_from_less_path(
         p.env("LESSCHARSET", "UTF-8");
         p.env("LESSANSIENDCHARS", "mK");
 
+        let mut less_hist_data = None;
         if config.navigate {
             if let Ok(hist_file) = navigate::copy_less_hist_file_and_append_navigate_regex(config) {
-                p.env("LESSHISTFILE", hist_file);
+                p.env("LESSHISTFILE", &hist_file);
+                if let Some(ref regex) = config.navigate_regex {
+                    less_hist_data = Some((hist_file, regex.clone()));
+                }
                 if config.show_themes {
                     p.arg("+n");
                 }
             }
         }
-        Some(p)
+        (Some(p), less_hist_data)
     } else {
-        None
+        (None, None)
     }
 }
 
