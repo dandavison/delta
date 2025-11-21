@@ -230,6 +230,7 @@ fn _make_process_from_less_path(
         if config.navigate {
             if let Ok(hist_file) = navigate::copy_less_hist_file_and_append_navigate_regex(config) {
                 p.env("LESSHISTFILE", &hist_file);
+                // When navigate is enabled, navigate_regex is always Some (either custom or auto-generated)
                 if let Some(ref regex) = config.navigate_regex {
                     less_hist_data = Some((hist_file, regex.clone()));
                 }
