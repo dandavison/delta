@@ -257,7 +257,11 @@ fn format_and_paint_line_number_field<'a>(
     let mut ansi_strings = Vec::new();
     let mut suffix = "";
     for placeholder in format_data {
-        ansi_strings.push(style.paint(placeholder.prefix.as_str()));
+        // Only paint prefix if it's not empty
+        let prefix = placeholder.prefix.as_str();
+        if !prefix.is_empty() {
+            ansi_strings.push(style.paint(prefix));
+        }
 
         let width = if let Some(placeholder_width) = placeholder.width {
             max(placeholder_width, min_field_width)
@@ -268,31 +272,46 @@ fn format_and_paint_line_number_field<'a>(
         let alignment_spec = placeholder.alignment_spec.unwrap_or(Align::Center);
         match placeholder.placeholder {
             Some(Placeholder::NumberMinus) => {
-                ansi_strings.push(styles[Minus].paint(format_line_number(
+                let formatted = format_line_number(
                     line_numbers[Minus],
                     alignment_spec,
                     width,
                     placeholder.precision,
                     None,
                     config,
-                )))
+                );
+                // Only apply ANSI style if the formatted string contains non-whitespace
+                if formatted.trim().is_empty() {
+                    ansi_strings.push(ansi_term::ANSIGenericString::from(formatted));
+                } else {
+                    ansi_strings.push(styles[Minus].paint(formatted));
+                }
             }
             Some(Placeholder::NumberPlus) => {
-                ansi_strings.push(styles[Plus].paint(format_line_number(
+                let formatted = format_line_number(
                     line_numbers[Plus],
                     alignment_spec,
                     width,
                     placeholder.precision,
                     Some(plus_file),
                     config,
-                )))
+                );
+                // Only apply ANSI style if the formatted string contains non-whitespace
+                if formatted.trim().is_empty() {
+                    ansi_strings.push(ansi_term::ANSIGenericString::from(formatted));
+                } else {
+                    ansi_strings.push(styles[Plus].paint(formatted));
+                }
             }
             None => {}
             _ => unreachable!("Invalid placeholder"),
         }
         suffix = placeholder.suffix.as_str();
     }
-    ansi_strings.push(style.paint(suffix));
+    // Only paint suffix if it's not empty
+    if !suffix.is_empty() {
+        ansi_strings.push(style.paint(suffix));
+    }
     ansi_strings
 }
 
@@ -988,4 +1007,54 @@ index 8b0d958..e69de29 100644
 @@ -1,1 +0,0 @@
 -一二三
 ";
+
+    #[test]
+    fn test_no_ansi_escapes_for_whitespace_line_numbers() {
+        // Test that when line numbers are None (showing only spaces),
+        // no ANSI escape codes are applied to those spaces
+        let config = make_config_from_args(&["--line-numbers"]);
+        let formatted = format_line_number(None, Align::Center, 5, None, None, &config);
+        assert_eq!(formatted, "     ");  // 5 spaces, no ANSI codes
+
+        // Create a simple line numbers data structure
+        let mut line_numbers_data = LineNumbersData::default();
+        line_numbers_data.hunk_max_line_number_width = 5;
+        line_numbers_data.format_data = MinusPlus::new(
+            vec![format::FormatStringPlaceholderData {
+                placeholder: Some(Placeholder::NumberMinus),
+                ..Default::default()
+            }],
+            vec![format::FormatStringPlaceholderData {
+                placeholder: Some(Placeholder::NumberPlus),
+                ..Default::default()
+            }],
+        );
+
+        // Test that spaces are not painted with ANSI codes
+        let styles = MinusPlus::new(
+            Style::from_colors(Some(ansi_term::Color::Red), None),
+            Style::from_colors(Some(ansi_term::Color::Green), None),
+        );
+        let line_numbers = MinusPlus::new(None, None);  // No line numbers
+
+        let ansi_strings = format_and_paint_line_number_field(
+            &line_numbers_data,
+            Minus,
+            &styles,
+            &line_numbers,
+            &config,
+        );
+
+        // The result should contain spaces without ANSI escape codes
+        let result = ansi_strings.iter().map(|s| s.to_string()).collect::<String>();
+
+        // Strip any ANSI codes and verify we just have spaces
+        let stripped = strip_ansi_codes(&result);
+        assert!(stripped.trim().is_empty(), "Expected only whitespace, got: '{}'", stripped);
+
+        // More importantly, verify that the raw string doesn't contain ANSI codes
+        // when it's just spaces (this is the optimization we're testing)
+        assert_eq!(result, "     ", "Expected 5 spaces without ANSI codes");
+        assert!(!result.contains('\x1b'), "Spaces should not be wrapped with ANSI escape codes");
+    }
 }
