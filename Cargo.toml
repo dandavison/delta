@@ -38,7 +38,7 @@ clap = { version = "4.3.14", features = [
 ] }
 console = "0.15.0"
 ctrlc = "3.2.5"
-dirs = "5.0.1"
+dirs = "6.0.0"
 git2 = { version = "0.20.0", default-features = false, features = [] }
 grep-cli = "0.1.8"
 itertools = "0.10.5"
