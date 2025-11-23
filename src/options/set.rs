@@ -260,13 +260,17 @@ fn set__light__dark__syntax_theme__options(
     arg_matches: &clap::ArgMatches,
     option_names: &HashMap<String, String>,
 ) {
-    let validate_light_and_dark = |opt: &cli::Opt| {
-        if opt.light && opt.dark {
+    let validate_light_and_dark = |opt: &cli::Opt, arg_matches: &clap::ArgMatches| {
+        // Only validate if both options were explicitly supplied by the user on the command line
+        // (not from git config or features)
+        if config::user_supplied_option("light", arg_matches)
+            && config::user_supplied_option("dark", arg_matches)
+            && opt.light && opt.dark {
             fatal("--light and --dark cannot be used together.");
         }
     };
     let empty_builtin_features = HashMap::new();
-    validate_light_and_dark(opt);
+    validate_light_and_dark(opt, arg_matches);
     if !(opt.light || opt.dark) {
         set_options!(
             [dark, light],
@@ -278,7 +282,7 @@ fn set__light__dark__syntax_theme__options(
             false
         );
     }
-    validate_light_and_dark(opt);
+    validate_light_and_dark(opt, arg_matches);
     set_options!(
         [syntax_theme],
         opt,
