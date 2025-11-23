@@ -411,7 +411,7 @@ impl From<cli::Opt> for Config {
             minus_style: styles["minus-style"],
             navigate: opt.navigate,
             navigate_regex,
-            null_style: Style::new(),
+            null_style: Style::null_style(),
             null_syntect_style: SyntectStyle::default(),
             pager: opt.pager,
             paging_mode: opt.computed.paging_mode,
