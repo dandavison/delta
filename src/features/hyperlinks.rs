@@ -135,6 +135,26 @@ pub mod tests {
     };
 
     #[test]
+    fn test_file_hyperlink_line_number_defaults_to_one() {
+        let config =
+            make_config_from_args(&["--hyperlinks-file-link-format", "file://{path}:{line}"]);
+
+        let result =
+            format_osc8_file_hyperlink("/absolute/path/to/file.rs", Some(42), "file.rs", &config);
+        assert_eq!(
+            result,
+            "\u{1b}]8;;file:///absolute/path/to/file.rs:42\u{1b}\\file.rs\u{1b}]8;;\u{1b}\\",
+        );
+
+        let result =
+            format_osc8_file_hyperlink("/absolute/path/to/file.rs", None, "file.rs", &config);
+        assert_eq!(
+            result,
+            "\u{1b}]8;;file:///absolute/path/to/file.rs:1\u{1b}\\file.rs\u{1b}]8;;\u{1b}\\",
+        );
+    }
+
+    #[test]
     fn test_formatted_hyperlinks() {
         let config = make_config_from_args(&["--hyperlinks-commit-link-format", "HERE:{commit}"]);
 
