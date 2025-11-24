@@ -10,7 +10,11 @@ const DELTA_EXPERIMENTAL_MAX_LINE_DISTANCE_FOR_NAIVELY_PAIRED_LINES: &str =
     "DELTA_EXPERIMENTAL_MAX_LINE_DISTANCE_FOR_NAIVELY_PAIRED_LINES";
 const DELTA_PAGER: &str = "DELTA_PAGER";
 
-#[derive(Default, Clone)]
+// debug env variables:
+pub const DELTA_DEBUG_LOGFILE: &str = "DELTA_DEBUG_LOGFILE";
+pub const DELTA_DEBUG_LOGFILE_MAX_SIZE: &str = "DELTA_DEBUG_LOGFILE_MAX_SIZE";
+
+#[derive(Default, Clone, Debug)]
 pub struct DeltaEnv {
     pub bat_theme: Option<String>,
     pub colorterm: Option<String>,
