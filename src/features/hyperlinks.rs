@@ -101,11 +101,8 @@ where
     if let Some(host) = &config.hostname {
         url = url.replace("{host}", host)
     }
-    if let Some(n) = line_number {
-        url = url.replace("{line}", &format!("{n}"))
-    } else {
-        url = url.replace("{line}", "")
-    };
+    let n = line_number.unwrap_or(1);
+    url = url.replace("{line}", &format!("{n}"));
     Cow::from(format_osc8_hyperlink(&url, text))
 }
 
@@ -133,6 +130,26 @@ pub mod tests {
         tests::integration_test_utils::{self, make_config_from_args, DeltaTest},
         utils,
     };
+
+    #[test]
+    fn test_file_hyperlink_line_number_defaults_to_one() {
+        let config =
+            make_config_from_args(&["--hyperlinks-file-link-format", "file://{path}:{line}"]);
+
+        let result =
+            format_osc8_file_hyperlink("/absolute/path/to/file.rs", Some(42), "file.rs", &config);
+        assert_eq!(
+            result,
+            "\u{1b}]8;;file:///absolute/path/to/file.rs:42\u{1b}\\file.rs\u{1b}]8;;\u{1b}\\",
+        );
+
+        let result =
+            format_osc8_file_hyperlink("/absolute/path/to/file.rs", None, "file.rs", &config);
+        assert_eq!(
+            result,
+            "\u{1b}]8;;file:///absolute/path/to/file.rs:1\u{1b}\\file.rs\u{1b}]8;;\u{1b}\\",
+        );
+    }
 
     #[test]
     fn test_formatted_hyperlinks() {
