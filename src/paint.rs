@@ -76,6 +76,8 @@ impl<'p> Painter<'p> {
         let line_numbers_data = if config.line_numbers {
             Some(line_numbers::LineNumbersData::from_format_strings(
                 &config.line_numbers_format,
+                &config.line_numbers_format_minus,
+                &config.line_numbers_format_plus,
                 panel_width_fix,
             ))
         } else if config.side_by_side {
@@ -426,6 +428,7 @@ impl<'p> Painter<'p> {
                     side_by_side_panel,
                     styles,
                     line_numbers,
+                    state,
                     config,
                 ))
             }

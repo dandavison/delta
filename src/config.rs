@@ -95,6 +95,8 @@ pub struct Config {
     pub line_buffer_size: usize,
     pub line_fill_method: BgFillMethod,
     pub line_numbers_format: LeftRight<String>,
+    pub line_numbers_format_minus: LeftRight<String>,
+    pub line_numbers_format_plus: LeftRight<String>,
     pub line_numbers_style_leftright: LeftRight<Style>,
     pub line_numbers_style_minusplus: MinusPlus<Style>,
     pub line_numbers_zero_style: Style,
@@ -215,6 +217,24 @@ impl From<cli::Opt> for Config {
                 opt.tokenization_regex
             ));
         });
+
+        // Clone line number format strings early to avoid borrow checker issues
+        let line_numbers_format_minus = LeftRight::new(
+            opt.line_numbers_minus_left_format
+                .clone()
+                .unwrap_or_else(|| opt.line_numbers_left_format.clone()),
+            opt.line_numbers_minus_right_format
+                .clone()
+                .unwrap_or_else(|| opt.line_numbers_right_format.clone()),
+        );
+        let line_numbers_format_plus = LeftRight::new(
+            opt.line_numbers_plus_left_format
+                .clone()
+                .unwrap_or_else(|| opt.line_numbers_left_format.clone()),
+            opt.line_numbers_plus_right_format
+                .clone()
+                .unwrap_or_else(|| opt.line_numbers_right_format.clone()),
+        );
 
         let blame_palette = make_blame_palette(opt.blame_palette, opt.computed.color_mode);
 
@@ -375,9 +395,11 @@ impl From<cli::Opt> for Config {
             },
             line_numbers: opt.line_numbers && !handlers::hunk::is_word_diff(),
             line_numbers_format: LeftRight::new(
-                opt.line_numbers_left_format,
-                opt.line_numbers_right_format,
+                opt.line_numbers_left_format.clone(),
+                opt.line_numbers_right_format.clone(),
             ),
+            line_numbers_format_minus,
+            line_numbers_format_plus,
             line_numbers_style_leftright: LeftRight::new(
                 styles["line-numbers-left-style"],
                 styles["line-numbers-right-style"],

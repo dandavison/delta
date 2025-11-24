@@ -515,6 +515,12 @@ pub struct Opt {
     /// dividing character. See the LINE NUMBERS section.
     pub line_numbers_left_format: String,
 
+    #[arg(long = "line-numbers-minus-left-format", value_name = "FMT")]
+    /// Format string for the left column of line numbers for minus (removed) lines.
+    ///
+    /// Defaults to the value of --line-numbers-left-format if not specified.
+    pub line_numbers_minus_left_format: Option<String>,
+
     #[arg(
         long = "line-numbers-left-style",
         default_value = "auto",
@@ -544,6 +550,24 @@ pub struct Opt {
     ///
     /// See STYLES and LINE NUMBERS sections.
     pub line_numbers_plus_style: String,
+
+    #[arg(long = "line-numbers-minus-right-format", value_name = "FMT")]
+    /// Format string for the right column of line numbers for minus (removed) lines.
+    ///
+    /// Defaults to the value of --line-numbers-right-format if not specified.
+    pub line_numbers_minus_right_format: Option<String>,
+
+    #[arg(long = "line-numbers-plus-left-format", value_name = "FMT")]
+    /// Format string for the left column of line numbers for plus (added) lines.
+    ///
+    /// Defaults to the value of --line-numbers-left-format if not specified.
+    pub line_numbers_plus_left_format: Option<String>,
+
+    #[arg(long = "line-numbers-plus-right-format", value_name = "FMT")]
+    /// Format string for the right column of line numbers for plus (added) lines.
+    ///
+    /// Defaults to the value of --line-numbers-right-format if not specified.
+    pub line_numbers_plus_right_format: Option<String>,
 
     #[arg(
         long = "line-numbers-right-format",

@@ -110,6 +110,7 @@ pub fn format_and_paint_line_numbers<'a>(
     side_by_side_panel: Option<PanelSide>,
     styles: MinusPlus<Style>,
     line_numbers: MinusPlus<Option<usize>>,
+    state: &State,
     config: &'a config::Config,
 ) -> Vec<ansi_term::ANSIGenericString<'a, str>> {
     let mut formatted_numbers = Vec::new();
@@ -127,6 +128,7 @@ pub fn format_and_paint_line_numbers<'a>(
             Minus,
             &styles,
             &line_numbers,
+            state,
             config,
         ));
     }
@@ -137,6 +139,7 @@ pub fn format_and_paint_line_numbers<'a>(
             Plus,
             &styles,
             &line_numbers,
+            state,
             config,
         ));
     }
@@ -151,6 +154,8 @@ lazy_static! {
 #[derive(Default, Debug)]
 pub struct LineNumbersData<'a> {
     pub format_data: MinusPlus<format::FormatStringData<'a>>,
+    pub format_data_minus: MinusPlus<format::FormatStringData<'a>>,
+    pub format_data_plus: MinusPlus<format::FormatStringData<'a>>,
     pub line_number: MinusPlus<usize>,
     pub hunk_max_line_number_width: usize,
     pub plus_file: String,
@@ -163,6 +168,8 @@ pub type SideBySideLineWidth = MinusPlus<usize>;
 impl<'a> LineNumbersData<'a> {
     pub fn from_format_strings(
         format: &'a MinusPlus<String>,
+        format_minus: &'a MinusPlus<String>,
+        format_plus: &'a MinusPlus<String>,
         use_full_width: ansifill::UseFullPanelWidth,
     ) -> LineNumbersData<'a> {
         let insert_center_space_on_odd_width = use_full_width.pad_width();
@@ -175,6 +182,30 @@ impl<'a> LineNumbersData<'a> {
                 ),
                 format::parse_line_number_format(
                     &format[Right],
+                    &LINE_NUMBERS_PLACEHOLDER_REGEX,
+                    insert_center_space_on_odd_width,
+                ),
+            ),
+            format_data_minus: MinusPlus::new(
+                format::parse_line_number_format(
+                    &format_minus[Left],
+                    &LINE_NUMBERS_PLACEHOLDER_REGEX,
+                    false,
+                ),
+                format::parse_line_number_format(
+                    &format_minus[Right],
+                    &LINE_NUMBERS_PLACEHOLDER_REGEX,
+                    insert_center_space_on_odd_width,
+                ),
+            ),
+            format_data_plus: MinusPlus::new(
+                format::parse_line_number_format(
+                    &format_plus[Left],
+                    &LINE_NUMBERS_PLACEHOLDER_REGEX,
+                    false,
+                ),
+                format::parse_line_number_format(
+                    &format_plus[Right],
                     &LINE_NUMBERS_PLACEHOLDER_REGEX,
                     insert_center_space_on_odd_width,
                 ),
@@ -246,11 +277,18 @@ fn format_and_paint_line_number_field<'a>(
     side: MinusPlusIndex,
     styles: &MinusPlus<Style>,
     line_numbers: &MinusPlus<Option<usize>>,
+    state: &State,
     config: &config::Config,
 ) -> Vec<ansi_term::ANSIGenericString<'a, str>> {
     let min_field_width = line_numbers_data.hunk_max_line_number_width;
 
-    let format_data = &line_numbers_data.format_data[side];
+    // Choose the appropriate format based on the state
+    let format_data = match state {
+        State::HunkMinus(_, _) | State::HunkMinusWrapped => &line_numbers_data.format_data_minus[side],
+        State::HunkPlus(_, _) | State::HunkPlusWrapped => &line_numbers_data.format_data_plus[side],
+        _ => &line_numbers_data.format_data[side],  // Default/zero lines
+    };
+
     let plus_file = &line_numbers_data.plus_file;
     let style = &config.line_numbers_style_leftright[side];
 
@@ -611,30 +649,30 @@ pub mod tests {
         use crate::features::side_by_side::ansifill;
         let w = ansifill::UseFullPanelWidth(false);
         let format = MinusPlus::new("".into(), "".into());
-        let mut data = LineNumbersData::from_format_strings(&format, w.clone());
+        let mut data = LineNumbersData::from_format_strings(&format, &format, &format, w.clone());
         data.initialize_hunk(&[(10, 11), (10000, 100001)], "a".into());
         assert_eq!(data.formatted_width(), MinusPlus::new(0, 0));
 
         let format = MinusPlus::new("│".into(), "│+│".into());
-        let mut data = LineNumbersData::from_format_strings(&format, w.clone());
+        let mut data = LineNumbersData::from_format_strings(&format, &format, &format, w.clone());
 
         data.initialize_hunk(&[(10, 11), (10000, 100001)], "a".into());
         assert_eq!(data.formatted_width(), MinusPlus::new(1, 3));
 
         let format = MinusPlus::new("│{nm:^3}│".into(), "│{np:^3}│".into());
-        let mut data = LineNumbersData::from_format_strings(&format, w.clone());
+        let mut data = LineNumbersData::from_format_strings(&format, &format, &format, w.clone());
 
         data.initialize_hunk(&[(10, 11), (10000, 100001)], "a".into());
         assert_eq!(data.formatted_width(), MinusPlus::new(8, 8));
 
         let format = MinusPlus::new("│{nm:^3}│ │{np:<12}│ │{nm}│".into(), "".into());
-        let mut data = LineNumbersData::from_format_strings(&format, w.clone());
+        let mut data = LineNumbersData::from_format_strings(&format, &format, &format, w.clone());
 
         data.initialize_hunk(&[(10, 11), (10000, 100001)], "a".into());
         assert_eq!(data.formatted_width(), MinusPlus::new(32, 0));
 
         let format = MinusPlus::new("│{np:^3}│ │{nm:<12}│ │{np}│".into(), "".into());
-        let mut data = LineNumbersData::from_format_strings(&format, w);
+        let mut data = LineNumbersData::from_format_strings(&format, &format, &format, w);
 
         data.initialize_hunk(&[(10, 11), (10000, 100001)], "a".into());
         assert_eq!(data.formatted_width(), MinusPlus::new(32, 0));
@@ -1029,6 +1067,27 @@ index 8b0d958..e69de29 100644
                 ..Default::default()
             }],
         );
+        // Also set the minus and plus format_data for testing
+        line_numbers_data.format_data_minus = MinusPlus::new(
+            vec![format::FormatStringPlaceholderData {
+                placeholder: Some(Placeholder::NumberMinus),
+                ..Default::default()
+            }],
+            vec![format::FormatStringPlaceholderData {
+                placeholder: Some(Placeholder::NumberPlus),
+                ..Default::default()
+            }],
+        );
+        line_numbers_data.format_data_plus = MinusPlus::new(
+            vec![format::FormatStringPlaceholderData {
+                placeholder: Some(Placeholder::NumberMinus),
+                ..Default::default()
+            }],
+            vec![format::FormatStringPlaceholderData {
+                placeholder: Some(Placeholder::NumberPlus),
+                ..Default::default()
+            }],
+        );
 
         // Test that spaces are not painted with ANSI codes
         let styles = MinusPlus::new(
@@ -1037,11 +1096,14 @@ index 8b0d958..e69de29 100644
         );
         let line_numbers = MinusPlus::new(None, None);  // No line numbers
 
+        // Use HunkZero state for testing (unchanged lines)
+        let state = State::HunkZero(crate::delta::DiffType::Unified, None);
         let ansi_strings = format_and_paint_line_number_field(
             &line_numbers_data,
             Minus,
             &styles,
             &line_numbers,
+            &state,
             &config,
         );
 
