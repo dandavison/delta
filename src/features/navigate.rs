@@ -106,14 +106,8 @@ fn get_delta_less_hist_file() -> std::io::Result<PathBuf> {
     dir.place_data_file("lesshst")
 }
 
-// LESSHISTFILE
-//        Name of the history file used to remember search commands
-//        and shell commands between invocations of less.  If set to
-//        "-" or "/dev/null", a history file is not used.  The
-//        default is "$HOME/.lesshst" on Unix systems,
-//        "$HOME/_lesshst" on DOS and Windows systems, or
-//        "$HOME/lesshst.ini" or "$INIT/lesshst.ini" on OS/2
-//        systems.
+// Get path of the less history file. See `man less` for more details.
+// On Unix, check all possible locations and pick the newest file.
 fn get_less_hist_file() -> Option<PathBuf> {
     if let Some(home_dir) = dirs::home_dir() {
         match std::env::var("LESSHISTFILE").as_deref() {
@@ -122,18 +116,41 @@ fn get_less_hist_file() -> Option<PathBuf> {
                 None
             }
             Ok(path) => {
-                // The user has specified a custom histfile
+                // The user has specified a custom histfile.
                 Some(PathBuf::from(path))
             }
             Err(_) => {
                 // The user is using the default less histfile location.
-                let mut hist_file = home_dir;
-                hist_file.push(if cfg!(windows) {
-                    "_lesshst"
-                } else {
-                    ".lesshst"
-                });
-                Some(hist_file)
+                #[cfg(unix)]
+                {
+                    // According to the less 643 manual:
+                    // "$XDG_STATE_HOME/lesshst" or "$HOME/.local/state/lesshst" or
+                    // "$XDG_DATA_HOME/lesshst" or "$HOME/.lesshst".
+                    let xdg_dirs = xdg::BaseDirectories::new().ok()?;
+                    [
+                        xdg_dirs.get_state_home().join("lesshst"),
+                        xdg_dirs.get_data_home().join("lesshst"),
+                        home_dir.join(".lesshst"),
+                    ]
+                    .iter()
+                    .filter(|path| path.exists())
+                    .max_by_key(|path| {
+                        std::fs::metadata(path)
+                            .and_then(|m| m.modified())
+                            .unwrap_or(std::time::UNIX_EPOCH)
+                    })
+                    .cloned()
+                }
+                #[cfg(not(unix))]
+                {
+                    let mut hist_file = home_dir;
+                    hist_file.push(if cfg!(windows) {
+                        "_lesshst"
+                    } else {
+                        ".lesshst"
+                    });
+                    Some(hist_file)
+                }
             }
         }
     } else {
@@ -146,6 +163,14 @@ mod tests {
     use std::fs::remove_file;
 
     use crate::tests::integration_test_utils;
+
+    #[test]
+    #[ignore]
+    // manually verify: cargo test -- test_get_less_hist_file --ignored --nocapture
+    fn test_get_less_hist_file() {
+        let hist_file = super::get_less_hist_file();
+        dbg!(hist_file);
+    }
 
     #[test]
     fn test_navigate_with_overridden_key_in_main_section() {
