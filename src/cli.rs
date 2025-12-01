@@ -96,6 +96,14 @@ pub struct Opt {
     /// See: <https://docs.rs/chrono/latest/chrono/format/strftime/index.html>
     pub blame_timestamp_output_format: Option<String>,
 
+    #[arg(long = "blame-show-commit-messages")]
+    /// Show commit messages in git blame output (requires --line-porcelain).
+    ///
+    /// When enabled, delta will display the first line of the commit message in the blame
+    /// output when space is available (i.e., when the same commit appears in consecutive lines).
+    /// This requires using `git blame --line-porcelain` as the input format.
+    pub blame_show_commit_messages: bool,
+
     #[arg(long = "color-only")]
     /// Do not alter the input structurally in any way.
     ///

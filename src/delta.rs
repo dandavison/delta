@@ -12,6 +12,7 @@ use crate::features;
 use crate::handlers::grep;
 use crate::handlers::hunk_header::{AmbiguousDiffMinusCounter, ParsedHunkHeader};
 use crate::handlers::{self, merge_conflict};
+use crate::handlers::blame::PorcelainBlameState;
 use crate::paint::Painter;
 use crate::style::DecorationStyle;
 use crate::utils;
@@ -111,6 +112,8 @@ pub struct StateMachine<'a> {
     pub current_file_pair: Option<(String, String)>,
     pub handled_diff_header_header_line_file_pair: Option<(String, String)>,
     pub blame_key_colors: HashMap<String, String>,
+    pub blame_commit_messages: HashMap<String, String>,
+    pub porcelain_blame_state: PorcelainBlameState,
     pub minus_line_counter: AmbiguousDiffMinusCounter,
 }
 
@@ -139,6 +142,8 @@ impl<'a> StateMachine<'a> {
             painter: Painter::new(writer, config),
             config,
             blame_key_colors: HashMap::new(),
+            blame_commit_messages: HashMap::new(),
+            porcelain_blame_state: PorcelainBlameState::new(),
             minus_line_counter: AmbiguousDiffMinusCounter::not_needed(),
         }
     }

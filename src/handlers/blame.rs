@@ -40,57 +40,153 @@ impl StateMachine<'_> {
         };
         if try_parse {
             let line = self.line.to_owned();
-            if let Some(blame) = parse_git_blame_line(&line, &self.config.blame_timestamp_format) {
-                // Format blame metadata
-                let format_data = format::parse_line_number_format(
-                    &self.config.blame_format,
-                    &BLAME_PLACEHOLDER_REGEX,
-                    false,
-                );
-                let mut formatted_blame_metadata =
-                    format_blame_metadata(&format_data, &blame, self.config);
-                let key = formatted_blame_metadata.clone();
-                let is_repeat = previous_key.as_deref() == Some(&key);
-                if is_repeat {
-                    formatted_blame_metadata =
-                        " ".repeat(measure_text_width(&formatted_blame_metadata))
-                };
-                let metadata_style =
-                    self.blame_metadata_style(&key, previous_key.as_deref(), is_repeat);
-                let code_style = self.config.blame_code_style.unwrap_or(metadata_style);
-                let separator_style = self.config.blame_separator_style.unwrap_or(code_style);
+            // First, try to parse as porcelain format
+            if let Some(is_complete) =
+                parse_git_blame_porcelain_line(&line, &mut self.porcelain_blame_state)
+            {
+                if is_complete {
+                    // We have a complete porcelain blame line with code
+                    // Extract the code (remove the leading tab)
+                    if let Some(code) = line.strip_prefix('\t') {
+                        // Clone needed values before the mutable borrow
+                        let commit_opt = self.porcelain_blame_state.current_commit.clone();
+                        let author_opt = self.porcelain_blame_state.author.clone();
+                        let author_time = self.porcelain_blame_state.author_time;
+                        let author_tz_opt = self.porcelain_blame_state.author_tz.clone();
+                        let line_number_opt = self.porcelain_blame_state.line_number;
+                        let summary_opt = self.porcelain_blame_state.summary.clone();
 
-                let (nr_prefix, line_number, nr_suffix) = format_blame_line_number(
-                    &self.config.blame_separator_format,
-                    blame.line_number,
-                    is_repeat,
-                );
+                        if let (
+                            Some(commit),
+                            Some(author),
+                            Some(author_time),
+                            Some(author_tz),
+                            Some(line_number),
+                        ) = (
+                            commit_opt,
+                            author_opt,
+                            author_time,
+                            author_tz_opt,
+                            line_number_opt,
+                        ) {
+                            // Parse the timezone offset
+                            let tz_offset = if author_tz.len() == 5 {
+                                let sign = if author_tz.starts_with('+') { 1 } else { -1 };
+                                let hours = author_tz[1..3].parse::<i32>().unwrap_or(0);
+                                let minutes = author_tz[3..5].parse::<i32>().unwrap_or(0);
+                                FixedOffset::east_opt(sign * (hours * 3600 + minutes * 60))
+                                    .unwrap_or_else(|| FixedOffset::east_opt(0).unwrap())
+                            } else {
+                                FixedOffset::east_opt(0).unwrap()
+                            };
 
-                write!(
-                    self.painter.writer,
-                    "{}{}{}{}",
-                    metadata_style.paint(&formatted_blame_metadata),
-                    separator_style.paint(nr_prefix),
-                    metadata_style.paint(&line_number),
-                    separator_style.paint(nr_suffix),
-                )?;
+                            let time = DateTime::from_timestamp(author_time, 0)
+                                .map(|dt| dt.with_timezone(&tz_offset))
+                                .unwrap_or_else(|| DateTime::default());
 
-                // Emit syntax-highlighted code
-                if self.state == State::Unknown {
-                    self.painter.set_syntax(self.get_filename().as_deref());
-                    self.painter.set_highlighter();
+                            let blame = BlameLine {
+                                commit: &commit,
+                                author: &author,
+                                time,
+                                line_number,
+                                code,
+                                commit_summary: summary_opt.clone(),
+                            };
+
+                            // Store commit message if we have one
+                            if let Some(ref summary) = blame.commit_summary {
+                                self.blame_commit_messages
+                                    .insert(commit.clone(), summary.clone());
+                            }
+                            handled_line =
+                                self.render_blame_line(blame, previous_key.as_deref())?;
+                        }
+                    }
+                } else {
+                    // This is a metadata line in porcelain format, just mark as handled
+                    handled_line = true;
                 }
-                self.state = State::Blame(key);
-                self.painter.syntax_highlight_and_paint_line(
-                    &format!("{}\n", blame.code),
-                    StyleSectionSpecifier::Style(code_style),
-                    self.state.clone(),
-                    BgShouldFill::default(),
-                );
-                handled_line = true
+            } else if let Some(mut blame) =
+                parse_git_blame_line(&line, &self.config.blame_timestamp_format)
+            {
+                // Standard format - check if we have a cached commit message
+                if let Some(summary) = self.blame_commit_messages.get(blame.commit) {
+                    blame.commit_summary = Some(summary.clone());
+                }
+                handled_line = self.render_blame_line(blame, previous_key.as_deref())?;
             }
         }
         Ok(handled_line)
+    }
+
+    fn render_blame_line(
+        &mut self,
+        blame: BlameLine,
+        previous_key: Option<&str>,
+    ) -> std::io::Result<bool> {
+        // Format blame metadata
+        let format_data = format::parse_line_number_format(
+            &self.config.blame_format,
+            &BLAME_PLACEHOLDER_REGEX,
+            false,
+        );
+        let mut formatted_blame_metadata = format_blame_metadata(&format_data, &blame, self.config);
+        let key = formatted_blame_metadata.clone();
+        let is_repeat = previous_key == Some(&key);
+
+        // Display commit message when not repeating (if enabled and available)
+        if is_repeat {
+            formatted_blame_metadata = " ".repeat(measure_text_width(&formatted_blame_metadata))
+        } else if self.config.blame_show_commit_messages {
+            if let Some(ref summary) = blame.commit_summary {
+                // Truncate commit message to fit available space
+                let available_width = measure_text_width(&formatted_blame_metadata);
+                let max_msg_width = available_width.saturating_sub(10); // Leave some padding
+                if max_msg_width > 0 {
+                    let truncated = if summary.len() > max_msg_width {
+                        format!("{}...", &summary[..max_msg_width.saturating_sub(3)])
+                    } else {
+                        summary.clone()
+                    };
+                    // Clear the metadata and show commit message instead
+                    formatted_blame_metadata =
+                        format!("{:width$}", truncated, width = available_width);
+                }
+            }
+        }
+
+        let metadata_style = self.blame_metadata_style(&key, previous_key, is_repeat);
+        let code_style = self.config.blame_code_style.unwrap_or(metadata_style);
+        let separator_style = self.config.blame_separator_style.unwrap_or(code_style);
+
+        let (nr_prefix, line_number, nr_suffix) = format_blame_line_number(
+            &self.config.blame_separator_format,
+            blame.line_number,
+            is_repeat,
+        );
+
+        write!(
+            self.painter.writer,
+            "{}{}{}{}",
+            metadata_style.paint(&formatted_blame_metadata),
+            separator_style.paint(nr_prefix),
+            metadata_style.paint(&line_number),
+            separator_style.paint(nr_suffix),
+        )?;
+
+        // Emit syntax-highlighted code
+        if self.state == State::Unknown {
+            self.painter.set_syntax(self.get_filename().as_deref());
+            self.painter.set_highlighter();
+        }
+        self.state = State::Blame(key);
+        self.painter.syntax_highlight_and_paint_line(
+            &format!("{}\n", blame.code),
+            StyleSectionSpecifier::Style(code_style),
+            self.state.clone(),
+            BgShouldFill::default(),
+        );
+        Ok(true)
     }
 
     fn get_filename(&self) -> Option<String> {
@@ -194,6 +290,7 @@ pub struct BlameLine<'a> {
     pub time: DateTime<FixedOffset>,
     pub line_number: usize,
     pub code: &'a str,
+    pub commit_summary: Option<String>,
 }
 
 // E.g.
@@ -249,7 +346,67 @@ pub fn parse_git_blame_line<'a>(line: &'a str, timestamp_format: &str) -> Option
         time,
         line_number,
         code,
+        commit_summary: None,
     })
+}
+
+/// State for tracking porcelain format parsing
+#[derive(Debug, Default)]
+pub struct PorcelainBlameState {
+    pub current_commit: Option<String>,
+    pub author: Option<String>,
+    pub author_time: Option<i64>,
+    pub author_tz: Option<String>,
+    pub summary: Option<String>,
+    pub line_number: Option<usize>,
+}
+
+impl PorcelainBlameState {
+    pub fn new() -> Self {
+        Self::default()
+    }
+
+    pub fn reset(&mut self) {
+        *self = Self::default();
+    }
+}
+
+lazy_static! {
+    static ref PORCELAIN_HEADER_REGEX: Regex =
+        Regex::new(r"^([0-9a-f]{40})\s+(\d+)\s+(\d+)(?:\s+(\d+))?$").unwrap();
+}
+
+/// Parse a line of git blame --line-porcelain output.
+/// Returns Some((is_complete)) where:
+/// - is_complete: true if this is the final line (the code line) for this blame entry
+pub fn parse_git_blame_porcelain_line(line: &str, state: &mut PorcelainBlameState) -> Option<bool> {
+    // Check if this is a commit header line
+    if let Some(caps) = PORCELAIN_HEADER_REGEX.captures(line) {
+        state.reset();
+        state.current_commit = Some(caps.get(1).unwrap().as_str().to_string());
+        state.line_number = caps.get(3).and_then(|m| m.as_str().parse::<usize>().ok());
+        return Some(false);
+    }
+
+    // Check if this is a metadata line
+    if let Some((key, value)) = line.split_once(' ') {
+        match key {
+            "author" => state.author = Some(value.to_string()),
+            "author-time" => state.author_time = value.parse::<i64>().ok(),
+            "author-tz" => state.author_tz = Some(value.to_string()),
+            "summary" => state.summary = Some(value.to_string()),
+            "filename" => return Some(false), // Skip filename lines
+            _ => {}                           // Ignore other metadata fields
+        }
+        return Some(false);
+    }
+
+    // Check if this is a code line (starts with tab)
+    if line.starts_with('\t') {
+        return Some(true);
+    }
+
+    None
 }
 
 lazy_static! {
@@ -554,6 +711,7 @@ mod tests {
             time,
             line_number: 0,
             code: "",
+            commit_summary: None,
         }
     }
 
@@ -573,6 +731,7 @@ mod tests {
             time: chrono::DateTime::default(),
             line_number: 0,
             code: "",
+            commit_summary: None,
         }
     }
 }

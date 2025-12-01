@@ -134,6 +134,7 @@ pub fn set_options(
             blame_separator_style,
             blame_timestamp_format,
             blame_timestamp_output_format,
+            blame_show_commit_messages,
             color_only,
             config,
             commit_decoration_style,
