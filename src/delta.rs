@@ -144,7 +144,7 @@ impl<'a> StateMachine<'a> {
             config,
             blame_key_colors: HashMap::new(),
             blame_commit_messages: HashMap::new(),
-            blame_last_commit_shown_message: None,
+            blame_current_commit_message_display: None,
             porcelain_blame_state: PorcelainBlameState::new(),
             minus_line_counter: AmbiguousDiffMinusCounter::not_needed(),
         }
