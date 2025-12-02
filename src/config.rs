@@ -45,7 +45,7 @@ pub struct Config {
     pub blame_separator_style: Option<Style>,
     pub blame_timestamp_format: String,
     pub blame_timestamp_output_format: Option<String>,
-    pub blame_show_commit_messages: bool,
+    pub blame_show_commit_messages: bool,  // true by default, disabled with --blame-hide-commit-messages
     pub color_only: bool,
     pub commit_regex: Regex,
     pub commit_style: Style,
@@ -314,7 +314,7 @@ impl From<cli::Opt> for Config {
             blame_separator_style: styles.remove("blame-separator-style"),
             blame_timestamp_format: opt.blame_timestamp_format,
             blame_timestamp_output_format: opt.blame_timestamp_output_format,
-            blame_show_commit_messages: opt.blame_show_commit_messages,
+            blame_show_commit_messages: !opt.blame_hide_commit_messages,  // Inverted: show by default
             commit_style: styles["commit-style"],
             color_only: opt.color_only,
             commit_regex,

@@ -96,13 +96,13 @@ pub struct Opt {
     /// See: <https://docs.rs/chrono/latest/chrono/format/strftime/index.html>
     pub blame_timestamp_output_format: Option<String>,
 
-    #[arg(long = "blame-show-commit-messages")]
-    /// Show commit messages in git blame output (requires --line-porcelain).
+    #[arg(long = "blame-hide-commit-messages")]
+    /// Hide commit messages in git blame output.
     ///
-    /// When enabled, delta will display the first line of the commit message in the blame
-    /// output when space is available (i.e., when the same commit appears in consecutive lines).
-    /// This requires using `git blame --line-porcelain` as the input format.
-    pub blame_show_commit_messages: bool,
+    /// When git blame is run with --line-porcelain format, delta automatically displays
+    /// the first line of the commit message on repeated lines where the same commit appears
+    /// consecutively. Use this flag to disable that behavior.
+    pub blame_hide_commit_messages: bool,
 
     #[arg(long = "color-only")]
     /// Do not alter the input structurally in any way.

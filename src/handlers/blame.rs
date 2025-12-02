@@ -133,25 +133,62 @@ impl StateMachine<'_> {
         let mut formatted_blame_metadata = format_blame_metadata(&format_data, &blame, self.config);
         let key = formatted_blame_metadata.clone();
         let is_repeat = previous_key == Some(&key);
+        
+        // Check if this is the first repeat of a new commit (where we should show the message)
+        let should_show_message = is_repeat 
+            && self.blame_last_commit_shown_message.as_deref() != Some(blame.commit)
+            && self.config.blame_show_commit_messages
+            && blame.commit_summary.is_some();
 
-        // Display commit message when not repeating (if enabled and available)
+        // Display commit message on first repeat only (when available from porcelain format)
         if is_repeat {
-            formatted_blame_metadata = " ".repeat(measure_text_width(&formatted_blame_metadata))
-        } else if self.config.blame_show_commit_messages {
-            if let Some(ref summary) = blame.commit_summary {
-                // Truncate commit message to fit available space
-                let available_width = measure_text_width(&formatted_blame_metadata);
-                let max_msg_width = available_width.saturating_sub(10); // Leave some padding
-                if max_msg_width > 0 {
-                    let truncated = if summary.len() > max_msg_width {
-                        format!("{}...", &summary[..max_msg_width.saturating_sub(3)])
+            let blank_width = measure_text_width(&formatted_blame_metadata);
+
+            if should_show_message {
+                // This is the first repeat - show the commit message once
+                if let Some(ref summary) = blame.commit_summary {
+                    // Mark that we've shown the message for this commit
+                    self.blame_last_commit_shown_message = Some(blame.commit.to_string());
+                    
+                    // Indent the message slightly and truncate to fit
+                    let indent = 1;
+                    let available_width = blank_width.saturating_sub(indent);
+                    if available_width > 0 {
+                        let truncated = if summary.len() > available_width {
+                            // Truncate intelligently
+                            let max_len = available_width.saturating_sub(3);
+                            if max_len > 0 && summary.len() > max_len {
+                                format!("{}...", &summary[..max_len])
+                            } else {
+                                summary.clone()
+                            }
+                        } else {
+                            summary.clone()
+                        };
+                        // Format with indent to align nicely
+                        formatted_blame_metadata = format!(
+                            "{:indent$}{:<width$}",
+                            "",
+                            truncated,
+                            indent = indent,
+                            width = available_width
+                        );
                     } else {
-                        summary.clone()
-                    };
-                    // Clear the metadata and show commit message instead
-                    formatted_blame_metadata =
-                        format!("{:width$}", truncated, width = available_width);
+                        // Not enough space, just show blanks
+                        formatted_blame_metadata = " ".repeat(blank_width);
+                    }
+                } else {
+                    // No commit message available, show blank space
+                    formatted_blame_metadata = " ".repeat(blank_width);
                 }
+            } else {
+                // Already shown message for this commit or no message - show blank space
+                formatted_blame_metadata = " ".repeat(blank_width);
+            }
+        } else {
+            // Not a repeat - reset tracking for new commit
+            if self.blame_last_commit_shown_message.is_some() {
+                self.blame_last_commit_shown_message = None;
             }
         }
 
@@ -384,7 +421,8 @@ pub fn parse_git_blame_porcelain_line(line: &str, state: &mut PorcelainBlameStat
     if let Some(caps) = PORCELAIN_HEADER_REGEX.captures(line) {
         state.reset();
         state.current_commit = Some(caps.get(1).unwrap().as_str().to_string());
-        state.line_number = caps.get(3).and_then(|m| m.as_str().parse::<usize>().ok());
+        // Get the original line number (second number in the header)
+        state.line_number = caps.get(2).and_then(|m| m.as_str().parse::<usize>().ok());
         return Some(false);
     }
 

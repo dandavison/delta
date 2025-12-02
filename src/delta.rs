@@ -113,6 +113,7 @@ pub struct StateMachine<'a> {
     pub handled_diff_header_header_line_file_pair: Option<(String, String)>,
     pub blame_key_colors: HashMap<String, String>,
     pub blame_commit_messages: HashMap<String, String>,
+    pub blame_current_commit_message_display: Option<(String, usize)>,  // (commit, chars_shown)
     pub porcelain_blame_state: PorcelainBlameState,
     pub minus_line_counter: AmbiguousDiffMinusCounter,
 }
@@ -143,6 +144,7 @@ impl<'a> StateMachine<'a> {
             config,
             blame_key_colors: HashMap::new(),
             blame_commit_messages: HashMap::new(),
+            blame_last_commit_shown_message: None,
             porcelain_blame_state: PorcelainBlameState::new(),
             minus_line_counter: AmbiguousDiffMinusCounter::not_needed(),
         }
