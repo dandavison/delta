@@ -44,7 +44,7 @@ pub struct Opt {
 
     #[arg(
         long = "blame-format",
-        default_value = "{timestamp:<15} {author:<15.14} {commit:<8}",
+        default_value = "{timestamp:<15} {author:<15.14} {commit:<8.8}",
         value_name = "FMT"
     )]
     /// Format string for git blame commit metadata.
