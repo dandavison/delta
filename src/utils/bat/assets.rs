@@ -3,7 +3,7 @@
 
 use std::io::{self, Write};
 
-use ansi_term::Colour::Green;
+use ansi_term::Color::Green;
 use ansi_term::Style;
 use bat;
 

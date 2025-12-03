@@ -103,7 +103,7 @@ pub fn linenumbers_and_styles<'a>(
     ))
 }
 
-/// Return a vec of `ansi_term::ANSIGenericString`s representing the left and right fields of the
+/// Return a vec of `ansi_term::AnsiGenericString`s representing the left and right fields of the
 /// two-column line number display.
 pub fn format_and_paint_line_numbers<'a>(
     line_numbers_data: &'a LineNumbersData,
@@ -111,7 +111,7 @@ pub fn format_and_paint_line_numbers<'a>(
     styles: MinusPlus<Style>,
     line_numbers: MinusPlus<Option<usize>>,
     config: &'a config::Config,
-) -> Vec<ansi_term::ANSIGenericString<'a, str>> {
+) -> Vec<ansi_term::AnsiGenericString<'a, str>> {
     let mut formatted_numbers = Vec::new();
 
     let (emit_left, emit_right) = match (config.side_by_side, side_by_side_panel) {
@@ -247,7 +247,7 @@ fn format_and_paint_line_number_field<'a>(
     styles: &MinusPlus<Style>,
     line_numbers: &MinusPlus<Option<usize>>,
     config: &config::Config,
-) -> Vec<ansi_term::ANSIGenericString<'a, str>> {
+) -> Vec<ansi_term::AnsiGenericString<'a, str>> {
     let min_field_width = line_numbers_data.hunk_max_line_number_width;
 
     let format_data = &line_numbers_data.format_data[side];

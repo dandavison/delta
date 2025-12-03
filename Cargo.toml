@@ -16,7 +16,7 @@ path = "src/main.rs"
 
 [dependencies]
 ansi_colours = "1.2.1"
-ansi_term = "0.12.1"
+ansi_term = { package = "nu-ansi-term", version = "0.50"}
 anstyle-parse = "0.2.3"
 anyhow = "1.0.70"
 bat = { version = "0.24.0", default-features = false, features = [

@@ -76,10 +76,21 @@ impl FromAnsiTermColor for Color {
             ansi_term::Color::Yellow => syntect_color_from_ansi_number(3).unwrap(),
             ansi_term::Color::Blue => syntect_color_from_ansi_number(4).unwrap(),
             ansi_term::Color::Purple => syntect_color_from_ansi_number(5).unwrap(),
+            ansi_term::Color::Magenta => syntect_color_from_ansi_number(5).unwrap(),
             ansi_term::Color::Cyan => syntect_color_from_ansi_number(6).unwrap(),
             ansi_term::Color::White => syntect_color_from_ansi_number(7).unwrap(),
+            ansi_term::Color::DarkGray => syntect_color_from_ansi_number(8).unwrap(),
+            ansi_term::Color::LightRed => syntect_color_from_ansi_number(9).unwrap(),
+            ansi_term::Color::LightGreen => syntect_color_from_ansi_number(10).unwrap(),
+            ansi_term::Color::LightYellow => syntect_color_from_ansi_number(11).unwrap(),
+            ansi_term::Color::LightBlue => syntect_color_from_ansi_number(12).unwrap(),
+            ansi_term::Color::LightMagenta => syntect_color_from_ansi_number(13).unwrap(),
+            ansi_term::Color::LightPurple => syntect_color_from_ansi_number(13).unwrap(),
+            ansi_term::Color::LightCyan => syntect_color_from_ansi_number(14).unwrap(),
+            ansi_term::Color::LightGray => syntect_color_from_ansi_number(15).unwrap(),
             ansi_term::Color::Fixed(n) => syntect_color_from_ansi_number(n).unwrap(),
-            ansi_term::Color::RGB(r, g, b) => Self { r, g, b, a: 0xFF },
+            ansi_term::Color::Rgb(r, g, b) => Self { r, g, b, a: 0xFF },
+            ansi_term::Color::Default => todo!(),
         }
     }
 }
