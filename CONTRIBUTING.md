@@ -52,3 +52,27 @@ The executable is then at `./target/release/delta`.
 A "debug" build can be built using `cargo build` and
 `./target/debug/delta`. This is faster to compile, but has much worse
 performance than the release build.
+
+## Benchmarking
+
+Here's an example using `hyperfine` to measure execution time distributions, and `script -q` to trick git into using its pager despite input not being a tty.
+
+```
+$ hyperfine --warmup 10 'GIT_PAGER=less script -q /dev/null command git log -n 1' 'GIT_PAGER=/opt/homebrew/bin/delta script -q /dev/null command git log -n 1' 'GIT_PAGER=/Users/dan/src/delta/target/release/delta script -q /dev/null  command git log -n 1'
+Benchmark 1: GIT_PAGER=less script -q /dev/null command git log -n 1
+  Time (mean ± σ):      19.1 ms ±   3.5 ms    [User: 6.5 ms, System: 12.3 ms]
+  Range (min … max):    13.2 ms …  29.0 ms    65 runs
+
+Benchmark 2: GIT_PAGER=/opt/homebrew/bin/delta script -q /dev/null command git log -n 1
+  Time (mean ± σ):      1.132 s ±  0.011 s    [User: 0.061 s, System: 0.046 s]
+  Range (min … max):    1.105 s …  1.143 s    10 runs
+
+Benchmark 3: GIT_PAGER=/Users/dan/src/delta/target/release/delta script -q /dev/null  command git log -n 1
+  Time (mean ± σ):      1.132 s ±  0.012 s    [User: 0.046 s, System: 0.047 s]
+  Range (min … max):    1.107 s …  1.143 s    10 runs
+
+Summary
+  GIT_PAGER=less script -q /dev/null command git log -n 1 ran
+   59.28 ± 11.02 times faster than GIT_PAGER=/opt/homebrew/bin/delta script -q /dev/null command git log -n 1
+   59.28 ± 11.03 times faster than GIT_PAGER=/Users/dan/src/delta/target/release/delta script -q /dev/null  command git log -n 1
+```
