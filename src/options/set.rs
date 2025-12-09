@@ -218,6 +218,7 @@ pub fn set_options(
             show_colors,
             show_themes,
             side_by_side,
+            side_by_side_fill_empty,
             wrap_max_lines,
             wrap_right_prefix_symbol,
             wrap_right_percent,

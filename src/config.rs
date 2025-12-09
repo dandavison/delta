@@ -128,6 +128,7 @@ pub struct Config {
     pub relative_paths: bool,
     pub show_themes: bool,
     pub side_by_side_data: side_by_side::SideBySideData,
+    pub side_by_side_fill_empty: Option<side_by_side::SideBySideFillEmpty>,
     pub side_by_side: bool,
     pub syntax_set: SyntaxSet,
     pub syntax_theme: Option<SyntaxTheme>,
@@ -246,6 +247,13 @@ impl From<cli::Opt> for Config {
             &opt.computed.decorations_width,
             &line_fill_method,
             side_by_side_data,
+        );
+
+        let side_by_side_fill_empty = side_by_side::SideBySideFillEmpty::from_str(
+            opt.side_by_side_fill_empty,
+            &opt.line_numbers_zero_style,
+            opt.computed.true_color,
+            opt.git_config.as_ref(),
         );
 
         let navigate_regex = if (opt.navigate || opt.show_themes)
@@ -427,6 +435,7 @@ impl From<cli::Opt> for Config {
             show_themes: opt.show_themes,
             side_by_side: opt.side_by_side && !handlers::hunk::is_word_diff(),
             side_by_side_data,
+            side_by_side_fill_empty,
             styles_map,
             syntax_set: opt.computed.syntax_set,
             syntax_theme: opt.computed.syntax_theme,
