@@ -6,6 +6,7 @@ use regex::Regex;
 use syntect::highlighting::Style as SyntectStyle;
 use syntect::highlighting::Theme as SyntaxTheme;
 use syntect::parsing::SyntaxSet;
+use unicode_segmentation::UnicodeSegmentation;
 
 use crate::ansi;
 use crate::cli;
@@ -460,6 +461,15 @@ fn make_blame_palette(blame_palette: Option<String>, mode: ColorMode) -> Vec<Str
 /// Did the user supply `option` on the command line?
 pub fn user_supplied_option(option: &str, arg_matches: &clap::ArgMatches) -> bool {
     arg_matches.value_source(option) == Some(ValueSource::CommandLine)
+}
+
+pub fn ensure_display_width_1(what: &str, arg: String) -> String {
+    match arg.grapheme_indices(true).count() {
+        INLINE_SYMBOL_WIDTH_1 => arg,
+        width => fatal(format!(
+            "Invalid value for {what}, display width of \"{arg}\" must be {INLINE_SYMBOL_WIDTH_1} but is {width}",
+        )),
+    }
 }
 
 pub fn delta_unreachable(message: &str) -> ! {
