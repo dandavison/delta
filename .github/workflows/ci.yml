@@ -16,9 +16,6 @@ jobs:
           - os: macos-latest
             target: aarch64-apple-darwin
             use-cross: false
-          - os: macos-13  # Should be Intel macOS, macos-latest is arm since ~2024-04
-            target: x86_64-apple-darwin
-            use-cross: false
           - os: windows-latest
             target: x86_64-pc-windows-msvc
             use-cross: false
