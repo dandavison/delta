@@ -270,7 +270,7 @@ fn parse_sgr_color(params: &mut dyn Iterator<Item = u16>) -> Option<ansi_term::C
             let r = u8::try_from(params.next()?).ok()?;
             let g = u8::try_from(params.next()?).ok()?;
             let b = u8::try_from(params.next()?).ok()?;
-            Some(ansi_term::Color::RGB(r, g, b))
+            Some(ansi_term::Color::Rgb(r, g, b))
         }
         Some(5) => Some(ansi_term::Color::Fixed(u8::try_from(params.next()?).ok()?)),
         _ => None,

@@ -412,7 +412,7 @@ fn get_code_style_sections<'b>(
             .iter()
             .map(|(ansi_term_style, s)| {
                 if ansi_term_style.is_bold
-                    && ansi_term_style.foreground == Some(ansi_term::Colour::Red)
+                    && ansi_term_style.foreground == Some(ansi_term::Color::Red)
                 {
                     (match_style, *s)
                 } else {

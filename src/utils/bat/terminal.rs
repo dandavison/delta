@@ -1,4 +1,4 @@
-use ansi_term::Color::{self, Fixed, RGB};
+use ansi_term::Color::{self, Fixed, Rgb};
 use ansi_term::{self, Style};
 
 use syntect::highlighting::{self, FontStyle};
@@ -38,7 +38,7 @@ pub fn to_ansi_color(color: highlighting::Color, true_color: bool) -> Option<ans
         // 01. The built-in theme ansi uses this.
         None
     } else if true_color {
-        Some(RGB(color.r, color.g, color.b))
+        Some(Rgb(color.r, color.g, color.b))
     } else {
         Some(Fixed(ansi_colours::ansi256_from_rgb((
             color.r, color.g, color.b,

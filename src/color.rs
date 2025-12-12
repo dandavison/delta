@@ -41,17 +41,28 @@ pub fn parse_color(s: &str, true_color: bool, git_config: Option<&GitConfig>) ->
 
 pub fn color_to_string(color: Color) -> String {
     match color {
+        Color::Default => todo!(),
         Color::Fixed(n) if n < 16 => ansi_16_color_number_to_name(n).unwrap().to_string(),
         Color::Fixed(n) => format!("{n}"),
-        Color::RGB(r, g, b) => format!("\"#{r:02x?}{g:02x?}{b:02x?}\""),
+        Color::Rgb(r, g, b) => format!("\"#{r:02x?}{g:02x?}{b:02x?}\""),
         Color::Black => "black".to_string(),
+        Color::DarkGray => "bright-black".to_string(),
         Color::Red => "red".to_string(),
+        Color::LightRed => "bright-red".to_string(),
         Color::Green => "green".to_string(),
+        Color::LightGreen => "bright-green".to_string(),
         Color::Yellow => "yellow".to_string(),
+        Color::LightYellow => "bright-yellow".to_string(),
         Color::Blue => "blue".to_string(),
+        Color::LightBlue => "bright-blue".to_string(),
         Color::Purple => "purple".to_string(),
+        Color::LightPurple => "bright-purple".to_string(),
+        Color::Magenta => "magenta".to_string(),
+        Color::LightMagenta => "bright-magenta".to_string(),
         Color::Cyan => "cyan".to_string(),
+        Color::LightCyan => "bright-cyan".to_string(),
         Color::White => "white".to_string(),
+        Color::LightGray => "bright-white".to_string(),
     }
 }
 
@@ -153,35 +164,35 @@ pub fn get_plus_emph_background_color_default(mode: ColorMode, is_true_color: bo
     }
 }
 
-const LIGHT_THEME_MINUS_COLOR: Color = Color::RGB(0xff, 0xe0, 0xe0);
+const LIGHT_THEME_MINUS_COLOR: Color = Color::Rgb(0xff, 0xe0, 0xe0);
 
 const LIGHT_THEME_MINUS_COLOR_256: Color = Color::Fixed(224);
 
-const LIGHT_THEME_MINUS_EMPH_COLOR: Color = Color::RGB(0xff, 0xc0, 0xc0);
+const LIGHT_THEME_MINUS_EMPH_COLOR: Color = Color::Rgb(0xff, 0xc0, 0xc0);
 
 const LIGHT_THEME_MINUS_EMPH_COLOR_256: Color = Color::Fixed(217);
 
-const LIGHT_THEME_PLUS_COLOR: Color = Color::RGB(0xd0, 0xff, 0xd0);
+const LIGHT_THEME_PLUS_COLOR: Color = Color::Rgb(0xd0, 0xff, 0xd0);
 
 const LIGHT_THEME_PLUS_COLOR_256: Color = Color::Fixed(194);
 
-const LIGHT_THEME_PLUS_EMPH_COLOR: Color = Color::RGB(0xa0, 0xef, 0xa0);
+const LIGHT_THEME_PLUS_EMPH_COLOR: Color = Color::Rgb(0xa0, 0xef, 0xa0);
 
 const LIGHT_THEME_PLUS_EMPH_COLOR_256: Color = Color::Fixed(157);
 
-const DARK_THEME_MINUS_COLOR: Color = Color::RGB(0x3f, 0x00, 0x01);
+const DARK_THEME_MINUS_COLOR: Color = Color::Rgb(0x3f, 0x00, 0x01);
 
 const DARK_THEME_MINUS_COLOR_256: Color = Color::Fixed(52);
 
-const DARK_THEME_MINUS_EMPH_COLOR: Color = Color::RGB(0x90, 0x10, 0x11);
+const DARK_THEME_MINUS_EMPH_COLOR: Color = Color::Rgb(0x90, 0x10, 0x11);
 
 const DARK_THEME_MINUS_EMPH_COLOR_256: Color = Color::Fixed(124);
 
-const DARK_THEME_PLUS_COLOR: Color = Color::RGB(0x00, 0x28, 0x00);
+const DARK_THEME_PLUS_COLOR: Color = Color::Rgb(0x00, 0x28, 0x00);
 
 const DARK_THEME_PLUS_COLOR_256: Color = Color::Fixed(22);
 
-const DARK_THEME_PLUS_EMPH_COLOR: Color = Color::RGB(0x00, 0x60, 0x00);
+const DARK_THEME_PLUS_EMPH_COLOR: Color = Color::Rgb(0x00, 0x60, 0x00);
 
 const DARK_THEME_PLUS_EMPH_COLOR_256: Color = Color::Fixed(28);
 

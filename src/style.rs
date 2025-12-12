@@ -97,7 +97,7 @@ impl Style {
     pub fn paint<'a, I, S: 'a + ToOwned + ?Sized>(
         self,
         input: I,
-    ) -> ansi_term::ANSIGenericString<'a, S>
+    ) -> ansi_term::AnsiGenericString<'a, S>
     where
         I: Into<Cow<'a, S>>,
         <S as ToOwned>::Owned: fmt::Debug,
@@ -130,7 +130,7 @@ impl Style {
         None
     }
 
-    pub fn to_painted_string(self) -> ansi_term::ANSIGenericString<'static, str> {
+    pub fn to_painted_string(self) -> ansi_term::AnsiGenericString<'static, str> {
         self.paint(self.to_string())
     }
 }
@@ -140,7 +140,7 @@ pub fn paint_color_string<'a>(
     color_string: &'a str,
     true_color: bool,
     git_config: Option<&GitConfig>,
-) -> ansi_term::ANSIGenericString<'a, str> {
+) -> ansi_term::AnsiGenericString<'a, str> {
     if let Some(color) = color::parse_color(color_string, true_color, git_config) {
         let style = ansi_term::Style {
             background: Some(color),
@@ -148,7 +148,7 @@ pub fn paint_color_string<'a>(
         };
         style.paint(color_string)
     } else {
-        ansi_term::ANSIGenericString::from(color_string)
+        ansi_term::AnsiGenericString::from(color_string)
     }
 }
 
@@ -219,7 +219,7 @@ pub fn ansi_term_style_equality(a: ansi_term::Style, b: ansi_term::Style) -> boo
 
 // TODO: The equality methods were implemented first, and the equality_key
 // methods later. The former should be re-implemented in terms of the latter.
-// But why did the former not address equality of ansi_term::Color::RGB values?
+// But why did the former not address equality of ansi_term::Color::Rgb values?
 #[derive(Clone)]
 pub struct AnsiTermStyleEqualityKey {
     attrs_key: (bool, bool, bool, bool, bool, bool, bool, bool),
@@ -321,6 +321,14 @@ fn ansi_term_16_color_equality(a: ansi_term::Color, b: ansi_term::Color) -> bool
             | (ansi_term::Color::Fixed(5), ansi_term::Color::Purple)
             | (ansi_term::Color::Fixed(6), ansi_term::Color::Cyan)
             | (ansi_term::Color::Fixed(7), ansi_term::Color::White)
+            | (ansi_term::Color::Fixed(8), ansi_term::Color::DarkGray)
+            | (ansi_term::Color::Fixed(9), ansi_term::Color::LightRed)
+            | (ansi_term::Color::Fixed(10), ansi_term::Color::LightGreen)
+            | (ansi_term::Color::Fixed(11), ansi_term::Color::LightYellow)
+            | (ansi_term::Color::Fixed(12), ansi_term::Color::LightBlue)
+            | (ansi_term::Color::Fixed(13), ansi_term::Color::LightPurple)
+            | (ansi_term::Color::Fixed(14), ansi_term::Color::LightCyan)
+            | (ansi_term::Color::Fixed(15), ansi_term::Color::LightGray)
     )
 }
 
@@ -336,11 +344,34 @@ fn ansi_term_color_equality_key(color: ansi_term::Color) -> (u8, u8, u8, u8) {
         ansi_term::Color::Fixed(2) | ansi_term::Color::Green => (2, default, default, default),
         ansi_term::Color::Fixed(3) | ansi_term::Color::Yellow => (3, default, default, default),
         ansi_term::Color::Fixed(4) | ansi_term::Color::Blue => (4, default, default, default),
-        ansi_term::Color::Fixed(5) | ansi_term::Color::Purple => (5, default, default, default),
+        ansi_term::Color::Fixed(5) | ansi_term::Color::Purple | ansi_term::Color::Magenta => {
+            (5, default, default, default)
+        }
         ansi_term::Color::Fixed(6) | ansi_term::Color::Cyan => (6, default, default, default),
         ansi_term::Color::Fixed(7) | ansi_term::Color::White => (7, default, default, default),
+        ansi_term::Color::Fixed(8) | ansi_term::Color::DarkGray => (8, default, default, default),
+        ansi_term::Color::Fixed(9) | ansi_term::Color::LightRed => (9, default, default, default),
+        ansi_term::Color::Fixed(10) | ansi_term::Color::LightGreen => {
+            (10, default, default, default)
+        }
+        ansi_term::Color::Fixed(11) | ansi_term::Color::LightYellow => {
+            (11, default, default, default)
+        }
+        ansi_term::Color::Fixed(12) | ansi_term::Color::LightBlue => {
+            (12, default, default, default)
+        }
+        ansi_term::Color::Fixed(13)
+        | ansi_term::Color::LightPurple
+        | ansi_term::Color::LightMagenta => (13, default, default, default),
+        ansi_term::Color::Fixed(14) | ansi_term::Color::LightCyan => {
+            (14, default, default, default)
+        }
+        ansi_term::Color::Fixed(15) | ansi_term::Color::LightGray => {
+            (15, default, default, default)
+        }
         ansi_term::Color::Fixed(n) => (n, default, default, default),
-        ansi_term::Color::RGB(r, g, b) => (r, g, b, 0),
+        ansi_term::Color::Rgb(r, g, b) => (r, g, b, 0),
+        ansi_term::Color::Default => todo!(),
     }
 }
 

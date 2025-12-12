@@ -2,7 +2,7 @@ use std::borrow::Cow;
 use std::collections::HashMap;
 use std::io::Write;
 
-use ansi_term::ANSIString;
+use ansi_term::AnsiString;
 use itertools::Itertools;
 use syntect::easy::HighlightLines;
 use syntect::highlighting::Style as SyntectStyle;
@@ -372,7 +372,7 @@ impl<'p> Painter<'p> {
     /// Emit line with ANSI sequences that extend the background color to the terminal width.
     pub fn right_fill_background_color(line: &mut String, fill_style: Style) {
         // HACK: How to properly incorporate the ANSI_CSI_CLEAR_TO_EOL into ansi_strings?
-        line.push_str(&ansi_term::ANSIStrings(&[fill_style.paint("")]).to_string());
+        line.push_str(&ansi_term::AnsiStrings(&[fill_style.paint("")]).to_string());
         if line
             .to_lowercase()
             .ends_with(&ansi::ANSI_SGR_RESET.to_lowercase())
@@ -404,7 +404,7 @@ impl<'p> Painter<'p> {
         state: &State,
         line_numbers_data: &mut Option<&mut line_numbers::LineNumbersData>,
         side_by_side_panel: Option<PanelSide>,
-        mut painted_prefix: Option<ansi_term::ANSIString>,
+        mut painted_prefix: Option<ansi_term::AnsiString>,
         config: &config::Config,
     ) -> (String, bool) {
         let mut ansi_strings = Vec::new();
@@ -454,7 +454,7 @@ impl<'p> Painter<'p> {
 
         // Only if syntax is empty (implies diff empty) can a line actually be empty.
         let is_empty = syntax_sections.is_empty();
-        (ansi_term::ANSIStrings(&ansi_strings).to_string(), is_empty)
+        (ansi_term::AnsiStrings(&ansi_strings).to_string(), is_empty)
     }
 
     /// Write output buffer to output stream, and clear the buffer.
@@ -777,7 +777,7 @@ fn get_diff_style_sections<'a>(
     (diff_sections, line_alignment)
 }
 
-fn painted_prefix(state: State, config: &config::Config) -> Option<ANSIString<'_>> {
+fn painted_prefix(state: State, config: &config::Config) -> Option<AnsiString<'_>> {
     use DiffType::*;
     use State::*;
     match (state, config.keep_plus_minus_markers) {
@@ -850,13 +850,13 @@ pub fn paint_file_path_with_line_number(
     if let Some(line_number) = line_number {
         if let Some(line_number_style) = line_number_style {
             if !file_with_line_number.is_empty() {
-                file_with_line_number.push(ansi_term::ANSIString::from(separator));
+                file_with_line_number.push(ansi_term::AnsiString::from(separator));
             }
             file_with_line_number.push(line_number_style.paint(format!("{line_number}")))
         }
     }
     if terminate_with_separator {
-        file_with_line_number.push(ansi_term::ANSIGenericString::from(separator));
+        file_with_line_number.push(ansi_term::AnsiGenericString::from(separator));
     }
     if pad_line_number {
         // If requested we pad line numbers to a width of at least
@@ -866,15 +866,15 @@ pub fn paint_file_path_with_line_number(
         // discussion about aligning grep output.
         match line_number {
             Some(n) if n < 10 => {
-                file_with_line_number.push(ansi_term::ANSIGenericString::from("  "))
+                file_with_line_number.push(ansi_term::AnsiGenericString::from("  "))
             }
             Some(n) if n < 100 => {
-                file_with_line_number.push(ansi_term::ANSIGenericString::from(" "))
+                file_with_line_number.push(ansi_term::AnsiGenericString::from(" "))
             }
             _ => {}
         }
     }
-    let file_with_line_number = ansi_term::ANSIStrings(&file_with_line_number).to_string();
+    let file_with_line_number = ansi_term::AnsiStrings(&file_with_line_number).to_string();
     match if config.hyperlinks && !file_with_line_number.is_empty() {
         utils::path::absolute_path(file_path, config)
     } else {

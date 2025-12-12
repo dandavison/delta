@@ -229,7 +229,7 @@ pub fn paint_zero_lines_side_by_side<'a>(
     output_buffer: &mut String,
     config: &Config,
     line_numbers_data: &mut Option<&mut line_numbers::LineNumbersData>,
-    painted_prefix: Option<ansi_term::ANSIString>,
+    painted_prefix: Option<ansi_term::AnsiString>,
     background_color_extends_to_terminal_width: BgShouldFill,
 ) {
     let states = vec![State::HunkZero(DiffType::Unified, None)];
