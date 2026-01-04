@@ -214,6 +214,7 @@ pub fn set_options(
             show_colors,
             show_themes,
             side_by_side,
+            side_by_side_min_width,
             wrap_max_lines,
             wrap_right_prefix_symbol,
             wrap_right_percent,
@@ -241,6 +242,13 @@ pub fn set_options(
     opt.computed.inspect_raw_lines =
         cli::InspectRawLines::from_str(&opt.inspect_raw_lines).unwrap();
     opt.computed.paging_mode = parse_paging_mode(&opt.paging_mode);
+
+    // Apply side-by-side-min-width: disable side-by-side if terminal is too narrow.
+    if opt.side_by_side_min_width > 0
+        && opt.computed.available_terminal_width < opt.side_by_side_min_width
+    {
+        opt.side_by_side = false;
+    }
 
     // --color-only is used for interactive.diffFilter (git add -p). side-by-side, and
     // **-decoration-style cannot be used there (does not emit lines in 1-1 correspondence with raw git output).
@@ -608,8 +616,15 @@ fn set_widths_and_isatty(opt: &mut cli::Opt) {
 
     // If one extra character for e.g. `less --status-column` is required use "-1"
     // as an argument, also see #41, #10, #115 and #727.
-    opt.computed.available_terminal_width =
-        crate::utils::workarounds::windows_msys2_width_fix(term_stdout.size(), &term_stdout);
+    #[cfg(test)]
+    {
+        opt.computed.available_terminal_width = tests::TERMINAL_WIDTH_IN_TESTS;
+    }
+    #[cfg(not(test))]
+    {
+        opt.computed.available_terminal_width =
+            crate::utils::workarounds::windows_msys2_width_fix(term_stdout.size(), &term_stdout);
+    }
 
     let (decorations_width, background_color_extends_to_terminal_width) = match opt.width.as_deref()
     {
@@ -862,5 +877,59 @@ pub mod tests {
         assert_eq!(parse_width_specifier("-12", term_width).unwrap(), 0);
         assert_eq!(parse_width_specifier(" - 12 ", term_width).unwrap(), 0);
         assert_eq!(parse_width_specifier(" 2 - 2 ", term_width).unwrap(), 0);
+    }
+
+    #[test]
+    fn test_side_by_side_min_width_disables_sbs_when_terminal_narrow() {
+        // Tests use TERMINAL_WIDTH_IN_TESTS = 43
+        // When min-width is greater than terminal width, side-by-side should be disabled
+        let opt = integration_test_utils::make_options_from_args(&[
+            "--side-by-side",
+            "--side-by-side-min-width",
+            "100",
+        ]);
+        assert!(!opt.side_by_side);
+    }
+
+    #[test]
+    fn test_side_by_side_min_width_allows_sbs_when_terminal_wide_enough() {
+        // Tests use TERMINAL_WIDTH_IN_TESTS = 43
+        // When min-width is less than or equal to terminal width, side-by-side should remain enabled
+        let opt = integration_test_utils::make_options_from_args(&[
+            "--side-by-side",
+            "--side-by-side-min-width",
+            "40",
+        ]);
+        assert!(opt.side_by_side);
+    }
+
+    #[test]
+    fn test_side_by_side_min_width_zero_always_allows_sbs() {
+        // When min-width is 0, side-by-side should always be allowed
+        let opt = integration_test_utils::make_options_from_args(&[
+            "--side-by-side",
+            "--side-by-side-min-width",
+            "0",
+        ]);
+        assert!(opt.side_by_side);
+    }
+
+    #[test]
+    fn test_side_by_side_min_width_from_git_config() {
+        use std::fs::remove_file;
+        let git_config_contents = b"
+[delta]
+    side-by-side = true
+    side-by-side-min-width = 100
+";
+        let git_config_path = "delta__test_side_by_side_min_width_from_git_config.gitconfig";
+        let opt = integration_test_utils::make_options_from_args_and_git_config(
+            &[],
+            Some(git_config_contents),
+            Some(git_config_path),
+        );
+        // Terminal width in tests is 43, min-width is 100, so side-by-side should be disabled
+        assert!(!opt.side_by_side);
+        remove_file(git_config_path).unwrap();
     }
 }

@@ -860,6 +860,16 @@ pub struct Opt {
     /// Display diffs in side-by-side layout.
     pub side_by_side: bool,
 
+    #[arg(long = "side-by-side-min-width", default_value = "0", value_name = "N")]
+    /// Minimum terminal width required to enable side-by-side mode. Defaults to 0.
+    ///
+    /// If the terminal width is less than this value, side-by-side mode will be disabled
+    /// regardless of the --side-by-side option. This allows automatic fallback to unified
+    /// diff when the terminal is too narrow to display side-by-side diffs comfortably.
+    /// Set to 0 to always use side-by-side when enabled. If not specified, side-by-side
+    /// will be used when enabled regardless of terminal width.
+    pub side_by_side_min_width: usize,
+
     #[arg(long = "syntax-theme", value_name = "SYNTAX_THEME")]
     /// The syntax-highlighting theme to use.
     ///
