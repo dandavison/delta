@@ -89,7 +89,8 @@ jobs:
 
   publish-to-cargo:
     permissions:
-      id-token: write # Required for OIDC token exchange
+      id-token: write  # Required for OIDC token exchange
+      contents: read
     name: Publishing to Cargo
     runs-on: ubuntu-latest
     steps:
