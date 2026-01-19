@@ -665,3 +665,47 @@
     hunk-header-file-style = darkgoldenrod
     hunk-header-line-number-style = orange
     hunk-header-style = file line-number darkviolet
+
+[delta "amber-newt"]
+    # inspired by GitHub's "dark protanopia and deuteranopia" color-vision friendly set
+    # author: https://github.com/artivilla
+    dark = true
+    syntax-theme = Nord
+    # -- decorations
+    file-style = "#f59e0b" bold
+    file-decoration-style = "#f59e0b" overline
+    file-added-label = [+]
+    file-copied-label = [==]
+    file-modified-label = [*]
+    file-removed-label = [-]
+    file-renamed-label = [->]
+    # -- hunk
+    hunk-header-decoration-style = "#0891b2" ul
+    hunk-header-file-style = "#94a3b8"
+    hunk-header-line-number-style = "#94a3b8"
+    hunk-header-style = file line-number syntax
+    # -- diff
+    keep-plus-minus-markers = true
+    line-numbers-left-format = " {nm:>3} │"
+    line-numbers-right-format = " {np:>3} │"
+    line-numbers-left-style = "#64748b"
+    line-numbers-right-style = "#64748b"
+    line-numbers-zero-style = "#475569"
+    line-numbers-minus-style = "#ea580c" bold
+    line-numbers-plus-style = "#0284c7" bold
+    minus-style = syntax "#4a1e04"
+    minus-emph-style = syntax "#7c2d12"
+    minus-non-emph-style = syntax "#4a1e04"
+    minus-empty-line-marker-style = syntax "#4a1e04"
+    plus-style = syntax "#082f49"
+    plus-emph-style = syntax "#0c4a6e"
+    plus-non-emph-style = syntax "#082f49"
+    plus-empty-line-marker-style = syntax "#082f49"
+    # -- commit
+    zero-style = syntax
+    whitespace-error-style = "#fbbf24" reverse
+    commit-decoration-style = "#f59e0b" box
+    commit-style = "#f59e0b" bold
+    # -- blame
+    blame-format = "{author:<18} ({commit:>7}) {timestamp:^16}"
+    blame-palette = "#1e293b" "#334155" "#475569"
