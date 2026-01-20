@@ -679,20 +679,18 @@
     file-modified-label = [*]
     file-removed-label = [-]
     file-renamed-label = [->]
+
     # -- hunk
     hunk-header-decoration-style = "#0891b2" ul
-    hunk-header-file-style = "#94a3b8"
-    hunk-header-line-number-style = "#94a3b8"
     hunk-header-style = file line-number syntax
+
     # -- diff
-    keep-plus-minus-markers = true
-    line-numbers-left-format = " {nm:>3} │"
-    line-numbers-right-format = " {np:>3} │"
-    line-numbers-left-style = "#64748b"
-    line-numbers-right-style = "#64748b"
+    line-numbers-left-format = " {nm:<4}"
+    line-numbers-right-format = " {np:<5}"
     line-numbers-zero-style = "#475569"
-    line-numbers-minus-style = "#ea580c" bold
-    line-numbers-plus-style = "#0284c7" bold
+    line-numbers-minus-style = "#ea580c"
+    line-numbers-plus-style = "#0284c7"
+    keep-plus-minus-markers = true
     minus-style = syntax "#4a1e04"
     minus-emph-style = syntax "#7c2d12"
     minus-non-emph-style = syntax "#4a1e04"
@@ -701,6 +699,7 @@
     plus-emph-style = syntax "#0c4a6e"
     plus-non-emph-style = syntax "#082f49"
     plus-empty-line-marker-style = syntax "#082f49"
+
     # -- commit
     zero-style = syntax
     whitespace-error-style = "#fbbf24" reverse
