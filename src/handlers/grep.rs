@@ -748,6 +748,7 @@ mod tests {
     use crate::handlers::grep::{
         parse_grep_line, parse_raw_grep_line, GrepLine, GrepType, LineType,
     };
+    use crate::tests::integration_test_utils::DeltaTest;
     use crate::utils::process::tests::FakeParentArgs;
 
     #[test]
@@ -1307,52 +1308,19 @@ mod tests {
     }
 
     #[test]
-    fn test_parse_grep_filename_only_output_with_hyphen() {
-        // Test for issue #1674: git grep -l output should not be parsed as grep output
-        // because filenames with hyphens get incorrectly split (my-file.rs -> my:file.rs)
+    fn test_git_grep_l_preserves_hyphenated_filenames() {
+        for flag in ["-l", "-L", "--files-with-matches", "--files-without-match"] {
+            let output = DeltaTest::with_args(&[])
+                .with_calling_process(&format!("git grep {} pattern", flag))
+                .with_input("my-file.rs\n")
+                .output;
 
-        // With -l flag (short option), filename-only output should NOT be parsed
-        {
-            let _args = FakeParentArgs::once("git grep -l pattern");
-            assert_eq!(parse_grep_line("my-file.rs"), None);
+            assert_eq!(
+                output.trim(),
+                "my-file.rs",
+                "git grep {} should preserve filename unchanged",
+                flag
+            );
         }
-
-        // With -L flag (short option), filename-only output should NOT be parsed
-        {
-            let _args = FakeParentArgs::once("git grep -L pattern");
-            assert_eq!(parse_grep_line("my-file.rs"), None);
-        }
-
-        // With --files-with-matches flag (long option), should NOT be parsed
-        {
-            let _args = FakeParentArgs::once("git grep --files-with-matches pattern");
-            assert_eq!(parse_grep_line("my-file.rs"), None);
-        }
-
-        // With --files-without-match flag (long option), should NOT be parsed
-        {
-            let _args = FakeParentArgs::once("git grep --files-without-match pattern");
-            assert_eq!(parse_grep_line("my-file.rs"), None);
-        }
-    }
-
-    #[test]
-    fn test_parse_grep_regular_output_with_hyphen_still_works() {
-        // Ensure regular grep output (without -l/-L) still parses correctly
-        let fake_parent_grep_command = "git grep -n pattern";
-        let _args = FakeParentArgs::once(fake_parent_grep_command);
-
-        // Regular grep output with line number should still parse
-        assert_eq!(
-            parse_grep_line("my-file.rs:10:some code here"),
-            Some(GrepLine {
-                grep_type: GrepType::Classic,
-                path: "my-file.rs".into(),
-                line_number: Some(10),
-                line_type: LineType::Match,
-                code: "some code here".into(),
-                submatches: None,
-            })
-        );
     }
 }
