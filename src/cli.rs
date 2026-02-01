@@ -96,12 +96,15 @@ pub struct Opt {
     /// See: <https://docs.rs/chrono/latest/chrono/format/strftime/index.html>
     pub blame_timestamp_output_format: Option<String>,
 
-    #[arg(long = "color-only")]
+    #[arg(long = "color-only", overrides_with = "no_color_only")]
     /// Do not alter the input structurally in any way.
     ///
     /// But color and highlight hunk lines according to your delta configuration. This is mainly
     /// intended for other tools that use delta.
     pub color_only: bool,
+
+    #[arg(long = "no-color-only", overrides_with = "color_only", hide = true)]
+    pub no_color_only: bool,
 
     #[arg(long = "config", default_value = "", value_name = "PATH", value_hint = ValueHint::FilePath)]
     /// Load the config file at PATH instead of ~/.gitconfig.
@@ -184,17 +187,23 @@ pub struct Opt {
     /// doesn't support it, then delta will fall back to `diff` instead of `git diff`.
     pub diff_args: String,
 
-    #[arg(long = "diff-highlight")]
+    #[arg(long = "diff-highlight", overrides_with = "no_diff_highlight")]
     /// Emulate diff-highlight.
     ///
     /// <https://github.com/git/git/tree/master/contrib/diff-highlight>
     pub diff_highlight: bool,
 
-    #[arg(long = "diff-so-fancy")]
+    #[arg(long = "no-diff-highlight", overrides_with = "diff_highlight", hide = true)]
+    pub no_diff_highlight: bool,
+
+    #[arg(long = "diff-so-fancy", overrides_with = "no_diff_so_fancy")]
     /// Emulate diff-so-fancy.
     ///
     /// <https://github.com/so-fancy/diff-so-fancy>
     pub diff_so_fancy: bool,
+
+    #[arg(long = "no-diff-so-fancy", overrides_with = "diff_so_fancy", hide = true)]
+    pub no_diff_so_fancy: bool,
 
     #[arg(long = "diff-stat-align-width", default_value = "48", value_name = "N")]
     /// Width allocated for file paths in a diff stat section.
@@ -406,7 +415,7 @@ pub struct Opt {
     /// Used in the default value of navigate-regex.
     pub hunk_label: String,
 
-    #[arg(long = "hyperlinks")]
+    #[arg(long = "hyperlinks", overrides_with = "no_hyperlinks")]
     /// Render commit hashes, file names, and line numbers as hyperlinks.
     ///
     /// Following the hyperlink spec for terminal emulators:
@@ -419,6 +428,9 @@ pub struct Opt {
     /// e.g. --navigate). If you use tmux, then you will also need a patched fork of tmux (see
     /// <https://github.com/dandavison/tmux>).
     pub hyperlinks: bool,
+
+    #[arg(long = "no-hyperlinks", overrides_with = "hyperlinks", hide = true)]
+    pub no_hyperlinks: bool,
 
     #[arg(long = "hyperlinks-commit-link-format", value_name = "FMT")]
     /// Format string for commit hyperlinks (requires --hyperlinks).
@@ -466,12 +478,15 @@ pub struct Opt {
     /// Git's --color-moved feature. Set this to "false" to disable this behavior.
     pub inspect_raw_lines: String,
 
-    #[arg(long = "keep-plus-minus-markers")]
+    #[arg(long = "keep-plus-minus-markers", overrides_with = "no_keep_plus_minus_markers")]
     /// Prefix added/removed lines with a +/- character, as git does.
     ///
     /// By default, delta does not emit any prefix, so code can be copied directly from delta's
     /// output.
     pub keep_plus_minus_markers: bool,
+
+    #[arg(long = "no-keep-plus-minus-markers", overrides_with = "keep_plus_minus_markers", hide = true)]
+    pub no_keep_plus_minus_markers: bool,
 
     #[arg(long = "light")]
     /// Use default colors appropriate for a light terminal background.
@@ -497,11 +512,14 @@ pub struct Opt {
     /// --width=variable is given.
     pub line_fill_method: Option<String>,
 
-    #[arg(short = 'n', long = "line-numbers")]
+    #[arg(short = 'n', long = "line-numbers", overrides_with = "no_line_numbers")]
     /// Display line numbers next to the diff.
     ///
     /// See LINE NUMBERS section.
     pub line_numbers: bool,
+
+    #[arg(long = "no-line-numbers", overrides_with = "line_numbers", hide = true)]
+    pub no_line_numbers: bool,
 
     #[arg(
         long = "line-numbers-left-format",
@@ -722,12 +740,15 @@ pub struct Opt {
     /// See STYLES section.
     pub minus_style: String,
 
-    #[arg(long = "navigate")]
+    #[arg(long = "navigate", overrides_with = "no_navigate")]
     /// Activate diff navigation.
     ///
     /// Use n to jump forwards and N to jump backwards. To change the file labels used see
     /// --file-added-label, --file-copied-label, --file-modified-label, --file-removed-label, --file-renamed-label.
     pub navigate: bool,
+
+    #[arg(long = "no-navigate", overrides_with = "navigate", hide = true)]
+    pub no_navigate: bool,
 
     #[arg(long = "navigate-regex", value_name = "REGEX")]
     /// Regular expression defining navigation stop points.
@@ -805,17 +826,23 @@ pub struct Opt {
     /// See STYLES section.
     pub plus_style: String,
 
-    #[arg(long = "raw")]
+    #[arg(long = "raw", overrides_with = "no_raw")]
     /// Do not alter the input in any way.
     ///
     /// This is mainly intended for testing delta.
     pub raw: bool,
 
-    #[arg(long = "relative-paths")]
+    #[arg(long = "no-raw", overrides_with = "raw", hide = true)]
+    pub no_raw: bool,
+
+    #[arg(long = "relative-paths", overrides_with = "no_relative_paths")]
     /// Output all file paths relative to the current directory.
     ///
     /// This means that they will resolve correctly when clicked on or used in shell commands.
     pub relative_paths: bool,
+
+    #[arg(long = "no-relative-paths", overrides_with = "relative_paths", hide = true)]
+    pub no_relative_paths: bool,
 
     #[arg(long = "right-arrow", default_value = "⟶  ", value_name = "STRING")]
     /// Text to display with a changed file path.
@@ -856,9 +883,12 @@ pub struct Opt {
     /// shown, use --dark or --light, or both, on the command line together with this option.
     pub show_themes: bool,
 
-    #[arg(short = 's', long = "side-by-side")]
+    #[arg(short = 's', long = "side-by-side", overrides_with = "no_side_by_side")]
     /// Display diffs in side-by-side layout.
     pub side_by_side: bool,
+
+    #[arg(long = "no-side-by-side", overrides_with = "side_by_side", hide = true)]
+    pub no_side_by_side: bool,
 
     #[arg(long = "syntax-theme", value_name = "SYNTAX_THEME")]
     /// The syntax-highlighting theme to use.
