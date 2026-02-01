@@ -842,6 +842,64 @@ pub mod tests {
     }
 
     #[test]
+    fn test_no_flags_override_gitconfig() {
+        let git_config_contents = b"
+[delta]
+    side-by-side = true
+    line-numbers = true
+    navigate = true
+    hyperlinks = true
+    keep-plus-minus-markers = true
+    raw = true
+    relative-paths = true
+";
+        let git_config_path = "delta__test_no_flags_override_gitconfig.gitconfig";
+
+        let opt = integration_test_utils::make_options_from_args_and_git_config(
+            &[
+                "--no-side-by-side",
+                "--no-line-numbers",
+                "--no-navigate",
+                "--no-hyperlinks",
+                "--no-keep-plus-minus-markers",
+                "--no-raw",
+                "--no-relative-paths",
+            ],
+            Some(git_config_contents),
+            Some(git_config_path),
+        );
+
+        assert!(!opt.side_by_side);
+        assert!(!opt.line_numbers);
+        assert!(!opt.navigate);
+        assert!(!opt.hyperlinks);
+        assert!(!opt.keep_plus_minus_markers);
+        assert!(!opt.raw);
+        assert!(!opt.relative_paths);
+
+        remove_file(git_config_path).unwrap();
+    }
+
+    #[test]
+    fn test_no_flags_last_flag_wins() {
+        // --no-side-by-side followed by --side-by-side should enable it
+        let opt = integration_test_utils::make_options_from_args_and_git_config(
+            &["--no-side-by-side", "--side-by-side"],
+            None,
+            None,
+        );
+        assert!(opt.side_by_side);
+
+        // --side-by-side followed by --no-side-by-side should disable it
+        let opt = integration_test_utils::make_options_from_args_and_git_config(
+            &["--side-by-side", "--no-side-by-side"],
+            None,
+            None,
+        );
+        assert!(!opt.side_by_side);
+    }
+
+    #[test]
     fn test_width_in_git_config_is_honored() {
         let git_config_contents = b"
 [delta]
