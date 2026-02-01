@@ -50,6 +50,17 @@ macro_rules! set_options {
                 "dark",
                 "light",
                 "syntax-theme",
+                // --no-* negation flags (handled in apply_no_flag_overrides)
+                "no-color-only",
+                "no-diff-highlight",
+                "no-diff-so-fancy",
+                "no-hyperlinks",
+                "no-keep-plus-minus-markers",
+                "no-line-numbers",
+                "no-navigate",
+                "no-raw",
+                "no-relative-paths",
+                "no-side-by-side",
             ]);
             let expected_option_names: HashSet<_> = $expected_option_name_map
                 .values()
@@ -234,6 +245,10 @@ pub fn set_options(
         true
     );
 
+    // Apply --no-* flag overrides. When a --no-* flag is user-supplied, it forces
+    // the corresponding option to false, overriding any gitconfig value.
+    apply_no_flag_overrides(opt, arg_matches);
+
     // Setting ComputedValues
     set_widths_and_isatty(opt);
     set_true_color(opt);
@@ -251,6 +266,26 @@ pub fn set_options(
         opt.commit_decoration_style = "none".to_string();
         opt.hunk_header_decoration_style = "none".to_string();
     }
+}
+
+fn apply_no_flag_overrides(opt: &mut cli::Opt, arg_matches: &clap::ArgMatches) {
+    macro_rules! apply_no_flag {
+        ($no_field:ident, $field:ident) => {
+            if config::user_supplied_option(stringify!($no_field), arg_matches) {
+                opt.$field = false;
+            }
+        };
+    }
+    apply_no_flag!(no_color_only, color_only);
+    apply_no_flag!(no_diff_highlight, diff_highlight);
+    apply_no_flag!(no_diff_so_fancy, diff_so_fancy);
+    apply_no_flag!(no_hyperlinks, hyperlinks);
+    apply_no_flag!(no_keep_plus_minus_markers, keep_plus_minus_markers);
+    apply_no_flag!(no_line_numbers, line_numbers);
+    apply_no_flag!(no_navigate, navigate);
+    apply_no_flag!(no_raw, raw);
+    apply_no_flag!(no_relative_paths, relative_paths);
+    apply_no_flag!(no_side_by_side, side_by_side);
 }
 
 #[allow(non_snake_case)]
@@ -373,28 +408,28 @@ fn gather_features(
 
     // Gather builtin feature flags supplied on command line.
     // TODO: Iterate over programmatically-obtained names of builtin features.
-    if opt.raw {
+    if opt.raw && !opt.no_raw {
         gather_builtin_features_recursively("raw", &mut features, builtin_features, opt);
     }
-    if opt.color_only {
+    if opt.color_only && !opt.no_color_only {
         gather_builtin_features_recursively("color-only", &mut features, builtin_features, opt);
     }
-    if opt.diff_highlight {
+    if opt.diff_highlight && !opt.no_diff_highlight {
         gather_builtin_features_recursively("diff-highlight", &mut features, builtin_features, opt);
     }
-    if opt.diff_so_fancy {
+    if opt.diff_so_fancy && !opt.no_diff_so_fancy {
         gather_builtin_features_recursively("diff-so-fancy", &mut features, builtin_features, opt);
     }
-    if opt.hyperlinks {
+    if opt.hyperlinks && !opt.no_hyperlinks {
         gather_builtin_features_recursively("hyperlinks", &mut features, builtin_features, opt);
     }
-    if opt.line_numbers {
+    if opt.line_numbers && !opt.no_line_numbers {
         gather_builtin_features_recursively("line-numbers", &mut features, builtin_features, opt);
     }
-    if opt.navigate {
+    if opt.navigate && !opt.no_navigate {
         gather_builtin_features_recursively("navigate", &mut features, builtin_features, opt);
     }
-    if opt.side_by_side {
+    if opt.side_by_side && !opt.no_side_by_side {
         gather_builtin_features_recursively("side-by-side", &mut features, builtin_features, opt);
     }
 
@@ -804,6 +839,64 @@ pub mod tests {
         assert_eq!(opt.computed.paging_mode, PagingMode::Never);
 
         remove_file(git_config_path).unwrap();
+    }
+
+    #[test]
+    fn test_no_flags_override_gitconfig() {
+        let git_config_contents = b"
+[delta]
+    side-by-side = true
+    line-numbers = true
+    navigate = true
+    hyperlinks = true
+    keep-plus-minus-markers = true
+    raw = true
+    relative-paths = true
+";
+        let git_config_path = "delta__test_no_flags_override_gitconfig.gitconfig";
+
+        let opt = integration_test_utils::make_options_from_args_and_git_config(
+            &[
+                "--no-side-by-side",
+                "--no-line-numbers",
+                "--no-navigate",
+                "--no-hyperlinks",
+                "--no-keep-plus-minus-markers",
+                "--no-raw",
+                "--no-relative-paths",
+            ],
+            Some(git_config_contents),
+            Some(git_config_path),
+        );
+
+        assert!(!opt.side_by_side);
+        assert!(!opt.line_numbers);
+        assert!(!opt.navigate);
+        assert!(!opt.hyperlinks);
+        assert!(!opt.keep_plus_minus_markers);
+        assert!(!opt.raw);
+        assert!(!opt.relative_paths);
+
+        remove_file(git_config_path).unwrap();
+    }
+
+    #[test]
+    fn test_no_flags_last_flag_wins() {
+        // --no-side-by-side followed by --side-by-side should enable it
+        let opt = integration_test_utils::make_options_from_args_and_git_config(
+            &["--no-side-by-side", "--side-by-side"],
+            None,
+            None,
+        );
+        assert!(opt.side_by_side);
+
+        // --side-by-side followed by --no-side-by-side should disable it
+        let opt = integration_test_utils::make_options_from_args_and_git_config(
+            &["--side-by-side", "--no-side-by-side"],
+            None,
+            None,
+        );
+        assert!(!opt.side_by_side);
     }
 
     #[test]
