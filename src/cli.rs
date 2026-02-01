@@ -193,7 +193,11 @@ pub struct Opt {
     /// <https://github.com/git/git/tree/master/contrib/diff-highlight>
     pub diff_highlight: bool,
 
-    #[arg(long = "no-diff-highlight", overrides_with = "diff_highlight", hide = true)]
+    #[arg(
+        long = "no-diff-highlight",
+        overrides_with = "diff_highlight",
+        hide = true
+    )]
     pub no_diff_highlight: bool,
 
     #[arg(long = "diff-so-fancy", overrides_with = "no_diff_so_fancy")]
@@ -202,7 +206,11 @@ pub struct Opt {
     /// <https://github.com/so-fancy/diff-so-fancy>
     pub diff_so_fancy: bool,
 
-    #[arg(long = "no-diff-so-fancy", overrides_with = "diff_so_fancy", hide = true)]
+    #[arg(
+        long = "no-diff-so-fancy",
+        overrides_with = "diff_so_fancy",
+        hide = true
+    )]
     pub no_diff_so_fancy: bool,
 
     #[arg(long = "diff-stat-align-width", default_value = "48", value_name = "N")]
@@ -478,14 +486,21 @@ pub struct Opt {
     /// Git's --color-moved feature. Set this to "false" to disable this behavior.
     pub inspect_raw_lines: String,
 
-    #[arg(long = "keep-plus-minus-markers", overrides_with = "no_keep_plus_minus_markers")]
+    #[arg(
+        long = "keep-plus-minus-markers",
+        overrides_with = "no_keep_plus_minus_markers"
+    )]
     /// Prefix added/removed lines with a +/- character, as git does.
     ///
     /// By default, delta does not emit any prefix, so code can be copied directly from delta's
     /// output.
     pub keep_plus_minus_markers: bool,
 
-    #[arg(long = "no-keep-plus-minus-markers", overrides_with = "keep_plus_minus_markers", hide = true)]
+    #[arg(
+        long = "no-keep-plus-minus-markers",
+        overrides_with = "keep_plus_minus_markers",
+        hide = true
+    )]
     pub no_keep_plus_minus_markers: bool,
 
     #[arg(long = "light")]
@@ -841,7 +856,11 @@ pub struct Opt {
     /// This means that they will resolve correctly when clicked on or used in shell commands.
     pub relative_paths: bool,
 
-    #[arg(long = "no-relative-paths", overrides_with = "relative_paths", hide = true)]
+    #[arg(
+        long = "no-relative-paths",
+        overrides_with = "relative_paths",
+        hide = true
+    )]
     pub no_relative_paths: bool,
 
     #[arg(long = "right-arrow", default_value = "⟶  ", value_name = "STRING")]
