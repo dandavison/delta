@@ -214,7 +214,6 @@ pub fn set_options(
             show_colors,
             show_themes,
             side_by_side,
-            side_by_side_min_width,
             wrap_max_lines,
             wrap_right_prefix_symbol,
             wrap_right_percent,
@@ -243,18 +242,16 @@ pub fn set_options(
         cli::InspectRawLines::from_str(&opt.inspect_raw_lines).unwrap();
     opt.computed.paging_mode = parse_paging_mode(&opt.paging_mode);
 
-    // Apply side-by-side-min-width: disable side-by-side if terminal is too narrow.
-    if opt.side_by_side_min_width > 0
-        && opt.computed.available_terminal_width < opt.side_by_side_min_width
-    {
-        opt.side_by_side = false;
-    }
+    // Resolve side-by-side: parse the optional min-width value and apply terminal width check.
+    let (sbs_enabled, sbs_min_width) = parse_side_by_side(&opt.side_by_side);
+    opt.computed.side_by_side = sbs_enabled
+        && (sbs_min_width == 0 || opt.computed.available_terminal_width >= sbs_min_width);
 
     // --color-only is used for interactive.diffFilter (git add -p). side-by-side, and
     // **-decoration-style cannot be used there (does not emit lines in 1-1 correspondence with raw git output).
     // See #274.
     if opt.color_only {
-        opt.side_by_side = false;
+        opt.computed.side_by_side = false;
         opt.file_decoration_style = "none".to_string();
         opt.commit_decoration_style = "none".to_string();
         opt.hunk_header_decoration_style = "none".to_string();
@@ -402,7 +399,7 @@ fn gather_features(
     if opt.navigate {
         gather_builtin_features_recursively("navigate", &mut features, builtin_features, opt);
     }
-    if opt.side_by_side {
+    if side_by_side_enabled(&opt.side_by_side) {
         gather_builtin_features_recursively("side-by-side", &mut features, builtin_features, opt);
     }
 
@@ -479,7 +476,18 @@ fn gather_builtin_features_from_flags_in_gitconfig(
     git_config: &GitConfig,
 ) {
     for child_feature in builtin_features.keys() {
-        if let Some(true) = git_config.get::<bool>(&format!("{git_config_key}.{child_feature}")) {
+        let key = format!("{git_config_key}.{child_feature}");
+        let enabled = if child_feature == "side-by-side" {
+            // side-by-side accepts a bool or an integer (min-width), so try string first.
+            git_config
+                .get::<Option<String>>(&key)
+                .flatten()
+                .map(|s| side_by_side_enabled(&Some(s)))
+                .unwrap_or(false)
+        } else {
+            git_config.get::<bool>(&key) == Some(true)
+        };
+        if enabled {
             gather_builtin_features_recursively(child_feature, features, builtin_features, opt);
         }
     }
@@ -536,6 +544,35 @@ fn gather_builtin_features_recursively(
 
 fn split_feature_string(features: &str) -> impl Iterator<Item = &str> {
     features.split_whitespace().rev()
+}
+
+/// Returns true if the side-by-side option value indicates side-by-side should be enabled.
+/// The value is `Some("true")`, `Some("80")`, etc. from CLI/gitconfig, or `None` if not set.
+fn side_by_side_enabled(value: &Option<String>) -> bool {
+    match value.as_deref() {
+        None | Some("false") | Some("off") | Some("no") | Some("0") => false,
+        Some(_) => true,
+    }
+}
+
+/// Parse the side-by-side option value into (enabled, min_width).
+/// - `None` → (false, 0)
+/// - `Some("true")` / `Some("yes")` / `Some("on")` → (true, 0)
+/// - `Some("false")` / `Some("no")` / `Some("off")` / `Some("0")` → (false, 0)
+/// - `Some("80")` → (true, 80)
+fn parse_side_by_side(value: &Option<String>) -> (bool, usize) {
+    match value.as_deref() {
+        None | Some("false") | Some("off") | Some("no") | Some("0") => (false, 0),
+        Some("true") | Some("yes") | Some("on") => (true, 0),
+        Some(s) => match s.parse::<usize>() {
+            Ok(min_width) => (true, min_width),
+            Err(_) => {
+                fatal(format!(
+                    r#"Invalid value for --side-by-side: {s}. Expected "true", "false", or a minimum terminal width (e.g. 80)."#,
+                ));
+            }
+        },
+    }
 }
 
 impl FromStr for cli::InspectRawLines {
@@ -807,7 +844,7 @@ pub mod tests {
         assert_eq!(opt.plus_non_emph_style, "black black");
         assert_eq!(opt.plus_style, "black black");
         assert!(opt.raw);
-        assert!(opt.side_by_side);
+        assert!(opt.computed.side_by_side);
         assert_eq!(opt.syntax_theme, Some("xxxyyyzzz".to_string()));
         assert_eq!(opt.tab_width, 77);
         assert_eq!(opt.true_color, "never");
@@ -883,35 +920,23 @@ pub mod tests {
     fn test_side_by_side_min_width_disables_sbs_when_terminal_narrow() {
         // Tests use TERMINAL_WIDTH_IN_TESTS = 43
         // When min-width is greater than terminal width, side-by-side should be disabled
-        let opt = integration_test_utils::make_options_from_args(&[
-            "--side-by-side",
-            "--side-by-side-min-width",
-            "100",
-        ]);
-        assert!(!opt.side_by_side);
+        let opt = integration_test_utils::make_options_from_args(&["--side-by-side=100"]);
+        assert!(!opt.computed.side_by_side);
     }
 
     #[test]
     fn test_side_by_side_min_width_allows_sbs_when_terminal_wide_enough() {
         // Tests use TERMINAL_WIDTH_IN_TESTS = 43
         // When min-width is less than or equal to terminal width, side-by-side should remain enabled
-        let opt = integration_test_utils::make_options_from_args(&[
-            "--side-by-side",
-            "--side-by-side-min-width",
-            "40",
-        ]);
-        assert!(opt.side_by_side);
+        let opt = integration_test_utils::make_options_from_args(&["--side-by-side=40"]);
+        assert!(opt.computed.side_by_side);
     }
 
     #[test]
-    fn test_side_by_side_min_width_zero_always_allows_sbs() {
-        // When min-width is 0, side-by-side should always be allowed
-        let opt = integration_test_utils::make_options_from_args(&[
-            "--side-by-side",
-            "--side-by-side-min-width",
-            "0",
-        ]);
-        assert!(opt.side_by_side);
+    fn test_side_by_side_always_enables_without_value() {
+        // When no value is given, side-by-side should always be enabled
+        let opt = integration_test_utils::make_options_from_args(&["--side-by-side"]);
+        assert!(opt.computed.side_by_side);
     }
 
     #[test]
@@ -919,8 +944,7 @@ pub mod tests {
         use std::fs::remove_file;
         let git_config_contents = b"
 [delta]
-    side-by-side = true
-    side-by-side-min-width = 100
+    side-by-side = 100
 ";
         let git_config_path = "delta__test_side_by_side_min_width_from_git_config.gitconfig";
         let opt = integration_test_utils::make_options_from_args_and_git_config(
@@ -929,7 +953,24 @@ pub mod tests {
             Some(git_config_path),
         );
         // Terminal width in tests is 43, min-width is 100, so side-by-side should be disabled
-        assert!(!opt.side_by_side);
+        assert!(!opt.computed.side_by_side);
+        remove_file(git_config_path).unwrap();
+    }
+
+    #[test]
+    fn test_side_by_side_true_from_git_config() {
+        use std::fs::remove_file;
+        let git_config_contents = b"
+[delta]
+    side-by-side = true
+";
+        let git_config_path = "delta__test_side_by_side_true_from_git_config.gitconfig";
+        let opt = integration_test_utils::make_options_from_args_and_git_config(
+            &[],
+            Some(git_config_contents),
+            Some(git_config_path),
+        );
+        assert!(opt.computed.side_by_side);
         remove_file(git_config_path).unwrap();
     }
 }
