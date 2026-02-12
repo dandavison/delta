@@ -642,15 +642,8 @@ fn set_widths_and_isatty(opt: &mut cli::Opt) {
 
     // If one extra character for e.g. `less --status-column` is required use "-1"
     // as an argument, also see #41, #10, #115 and #727.
-    #[cfg(test)]
-    {
-        opt.computed.available_terminal_width = tests::TERMINAL_WIDTH_IN_TESTS;
-    }
-    #[cfg(not(test))]
-    {
-        opt.computed.available_terminal_width =
-            crate::utils::workarounds::windows_msys2_width_fix(term_stdout.size(), &term_stdout);
-    }
+    opt.computed.available_terminal_width =
+        crate::utils::workarounds::windows_msys2_width_fix(term_stdout.size(), &term_stdout);
 
     let (decorations_width, background_color_extends_to_terminal_width) = match opt.width.as_deref()
     {
@@ -716,6 +709,8 @@ pub mod tests {
     use crate::cli;
     use crate::tests::integration_test_utils;
     use crate::utils::bat::output::PagingMode;
+
+    use super::parse_side_by_side;
 
     pub const TERMINAL_WIDTH_IN_TESTS: usize = 43;
 
@@ -907,25 +902,34 @@ pub mod tests {
 
     #[test]
     fn test_side_by_side_min_width_disables_sbs_when_terminal_narrow() {
-        // Tests use TERMINAL_WIDTH_IN_TESTS = 43
-        // When min-width is greater than terminal width, side-by-side should be disabled
-        let opt = integration_test_utils::make_options_from_args(&["--side-by-side=100"]);
+        // Use a min-width much larger than any reasonable terminal to guarantee it's disabled.
+        let opt = integration_test_utils::make_options_from_args(&["--side-by-side=99999"]);
         assert!(!opt.computed.side_by_side);
     }
 
     #[test]
-    fn test_side_by_side_min_width_allows_sbs_when_terminal_wide_enough() {
-        // Tests use TERMINAL_WIDTH_IN_TESTS = 43
-        // When min-width is less than or equal to terminal width, side-by-side should remain enabled
-        let opt = integration_test_utils::make_options_from_args(&["--side-by-side=40"]);
+    fn test_side_by_side_always_enables_without_value() {
+        // When no value is given, min-width defaults to 0 (always enabled)
+        let opt = integration_test_utils::make_options_from_args(&["--side-by-side"]);
         assert!(opt.computed.side_by_side);
     }
 
     #[test]
-    fn test_side_by_side_always_enables_without_value() {
-        // When no value is given, side-by-side should always be enabled
-        let opt = integration_test_utils::make_options_from_args(&["--side-by-side"]);
-        assert!(opt.computed.side_by_side);
+    fn test_parse_side_by_side() {
+        // No value → disabled
+        assert_eq!(parse_side_by_side(&None), (false, 0));
+        // Boolean true → enabled, min-width 0
+        assert_eq!(parse_side_by_side(&Some("true".to_string())), (true, 0));
+        assert_eq!(parse_side_by_side(&Some("yes".to_string())), (true, 0));
+        assert_eq!(parse_side_by_side(&Some("on".to_string())), (true, 0));
+        // Boolean false → disabled
+        assert_eq!(parse_side_by_side(&Some("false".to_string())), (false, 0));
+        assert_eq!(parse_side_by_side(&Some("no".to_string())), (false, 0));
+        assert_eq!(parse_side_by_side(&Some("off".to_string())), (false, 0));
+        // Numeric → enabled with min-width
+        assert_eq!(parse_side_by_side(&Some("80".to_string())), (true, 80));
+        assert_eq!(parse_side_by_side(&Some("40".to_string())), (true, 40));
+        assert_eq!(parse_side_by_side(&Some("0".to_string())), (false, 0));
     }
 
     #[test]
@@ -933,7 +937,7 @@ pub mod tests {
         use std::fs::remove_file;
         let git_config_contents = b"
 [delta]
-    side-by-side = 100
+    side-by-side = 99999
 ";
         let git_config_path = "delta__test_side_by_side_min_width_from_git_config.gitconfig";
         let opt = integration_test_utils::make_options_from_args_and_git_config(
@@ -941,7 +945,7 @@ pub mod tests {
             Some(git_config_contents),
             Some(git_config_path),
         );
-        // Terminal width in tests is 43, min-width is 100, so side-by-side should be disabled
+        // min-width of 99999 is larger than any terminal, so side-by-side should be disabled
         assert!(!opt.computed.side_by_side);
         remove_file(git_config_path).unwrap();
     }
@@ -966,11 +970,10 @@ pub mod tests {
     #[test]
     fn test_side_by_side_numeric_from_git_config_activates_line_numbers() {
         use std::fs::remove_file;
-        // side-by-side = 40 with terminal width 43 should enable side-by-side
-        // AND activate child features (line-numbers)
+        // side-by-side = true should activate child features (line-numbers)
         let git_config_contents = b"
 [delta]
-    side-by-side = 40
+    side-by-side = true
 ";
         let git_config_path =
             "delta__test_side_by_side_numeric_activates_line_numbers.gitconfig";
@@ -983,7 +986,7 @@ pub mod tests {
         // The side-by-side feature should activate line-numbers as a child feature
         assert!(
             opt.features.as_ref().unwrap().contains("line-numbers"),
-            "side-by-side = 40 should activate line-numbers feature, got: {:?}",
+            "side-by-side = true should activate line-numbers feature, got: {:?}",
             opt.features
         );
         remove_file(git_config_path).unwrap();
