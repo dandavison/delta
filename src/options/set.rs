@@ -476,18 +476,7 @@ fn gather_builtin_features_from_flags_in_gitconfig(
     git_config: &GitConfig,
 ) {
     for child_feature in builtin_features.keys() {
-        let key = format!("{git_config_key}.{child_feature}");
-        let enabled = if child_feature == "side-by-side" {
-            // side-by-side accepts a bool or an integer (min-width), so try string first.
-            git_config
-                .get::<Option<String>>(&key)
-                .flatten()
-                .map(|s| side_by_side_enabled(&Some(s)))
-                .unwrap_or(false)
-        } else {
-            git_config.get::<bool>(&key) == Some(true)
-        };
-        if enabled {
+        if let Some(true) = git_config.get::<bool>(&format!("{git_config_key}.{child_feature}")) {
             gather_builtin_features_recursively(child_feature, features, builtin_features, opt);
         }
     }
@@ -971,6 +960,32 @@ pub mod tests {
             Some(git_config_path),
         );
         assert!(opt.computed.side_by_side);
+        remove_file(git_config_path).unwrap();
+    }
+
+    #[test]
+    fn test_side_by_side_numeric_from_git_config_activates_line_numbers() {
+        use std::fs::remove_file;
+        // side-by-side = 40 with terminal width 43 should enable side-by-side
+        // AND activate child features (line-numbers)
+        let git_config_contents = b"
+[delta]
+    side-by-side = 40
+";
+        let git_config_path =
+            "delta__test_side_by_side_numeric_activates_line_numbers.gitconfig";
+        let opt = integration_test_utils::make_options_from_args_and_git_config(
+            &[],
+            Some(git_config_contents),
+            Some(git_config_path),
+        );
+        assert!(opt.computed.side_by_side);
+        // The side-by-side feature should activate line-numbers as a child feature
+        assert!(
+            opt.features.as_ref().unwrap().contains("line-numbers"),
+            "side-by-side = 40 should activate line-numbers feature, got: {:?}",
+            opt.features
+        );
         remove_file(git_config_path).unwrap();
     }
 }
