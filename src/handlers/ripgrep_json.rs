@@ -171,6 +171,32 @@ mod tests {
     }
 
     #[test]
+    fn test_max_line_length_truncates_long_rg_json_line() {
+        // https://github.com/dandavison/delta/issues/2111
+        // rg --json output with long code lines was not truncated.
+        let max_line_length = 200;
+        let long_code = format!("var x = {};\\n", "a".repeat(5000));
+        let data = format!(
+            r#"{{"type":"begin","data":{{"path":{{"text":"test.js"}}}}}}
+{{"type":"match","data":{{"path":{{"text":"test.js"}},"lines":{{"text":"{long_code}"}},"line_number":1,"absolute_offset":0,"submatches":[{{"match":{{"text":"var"}},"start":0,"end":3}}]}}}}
+{{"type":"end","data":{{"path":{{"text":"test.js"}},"binary_offset":null,"stats":{{"elapsed":{{"secs":0,"nanos":100,"human":"0s"}},"searches":1,"searches_with_match":1,"bytes_searched":100,"bytes_printed":100,"matched_lines":1,"matches":1}}}}}}
+{{"type":"summary","data":{{"elapsed_total":{{"secs":0,"nanos":100,"human":"0s"}},"stats":{{"bytes_printed":100,"bytes_searched":100,"elapsed":{{"human":"0s","nanos":100,"secs":0}},"matched_lines":1,"matches":1,"searches":1,"searches_with_match":1}}}}}}"#
+        );
+        let result = DeltaTest::with_args(&["--max-line-length", &max_line_length.to_string()])
+            .with_input(&data);
+        // The line number prefix (e.g. "1:") adds a few chars beyond max_line_length.
+        let tolerance = max_line_length + 10;
+        for line in result.output.lines() {
+            let visible_width = crate::ansi::measure_text_width(line);
+            assert!(
+                visible_width <= tolerance,
+                "line has visible width {visible_width} > {tolerance}: {:.120}...",
+                line
+            );
+        }
+    }
+
+    #[test]
     fn test_deserialize() {
         let line = r#"{"type":"match","data":{"path":{"text":"src/cli.rs"},"lines":{"text":"    fn from_clap_and_git_config(\n"},"line_number":null,"absolute_offset":35837,"submatches":[{"match":{"text":"fn"},"start":4,"end":6}]}}"#;
         let ripgrep_line: RipGrepLine = serde_json::from_str(line).unwrap();
