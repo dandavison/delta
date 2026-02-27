@@ -28,6 +28,19 @@ pub struct GrepLine<'b> {
 }
 
 impl GrepLine<'_> {
+    fn truncate(&mut self, max_len: usize) {
+        let truncate_at = self.code.floor_char_boundary(max_len);
+        self.code = Cow::Owned(self.code[..truncate_at].to_string());
+        if let Some(ref mut submatches) = self.submatches {
+            submatches.retain(|(start, _)| *start < truncate_at);
+            for (_, end) in submatches.iter_mut() {
+                if *end > truncate_at {
+                    *end = truncate_at;
+                }
+            }
+        }
+    }
+
     fn expand_tabs(&mut self, tab_cfg: &tabs::TabCfg) {
         let old_len = self.code.len();
         self.code = tabs::expand(&self.code, tab_cfg).into();
@@ -111,6 +124,13 @@ impl StateMachine<'_> {
 
         if matches!(grep_line.line_type, LineType::Ignore) {
             return Ok(true);
+        }
+        // Truncate long code lines. For non-JSON grep, ingest_line_utf8 already
+        // truncates the raw line. For rg --json, the raw JSON is kept intact for
+        // parsing, so the extracted code must be truncated here.
+        let mut grep_line = grep_line;
+        if self.config.max_line_length > 0 && grep_line.code.len() > self.config.max_line_length {
+            grep_line.truncate(self.config.max_line_length);
         }
         let first_path = previous_path.is_none();
         let new_path = first_path || previous_path.as_deref() != Some(&grep_line.path);
