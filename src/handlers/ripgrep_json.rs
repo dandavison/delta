@@ -183,9 +183,11 @@ mod tests {
 {{"type":"summary","data":{{"elapsed_total":{{"secs":0,"nanos":100,"human":"0s"}},"stats":{{"bytes_printed":100,"bytes_searched":100,"elapsed":{{"human":"0s","nanos":100,"secs":0}},"matched_lines":1,"matches":1,"searches":1,"searches_with_match":1}}}}}}"#
         );
         let result = DeltaTest::with_args(&["--max-line-length", &max_line_length.to_string()])
+            .set_config(|cfg| cfg.truncation_symbol = ">".into())
             .with_input(&data);
         // The line number prefix (e.g. "1:") adds a few chars beyond max_line_length.
         let tolerance = max_line_length + 10;
+        let mut found_truncation_symbol = false;
         for line in result.output.lines() {
             let visible_width = crate::ansi::measure_text_width(line);
             assert!(
@@ -193,7 +195,14 @@ mod tests {
                 "line has visible width {visible_width} > {tolerance}: {:.120}...",
                 line
             );
+            if line.contains('>') {
+                found_truncation_symbol = true;
+            }
         }
+        assert!(
+            found_truncation_symbol,
+            "truncation symbol '>' not found in output; truncated lines should show it"
+        );
     }
 
     #[test]
