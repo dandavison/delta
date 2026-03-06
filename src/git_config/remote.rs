@@ -12,6 +12,7 @@ pub enum GitRemoteRepo {
     GitLab { slug: String },
     SourceHut { slug: String },
     Codeberg { slug: String },
+    Bitbucket { slug: String },
 }
 
 impl GitRemoteRepo {
@@ -28,6 +29,9 @@ impl GitRemoteRepo {
             }
             Self::Codeberg { slug } => {
                 format!("https://codeberg.org/{slug}/commit/{commit}")
+            }
+            Self::Bitbucket { slug } => {
+                format!("https://bitbucket.org/{slug}/commits/{commit}")
             }
         }
     }
@@ -97,6 +101,20 @@ lazy_static! {
         "
     )
     .unwrap();
+    static ref BITBUCKET_REMOTE_URL: Regex = Regex::new(
+        r"(?x)
+        ^
+        (?:https://|git@)? # Support both HTTPS and SSH URLs, SSH URLs optionally omitting the git@
+        bitbucket\.org
+        [:/]              # This separator differs between SSH and HTTPS URLs
+        ([^/]+)           # Capture the user/org name
+        /
+        (.+?)             # Capture the repo name (lazy to avoid consuming '.git' if present)
+        (?:\.git)?        # Non-capturing group to consume '.git' if present
+        $
+        "
+    )
+    .unwrap();
 }
 
 impl FromStr for GitRemoteRepo {
@@ -135,8 +153,16 @@ impl FromStr for GitRemoteRepo {
                     repo = caps.get(2).unwrap().as_str()
                 ),
             })
+        } else if let Some(caps) = BITBUCKET_REMOTE_URL.captures(s) {
+            Ok(Self::Bitbucket {
+                slug: format!(
+                    "{user}/{repo}",
+                    user = caps.get(1).unwrap().as_str(),
+                    repo = caps.get(2).unwrap().as_str()
+                ),
+            })
         } else {
-            Err(anyhow!("Not a GitHub, GitLab, SourceHut or Codeberg repo."))
+            Err(anyhow!("Not a GitHub, GitLab, SourceHut, Codeberg or Bitbucket repo."))
         }
     }
 }
@@ -286,6 +312,40 @@ mod tests {
         assert_eq!(
             repo.format_commit_url(commit_hash),
             format!("https://codeberg.org/dnkl/foot/commit/{commit_hash}")
+        )
+    }
+
+    #[test]
+    fn test_parse_bitbucket_urls() {
+        let urls = &[
+            "https://bitbucket.org/someuser/somerepo.git",
+            "https://bitbucket.org/someuser/somerepo",
+            "git@bitbucket.org:someuser/somerepo.git",
+            "git@bitbucket.org:someuser/somerepo",
+            "bitbucket.org:someuser/somerepo.git",
+            "bitbucket.org:someuser/somerepo",
+        ];
+        for url in urls {
+            let parsed = GitRemoteRepo::from_str(url);
+            assert!(parsed.is_ok());
+            assert_eq!(
+                parsed.unwrap(),
+                GitRemoteRepo::Bitbucket {
+                    slug: "someuser/somerepo".to_string()
+                }
+            );
+        }
+    }
+
+    #[test]
+    fn test_format_bitbucket_commit_link() {
+        let repo = GitRemoteRepo::Bitbucket {
+            slug: "someuser/somerepo".to_string(),
+        };
+        let commit_hash = "1c072856ebf12419378c5098ad543c497197c6da";
+        assert_eq!(
+            repo.format_commit_url(commit_hash),
+            format!("https://bitbucket.org/someuser/somerepo/commits/{commit_hash}")
         )
     }
 }
