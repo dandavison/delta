@@ -162,7 +162,9 @@ impl FromStr for GitRemoteRepo {
                 ),
             })
         } else {
-            Err(anyhow!("Not a GitHub, GitLab, SourceHut, Codeberg or Bitbucket repo."))
+            Err(anyhow!(
+                "Not a GitHub, GitLab, SourceHut, Codeberg or Bitbucket repo."
+            ))
         }
     }
 }
