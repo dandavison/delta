@@ -91,8 +91,8 @@ Options:
           Style string for the commit hash decoration.
 
           See STYLES section. The style string should contain one of the
-          special attributes 'box', 'ul' (underline), 'ol' (overline), or the
-          combination 'ul ol'.
+          special attributes 'box', 'ul' (underline), 'ol' (overline), or a
+          combination ('ul ol' or 'box ul').
 
           [default: ""]
 
@@ -214,8 +214,8 @@ Options:
           Style string for the file decoration.
 
           See STYLES section. The style string should contain one of the
-          special attributes 'box', 'ul' (underline), 'ol' (overline), or the
-          combination 'ul ol'.
+          special attributes 'box', 'ul' (underline), 'ol' (overline), or a
+          combination ('ul ol' or 'box ul').
 
           [default: "blue ul"]
 
@@ -322,8 +322,8 @@ Options:
           Style string for the hunk-header decoration.
 
           See STYLES section. The style string should contain one of the
-          special attributes 'box', 'ul' (underline), 'ol' (overline), or the
-          combination 'ul ol'.
+          special attributes 'box', 'ul' (underline), 'ol' (overline), or a
+          combination ('ul ol' or 'box ul').
 
           [default: "blue box"]
 
@@ -573,7 +573,8 @@ Options:
           This styles the decoration of the header above the diff between the
           ancestral commit and the 'ours' branch. See STYLES section. The
           style string should contain one of the special attributes 'box',
-          'ul' (underline), 'ol' (overline), or the combination 'ul ol'.
+          'ul' (underline), 'ol' (overline), or a combination ('ul ol' or 'box
+          ul').
 
           [default: box]
 
@@ -592,7 +593,7 @@ Options:
           This styles the decoration of the header above the diff between the
           ancestral commit and 'their' branch.  See STYLES section. The style
           string should contain one of the special attributes 'box', 'ul'
-          (underline), 'ol' (overline), or the combination 'ul ol'.
+          (underline), 'ol' (overline), or a combination ('ul ol' or 'box ul').
 
           [default: box]
 
