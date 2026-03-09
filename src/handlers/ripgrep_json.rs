@@ -170,6 +170,36 @@ mod tests {
         "#);
     }
 
+    // https://github.com/dandavison/delta/issues/2111
+    // When input comes from `rg --json`, long lines (e.g. minified JS) are
+    // not truncated even when --max-line-length is set, because JSON lines
+    // bypass truncation in ingest_line_utf8 (they must remain intact for
+    // parsing), and the extracted code is never subsequently truncated.
+    #[test]
+    fn test_max_line_length_truncates_long_rg_json_line() {
+        let max_len = 200;
+        // Build a long code line with a submatch near the start.
+        let long_code = "x".repeat(5000);
+        let data = format!(
+            r#"{{"type":"begin","data":{{"path":{{"text":"long.js"}}}}}}
+{{"type":"match","data":{{"path":{{"text":"long.js"}},"lines":{{"text":"{long_code}\n"}},"line_number":1,"absolute_offset":0,"submatches":[{{"match":{{"text":"xx"}},"start":10,"end":12}}]}}}}
+{{"type":"end","data":{{"path":{{"text":"long.js"}},"binary_offset":null,"stats":{{"elapsed":{{"secs":0,"nanos":0,"human":"0s"}},"searches":1,"searches_with_match":1,"bytes_searched":5000,"bytes_printed":5000,"matched_lines":1,"matches":1}}}}}}"#
+        );
+        let result = DeltaTest::with_args(&[&format!("--max-line-length={max_len}")])
+            .with_input(&data);
+        // Every output line must respect max-line-length (with some tolerance
+        // for ANSI codes and line-number prefixes).
+        let tolerance = 30;
+        for line in result.output.lines() {
+            assert!(
+                line.len() <= max_len + tolerance,
+                "Line exceeds max-line-length ({max_len}+{tolerance}): length={}, content={:?}",
+                line.len(),
+                &line[..line.len().min(100)],
+            );
+        }
+    }
+
     #[test]
     fn test_deserialize() {
         let line = r#"{"type":"match","data":{"path":{"text":"src/cli.rs"},"lines":{"text":"    fn from_clap_and_git_config(\n"},"line_number":null,"absolute_offset":35837,"submatches":[{"match":{"text":"fn"},"start":4,"end":6}]}}"#;
