@@ -9,3 +9,8 @@ src/junk.rs
 # insta: unreviewed inline data, and separate snapshot files
 *.pending-snap
 **/snapshots/*.snap.new
+
+# task automation
+AGENTS.md
+CLAUDE.md
+.task/
