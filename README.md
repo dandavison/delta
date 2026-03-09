@@ -51,7 +51,7 @@ Delta has many features and is very customizable; please see `delta -h` (short h
 - Line numbering
 - `n` and `N` keybindings to move between files in large diffs, and between diffs in `log -p` views (`--navigate`)
 - Improved merge conflict display
-- Improved `git blame` display (syntax highlighting; `--hyperlinks` formats commits as links to hosting provider etc. Supported hosting providers are: GitHub, GitLab, SourceHut, Codeberg)
+- Improved `git blame` display (syntax highlighting; `--hyperlinks` formats commits as links to hosting provider etc. Supported hosting providers are: GitHub, GitLab, SourceHut, Codeberg, Bitbucket)
 - Syntax-highlights grep output from `rg`, `git grep`, `grep`, etc
 - Support for Git's `--color-moved` feature.
 - Code can be copied directly from the diff (`-/+` markers are removed by default).
