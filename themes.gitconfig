@@ -665,3 +665,30 @@
     hunk-header-file-style = darkgoldenrod
     hunk-header-line-number-style = orange
     hunk-header-style = file line-number darkviolet
+
+[delta "nightjar"]
+    # author: https://github.com/citizenhicks
+    # pastel colors (catpuccin mocha), best with git context 6
+    dark = true
+    max-line-length = 0
+    file-decoration-style = "#414868" overline
+    file-style = "#cdd6f4" bold
+    hunk-header-style = syntax bold italic
+    hunk-header-decoration-style = "#313244" box
+    line-numbers = true
+    line-numbers-left-format = "{nm:>1}┊"
+    line-numbers-left-style = "#a6adc8"
+    line-numbers-minus-style = "#f38ba8" bold
+    line-numbers-plus-style = "#a6e3a1" bold
+    line-numbers-right-format = " {np:>1}┊"
+    line-numbers-right-style = "#bac2de"
+    line-numbers-zero-style = "#6c7086"
+    minus-emph-style = "#11111b" "#f38ba8"
+    minus-style = syntax "#3e2937"
+    plus-emph-style = "#11111b" "#a6e3a1"
+    plus-style = syntax "#2f3b36"
+    syntax-theme = Nord
+    whitespace-error-style = "#f38ba8" reverse
+    zero-style = syntax
+    minus-non-emph-style = syntax "#3e2937"
+    plus-non-emph-style = syntax "#2f3b36"
