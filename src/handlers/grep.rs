@@ -13,7 +13,8 @@ use crate::delta::{State, StateMachine};
 use crate::handlers::{self, ripgrep_json};
 use crate::paint::{self, BgShouldFill, StyleSectionSpecifier};
 use crate::style::Style;
-use crate::utils::{process, tabs};
+use crate::utils::process::{self, CommandLine};
+use crate::utils::tabs;
 
 use super::hunk_header::HunkHeaderIncludeHunkLabel;
 
@@ -664,11 +665,24 @@ $
     .unwrap()
 }
 
+/// Check if git grep is running in filename-only output mode.
+/// In this mode, output contains just filenames without line numbers or code,
+/// so parsing as grep output would incorrectly split the filename.
+fn is_filename_only_output(cmd: &CommandLine) -> bool {
+    cmd.short_options.contains("-l")
+        || cmd.short_options.contains("-L")
+        || cmd.long_options.contains("--files-with-matches")
+        || cmd.long_options.contains("--files-without-match")
+}
+
 pub fn parse_grep_line(line: &str) -> Option<GrepLine<'_>> {
     if line.starts_with('{') {
         ripgrep_json::parse_line(line)
     } else {
         match &*process::calling_process() {
+            process::CallingProcess::GitGrep(cmd) if is_filename_only_output(cmd) => {
+                None // Don't parse filename-only output as grep lines
+            }
             process::CallingProcess::GitGrep(_) | process::CallingProcess::OtherGrep => [
                 &*GREP_LINE_REGEX_ASSUMING_FILE_EXTENSION_AND_LINE_NUMBER,
                 &*GREP_LINE_REGEX_ASSUMING_FILE_EXTENSION_NO_SPACES,
@@ -734,6 +748,7 @@ mod tests {
     use crate::handlers::grep::{
         parse_grep_line, parse_raw_grep_line, GrepLine, GrepType, LineType,
     };
+    use crate::tests::integration_test_utils::DeltaTest;
     use crate::utils::process::tests::FakeParentArgs;
 
     #[test]
@@ -1290,5 +1305,22 @@ mod tests {
                 (miss, " state {")
             ]))
         );
+    }
+
+    #[test]
+    fn test_git_grep_l_preserves_hyphenated_filenames() {
+        for flag in ["-l", "-L", "--files-with-matches", "--files-without-match"] {
+            let output = DeltaTest::with_args(&[])
+                .with_calling_process(&format!("git grep {} pattern", flag))
+                .with_input("my-file.rs\n")
+                .output;
+
+            assert_eq!(
+                output.trim(),
+                "my-file.rs",
+                "git grep {} should preserve filename unchanged",
+                flag
+            );
+        }
     }
 }
