@@ -4,6 +4,7 @@ use unicode_width::UnicodeWidthStr;
 
 use crate::ansi;
 use crate::cli;
+use crate::config::ensure_display_width_1;
 use crate::config::{self, delta_unreachable, Config};
 use crate::delta::DiffType;
 use crate::delta::State;
@@ -53,6 +54,59 @@ impl SideBySideData {
             _ => available_terminal_width / 2,
         };
         SideBySideData::new(Panel { width: panel_width }, Panel { width: panel_width })
+    }
+}
+
+#[derive(Clone, Debug)]
+pub struct SideBySideFillEmpty {
+    pub filler: smol_str::SmolStr,
+    pub style: Style,
+}
+
+impl SideBySideFillEmpty {
+    fn new(filler: smol_str::SmolStr, style: Style) -> Self {
+        ensure_display_width_1(
+            "first argument of side-by-side-fill-empty",
+            filler.to_string(),
+        );
+        Self { filler, style }
+    }
+
+    fn default_filler(style: Style) -> Self {
+        Self {
+            filler: "/".into(),
+            style,
+        }
+    }
+
+    pub fn from_str(
+        s: Option<String>,
+        default_style: &str,
+        true_color: bool,
+        git_config: Option<&crate::git_config::GitConfig>,
+    ) -> Option<Self> {
+        match s?.split(char::is_whitespace).collect::<Vec<_>>().as_slice() {
+            [] | [""] => None,
+            [single_arg] => match single_arg.to_lowercase().as_str() {
+                "false" => None,
+                "true" => Some(SideBySideFillEmpty::default_filler(Style::from_str(
+                    default_style,
+                    None,
+                    None,
+                    true_color,
+                    git_config,
+                ))),
+                _ => Some(SideBySideFillEmpty::new(
+                    single_arg.into(),
+                    Style::from_str(default_style, None, None, true_color, git_config),
+                )),
+            },
+            args => {
+                let style =
+                    Style::from_str(&args[1..].join(" "), None, None, true_color, git_config);
+                Some(SideBySideFillEmpty::new(args[0].into(), style))
+            }
+        }
     }
 }
 
@@ -518,18 +572,27 @@ fn pad_panel_line_to_width(
         config,
     );
 
-    match bg_fill_mode {
-        Some(BgFillMethod::TryAnsiSequence) => {
+    match (
+        bg_fill_mode,
+        config.side_by_side_fill_empty.as_ref(),
+        panel_line_is_empty,
+    ) {
+        (_, Some(fill), true) => panel_line.push_str(
+            &fill
+                .style
+                .paint(fill.filler.repeat(panel_width - text_width))
+                .to_string(),
+        ),
+        (Some(BgFillMethod::TryAnsiSequence), _, _) => {
             Painter::right_fill_background_color(panel_line, fill_style)
         }
-        Some(BgFillMethod::Spaces) if text_width >= panel_width => (),
-        Some(BgFillMethod::Spaces) => panel_line.push_str(
-            #[allow(clippy::unnecessary_to_owned)]
+        (Some(BgFillMethod::Spaces), _, _) if text_width >= panel_width => (),
+        (Some(BgFillMethod::Spaces), _, _) => panel_line.push_str(
             &fill_style
                 .paint(" ".repeat(panel_width - text_width))
                 .to_string(),
         ),
-        None => (),
+        (None, _, _) => (),
     }
 }
 

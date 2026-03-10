@@ -3,10 +3,9 @@ use unicode_segmentation::UnicodeSegmentation;
 use unicode_width::UnicodeWidthStr;
 
 use crate::cli;
-use crate::config::INLINE_SYMBOL_WIDTH_1;
+use crate::config::{ensure_display_width_1, Config, INLINE_SYMBOL_WIDTH_1};
 use crate::fatal;
 
-use crate::config::Config;
 use crate::delta::DiffType;
 use crate::delta::State;
 use crate::features::line_numbers::{self, SideBySideLineWidth};
@@ -94,15 +93,6 @@ fn remove_percent_suffix(arg: &str) -> &str {
     match &arg.strip_suffix('%') {
         Some(s) => s,
         None => arg,
-    }
-}
-
-fn ensure_display_width_1(what: &str, arg: String) -> String {
-    match arg.grapheme_indices(true).count() {
-        INLINE_SYMBOL_WIDTH_1 => arg,
-        width => fatal(format!(
-            "Invalid value for {what}, display width of \"{arg}\" must be {INLINE_SYMBOL_WIDTH_1} but is {width}",
-        )),
     }
 }
 
