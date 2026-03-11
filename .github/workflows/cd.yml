@@ -5,6 +5,11 @@ on:
     tags:
       - '[0-9]+.[0-9]+.[0-9]+'
 
+permissions:
+  contents: write     # for release creation and asset upload
+  id-token: write     # for artifact attestations
+  attestations: write # for artifact attestations
+
 jobs:
   publish:
     name: Publishing for ${{ matrix.job.os }}
@@ -86,6 +91,13 @@ jobs:
             git-delta*.deb
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Generating artifact attestations
+        uses: actions/attest@v4
+        with:
+          subject-path: |
+            delta-*-${{ matrix.job.target }}.*
+            git-delta*.deb
 
   publish-to-cargo:
     name: Publishing to Cargo
