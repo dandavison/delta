@@ -189,7 +189,7 @@ impl<'a> LineNumbersData<'a> {
         // file. In the case of merge commits, it may be longer.
         self.line_number =
             MinusPlus::new(line_numbers[0].0, line_numbers[line_numbers.len() - 1].0);
-        let hunk_max_line_number = line_numbers.iter().map(|(n, d)| n + d).max().unwrap();
+        let hunk_max_line_number = line_numbers.iter().map(|(n, d)| n + d).max().unwrap_or_default();
         self.hunk_max_line_number_width =
             1 + (hunk_max_line_number as f64).log10().floor() as usize;
         self.plus_file = plus_file;
