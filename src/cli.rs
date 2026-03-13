@@ -81,9 +81,12 @@ pub struct Opt {
     #[arg(
         long = "blame-timestamp-format",
         default_value = "%Y-%m-%d %H:%M:%S %z",
-        value_name = "FMT"
+        value_name = "FMT_IN"
     )]
-    /// Format of `git blame` timestamp in raw git output received by delta.
+    /// Expected formatting of the timestamp in raw `git blame` output read by delta.
+    ///
+    /// Must follow the format given to the git `--date=format:...` option, i.e. the
+    /// `strftime` conventions. Spelled out days or months are not supported.
     pub blame_timestamp_format: String,
 
     #[arg(long = "blame-timestamp-output-format", value_name = "FMT")]
