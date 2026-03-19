@@ -1,0 +1,12 @@
+diff --git a/example.py b/example.py
+index f5b0357..0e417fd 100644
+--- a/example.py
++++ b/example.py
+@@ -9,5 +9,5 @@ def foo():
+     And yet more.
+     Final docstring line.
+     """
+-    x = 1
+-    return x
++    x = 2
++    return x + 1

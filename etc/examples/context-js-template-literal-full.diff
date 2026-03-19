@@ -1,0 +1,26 @@
+diff --git a/render.js b/render.js
+index 5a34c24..8b7dc94 100644
+--- a/render.js
++++ b/render.js
+@@ -1,17 +1,18 @@
+ function render(data) {
+     const html = `
+         <div class="container">
+             <header>
+                 <h1>${data.title}</h1>
+                 <nav>${data.breadcrumbs}</nav>
+             </header>
+             <main>
+                 <p>${data.description}</p>
+                 <ul>${data.items}</ul>
+             </main>
+         </div>
+     `;
+-    const element = document.createElement("div");
+-    element.innerHTML = html;
+-    return element;
++    const wrapper = document.createElement("section");
++    wrapper.innerHTML = html;
++    wrapper.classList.add("rendered");
++    return wrapper;
+ }

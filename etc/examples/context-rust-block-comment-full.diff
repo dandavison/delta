@@ -1,0 +1,23 @@
+diff --git a/lib.rs b/lib.rs
+index 7adaebb..dfa1b5f 100644
+--- a/lib.rs
++++ b/lib.rs
+@@ -1,16 +1,17 @@
+ /// Entry point for the library.
+ pub fn process(input: &str) -> Result<String, Error> {
+     /*
+      * Multi-line comment explaining
+      * the complex validation logic
+      * that follows below.
+      * It covers edge cases for:
+      * - empty input
+      * - unicode input
+      * - oversized input
+      * - malformed input
+      */
+     let validated = validate(input)?;
+-    let result = transform(validated);
++    let trimmed = validated.trim();
++    let result = transform(trimmed);
+     Ok(result)
+ }

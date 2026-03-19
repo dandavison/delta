@@ -1,0 +1,20 @@
+diff --git a/example.py b/example.py
+index f5b0357..0e417fd 100644
+--- a/example.py
++++ b/example.py
+@@ -1,13 +1,13 @@
+ def foo():
+     """
+     This is a docstring that spans
+     multiple lines.
+     It has lots of content.
+     More content here.
+     Even more explanation.
+     Still going on.
+     And yet more.
+     Final docstring line.
+     """
+-    x = 1
+-    return x
++    x = 2
++    return x + 1
