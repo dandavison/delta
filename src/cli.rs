@@ -184,6 +184,15 @@ pub struct Opt {
     /// doesn't support it, then delta will fall back to `diff` instead of `git diff`.
     pub diff_args: String,
 
+    #[arg(short = 'U', value_name = "N")]
+    /// Display at most N context lines around each change.
+    ///
+    /// When the input diff has more context lines than N (e.g. from `git diff -U9999`), delta
+    /// still uses all of them for correct syntax highlighting but only displays N. This fixes
+    /// syntax highlighting inside multiline constructs (triple-quoted strings, block comments)
+    /// when the diff is generated with large context.
+    pub context: Option<usize>,
+
     #[arg(long = "diff-highlight")]
     /// Emulate diff-highlight.
     ///
