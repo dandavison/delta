@@ -3186,12 +3186,60 @@ index 53f98b6..14d6caa 100644
         );
     }
 
+    // This test uses -U 3 with a full-file-context diff. The highlighter sees
+    // the entire file (including `def foo():` and the opening `"""`), so it
+    // correctly parses the closing `"""` as ending the string. The -U 3 flag
+    // then narrows the displayed output to 3 context lines around changes.
+    #[test]
+    fn test_syntax_highlighting_with_context_narrowing() {
+        let result = DeltaTest::with_args(&["--color-only", "-U", "3"])
+            .explain_ansi()
+            .with_input(PYTHON_DOCSTRING_FULL_CONTEXT_DIFF);
+
+        // Narrowing: `def foo():` and opening `"""` should be suppressed
+        // since they are more than 3 context lines from the changes.
+        assert!(
+            !result.output.lines().any(|l| l.contains("def foo")),
+            "extra context lines should be suppressed by -U 3"
+        );
+
+        // Correct highlighting: `return` is a keyword, not a string
+        let plus_return_line = result
+            .output
+            .lines()
+            .find(|l| l.contains("+") && l.contains("return"))
+            .expect("should have a +return line");
+        assert!(
+            plus_return_line.contains("(203)return"),
+            "`return` after closing \"\"\" should be keyword-highlighted (203), \
+             got: {}",
+            plus_return_line
+        );
+    }
+
     const PYTHON_DOCSTRING_CONTEXT_DIFF: &str = "\
 diff --git a/example.py b/example.py
 index 1234567..abcdefg 100644
 --- a/example.py
 +++ b/example.py
 @@ -5,8 +5,8 @@
+     This is a docstring that spans
+     multiple lines.
+     \"\"\"
+-    x = 1
+-    return x
++    x = 2
++    return x + 1
+";
+
+    const PYTHON_DOCSTRING_FULL_CONTEXT_DIFF: &str = "\
+diff --git a/example.py b/example.py
+index 1234567..abcdefg 100644
+--- a/example.py
++++ b/example.py
+@@ -1,12 +1,12 @@
+ def foo():
+     \"\"\"
      This is a docstring that spans
      multiple lines.
      \"\"\"

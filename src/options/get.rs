@@ -124,6 +124,7 @@ pub trait GetOptionValue {
 }
 
 impl GetOptionValue for Option<String> {}
+impl GetOptionValue for Option<usize> {}
 impl GetOptionValue for String {}
 impl GetOptionValue for bool {}
 impl GetOptionValue for f64 {}
