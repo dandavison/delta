@@ -3155,4 +3155,49 @@ index 53f98b6..14d6caa 100644
  三æäöø€ÆÄÖ〇Øß三
  ¶
 ";
+
+    // Hunk starts inside a Python docstring: context lines are docstring body,
+    // then `"""` closes it, then real code follows. Because syntect starts each
+    // hunk in the default (beginning-of-file) parse state, it treats the closing
+    // `"""` as an *opening* delimiter, inverting highlighting: docstring text
+    // gets code colors, and actual code gets string colors.
+    //
+    // See https://github.com/dandavison/delta/issues/117
+    #[test]
+    fn test_syntax_highlighting_inside_multiline_string_context() {
+        let result = DeltaTest::with_args(&["--color-only"])
+            .explain_ansi()
+            .with_input(PYTHON_DOCSTRING_CONTEXT_DIFF);
+
+        // After the closing `"""`, `return` is real Python code and must be
+        // highlighted as a keyword (color 203), not as a string (color 242).
+        // With the bug, the entire line gets string color because syntect
+        // thinks `"""` opened a string rather than closing one.
+        let plus_return_line = result
+            .output
+            .lines()
+            .find(|l| l.contains("+") && l.contains("return"))
+            .expect("should have a +return line");
+        assert!(
+            plus_return_line.contains("(203)return"),
+            "BUG: `return` after closing \"\"\" should be keyword-highlighted (203), \
+             but got string highlighting instead.\nLine: {}",
+            plus_return_line
+        );
+    }
+
+    const PYTHON_DOCSTRING_CONTEXT_DIFF: &str = "\
+diff --git a/example.py b/example.py
+index 1234567..abcdefg 100644
+--- a/example.py
++++ b/example.py
+@@ -5,8 +5,8 @@
+     This is a docstring that spans
+     multiple lines.
+     \"\"\"
+-    x = 1
+-    return x
++    x = 2
++    return x + 1
+";
 }
