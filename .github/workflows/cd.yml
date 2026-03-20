@@ -88,12 +88,19 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
   publish-to-cargo:
+    permissions:
+      id-token: write  # Required for OIDC token exchange
+      contents: read
     name: Publishing to Cargo
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v3
+      - uses: rust-lang/crates-io-auth-action@v1
+        id: auth
       - uses: dtolnay/rust-toolchain@stable
-      - run: cargo publish --token ${{ secrets.CARGO_API_KEY }} --allow-dirty
+      - run: cargo publish --allow-dirty
+        env:
+          CARGO_REGISTRY_TOKEN: ${{ steps.auth.outputs.token }}
 
   publish-to-winget:
     name: Publish to WinGet
