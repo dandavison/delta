@@ -184,7 +184,7 @@ pub struct Opt {
     /// doesn't support it, then delta will fall back to `diff` instead of `git diff`.
     pub diff_args: String,
 
-    #[arg(short = 'U', value_name = "N")]
+    #[arg(short = 'U', long = "context-lines", value_name = "N")]
     /// Display at most N context lines around each change.
     ///
     /// When the input diff has more context lines than N, delta will use all of them for syntax
