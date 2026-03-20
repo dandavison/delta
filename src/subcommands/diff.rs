@@ -37,7 +37,7 @@ pub fn build_diff_cmd(
     // When context narrowing is active, we need full file context for correct
     // syntax highlighting. Strip any user-supplied -U from diff_args and inject
     // -U9999 instead.
-    if config.context.is_some() {
+    if config.context_lines.is_some() {
         diff_args.retain(|arg| !arg.starts_with("-U") && !arg.starts_with("-u"));
     }
 
@@ -53,14 +53,14 @@ pub fn build_diff_cmd(
                     || via_process_substitution(plus_file)) =>
         {
             let mut cmd = vec!["git", "diff", "--no-index", "--color"];
-            if config.context.is_some() {
+            if config.context_lines.is_some() {
                 cmd.push("-U9999");
             }
             (SubCmdKind::GitDiff, cmd)
         }
         _ => (
             SubCmdKind::Diff,
-            if config.context.is_some() {
+            if config.context_lines.is_some() {
                 vec!["diff", "-U9999"]
             } else if diff_args_set_unified_context(&diff_args) {
                 vec!["diff"]

@@ -183,7 +183,7 @@ impl<'p> Painter<'p> {
         );
         self.minus_lines.clear();
         self.plus_lines.clear();
-        if self.config.context.is_some() {
+        if self.config.context_lines.is_some() {
             self.snapshot_output(OutputChunkType::Change);
         }
     }
@@ -226,7 +226,7 @@ impl<'p> Painter<'p> {
                 BgShouldFill::default(),
             );
         }
-        if self.config.context.is_some() {
+        if self.config.context_lines.is_some() {
             self.snapshot_output(OutputChunkType::Context);
         }
     }
@@ -481,7 +481,7 @@ impl<'p> Painter<'p> {
 
     /// Write output buffer to output stream, and clear the buffer.
     pub fn emit(&mut self) -> std::io::Result<()> {
-        if self.config.context.is_some() {
+        if self.config.context_lines.is_some() {
             self.snapshot_output(OutputChunkType::Other);
             Ok(())
         } else {
@@ -503,7 +503,7 @@ impl<'p> Painter<'p> {
     }
 
     pub fn flush_hunk_output(&mut self) -> std::io::Result<()> {
-        let max_context = match self.config.context {
+        let max_context = match self.config.context_lines {
             Some(n) => n,
             None => {
                 // No narrowing: output_buffer should already have been

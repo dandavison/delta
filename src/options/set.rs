@@ -41,7 +41,6 @@ macro_rules! set_options {
         if $check_names {
             option_names.extend(&[
                 "24-bit-color",
-                "context-lines", // Per-invocation flag, not set via gitconfig
                 "diff-highlight", // Does not exist as a flag on config
                 "diff-so-fancy", // Does not exist as a flag on config
                 "detect-dark-light", // Does not exist as a flag on config
@@ -140,6 +139,7 @@ pub fn set_options(
             commit_decoration_style,
             commit_regex,
             commit_style,
+            context_lines,
             default_language,
             diff_args,
             diff_stat_align_width,

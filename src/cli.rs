@@ -191,7 +191,7 @@ pub struct Opt {
     /// highlighting but only display N. This can fix incorrect syntax highlighting around multiline
     /// constructs (multiline strings, block comments, etc). Use this in conjunction with git's -U
     /// option, e.g. `git diff -U9999`.
-    pub context: Option<usize>,
+    pub context_lines: Option<usize>,
 
     #[arg(long = "diff-highlight")]
     /// Emulate diff-highlight.
