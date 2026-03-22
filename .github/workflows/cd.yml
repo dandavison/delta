@@ -18,19 +18,19 @@ jobs:
           - os: windows-latest
             target: x86_64-pc-windows-msvc
             use-cross: false
-          - os: ubuntu-20.04
+          - os: ubuntu-latest
             target: x86_64-unknown-linux-gnu
             use-cross: false
           - os: ubuntu-latest
             target: x86_64-unknown-linux-musl
             use-cross: true
-          - os: ubuntu-20.04
+          - os: ubuntu-latest
             target: i686-unknown-linux-gnu
             use-cross: true
-          - os: ubuntu-20.04
+          - os: ubuntu-latest
             target: arm-unknown-linux-gnueabihf
             use-cross: true
-          - os: ubuntu-20.04
+          - os: ubuntu-latest
             target: aarch64-unknown-linux-gnu
             use-cross: true
 
@@ -40,7 +40,7 @@ jobs:
         with:
           targets: ${{ matrix.job.target }}
       - name: Checkout repository
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
       - name: Install cross
         if: matrix.job.use-cross
         uses: taiki-e/install-action@v2
@@ -79,7 +79,7 @@ jobs:
         run: ./etc/ci/before_deploy.sh
 
       - name: Releasing assets
-        uses: softprops/action-gh-release@v1
+        uses: softprops/action-gh-release@v2
         with:
           files: |
             delta-*-${{ matrix.job.target }}.*
@@ -91,7 +91,7 @@ jobs:
     name: Publishing to Cargo
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
       - uses: dtolnay/rust-toolchain@stable
       - run: cargo publish --token ${{ secrets.CARGO_API_KEY }} --allow-dirty
 
