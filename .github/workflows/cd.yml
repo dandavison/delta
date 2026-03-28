@@ -129,27 +129,26 @@ jobs:
           fi
           echo "All ${#expected[@]} expected assets present."
 
-      - name: Verify .deb installability on Debian 12
+      - name: Download .deb assets
         run: |
           tag="${GITHUB_REF#refs/tags/}"
-          deb_url="https://github.com/${GITHUB_REPOSITORY}/releases/download/${tag}/git-delta_${tag}_amd64.deb"
-          docker run --rm debian:12 bash -c "
+          mkdir -p /tmp/debs
+          gh release download "$tag" --repo "$GITHUB_REPOSITORY" --dir /tmp/debs --pattern "git-delta*.deb"
+
+      - name: Verify .deb installability on Debian 12
+        run: |
+          docker run --rm -v /tmp/debs:/debs debian:12 bash -c "
             set -e
-            apt-get update -qq > /dev/null 2>&1
-            apt-get install -y -qq curl > /dev/null 2>&1
-            curl -fsSL -o /tmp/delta.deb '$deb_url'
-            dpkg -i /tmp/delta.deb
+            dpkg -i /debs/git-delta_*_amd64.deb
             delta --version
           "
 
       - name: Verify .deb libc6 dependencies are Debian 12 compatible
         run: |
-          tag="${GITHUB_REF#refs/tags/}"
           max_libc="2.36"
-          for arch in amd64 arm64 armhf i386; do
-            deb_url="https://github.com/${GITHUB_REPOSITORY}/releases/download/${tag}/git-delta_${tag}_${arch}.deb"
-            curl -fsSL -o "/tmp/delta-${arch}.deb" "$deb_url"
-            depends=$(dpkg-deb -f "/tmp/delta-${arch}.deb" Depends)
+          for deb in /tmp/debs/git-delta_*.deb; do
+            arch=$(dpkg-deb -f "$deb" Architecture)
+            depends=$(dpkg-deb -f "$deb" Depends)
             echo "${arch}: ${depends}"
             libc_ver=$(echo "$depends" | grep -oP 'libc6 \(>= \K[0-9.]+')
             if [ "$(printf '%s\n%s' "$libc_ver" "$max_libc" | sort -V | tail -1)" != "$max_libc" ]; then
