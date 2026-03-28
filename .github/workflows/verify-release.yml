@@ -70,7 +70,11 @@ jobs:
             arch=$(dpkg-deb -f "$deb" Architecture)
             depends=$(dpkg-deb -f "$deb" Depends)
             echo "${arch}: ${depends}"
-            libc_ver=$(echo "$depends" | grep -oP 'libc6 \(>= \K[0-9.]+')
+            libc_ver=$(echo "$depends" | grep -oP 'libc6 \(>= \K[0-9.]+' || true)
+            if [ -z "$libc_ver" ]; then
+              echo "  (no libc6 dependency)"
+              continue
+            fi
             if [ "$(printf '%s\n%s' "$libc_ver" "$max_libc" | sort -V | tail -1)" != "$max_libc" ]; then
               echo "FAIL: ${arch} requires libc6 >= ${libc_ver}, but Debian 12 has ${max_libc}"
               exit 1
