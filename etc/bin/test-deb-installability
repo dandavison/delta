@@ -1,0 +1,49 @@
+#!/usr/bin/env bash
+# Test whether a delta release .deb is installable on Debian 12 (bookworm).
+# Usage: ./test-deb-installability.sh <version> [architecture]
+# Examples:
+#   ./test-deb-installability.sh 0.18.2
+#   ./test-deb-installability.sh 0.19.1
+#   ./test-deb-installability.sh 0.19.1 arm64
+
+set -euo pipefail
+
+version="${1:?Usage: $0 <version> [architecture]}"
+arch="${2:-amd64}"
+
+deb_url="https://github.com/dandavison/delta/releases/download/${version}/git-delta_${version}_${arch}.deb"
+deb_file="git-delta_${version}_${arch}.deb"
+
+echo "=== Testing delta ${version} (${arch}) on Debian 12 (bookworm) ==="
+echo "URL: ${deb_url}"
+
+docker run --rm -i debian:12 bash -s "$deb_url" "$deb_file" <<'SCRIPT'
+set -euo pipefail
+deb_url="$1"
+deb_file="$2"
+
+apt-get update -qq > /dev/null 2>&1
+apt-get install -y -qq curl > /dev/null 2>&1
+
+echo "Downloading ${deb_url}..."
+if ! curl -fsSL -o "/tmp/${deb_file}" "$deb_url"; then
+    echo "FAIL: could not download ${deb_url}"
+    exit 1
+fi
+
+echo "Attempting install..."
+if dpkg -i "/tmp/${deb_file}" 2>&1; then
+    echo "SUCCESS: installed and runnable"
+    delta --version
+else
+    echo ""
+    echo "dpkg failed. Checking dependency details:"
+    dpkg-deb -f "/tmp/${deb_file}" Depends
+    echo ""
+    echo "Host glibc version:"
+    dpkg -s libc6 | grep ^Version
+    echo ""
+    echo "FAIL: not installable on this Debian version"
+    exit 1
+fi
+SCRIPT
