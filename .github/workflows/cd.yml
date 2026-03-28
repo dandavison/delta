@@ -87,6 +87,77 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
+  verify-release:
+    name: Verify release assets
+    needs: publish
+    runs-on: ubuntu-latest
+    env:
+      GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+    steps:
+      - name: Wait for release assets to be available
+        run: sleep 10
+
+      - name: Check all expected assets exist
+        run: |
+          tag="${GITHUB_REF#refs/tags/}"
+          expected=(
+            "delta-${tag}-aarch64-apple-darwin.tar.gz"
+            "delta-${tag}-aarch64-unknown-linux-gnu.tar.gz"
+            "delta-${tag}-arm-unknown-linux-gnueabihf.tar.gz"
+            "delta-${tag}-i686-unknown-linux-gnu.tar.gz"
+            "delta-${tag}-x86_64-pc-windows-msvc.zip"
+            "delta-${tag}-x86_64-unknown-linux-gnu.tar.gz"
+            "delta-${tag}-x86_64-unknown-linux-musl.tar.gz"
+            "git-delta_${tag}_amd64.deb"
+            "git-delta_${tag}_arm64.deb"
+            "git-delta_${tag}_armhf.deb"
+            "git-delta_${tag}_i386.deb"
+            "git-delta-musl_${tag}_amd64.deb"
+          )
+          actual=$(gh release view "$tag" --repo "$GITHUB_REPOSITORY" --json assets -q '.assets[].name' | sort)
+          missing=()
+          for asset in "${expected[@]}"; do
+            if ! echo "$actual" | grep -qxF "$asset"; then
+              missing+=("$asset")
+            fi
+          done
+          if [[ ${#missing[@]} -gt 0 ]]; then
+            echo "FAIL: missing release assets:"
+            printf '  %s\n' "${missing[@]}"
+            exit 1
+          fi
+          echo "All ${#expected[@]} expected assets present."
+
+      - name: Verify .deb installability on Debian 12
+        run: |
+          tag="${GITHUB_REF#refs/tags/}"
+          deb_url="https://github.com/${GITHUB_REPOSITORY}/releases/download/${tag}/git-delta_${tag}_amd64.deb"
+          docker run --rm debian:12 bash -c "
+            set -e
+            apt-get update -qq > /dev/null 2>&1
+            apt-get install -y -qq curl > /dev/null 2>&1
+            curl -fsSL -o /tmp/delta.deb '$deb_url'
+            dpkg -i /tmp/delta.deb
+            delta --version
+          "
+
+      - name: Verify .deb libc6 dependencies are Debian 12 compatible
+        run: |
+          tag="${GITHUB_REF#refs/tags/}"
+          max_libc="2.36"
+          for arch in amd64 arm64 armhf i386; do
+            deb_url="https://github.com/${GITHUB_REPOSITORY}/releases/download/${tag}/git-delta_${tag}_${arch}.deb"
+            curl -fsSL -o "/tmp/delta-${arch}.deb" "$deb_url"
+            depends=$(dpkg-deb -f "/tmp/delta-${arch}.deb" Depends)
+            echo "${arch}: ${depends}"
+            libc_ver=$(echo "$depends" | grep -oP 'libc6 \(>= \K[0-9.]+')
+            if [ "$(printf '%s\n%s' "$libc_ver" "$max_libc" | sort -V | tail -1)" != "$max_libc" ]; then
+              echo "FAIL: ${arch} requires libc6 >= ${libc_ver}, but Debian 12 has ${max_libc}"
+              exit 1
+            fi
+          done
+          echo "All .deb packages are Debian 12 compatible."
+
   publish-to-cargo:
     name: Publishing to Cargo
     runs-on: ubuntu-latest
