@@ -85,7 +85,7 @@ Options:
       --config <PATH>
           Load the config file at PATH instead of ~/.gitconfig
 
-          [default: ]
+          [default: ""]
 
       --commit-decoration-style <STYLE>
           Style string for the commit hash decoration.
@@ -94,7 +94,7 @@ Options:
           special attributes 'box', 'ul' (underline), 'ol' (overline), or the
           combination 'ul ol'.
 
-          [default: ]
+          [default: ""]
 
       --commit-regex <REGEX>
           Regular expression used to identify the commit line when parsing
@@ -147,13 +147,13 @@ Options:
           used as `interactive.diffFilter`. In this case the color is queried
           from the terminal even though the output is redirected.
 
-          [default: auto]
-
           Possible values:
           - auto:   Only query the terminal for its colors if the output is
             not redirected
           - always: Always query the terminal for its colors
           - never:  Never query the terminal for its colors
+
+          [default: auto]
 
   -@, --diff-args <STRING>
           Extra arguments to pass to `git diff` when using delta to diff two
@@ -166,7 +166,7 @@ Options:
           and your git version doesn't support it, then delta will fall back
           to `diff` instead of `git diff`.
 
-          [default: ]
+          [default: ""]
 
       --diff-highlight
           Emulate diff-highlight.
@@ -224,7 +224,7 @@ Options:
 
           Used in the default value of navigate-regex.
 
-          [default: ]
+          [default: ""]
 
       --file-removed-label <STRING>
           Text to display before a removed file path.
@@ -358,7 +358,7 @@ Options:
 
           Used in the default value of navigate-regex.
 
-          [default: ]
+          [default: ""]
 
       --hyperlinks
           Render commit hashes, file names, and line numbers as hyperlinks.
@@ -385,17 +385,14 @@ Options:
       --hyperlinks-file-link-format <FMT>
           Format string for file hyperlinks (requires --hyperlinks).
 
-          The placeholders "{path}" and "{line}" will be replaced by the
-          absolute file path and the line number, respectively. The default
-          value of this option creates hyperlinks using standard file URLs;
-          your operating system should open these in the application
-          registered for that file type. However, these do not make use of
-          the line number. In order for the link to open the file at the
-          correct line number, you could use a custom URL format such as
+          Placeholders "{path}" and "{line}" will be replaced by the absolute
+          file path and the line number; "{host}" with the hostname delta is
+          currently running on. The default is to create a hyperlink
+          containing a standard file URI with only the filename, which your
+          terminal or OS should handle. You can specify any scheme, such as
           "file-line://{path}:{line}" and register an application to handle
-          the custom "file-line" URL scheme by opening the file in your
-          editor/IDE at the indicated line number. See
-          <https://github.com/dandavison/open-in-editor> for an example.
+          it. See <https://dandavison.github.io/delta/hyperlinks.html> for
+          details.
 
           [default: file://{path}]
 
