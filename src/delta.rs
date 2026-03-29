@@ -147,6 +147,9 @@ impl<'a> StateMachine<'a> {
     where
         I: BufRead,
     {
+        // right after this the next syscall prints the first line: `write(6, "\33[33mcommit ..." )`
+        utils::timing::measure(utils::timing::Measurement::FirstPaint);
+
         while let Some(Ok(raw_line_bytes)) = lines.next() {
             self.ingest_line(raw_line_bytes);
 
