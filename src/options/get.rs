@@ -225,8 +225,8 @@ pub mod tests {
             git_config_contents,
             git_config_path,
             "'delta.side-by-side=false'".into(),
-            &|opt: Opt| assert!(opt.side_by_side),
-            &|opt: Opt| assert!(!opt.side_by_side),
+            &|opt: Opt| assert!(opt.computed.side_by_side),
+            &|opt: Opt| assert!(!opt.computed.side_by_side),
         );
     }
 
@@ -276,7 +276,7 @@ pub mod tests {
             Some(git_config_path),
         );
         assert_eq!(opt.features.unwrap(), "feature-from-gitconfig");
-        assert!(!opt.side_by_side);
+        assert!(!opt.computed.side_by_side);
 
         let opt = integration_test_utils::make_options_from_args_and_git_config_with_custom_env(
             DeltaEnv {
@@ -289,7 +289,7 @@ pub mod tests {
         );
         // `line-numbers` is a builtin feature induced by side-by-side
         assert_eq!(opt.features.unwrap(), "line-numbers side-by-side");
-        assert!(opt.side_by_side);
+        assert!(opt.computed.side_by_side);
 
         let opt = integration_test_utils::make_options_from_args_and_git_config_with_custom_env(
             DeltaEnv {
@@ -304,7 +304,7 @@ pub mod tests {
             opt.features.unwrap(),
             "feature-from-gitconfig line-numbers side-by-side"
         );
-        assert!(opt.side_by_side);
+        assert!(opt.computed.side_by_side);
 
         remove_file(git_config_path).unwrap();
     }
