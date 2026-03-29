@@ -44,6 +44,10 @@ Note that the package is often called `git-delta`, but the executable installed 
     <td><a href="https://ports.macports.org/port/git-delta/summary">MacPorts</a></td>
     <td><code>port install git-delta</code></td>
   </tr>
+    <tr>
+    <td><a href="https://github.com/jdx/mise">mise</a></td>
+    <td><code>mise use -g delta@latest</code></td>
+  </tr>
   <tr>
     <td><a href="https://search.nixos.org/packages?show=delta&query=delta">Nix</a></td>
     <td><code>nix-env -iA nixpkgs.delta</code>
