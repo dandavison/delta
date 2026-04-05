@@ -167,10 +167,9 @@ where
             encoded.push((*curr, j - i));
             if j == end {
                 return encoded;
-            } else {
-                curr = &sequence[j];
-                i = j;
             }
+            curr = &sequence[j];
+            i = j;
         }
         j += 1;
     }
