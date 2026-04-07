@@ -270,9 +270,7 @@ impl StateMachine<'_> {
             }
             _ => {
                 if self.config.navigate {
-                    write!(
-                        self.painter.writer,
-                        "{}",
+                    self.painter.output_buffer.push_str(
                         match (
                             &grep_line.line_type,
                             OUTPUT_CONFIG.add_navigate_marker_to_matches
@@ -281,7 +279,7 @@ impl StateMachine<'_> {
                             (_, true) => "  ",
                             _ => "",
                         }
-                    )?
+                    )
                 }
                 self._emit_classic_format_file_and_line_number(&grep_line)?;
                 self._emit_classic_format_code(grep_line)?;
@@ -306,10 +304,8 @@ impl StateMachine<'_> {
             // ":" for matches and non-matches alike.
             &self.config.grep_separator_symbol
         };
-        write!(
-            self.painter.writer,
-            "{}",
-            paint::paint_file_path_with_line_number(
+        self.painter.output_buffer.push_str(
+            &paint::paint_file_path_with_line_number(
                 grep_line.line_number,
                 &grep_line.path,
                 OUTPUT_CONFIG.pad_line_number,
@@ -319,7 +315,7 @@ impl StateMachine<'_> {
                 Some(self.config.grep_line_number_style),
                 self.config
             )
-        )?;
+        );
         Ok(())
     }
 
