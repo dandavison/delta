@@ -171,6 +171,42 @@ mod tests {
     }
 
     #[test]
+    fn test_classic_format_rg_json_each_match_on_own_line() {
+        // `rg i --json test.c | delta --grep-output-type classic`
+        // Each match must appear on its own line with its file:line: prefix.
+        // Regression: with context-lines set, file:line: prefixes were written
+        // directly to writer while code went through output_buffer, causing all
+        // prefixes to be concatenated on a single line.
+        let data = r#"{"type":"begin","data":{"path":{"text":"test.c"}}}
+{"type":"match","data":{"path":{"text":"test.c"},"lines":{"text":"// i ABC\n"},"line_number":1,"absolute_offset":0,"submatches":[{"match":{"text":"i"},"start":3,"end":4}]}}
+{"type":"match","data":{"path":{"text":"test.c"},"lines":{"text":"int f() { return 4; }\n"},"line_number":2,"absolute_offset":9,"submatches":[{"match":{"text":"i"},"start":0,"end":1}]}}
+{"type":"match","data":{"path":{"text":"test.c"},"lines":{"text":"const char* i = \"ABC\";\n"},"line_number":3,"absolute_offset":31,"submatches":[{"match":{"text":"i"},"start":12,"end":13}]}}
+{"type":"end","data":{"path":{"text":"test.c"},"binary_offset":null,"stats":{"elapsed":{"secs":0,"nanos":23885,"human":"0.000024s"},"searches":1,"searches_with_match":1,"bytes_searched":71,"bytes_printed":602,"matched_lines":3,"matches":3}}}
+{"data":{"elapsed_total":{"human":"0.000433s","nanos":432974,"secs":0},"stats":{"bytes_printed":602,"bytes_searched":71,"elapsed":{"human":"0.000024s","nanos":23885,"secs":0},"matched_lines":3,"matches":3,"searches":1,"searches_with_match":1}},"type":"summary"}
+"#;
+        let result = DeltaTest::with_args(&["--grep-output-type", "classic", "--context-lines", "3"])
+            .explain_ansi()
+            .with_input(data);
+        let lines: Vec<&str> = result.output.lines().collect();
+        // Each match should be on its own line, with its file:line: prefix
+        assert!(
+            lines.len() >= 3,
+            "Expected at least 3 output lines (one per match), got {}: {:?}",
+            lines.len(),
+            lines,
+        );
+        // Each line should contain the file path
+        for (i, line) in lines.iter().enumerate() {
+            assert!(
+                line.contains("test.c"),
+                "Line {} should contain 'test.c': {}",
+                i,
+                line
+            );
+        }
+    }
+
+    #[test]
     fn test_deserialize() {
         let line = r#"{"type":"match","data":{"path":{"text":"src/cli.rs"},"lines":{"text":"    fn from_clap_and_git_config(\n"},"line_number":null,"absolute_offset":35837,"submatches":[{"match":{"text":"fn"},"start":4,"end":6}]}}"#;
         let ripgrep_line: RipGrepLine = serde_json::from_str(line).unwrap();
