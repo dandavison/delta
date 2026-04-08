@@ -968,7 +968,7 @@ pub mod tests {
     }
 
     #[test]
-    fn test_side_by_side_numeric_from_git_config_activates_line_numbers() {
+    fn test_side_by_side_true_from_git_config_activates_line_numbers() {
         use std::fs::remove_file;
         // side-by-side = true should activate child features (line-numbers)
         let git_config_contents = b"
@@ -990,5 +990,54 @@ pub mod tests {
             opt.features
         );
         remove_file(git_config_path).unwrap();
+    }
+
+    #[test]
+    fn test_side_by_side_numeric_value_from_git_config_activates_line_numbers() {
+        use std::fs::remove_file;
+        // side-by-side = <number> should activate child features (line-numbers)
+        // Using 10 which is smaller than TERMINAL_WIDTH_IN_TESTS (43)
+        let git_config_contents = b"
+[delta]
+    side-by-side = 10
+";
+        let git_config_path =
+            "delta__test_side_by_side_numeric_value_activates_line_numbers.gitconfig";
+        let opt = integration_test_utils::make_options_from_args_and_git_config(
+            &[],
+            Some(git_config_contents),
+            Some(git_config_path),
+        );
+        assert!(opt.computed.side_by_side);
+        assert!(
+            opt.features.as_ref().unwrap().contains("line-numbers"),
+            "side-by-side = 10 should activate line-numbers feature, got: {:?}",
+            opt.features
+        );
+        remove_file(git_config_path).unwrap();
+    }
+
+    #[test]
+    fn test_side_by_side_zero_from_git_config_disables() {
+        use std::fs::remove_file;
+        let git_config_contents = b"
+[delta]
+    side-by-side = 0
+";
+        let git_config_path = "delta__test_side_by_side_zero_disables.gitconfig";
+        let opt = integration_test_utils::make_options_from_args_and_git_config(
+            &[],
+            Some(git_config_contents),
+            Some(git_config_path),
+        );
+        assert!(!opt.computed.side_by_side);
+        remove_file(git_config_path).unwrap();
+    }
+
+    #[test]
+    fn test_side_by_side_min_width_enables_sbs_when_terminal_wide() {
+        // min-width of 1 is smaller than TERMINAL_WIDTH_IN_TESTS (43), so sbs should be enabled.
+        let opt = integration_test_utils::make_options_from_args(&["--side-by-side=1"]);
+        assert!(opt.computed.side_by_side);
     }
 }
