@@ -536,12 +536,8 @@ fn split_feature_string(features: &str) -> impl Iterator<Item = &str> {
 }
 
 /// Returns true if the side-by-side option value indicates side-by-side should be enabled.
-/// The value is `Some("true")`, `Some("80")`, etc. from CLI/gitconfig, or `None` if not set.
 fn side_by_side_enabled(value: &Option<String>) -> bool {
-    match value.as_deref() {
-        None | Some("false") | Some("off") | Some("no") | Some("0") => false,
-        Some(_) => true,
-    }
+    parse_side_by_side(value).0
 }
 
 /// Parse the side-by-side option value into (enabled, min_width).
