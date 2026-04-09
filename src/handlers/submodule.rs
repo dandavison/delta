@@ -30,18 +30,14 @@ impl StateMachine<'_> {
         }
         if let Some(commit) = get_submodule_short_commit(&self.line) {
             if let State::HunkHeader(_, _, _, _) = self.state {
-                self.state = State::SubmoduleShort(commit.to_owned());
+                self.state = State::SubmoduleShort(commit);
             } else if let State::SubmoduleShort(minus_commit) = &self.state {
                 self.painter.emit()?;
                 writeln!(
                     self.painter.writer,
                     "{}..{}",
-                    self.config
-                        .minus_style
-                        .paint(minus_commit.chars().take(12).collect::<String>()),
-                    self.config
-                        .plus_style
-                        .paint(commit.chars().take(12).collect::<String>()),
+                    self.config.minus_style.paint(minus_commit),
+                    self.config.plus_style.paint(&commit),
                 )?;
             }
         }
@@ -54,9 +50,13 @@ lazy_static! {
         Regex::new("^[-+]Subproject commit ([0-9a-f]{40})(-dirty)?$").unwrap();
 }
 
-pub fn get_submodule_short_commit(line: &str) -> Option<&str> {
-    match SUBMODULE_SHORT_LINE_REGEX.captures(line) {
-        Some(caps) => Some(caps.get(1).unwrap().as_str()),
-        None => None,
-    }
+pub fn get_submodule_short_commit(line: &str) -> Option<String> {
+    SUBMODULE_SHORT_LINE_REGEX.captures(line).map(|caps| {
+        let hash = &caps[1][..12];
+        if caps.get(2).is_some() {
+            format!("{hash}-dirty")
+        } else {
+            hash.to_owned()
+        }
+    })
 }

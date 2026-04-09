@@ -277,7 +277,35 @@ index 0123456..1234567 100644
                 r#"
             some_submodule
             ──────────────────────────────
-            ca030fd1a022..803be42ca46a"#,
+            ca030fd1a022..803be42ca46a-dirty"#,
+            );
+    }
+
+    #[test]
+    fn test_same_hash_dirty_submodule_diff() {
+        DeltaTest::with_args(&["--width", "40"])
+            .with_input(SUBMODULE_SAME_HASH_DIRTY)
+            .inspect()
+            .expect_after_skip(
+                1,
+                r#"
+            some_submodule
+            ────────────────────────────────────────
+            803be42ca46a..803be42ca46a-dirty"#,
+            );
+    }
+
+    #[test]
+    fn test_dirty_to_clean_submodule_diff() {
+        DeltaTest::with_args(&["--width", "40"])
+            .with_input(SUBMODULE_DIRTY_TO_CLEAN)
+            .inspect()
+            .expect_after_skip(
+                1,
+                r#"
+            some_submodule
+            ────────────────────────────────────────
+            803be42ca46a-dirty..803be42ca46a"#,
             );
     }
 
@@ -2525,6 +2553,26 @@ index ca030fd1a0..803be42ca4 160000
 @@ -1 +1 @@
 -Subproject commit ca030fd1a02225a6fc1a834c480276d9c97a8c6f
 +Subproject commit 803be42ca46af0fbc65b54a9abfb499389516939-dirty
+";
+
+    const SUBMODULE_SAME_HASH_DIRTY: &str = "\
+diff --git a/some_submodule b/some_submodule
+index 803be42ca4..803be42ca4 160000
+--- a/some_submodule
++++ b/some_submodule
+@@ -1 +1 @@
+-Subproject commit 803be42ca46af0fbc65b54a9abfb499389516939
++Subproject commit 803be42ca46af0fbc65b54a9abfb499389516939-dirty
+";
+
+    const SUBMODULE_DIRTY_TO_CLEAN: &str = "\
+diff --git a/some_submodule b/some_submodule
+index 803be42ca4..803be42ca4 160000
+--- a/some_submodule
++++ b/some_submodule
+@@ -1 +1 @@
+-Subproject commit 803be42ca46af0fbc65b54a9abfb499389516939-dirty
++Subproject commit 803be42ca46af0fbc65b54a9abfb499389516939
 ";
 
     // See etc/examples/662-submodules
