@@ -15,6 +15,7 @@ use crate::handlers::{self, merge_conflict};
 use crate::paint::Painter;
 use crate::style::DecorationStyle;
 use crate::utils;
+use crate::utils::RecordDeltaCall;
 
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub enum State {
@@ -147,7 +148,11 @@ impl<'a> StateMachine<'a> {
     where
         I: BufRead,
     {
+        let mut debug_helper = RecordDeltaCall::new(self.config);
+
         while let Some(Ok(raw_line_bytes)) = lines.next() {
+            debug_helper.write(raw_line_bytes);
+
             self.ingest_line(raw_line_bytes);
 
             if self.source == Source::Unknown {
