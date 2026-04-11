@@ -905,7 +905,7 @@ pub mod tests {
 
     #[test]
     fn test_side_by_side_always_enables_without_value() {
-        // When no value is given, min-width defaults to 0 (always enabled)
+        // --side-by-side without a value always sets: enabled=true, min_width=0
         let opt = integration_test_utils::make_options_from_args(&["--side-by-side"]);
         assert!(opt.computed.side_by_side);
     }
