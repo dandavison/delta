@@ -9,6 +9,21 @@ By default, side-by-side view has line-numbers activated, and has syntax highlig
 
 <table><tr><td><img width=800px src="https://user-images.githubusercontent.com/52205/87230973-412eb900-c381-11ea-8aec-cc200290bd1b.png" alt="image" /></td></tr></table>
 
+Optionally, set a minimum terminal width to enable side-by-side mode only when the terminal is wide enough. If the terminal is narrower, delta falls back to unified diff:
+
+```gitconfig
+[delta]
+    side-by-side = 140   # enable side-by-side only when terminal is at least 140 columns
+```
+
+Or from the command line:
+
+```sh
+delta --side-by-side=140
+```
+
+Setting `side-by-side = 0` disables side-by-side mode.
+
 To activate and deactivate side-by-side view from the command line, consider using the [`DELTA_FEATURES`](./features-named-groups-of-settings.md) environment variable. For example:
 
 ```sh
