@@ -971,8 +971,7 @@ pub mod tests {
 [delta]
     side-by-side = true
 ";
-        let git_config_path =
-            "delta__test_side_by_side_numeric_activates_line_numbers.gitconfig";
+        let git_config_path = "delta__test_side_by_side_numeric_activates_line_numbers.gitconfig";
         let opt = integration_test_utils::make_options_from_args_and_git_config(
             &[],
             Some(git_config_contents),
