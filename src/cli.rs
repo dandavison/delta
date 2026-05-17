@@ -920,6 +920,12 @@ pub struct Opt {
     /// --max-line-distance=1.0 (this is more similar to `git --word-diff`).
     pub tokenization_regex: String,
 
+    #[arg(long = "wrap-word-lookback", default_value = "0", value_name = "N")]
+    /// Prefer a word-friendly wrap point within the last N characters before the wrap.
+    ///
+    /// 0 (default) wraps exactly at the column boundary.
+    pub wrap_word_lookback: usize,
+
     #[arg(long = "wrap-left-symbol", default_value = "↵", value_name = "STRING")]
     /// End-of-line wrapped content symbol (left-aligned).
     ///

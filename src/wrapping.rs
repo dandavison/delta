@@ -28,6 +28,9 @@ pub struct WrapConfig {
     // This value is --wrap-max-lines + 1, and unlimited is 0, see
     // adapt_wrap_max_lines_argument()
     pub max_lines: usize,
+    // Maximum number of graphemes to scan backwards from the column-based split
+    // looking for a word-friendly break point. 0 disables the lookback.
+    pub word_lookback: usize,
     pub inline_hint_syntect_style: SyntectStyle,
 }
 
@@ -60,6 +63,7 @@ impl WrapConfig {
                 }
             },
             max_lines: adapt_wrap_max_lines_argument(opt.wrap_max_lines.clone()),
+            word_lookback: opt.wrap_word_lookback,
             inline_hint_syntect_style: SyntectStyle::from_delta_style(inline_hint_style),
         }
     }
@@ -104,6 +108,16 @@ fn ensure_display_width_1(what: &str, arg: String) -> String {
             "Invalid value for {what}, display width of \"{arg}\" must be {INLINE_SYMBOL_WIDTH_1} but is {width}",
         )),
     }
+}
+
+fn is_word_grapheme(s: &str) -> bool {
+    s.chars()
+        .next()
+        .is_some_and(|c| c.is_alphanumeric() || c == '_')
+}
+
+fn is_whitespace_grapheme(s: &str) -> bool {
+    s.chars().next().is_some_and(|c| c.is_whitespace())
 }
 
 fn adapt_wrap_max_lines_argument(arg: String) -> usize {
@@ -257,14 +271,46 @@ where
                 text
             } else {
                 let mut byte_split_pos = 0;
+                let mut grapheme_split_idx = 0;
                 // After loop byte_split_pos may still equal to 0. If width_left
                 // is less than the width of first character, We can't display it.
-                for &(item_len, item_width) in graphemes.iter() {
+                for (i, &(item_len, item_width)) in graphemes.iter().enumerate() {
                     if width_left >= item_width {
                         byte_split_pos += item_len;
                         width_left -= item_width;
+                        grapheme_split_idx = i + 1;
                     } else {
                         break;
+                    }
+                }
+
+                // Optional word-aware lookback: scan up to `word_lookback`
+                // graphemes back from the column-based split. Prefer the
+                // closest whitespace grapheme; if none is found, fall back to
+                // the closest non-word grapheme.
+                if wrap_config.word_lookback > 0
+                    && grapheme_split_idx > 0
+                    && grapheme_split_idx < graphemes.len()
+                {
+                    let lookback = wrap_config.word_lookback.min(grapheme_split_idx);
+                    let mut scan_byte = byte_split_pos;
+                    let mut nonword_split: Option<usize> = None;
+                    for steps in 1..=lookback {
+                        let idx = grapheme_split_idx - steps;
+                        let len = graphemes[idx].0;
+                        scan_byte -= len;
+                        let g = &text[scan_byte..scan_byte + len];
+                        if is_whitespace_grapheme(g) {
+                            byte_split_pos = scan_byte + len;
+                            nonword_split = None;
+                            break;
+                        }
+                        if nonword_split.is_none() && !is_word_grapheme(g) {
+                            nonword_split = Some(scan_byte + len);
+                        }
+                    }
+                    if let Some(pos) = nonword_split {
+                        byte_split_pos = pos;
                     }
                 }
 
@@ -833,6 +879,55 @@ mod tests {
                 vec![vec![(*S1, "012"), (*S2, "34"), (*SD, W)], vec![(*S2, "56")]]
             );
         }
+    }
+
+    #[test]
+    fn test_wrap_line_word_lookback() {
+        // At width 17 the column-based split lands inside "important_file_xy"
+        // (mid-word). With word_lookback=10 the split should back up to right
+        // after the "/" that follows "very".
+        let line = vec![(*S1, "src/very/important_file_xy")];
+
+        {
+            // word_lookback=0 (disabled): split exactly at column 16.
+            let cfg = mk_wrap_cfg(&TEST_WRAP_CFG);
+            let lines = wrap_test(&cfg, line.clone(), 17);
+            assert_eq!(lines[0], [(*S1, "src/very/importa"), (*SD, W)]);
+        }
+
+        {
+            let mut wc = TEST_WRAP_CFG.clone();
+            wc.word_lookback = 10;
+            let cfg = mk_wrap_cfg(&wc);
+            let lines = wrap_test(&cfg, line, 17);
+            // Lookback finds the "/" after "very" and splits there.
+            assert_eq!(lines[0], [(*S1, "src/very/"), (*SD, W)]);
+        }
+    }
+
+    #[test]
+    fn test_wrap_line_word_lookback_prefers_whitespace() {
+        // Window contains both a non-word grapheme ("/") closer to the split
+        // and a whitespace (" ") farther back. The space should win.
+        let line = vec![(*S1, "alpha beta/gammadelta")];
+        let mut wc = TEST_WRAP_CFG.clone();
+        wc.word_lookback = 10;
+        let cfg = mk_wrap_cfg(&wc);
+        let lines = wrap_test(&cfg, line, 16);
+        // Column-based split sits inside "gammadelta". The "/" at index 10 is
+        // closer, but the space at index 5 is preferred when within the window.
+        assert_eq!(lines[0], [(*S1, "alpha "), (*SD, W)]);
+    }
+
+    #[test]
+    fn test_wrap_line_word_lookback_no_break_in_window() {
+        // No non-word grapheme within lookback window — fall back to column split.
+        let line = vec![(*S1, "abcdefghijklmnopqrstuvwxyz")];
+        let mut wc = TEST_WRAP_CFG.clone();
+        wc.word_lookback = 5;
+        let cfg = mk_wrap_cfg(&wc);
+        let lines = wrap_test(&cfg, line, 11);
+        assert_eq!(lines[0], [(*S1, "abcdefghij"), (*SD, W)]);
     }
 
     #[test]
