@@ -1,12 +1,15 @@
 use std::io::Write;
+use std::path::PathBuf;
 use std::process::{Command, Stdio};
 
 fn delta_bin() -> String {
     std::env::var("CARGO_BIN_EXE_delta").unwrap_or_else(|_| {
         // Fallback for when not run via cargo test
-        let mut path = format!("{}/target/debug/delta", env!("CARGO_MANIFEST_DIR"));
-        path.push_str(std::env::consts::EXE_SUFFIX);
-        path
+        let mut path = PathBuf::from(env!("CARGO_MANIFEST_DIR"));
+        path.push("target");
+        path.push("debug");
+        path.push(format!("delta{}", std::env::consts::EXE_SUFFIX));
+        path.to_string_lossy().into_owned()
     })
 }
 
