@@ -419,6 +419,7 @@ pub fn wrap_minusplus_block<'c: 'a, 'a>(
         wrapinfo_iter: &mut ItWrap,
         line_width: usize,
         fill_style: &Style,
+        fill_from_content: bool,
         errhint: &'a str,
     ) -> (usize, usize)
     where
@@ -455,15 +456,32 @@ pub fn wrap_minusplus_block<'c: 'a, 'a>(
             None
         };
 
+        let diff_sections = diff_iter
+            .next()
+            .unwrap_or_else(|| panic!("bad diff alignment {}", errhint));
+
+        // A standalone line has one background; if map-styles repainted it, the
+        // wrap symbol and padding must follow that paint, not minus/plus-style.
+        // Homolog pairs keep the passed non-emph fill.
+        let diff_fill_style = if fill_from_content {
+            diff_sections
+                .iter()
+                .rev()
+                .filter(|(_, s)| s != &"\n")
+                .map(|(style, _)| *style)
+                .next()
+                .unwrap_or(*fill_style)
+        } else {
+            *fill_style
+        };
+
         let (start2, extended_to2) = wrap_if_too_long(
             config,
             wrapped_diff,
-            diff_iter
-                .next()
-                .unwrap_or_else(|| panic!("bad diff alignment {}", errhint)),
+            diff_sections,
             must_wrap,
             line_width,
-            fill_style,
+            &diff_fill_style,
             &inline_hint_style,
         );
 
@@ -480,7 +498,7 @@ pub fn wrap_minusplus_block<'c: 'a, 'a>(
 
     // This macro avoids having the same code block 4x in the alignment processing
     macro_rules! wrap_and_assert {
-        ($side:tt, $fill_style:expr, $errhint:tt, $have:tt, $expected:tt) => {{
+        ($side:tt, $fill_style:expr, $fill_from_content:expr, $errhint:tt, $have:tt, $expected:tt) => {{
             assert_eq!(*$have, $expected, "bad alignment index {}", $errhint);
             $expected += 1;
 
@@ -493,6 +511,7 @@ pub fn wrap_minusplus_block<'c: 'a, 'a>(
                 &mut wrapinfo[$side],
                 line_width[$side],
                 &$fill_style[$side],
+                $fill_from_content,
                 $errhint,
             )
         }};
@@ -507,7 +526,7 @@ pub fn wrap_minusplus_block<'c: 'a, 'a>(
         let (minus_extended, plus_extended) = match (minus, plus) {
             (Some(m), None) => {
                 let (minus_start, extended_to) =
-                    wrap_and_assert!(Left, standalone_fill_style, "[*l*] (-)", m, m_expected);
+                    wrap_and_assert!(Left, standalone_fill_style, true, "[*l*] (-)", m, m_expected);
 
                 for i in minus_start..extended_to {
                     new_alignment.push((Some(i), None));
@@ -517,7 +536,7 @@ pub fn wrap_minusplus_block<'c: 'a, 'a>(
             }
             (None, Some(p)) => {
                 let (plus_start, extended_to) =
-                    wrap_and_assert!(Right, standalone_fill_style, "(-) [*r*]", p, p_expected);
+                    wrap_and_assert!(Right, standalone_fill_style, true, "(-) [*r*]", p, p_expected);
 
                 for i in plus_start..extended_to {
                     new_alignment.push((None, Some(i)));
@@ -527,9 +546,9 @@ pub fn wrap_minusplus_block<'c: 'a, 'a>(
             }
             (Some(m), Some(p)) => {
                 let (minus_start, m_extended_to) =
-                    wrap_and_assert!(Left, homolog_fill_style, "[*l*] (r)", m, m_expected);
+                    wrap_and_assert!(Left, homolog_fill_style, false, "[*l*] (r)", m, m_expected);
                 let (plus_start, p_extended_to) =
-                    wrap_and_assert!(Right, homolog_fill_style, "(l) [*r*]", p, p_expected);
+                    wrap_and_assert!(Right, homolog_fill_style, false, "(l) [*r*]", p, p_expected);
 
                 for (new_m, new_p) in (minus_start..m_extended_to).zip(plus_start..p_extended_to) {
                     new_alignment.push((Some(new_m), Some(new_p)));
