@@ -319,12 +319,28 @@ impl<'p> Painter<'p> {
         background_color_extends_to_terminal_width: BgShouldFill,
         config: &config::Config,
     ) -> (Option<BgFillMethod>, Style) {
+        // Consider the following raw line, from git colorMoved:
+        // ␛[1;36m+␛[m␛[1;36mclass·X:·pass␛[m␊ The last style section returned by
+        // parse_style_sections will be a default style associated with the terminal newline
+        // character; we want the last "real" style.
+        //
+        // Also used for standalone minus/plus lines below, so a map-styles remap of
+        // the content is reflected in the right-fill.
+        let last_painted_style = || {
+            diff_sections
+                .iter()
+                .rev()
+                .filter(|(_, s)| s != &"\n")
+                .map(|(style, _)| *style)
+                .next()
+        };
+
         let fill_style = match state {
             State::HunkMinus(_, None) | State::HunkMinusWrapped => {
                 if let Some(true) = line_has_homolog {
                     config.minus_non_emph_style
                 } else {
-                    config.minus_style
+                    last_painted_style().unwrap_or(config.minus_style)
                 }
             }
             State::HunkZero(_, None) | State::HunkZeroWrapped => config.zero_style,
@@ -332,24 +348,12 @@ impl<'p> Painter<'p> {
                 if let Some(true) = line_has_homolog {
                     config.plus_non_emph_style
                 } else {
-                    config.plus_style
+                    last_painted_style().unwrap_or(config.plus_style)
                 }
             }
             State::HunkMinus(_, Some(_))
             | State::HunkZero(_, Some(_))
-            | State::HunkPlus(_, Some(_)) => {
-                // Consider the following raw line, from git colorMoved:
-                // ␛[1;36m+␛[m␛[1;36mclass·X:·pass␛[m␊ The last style section returned by
-                // parse_style_sections will be a default style associated with the terminal newline
-                // character; we want the last "real" style.
-                diff_sections
-                    .iter()
-                    .rev()
-                    .filter(|(_, s)| s != &"\n")
-                    .map(|(style, _)| *style)
-                    .next()
-                    .unwrap_or(config.null_style)
-            }
+            | State::HunkPlus(_, Some(_)) => last_painted_style().unwrap_or(config.null_style),
             State::Blame(_) => diff_sections[0].0,
             _ => config.null_style,
         };
@@ -1128,5 +1132,40 @@ mod superimpose_style_sections {
                 vec![((*SYNTAX_STYLE, *SYNTAX_HIGHLIGHTED_STYLE), 'a')]
             );
         }
+    }
+}
+
+#[cfg(test)]
+mod fill_style_tests {
+    use super::*;
+    use crate::delta::{DiffType, State};
+    use crate::tests::integration_test_utils::make_config_from_args;
+
+    #[test]
+    fn test_right_fill_follows_painted_content_for_standalone_minus() {
+        // For a standalone (non-homolog) removed line whose content was repainted
+        // away from minus_style (e.g. by map-styles), the right-fill must follow the
+        // painted content, not fall back to minus_style.
+        let config = make_config_from_args(&[
+            "--minus-style",
+            "white #aabbcc",
+            "--plus-style",
+            "white #112233",
+        ]);
+        // plus_style stands in for content remapped to a non-minus background.
+        let content_style = config.plus_style;
+        let diff_sections = vec![(content_style, "content"), (config.null_style, "\n")];
+        let (_, fill_style) = Painter::get_should_right_fill_background_color_and_fill_style(
+            &diff_sections,
+            Some(false),
+            &State::HunkMinus(DiffType::Unified, None),
+            BgShouldFill::With(BgFillMethod::Spaces),
+            &config,
+        );
+        assert_eq!(
+            fill_style.get_background_color(),
+            content_style.get_background_color(),
+            "right-fill should match the painted content, not minus_style"
+        );
     }
 }
