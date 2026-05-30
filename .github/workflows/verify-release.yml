@@ -1,0 +1,83 @@
+name: Verify Release
+
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: "Release version to verify (e.g. 0.19.2)"
+        required: true
+  workflow_call:
+    inputs:
+      version:
+        required: true
+        type: string
+
+jobs:
+  verify:
+    name: Verify release assets
+    runs-on: ubuntu-latest
+    env:
+      GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+    steps:
+      - name: Check all expected assets exist
+        run: |
+          tag="${{ inputs.version }}"
+          expected=(
+            "delta-${tag}-aarch64-apple-darwin.tar.gz"
+            "delta-${tag}-aarch64-unknown-linux-gnu.tar.gz"
+            "delta-${tag}-arm-unknown-linux-gnueabihf.tar.gz"
+            "delta-${tag}-i686-unknown-linux-gnu.tar.gz"
+            "delta-${tag}-x86_64-pc-windows-msvc.zip"
+            "delta-${tag}-x86_64-unknown-linux-gnu.tar.gz"
+            "delta-${tag}-x86_64-unknown-linux-musl.tar.gz"
+            "git-delta_${tag}_amd64.deb"
+            "git-delta_${tag}_arm64.deb"
+            "git-delta_${tag}_armhf.deb"
+            "git-delta_${tag}_i386.deb"
+            "git-delta-musl_${tag}_amd64.deb"
+          )
+          actual=$(gh release view "$tag" --repo "$GITHUB_REPOSITORY" --json assets -q '.assets[].name' | sort)
+          missing=()
+          for asset in "${expected[@]}"; do
+            if ! echo "$actual" | grep -qxF "$asset"; then
+              missing+=("$asset")
+            fi
+          done
+          if [[ ${#missing[@]} -gt 0 ]]; then
+            echo "FAIL: missing release assets:"
+            printf '  %s\n' "${missing[@]}"
+            exit 1
+          fi
+          echo "All ${#expected[@]} expected assets present."
+
+      - name: Download .deb assets
+        run: |
+          mkdir -p /tmp/debs
+          gh release download "${{ inputs.version }}" --repo "$GITHUB_REPOSITORY" --dir /tmp/debs --pattern "git-delta*.deb"
+
+      - name: Verify .deb installability on Debian 12
+        run: |
+          docker run --rm -v /tmp/debs:/debs debian:12 bash -c "
+            set -e
+            dpkg -i /debs/git-delta_*_amd64.deb
+            delta --version
+          "
+
+      - name: Verify .deb libc6 dependencies are Debian 12 compatible
+        run: |
+          max_libc="2.36"
+          for deb in /tmp/debs/git-delta_*.deb; do
+            arch=$(dpkg-deb -f "$deb" Architecture)
+            depends=$(dpkg-deb -f "$deb" Depends)
+            echo "${arch}: ${depends}"
+            libc_ver=$(echo "$depends" | grep -oP 'libc6 \(>= \K[0-9.]+' || true)
+            if [ -z "$libc_ver" ]; then
+              echo "  (no libc6 dependency)"
+              continue
+            fi
+            if [ "$(printf '%s\n%s' "$libc_ver" "$max_libc" | sort -V | tail -1)" != "$max_libc" ]; then
+              echo "FAIL: ${arch} requires libc6 >= ${libc_ver}, but Debian 12 has ${max_libc}"
+              exit 1
+            fi
+          done
+          echo "All .deb packages are Debian 12 compatible."

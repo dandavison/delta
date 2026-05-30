@@ -174,7 +174,7 @@ impl StateMachine<'_> {
                 &HunkHeaderIncludeFilePath::Yes,
                 &HunkHeaderIncludeLineNumber::No,
                 &HunkHeaderIncludeHunkLabel::Yes,
-                &HunkHeaderIncludeCodeFragment::Yes,
+                &HunkHeaderIncludeCodeFragment::YesNoSpace,
                 "",
                 self.config,
             )?
@@ -237,7 +237,7 @@ impl StateMachine<'_> {
                 &HunkHeaderIncludeLineNumber::No
             },
             &HunkHeaderIncludeHunkLabel::No,
-            &HunkHeaderIncludeCodeFragment::Yes,
+            &HunkHeaderIncludeCodeFragment::YesNoSpace,
             grep_line.line_type.file_path_separator(),
             self.config,
         )
