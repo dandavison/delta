@@ -49,6 +49,11 @@ pub struct DiffLineMetadata {
     old_line: usize,
     new_line: usize,
     file: String,
+    /// The record (`type_char`, `new_line`, `old_line`) most recently emitted
+    /// for a primary content line, so a wrapped continuation row can re-emit it
+    /// without advancing the counters. Set by every primary line; read by the
+    /// wrapped row(s) that immediately follow it.
+    last_record: Option<(char, usize, Option<usize>)>,
 }
 
 impl DiffLineMetadata {
@@ -59,6 +64,7 @@ impl DiffLineMetadata {
             old_line: 0,
             new_line: 0,
             file: String::new(),
+            last_record: None,
         })
     }
 
@@ -73,12 +79,19 @@ impl DiffLineMetadata {
 
     /// Advance the counters for `state` and return the OSC sequence to prepend
     /// to that content line, or an empty string for states that carry no
-    /// metadata (headers, wrapped continuations, and -- in this prototype --
-    /// combined/merge diffs). The counter arithmetic mirrors
-    /// `line_numbers::linenumbers_and_styles`.
+    /// metadata (headers and -- in this prototype -- combined/merge diffs). The
+    /// counter arithmetic mirrors `line_numbers::linenumbers_and_styles`.
+    ///
+    /// A wrapped continuation row (`Hunk*Wrapped`, produced when side-by-side
+    /// wraps a long line into several output rows) re-emits the record of the
+    /// primary line it continues, *without* advancing the counters. delta emits
+    /// each wrapped row as a distinct output line, so a host sees them as
+    /// distinct lines and needs the identity on each -- otherwise acting on a
+    /// continuation row, or treating the wrapped line as one block when
+    /// navigating, breaks.
     pub fn osc_for_line(&mut self, state: &State) -> String {
         use State::*;
-        let (type_char, new_line, old_line) = match state {
+        let record = match state {
             HunkZero(DiffType::Unified, _) => {
                 let record = ('c', self.new_line, None);
                 self.old_line += 1;
@@ -98,13 +111,72 @@ impl DiffLineMetadata {
                 self.old_line += 1;
                 record
             }
+            HunkZeroWrapped | HunkMinusWrapped | HunkPlusWrapped => match self.last_record {
+                Some(record) => record,
+                None => return String::new(),
+            },
             _ => return String::new(),
         };
+        self.last_record = Some(record);
+        let (type_char, new_line, old_line) = record;
         let old_field = old_line.map_or(String::new(), |n| n.to_string());
         format!(
             "{OSC};{version};{type_char};{new_line};{old_field};{file}{ST}",
             version = self.version,
             file = self.file,
         )
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::delta::{DiffType, State};
+
+    fn emitter() -> DiffLineMetadata {
+        let mut md = DiffLineMetadata {
+            version: 1,
+            old_line: 0,
+            new_line: 0,
+            file: String::new(),
+            last_record: None,
+        };
+        // @@ -1,3 +1,4 @@ : old start 1, new start 1.
+        md.initialize_hunk(&[(1, 3), (1, 4)], "f.txt".to_owned());
+        md
+    }
+
+    #[test]
+    fn test_wrapped_rows_reemit_the_primary_record_without_advancing() {
+        let mut md = emitter();
+        let zero = md.osc_for_line(&State::HunkZero(DiffType::Unified, None));
+        let plus = md.osc_for_line(&State::HunkPlus(DiffType::Unified, None));
+        let plus_w1 = md.osc_for_line(&State::HunkPlusWrapped);
+        let plus_w2 = md.osc_for_line(&State::HunkPlusWrapped);
+        let zero_after = md.osc_for_line(&State::HunkZero(DiffType::Unified, None));
+
+        assert_eq!(zero, "\x1b]1717;1;c;1;;f.txt\x1b\\");
+        assert_eq!(plus, "\x1b]1717;1;a;2;;f.txt\x1b\\");
+        // Continuation rows re-emit the addition's record verbatim.
+        assert_eq!(plus_w1, plus);
+        assert_eq!(plus_w2, plus);
+        // The wrapped rows must not advance the counters: the next content line
+        // is new-line 3, not 5.
+        assert_eq!(zero_after, "\x1b]1717;1;c;3;;f.txt\x1b\\");
+    }
+
+    #[test]
+    fn test_wrapped_deletion_reemits_both_line_numbers() {
+        let mut md = emitter();
+        let minus = md.osc_for_line(&State::HunkMinus(DiffType::Unified, None));
+        let minus_w = md.osc_for_line(&State::HunkMinusWrapped);
+        assert_eq!(minus, "\x1b]1717;1;d;1;1;f.txt\x1b\\");
+        assert_eq!(minus_w, minus);
+    }
+
+    #[test]
+    fn test_wrapped_row_with_no_preceding_primary_emits_nothing() {
+        let mut md = emitter();
+        assert_eq!(md.osc_for_line(&State::HunkZeroWrapped), "");
     }
 }
