@@ -16,6 +16,7 @@
 // Ghostty, VS Code, ConEmu, urxvt); none of them interpret it, so a terminal that
 // is not a participating host skips it harmlessly.
 
+use std::io::{self, Write};
 use std::sync::OnceLock;
 
 use crate::delta::{DiffType, State};
@@ -142,6 +143,81 @@ impl DiffLineMetadata {
             file = self.file,
         )
     }
+
+    /// The `h` (hunk-header) record for the current hunk. `initialize_hunk` has
+    /// just seeded `new_line` with the hunk's new-file start -- which is the
+    /// hunk's first line (spec §5.2) -- so it is in hand exactly when the hunk
+    /// header is rendered. `old-line` is empty on a header.
+    pub fn osc_for_hunk_header(&self) -> String {
+        self.header_osc('h', Some(self.new_line), &self.file)
+    }
+
+    /// The `f` (file-header) record. It carries no line numbers (spec §5.5):
+    /// delta renders the file header (the boxed file name) as soon as it parses
+    /// the `+++` line, *before* it has seen the first `@@`, so the file's first
+    /// hunk line is not known here. The path is supplied by the caller because
+    /// the emitter only learns it at the first hunk header.
+    pub fn osc_for_file_header(&self, file: &str) -> String {
+        self.header_osc('f', None, file)
+    }
+
+    fn header_osc(&self, type_char: char, new_line: Option<usize>, file: &str) -> String {
+        let new_field = new_line.map_or(String::new(), |n| n.to_string());
+        format!(
+            "{OSC};{version};{type_char};{new_field};;{file}{ST}",
+            version = self.version,
+        )
+    }
+}
+
+/// A `Write` adapter that injects `prefix` at the start of the stream and after
+/// every newline. delta draws a file/hunk header as a *multi-row* decoration --
+/// an underline under the file name, a box around the hunk header -- written
+/// straight to the output by the `draw` functions. To tag the whole block we
+/// wrap that writer so every row the decoration emits is preceded by the
+/// header's record, the same "every output row carries the record" rule that
+/// wrapped content rows follow (spec §6.3/§6.4).
+struct OscLinePrefixer<'a> {
+    inner: &'a mut dyn Write,
+    prefix: &'a str,
+    at_line_start: bool,
+}
+
+impl Write for OscLinePrefixer<'_> {
+    fn write(&mut self, buf: &[u8]) -> io::Result<usize> {
+        for chunk in buf.split_inclusive(|&b| b == b'\n') {
+            if self.at_line_start {
+                self.inner.write_all(self.prefix.as_bytes())?;
+            }
+            self.inner.write_all(chunk)?;
+            self.at_line_start = chunk.ends_with(b"\n");
+        }
+        Ok(buf.len())
+    }
+
+    fn flush(&mut self) -> io::Result<()> {
+        self.inner.flush()
+    }
+}
+
+/// Run `draw`, prefixing every output row it writes with `osc` (a header
+/// record). With `osc` empty the closure writes to `writer` untouched, so the
+/// output stays byte-for-byte identical to stock delta.
+pub fn write_with_header_osc(
+    writer: &mut dyn Write,
+    osc: &str,
+    draw: impl FnOnce(&mut dyn Write) -> io::Result<()>,
+) -> io::Result<()> {
+    if osc.is_empty() {
+        draw(writer)
+    } else {
+        let mut prefixer = OscLinePrefixer {
+            inner: writer,
+            prefix: osc,
+            at_line_start: true,
+        };
+        draw(&mut prefixer)
+    }
 }
 
 #[cfg(test)]
@@ -167,6 +243,53 @@ mod tests {
         // The handshake carries only the version (no further fields), so a host tells
         // it apart from a per-line record by field count.
         assert_eq!(handshake_for_version(1), "\x1b]1717;1\x1b\\");
+    }
+
+    #[test]
+    fn test_hunk_header_record_carries_the_hunks_first_line() {
+        // `h` carries the hunk's first new-file line (just seeded by
+        // initialize_hunk) and no old-line. Emitting it does not advance the
+        // counters: the hunk's first content line reports the same line.
+        let mut md = emitter();
+        assert_eq!(md.osc_for_hunk_header(), "\x1b]1717;1;h;1;;f.txt\x1b\\");
+        assert_eq!(
+            md.osc_for_line(&State::HunkZero(DiffType::Unified, None)),
+            "\x1b]1717;1;c;1;;f.txt\x1b\\"
+        );
+    }
+
+    #[test]
+    fn test_file_header_record_has_no_line_numbers() {
+        // `f` never carries line numbers (spec §5.5): delta draws the file
+        // header before it has seen the first `@@`. The path comes from the
+        // caller, because the emitter's own state is only seeded at the first
+        // hunk header.
+        let md = emitter();
+        assert_eq!(
+            md.osc_for_file_header("src/foo.rs"),
+            "\x1b]1717;1;f;;;src/foo.rs\x1b\\"
+        );
+    }
+
+    #[test]
+    fn test_header_record_prefixes_every_row_of_a_multi_row_block() {
+        // A file/hunk header is a multi-row decoration (an underlined name, a
+        // box); every row of the block carries the record (spec §6.4). With no
+        // record the drawn bytes pass through untouched.
+        let draw = |w: &mut dyn io::Write| -> io::Result<()> {
+            write!(w, "──┐\n1:│\n──┘\n")
+        };
+
+        let mut tagged = Vec::new();
+        write_with_header_osc(&mut tagged, "[osc]", draw).unwrap();
+        assert_eq!(
+            String::from_utf8(tagged).unwrap(),
+            "[osc]──┐\n[osc]1:│\n[osc]──┘\n"
+        );
+
+        let mut untouched = Vec::new();
+        write_with_header_osc(&mut untouched, "", draw).unwrap();
+        assert_eq!(String::from_utf8(untouched).unwrap(), "──┐\n1:│\n──┘\n");
     }
 
     #[test]

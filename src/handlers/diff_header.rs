@@ -57,12 +57,14 @@ impl StateMachine<'_> {
         // (it connects the plus_file and minus_file),
         // and to call fn handle_generic_diff_header_header_line directly.
         if self.config.color_only {
+            let osc = self.diff_header_osc();
             write_generic_diff_header_header_line(
                 &self.line,
                 &self.raw_line,
                 &mut self.painter,
                 &mut self.mode_info,
                 self.config,
+                &osc,
             )?;
             Ok(true)
         } else {
@@ -189,6 +191,25 @@ impl StateMachine<'_> {
         Ok(handled_line)
     }
 
+    /// The `f` (file-header) record for the current file, or an empty string
+    /// when no host negotiated emission. The path is selected exactly as the
+    /// hunk header selects it (`plus_file`, or `minus_file` for a deletion).
+    /// delta renders the file header before it has parsed the first `@@`, so
+    /// the record's new-line is left empty (`osc_for_file_header`).
+    pub(crate) fn diff_header_osc(&self) -> String {
+        match self.painter.diff_line_metadata.as_ref() {
+            Some(md) => {
+                let file = if self.plus_file == "/dev/null" {
+                    &self.minus_file
+                } else {
+                    &self.plus_file
+                };
+                md.osc_for_file_header(file)
+            }
+            None => String::new(),
+        }
+    }
+
     /// Construct file change line from minus and plus file and write with DiffHeader styling.
     fn _handle_diff_header_header_line(&mut self, comparing: bool) -> std::io::Result<()> {
         let line = get_file_change_description_from_file_paths(
@@ -200,12 +221,14 @@ impl StateMachine<'_> {
             self.config,
         );
         // FIXME: no support for 'raw'
+        let osc = self.diff_header_osc();
         write_generic_diff_header_header_line(
             &line,
             &line,
             &mut self.painter,
             &mut self.mode_info,
             self.config,
+            &osc,
         )
     }
 
@@ -242,12 +265,14 @@ impl StateMachine<'_> {
             let label = format_label(&self.config.file_modified_label);
             let name = get_repeated_file_path_from_diff_line(&self.diff_line).unwrap_or_default();
             let line = format!("{}{}", label, format_file(&name));
+            let osc = self.diff_header_osc();
             write_generic_diff_header_header_line(
                 &line,
                 &line,
                 &mut self.painter,
                 &mut self.mode_info,
                 self.config,
+                &osc,
             )
         } else if !self.config.color_only
             && self.should_handle()
@@ -270,6 +295,7 @@ pub fn write_generic_diff_header_header_line(
     painter: &mut Painter,
     mode_info: &mut String,
     config: &Config,
+    metadata_osc: &str,
 ) -> std::io::Result<()> {
     // If file_style is "omit", we'll skip the process and print nothing.
     // However in the case of color_only mode,
@@ -283,14 +309,20 @@ pub fn write_generic_diff_header_header_line(
         // Maintain 1-1 correspondence between input and output lines.
         writeln!(painter.writer)?;
     }
-    draw_fn(
+    crate::features::diff_line_metadata::write_with_header_osc(
         painter.writer,
-        &format!("{}{}", line, if pad { " " } else { "" }),
-        &format!("{}{}", raw_line, if pad { " " } else { "" }),
-        mode_info,
-        &config.decorations_width,
-        config.file_style,
-        decoration_ansi_term_style,
+        metadata_osc,
+        |w| {
+            draw_fn(
+                w,
+                &format!("{}{}", line, if pad { " " } else { "" }),
+                &format!("{}{}", raw_line, if pad { " " } else { "" }),
+                mode_info,
+                &config.decorations_width,
+                config.file_style,
+                decoration_ansi_term_style,
+            )
+        },
     )?;
     if !mode_info.is_empty() {
         mode_info.truncate(0);
