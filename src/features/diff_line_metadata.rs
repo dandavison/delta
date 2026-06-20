@@ -41,6 +41,19 @@ pub fn negotiated_version() -> Option<u32> {
     })
 }
 
+/// The handshake record: a version-only OSC 1717 (no further fields) that a
+/// conforming pager emits once, as its first output, to announce it speaks the
+/// protocol (see the spec, §4.4). It lets a host probe delta on an empty diff --
+/// which emits no per-line records -- and tell "speaks the protocol" apart from
+/// "unsupported pager". Empty when no host negotiated a version.
+pub fn handshake() -> String {
+    negotiated_version().map_or(String::new(), handshake_for_version)
+}
+
+fn handshake_for_version(version: u32) -> String {
+    format!("{OSC};{version}{ST}")
+}
+
 /// Tracks the current old-/new-file line numbers within a hunk and formats the
 /// per-line OSC sequence. One instance is held by the `Painter` (when emission
 /// is negotiated) and re-seeded at every hunk header.
@@ -144,6 +157,13 @@ mod tests {
         // @@ -1,3 +1,4 @@ : old start 1, new start 1.
         md.initialize_hunk(&[(1, 3), (1, 4)], "f.txt".to_owned());
         md
+    }
+
+    #[test]
+    fn test_handshake_is_version_only() {
+        // The handshake carries only the version (no further fields), so a host tells
+        // it apart from a per-line record by field count.
+        assert_eq!(handshake_for_version(1), "\x1b]1717;1\x1b\\");
     }
 
     #[test]
