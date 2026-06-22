@@ -22,6 +22,7 @@ use terminal_colorsaurus::{color_scheme, QueryOptions};
 
 use crate::cli::{self, DetectDarkLight};
 use crate::color::{ColorMode, ColorMode::*};
+use crate::git_config::GitConfig;
 
 #[allow(non_snake_case)]
 pub fn set__color_mode__syntax_theme__syntax_set(opt: &mut cli::Opt, assets: HighlightingAssets) {
@@ -81,21 +82,62 @@ fn get_color_mode_and_syntax_theme_name(
 }
 
 fn get_color_mode(opt: &cli::Opt) -> Option<ColorMode> {
-    if opt.light {
-        Some(Light)
-    } else if opt.dark {
-        Some(Dark)
-    } else if should_detect_color_mode(opt) {
-        detect_color_mode()
-    } else {
-        None
-    }
+    opt.computed.resolved_color_mode
 }
 
-/// See [`cli::Opt::detect_dark_light`] for a detailed explanation.
-fn should_detect_color_mode(opt: &cli::Opt) -> bool {
+/// Resolve the mode that selects `dark-features`/`light-features`, frozen into
+/// `opt.computed.resolved_color_mode` and returned by `get_color_mode`. Precedence: CLI
+/// `--light`/`--dark`, config/feature `dark`/`light`, detection, syntax theme, default dark.
+/// `opt.features` must hold the base list (no per-mode injection) so selection stays non-circular.
+pub fn resolve_color_mode_for_feature_injection(
+    opt: &mut cli::Opt,
+    builtin_features: &std::collections::HashMap<String, crate::features::BuiltinFeature>,
+    git_config: &mut Option<GitConfig>,
+    arg_matches: &clap::ArgMatches,
+) -> Option<ColorMode> {
+    use crate::options::get::get_option_value;
+
+    // Dark wins a dark+light conflict; a real one is rejected later by validate_light_and_dark.
+    if opt.dark {
+        return Some(Dark);
+    }
+    if opt.light {
+        return Some(Light);
+    }
+    let dark = get_option_value::<bool>("dark", builtin_features, opt, git_config).unwrap_or(false);
+    let light =
+        get_option_value::<bool>("light", builtin_features, opt, git_config).unwrap_or(false);
+    if dark {
+        return Some(Dark);
+    }
+    if light {
+        return Some(Light);
+    }
+    // color-only gates detection but is finalized by the option macro later; resolve it now.
+    let color_only = opt.color_only
+        || get_option_value::<bool>("color-only", builtin_features, opt, git_config)
+            .unwrap_or(false);
+    if should_detect_color_mode(opt, color_only) {
+        if let Some(detected) = detect_color_mode() {
+            return Some(detected);
+        }
+    }
+    // Explicit --syntax-theme wins; otherwise config/feature outranks the BAT_THEME value already
+    // on opt.syntax_theme.
+    let syntax_theme = if crate::config::user_supplied_option("syntax_theme", arg_matches) {
+        opt.syntax_theme.clone()
+    } else {
+        get_option_value::<String>("syntax-theme", builtin_features, opt, git_config)
+            .or_else(|| opt.syntax_theme.clone())
+    };
+    Some(get_color_mode_and_syntax_theme_name(syntax_theme.as_ref(), None).0)
+}
+
+/// See [`cli::Opt::detect_dark_light`]. `color_only` is the effective config-resolved value, not
+/// `opt.color_only` (which the option macro finalizes later).
+fn should_detect_color_mode(opt: &cli::Opt, color_only: bool) -> bool {
     match opt.detect_dark_light {
-        DetectDarkLight::Auto => opt.color_only || stdout().is_terminal(),
+        DetectDarkLight::Auto => color_only || stdout().is_terminal(),
         DetectDarkLight::Always => true,
         DetectDarkLight::Never => false,
     }
@@ -127,6 +169,23 @@ mod tests {
     use super::*;
     use crate::color;
     use crate::tests::integration_test_utils;
+
+    #[test]
+    fn test_should_detect_color_mode_respects_effective_color_only() {
+        // Guards against gating detection on the not-yet-resolved `opt.color_only`.
+        let opt = integration_test_utils::make_options_from_args(&["--detect-dark-light", "auto"]);
+        assert!(should_detect_color_mode(&opt, true));
+        assert_eq!(
+            should_detect_color_mode(&opt, false),
+            stdout().is_terminal()
+        );
+        let always =
+            integration_test_utils::make_options_from_args(&["--detect-dark-light", "always"]);
+        assert!(should_detect_color_mode(&always, false));
+        let never =
+            integration_test_utils::make_options_from_args(&["--detect-dark-light", "never"]);
+        assert!(!should_detect_color_mode(&never, true));
+    }
 
     // TODO: Test influence of BAT_THEME env var. E.g. see utils::process::tests::FakeParentArgs.
     #[test]
