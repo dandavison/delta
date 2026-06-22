@@ -146,7 +146,7 @@ pub struct Opt {
     /// typically make sense to set this in the per-repository config file '.git/config'.
     pub default_language: String,
 
-    /// Detect whether or not the terminal is dark or light by querying for its colors.
+    /// Detect whether the terminal background is dark or light, by querying the terminal or (with `system-global`) the OS appearance.
     ///
     /// Ignored if either `--dark` or `--light` is specified.
     ///
@@ -1207,6 +1207,8 @@ pub enum DetectDarkLight {
     /// Only query the terminal for its colors if the output is not redirected.
     #[default]
     Auto,
+    /// Use the OS-wide light/dark appearance instead of querying the terminal; works when piped.
+    SystemGlobal,
     /// Always query the terminal for its colors.
     Always,
     /// Never query the terminal for its colors.
