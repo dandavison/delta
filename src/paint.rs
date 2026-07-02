@@ -10,6 +10,7 @@ use syntect::parsing::{SyntaxReference, SyntaxSet};
 
 use crate::config::{self, delta_unreachable, Config};
 use crate::delta::{DiffType, InMergeConflict, MergeParents, State};
+use crate::features::diff_line_metadata::DiffLineMetadata;
 use crate::features::hyperlinks;
 use crate::features::line_numbers::{self, LineNumbersData};
 use crate::features::side_by_side::ansifill;
@@ -35,6 +36,9 @@ pub struct Painter<'p> {
     // In side-by-side mode it is always Some (but possibly an empty one), even
     // if config.line_numbers is false. See `UseFullPanelWidth` as well.
     pub line_numbers_data: Option<line_numbers::LineNumbersData<'p>>,
+    // Emits per-line diff metadata as an OSC sequence for a host application;
+    // Some only when the host negotiated emission via the OSC1717 env var.
+    pub diff_line_metadata: Option<DiffLineMetadata>,
     pub merge_conflict_lines: merge_conflict::MergeConflictLines,
     pub merge_conflict_commit_names: merge_conflict::MergeConflictCommitNames,
 }
@@ -97,6 +101,7 @@ impl<'p> Painter<'p> {
             writer,
             config,
             line_numbers_data,
+            diff_line_metadata: DiffLineMetadata::from_env(),
             merge_conflict_lines: merge_conflict::MergeConflictLines::new(),
             merge_conflict_commit_names: merge_conflict::MergeConflictCommitNames::new(),
         }
@@ -161,6 +166,7 @@ impl<'p> Painter<'p> {
         paint_minus_and_plus_lines(
             MinusPlus::new(&self.minus_lines, &self.plus_lines),
             &mut self.line_numbers_data,
+            &mut self.diff_line_metadata.as_mut(),
             &mut self.highlighter,
             &mut self.output_buffer,
             self.config,
@@ -203,6 +209,7 @@ impl<'p> Painter<'p> {
                 &mut self.output_buffer,
                 self.config,
                 &mut self.line_numbers_data.as_mut(),
+                &mut self.diff_line_metadata.as_mut(),
                 None,
                 BgShouldFill::default(),
             );
@@ -220,6 +227,7 @@ impl<'p> Painter<'p> {
         output_buffer: &mut String,
         config: &config::Config,
         line_numbers_data: &mut Option<&mut line_numbers::LineNumbersData>,
+        diff_line_metadata: &mut Option<&mut DiffLineMetadata>,
         empty_line_style: Option<Style>, // a style with background color to highlight an empty line
         background_color_extends_to_terminal_width: BgShouldFill,
     ) {
@@ -274,6 +282,11 @@ impl<'p> Painter<'p> {
                 }
             };
 
+            // Prepend the per-line diff metadata OSC sequence, so it precedes
+            // the line's first cell (incl. any gutter) -- see the design notes.
+            if let Some(metadata) = diff_line_metadata.as_mut() {
+                output_buffer.push_str(&metadata.osc_for_line(state));
+            }
             output_buffer.push_str(&line);
             output_buffer.push('\n');
         }
@@ -304,6 +317,7 @@ impl<'p> Painter<'p> {
             &[false],
             &mut self.output_buffer,
             self.config,
+            &mut None,
             &mut None,
             None,
             background_color_extends_to_terminal_width,
@@ -606,6 +620,7 @@ pub fn prepare_raw_line(raw_line: &str, prefix_length: usize, config: &config::C
 pub fn paint_minus_and_plus_lines(
     lines: MinusPlus<&Vec<(String, State)>>,
     line_numbers_data: &mut Option<LineNumbersData>,
+    diff_line_metadata: &mut Option<&mut DiffLineMetadata>,
     highlighter: &mut Option<HighlightLines>,
     output_buffer: &mut String,
     config: &config::Config,
@@ -662,6 +677,7 @@ pub fn paint_minus_and_plus_lines(
                 output_buffer,
                 config,
                 &mut line_numbers_data.as_mut(),
+                diff_line_metadata,
                 Some(config.minus_empty_line_marker_style),
                 BgShouldFill::default(),
             );
@@ -675,6 +691,7 @@ pub fn paint_minus_and_plus_lines(
                 output_buffer,
                 config,
                 &mut line_numbers_data.as_mut(),
+                diff_line_metadata,
                 Some(config.plus_empty_line_marker_style),
                 BgShouldFill::default(),
             );

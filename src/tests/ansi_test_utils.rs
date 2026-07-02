@@ -195,6 +195,7 @@ pub mod ansi_test_utils {
             &mut output_buffer,
             config,
             &mut None,
+            &mut None,
             None,
             paint::BgShouldFill::default(),
         );
