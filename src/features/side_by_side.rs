@@ -8,6 +8,7 @@ use crate::config::{self, delta_unreachable, Config};
 use crate::delta::DiffType;
 use crate::delta::State;
 use crate::edits;
+use crate::features::diff_line_metadata::DiffLineMetadata;
 use crate::features::{line_numbers, OptionValueFunction};
 use crate::minusplus::*;
 use crate::paint::{BgFillMethod, BgShouldFill, LineSections, Painter};
@@ -114,6 +115,7 @@ pub fn paint_minus_and_plus_lines_side_by_side(
     lines_have_homolog: LeftRight<Vec<bool>>,
     line_alignment: Vec<(Option<usize>, Option<usize>)>,
     line_numbers_data: &mut Option<LineNumbersData>,
+    diff_line_metadata: &mut Option<&mut DiffLineMetadata>,
     output_buffer: &mut String,
     config: &config::Config,
 ) {
@@ -171,11 +173,34 @@ pub fn paint_minus_and_plus_lines_side_by_side(
         lines_have_homolog
     };
 
+    // Per-cell diff metadata: the left panel's cells carry the minus line's
+    // identity, the right panel's the plus line's. The OSC strings are computed
+    // in the single-column order (all minus, then all plus) so the line-number
+    // counters advance exactly as the unified emitter's. A wrapped continuation
+    // row re-emits its primary line's record (osc_for_line handles this), so
+    // every visual row of a wrapped line carries the identity. They are looked
+    // up by the same index that selects the line's state below.
+    let metadata_oscs = diff_line_metadata.as_mut().map(|md| {
+        LeftRight::new(
+            line_states[Left]
+                .iter()
+                .map(|state| md.osc_for_line(state))
+                .collect::<Vec<_>>(),
+            line_states[Right]
+                .iter()
+                .map(|state| md.osc_for_line(state))
+                .collect::<Vec<_>>(),
+        )
+    });
+
     for (minus_line_index, plus_line_index) in line_alignment {
         let left_state = match minus_line_index {
             Some(i) => &line_states[Left][i],
             None => &State::HunkMinus(DiffType::Unified, None),
         };
+        if let (Some(oscs), Some(i)) = (&metadata_oscs, minus_line_index) {
+            output_buffer.push_str(&oscs[Left][i]);
+        }
         output_buffer.push_str(&paint_left_panel_minus_line(
             minus_line_index,
             &syntax_sections[Left],
@@ -191,6 +216,9 @@ pub fn paint_minus_and_plus_lines_side_by_side(
             Some(i) => &line_states[Right][i],
             None => &State::HunkPlus(DiffType::Unified, None),
         };
+        if let (Some(oscs), Some(i)) = (&metadata_oscs, plus_line_index) {
+            output_buffer.push_str(&oscs[Right][i]);
+        }
         output_buffer.push_str(&paint_right_panel_plus_line(
             plus_line_index,
             &syntax_sections[Right],
@@ -229,6 +257,7 @@ pub fn paint_zero_lines_side_by_side<'a>(
     output_buffer: &mut String,
     config: &Config,
     line_numbers_data: &mut Option<&mut line_numbers::LineNumbersData>,
+    diff_line_metadata: &mut Option<&mut DiffLineMetadata>,
     painted_prefix: Option<ansi_term::ANSIString>,
     background_color_extends_to_terminal_width: BgShouldFill,
 ) {
@@ -249,6 +278,14 @@ pub fn paint_zero_lines_side_by_side<'a>(
         .zip_eq(states)
         .enumerate()
     {
+        // A context line is shown in both panels; emit its metadata identically
+        // before each panel's cell. Compute it once so the counters advance a
+        // single step for the line; a wrapped continuation row re-emits the
+        // line's record (osc_for_line handles this) so it, too, is identified.
+        let osc = diff_line_metadata
+            .as_mut()
+            .map(|md| md.osc_for_line(&state))
+            .unwrap_or_default();
         for panel_side in &[Left, Right] {
             let (mut panel_line, panel_line_is_empty) = Painter::paint_line(
                 &syntax_sections,
@@ -270,6 +307,7 @@ pub fn paint_zero_lines_side_by_side<'a>(
                 background_color_extends_to_terminal_width,
                 config,
             );
+            output_buffer.push_str(&osc);
             output_buffer.push_str(&panel_line);
         }
         output_buffer.push('\n');
