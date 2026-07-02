@@ -197,6 +197,7 @@ impl<'p> Painter<'p> {
                 &mut self.output_buffer,
                 self.config,
                 &mut self.line_numbers_data.as_mut(),
+                &mut self.diff_line_metadata.as_mut(),
                 painted_prefix(state, self.config),
                 BgShouldFill::With(BgFillMethod::Spaces),
             );
@@ -663,6 +664,7 @@ pub fn paint_minus_and_plus_lines(
             lines_have_homolog,
             line_alignment,
             line_numbers_data,
+            diff_line_metadata,
             output_buffer,
             config,
         )
