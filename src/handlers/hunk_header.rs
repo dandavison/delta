@@ -171,6 +171,21 @@ impl StateMachine<'_> {
                 .initialize_hunk(line_numbers_and_hunk_lengths, self.plus_file.to_string());
         }
 
+        if self.painter.diff_line_metadata.is_some() {
+            // Compute the file path before borrowing the emitter mutably, and
+            // select it the same way the hunk-header line below does.
+            let file = if self.plus_file == "/dev/null" {
+                self.minus_file.clone()
+            } else {
+                self.plus_file.clone()
+            };
+            self.painter
+                .diff_line_metadata
+                .as_mut()
+                .unwrap()
+                .initialize_hunk(line_numbers_and_hunk_lengths, file);
+        }
+
         if self.config.hunk_header_style.is_raw {
             write_hunk_header_raw(&mut self.painter, line, raw_line, self.config)?;
         } else if self.config.hunk_header_style.is_omitted {
