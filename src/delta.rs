@@ -118,6 +118,12 @@ pub fn delta<I>(lines: ByteLines<I>, writer: &mut dyn Write, config: &Config) ->
 where
     I: BufRead,
 {
+    // Announce protocol support as the first output, so a host can probe delta even on
+    // an empty diff (which produces no per-line records). See features::diff_line_metadata.
+    let handshake = features::diff_line_metadata::handshake();
+    if !handshake.is_empty() {
+        writer.write_all(handshake.as_bytes())?;
+    }
     StateMachine::new(writer, config).consume(lines)
 }
 
