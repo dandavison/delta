@@ -142,6 +142,64 @@ impl DiffLineMetadata {
             file = self.file,
         )
     }
+
+    /// The `h` (hunk-header) record for the hunk currently being emitted (spec §12).
+    /// `initialize_hunk` has just seeded `new_line` to the hunk's first new-file
+    /// line, so it is in hand exactly when the header is drawn.
+    pub fn osc_for_hunk_header(&self) -> String {
+        format!(
+            "{OSC};{version};h;{new_line};;{file}{ST}",
+            version = self.version,
+            new_line = self.new_line,
+            file = self.file,
+        )
+    }
+
+    /// The `f` (file-header) record for `file` (spec §12). delta draws the file
+    /// header at `+++`, before the first `@@`, so the first-hunk line isn't known:
+    /// `new-line` is emitted empty and the host falls back to the first content
+    /// record (spec §12.4).
+    pub fn osc_for_file_header(&self, file: &str) -> String {
+        format!("{OSC};{version};f;;;{file}{ST}", version = self.version)
+    }
+}
+
+/// A `Write` that emits `prefix` before the first byte of every line it forwards
+/// (before the first byte overall, and again after each `\n`). Used to attach a
+/// header record (spec §12.5) to every output row a multi-row header draws — a box,
+/// a rule, a blank — mirroring the per-row rule wrapped content follows (§6.3).
+pub struct OscLinePrefixer<'a> {
+    inner: &'a mut dyn std::io::Write,
+    prefix: String,
+    at_line_start: bool,
+}
+
+impl<'a> OscLinePrefixer<'a> {
+    pub fn new(inner: &'a mut dyn std::io::Write, prefix: String) -> Self {
+        Self {
+            inner,
+            prefix,
+            at_line_start: true,
+        }
+    }
+}
+
+impl std::io::Write for OscLinePrefixer<'_> {
+    fn write(&mut self, buf: &[u8]) -> std::io::Result<usize> {
+        for &byte in buf {
+            if self.at_line_start {
+                self.inner.write_all(self.prefix.as_bytes())?;
+                self.at_line_start = false;
+            }
+            self.inner.write_all(std::slice::from_ref(&byte))?;
+            self.at_line_start = byte == b'\n';
+        }
+        Ok(buf.len())
+    }
+
+    fn flush(&mut self) -> std::io::Result<()> {
+        self.inner.flush()
+    }
 }
 
 #[cfg(test)]
@@ -167,6 +225,29 @@ mod tests {
         // The handshake carries only the version (no further fields), so a host tells
         // it apart from a per-line record by field count.
         assert_eq!(handshake_for_version(1), "\x1b]1717;1\x1b\\");
+    }
+
+    #[test]
+    fn test_hunk_header_record() {
+        // `h` carries the hunk's first new-file line (seeded by initialize_hunk),
+        // no old-line, and doesn't advance the counters (content follows at 1).
+        let mut md = emitter();
+        assert_eq!(md.osc_for_hunk_header(), "\x1b]1717;1;h;1;;f.txt\x1b\\");
+        assert_eq!(
+            md.osc_for_line(&State::HunkZero(DiffType::Unified, None)),
+            "\x1b]1717;1;c;1;;f.txt\x1b\\"
+        );
+    }
+
+    #[test]
+    fn test_file_header_record_has_empty_new_line() {
+        // delta draws the file header before the first `@@`, so `f`'s new-line is
+        // empty; the host falls back to the first content record (spec §12.4).
+        let md = emitter();
+        assert_eq!(
+            md.osc_for_file_header("src/foo.rs"),
+            "\x1b]1717;1;f;;;src/foo.rs\x1b\\"
+        );
     }
 
     #[test]

@@ -20,8 +20,10 @@
 // ```
 use std::convert::TryInto;
 use std::fmt::Write as FmtWrite;
+use std::io::Write as IoWrite;
 
 use super::draw;
+use crate::features::diff_line_metadata::OscLinePrefixer;
 use crate::config::{
     Config, HunkHeaderIncludeCodeFragment, HunkHeaderIncludeFilePath, HunkHeaderIncludeLineNumber,
 };
@@ -186,14 +188,27 @@ impl StateMachine<'_> {
                 .initialize_hunk(line_numbers_and_hunk_lengths, file);
         }
 
+        // The `h` record (spec §12) to attach to every row of the hunk header;
+        // empty (no-op) when metadata isn't negotiated. The counters were just
+        // seeded above, so the hunk's first new-file line is in hand.
+        let header_osc = self
+            .painter
+            .diff_line_metadata
+            .as_ref()
+            .map(|md| md.osc_for_hunk_header())
+            .unwrap_or_default();
+
         if self.config.hunk_header_style.is_raw {
-            write_hunk_header_raw(&mut self.painter, line, raw_line, self.config)?;
+            write_hunk_header_raw(&mut self.painter, line, raw_line, self.config, &header_osc)?;
         } else if self.config.hunk_header_style.is_omitted {
             writeln!(self.painter.writer)?;
         } else {
             // Add a blank line below the hunk-header-line for readability, unless
             // color_only mode is active.
             if !self.config.color_only {
+                if !header_osc.is_empty() {
+                    write!(self.painter.writer, "{header_osc}")?;
+                }
                 writeln!(self.painter.writer)?;
             }
 
@@ -216,6 +231,7 @@ impl StateMachine<'_> {
                 &HunkHeaderIncludeHunkLabel::Yes,
                 &self.config.hunk_header_style_include_code_fragment,
                 ":",
+                &header_osc,
                 self.config,
             )?;
         };
@@ -283,14 +299,17 @@ fn write_hunk_header_raw(
     line: &str,
     raw_line: &str,
     config: &Config,
+    header_osc: &str,
 ) -> std::io::Result<()> {
     let (mut draw_fn, pad, decoration_ansi_term_style) =
         draw::get_draw_function(config.hunk_header_style.decoration_style);
+    // Prefix every drawn row with the `h` record (no-op when empty).
+    let mut writer = OscLinePrefixer::new(&mut *painter.writer, header_osc.to_string());
     if config.hunk_header_style.decoration_style != DecorationStyle::NoDecoration {
-        writeln!(painter.writer)?;
+        writeln!(writer)?;
     }
     draw_fn(
-        painter.writer,
+        &mut writer,
         &format!("{}{}", line, if pad { " " } else { "" }),
         &format!("{}{}", raw_line, if pad { " " } else { "" }),
         "",
@@ -317,6 +336,7 @@ pub fn write_line_of_code_with_optional_path_and_line_number(
     include_hunk_label: &HunkHeaderIncludeHunkLabel,
     include_code_fragment: &HunkHeaderIncludeCodeFragment,
     file_path_separator: &str,
+    header_osc: &str,
     config: &Config,
 ) -> std::io::Result<()> {
     let (mut draw_fn, _, decoration_ansi_term_style) = draw::get_draw_function(decoration_style);
@@ -353,16 +373,20 @@ pub fn write_line_of_code_with_optional_path_and_line_number(
             painter,
             config,
         );
+        // Take the buffer out so the writer field can be borrowed to wrap it with
+        // the `h` record on every drawn row (no-op when empty). Dropping it leaves
+        // `output_buffer` empty, matching the original `.clear()`.
+        let buffer = std::mem::take(&mut painter.output_buffer);
+        let mut writer = OscLinePrefixer::new(&mut *painter.writer, header_osc.to_string());
         draw_fn(
-            painter.writer,
-            &painter.output_buffer,
-            &painter.output_buffer,
+            &mut writer,
+            &buffer,
+            &buffer,
             "",
             &config.decorations_width,
             config.null_style,
             decoration_ansi_term_style,
         )?;
-        painter.output_buffer.clear();
     }
 
     Ok(())
