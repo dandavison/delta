@@ -238,17 +238,21 @@ fn parse_hunk_header(line: &str) -> Option<ParsedHunkHeader> {
         let line_numbers_and_hunk_lengths: Vec<(usize, usize)> = HUNK_HEADER_FILE_COORDINATE_REGEX
             .captures_iter(file_coordinates)
             .map(|caps| {
-                (
-                    caps[1].parse::<usize>().unwrap(),
+                // A line number or hunk length that overflows `usize` (a
+                // pathological hunk header) makes this `None`, so the header is
+                // treated as unparseable and rendered as an ordinary line rather
+                // than panicking.
+                Some((
+                    caps[1].parse::<usize>().ok()?,
                     caps.get(2)
                         .map(|m| m.as_str())
                         // Per the specs linked above, if the hunk length is absent then it is 1.
                         .unwrap_or("1")
                         .parse::<usize>()
-                        .unwrap(),
-                )
+                        .ok()?,
+                ))
             })
-            .collect();
+            .collect::<Option<Vec<_>>>()?;
         if line_numbers_and_hunk_lengths.is_empty() {
             None
         } else {
@@ -465,6 +469,25 @@ pub mod tests {
     fn test_parse_hunk_header_with_no_hunk_lengths() {
         let result = parse_hunk_header("@@  @@\n");
         assert_eq!(result, None);
+    }
+
+    #[test]
+    fn test_parse_hunk_header_line_number_overflow() {
+        // A line number or hunk length exceeding usize::MAX must not panic; the
+        // header is unparseable so parse_hunk_header returns None and the line
+        // is rendered verbatim.
+        assert_eq!(
+            parse_hunk_header("@@ -99999999999999999999999999 +1 @@ context\n"),
+            None
+        );
+        assert_eq!(
+            parse_hunk_header("@@ -1 +99999999999999999999999999 @@\n"),
+            None
+        );
+        assert_eq!(
+            parse_hunk_header("@@ -1,99999999999999999999999999 +1 @@\n"),
+            None
+        );
     }
 
     #[test]
