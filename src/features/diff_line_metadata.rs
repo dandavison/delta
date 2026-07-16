@@ -5,11 +5,11 @@
 // by color, adds gutters), so that identity cannot be recovered from the
 // painted text alone -- the pager, which still has it at render time, states it.
 //
-// This is gated on the OSC1717_METADATA environment variable: the host
-// advertises the protocol versions it understands and delta emits the highest
-// mutually-understood one. When the variable is unset (i.e. delta is not running
-// under such a host) nothing is emitted, so a raw terminal / less / tmux see a
-// normal diff.
+// This is gated on the OSC1717 environment variable: the host advertises the
+// protocol versions it understands and delta emits the highest mutually-
+// understood one. When the variable is unset (i.e. delta is not running under
+// such a host) nothing is emitted, so a raw terminal / less / tmux see a normal
+// diff.
 //
 // The OSC number 1717 was chosen after auditing the OSC allocations of the major
 // terminal emulators (xterm, VTE, kitty, foot, WezTerm, iTerm2, Windows Terminal,
@@ -38,11 +38,11 @@ fn pick_version(advertised: &str) -> Option<u32> {
 }
 
 /// The protocol version to emit, negotiated against the host's advertised list
-/// in `OSC1717_METADATA` (e.g. "V1" or "V1,V2"), or `None` when no host is
-/// asking (the variable is unset) so delta stays silent.
+/// in `OSC1717` (e.g. "V1" or "V1,V2"), or `None` when no host is asking (the
+/// variable is unset) so delta stays silent.
 pub fn negotiated_version() -> Option<u32> {
     static VERSION: OnceLock<Option<u32>> = OnceLock::new();
-    *VERSION.get_or_init(|| pick_version(&std::env::var("OSC1717_METADATA").ok()?))
+    *VERSION.get_or_init(|| pick_version(&std::env::var("OSC1717").ok()?))
 }
 
 /// The handshake record: a version-only OSC 1717 (no further fields) that a

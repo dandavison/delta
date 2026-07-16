@@ -37,7 +37,7 @@ pub struct Painter<'p> {
     // if config.line_numbers is false. See `UseFullPanelWidth` as well.
     pub line_numbers_data: Option<line_numbers::LineNumbersData<'p>>,
     // Emits per-line diff metadata as an OSC sequence for a host application;
-    // Some only when the host negotiated emission via OSC1717_METADATA.
+    // Some only when the host negotiated emission via the OSC1717 env var.
     pub diff_line_metadata: Option<DiffLineMetadata>,
     pub merge_conflict_lines: merge_conflict::MergeConflictLines,
     pub merge_conflict_commit_names: merge_conflict::MergeConflictCommitNames,
