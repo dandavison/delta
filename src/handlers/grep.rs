@@ -669,6 +669,19 @@ pub fn parse_grep_line(line: &str) -> Option<GrepLine<'_>> {
         ripgrep_json::parse_line(line)
     } else {
         match &*process::calling_process() {
+            // `-h`/`--no-filename` suppresses the path entirely, so every
+            // line is raw file content with no path/separator structure.
+            // The heuristic regexes below have no reliable signal to work
+            // from in that case, and will misparse content that happens to
+            // contain a run of the separator characters (':', '-', '=') --
+            // e.g. `foo=equals` in a file named `foo` looks identical to a
+            // `path=code` grep line. Skip heuristic parsing entirely.
+            process::CallingProcess::GitGrep(command_line)
+                if command_line.short_options.contains("-h")
+                    || command_line.long_options.contains("--no-filename") =>
+            {
+                None
+            }
             process::CallingProcess::GitGrep(_) | process::CallingProcess::OtherGrep => [
                 &*GREP_LINE_REGEX_ASSUMING_FILE_EXTENSION_AND_LINE_NUMBER,
                 &*GREP_LINE_REGEX_ASSUMING_FILE_EXTENSION_NO_SPACES,
@@ -1195,6 +1208,18 @@ mod tests {
                 submatches: None,
             })
         );
+    }
+
+    #[test]
+    fn test_parse_grep_h_no_filename_not_misparsed_as_path() {
+        // git grep -h: no filename is printed, so a content line that
+        // happens to contain a separator character (e.g. "foo=equals")
+        // must not be misparsed as a `path=code` grep line.
+        let fake_parent_grep_command =
+            "/usr/local/bin/git --doesnt-matter grep -h --nor-this nor_this -- nor_this";
+        let _args = FakeParentArgs::once(fake_parent_grep_command);
+
+        assert_eq!(parse_grep_line("foo=equals"), None);
     }
 
     #[test]
