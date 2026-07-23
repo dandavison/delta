@@ -473,6 +473,7 @@ enum GrepLineRegex {
     WithFileExtensionAndLineNumber,
     WithFileExtension,
     WithFileExtensionNoSpaces,
+    WithoutFileExtension,
     WithoutSeparatorCharacters,
 }
 
@@ -494,6 +495,11 @@ lazy_static! {
 lazy_static! {
     static ref GREP_LINE_REGEX_ASSUMING_FILE_EXTENSION: Regex =
         make_grep_line_regex(GrepLineRegex::WithFileExtension);
+}
+
+lazy_static! {
+    static ref GREP_LINE_REGEX_ASSUMING_NO_FILE_EXTENSION: Regex =
+        make_grep_line_regex(GrepLineRegex::WithoutFileExtension);
 }
 
 lazy_static! {
@@ -550,6 +556,18 @@ fn make_grep_line_regex(regex_variant: GrepLineRegex) -> Regex {
         (                        # 1. file name (colons not allowed)
             [^:|\ ]+                # try to be strict about what a file path can start with
             [^\ ]\.[^.\ :=-]{1,6}   # extension
+        )
+        "
+        }
+        GrepLineRegex::WithoutFileExtension => {
+            r"
+        (                        # 1. file name (colons not allowed, but other separator
+                                 #    characters such as '-' and '=' are, since a path
+                                 #    with no recognizable extension may legitimately
+                                 #    contain them -- e.g. `foo-bar`)
+            [^:|\ ]                 # try to be strict about what a file path can start with
+            [^:]*                   # anything except a colon
+            [^:\ ]                  # a file name cannot end with whitespace or a colon
         )
         "
         }
@@ -673,6 +691,7 @@ pub fn parse_grep_line(line: &str) -> Option<GrepLine<'_>> {
                 &*GREP_LINE_REGEX_ASSUMING_FILE_EXTENSION_AND_LINE_NUMBER,
                 &*GREP_LINE_REGEX_ASSUMING_FILE_EXTENSION_NO_SPACES,
                 &*GREP_LINE_REGEX_ASSUMING_FILE_EXTENSION,
+                &*GREP_LINE_REGEX_ASSUMING_NO_FILE_EXTENSION,
                 &*GREP_LINE_REGEX_ASSUMING_NO_INTERNAL_SEPARATOR_CHARS,
             ]
             .iter()
@@ -906,10 +925,8 @@ mod tests {
     }
 
     #[test]
-    #[ignore]
     fn test_parse_grep_n_match_file_name_with_dashes_and_no_extension() {
         // git grep -n
-        // This fails: we can't parse it currently.
         let fake_parent_grep_command =
             "/usr/local/bin/git --doesnt-matter grep --nor-this nor_this -- nor_this";
         let _args = FakeParentArgs::once(fake_parent_grep_command);
@@ -922,6 +939,27 @@ mod tests {
                 line_number: Some(4),
                 line_type: LineType::Match,
                 code: "repo=$(mktemp -d)".into(),
+                submatches: None,
+            })
+        );
+    }
+
+    #[test]
+    fn test_parse_grep_match_file_name_with_dashes_and_no_extension_no_line_number() {
+        // git grep (no -n): the exact repro from
+        // https://github.com/dandavison/delta/issues/2144
+        let fake_parent_grep_command =
+            "/usr/local/bin/git --doesnt-matter grep --nor-this nor_this -- nor_this";
+        let _args = FakeParentArgs::once(fake_parent_grep_command);
+
+        assert_eq!(
+            parse_grep_line("foo-bar:content"),
+            Some(GrepLine {
+                grep_type: GrepType::Classic,
+                path: "foo-bar".into(),
+                line_number: None,
+                line_type: LineType::Match,
+                code: "content".into(),
                 submatches: None,
             })
         );
