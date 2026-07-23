@@ -18,9 +18,9 @@ pub enum CallingProcess {
     GitReflog(CommandLine),
     GitBlame(CommandLine),
     GitGrep(CommandLine),
-    OtherGrep, // rg, grep, ag, ack, etc
-    None,      // no matching process could be found
-    Pending,   // calling process is currently being determined
+    OtherGrep(CommandLine), // rg, grep, ag, ack, etc
+    None,                   // no matching process could be found
+    Pending,                // calling process is currently being determined
 }
 
 // The information where the calling process info comes from *should* be inside
@@ -38,7 +38,7 @@ impl CallingProcess {
             CallingProcess::GitLog(cmd) if cmd.long_options.contains("--relative") => true,
             CallingProcess::GitBlame(_)
             | CallingProcess::GitGrep(_)
-            | CallingProcess::OtherGrep => true,
+            | CallingProcess::OtherGrep(_) => true,
             _ => false,
         }
     }
@@ -202,7 +202,7 @@ pub fn describe_calling_process(args: &[String]) -> ProcessArgs<CallingProcess> 
             // TODO: parse_style_sections is failing to parse ANSI escape sequences emitted by
             // grep (BSD and GNU), ag, pt. See #794
             Some(s) if is_any_of(s.to_str(), ["rg", "ack", "sift"]) => {
-                ProcessArgs::Args(CallingProcess::OtherGrep)
+                ProcessArgs::Args(CallingProcess::OtherGrep(parse_command_line(args)))
             }
             Some(_) => {
                 // It's not git, and it's not another grep tool. Keep
@@ -1129,7 +1129,7 @@ pub mod tests {
         ]);
         assert_eq!(
             calling_process_cmdline(parent, describe_calling_process),
-            Some(CallingProcess::GitGrep(empty_command_line))
+            Some(CallingProcess::GitGrep(empty_command_line.clone()))
         );
 
         for grep_command in &[
@@ -1145,9 +1145,23 @@ pub mod tests {
             ]);
             assert_eq!(
                 calling_process_cmdline(parent, describe_calling_process),
-                Some(CallingProcess::OtherGrep)
+                Some(CallingProcess::OtherGrep(empty_command_line.clone()))
             );
         }
+
+        let parent = MockProcInfo::with(&[
+            (2, 100, "-shell", None),
+            (3, 100, "rg -l pattern", Some(2)),
+            (4, 100, "delta", Some(3)),
+        ]);
+        assert_eq!(
+            calling_process_cmdline(parent, describe_calling_process),
+            Some(CallingProcess::OtherGrep(CommandLine {
+                long_options: [].into(),
+                short_options: set(&["-l"]),
+                last_arg: Some("pattern".to_string()),
+            }))
+        );
 
         let git_grep_command =
             "git grep -ab --function-context -n --show-function -W --foo=val pattern hello.txt";

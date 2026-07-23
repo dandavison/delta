@@ -473,6 +473,7 @@ enum GrepLineRegex {
     WithFileExtensionAndLineNumber,
     WithFileExtension,
     WithFileExtensionNoSpaces,
+    WithoutFileExtension,
     WithoutSeparatorCharacters,
 }
 
@@ -494,6 +495,11 @@ lazy_static! {
 lazy_static! {
     static ref GREP_LINE_REGEX_ASSUMING_FILE_EXTENSION: Regex =
         make_grep_line_regex(GrepLineRegex::WithFileExtension);
+}
+
+lazy_static! {
+    static ref GREP_LINE_REGEX_ASSUMING_NO_FILE_EXTENSION: Regex =
+        make_grep_line_regex(GrepLineRegex::WithoutFileExtension);
 }
 
 lazy_static! {
@@ -550,6 +556,18 @@ fn make_grep_line_regex(regex_variant: GrepLineRegex) -> Regex {
         (                        # 1. file name (colons not allowed)
             [^:|\ ]+                # try to be strict about what a file path can start with
             [^\ ]\.[^.\ :=-]{1,6}   # extension
+        )
+        "
+        }
+        GrepLineRegex::WithoutFileExtension => {
+            r"
+        (                        # 1. file name (colons not allowed, but other separator
+                                 #    characters such as '-' and '=' are, since a path
+                                 #    with no recognizable extension may legitimately
+                                 #    contain them -- e.g. `foo-bar`)
+            [^:|\ ]                 # try to be strict about what a file path can start with
+            [^:]*                   # anything except a colon
+            [^:\ ]                  # a file name cannot end with whitespace or a colon
         )
         "
         }
@@ -669,10 +687,32 @@ pub fn parse_grep_line(line: &str) -> Option<GrepLine<'_>> {
         ripgrep_json::parse_line(line)
     } else {
         match &*process::calling_process() {
-            process::CallingProcess::GitGrep(_) | process::CallingProcess::OtherGrep => [
+            process::CallingProcess::OtherGrep(cmd)
+                if cmd.short_options.contains("-l")
+                    || cmd.long_options.contains("--files-with-matches") =>
+            {
+                // `-l`/`--files-with-matches` output is a bare path, one per
+                // line -- no separator and no code/match content at all. The
+                // heuristic regexes below assume every line has a
+                // path+separator+code structure, so they can't represent
+                // this and will misparse a path that happens to contain a
+                // ':', '-', or '=' (see #2042). Since we know from the
+                // calling process that every line in this run is just a
+                // path, skip heuristic parsing entirely.
+                Some(GrepLine {
+                    grep_type: GrepType::Classic,
+                    path: line.into(),
+                    line_number: None,
+                    line_type: LineType::FileHeader,
+                    code: "".into(),
+                    submatches: None,
+                })
+            }
+            process::CallingProcess::GitGrep(_) | process::CallingProcess::OtherGrep(_) => [
                 &*GREP_LINE_REGEX_ASSUMING_FILE_EXTENSION_AND_LINE_NUMBER,
                 &*GREP_LINE_REGEX_ASSUMING_FILE_EXTENSION_NO_SPACES,
                 &*GREP_LINE_REGEX_ASSUMING_FILE_EXTENSION,
+                &*GREP_LINE_REGEX_ASSUMING_NO_FILE_EXTENSION,
                 &*GREP_LINE_REGEX_ASSUMING_NO_INTERNAL_SEPARATOR_CHARS,
             ]
             .iter()
@@ -689,7 +729,7 @@ pub fn parse_raw_grep_line(raw_line: &str) -> Option<GrepLine<'_>> {
     }
     if !matches!(
         &*process::calling_process(),
-        process::CallingProcess::GitGrep(_) | process::CallingProcess::OtherGrep
+        process::CallingProcess::GitGrep(_) | process::CallingProcess::OtherGrep(_)
     ) {
         return None;
     }
@@ -735,6 +775,29 @@ mod tests {
         parse_grep_line, parse_raw_grep_line, GrepLine, GrepType, LineType,
     };
     use crate::utils::process::tests::FakeParentArgs;
+
+    #[test]
+    fn test_parse_grep_rg_l_bare_path_with_hyphen() {
+        // `rg --json -l` (or plain `rg -l`): ripgrep ignores --json for -l
+        // and emits a bare path per line, no separator or code at all. A
+        // path that happens to contain a hyphen (e.g. from a repo with
+        // hyphenated filenames) must not be misparsed as path+separator+code.
+        // https://github.com/dandavison/delta/issues/2042
+        let fake_parent_grep_command = "/usr/local/bin/rg -l pattern";
+        let _args = FakeParentArgs::for_scope(fake_parent_grep_command);
+
+        assert_eq!(
+            parse_grep_line("test-1"),
+            Some(GrepLine {
+                grep_type: GrepType::Classic,
+                path: "test-1".into(),
+                line_number: None,
+                line_type: LineType::FileHeader,
+                code: "".into(),
+                submatches: None,
+            })
+        );
+    }
 
     #[test]
     fn test_parse_grep_match() {
@@ -906,10 +969,8 @@ mod tests {
     }
 
     #[test]
-    #[ignore]
     fn test_parse_grep_n_match_file_name_with_dashes_and_no_extension() {
         // git grep -n
-        // This fails: we can't parse it currently.
         let fake_parent_grep_command =
             "/usr/local/bin/git --doesnt-matter grep --nor-this nor_this -- nor_this";
         let _args = FakeParentArgs::once(fake_parent_grep_command);
@@ -922,6 +983,27 @@ mod tests {
                 line_number: Some(4),
                 line_type: LineType::Match,
                 code: "repo=$(mktemp -d)".into(),
+                submatches: None,
+            })
+        );
+    }
+
+    #[test]
+    fn test_parse_grep_match_file_name_with_dashes_and_no_extension_no_line_number() {
+        // git grep (no -n): the exact repro from
+        // https://github.com/dandavison/delta/issues/2144
+        let fake_parent_grep_command =
+            "/usr/local/bin/git --doesnt-matter grep --nor-this nor_this -- nor_this";
+        let _args = FakeParentArgs::once(fake_parent_grep_command);
+
+        assert_eq!(
+            parse_grep_line("foo-bar:content"),
+            Some(GrepLine {
+                grep_type: GrepType::Classic,
+                path: "foo-bar".into(),
+                line_number: None,
+                line_type: LineType::Match,
+                code: "content".into(),
                 submatches: None,
             })
         );
