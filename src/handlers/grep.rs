@@ -664,21 +664,45 @@ $
     .unwrap()
 }
 
+// `git grep -l|-L|--name-only|--files-with-matches|--files-without-match` output is a
+// bare path per line: no separator, no line number, no code. In that mode the path may
+// legitimately contain ':', '-' or '=', so the separator-guessing regexes below (which
+// exist to split ordinary "path:line:code" grep output) must not be applied to it: doing
+// so can misparse a hyphen (etc.) inside the path as a separator and corrupt the path.
+fn is_filename_only_grep_command_line(command_line: &process::CommandLine) -> bool {
+    command_line.short_options.contains("-l")
+        || command_line.short_options.contains("-L")
+        || command_line.long_options.contains("--name-only")
+        || command_line.long_options.contains("--files-with-matches")
+        || command_line.long_options.contains("--files-without-match")
+}
+
 pub fn parse_grep_line(line: &str) -> Option<GrepLine<'_>> {
     if line.starts_with('{') {
-        ripgrep_json::parse_line(line)
-    } else {
-        match &*process::calling_process() {
-            process::CallingProcess::GitGrep(_) | process::CallingProcess::OtherGrep => [
-                &*GREP_LINE_REGEX_ASSUMING_FILE_EXTENSION_AND_LINE_NUMBER,
-                &*GREP_LINE_REGEX_ASSUMING_FILE_EXTENSION_NO_SPACES,
-                &*GREP_LINE_REGEX_ASSUMING_FILE_EXTENSION,
-                &*GREP_LINE_REGEX_ASSUMING_NO_INTERNAL_SEPARATOR_CHARS,
-            ]
-            .iter()
-            .find_map(|regex| _parse_grep_line(regex, line)),
-            _ => None,
+        return ripgrep_json::parse_line(line);
+    }
+    match &*process::calling_process() {
+        process::CallingProcess::GitGrep(command_line)
+            if is_filename_only_grep_command_line(command_line) =>
+        {
+            Some(GrepLine {
+                grep_type: GrepType::Classic,
+                path: line.into(),
+                line_number: None,
+                line_type: LineType::FileHeader,
+                code: "".into(),
+                submatches: None,
+            })
         }
+        process::CallingProcess::GitGrep(_) | process::CallingProcess::OtherGrep => [
+            &*GREP_LINE_REGEX_ASSUMING_FILE_EXTENSION_AND_LINE_NUMBER,
+            &*GREP_LINE_REGEX_ASSUMING_FILE_EXTENSION_NO_SPACES,
+            &*GREP_LINE_REGEX_ASSUMING_FILE_EXTENSION,
+            &*GREP_LINE_REGEX_ASSUMING_NO_INTERNAL_SEPARATOR_CHARS,
+        ]
+        .iter()
+        .find_map(|regex| _parse_grep_line(regex, line)),
+        _ => None,
     }
 }
 
@@ -941,6 +965,69 @@ mod tests {
                 line_number: Some(4),
                 line_type: LineType::Match,
                 code: "value=hi-there".into(),
+                submatches: None,
+            })
+        );
+    }
+
+    #[test]
+    fn test_parse_grep_name_only_hyphenated_path() {
+        // git grep --name-only (and -l/-L/--files-with-matches/--files-without-match)
+        // emit a bare path per line, with no separator or code content. The path
+        // itself may contain ':', '-' or '=', so it must never be run through the
+        // separator-guessing regexes used for ordinary "path:line:code" output.
+        let fake_parent_grep_command =
+            "/usr/local/bin/git --doesnt-matter grep --name-only nor_this -- nor_this";
+        let _args = FakeParentArgs::for_scope(fake_parent_grep_command);
+
+        assert_eq!(
+            parse_grep_line("dev-account/policy.tf"),
+            Some(GrepLine {
+                grep_type: GrepType::Classic,
+                path: "dev-account/policy.tf".into(),
+                line_number: None,
+                line_type: LineType::FileHeader,
+                code: "".into(),
+                submatches: None,
+            })
+        );
+    }
+
+    #[test]
+    fn test_parse_grep_files_with_matches_short_flag_hyphenated_path() {
+        // git grep -l
+        let fake_parent_grep_command =
+            "/usr/local/bin/git --doesnt-matter grep -l nor_this -- nor_this";
+        let _args = FakeParentArgs::for_scope(fake_parent_grep_command);
+
+        assert_eq!(
+            parse_grep_line("dev-account/policy.tf"),
+            Some(GrepLine {
+                grep_type: GrepType::Classic,
+                path: "dev-account/policy.tf".into(),
+                line_number: None,
+                line_type: LineType::FileHeader,
+                code: "".into(),
+                submatches: None,
+            })
+        );
+    }
+
+    #[test]
+    fn test_parse_grep_files_without_match_short_flag_hyphenated_path() {
+        // git grep -L
+        let fake_parent_grep_command =
+            "/usr/local/bin/git --doesnt-matter grep -L nor_this -- nor_this";
+        let _args = FakeParentArgs::for_scope(fake_parent_grep_command);
+
+        assert_eq!(
+            parse_grep_line("dev-account/policy.tf"),
+            Some(GrepLine {
+                grep_type: GrepType::Classic,
+                path: "dev-account/policy.tf".into(),
+                line_number: None,
+                line_type: LineType::FileHeader,
+                code: "".into(),
                 submatches: None,
             })
         );
