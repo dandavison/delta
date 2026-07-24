@@ -587,7 +587,7 @@ fn parse_width_specifier(width_arg: &str, terminal_width: usize) -> Result<usize
                 format!(
                     "the current terminal width of {} minus {} is negative",
                     terminal_width,
-                    &width_arg[1..].trim(),
+                    width_arg[1..].trim(),
                 )
             })?,
         Some(index) => {

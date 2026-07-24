@@ -50,7 +50,7 @@ impl WrapConfig {
                     .unwrap_or_else(|err| {
                         fatal(format!(
                             "Could not parse wrap-right-percent argument {}: {}.",
-                            &arg, err
+                            arg, err
                         ))
                     });
                 if percent.is_finite() && percent > 0.0 && percent < 100.0 {

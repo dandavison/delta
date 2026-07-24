@@ -220,7 +220,7 @@ fn write_merge_conflict_bar(
     writeln!(
         painter.writer,
         "{}",
-        &s.graphemes(true).cycle().take(width).join("")
+        s.graphemes(true).cycle().take(width).join("")
     )?;
     Ok(())
 }

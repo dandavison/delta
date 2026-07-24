@@ -246,7 +246,7 @@ pub fn paint_zero_lines_side_by_side<'a>(
     for (line_index, ((syntax_sections, diff_sections), state)) in syntax_style_sections
         .into_iter()
         .zip_eq(diff_style_sections.iter())
-        .zip_eq(states.into_iter())
+        .zip_eq(states)
         .enumerate()
     {
         for panel_side in &[Left, Right] {
