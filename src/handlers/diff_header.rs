@@ -293,7 +293,7 @@ pub fn write_generic_diff_header_header_line(
         decoration_ansi_term_style,
     )?;
     if !mode_info.is_empty() {
-        mode_info.truncate(0);
+        mode_info.clear();
     }
     Ok(())
 }
