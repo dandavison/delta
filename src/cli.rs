@@ -733,6 +733,14 @@ pub struct Opt {
     /// Regular expression defining navigation stop points.
     pub navigate_regex: Option<String>,
 
+    #[arg(
+        long = "newlines",
+        default_value = "file diff",
+        value_name = "WHERE"
+    )]
+    /// Insert newlines between elements.
+    pub newlines: String,
+
     #[arg(long = "no-gitconfig")]
     /// Do not read any settings from git config.
     ///

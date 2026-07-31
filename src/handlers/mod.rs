@@ -46,6 +46,7 @@ impl StateMachine<'_> {
                 &mut self.painter,
                 &mut self.mode_info,
                 self.config,
+                &mut self.in_hunk,
             )?;
             handled_line = true;
         }
