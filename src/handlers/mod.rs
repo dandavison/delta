@@ -18,7 +18,16 @@ pub mod submodule;
 use crate::delta::{State, StateMachine};
 
 impl StateMachine<'_> {
-    pub fn handle_additional_cases(&mut self, to_state: State) -> std::io::Result<bool> {
+    /// `osc` is the `f` record to tag the row with (empty for none): whether
+    /// the row is about the file `diff_header_osc()` would name is knowledge
+    /// the call sites have, not this function -- an "Only in"/"Submodule" row
+    /// concerns a file whose path is never parsed into `minus_file`/`plus_file`,
+    /// so tagging it with those would name the *previous* file.
+    pub fn handle_additional_cases(
+        &mut self,
+        to_state: State,
+        osc: String,
+    ) -> std::io::Result<bool> {
         let mut handled_line = false;
 
         // Additional cases:
@@ -40,7 +49,6 @@ impl StateMachine<'_> {
         self.state = to_state;
         if self.should_handle() {
             self.painter.emit()?;
-            let osc = self.diff_header_osc();
             diff_header::write_generic_diff_header_header_line(
                 &self.line,
                 &self.raw_line,

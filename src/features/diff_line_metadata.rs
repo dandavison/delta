@@ -85,6 +85,20 @@ impl DiffLineMetadata {
         })
     }
 
+    /// A version-1 emitter regardless of environment. Tests cannot go through
+    /// `from_env`: the negotiated version is cached in a process-wide OnceLock,
+    /// so an env var set by one test would leak into all others.
+    #[cfg(test)]
+    pub fn v1_for_tests() -> Self {
+        Self {
+            version: 1,
+            old_line: 0,
+            new_line: 0,
+            file: String::new(),
+            last_record: None,
+        }
+    }
+
     /// Seed the line-number counters and file path at a hunk header. Mirrors
     /// `LineNumbersData::initialize_hunk`: the first entry is the old-file start,
     /// the last is the new-file start.
@@ -226,13 +240,7 @@ mod tests {
     use crate::delta::{DiffType, State};
 
     fn emitter() -> DiffLineMetadata {
-        let mut md = DiffLineMetadata {
-            version: 1,
-            old_line: 0,
-            new_line: 0,
-            file: String::new(),
-            last_record: None,
-        };
+        let mut md = DiffLineMetadata::v1_for_tests();
         // @@ -1,3 +1,4 @@ : old start 1, new start 1.
         md.initialize_hunk(&[(1, 3), (1, 4)], "f.txt".to_owned());
         md

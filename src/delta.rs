@@ -149,7 +149,7 @@ impl<'a> StateMachine<'a> {
         }
     }
 
-    fn consume<I>(&mut self, mut lines: ByteLines<I>) -> std::io::Result<()>
+    pub(crate) fn consume<I>(&mut self, mut lines: ByteLines<I>) -> std::io::Result<()>
     where
         I: BufRead,
     {

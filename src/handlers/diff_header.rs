@@ -95,6 +95,12 @@ impl StateMachine<'_> {
 
         if self.source == Source::DiffUnified {
             self.state = State::DiffHeader(DiffType::Unified);
+            // The `---` line starts a new file section, and with no `diff --git`
+            // line in this format, nothing has reset `plus_file`: it still holds
+            // the previous file's path. Clear it so the stale path cannot leak
+            // into this file's metadata (`diff_header_osc`) before the `+++`
+            // line sets the real one.
+            self.plus_file.clear();
             self.painter
                 .set_syntax(get_filename_from_marker_line(&self.line));
         } else {
@@ -196,6 +202,12 @@ impl StateMachine<'_> {
     /// hunk header selects it (`plus_file`, or `minus_file` for a deletion).
     /// delta renders the file header before it has parsed the first `@@`, so
     /// the record's new-line is left empty (`osc_for_file_header`).
+    ///
+    /// The path can still be unknown at some header rows -- a rename's rows
+    /// before `rename to` has been parsed, or a `---` row that no `diff --git`
+    /// line pre-filled. Such rows carry no record (the spec makes tagging
+    /// every header row a recommendation, not a requirement): a record naming
+    /// a wrong or empty path would hand the host a second file identity.
     pub(crate) fn diff_header_osc(&self) -> String {
         match self.painter.diff_line_metadata.as_ref() {
             Some(md) => {
@@ -204,7 +216,17 @@ impl StateMachine<'_> {
                 } else {
                     &self.plus_file
                 };
-                md.osc_for_file_header(file)
+                // A binary file's path was decorated in place for display
+                // (`handle_diff_header_misc_line`); the record carries the
+                // real path.
+                let file = file
+                    .strip_suffix(super::diff_header_misc::BINARY_FILE_SUFFIX)
+                    .unwrap_or(file);
+                if file.is_empty() {
+                    String::new()
+                } else {
+                    md.osc_for_file_header(file)
+                }
             }
             None => String::new(),
         }
@@ -502,7 +524,9 @@ pub fn get_file_change_description_from_file_paths(
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::tests::integration_test_utils::{make_config_from_args, DeltaTest};
+    use crate::tests::integration_test_utils::{
+        make_config_from_args, run_delta_with_diff_line_metadata, DeltaTest,
+    };
     use insta::assert_snapshot;
 
     #[test]
@@ -901,6 +925,140 @@ index 0000000..323fae0
         (81)print(231)((186)"Hello"(231))(normal)
         (normal 52)-- World?(normal)
         "###);
+    }
+
+    /// Run delta with OSC 1717 metadata emission and render the output for
+    /// asserting on the records: each `ESC ] 1717 ; … ESC \` becomes a
+    /// visible `⟦…⟧`, colors are stripped.
+    fn visible_metadata_records(input: &str, args: &[&str]) -> String {
+        let config = make_config_from_args(args);
+        let output = run_delta_with_diff_line_metadata(input, &config);
+        crate::ansi::strip_ansi_codes(&output.replace("\x1b]1717;", "⟦").replace("\x1b\\", "⟧"))
+    }
+
+    #[test]
+    fn test_file_header_records_in_color_only_unified_diff() {
+        // Plain `diff -u` input has no `diff --git` line, so at a `---` row the
+        // new-file path is not known yet: the row must carry no `f` record --
+        // in particular not an empty path (first file) or the previous file's
+        // (later files). Each `+++` row carries its file's record, and file 1's
+        // content records must name file 1 even though delta's buffering emits
+        // them after file 2's header rows (a delta `--color-only` quirk that
+        // predates the metadata feature).
+        let input = "\
+--- old1.txt
++++ new1.txt
+@@ -1 +1 @@
+-foo
++bar
+--- old2.txt
++++ new2.txt
+@@ -1 +1 @@
+-foo
++bar
+";
+        assert_snapshot!(visible_metadata_records(input, &["--color-only"]), @r"
+        --- old1.txt
+        ⟦1;f;;;new1.txt⟧+++ new1.txt
+        ⟦1;h;1;;new1.txt⟧@@ -1 +1 @@
+        --- old2.txt
+        ⟦1;f;;;new2.txt⟧+++ new2.txt
+        ⟦1;d;1;1;new1.txt⟧-foo
+        ⟦1;a;1;;new1.txt⟧+bar
+        ⟦1;h;1;;new2.txt⟧@@ -1 +1 @@
+        ⟦1;d;1;1;new2.txt⟧-foo
+        ⟦1;a;1;;new2.txt⟧+bar
+        ");
+    }
+
+    #[test]
+    fn test_file_header_records_for_rename_in_color_only_mode() {
+        // For a rename the two paths in the `diff --git` line differ, so
+        // nothing pre-fills `plus_file`: until the `rename to` line is parsed
+        // the header rows must carry no `f` record rather than an empty path.
+        let input = "\
+diff --git a/old.txt b/new.txt
+similarity index 90%
+rename from old.txt
+rename to new.txt
+";
+        assert_snapshot!(visible_metadata_records(input, &["--color-only"]), @r"
+        diff --git a/old.txt b/new.txt
+        similarity index 90%
+        rename from old.txt
+        ⟦1;f;;;new.txt⟧rename to new.txt
+        ");
+    }
+
+    #[test]
+    fn test_no_file_header_record_on_only_in_row() {
+        // An "Only in dir: file" row names a file delta never parses into
+        // `minus_file`/`plus_file`; it must not carry the previous file's `f`
+        // record.
+        let input = "\
+--- dir1/f.txt
++++ dir2/f.txt
+@@ -1 +1 @@
+-foo
++bar
+Only in dir1: g.txt
+";
+        assert_snapshot!(visible_metadata_records(input, &[]), @r"
+        ⟦1;f;;;dir2/f.txt⟧dir1/f.txt ⟶   dir2/f.txt
+        ⟦1;f;;;dir2/f.txt⟧───────────────────────────────────────────
+
+        ⟦1;h;1;;dir2/f.txt⟧───┐
+        ⟦1;h;1;;dir2/f.txt⟧1: │
+        ⟦1;h;1;;dir2/f.txt⟧───┘
+        ⟦1;d;1;1;dir2/f.txt⟧foo
+        ⟦1;a;1;;dir2/f.txt⟧bar
+
+        Only in dir1: g.txt
+        ───────────────────────────────────────────
+        ");
+    }
+
+    #[test]
+    fn test_no_file_header_record_on_submodule_rows() {
+        let input = "\
+diff --git a/one.txt b/one.txt
+index 257cc56..5716ca5 100644
+--- a/one.txt
++++ b/one.txt
+@@ -1 +1 @@
+-foo
++bar
+Submodule sub/mod contains untracked content
+";
+        assert_snapshot!(visible_metadata_records(input, &[]), @r"
+        ⟦1;f;;;one.txt⟧one.txt
+        ⟦1;f;;;one.txt⟧───────────────────────────────────────────
+
+        ⟦1;h;1;;one.txt⟧───┐
+        ⟦1;h;1;;one.txt⟧1: │
+        ⟦1;h;1;;one.txt⟧───┘
+        ⟦1;d;1;1;one.txt⟧foo
+        ⟦1;a;1;;one.txt⟧bar
+
+        Submodule sub/mod contains untracked content
+        ────────────────────────────────────────────
+        ");
+    }
+
+    #[test]
+    fn test_binary_file_header_record_carries_the_real_path() {
+        // The rendered header says "img.png (binary file)", but the display
+        // suffix is appended to `plus_file` in place; the record must carry
+        // the real path.
+        let input = "\
+diff --git a/img.png b/img.png
+index 0000000..a5d0c46 100644
+Binary files a/img.png and b/img.png differ
+";
+        assert_snapshot!(visible_metadata_records(input, &[]), @r"
+        ⟦1;f;;;img.png⟧img.png (binary file)
+        ⟦1;f;;;img.png⟧───────────────────────────────────────────
+        ");
     }
 
     #[test]
