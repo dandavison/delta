@@ -40,12 +40,14 @@ impl StateMachine<'_> {
         self.state = to_state;
         if self.should_handle() {
             self.painter.emit()?;
+            let osc = self.diff_header_osc();
             diff_header::write_generic_diff_header_header_line(
                 &self.line,
                 &self.raw_line,
                 &mut self.painter,
                 &mut self.mode_info,
                 self.config,
+                &osc,
             )?;
             handled_line = true;
         }
