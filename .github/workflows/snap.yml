@@ -1,0 +1,40 @@
+name: Build and test snap
+
+on:
+  push:
+    branches:
+      - master
+  pull_request:
+
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: snapcore/action-build@v1
+        id: snapcraft
+      - uses: actions/upload-artifact@v3
+        with:
+          name: snap
+          path: ${{ steps.snapcraft.outputs.snap }}
+      - name: Install snap
+        run: |
+          set -e -u -x
+          sudo snap install --dangerous ${{ steps.snapcraft.outputs.snap }}
+          sudo snap alias git-delta.delta delta
+      - name: Test snap
+        run: |
+          set -e -u -x
+          git config core.pager delta
+          git config interactive.diffFilter "delta --color-only"
+          git config delta.navigate true
+          git config delta.light false
+          git config merge.conflictstyle diff3
+          git config diff.colorMoved default
+
+          git delta --version
+
+          echo "additional line" | tee new.file
+          git add new.file
+          git diff --staged

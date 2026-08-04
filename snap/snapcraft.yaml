@@ -1,0 +1,50 @@
+name: git-delta
+base: core22
+adopt-info: git-delta
+summary: A syntax-highlighting pager for git, diff, and grep output
+description: |
+  Code evolves, and we all spend time studying diffs. Delta aims to make this
+  both efficient and enjoyable: it allows you to make extensive changes to the
+  layout and styling of diffs, as well as allowing you to stay arbitrarily
+  close to the default git/diff output.
+
+  **Configuration**
+
+  Ensure that the command can be executed by running
+
+    sudo snap alias git-delta.delta delta
+
+  Configure your git repository with
+
+    git config core.pager delta
+    git config interactive.diffFilter "delta --color-only"
+    git config delta.navigate true
+    git config delta.light false
+    git config merge.conflictstyle diff3
+    git config diff.colorMoved default
+
+  These settings can be applied globally by adding `--global`, e.g.
+
+    git config --global core.pager delta
+
+website: https://dandavison.github.io/delta/introduction.html
+license: MIT
+
+grade: stable
+confinement: strict
+
+apps:
+  delta:
+    command: bin/delta
+  git-delta:
+    command: bin/delta
+
+parts:
+  git-delta:
+    plugin: rust
+    source: https://github.com/dandavison/delta.git
+    override-pull: |
+      snapcraftctl pull
+      snapcraftctl set-version "$(git describe --tags)"
+    build-packages:
+      - rust-all
