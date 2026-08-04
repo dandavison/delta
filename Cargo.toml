@@ -43,6 +43,7 @@ git2 = { version = "0.20.0", default-features = false, features = [] }
 grep-cli = "0.1.8"
 itertools = "0.10.5"
 lazy_static = "1.4"
+libc = "*"
 palette = "0.7.2"
 pathdiff = "0.2.1"
 regex = "1.7.1"

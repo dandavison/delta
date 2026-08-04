@@ -70,6 +70,7 @@ fn main() -> std::io::Result<()> {
         .unwrap_or_else(|err| eprintln!("Failed to set ctrl-c handler: {err}"));
     let exit_code = run_app(std::env::args_os().collect::<Vec<_>>(), None)?;
     // when you call process::exit, no drop impls are called, so we want to do it only once, here
+    // (exception: a subcommand is exec'ed directly)
     process::exit(exit_code);
 }
 
@@ -97,7 +98,7 @@ pub fn run_app(
         utils::process::set_calling_process(
             &cmd.args
                 .iter()
-                .map(|arg| OsStr::to_string_lossy(arg).to_string())
+                .map(|arg| OsStr::to_string_lossy(arg.as_ref()).to_string())
                 .collect::<Vec<_>>(),
         );
     }
@@ -136,14 +137,33 @@ pub fn run_app(
         return Ok(0);
     };
 
-    let _show_config = opt.show_config;
+    let show_config = opt.show_config;
     let config = config::Config::from(opt);
 
-    if _show_config {
+    if show_config {
         let stdout = io::stdout();
         let mut stdout = stdout.lock();
         subcommands::show_config::show_config(&config, &mut stdout)?;
         return Ok(0);
+    }
+
+    let subcmd = match call {
+        Call::DeltaDiff(_, minus, plus) => {
+            match subcommands::diff::build_diff_cmd(&minus, &plus, &config) {
+                Err(code) => return Ok(code),
+                Ok(val) => val,
+            }
+        }
+        Call::SubCommand(_, subcmd) => subcmd,
+        Call::Delta(_) => SubCommand::none(),
+        Call::Help(_) | Call::Version(_) => delta_unreachable("help/version handled earlier"),
+    };
+
+    // Do the exec before the pager is set up.
+    // No subprocesses must exist (but other threads may), and no terminal queries must be outstanding.
+    #[cfg(not(test))]
+    if !subcmd.is_none() && !config.stdout_is_term {
+        subcmd.exec();
     }
 
     // The following block structure is because of `writer` and related lifetimes:
@@ -159,18 +179,6 @@ pub fn run_app(
         &mut capture_output.unwrap()
     } else {
         output_type.handle().unwrap()
-    };
-
-    let subcmd = match call {
-        Call::DeltaDiff(_, minus, plus) => {
-            match subcommands::diff::build_diff_cmd(&minus, &plus, &config) {
-                Err(code) => return Ok(code),
-                Ok(val) => val,
-            }
-        }
-        Call::SubCommand(_, subcmd) => subcmd,
-        Call::Delta(_) => SubCommand::none(),
-        Call::Help(_) | Call::Version(_) => delta_unreachable("help/version handled earlier"),
     };
 
     if subcmd.is_none() {
@@ -189,12 +197,14 @@ pub fn run_app(
         let res = delta(io::stdin().lock().byte_lines(), &mut writer, &config);
 
         if let Err(error) = res {
-            match error.kind() {
-                ErrorKind::BrokenPipe => return Ok(0),
-                _ => {
-                    eprintln!("{error}");
-                    return Ok(config.error_exit_code);
-                }
+            if error.kind() == ErrorKind::BrokenPipe {
+                // Not the entire input was processed, so we should not return 0.
+                // Other unix utils with a default SIGPIPE handler would have their exit code
+                // set to this code by the shell, emulate it:
+                return Ok(128 + libc::SIGPIPE);
+            } else {
+                eprintln!("{error}");
+                return Ok(config.error_exit_code);
             }
         }
 
@@ -203,7 +213,9 @@ pub fn run_app(
         // First start a subcommand, and pipe input from it to delta(). Also handle
         // subcommand exit code and stderr (maybe truncate it, e.g. for git and diff logic).
 
-        let (subcmd_bin, subcmd_args) = subcmd.args.split_first().unwrap();
+        let subcmd_args: Vec<&OsStr> = subcmd.args.iter().map(|arg| arg.as_ref()).collect();
+
+        let (subcmd_bin, subcmd_args) = subcmd_args.split_first().unwrap();
         let subcmd_kind = subcmd.kind; // for easier {} formatting
 
         let subcmd_bin_path = match grep_cli::resolve_binary(std::path::PathBuf::from(subcmd_bin)) {
@@ -236,25 +248,45 @@ pub fn run_app(
 
         if let Err(error) = res {
             let _ = cmd.wait(); // for clippy::zombie_processes
-            match error.kind() {
-                ErrorKind::BrokenPipe => return Ok(0),
-                _ => {
-                    eprintln!("{error}");
-                    return Ok(config.error_exit_code);
-                }
+            if error.kind() == ErrorKind::BrokenPipe {
+                // (see non-subcommand block above)
+                return Ok(128 + libc::SIGPIPE);
+            } else {
+                eprintln!("{error}");
+                return Ok(config.error_exit_code);
             }
         };
 
-        let subcmd_status = cmd
-            .wait()
-            .unwrap_or_else(|_| {
-                delta_unreachable(&format!("{subcmd_kind:?} process not running."));
-            })
-            .code()
-            .unwrap_or_else(|| {
-                eprintln!("delta: {subcmd_kind:?} process terminated without exit status.");
-                config.error_exit_code
-            });
+        let subcmd_status = cmd.wait().unwrap_or_else(|_| {
+            delta_unreachable(&format!("{subcmd_kind} process not running."));
+        });
+
+        let subcmd_code = subcmd_status.code().unwrap_or_else(|| {
+            #[cfg(unix)]
+            {
+                // On unix no exit status usually means the process was terminated
+                // by a signal (not using MT-unsafe `libc::strsignal` to get its name).
+                use std::os::unix::process::ExitStatusExt;
+
+                if let Some(signal) = subcmd_status.signal() {
+                    // (note that by default the rust runtime blocks SIGPIPE)
+                    if signal != libc::SIGPIPE {
+                        eprintln!(
+                            "delta: {subcmd_kind:?} received signal {signal}{}",
+                            if subcmd_status.core_dumped() {
+                                " (core dumped)"
+                            } else {
+                                ""
+                            }
+                        );
+                    }
+                    // unix convention: 128 + signal
+                    return 128 + signal;
+                }
+            }
+            eprintln!("delta: {subcmd_kind:?} process terminated without exit status.");
+            config.error_exit_code
+        });
 
         let mut stderr_lines = io::BufReader::new(
             cmd.stderr
@@ -272,8 +304,7 @@ pub fn run_app(
 
         // On `git diff` unknown option error: stop after printing the first line above (which is
         // an error message), because the entire --help text follows.
-        if !(subcmd_status == 129
-            && matches!(subcmd_kind, SubCmdKind::GitDiff | SubCmdKind::Git(_)))
+        if !(subcmd_code == 129 && matches!(subcmd_kind, SubCmdKind::GitDiff | SubCmdKind::Git(_)))
         {
             for line in stderr_lines {
                 eprintln!(
@@ -283,22 +314,22 @@ pub fn run_app(
             }
         }
 
-        if matches!(subcmd_kind, SubCmdKind::GitDiff | SubCmdKind::Diff) && subcmd_status >= 2 {
+        if matches!(subcmd_kind, SubCmdKind::GitDiff | SubCmdKind::Diff) && subcmd_code >= 2 {
             eprintln!(
-                "{subcmd_kind:?} process failed with exit status {subcmd_status}. Command was: {}",
+                "delta: {subcmd_kind:?} process failed with exit status {subcmd_code}. Command was: {}",
                 format_args!(
                     "{} {}",
                     subcmd_bin_path.display(),
                     shell_words::join(
                         subcmd_args
                             .iter()
-                            .map(|arg0: &OsString| std::ffi::OsStr::to_string_lossy(arg0))
+                            .map(|arg0: &&OsStr| OsStr::to_string_lossy(arg0))
                     ),
                 )
             );
         }
 
-        Ok(subcmd_status)
+        Ok(subcmd_code)
     }
 
     // `output_type` drop impl runs here
