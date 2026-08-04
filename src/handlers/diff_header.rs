@@ -192,8 +192,16 @@ impl StateMachine<'_> {
     /// Construct file change line from minus and plus file and write with DiffHeader styling.
     fn _handle_diff_header_header_line(&mut self, comparing: bool) -> std::io::Result<()> {
         let line = get_file_change_description_from_file_paths(
-            &self.minus_file,
-            &self.plus_file,
+            self.config
+                .minus_file
+                .as_ref()
+                .and_then(|p| p.to_str())
+                .unwrap_or(&self.minus_file),
+            self.config
+                .plus_file
+                .as_ref()
+                .and_then(|p| p.to_str())
+                .unwrap_or(&self.plus_file),
             comparing,
             &self.minus_file_event,
             &self.plus_file_event,
