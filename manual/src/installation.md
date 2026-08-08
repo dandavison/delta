@@ -92,6 +92,8 @@ Note that the package is often called `git-delta`, but the executable installed 
   </tr>
 </table>
 
+On Windows, after Chocolatey, Scoop, or Winget, start a **new** shell so `PATH` includes `delta`.
+
 Users of older MacOS versions (e.g. 10.11 El Capitan) should install using Homebrew, Cargo, or MacPorts: the binaries on the release page will not work.
 
 Behind the scenes, delta uses [`less`](https://www.greenwoodsoftware.com/less/) for paging.
