@@ -2,7 +2,7 @@
 
 All Delta features work correctly in VSCode's terminal emulator (please open an issue if that's not true).
 
-To format file links for opening in VSCode from other terminal emulators, use the [VSCode URL handler](https://code.visualstudio.com/docs/editor/command-line#_opening-vs-code-with-urls):
+To format file links for opening in VSCode from other terminal emulators, use the [VSCode URL handler](https://code.visualstudio.com/docs/configure/command-line#_opening-vs-code-with-urls):
 
 ```gitconfig
 [delta]
