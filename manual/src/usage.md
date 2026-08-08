@@ -16,6 +16,20 @@ You can also use [process substitution](https://en.wikipedia.org/wiki/Process_su
 delta <(sort file1) <(sort file2)
 ```
 
-In addition to git output, delta handles standard unified diff format, e.g. `diff -u a.txt b.txt | delta`.
+In addition to git output, delta handles standard unified diffs when you pipe them in:
+
+```sh
+diff -u a.txt b.txt | delta
+git diff | delta
+git show HEAD | delta --side-by-side
+```
+
+That works without changing `~/.gitconfig`. Use `--no-gitconfig` if you want built-in defaults only (ignore any `[delta]` settings already in git config):
+
+```sh
+git diff | delta --no-gitconfig
+```
+
+For permanent setup (pager, interactive diffFilter, etc.), see [Configuration](./configuration.md).
 
 For Mercurial, you can add delta, with its command line options, to the `[pager]` section of `.hgrc`.
