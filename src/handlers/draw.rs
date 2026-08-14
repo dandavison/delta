@@ -34,12 +34,10 @@ pub fn get_draw_function(
             (Box::new(write_boxed_with_underline), true, style)
         }
         DecorationStyle::BoxWithOverline(style) => {
-            // TODO: not implemented
-            (Box::new(write_boxed), true, style)
+            (Box::new(write_boxed_with_overline), true, style)
         }
         DecorationStyle::BoxWithUnderOverline(style) => {
-            // TODO: not implemented
-            (Box::new(write_boxed), true, style)
+            (Box::new(write_boxed_with_underoverline), true, style)
         }
         DecorationStyle::Underline(style) => (Box::new(write_underlined), false, style),
         DecorationStyle::Overline(style) => (Box::new(write_overlined), false, style),
@@ -76,6 +74,52 @@ pub fn write_boxed(
     text: &str,
     raw_text: &str,
     addendum: &str,
+    line_width: &Width, // ignored
+    text_style: Style,
+    decoration_style: ansi_term::Style,
+) -> std::io::Result<()> {
+    _write_boxed(
+        false,
+        writer,
+        text,
+        raw_text,
+        addendum,
+        line_width,
+        text_style,
+        decoration_style,
+    )
+}
+
+/// Write text to stream, surrounded by a box, and extend a whisker from
+/// the top right corner.
+fn write_boxed_with_overline(
+    writer: &mut dyn Write,
+    text: &str,
+    raw_text: &str,
+    addendum: &str,
+    line_width: &Width, // ignored
+    text_style: Style,
+    decoration_style: ansi_term::Style,
+) -> std::io::Result<()> {
+    _write_boxed(
+        true,
+        writer,
+        text,
+        raw_text,
+        addendum,
+        line_width,
+        text_style,
+        decoration_style,
+    )
+}
+
+#[allow(clippy::too_many_arguments)]
+fn _write_boxed(
+    overline: bool,
+    writer: &mut dyn Write,
+    text: &str,
+    raw_text: &str,
+    addendum: &str,
     _line_width: &Width, // ignored
     text_style: Style,
     decoration_style: ansi_term::Style,
@@ -92,6 +136,7 @@ pub fn write_boxed(
         raw_text,
         addendum,
         box_width,
+        overline,
         text_style,
         decoration_style,
     )?;
@@ -110,6 +155,52 @@ fn write_boxed_with_underline(
     text_style: Style,
     decoration_style: ansi_term::Style,
 ) -> std::io::Result<()> {
+    _write_boxed_with_underline(
+        false,
+        writer,
+        text,
+        raw_text,
+        addendum,
+        line_width,
+        text_style,
+        decoration_style,
+    )
+}
+
+/// Write text to stream, surrounded by a box, extend a whisker from the
+/// top right corner, and extend a line from the bottom right corner.
+fn write_boxed_with_underoverline(
+    writer: &mut dyn Write,
+    text: &str,
+    raw_text: &str,
+    addendum: &str,
+    line_width: &Width,
+    text_style: Style,
+    decoration_style: ansi_term::Style,
+) -> std::io::Result<()> {
+    _write_boxed_with_underline(
+        true,
+        writer,
+        text,
+        raw_text,
+        addendum,
+        line_width,
+        text_style,
+        decoration_style,
+    )
+}
+
+#[allow(clippy::too_many_arguments)]
+fn _write_boxed_with_underline(
+    overline: bool,
+    writer: &mut dyn Write,
+    text: &str,
+    raw_text: &str,
+    addendum: &str,
+    line_width: &Width,
+    text_style: Style,
+    decoration_style: ansi_term::Style,
+) -> std::io::Result<()> {
     let box_width = ansi::measure_text_width(text);
     write_boxed_with_horizontal_whisker(
         writer,
@@ -117,6 +208,7 @@ fn write_boxed_with_underline(
         raw_text,
         addendum,
         box_width,
+        overline,
         text_style,
         decoration_style,
     )?;
@@ -262,12 +354,14 @@ fn write_horizontal_line(
     )
 }
 
+#[allow(clippy::too_many_arguments)]
 fn write_boxed_with_horizontal_whisker(
     writer: &mut dyn Write,
     text: &str,
     raw_text: &str,
     addendum: &str,
     box_width: usize,
+    overline: bool,
     text_style: Style,
     decoration_style: ansi_term::Style,
 ) -> std::io::Result<()> {
@@ -282,6 +376,7 @@ fn write_boxed_with_horizontal_whisker(
         raw_text,
         addendum,
         box_width,
+        overline,
         text_style,
         decoration_style,
     )?;
@@ -289,34 +384,47 @@ fn write_boxed_with_horizontal_whisker(
     Ok(())
 }
 
+/// Write the top edge of the box, the text row, and the bottom edge of the box,
+/// leaving the cursor at the end of the bottom edge. If `overline` is true then
+/// the top right corner is a T-junction with a short horizontal whisker,
+/// otherwise it is a plain corner.
+#[allow(clippy::too_many_arguments)]
 fn write_boxed_partial(
     writer: &mut dyn Write,
     text: &str,
     raw_text: &str,
     addendum: &str,
     box_width: usize,
+    overline: bool,
     text_style: Style,
     decoration_style: ansi_term::Style,
 ) -> std::io::Result<()> {
-    let (horizontal, down_left, vertical) = if decoration_style.is_bold {
+    let (horizontal, down_left, down_horizontal, vertical) = if decoration_style.is_bold {
         (
             box_drawing::heavy::HORIZONTAL,
             box_drawing::heavy::DOWN_LEFT,
+            box_drawing::heavy::DOWN_HORIZONTAL,
             box_drawing::heavy::VERTICAL,
         )
     } else {
         (
             box_drawing::light::HORIZONTAL,
             box_drawing::light::DOWN_LEFT,
+            box_drawing::light::DOWN_HORIZONTAL,
             box_drawing::light::VERTICAL,
         )
+    };
+    let top_right_corner = if overline {
+        format!("{down_horizontal}{horizontal}")
+    } else {
+        down_left.to_string()
     };
     let horizontal_edge = horizontal.repeat(box_width);
     writeln!(
         writer,
         "{}{}",
         decoration_style.paint(&horizontal_edge),
-        decoration_style.paint(down_left),
+        decoration_style.paint(top_right_corner),
     )?;
     if text_style.is_raw {
         write!(writer, "{raw_text}")?;

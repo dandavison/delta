@@ -544,7 +544,6 @@ commit 94907c0f136f46dc46ffae2dc92dca9af7eb7c2e
         ]);
     }
 
-    #[ignore]
     #[test]
     fn test_commit_style_box_ol() {
         _do_test_commit_style_box_ol(&[
@@ -552,6 +551,17 @@ commit 94907c0f136f46dc46ffae2dc92dca9af7eb7c2e
             "blue",
             "--commit-decoration-style",
             "blue box ol",
+        ]);
+    }
+
+    #[test]
+    fn test_commit_style_box_ul_ol() {
+        _do_test_commit_style_box_ul_ol(&[
+            "--commit-style",
+            "blue",
+            "--commit-decoration-style",
+            "blue box ul ol",
+            "--width=64",
         ]);
     }
 
@@ -653,6 +663,39 @@ commit 94907c0f136f46dc46ffae2dc92dca9af7eb7c2e │
 commit 94907c0f136f46dc46ffae2dc92dca9af7eb7c2e │
 ────────────────────────────────────────────────┘
 "
+        ));
+    }
+
+    fn _do_test_commit_style_box_ul_ol(args: &[&str]) {
+        let config = integration_test_utils::make_config_from_args(args);
+        let output = integration_test_utils::run_delta(GIT_DIFF_SINGLE_HUNK, &config);
+        ansi_test_utils::assert_line_has_style(
+            &output,
+            0,
+            "────────────────────────────────────────────────┬─",
+            "blue",
+            &config,
+        );
+        ansi_test_utils::assert_line_has_style(
+            &output,
+            1,
+            "commit 94907c0f136f46dc46ffae2dc92dca9af7eb7c2e │",
+            "blue",
+            &config,
+        );
+        ansi_test_utils::assert_line_has_style(
+            &output,
+            2,
+            "────────────────────────────────────────────────┴─",
+            "blue",
+            &config,
+        );
+        let output = strip_ansi_codes(&output);
+        assert!(output.contains(
+            "\
+────────────────────────────────────────────────┬─
+commit 94907c0f136f46dc46ffae2dc92dca9af7eb7c2e │
+────────────────────────────────────────────────┴─"
         ));
     }
 
@@ -847,7 +890,6 @@ src/align.rs
         ]);
     }
 
-    #[ignore]
     #[test]
     fn test_file_style_box_ol() {
         _do_test_file_style_box_ol(&[
@@ -855,6 +897,16 @@ src/align.rs
             "green",
             "--file-decoration-style",
             "green box ol",
+        ]);
+    }
+
+    #[test]
+    fn test_file_style_box_ul_ol() {
+        _do_test_file_style_box_ul_ol(&[
+            "--file-style",
+            "green",
+            "--file-decoration-style",
+            "green box ul ol",
         ]);
     }
 
@@ -902,6 +954,21 @@ src/align.rs │
 src/align.rs │
 ─────────────┘
 "
+        ));
+    }
+
+    fn _do_test_file_style_box_ul_ol(args: &[&str]) {
+        let config = integration_test_utils::make_config_from_args(args);
+        let output = integration_test_utils::run_delta(GIT_DIFF_SINGLE_HUNK, &config);
+        ansi_test_utils::assert_line_has_style(&output, 7, "─────────────┬─", "green", &config);
+        ansi_test_utils::assert_line_has_style(&output, 8, "src/align.rs │", "green", &config);
+        ansi_test_utils::assert_line_has_style(&output, 9, "─────────────┴─", "green", &config);
+        let output = strip_ansi_codes(&output);
+        assert!(output.contains(
+            "
+─────────────┬─
+src/align.rs │
+─────────────┴─"
         ));
     }
 
