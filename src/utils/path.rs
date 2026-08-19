@@ -6,14 +6,13 @@ use super::process::calling_process;
 
 // Infer absolute path to `relative_path`.
 pub fn absolute_path(relative_path: &str, config: &Config) -> Option<PathBuf> {
-    let caller = calling_process();
     if let Some(path) = root_relative_path(relative_path, config) {
         return Some(normalize_path(path));
     }
     match (
         &config.cwd_of_delta_process,
         &config.cwd_of_user_shell_process,
-        caller.paths_in_input_are_relative_to_cwd() || config.relative_paths,
+        calling_process().paths_in_input_are_relative_to_cwd() || config.relative_paths,
     ) {
         // Note that if we were invoked by git then cwd_of_delta_process == repo_root
         (Some(cwd_of_delta_process), _, false) => Some(cwd_of_delta_process.join(relative_path)),
