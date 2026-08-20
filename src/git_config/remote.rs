@@ -32,6 +32,13 @@ impl GitRemoteRepo {
         }
     }
 
+    pub fn format_issue_url(&self, issue: &str) -> Option<String> {
+        match self {
+            Self::GitHub { slug } => Some(format!("https://github.com/{slug}/issues/{issue}")),
+            _ => None,
+        }
+    }
+
     #[cfg(test)]
     pub fn for_testing() -> Option<GitRemoteRepo> {
         Some(GitRemoteRepo::GitHub {
@@ -177,6 +184,25 @@ mod tests {
             repo.format_commit_url(commit_hash),
             format!("https://github.com/dandavison/delta/commit/{commit_hash}")
         )
+    }
+
+    #[test]
+    fn test_format_github_issue_link() {
+        let repo = GitRemoteRepo::GitHub {
+            slug: "dandavison/delta".to_string(),
+        };
+        assert_eq!(
+            repo.format_issue_url("1482"),
+            Some("https://github.com/dandavison/delta/issues/1482".to_string())
+        )
+    }
+
+    #[test]
+    fn test_other_hosts_do_not_format_github_issue_links() {
+        let repo = GitRemoteRepo::GitLab {
+            slug: "proj/repo".to_string(),
+        };
+        assert_eq!(repo.format_issue_url("1482"), None)
     }
 
     #[test]
