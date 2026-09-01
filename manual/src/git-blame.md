@@ -1,6 +1,6 @@
 # Git blame
 
-Set delta as the pager for `blame` in the `[pager]` section of your gitconfig: see the [example gitconfig](./get-started.md).
+If you do not have `pager=delta` in `[core]` and only want to use delta for blame, add `blame=delta` to the `[pager]` section of your gitconfig: see the [example gitconfig](./get-started.md).
 If `hyperlinks` is enabled in the `[delta]` section then each blame commit will link to the commit on GitHub/GitLab/Bitbucket/etc.
  See [hyperlinks](./hyperlinks.md).
 
