@@ -1,4 +1,4 @@
-use std::path::{Component, Path, PathBuf};
+use std::path::{Component, Path, PathBuf, MAIN_SEPARATOR_STR};
 
 use crate::config::Config;
 
@@ -6,6 +6,9 @@ use super::process::calling_process;
 
 // Infer absolute path to `relative_path`.
 pub fn absolute_path(relative_path: &str, config: &Config) -> Option<PathBuf> {
+    if let Some(path) = root_relative_path(relative_path, config) {
+        return Some(normalize_path(path));
+    }
     match (
         &config.cwd_of_delta_process,
         &config.cwd_of_user_shell_process,
@@ -23,6 +26,22 @@ pub fn absolute_path(relative_path: &str, config: &Config) -> Option<PathBuf> {
         _ => None,
     }
     .map(normalize_path)
+}
+
+/// `git diff --no-index` strips the leading separator from absolute path arguments, so the paths
+/// it emits for those arguments are relative to the filesystem root, not to the cwd. Return the
+/// intended absolute path if `path` is such a path. See #1928.
+fn root_relative_path(path: &str, config: &Config) -> Option<PathBuf> {
+    let candidate = PathBuf::from(MAIN_SEPARATOR_STR).join(path);
+    if !candidate.is_absolute() {
+        // E.g. on Windows, where `git diff --no-index` does not emit such paths.
+        return None;
+    }
+    // Only when delta ran `git diff --no-index` itself, so the two files are known exactly.
+    // Guessing from the path alone would rewrite paths in ordinary diffs.
+    (config.minus_file.as_ref() == Some(&candidate)
+        || config.plus_file.as_ref() == Some(&candidate))
+    .then_some(candidate)
 }
 
 #[allow(clippy::needless_borrows_for_generic_args)] // Lint has known problems, &path != path
@@ -114,5 +133,48 @@ pub fn fake_delta_cwd_for_tests() -> PathBuf {
     #[cfg(target_os = "windows")]
     {
         PathBuf::from(r"C:\fake\delta\cwd")
+    }
+}
+
+#[cfg(not(target_os = "windows"))]
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::tests::integration_test_utils::make_config_from_args;
+    use pretty_assertions::assert_eq;
+
+    #[test]
+    fn test_absolute_path_of_root_relative_path_from_delta_diff() {
+        // `delta /tmp/a.txt /tmp/b.txt` runs `git diff --no-index`, which emits the paths with
+        // their leading separator stripped, i.e. relative to the filesystem root. The cwd must not
+        // be prepended to them. https://github.com/dandavison/delta/issues/1928
+        let mut config = make_config_from_args(&[]);
+        config.minus_file = Some(PathBuf::from("/tmp/a.txt"));
+        config.plus_file = Some(PathBuf::from("/tmp/b.txt"));
+
+        assert_eq!(
+            absolute_path("tmp/a.txt", &config),
+            Some(PathBuf::from("/tmp/a.txt"))
+        );
+        assert_eq!(
+            absolute_path("tmp/b.txt", &config),
+            Some(PathBuf::from("/tmp/b.txt"))
+        );
+        // A path which is not one of the files being diffed is still resolved relative to the cwd.
+        assert_eq!(
+            absolute_path("tmp/c.txt", &config),
+            Some(fake_delta_cwd_for_tests().join("tmp/c.txt"))
+        );
+    }
+
+    #[test]
+    fn test_absolute_path_of_repo_relative_path() {
+        // When delta is invoked by git in a repo, paths are relative to the repo root, which is
+        // delta's cwd, so they must be joined to it.
+        let config = make_config_from_args(&[]);
+        assert_eq!(
+            absolute_path("src/main.rs", &config),
+            Some(fake_delta_cwd_for_tests().join("src/main.rs"))
+        );
     }
 }
