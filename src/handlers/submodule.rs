@@ -13,7 +13,9 @@ impl StateMachine<'_> {
         if !self.test_submodule_log() {
             return Ok(false);
         }
-        self.handle_additional_cases(State::SubmoduleLog)
+        // A submodule row is not a header of the current file; tag it with no
+        // record rather than the preceding file's path.
+        self.handle_additional_cases(State::SubmoduleLog, String::new())
     }
 
     #[inline]

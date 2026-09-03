@@ -311,6 +311,25 @@ pub fn run_delta(input: &str, config: &config::Config) -> String {
     String::from_utf8(writer).unwrap()
 }
 
+/// Like `run_delta`, but with per-line diff metadata emission (OSC 1717)
+/// enabled as if the host had negotiated protocol version 1. The emitter is
+/// injected directly because the env-var handshake is cached process-wide
+/// (see `DiffLineMetadata::v1_for_tests`). The handshake record itself is
+/// emitted by the `delta` entry point, not the state machine, so it does not
+/// appear in the output.
+pub fn run_delta_with_diff_line_metadata(input: &str, config: &config::Config) -> String {
+    use crate::features::diff_line_metadata::DiffLineMetadata;
+
+    let mut writer: Vec<u8> = Vec::new();
+    let mut machine = crate::delta::StateMachine::new(&mut writer, config);
+    machine.painter.diff_line_metadata = Some(DiffLineMetadata::v1_for_tests());
+    machine
+        .consume(ByteLines::new(BufReader::new(input.as_bytes())))
+        .unwrap();
+    drop(machine);
+    String::from_utf8(writer).unwrap()
+}
+
 pub mod tests {
     use super::*;
 
