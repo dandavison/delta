@@ -41,4 +41,6 @@ export DELTA_FEATURES='+side-by-side my-feature'
 
 (The `+` means "add these features to those configured in git config".)
 
+To enable [navigate](./navigation-keybindings-for-large-diffs.md) keybindings without changing git config, set `DELTA_NAVIGATE` to any value (for example `export DELTA_NAVIGATE=1`). That is equivalent to `--navigate` / `delta.navigate=true`.
+
 The `DELTA_PAGER` env var is described above.
