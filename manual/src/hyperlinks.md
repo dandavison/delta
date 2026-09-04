@@ -7,7 +7,7 @@ Delta uses [terminal hyperlinks](https://gist.github.com/egmontkob/eb114294efbcd
     hyperlinks = true
 ```
 
-Commit hashes link to GitHub/GitLab/Bitbucket (use `hyperlinks-commit-link-format` for full control).
+Commit hashes link to GitHub/GitLab/SourceHut/Codeberg (use `hyperlinks-commit-link-format` for full control).
 
 The links on line numbers (in grep output, as well as diffs) are particularly interesting: with a little bit of effort, they can be made to open your editor or IDE at the correct line.
 Use `hyperlinks-file-link-format` to construct the correct URL for your system.
