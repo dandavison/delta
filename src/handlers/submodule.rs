@@ -28,20 +28,22 @@ impl StateMachine<'_> {
         if !self.test_submodule_short_line() || self.config.color_only {
             return Ok(false);
         }
-        if let Some(commit) = get_submodule_short_commit(&self.line) {
+        if let Some((commit, dirty)) = get_submodule_short_commit(&self.line) {
             if let State::HunkHeader(_, _, _, _) = self.state {
                 self.state = State::SubmoduleShort(commit.to_owned());
             } else if let State::SubmoduleShort(minus_commit) = &self.state {
                 self.painter.emit()?;
+                let dirty_suffix = if dirty { "-dirty" } else { "" };
                 writeln!(
                     self.painter.writer,
-                    "{}..{}",
+                    "{}..{}{}",
                     self.config
                         .minus_style
                         .paint(minus_commit.chars().take(12).collect::<String>()),
                     self.config
                         .plus_style
                         .paint(commit.chars().take(12).collect::<String>()),
+                    self.config.plus_style.paint(dirty_suffix),
                 )?;
             }
         }
@@ -54,9 +56,9 @@ lazy_static! {
         Regex::new("^[-+]Subproject commit ([0-9a-f]{40})(-dirty)?$").unwrap();
 }
 
-pub fn get_submodule_short_commit(line: &str) -> Option<&str> {
+pub fn get_submodule_short_commit(line: &str) -> Option<(&str, bool)> {
     match SUBMODULE_SHORT_LINE_REGEX.captures(line) {
-        Some(caps) => Some(caps.get(1).unwrap().as_str()),
+        Some(caps) => Some((caps.get(1).unwrap().as_str(), caps.get(2).is_some())),
         None => None,
     }
 }
