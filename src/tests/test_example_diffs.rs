@@ -1981,6 +1981,13 @@ src/align.rs:71: impl<'a> Alignment<'a> { │
     }
 
     #[test]
+    fn test_hyperlinks_binary_files() {
+        DeltaTest::with_args(&["--hyperlinks"])
+            .with_input(BINARY_FILES_DIFFER)
+            .expect_raw_contains("]8;;\u{1b}\\ (binary file)");
+    }
+
+    #[test]
     fn test_filenames_with_spaces() {
         DeltaTest::with_args(&[])
             .with_input(GIT_DIFF_NO_INDEX_FILENAMES_WITH_SPACES)

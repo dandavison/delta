@@ -29,13 +29,12 @@ impl StateMachine<'_> {
                 return Ok(true);
             }
 
+            self.binary_files = true;
             if self.minus_file != "/dev/null" {
                 relativize_path_maybe(&mut self.minus_file, self.config);
-                self.minus_file.push_str(" (binary file)");
             }
             if self.plus_file != "/dev/null" {
                 relativize_path_maybe(&mut self.plus_file, self.config);
-                self.plus_file.push_str(" (binary file)");
             }
             return Ok(true);
         }
