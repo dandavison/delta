@@ -390,7 +390,7 @@ impl From<cli::Opt> for Config {
             line_buffer_size: opt.line_buffer_size,
             max_line_distance: opt.max_line_distance,
             max_line_distance_for_naively_paired_lines,
-            max_line_length: if opt.side_by_side {
+            max_line_length: if opt.computed.side_by_side {
                 wrap_config.config_max_line_length(
                     opt.max_line_length,
                     opt.computed.available_terminal_width,
@@ -424,7 +424,7 @@ impl From<cli::Opt> for Config {
             git_plus_style: styles["git-plus-style"],
             relative_paths: opt.relative_paths,
             show_themes: opt.show_themes,
-            side_by_side: opt.side_by_side && !handlers::hunk::is_word_diff(),
+            side_by_side: opt.computed.side_by_side && !handlers::hunk::is_word_diff(),
             side_by_side_data,
             styles_map,
             syntax_set: opt.computed.syntax_set,
