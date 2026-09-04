@@ -125,6 +125,10 @@ pub fn set_options(
         .unwrap_or_else(|| "magenta reverse".to_string())
     }
 
+    // Sets opt.computed.color_mode to the computed or provided value (by --light or --dark),
+    // then used e.g. by the line numbers feature.
+    theme::set__color_mode__syntax_theme__syntax_set(opt, assets);
+
     set_options!(
         [
             blame_code_style,
@@ -237,7 +241,6 @@ pub fn set_options(
     // Setting ComputedValues
     set_widths_and_isatty(opt);
     set_true_color(opt);
-    theme::set__color_mode__syntax_theme__syntax_set(opt, assets);
     opt.computed.inspect_raw_lines =
         cli::InspectRawLines::from_str(&opt.inspect_raw_lines).unwrap();
     opt.computed.paging_mode = parse_paging_mode(&opt.paging_mode);
