@@ -381,6 +381,18 @@ fn make_style_sections<'a>(
     let mut curr = 0;
     for (start_, end_) in submatches {
         let (start, end) = (*start_, *end_);
+        // Ensure indices are at char boundaries to avoid panicking on
+        // multi-byte UTF-8 characters (e.g. ©, emoji, CJK).
+        let start = if line.is_char_boundary(start) {
+            start
+        } else {
+            line.floor_char_boundary(start)
+        };
+        let end = if line.is_char_boundary(end) {
+            end
+        } else {
+            line.floor_char_boundary(end)
+        };
         if start > curr {
             sections.push((non_match_style, &line[curr..start]))
         };
