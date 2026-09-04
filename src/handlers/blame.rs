@@ -313,8 +313,9 @@ pub fn format_blame_line_number(
     let mut result = String::new();
 
     // depends on defaults being set when parsing arguments
-    let line_number = if let Some(width) = format.width {
-        format::pad(line_number, width, format.alignment_spec.unwrap(), None)
+    let line_number = if let (Some(width), Some(alignment)) = (format.width, format.alignment_spec)
+    {
+        format::pad(line_number, width, alignment, None)
     } else {
         String::new()
     };
