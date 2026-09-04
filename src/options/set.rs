@@ -388,9 +388,6 @@ fn gather_features(
     if opt.hyperlinks {
         gather_builtin_features_recursively("hyperlinks", &mut features, builtin_features, opt);
     }
-    if opt.line_numbers {
-        gather_builtin_features_recursively("line-numbers", &mut features, builtin_features, opt);
-    }
     if opt.navigate {
         gather_builtin_features_recursively("navigate", &mut features, builtin_features, opt);
     }
@@ -421,6 +418,12 @@ fn gather_features(
             opt,
             git_config,
         );
+    }
+
+    // Gather `line-numbers` after theme features so theme-provided line-number styles are not
+    // overridden by the built-in default styles when `--line-numbers` is enabled.
+    if opt.line_numbers {
+        gather_builtin_features_recursively("line-numbers", &mut features, builtin_features, opt);
     }
 
     Vec::<String>::from(features)
@@ -824,6 +827,37 @@ pub mod tests {
         );
 
         assert_eq!(opt.computed.decorations_width, cli::Width::Variable);
+
+        remove_file(git_config_path).unwrap();
+    }
+
+    #[test]
+    fn test_line_numbers_flag_does_not_override_theme_line_number_styles() {
+        let git_config_contents = b"
+[delta]
+    features = catppuccin-latte
+
+[delta \"catppuccin-latte\"]
+    line-numbers-left-style = red
+    line-numbers-minus-style = yellow
+    line-numbers-zero-style = green
+    line-numbers-plus-style = blue
+    line-numbers-right-style = magenta
+";
+        let git_config_path =
+            "delta__test_line_numbers_flag_does_not_override_theme_line_number_styles.gitconfig";
+
+        let opt = integration_test_utils::make_options_from_args_and_git_config(
+            &["--line-numbers"],
+            Some(git_config_contents),
+            Some(git_config_path),
+        );
+
+        assert_eq!(opt.line_numbers_left_style, "red");
+        assert_eq!(opt.line_numbers_minus_style, "yellow");
+        assert_eq!(opt.line_numbers_zero_style, "green");
+        assert_eq!(opt.line_numbers_plus_style, "blue");
+        assert_eq!(opt.line_numbers_right_style, "magenta");
 
         remove_file(git_config_path).unwrap();
     }

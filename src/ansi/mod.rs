@@ -243,6 +243,11 @@ mod tests {
     }
 
     #[test]
+    fn test_measure_text_width_ignores_bom() {
+        assert_eq!(measure_text_width("a\u{feff}b"), 2);
+    }
+
+    #[test]
     fn test_strip_ansi_codes_osc_hyperlink() {
         assert_eq!(strip_ansi_codes("\x1b[38;5;4m\x1b]8;;file:///Users/dan/src/delta/src/ansi/mod.rs\x1b\\src/ansi/mod.rs\x1b]8;;\x1b\\\x1b[0m\n"),
                    "src/ansi/mod.rs\n");

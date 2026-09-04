@@ -418,4 +418,20 @@ ignored!  2
                 (green)+2(normal)",
             );
     }
+
+    #[test]
+    fn test_delta_test_ignores_bom_in_raw_output_with_line_numbers() {
+        let input = "@@ -1,1 +1,1 @@ fn foo() {\n-\u{feff}abc\n+\u{feff}abd\n";
+        DeltaTest::with_args(&["--raw"])
+            .set_config(|c| c.pager = None)
+            .set_config(|c| c.line_numbers = true)
+            .with_input(input)
+            .expect(
+                r#"
+                 #indent_mark
+                 @@ -1,1 +1,1 @@ fn foo() {
+                   1 ⋮    │-abc
+                     ⋮  1 │+abd"#,
+            );
+    }
 }
