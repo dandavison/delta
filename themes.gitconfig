@@ -665,3 +665,55 @@
     hunk-header-file-style = darkgoldenrod
     hunk-header-line-number-style = orange
     hunk-header-style = file line-number darkviolet
+
+[delta "ghost-mantis"]
+    # author: https://github.com/AndyP3r3z
+    # NerdFonts needed for file labels.
+    # Inspired by Everforest and all other themes in this file.
+    # General appearance
+    dark = true
+    syntax-theme = Everforest Dark+
+    keep-plus-minus-markers = false
+    hunk-header-style = omit
+    # File
+    file-style = "#7A8478" bold
+    file-decoration-style = "#7A8478" ul
+    file-added-label = 
+    file-copied-label = 
+    file-modified-label = 
+    file-removed-label = 
+    file-renamed-label = 
+    # Line numbers
+    line-numbers = true
+    line-numbers-left-format = " {nm:>3} ▏"
+    line-numbers-right-format = " {np:>3} ▏"
+    line-numbers-left-style = red
+    line-numbers-right-style = green
+    line-numbers-minus-style = red
+    line-numbers-plus-style = green
+    line-numbers-zero-style = "#56635F"
+    # Diff contents
+    inline-hint-style = syntax
+    minus-emph-style = bold reverse red
+    minus-empty-line-marker-style = bold reverse red
+    minus-non-emph-style = syntax auto
+    plus-emph-style = bold reverse green
+    plus-empty-line-marker-style = bold reverse green
+    plus-non-emph-style = syntax auto
+    minus-style = syntax "#543A48"
+    plus-style = syntax "#425047"
+    zero-style = syntax
+    # Blame
+    blame-code-style = syntax
+    blame-format = "{author:<18} ({commit:>9}) {timestamp:^16}"
+    blame-palette = "#343F44" "#3D484D" "#475258" "#4F585E"
+    # Merge conflicts
+    merge-conflict-begin-symbol = ~
+    merge-conflict-end-symbol = ~
+    merge-conflict-ours-diff-header-style = yellow bold
+    merge-conflict-theirs-diff-header-style = yellow bold overline
+    merge-conflict-ours-diff-header-decoration-style = ""
+    merge-conflict-theirs-diff-header-decoration-style = ""
+    # Grep
+    grep-file-style = blue
+    grep-line-number-style = green
