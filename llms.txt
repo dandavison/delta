@@ -1,0 +1,45 @@
+# delta
+
+> A syntax-highlighting pager for git, diff, grep, rg --json, and blame output.
+
+Delta is a terminal-based viewer that reformats git and diff output with syntax highlighting, line numbers, side-by-side view, and other features for reviewing changes.
+
+## Docs
+
+- [Introduction](https://dandavison.github.io/delta/introduction.html): What delta is and why to use it
+- [Get started](https://dandavison.github.io/delta/get-started.html): Quick setup to start using delta
+- [Features](https://dandavison.github.io/delta/features.html): Overview of delta's capabilities
+- [Installation](https://dandavison.github.io/delta/installation.html): How to install delta on various platforms
+- [Configuration](https://dandavison.github.io/delta/configuration.html): How to configure delta via git config or a config file
+- [Environment variables](https://dandavison.github.io/delta/environment-variables.html): Environment variables recognized by delta
+- [How delta works](https://dandavison.github.io/delta/how-delta-works.html): Internals of how delta processes and renders diffs
+- [Usage](https://dandavison.github.io/delta/usage.html): General usage guide
+- [Choosing colors (styles)](https://dandavison.github.io/delta/choosing-colors-styles.html): How to choose and customize colors and styles
+- [Line numbers](https://dandavison.github.io/delta/line-numbers.html): Displaying line numbers in diffs
+- [Hyperlinks](https://dandavison.github.io/delta/hyperlinks.html): Making file paths clickable hyperlinks
+- [Side-by-side view](https://dandavison.github.io/delta/side-by-side-view.html): Viewing diffs in a side-by-side layout
+- [Grep](https://dandavison.github.io/delta/grep.html): Using delta with grep and ripgrep output
+- ["Features": named groups of settings](https://dandavison.github.io/delta/features-named-groups-of-settings.html): Grouping configuration settings into reusable named features
+- [Custom themes](https://dandavison.github.io/delta/custom-themes.html): Creating and using custom color themes
+- [diff-highlight and diff-so-fancy emulation](https://dandavison.github.io/delta/diff-highlight-and-diff-so-fancy-emulation.html): Emulating other diff highlighting tools
+- [--color-moved support](https://dandavison.github.io/delta/color-moved-support.html): Highlighting moved lines of code
+- [Navigation keybindings for large diffs](https://dandavison.github.io/delta/navigation-keybindings-for-large-diffs.html): Keybindings for navigating large diffs
+- [Merge conflicts](https://dandavison.github.io/delta/merge-conflicts.html): How delta displays merge conflicts
+- [Git blame](https://dandavison.github.io/delta/git-blame.html): Using delta with git blame
+- [Supported languages and themes](https://dandavison.github.io/delta/supported-languages-and-themes.html): List of supported syntax languages and color themes
+- [Tips & tricks](https://dandavison.github.io/delta/tips-and-tricks.html): Miscellaneous tips for using delta
+- [Toggling side-by-side and other delta features](https://dandavison.github.io/delta/tips-and-tricks/toggling-delta-features.html): Toggling delta features on and off
+- [24 bit color (truecolor)](https://dandavison.github.io/delta/tips-and-tricks/24-bit-color-truecolor.html): Enabling truecolor support
+- [Mouse scrolling](https://dandavison.github.io/delta/tips-and-tricks/mouse-scrolling.html): Configuring mouse scrolling behavior
+- [Save output with colors to HTML/PDF etc](https://dandavison.github.io/delta/tips-and-tricks/export-to-html.html): Exporting colored output to other formats
+- [Using Delta on Windows](https://dandavison.github.io/delta/tips-and-tricks/using-delta-on-windows.html): Windows-specific setup notes
+- [Using Delta with GNU Screen](https://dandavison.github.io/delta/tips-and-tricks/using-delta-with-gnu-screen.html): Using delta inside GNU Screen
+- [Using Delta with Magit](https://dandavison.github.io/delta/tips-and-tricks/using-delta-with-magit.html): Using delta with Magit in Emacs
+- [Using Delta with tmux](https://dandavison.github.io/delta/tips-and-tricks/using-delta-with-tmux.html): Using delta inside tmux
+- [Using Delta with VSCode](https://dandavison.github.io/delta/tips-and-tricks/using-delta-with-vscode.html): Using delta with VSCode's integrated terminal
+- [Generating shell completion files](https://dandavison.github.io/delta/tips-and-tricks/shell-completion.html): Generating shell completions for delta
+- [Comparisons with other tools](https://dandavison.github.io/delta/comparisons-with-other-tools.html): How delta compares to similar tools
+- [Build delta from source](https://dandavison.github.io/delta/build-delta-from-source.html): Building delta from source
+- [Related projects](https://dandavison.github.io/delta/related-projects.html): Projects related to or built on delta
+- [Full --help output](https://dandavison.github.io/delta/full---help-output.html): Complete CLI help output
+- [Delta configs used in screenshots](https://dandavison.github.io/delta/delta-configs-used-in-screenshots.html): Configs used to produce documentation screenshots
