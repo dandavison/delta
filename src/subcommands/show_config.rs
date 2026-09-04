@@ -4,6 +4,7 @@ use itertools::Itertools;
 
 use crate::cli;
 use crate::config;
+use crate::config::{HunkHeaderIncludeCodeFragment, HunkHeaderIncludeFilePath, HunkHeaderIncludeLineNumber};
 use crate::features::side_by_side::{Left, Right};
 use crate::minusplus::*;
 use crate::paint::BgFillMethod;
@@ -37,7 +38,24 @@ pub fn show_config(config: &config::Config, writer: &mut dyn Write) -> std::io::
             .join(" "),
         commit_style = config.commit_style.to_painted_string(),
         file_style = config.file_style.to_painted_string(),
-        hunk_header_style = config.hunk_header_style.to_painted_string(),
+        hunk_header_style = {
+            let mut parts = Vec::new();
+            if matches!(config.hunk_header_style_include_file_path, HunkHeaderIncludeFilePath::Yes) {
+                parts.push("file".to_string());
+            }
+            if matches!(config.hunk_header_style_include_line_number, HunkHeaderIncludeLineNumber::Yes) {
+                parts.push("line-number".to_string());
+            }
+            if matches!(config.hunk_header_style_include_code_fragment, HunkHeaderIncludeCodeFragment::No) {
+                parts.push("omit-code-fragment".to_string());
+            }
+            let style_str = config.hunk_header_style.to_string();
+            if !style_str.is_empty() {
+                parts.push(style_str);
+            }
+            let full = parts.join(" ");
+            config.hunk_header_style.paint(full)
+        },
         minus_emph_style = config.minus_emph_style.to_painted_string(),
         minus_empty_line_marker_style = config.minus_empty_line_marker_style.to_painted_string(),
         minus_non_emph_style = config.minus_non_emph_style.to_painted_string(),
@@ -202,5 +220,48 @@ mod tests {
         let s = ansi::strip_ansi_codes(&s);
         assert!(s.contains("    commit-style                  = raw\n"));
         assert!(s.contains(r"    word-diff-regex               = '\w+'"));
+    }
+
+    #[test]
+    fn test_show_config_hunk_header_style_includes_special_attributes() {
+        // Default hunk-header-style is "line-number syntax", so show-config
+        // should display "line-number syntax", not just "syntax".
+        // See https://github.com/dandavison/delta/issues/2037
+        let config = integration_test_utils::make_config_from_args(&[]);
+        let mut writer = Cursor::new(vec![0; 8192]);
+        show_config(&config, &mut writer).unwrap();
+        let mut s = String::new();
+        writer.rewind().unwrap();
+        writer.read_to_string(&mut s).unwrap();
+        let s = ansi::strip_ansi_codes(&s);
+        assert!(
+            s.contains("    hunk-header-style             = line-number syntax\n"),
+            "Expected 'line-number syntax' but got: {}",
+            s.lines()
+                .find(|l| l.contains("hunk-header-style"))
+                .unwrap_or("NOT FOUND")
+        );
+    }
+
+    #[test]
+    fn test_show_config_hunk_header_style_with_file() {
+        // When hunk-header-style includes "file", it should appear in show-config output.
+        let config = integration_test_utils::make_config_from_args(&[
+            "--hunk-header-style",
+            "file syntax",
+        ]);
+        let mut writer = Cursor::new(vec![0; 8192]);
+        show_config(&config, &mut writer).unwrap();
+        let mut s = String::new();
+        writer.rewind().unwrap();
+        writer.read_to_string(&mut s).unwrap();
+        let s = ansi::strip_ansi_codes(&s);
+        assert!(
+            s.contains("    hunk-header-style             = file syntax\n"),
+            "Expected 'file syntax' but got: {}",
+            s.lines()
+                .find(|l| l.contains("hunk-header-style"))
+                .unwrap_or("NOT FOUND")
+        );
     }
 }
