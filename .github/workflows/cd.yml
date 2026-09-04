@@ -33,6 +33,9 @@ jobs:
           - os: ubuntu-22.04
             target: aarch64-unknown-linux-gnu
             use-cross: true
+          - os: ubuntu-24.04-riscv
+            target: riscv64gc-unknown-linux-gnu
+            use-cross: false
 
     steps:
       - name: Installing Rust toolchain
