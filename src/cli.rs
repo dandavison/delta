@@ -407,7 +407,8 @@ pub struct Opt {
     pub hunk_label: String,
 
     #[arg(long = "hyperlinks")]
-    /// Render commit hashes, file names, and line numbers as hyperlinks.
+    /// Render commit hashes, GitHub issue and pull request references, file names, and line numbers
+    /// as hyperlinks.
     ///
     /// Following the hyperlink spec for terminal emulators:
     /// <https://gist.github.com/egmontkob/eb114294efbcd5adb1944c9f3cb5feda>. By default, file names

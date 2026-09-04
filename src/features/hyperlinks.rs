@@ -2,7 +2,7 @@ use std::borrow::Cow;
 use std::path::Path;
 
 use lazy_static::lazy_static;
-use regex::{Match, Matches, Regex};
+use regex::Regex;
 
 use crate::config::Config;
 use crate::features::OptionValueFunction;
@@ -25,62 +25,66 @@ lazy_static! {
     // Commit hashes can be abbreviated to 7 characters, these necessarily become longer
     // when more objects are in a repository.
     // Note: pure numbers are filtered out later again.
-    static ref COMMIT_HASH_REGEX: Regex = Regex::new(r"\b[0-9a-f]{7,40}\b").unwrap();
+    static ref COMMIT_OR_ISSUE_REGEX: Regex = Regex::new(
+        r"(?P<commit>\b[0-9a-f]{7,40}\b)|(?:^|[^\w])(?P<issue>#[1-9][0-9]*\b)"
+    )
+    .unwrap();
 }
 
 pub fn format_commit_line_with_osc8_commit_hyperlink<'a>(
     line: &'a str,
     config: &Config,
 ) -> Cow<'a, str> {
-    // Given matches in a line, m = matches[0] and pos = 0: store line[pos..m.start()] first, then
-    // store the T(line[m.start()..m.end()]) match transformation, then set pos = m.end().
-    // Repeat for matches[1..]. Finally, store line[pos..].
-    struct HyperlinkCommits<T>(T)
-    where
-        T: Fn(&str) -> String;
-    impl<T: for<'b> Fn(&'b str) -> String> HyperlinkCommits<T> {
-        fn _m(&self, result: &mut String, line: &str, m: &Match, prev_pos: usize) -> usize {
-            result.push_str(&line[prev_pos..m.start()]);
-            let commit = &line[m.start()..m.end()];
-            // Do not link numbers, require at least one non-decimal:
-            if commit.contains(|c| matches!(c, 'a'..='f')) {
-                result.push_str(&format_osc8_hyperlink(&self.0(commit), commit));
+    let repo = config
+        .git_config()
+        .and_then(|config| config.get_remote_url().as_ref());
+    if config.hyperlinks_commit_link_format.is_none() && repo.is_none() {
+        return Cow::from(line);
+    }
+
+    let mut result = String::new();
+    let mut pos = 0;
+    let mut linked = false;
+
+    // Limit the number of matches per line: an exhaustive iterator is
+    // O(len(line) * len(regex)^2).
+    for captures in COMMIT_OR_ISSUE_REGEX.captures_iter(line).take(13) {
+        let (m, url) = if let Some(issue) = captures.name("issue") {
+            let issue_number = issue.as_str().trim_start_matches('#');
+            (
+                issue,
+                repo.and_then(|repo| repo.format_issue_url(issue_number)),
+            )
+        } else {
+            let commit = captures.name("commit").unwrap();
+            let commit_hash = commit.as_str();
+            // Do not link numbers: require at least one non-decimal character.
+            let url = if commit_hash.contains(|c| matches!(c, 'a'..='f')) {
+                config
+                    .hyperlinks_commit_link_format
+                    .as_ref()
+                    .map(|format| format.replace("{commit}", commit_hash))
+                    .or_else(|| repo.map(|repo| repo.format_commit_url(commit_hash)))
             } else {
-                result.push_str(commit);
-            }
-            m.end()
-        }
-        fn with_input(&self, line: &str, m0: &Match, matches123: &mut Matches) -> String {
-            let mut result = String::new();
-            let mut pos = self._m(&mut result, line, m0, 0);
-            // limit number of matches per line, an exhaustive `find_iter` is O(len(line) * len(regex)^2)
-            for m in matches123.take(12) {
-                pos = self._m(&mut result, line, &m, pos);
-            }
-            result.push_str(&line[pos..]);
-            result
+                None
+            };
+            (commit, url)
+        };
+
+        if let Some(url) = url {
+            result.push_str(&line[pos..m.start()]);
+            result.push_str(&format_osc8_hyperlink(&url, m.as_str()));
+            pos = m.end();
+            linked = true;
         }
     }
 
-    if let Some(commit_link_format) = &config.hyperlinks_commit_link_format {
-        let mut matches = COMMIT_HASH_REGEX.find_iter(line);
-        if let Some(first_match) = matches.next() {
-            let result =
-                HyperlinkCommits(|commit_hash| commit_link_format.replace("{commit}", commit_hash))
-                    .with_input(line, &first_match, &mut matches);
-            return Cow::from(result);
-        }
-    } else if let Some(config) = config.git_config() {
-        if let Some(repo) = config.get_remote_url() {
-            let mut matches = COMMIT_HASH_REGEX.find_iter(line);
-            if let Some(first_match) = matches.next() {
-                let result = HyperlinkCommits(|commit_hash| repo.format_commit_url(commit_hash))
-                    .with_input(line, &first_match, &mut matches);
-                return Cow::from(result);
-            }
-        }
+    if linked {
+        result.push_str(&line[pos..]);
+        Cow::from(result)
+    } else {
+        Cow::from(line)
     }
-    Cow::from(line)
 }
 
 /// Create a file hyperlink, displaying `text`.
@@ -222,6 +226,52 @@ pub mod tests {
         https://github.com/dandavison/delta/commit/c5696757c0827349a87daa95415656\u{1b}\
         \\c5696757c0827349a87daa95415656\u{1b}]8;;\
          \u{1b}\\!"
+        );
+
+        let line = "Fixes #1482 in a589ff9debaefdd (#1573)";
+        let result = format_commit_line_with_osc8_commit_hyperlink(line, &config);
+        assert_eq!(
+            result,
+            format!(
+                "Fixes {} in {} ({})",
+                format_osc8_hyperlink(
+                    "https://github.com/dandavison/delta/issues/1482",
+                    "#1482"
+                ),
+                format_osc8_hyperlink(
+                    "https://github.com/dandavison/delta/commit/a589ff9debaefdd",
+                    "a589ff9debaefdd"
+                ),
+                format_osc8_hyperlink(
+                    "https://github.com/dandavison/delta/issues/1573",
+                    "#1573"
+                )
+            )
+        );
+
+        let line = "C#123 and word#456 are not issue references; neither are #0 or #12abc";
+        let result = format_commit_line_with_osc8_commit_hyperlink(line, &config);
+        assert_eq!(result, line);
+    }
+
+    #[test]
+    fn test_custom_commit_format_and_github_issue_hyperlinks() {
+        let mut config =
+            make_config_from_args(&["--hyperlinks-commit-link-format", "HERE:{commit}"]);
+        config.git_config = GitConfig::for_testing();
+
+        let line = "Fixes #1482 in a589ff9debaefdd";
+        let result = format_commit_line_with_osc8_commit_hyperlink(line, &config);
+        assert_eq!(
+            result,
+            format!(
+                "Fixes {} in {}",
+                format_osc8_hyperlink(
+                    "https://github.com/dandavison/delta/issues/1482",
+                    "#1482"
+                ),
+                format_osc8_hyperlink("HERE:a589ff9debaefdd", "a589ff9debaefdd")
+            )
         );
     }
 
