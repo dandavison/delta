@@ -102,7 +102,7 @@ fn get_delta_less_hist_file() -> std::io::Result<PathBuf> {
 
 #[cfg(not(target_os = "windows"))]
 fn get_delta_less_hist_file() -> std::io::Result<PathBuf> {
-    let dir = xdg::BaseDirectories::with_prefix("delta")?;
+    let dir = xdg::BaseDirectories::with_prefix("delta");
     dir.place_data_file("lesshst")
 }
 
@@ -126,13 +126,14 @@ fn get_less_hist_file() -> Option<PathBuf> {
                     // According to the less 643 manual:
                     // "$XDG_STATE_HOME/lesshst" or "$HOME/.local/state/lesshst" or
                     // "$XDG_DATA_HOME/lesshst" or "$HOME/.lesshst".
-                    let xdg_dirs = xdg::BaseDirectories::new().ok()?;
+                    let xdg_dirs = xdg::BaseDirectories::new();
                     [
-                        xdg_dirs.get_state_home().join("lesshst"),
-                        xdg_dirs.get_data_home().join("lesshst"),
-                        home_dir.join(".lesshst"),
+                        xdg_dirs.get_state_home().map(|path| path.join("lesshst")),
+                        xdg_dirs.get_data_home().map(|path| path.join("lesshst")),
+                        Some(home_dir.join(".lesshst")),
                     ]
                     .iter()
+                    .flatten()
                     .filter(|path| path.exists())
                     .max_by_key(|path| {
                         std::fs::metadata(path)
