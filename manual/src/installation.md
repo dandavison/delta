@@ -57,6 +57,10 @@ Note that the package is often called `git-delta`, but the executable installed 
     <td><code>zypper install git-delta</code>
   </tr>
   <tr>
+    <td><a href="https://packages.termux.org/apt/termux-main/pool/main/g/git-delta/">Termux</a></td>
+    <td><code>pkg install git-delta</code>
+  </tr>
+  <tr>
     <td><a href="https://github.com/void-linux/void-packages/tree/master/srcpkgs/delta">Void Linux</a></td>
     <td><code>xbps-install -S delta</code>
   </tr>
