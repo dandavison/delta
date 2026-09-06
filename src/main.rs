@@ -83,7 +83,7 @@ pub fn run_app(
 ) -> std::io::Result<i32> {
     let env = env::DeltaEnv::init();
     let assets = utils::bat::assets::load_highlighting_assets();
-    let (call, opt) = cli::Opt::from_args_and_git_config(args, &env, assets);
+    let (call, opt) = cli::Opt::from_args_and_git_config(args.clone(), &env, assets);
 
     if let Call::Version(msg) = call {
         writeln!(std::io::stdout(), "{}", msg.trim_end())?;
@@ -112,7 +112,9 @@ pub fn run_app(
     } else if opt.list_syntax_themes {
         Some(subcommands::list_syntax_themes::list_syntax_themes())
     } else if opt.show_syntax_themes {
-        Some(subcommands::show_syntax_themes::show_syntax_themes())
+        Some(subcommands::show_syntax_themes::show_syntax_themes(
+            &args, &env,
+        ))
     } else if opt.show_themes {
         Some(subcommands::show_themes::show_themes(
             opt.dark,

@@ -6,18 +6,17 @@ use crate::env::DeltaEnv;
 use crate::options::theme::color_mode_from_syntax_theme;
 use crate::utils;
 use crate::utils::bat::output::{OutputType, PagingMode};
-use clap::Parser;
+use std::ffi::OsString;
 use std::io::{self, ErrorKind, IsTerminal, Read, Write};
 
 #[cfg(not(tarpaulin_include))]
-pub fn show_syntax_themes() -> std::io::Result<()> {
-    let env = DeltaEnv::default();
-    let assets = utils::bat::assets::load_highlighting_assets();
+pub fn show_syntax_themes(args: &[OsString], env: &DeltaEnv) -> std::io::Result<()> {
+    let make_opt = || make_options(args, env);
     let mut output_type = OutputType::from_mode(
-        &env,
+        env,
         PagingMode::QuitIfOneScreen,
         None,
-        &config::Config::from(cli::Opt::parse()).into(),
+        &config::Config::from(make_opt()).into(),
     )
     .unwrap();
     let mut writer = output_type.handle().unwrap();
@@ -34,11 +33,6 @@ pub fn show_syntax_themes() -> std::io::Result<()> {
         None
     };
 
-    let make_opt = || {
-        let mut opt = cli::Opt::parse();
-        opt.computed.syntax_set = assets.get_syntax_set().unwrap().clone();
-        opt
-    };
     let opt = make_opt();
 
     if !(opt.dark || opt.light) {
@@ -50,6 +44,12 @@ pub fn show_syntax_themes() -> std::io::Result<()> {
         _show_syntax_themes(opt, Dark, &mut writer, stdin_data.as_ref())?
     };
     Ok(())
+}
+
+fn make_options(args: &[OsString], env: &DeltaEnv) -> cli::Opt {
+    let assets = utils::bat::assets::load_highlighting_assets();
+    let (_, opt) = cli::Opt::from_args_and_git_config(args.to_vec(), env, assets);
+    opt.unwrap_or_else(|| config::delta_unreachable("Opt is set"))
 }
 
 fn _show_syntax_themes(
@@ -115,6 +115,79 @@ mod tests {
     use super::*;
     use crate::ansi;
     use crate::tests::integration_test_utils;
+
+    const INPUT: &str = "--- a/example.rs\n+++ b/example.rs\n@@ -1,3 +1,3 @@\n-fn old() {}\n-\n+fn new() {}\n+\n \n";
+
+    fn preview_theme(opt: cli::Opt, mode: ColorMode, theme: &str) -> String {
+        let mut preview = Vec::new();
+        _show_syntax_themes(opt, mode, &mut preview, Some(&INPUT.as_bytes().to_vec())).unwrap();
+        let preview = String::from_utf8(preview).unwrap();
+        let heading = format!(
+            "\n\nSyntax theme: {}\n\n",
+            ansi_term::Style::new().bold().paint(theme)
+        );
+        preview
+            .split_once(&heading)
+            .unwrap()
+            .1
+            .split("\n\nSyntax theme:")
+            .next()
+            .unwrap()
+            .to_string()
+    }
+
+    #[test]
+    fn test_syntax_theme_preview_matches_normal_rendering() {
+        for (mode, flag, theme) in [(Dark, "--dark", "Nord"), (Light, "--light", "GitHub")] {
+            for true_color in ["always", "never"] {
+                let args = [
+                    "--no-gitconfig",
+                    flag,
+                    "--true-color",
+                    true_color,
+                    "--width",
+                    "40",
+                ];
+                let mut preview_args: Vec<OsString> = args.iter().map(OsString::from).collect();
+                preview_args.push("--show-syntax-themes".into());
+                let opt = make_options(&preview_args, &DeltaEnv::default());
+                let actual = preview_theme(opt, mode, theme);
+                let mut normal_args = args[1..].to_vec();
+                normal_args.extend(["--syntax-theme", theme]);
+                let expected = integration_test_utils::run_delta(
+                    INPUT,
+                    &integration_test_utils::make_config_from_args(&normal_args),
+                );
+                assert_eq!(actual, expected, "{theme}, true-color={true_color}");
+            }
+        }
+    }
+
+    #[test]
+    fn test_syntax_theme_preview_honors_config_and_environment() {
+        let path = "delta__test_syntax_theme_preview.gitconfig";
+        let contents = b"[delta]\nfeatures = preview-test\n[delta \"preview-test\"]\nlight = true\nline-numbers = true\nminus-style = normal\nplus-style = syntax\nwidth = 40\n";
+        std::fs::write(path, contents).unwrap();
+        let env = DeltaEnv {
+            colorterm: Some("truecolor".into()),
+            ..DeltaEnv::default()
+        };
+        let args = ["--config", path, "--show-syntax-themes"].map(OsString::from);
+        let opt = make_options(&args, &env);
+        assert!(opt.light);
+        let actual = preview_theme(opt, Light, "GitHub");
+        let expected_opt =
+            integration_test_utils::make_options_from_args_and_git_config_with_custom_env(
+                env,
+                &["--syntax-theme", "GitHub"],
+                Some(contents),
+                Some(path),
+            );
+        let expected =
+            integration_test_utils::run_delta(INPUT, &config::Config::from(expected_opt));
+        std::fs::remove_file(path).unwrap();
+        assert_eq!(actual, expected);
+    }
 
     #[test]
     #[ignore] // Not working (timing out) when run by tarpaulin, presumably due to stdin detection.
