@@ -16,6 +16,7 @@ end-to-end-test: build
 	./tests/test_raw_output_matches_git_on_full_repo_history
 	./tests/test_deprecated_options > /dev/null
 	./tests/test_navigate_less_history_file
+	bash ./tests/test_navigate_pager
 
 shell-completion:
 	for shell in bash fish zsh; do ./target/release/delta --generate-completion $$shell > etc/completion/completion.$$shell; done
