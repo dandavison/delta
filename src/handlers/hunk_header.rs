@@ -23,11 +23,11 @@ use std::fmt::Write as FmtWrite;
 use std::io::Write as IoWrite;
 
 use super::draw;
-use crate::features::diff_line_metadata::OscLinePrefixer;
 use crate::config::{
     Config, HunkHeaderIncludeCodeFragment, HunkHeaderIncludeFilePath, HunkHeaderIncludeLineNumber,
 };
 use crate::delta::{self, DiffType, InMergeConflict, MergeParents, State, StateMachine};
+use crate::features::diff_line_metadata::OscLinePrefixer;
 use crate::paint::{self, BgShouldFill, Painter, StyleSectionSpecifier};
 use crate::style::{DecorationStyle, Style};
 use lazy_static::lazy_static;

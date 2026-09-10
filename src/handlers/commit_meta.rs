@@ -3,6 +3,7 @@ use std::borrow::Cow;
 use super::draw;
 use crate::delta::{State, StateMachine};
 use crate::features;
+use crate::features::diff_line_metadata::{commit_id, OscLinePrefixer};
 
 impl StateMachine<'_> {
     #[inline]
@@ -22,6 +23,11 @@ impl StateMachine<'_> {
             self.painter.emit()?;
             self._handle_commit_meta_header_line()?;
             handled_line = true
+        } else {
+            // With the default commit style the line is passed through
+            // unchanged, and the record has to precede it just the same.
+            self.painter.emit()?;
+            write!(self.painter.writer, "{}", self.commit_osc())?;
         }
         Ok(handled_line)
     }
@@ -47,8 +53,12 @@ impl StateMachine<'_> {
             (Cow::from(&self.line), Cow::from(&self.raw_line))
         };
 
+        // Prefix every drawn row with the `C` record (no-op when empty), as the
+        // file and hunk headers do for theirs.
+        let commit_osc = self.commit_osc();
+        let mut writer = OscLinePrefixer::new(&mut *self.painter.writer, commit_osc);
         draw_fn(
-            self.painter.writer,
+            &mut writer,
             &format!("{}{}", formatted_line, if pad { " " } else { "" }),
             &format!("{}{}", formatted_raw_line, if pad { " " } else { "" }),
             "",
@@ -57,5 +67,18 @@ impl StateMachine<'_> {
             decoration_ansi_term_style,
         )?;
         Ok(())
+    }
+
+    /// The `C` (commit) record for the commit-header line being drawn, or empty
+    /// when metadata isn't negotiated or the line names no commit.
+    fn commit_osc(&self) -> String {
+        let Some(metadata) = self.painter.diff_line_metadata.as_ref() else {
+            return String::new();
+        };
+        let Some(marker) = self.config.commit_regex.find(&self.line) else {
+            return String::new();
+        };
+        commit_id(&self.line, marker.end())
+            .map_or(String::new(), |commit| metadata.osc_for_commit(commit))
     }
 }

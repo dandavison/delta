@@ -162,6 +162,23 @@ impl DiffLineMetadata {
     pub fn osc_for_file_header(&self, file: &str) -> String {
         format!("{OSC};{version};f;;;{file}{ST}", version = self.version)
     }
+
+    /// The `C` (commit) record marking the first row of a commit in `git log`
+    /// output. A commit is no line of any file, so it carries no line numbers
+    /// and states its id where a diff row states its file.
+    pub fn osc_for_commit(&self, commit: &str) -> String {
+        format!("{OSC};{version};C;;;{commit}{ST}", version = self.version)
+    }
+}
+
+/// The commit a commit-header line names: the first token after whatever
+/// `--commit-regex` matched, which is where git prints it. `None` when there is
+/// no such token or it is no hash, so a custom regex matching something else
+/// yields no record rather than a wrong one.
+pub fn commit_id(line: &str, marker_end: usize) -> Option<&str> {
+    let commit = line.get(marker_end..)?.split_whitespace().next()?;
+    let is_hash = commit.len() >= 4 && commit.chars().all(|c| c.is_ascii_hexdigit());
+    is_hash.then_some(commit)
 }
 
 /// A `Write` that emits `prefix` before the first byte of every line it forwards
@@ -248,6 +265,30 @@ mod tests {
             md.osc_for_file_header("src/foo.rs"),
             "\x1b]1717;1;f;;;src/foo.rs\x1b\\"
         );
+    }
+
+    #[test]
+    fn test_commit_record_carries_the_commit_id() {
+        // `C` marks the first row of a commit in `git log` output. It is no line
+        // of any file, so it carries no line numbers; the commit id goes where a
+        // diff row carries its file.
+        let md = emitter();
+        assert_eq!(
+            md.osc_for_commit("dbb7c03c3f306c0b12ce003358e1fd17c3fd2701"),
+            "\x1b]1717;1;C;;;dbb7c03c3f306c0b12ce003358e1fd17c3fd2701\x1b\\"
+        );
+    }
+
+    #[test]
+    fn test_commit_id_is_the_token_after_what_marks_the_line() {
+        // Whatever `--commit-regex` matched identifies the line; the commit is
+        // the first token after it, so decorations stay out of it.
+        assert_eq!(
+            commit_id("commit dbb7c03 (HEAD -> main, origin/main)", 7),
+            Some("dbb7c03")
+        );
+        assert_eq!(commit_id("commit ", 7), None);
+        assert_eq!(commit_id("commit not-a-hash", 7), None);
     }
 
     #[test]

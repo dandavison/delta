@@ -6,8 +6,8 @@ use unicode_segmentation::UnicodeSegmentation;
 
 use super::draw;
 use crate::config::Config;
-use crate::features::diff_line_metadata::OscLinePrefixer;
 use crate::delta::{DiffType, Source, State, StateMachine};
+use crate::features::diff_line_metadata::OscLinePrefixer;
 use crate::paint::Painter;
 use crate::{features, utils};
 
