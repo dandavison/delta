@@ -24,6 +24,9 @@ jobs:
           - os: ubuntu-latest
             target: x86_64-unknown-linux-musl
             use-cross: true
+          - os: ubuntu-24.04-arm
+            target: aarch64-unknown-linux-musl
+            use-cross: false
           - os: ubuntu-22.04
             target: i686-unknown-linux-gnu
             use-cross: true
