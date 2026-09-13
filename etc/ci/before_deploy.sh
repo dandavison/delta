@@ -71,9 +71,15 @@ make_deb() {
             library_dir=""
             ;;
         aarch64*)
-            architecture=arm64
-            gcc_prefix="aarch64-linux-gnu-"
-            library_dir="-l/usr/aarch64-linux-gnu/lib"
+            if [[ $TARGET == *-musl ]]; then
+                architecture=arm64
+                gcc_prefix=""
+                library_dir=""
+            else
+                architecture=arm64
+                gcc_prefix="aarch64-linux-gnu-"
+                library_dir="-l/usr/aarch64-linux-gnu/lib"
+            fi
             ;;
         arm*hf)
             architecture=armhf
