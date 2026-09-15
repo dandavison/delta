@@ -50,7 +50,7 @@ Delta has many features and is very customizable; please see `delta -h` (short h
 - Word-level diff highlighting using a Levenshtein edit inference algorithm
 - Side-by-side view with line-wrapping
 - Line numbering
-- `n` and `N` keybindings to move between files in large diffs, and between diffs in `log -p` views (`--navigate`)
+- `n` and `N` keybindings to move between file and hunk headers in large diffs, and commit headers in `git log -p` views ([`--navigate`](https://dandavison.github.io/delta/navigation-keybindings-for-large-diffs.html))
 - Improved merge conflict display
 - Improved `git blame` display (syntax highlighting; `--hyperlinks` formats commits as links to hosting provider etc. Supported hosting providers are: GitHub, GitLab, SourceHut, Codeberg)
 - Syntax-highlights grep output from `rg`, `git grep`, `grep`, etc
