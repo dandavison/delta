@@ -4,12 +4,24 @@ use crate::utils::path::relativize_path_maybe;
 impl StateMachine<'_> {
     #[inline]
     fn test_diff_file_missing(&self) -> bool {
-        self.source == Source::DiffUnified && self.line.starts_with("Only in ")
+        let in_unified_diff = matches!(
+            self.state,
+            State::DiffHeader(_)
+                | State::HunkHeader(_, _, _, _)
+                | State::HunkMinus(_, _)
+                | State::HunkPlus(_, _)
+                | State::HunkZero(_, _)
+        );
+        self.source == Source::DiffUnified
+            && (in_unified_diff || self.source_detected_on_current_line)
+            && self.parse_line.starts_with("Only in ")
     }
 
     #[inline]
     fn test_diff_is_binary(&self) -> bool {
-        self.line.starts_with("Binary files ")
+        matches!(self.state, State::DiffHeader(_))
+            && self.parse_line.starts_with("Binary files ")
+            && self.parse_line.ends_with(" differ")
     }
 
     pub fn handle_diff_header_misc_line(&mut self) -> std::io::Result<bool> {

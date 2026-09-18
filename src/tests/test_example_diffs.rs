@@ -363,6 +363,388 @@ index 0123456..1234567 100644
     }
 
     #[test]
+    fn test_oneline_commit_after_diff_is_preserved() {
+        for (input, preceding_header) in [
+            (
+                GIT_LOG_ONELINE_AFTER_BINARY_DIFF,
+                "document.bin (binary file)",
+            ),
+            (GIT_LOG_ONELINE_AFTER_TEXT_DIFF, "note.txt"),
+        ] {
+            let output = DeltaTest::with_args(&[]).with_input(input).output;
+            let commit = "324dd44 Initial draft";
+            assert_eq!(
+                output.matches(commit).count(),
+                1,
+                "unexpected output:\n{output}"
+            );
+            let header_position = output
+                .find(preceding_header)
+                .expect("preceding file header should be present");
+            let commit_position = output
+                .find(commit)
+                .expect("one-line commit should be present");
+            assert!(
+                header_position < commit_position,
+                "file header was not flushed before commit line:\n{}",
+                output
+            );
+            assert!(!output.contains("\nindex "));
+        }
+    }
+
+    #[test]
+    fn test_recognized_diff_header_lines_are_suppressed() {
+        let output = DeltaTest::with_args(&[])
+            .with_input(RECOGNIZED_AND_UNRECOGNIZED_DIFF_HEADER_LINES)
+            .output;
+
+        assert!(
+            output.lines().any(|line| line == "user-visible line"),
+            "missing user-visible line from output:\n{}",
+            output
+        );
+        for machine_line in [
+            "diff --cc file.bin",
+            "index 1111111,2222222..3333333",
+            "mode 100644,100644..100755",
+            "GIT binary patch",
+            "literal 0",
+            "HcmV?d00001",
+        ] {
+            assert!(!output.contains(machine_line));
+        }
+    }
+
+    #[test]
+    fn test_git_binary_patch_machine_lines_are_suppressed() {
+        let output = DeltaTest::with_args(&[])
+            .with_input(GIT_BINARY_PATCH_WITH_TWO_FRAGMENTS)
+            .output;
+
+        assert!(output.lines().any(|line| line == "user-visible line"));
+        for machine_line in ["GIT binary patch", "literal 0", "delta 0", "HcmV?d00001"] {
+            assert!(
+                !output.contains(machine_line),
+                "unexpected output:\n{}",
+                output
+            );
+        }
+    }
+
+    #[test]
+    fn test_binary_payload_lookalikes_are_preserved() {
+        for line in ["Better", "literal 3", "delta 3"] {
+            let input = format!("{DIFF_HEADER_BEFORE_UNKNOWN_LINE}{line}\n");
+            let output = DeltaTest::with_args(&[]).with_input(&input).output;
+            assert!(
+                output.lines().any(|output_line| output_line == line),
+                "missing {:?} from output:\n{}",
+                line,
+                output
+            );
+        }
+    }
+
+    #[test]
+    fn test_diff_header_metadata_lookalikes_are_preserved() {
+        for line in [
+            "index of topics",
+            "similarity index notes",
+            "old mode notes",
+            "new file mode notes",
+            "rename from ",
+        ] {
+            let input = format!("diff --git a/file b/file\n{line}\n");
+            let output = DeltaTest::with_args(&[]).with_input(&input).output;
+            assert!(
+                output.lines().any(|output_line| output_line == line),
+                "missing {:?} from output:\n{}",
+                line,
+                output
+            );
+        }
+    }
+
+    #[test]
+    fn test_malformed_diff_header_lookalikes_are_preserved() {
+        for line in [
+            "diff -user content",
+            "diff --git ",
+            "diff -Unexpected output changed",
+            "diff -U banana old new",
+            "diff --unified 5 output changed",
+            "diff -u --color always old new",
+            "diff -u old new extra",
+            "diff -u --brief old new",
+        ] {
+            for prefix in [
+                DIFF_HEADER_BEFORE_UNKNOWN_LINE,
+                "diff --git a/file b/file\nindex 1111111..2222222 100644\n--- a/file\n+++ b/file\n@@ -1 +1 @@\n-old\n+new\n",
+            ] {
+                let input = format!("{prefix}{line}\n");
+                let output = DeltaTest::with_args(&[]).with_input(&input).output;
+                assert!(
+                    output.lines().any(|output_line| output_line == line),
+                    "missing {:?} from output:\n{}",
+                    line,
+                    output
+                );
+            }
+        }
+    }
+
+    #[test]
+    fn test_standalone_unified_option_clusters_are_recognized() {
+        for header in [
+            "diff -uN old new",
+            "diff -ruN old new",
+            "diff -uIregex old new",
+            "diff -uLleft -Lright old new",
+            "diff -u --ignore-case old new",
+            "diff -u --from-file=old new",
+            "diff -u --to-file=new old",
+        ] {
+            let input = format!("{header}\n--- old\n+++ new\n@@ -1 +1 @@\n-old\n+new\n");
+            let output = DeltaTest::with_args(&[]).with_input(&input).output;
+            assert!(!output.contains(header), "unexpected output:\n{}", output);
+            assert!(
+                output.contains("old ⟶   new"),
+                "unexpected output:\n{}",
+                output
+            );
+        }
+    }
+
+    #[test]
+    fn test_standalone_unified_diff_after_git_hunk_is_recognized() {
+        let input = "\
+diff --git a/file b/file
+index 1111111..2222222 100644
+--- a/file
++++ b/file
+@@ -1,2 +1,2 @@
+-old git
++new git
+diff -u old new
+--- old
++++ new
+@@ -1 +1 @@
+-old standalone
++new standalone
+";
+        let output = DeltaTest::with_args(&[]).with_input(input).output;
+        let output = strip_ansi_codes(&output);
+        let expected = [
+            "old git",
+            "new git",
+            "diff -u old new",
+            "old standalone",
+            "new standalone",
+        ];
+        let positions = expected.map(|text| {
+            assert_eq!(
+                output.matches(text).count(),
+                1,
+                "unexpected output:\n{}",
+                output
+            );
+            output.find(text).unwrap()
+        });
+        assert!(
+            positions.windows(2).all(|pair| pair[0] < pair[1]),
+            "unexpected output:\n{}",
+            output
+        );
+        assert!(!output.contains("-- old"), "unexpected output:\n{}", output);
+        assert!(!output.contains("++ new"), "unexpected output:\n{}", output);
+    }
+
+    #[test]
+    fn test_diff_boundary_after_hunk_header_emits_pending_header() {
+        let input = "\
+diff --git a/file b/file
+index 1111111..2222222 100644
+--- a/file
++++ b/file
+@@ -1 +1 @@
+diff -u old new
+";
+        let output = DeltaTest::with_args(&["--hunk-header-style", "raw"])
+            .with_input(input)
+            .output;
+        let output = strip_ansi_codes(&output);
+        let hunk_position = output.find("@@ -1 +1 @@").expect("missing hunk header");
+        let boundary_position = output.find("diff -u old new").expect("missing boundary");
+        assert_eq!(output.matches("@@ -1 +1 @@").count(), 1, "{}", output);
+        assert_eq!(output.matches("diff -u old new").count(), 1, "{}", output);
+        assert!(hunk_position < boundary_position, "{}", output);
+    }
+
+    #[test]
+    fn test_unrecognized_line_after_standalone_header_is_preserved_at_eof() {
+        let input = "diff -u old new\nexplanatory text\n--- user-visible\n";
+        let output = DeltaTest::with_args(&[]).with_input(input).output;
+        let output = strip_ansi_codes(&output);
+        assert!(
+            output.ends_with("explanatory text\n--- user-visible\n"),
+            "{}",
+            output
+        );
+    }
+
+    #[test]
+    fn test_rejected_binary_fragment_reconsiders_headerless_diff_marker() {
+        let input = format!(
+            "{GIT_BINARY_PATCH_PENDING_SECOND_HEADER}\n--- old\n+++ new\n@@ -1 +1 @@\n--- content\n+++ replacement\n"
+        );
+        let output = DeltaTest::with_args(&[]).with_input(&input).output;
+        let output = strip_ansi_codes(&output);
+        assert!(output.lines().any(|line| line == "literal 3"), "{}", output);
+        assert!(output.contains("old ⟶   new"), "{}", output);
+        assert!(output.contains("content"), "{}", output);
+        assert!(output.contains("replacement"), "{}", output);
+        assert_eq!(output.matches('⟶').count(), 1, "{}", output);
+    }
+
+    #[test]
+    fn test_unrecognized_diff_header_line_preserves_following_blank() {
+        let input =
+            format!("{DIFF_HEADER_BEFORE_UNKNOWN_LINE}commit summary\n\nexplanatory text\n");
+        let output = DeltaTest::with_args(&[]).with_input(&input).output;
+        assert!(
+            output.contains("commit summary\n\nexplanatory text"),
+            "unexpected output:\n{}",
+            output
+        );
+    }
+
+    #[test]
+    fn test_binary_patch_recognition_uses_untruncated_input() {
+        let output = DeltaTest::with_args(&["--max-line-length", "10"])
+            .with_input(GIT_BINARY_PATCH_WITH_TWO_FRAGMENTS)
+            .output;
+
+        assert!(
+            output.lines().any(|line| line.starts_with("user-")),
+            "unexpected output:\n{}",
+            output
+        );
+        assert!(
+            !output.contains("GIT binary"),
+            "unexpected output:\n{}",
+            output
+        );
+        assert!(!output.contains("HcmV?d"), "unexpected output:\n{}", output);
+    }
+
+    #[test]
+    fn test_binary_patch_is_unchanged_in_raw_modes() {
+        for args in [&["--color-only"][..], &["--raw"][..]] {
+            let output = DeltaTest::with_args(args)
+                .with_input(GIT_BINARY_PATCH_WITH_TWO_FRAGMENTS)
+                .output;
+            assert_eq!(
+                strip_ansi_codes(&output),
+                GIT_BINARY_PATCH_WITH_TWO_FRAGMENTS
+            );
+        }
+    }
+
+    #[test]
+    fn test_combined_diff_header_uses_untruncated_input() {
+        let output = DeltaTest::with_args(&["--max-line-length", "10"])
+            .with_input(COMBINED_DIFF_WITH_LONG_FILENAME)
+            .output;
+
+        assert!(
+            output.contains("verylongfilename.txt"),
+            "combined file name was truncated during parsing:\n{}",
+            output
+        );
+        assert!(!output.contains("a/ver"), "unexpected output:\n{}", output);
+    }
+
+    #[test]
+    fn test_headerless_unified_diff_uses_untruncated_input() {
+        let output = DeltaTest::with_args(&["--max-line-length", "2"])
+            .with_input(HEADERLESS_UNIFIED_DIFF_WITH_DASH_CONTENT)
+            .output;
+        let output = strip_ansi_codes(&output);
+        assert_eq!(
+            output.lines().filter(|line| *line == "→").count(),
+            2,
+            "both truncated hunk lines were not rendered:\n{}",
+            output
+        );
+        assert_eq!(
+            output.matches('⟶').count(),
+            1,
+            "hunk content was misparsed as another file header:\n{}",
+            output
+        );
+    }
+
+    #[test]
+    fn test_only_in_line_uses_untruncated_input() {
+        let output = DeltaTest::with_args(&["--max-line-length", "2"])
+            .with_input("Only in left: file.txt\n")
+            .output;
+        let output = strip_ansi_codes(&output);
+        assert!(
+            output.lines().any(|line| line.starts_with("──")),
+            "Only-in line was not recognized below its prefix length:\n{}",
+            output
+        );
+    }
+
+    #[test]
+    fn test_standalone_unified_unknown_line_ends_metadata_handling() {
+        for line in [
+            "old mode 100644",
+            "Binary files a and b differ",
+            "--- user-visible",
+            "Only in hindsight",
+        ] {
+            let input = format!("diff -u old new\ncommit summary\n{line}\n");
+            let output = DeltaTest::with_args(&[]).with_input(&input).output;
+            let output = strip_ansi_codes(&output);
+            assert!(
+                output.ends_with(&format!("{line}\n")),
+                "{line:?} was suppressed or restyled after leaving the metadata section:\n{}",
+                output
+            );
+        }
+    }
+
+    #[test]
+    fn test_rejected_second_binary_fragment_header_is_replayed() {
+        for suffix in [
+            "\n\nexplanatory text\n",
+            "\nold mode 100644\n",
+            "\nBinary files a and b differ\n",
+            "",
+        ] {
+            let input = format!("{GIT_BINARY_PATCH_PENDING_SECOND_HEADER}{suffix}");
+            let output = DeltaTest::with_args(&[]).with_input(&input).output;
+            assert!(
+                output.lines().any(|line| line == "literal 3"),
+                "missing rejected header from output:\n{}",
+                output
+            );
+            if !suffix.is_empty() {
+                let next_line = suffix.trim_start_matches('\n').trim_end();
+                assert!(output.contains(&format!("literal 3{suffix}")));
+                assert!(
+                    output.lines().any(|line| line == next_line),
+                    "mismatching line was not preserved:\n{}",
+                    output
+                );
+            }
+        }
+    }
+
+    #[test]
     fn test_diff_in_diff() {
         let config = integration_test_utils::make_config_from_args(&[]);
         let output = integration_test_utils::run_delta(DIFF_IN_DIFF, &config);
@@ -2697,6 +3079,93 @@ index 7b57bd29ea8a..4d3b8c11a4a2 100644
 @@ -1 +1 @@
 -123
 +456
+";
+
+    const GIT_LOG_ONELINE_AFTER_BINARY_DIFF: &str = "\
+2e15507 Better content
+diff --git a/document.bin b/document.bin
+index 1111111..2222222 100644
+Binary files a/document.bin and b/document.bin differ
+324dd44 Initial draft
+diff --git a/document.bin b/document.bin
+new file mode 100644
+index 0000000..1111111
+Binary files /dev/null and b/document.bin differ
+";
+
+    const GIT_LOG_ONELINE_AFTER_TEXT_DIFF: &str = "\
+2e15507 Better content
+diff --git a/note.txt b/note.txt
+index 1111111..2222222 100644
+--- a/note.txt
++++ b/note.txt
+@@ -1 +1 @@
+-old
++new
+324dd44 Initial draft
+diff --git a/note.txt b/note.txt
+new file mode 100644
+index 0000000..1111111
+--- /dev/null
++++ b/note.txt
+@@ -0,0 +1 @@
++old
+";
+
+    const RECOGNIZED_AND_UNRECOGNIZED_DIFF_HEADER_LINES: &str = "\
+diff --cc file.bin
+index 1111111,2222222..3333333
+mode 100644,100644..100755
+GIT binary patch
+literal 0
+HcmV?d00001
+
+user-visible line
+";
+
+    const DIFF_HEADER_BEFORE_UNKNOWN_LINE: &str = "\
+diff --git a/file.bin b/file.bin
+index 1111111..2222222 100644
+Binary files a/file.bin and b/file.bin differ
+";
+
+    const GIT_BINARY_PATCH_WITH_TWO_FRAGMENTS: &str = "\
+diff --git a/file.bin b/file.bin
+index 1111111..2222222 100644
+GIT binary patch
+literal 0
+HcmV?d00001
+
+delta 0
+HcmV?d00001
+
+user-visible line
+";
+
+    const GIT_BINARY_PATCH_PENDING_SECOND_HEADER: &str = "\
+diff --git a/file.bin b/file.bin
+index 1111111..2222222 100644
+GIT binary patch
+literal 0
+HcmV?d00001
+
+literal 3";
+
+    const COMBINED_DIFF_WITH_LONG_FILENAME: &str = "\
+diff --combined verylongfilename.txt
+index 1111111,2222222..3333333
+--- a/verylongfilename.txt
++++ b/verylongfilename.txt
+@@@ -1,1 -1,1 +1,1 @@@
+++combined
+";
+
+    const HEADERLESS_UNIFIED_DIFF_WITH_DASH_CONTENT: &str = "\
+--- old
++++ new
+@@ -1 +1 @@
+--- content
++++ replacement
 ";
 
     const DIFF_NO_INDEX_BINARY_FILES_DIFFER: &str = "\
