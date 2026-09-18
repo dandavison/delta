@@ -1019,7 +1019,10 @@ Only in dir1: g.txt
     }
 
     #[test]
-    fn test_no_file_header_record_on_submodule_rows() {
+    fn test_file_header_record_on_submodule_rows_names_the_submodule() {
+        // A submodule's rows announce the submodule, whose path is nowhere but
+        // on the row itself: `minus_file`/`plus_file` still hold the file above
+        // it, so a record built from those would name that file.
         let input = "\
 diff --git a/one.txt b/one.txt
 index 257cc56..5716ca5 100644
@@ -1029,6 +1032,8 @@ index 257cc56..5716ca5 100644
 -foo
 +bar
 Submodule sub/mod contains untracked content
+Submodule sub/mod a32f27c..2d9f921 (rewind):
+  < make it so
 ";
         assert_snapshot!(visible_metadata_records(input, &[]), @r"
         ⟦1;f;;;one.txt⟧one.txt
@@ -1040,8 +1045,41 @@ Submodule sub/mod contains untracked content
         ⟦1;d;1;1;one.txt⟧foo
         ⟦1;a;1;;one.txt⟧bar
 
-        Submodule sub/mod contains untracked content
-        ────────────────────────────────────────────
+        ⟦1;f;;;sub/mod⟧Submodule sub/mod contains untracked content
+        ⟦1;f;;;sub/mod⟧────────────────────────────────────────────
+
+        ⟦1;f;;;sub/mod⟧Submodule sub/mod a32f27c..2d9f921 (rewind):
+        ⟦1;f;;;sub/mod⟧────────────────────────────────────────────
+          < make it so
+        ");
+    }
+
+    #[test]
+    fn test_no_file_header_record_on_an_unreadable_submodule_row() {
+        // A row that opens with "Submodule " but states no submodule carries no
+        // record: an empty path would hand the host a second file identity.
+        let input = "\
+diff --git a/one.txt b/one.txt
+index 257cc56..5716ca5 100644
+--- a/one.txt
++++ b/one.txt
+@@ -1 +1 @@
+-foo
++bar
+Submodule support was added
+";
+        assert_snapshot!(visible_metadata_records(input, &[]), @r"
+        ⟦1;f;;;one.txt⟧one.txt
+        ⟦1;f;;;one.txt⟧───────────────────────────────────────────
+
+        ⟦1;h;1;;one.txt⟧───┐
+        ⟦1;h;1;;one.txt⟧1: │
+        ⟦1;h;1;;one.txt⟧───┘
+        ⟦1;d;1;1;one.txt⟧foo
+        ⟦1;a;1;;one.txt⟧bar
+
+        Submodule support was added
+        ───────────────────────────────────────────
         ");
     }
 
