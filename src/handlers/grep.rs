@@ -211,6 +211,7 @@ impl StateMachine<'_> {
                     &self.raw_line,
                     self.config.grep_match_word_style,
                     self.config.grep_match_line_style,
+                    self.config.git_grep_match_style,
                     &grep_line.path,
                     grep_line.line_number,
                 )
@@ -352,6 +353,7 @@ impl StateMachine<'_> {
                     &self.raw_line,
                     self.config.grep_match_word_style,
                     self.config.grep_match_line_style,
+                    self.config.git_grep_match_style,
                     &grep_line.path,
                     grep_line.line_number,
                 )
@@ -398,6 +400,7 @@ fn get_code_style_sections<'b>(
     raw_line: &'b str,
     match_style: Style,
     non_match_style: Style,
+    git_match_style: Style,
     path: &str,
     line_number: Option<usize>,
 ) -> Option<StyleSectionSpecifier<'b>> {
@@ -411,8 +414,11 @@ fn get_code_style_sections<'b>(
         let match_style_sections = ansi::parse_style_sections(&raw_line[(prefix_end + 1)..])
             .iter()
             .map(|(ansi_term_style, s)| {
-                if ansi_term_style.is_bold
-                    && ansi_term_style.foreground == Some(ansi_term::Colour::Red)
+                if !git_match_style.ansi_term_style.is_plain()
+                    && crate::style::ansi_term_style_equality(
+                        *ansi_term_style,
+                        git_match_style.ansi_term_style,
+                    )
                 {
                     (match_style, *s)
                 } else {
@@ -1271,12 +1277,58 @@ mod tests {
         let grep = parse_grep_line(&stripped).unwrap();
 
         assert_eq!(
-            get_code_style_sections(&working_example, hit, miss, &grep.path, grep.line_number),
+            get_code_style_sections(
+                &working_example,
+                hit,
+                miss,
+                Style::from_git_str("bold red"),
+                &grep.path,
+                grep.line_number,
+            ),
             Some(StyleSectionSpecifier::StyleSections(vec![
                 (miss, "  - "),
                 (hit, "kind: Service"),
                 (miss, "Account")
             ]))
+        );
+
+        let custom_match_color = format!(
+            "{escape}[35mREADME.md{escape}[m{escape}[36m:{escape}[m## {escape}[1;32mGet Started{escape}[m"
+        );
+        let custom_match_color_stripped = strip_ansi_codes(&custom_match_color);
+        let custom_match_color_grep = parse_grep_line(&custom_match_color_stripped).unwrap();
+
+        assert_eq!(
+            get_code_style_sections(
+                &custom_match_color,
+                hit,
+                miss,
+                Style::from_git_str("bold green"),
+                &custom_match_color_grep.path,
+                custom_match_color_grep.line_number
+            ),
+            Some(StyleSectionSpecifier::StyleSections(vec![
+                (miss, "## "),
+                (hit, "Get Started")
+            ]))
+        );
+
+        let unstyled_match = format!("README.md{escape}[36m:{escape}[m## Get Started");
+        let unstyled_match_stripped = strip_ansi_codes(&unstyled_match);
+        let unstyled_match_grep = parse_grep_line(&unstyled_match_stripped).unwrap();
+        assert_eq!(
+            get_code_style_sections(
+                &unstyled_match,
+                hit,
+                miss,
+                Style::from_git_str("normal"),
+                &unstyled_match_grep.path,
+                unstyled_match_grep.line_number
+            ),
+            Some(StyleSectionSpecifier::StyleSections(vec![(
+                miss,
+                "## Get Started"
+            )]))
         );
 
         let broken_example = format!("foo/bar/baz.yaml{escape}[36m:{escape}[m2{escape}[36m:{escape}[m{escape}[1;31mkind: Service{escape}[m");
@@ -1288,6 +1340,7 @@ mod tests {
                 &broken_example,
                 hit,
                 miss,
+                Style::from_git_str("bold red"),
                 &broken_grep.path,
                 broken_grep.line_number
             ),
@@ -1306,6 +1359,7 @@ mod tests {
                 &plus_example,
                 hit,
                 miss,
+                Style::from_git_str("bold red"),
                 &plus_grep.path,
                 plus_grep.line_number
             ),

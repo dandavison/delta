@@ -67,6 +67,7 @@ pub struct Config {
     pub git_config: Option<GitConfig>,
     pub git_minus_style: Style,
     pub git_plus_style: Style,
+    pub git_grep_match_style: Style,
     pub grep_context_line_style: Style,
     pub grep_file_style: Style,
     pub classic_grep_header_file_style: Style,
@@ -188,6 +189,11 @@ impl From<cli::Opt> for Config {
     fn from(opt: cli::Opt) -> Self {
         let mut styles = parse_styles::parse_styles(&opt);
         let styles_map = parse_styles::parse_styles_map(&opt);
+        let git_grep_match_style = opt
+            .git_config()
+            .and_then(|git_config| git_config.get::<String>("color.grep.match"))
+            .map(|style| Style::from_git_str(&style))
+            .unwrap_or_else(|| Style::from_git_str("bold red"));
 
         let wrap_config = WrapConfig::from_opt(&opt, styles["inline-hint-style"]);
 
@@ -317,6 +323,7 @@ impl From<cli::Opt> for Config {
             hunk_label,
             file_style: styles["file-style"],
             git_config: opt.git_config,
+            git_grep_match_style,
             grep_context_line_style: styles["grep-context-line-style"],
             grep_file_style: styles["grep-file-style"],
             classic_grep_header_file_style: styles["classic-grep-header-file-style"],
@@ -476,9 +483,35 @@ pub const HEADER_LEN: usize = 7;
 #[cfg(test)]
 pub mod tests {
     use crate::cli;
+    use crate::style::Style;
     use crate::tests::integration_test_utils;
     use crate::utils::bat::output::PagingMode;
     use std::fs::remove_file;
+
+    #[test]
+    fn test_git_grep_match_style_from_config() {
+        let default_config = integration_test_utils::make_config_from_args(&[]);
+        assert_eq!(
+            default_config.git_grep_match_style,
+            Style::from_git_str("bold red")
+        );
+
+        let git_config_contents = b"
+[color \"grep\"]
+    match = bold green
+";
+        let git_config_path = "delta__test_git_grep_match_style.gitconfig";
+        let config = integration_test_utils::make_config_from_args_and_git_config(
+            &[],
+            Some(git_config_contents),
+            Some(git_config_path),
+        );
+        assert_eq!(
+            config.git_grep_match_style,
+            Style::from_git_str("bold green")
+        );
+        remove_file(git_config_path).unwrap();
+    }
 
     #[test]
     fn test_get_computed_values_from_config() {
