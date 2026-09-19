@@ -609,7 +609,9 @@ fn set_widths_and_isatty(opt: &mut cli::Opt) {
     // If one extra character for e.g. `less --status-column` is required use "-1"
     // as an argument, also see #41, #10, #115 and #727.
     opt.computed.available_terminal_width =
-        crate::utils::workarounds::windows_msys2_width_fix(term_stdout.size(), &term_stdout);
+        width_from_columns_env_var(&opt.env).unwrap_or_else(|| {
+            crate::utils::workarounds::windows_msys2_width_fix(term_stdout.size(), &term_stdout)
+        });
 
     let (decorations_width, background_color_extends_to_terminal_width) = match opt.width.as_deref()
     {
@@ -637,6 +639,20 @@ fn set_widths_and_isatty(opt: &mut cli::Opt) {
     opt.computed.decorations_width = decorations_width;
     opt.computed.background_color_extends_to_terminal_width =
         background_color_extends_to_terminal_width;
+}
+
+/// The width that $COLUMNS states, if it holds a positive number.
+///
+/// A caller that runs delta without a terminal on delta's stdout has no other way to say how wide
+/// the output should be. Git has the same problem once it has redirected its own stdout to the
+/// pager, and it solves it by setting $COLUMNS for the pager to inherit; git's `term_columns()`
+/// then reads $COLUMNS ahead of the ioctl. Delta follows git here, so that the two agree on the
+/// width when delta renders a diff that git produced.
+fn width_from_columns_env_var(env: &DeltaEnv) -> Option<usize> {
+    match env.columns.as_deref()?.trim().parse() {
+        Ok(width) if width > 0 => Some(width),
+        _ => None,
+    }
 }
 
 fn set_true_color(opt: &mut cli::Opt) {
@@ -862,5 +878,28 @@ pub mod tests {
         assert_eq!(parse_width_specifier("-12", term_width).unwrap(), 0);
         assert_eq!(parse_width_specifier(" - 12 ", term_width).unwrap(), 0);
         assert_eq!(parse_width_specifier(" 2 - 2 ", term_width).unwrap(), 0);
+    }
+
+    #[test]
+    fn test_width_from_columns_env_var() {
+        use super::width_from_columns_env_var;
+        use crate::env::DeltaEnv;
+
+        let width_for = |columns: Option<&str>| {
+            width_from_columns_env_var(&DeltaEnv {
+                columns: columns.map(str::to_string),
+                ..DeltaEnv::default()
+            })
+        };
+
+        assert_eq!(width_for(None), None);
+        assert_eq!(width_for(Some("")), None);
+        assert_eq!(width_for(Some("0")), None);
+        assert_eq!(width_for(Some("-80")), None);
+        assert_eq!(width_for(Some("wide")), None);
+        assert_eq!(width_for(Some("80x24")), None);
+
+        assert_eq!(width_for(Some("80")), Some(80));
+        assert_eq!(width_for(Some(" 80 ")), Some(80));
     }
 }
