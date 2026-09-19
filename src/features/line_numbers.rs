@@ -252,12 +252,21 @@ fn format_and_paint_line_number_field<'a>(
 
     let format_data = &line_numbers_data.format_data[side];
     let plus_file = &line_numbers_data.plus_file;
-    let style = &config.line_numbers_style_leftright[side];
+    let minus_plus_style = match (line_numbers[Minus], line_numbers[Plus]) {
+        (Some(_), None) => styles[Minus],
+        (None, Some(_)) => styles[Plus],
+        (Some(_), Some(_)) => styles[Plus], // FIXME!
+        _ => unreachable!(),
+    };
+    let left_right_style = match &config.line_numbers_style_leftright[side] {
+        style if style.is_omitted => &minus_plus_style,
+        style => style,
+    };
 
     let mut ansi_strings = Vec::new();
     let mut suffix = "";
     for placeholder in format_data {
-        ansi_strings.push(style.paint(placeholder.prefix.as_str()));
+        ansi_strings.push(left_right_style.paint(placeholder.prefix.as_str()));
 
         let width = if let Some(placeholder_width) = placeholder.width {
             max(placeholder_width, min_field_width)
@@ -268,31 +277,47 @@ fn format_and_paint_line_number_field<'a>(
         let alignment_spec = placeholder.alignment_spec.unwrap_or(Align::Center);
         match placeholder.placeholder {
             Some(Placeholder::NumberMinus) => {
-                ansi_strings.push(styles[Minus].paint(format_line_number(
+                let formatted = format_line_number(
                     line_numbers[Minus],
                     alignment_spec,
                     width,
                     placeholder.precision,
                     None,
                     config,
-                )))
+                );
+                // In side-by-side mode we paint an empty cell according to its column; otherwise we
+                // paint it according to its row. (Only the background color is relevant to an empty
+                // cell.) See #949
+                let style = match (config.side_by_side, line_numbers[Minus].is_some()) {
+                    (true, _) | (false, true) => styles[Minus],
+                    (false, false) => styles[Plus],
+                };
+                ansi_strings.push(style.paint(formatted))
             }
             Some(Placeholder::NumberPlus) => {
-                ansi_strings.push(styles[Plus].paint(format_line_number(
+                let formatted = format_line_number(
                     line_numbers[Plus],
                     alignment_spec,
                     width,
                     placeholder.precision,
                     Some(plus_file),
                     config,
-                )))
+                );
+                // In side-by-side mode we paint an empty cell according to its column; otherwise we
+                // paint it according to its row. (Only the background color is relevant to an empty
+                // cell.) See #949
+                let style = match (config.side_by_side, line_numbers[Plus].is_some()) {
+                    (true, _) | (false, true) => styles[Plus],
+                    (false, false) => styles[Minus],
+                };
+                ansi_strings.push(style.paint(formatted))
             }
             None => {}
             _ => unreachable!("Invalid placeholder"),
         }
         suffix = placeholder.suffix.as_str();
     }
-    ansi_strings.push(style.paint(suffix));
+    ansi_strings.push(left_right_style.paint(suffix));
     ansi_strings
 }
 
