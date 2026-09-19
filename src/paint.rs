@@ -1,5 +1,4 @@
 use std::borrow::Cow;
-use std::collections::HashMap;
 use std::io::Write;
 
 use ansi_term::ANSIString;
@@ -250,6 +249,7 @@ impl<'p> Painter<'p> {
                     diff_sections,
                     Some(line_has_homolog),
                     state,
+                    line_background_from_git(state, config),
                     background_color_extends_to_terminal_width,
                     config,
                 );
@@ -316,43 +316,33 @@ impl<'p> Painter<'p> {
         diff_sections: &[(Style, &str)],
         line_has_homolog: Option<bool>,
         state: &State,
+        line_background: Option<Style>,
         background_color_extends_to_terminal_width: BgShouldFill,
         config: &config::Config,
     ) -> (Option<BgFillMethod>, Style) {
-        let fill_style = match state {
-            State::HunkMinus(_, None) | State::HunkMinusWrapped => {
+        // Prefer the line's background taken from git's own +/- coloring (see
+        // `line_background_from_git`) — the single source of truth for a line's color,
+        // independent of the per-cell styles. Fall back to delta's nominal style for
+        // the state when git's coloring is not preserved.
+        let fill_style = line_background.unwrap_or_else(|| match state {
+            State::HunkMinus(_, _) | State::HunkMinusWrapped => {
                 if let Some(true) = line_has_homolog {
                     config.minus_non_emph_style
                 } else {
                     config.minus_style
                 }
             }
-            State::HunkZero(_, None) | State::HunkZeroWrapped => config.zero_style,
-            State::HunkPlus(_, None) | State::HunkPlusWrapped => {
+            State::HunkZero(_, _) | State::HunkZeroWrapped => config.zero_style,
+            State::HunkPlus(_, _) | State::HunkPlusWrapped => {
                 if let Some(true) = line_has_homolog {
                     config.plus_non_emph_style
                 } else {
                     config.plus_style
                 }
             }
-            State::HunkMinus(_, Some(_))
-            | State::HunkZero(_, Some(_))
-            | State::HunkPlus(_, Some(_)) => {
-                // Consider the following raw line, from git colorMoved:
-                // ␛[1;36m+␛[m␛[1;36mclass·X:·pass␛[m␊ The last style section returned by
-                // parse_style_sections will be a default style associated with the terminal newline
-                // character; we want the last "real" style.
-                diff_sections
-                    .iter()
-                    .rev()
-                    .filter(|(_, s)| s != &"\n")
-                    .map(|(style, _)| *style)
-                    .next()
-                    .unwrap_or(config.null_style)
-            }
             State::Blame(_) => diff_sections[0].0,
             _ => config.null_style,
-        };
+        });
 
         match (
             fill_style.get_background_color().is_some(),
@@ -641,11 +631,22 @@ pub fn paint_minus_and_plus_lines(
         config,
     );
     if config.side_by_side {
+        let lines_background = MinusPlus::new(
+            lines[Minus]
+                .iter()
+                .map(|(_, state)| line_background_from_git(state, config))
+                .collect::<Vec<_>>(),
+            lines[Plus]
+                .iter()
+                .map(|(_, state)| line_background_from_git(state, config))
+                .collect::<Vec<_>>(),
+        );
         side_by_side::paint_minus_and_plus_lines_side_by_side(
             lines,
             syntax_style_sections,
             diff_style_sections,
             lines_have_homolog,
+            lines_background,
             line_alignment,
             line_numbers_data,
             output_buffer,
@@ -803,27 +804,44 @@ fn painted_prefix(state: State, config: &config::Config) -> Option<ANSIString<'_
     }
 }
 
+// Map a single raw ANSI style through `map-styles` (config.styles_map).
+fn map_ansi_term_style(original_style: ansi_term::Style, config: &config::Config) -> Style {
+    config
+        .styles_map
+        .as_ref()
+        .and_then(|m| {
+            m.get(&style::ansi_term_style_equality_key(original_style))
+                .copied()
+        })
+        .unwrap_or_else(|| Style {
+            ansi_term_style: original_style,
+            ..Style::default()
+        })
+}
+
+// A diff line's background, taken from git's own coloring. git colors the +/-
+// marker with the line's color (and the whole line, for colorMoved), so the
+// marker carries it even when the line is blank. Returns that style mapped
+// through `map-styles`, or None for a line whose git coloring delta does not
+// preserve (ordinary, default-colored +/- lines).
+fn line_background_from_git(state: &State, config: &config::Config) -> Option<Style> {
+    let raw_line = match state {
+        State::HunkMinus(_, Some(raw))
+        | State::HunkZero(_, Some(raw))
+        | State::HunkPlus(_, Some(raw)) => raw,
+        _ => return None,
+    };
+    ansi::parse_leading_style(raw_line).map(|s| map_ansi_term_style(s, config))
+}
+
 // Parse ANSI styles encountered in `raw_line` and apply `styles_map`.
 pub fn parse_style_sections<'a>(
     raw_line: &'a str,
     config: &config::Config,
 ) -> LineSections<'a, Style> {
-    let empty_map = HashMap::new();
-    let styles_map = config.styles_map.as_ref().unwrap_or(&empty_map);
     ansi::parse_style_sections(raw_line)
         .iter()
-        .map(|(original_style, s)| {
-            match styles_map.get(&style::ansi_term_style_equality_key(*original_style)) {
-                Some(mapped_style) => (*mapped_style, *s),
-                None => (
-                    Style {
-                        ansi_term_style: *original_style,
-                        ..Style::default()
-                    },
-                    *s,
-                ),
-            }
-        })
+        .map(|(original_style, s)| (map_ansi_term_style(*original_style, config), *s))
         .collect()
 }
 
@@ -1128,5 +1146,178 @@ mod superimpose_style_sections {
                 vec![((*SYNTAX_STYLE, *SYNTAX_HIGHLIGHTED_STYLE), 'a')]
             );
         }
+    }
+}
+
+#[cfg(test)]
+mod line_background_tests {
+    use super::*;
+    use crate::delta::{DiffType, State};
+    use crate::tests::integration_test_utils::make_config_from_args;
+
+    // git puts a moved line's color on the +/- marker (and the whole line); map-styles
+    // remaps it. The background is recovered from the marker even when the line is blank --
+    // the case the blank-moved-line bug missed.
+    #[test]
+    fn test_line_background_from_git_uses_marker_color() {
+        let config = make_config_from_args(&[
+            "--true-color",
+            "always",
+            "--minus-style",
+            "black #d6a29f",
+            "--map-styles",
+            "bold magenta => white #545557",
+        ]);
+        let bg = |raw: &str| {
+            line_background_from_git(
+                &State::HunkMinus(DiffType::Unified, Some(raw.to_string())),
+                &config,
+            )
+            .and_then(|s| s.get_background_color())
+        };
+        let mapped = Some(ansi_term::Color::RGB(0x54, 0x55, 0x57));
+        // A non-blank and a fully-blank moved line both yield the mapped move color.
+        assert_eq!(bg("\x1b[1;35mclass X: pass\x1b[m\n"), mapped);
+        assert_eq!(
+            bg("\x1b[1;35m\x1b[m\n"),
+            mapped,
+            "blank moved line keeps the marker's color"
+        );
+        // A line whose git color delta does not preserve gets no override.
+        assert_eq!(
+            line_background_from_git(&State::HunkMinus(DiffType::Unified, None), &config),
+            None
+        );
+    }
+
+    // The right-fill is the line's background; it never reads the painted cells, so a cell
+    // styled like whitespace-error (or anything else) can neither drive nor spoof it.
+    #[test]
+    fn test_right_fill_is_the_background_not_a_cell() {
+        let config = make_config_from_args(&[
+            "--true-color",
+            "always",
+            "--minus-style",
+            "black #d6a29f",
+            "--plus-style",
+            "black #112233",
+        ]);
+        let background = config.plus_style;
+        let sections = vec![
+            (config.whitespace_error_style, "  "),
+            (config.null_style, "\n"),
+        ];
+        let (_, fill) = Painter::get_should_right_fill_background_color_and_fill_style(
+            &sections,
+            Some(false),
+            &State::HunkMinus(DiffType::Unified, None),
+            Some(background),
+            BgShouldFill::With(BgFillMethod::Spaces),
+            &config,
+        );
+        assert_eq!(
+            fill.get_background_color(),
+            background.get_background_color(),
+            "fill must follow the line background, not a painted cell or minus_style"
+        );
+        assert_ne!(
+            fill.get_background_color(),
+            config.minus_style.get_background_color(),
+            "fill must not fall back to minus_style when a background is given"
+        );
+    }
+
+    // The value-collision case: if the line's background is the *same style* as
+    // whitespace-error-style, the fill must still keep it. The earlier heuristics --
+    // "identity != whitespace_error_style" and "has an explicit background" -- would each
+    // have dropped it here, leaving a mismatch. Reading the background directly cannot.
+    #[test]
+    fn test_right_fill_kept_when_background_equals_whitespace_error_style() {
+        let config = make_config_from_args(&[
+            "--true-color",
+            "always",
+            "--whitespace-error-style",
+            "magenta reverse",
+            "--minus-style",
+            "black #d6a29f",
+        ]);
+        let background = config.whitespace_error_style;
+        let sections = vec![
+            (config.whitespace_error_style, "  "),
+            (config.null_style, "\n"),
+        ];
+        let (_, fill) = Painter::get_should_right_fill_background_color_and_fill_style(
+            &sections,
+            Some(false),
+            &State::HunkMinus(DiffType::Unified, None),
+            Some(background),
+            BgShouldFill::With(BgFillMethod::Spaces),
+            &config,
+        );
+        assert_eq!(
+            fill, background,
+            "fill must keep a background that collides with whitespace-error-style"
+        );
+    }
+
+    // git emits a line's color at byte 0, on the +/- marker; a color appearing only later is a
+    // within-line accent (a word-diff span, a whitespace-error highlight, a colored substring of
+    // a `raw`-style line), not the line's background. `line_background_from_git` reads the leading
+    // style alone, so it returns None for such a line.
+    #[test]
+    fn test_line_background_from_git_ignores_non_leading_color() {
+        let config = make_config_from_args(&["--true-color", "always"]);
+        // "foo" is uncolored; the green background begins mid-line.
+        let raw = "foo\x1b[42mbar\x1b[m\n";
+        for state in [
+            State::HunkMinus(DiffType::Unified, Some(raw.to_string())),
+            State::HunkZero(DiffType::Unified, Some(raw.to_string())),
+            State::HunkPlus(DiffType::Unified, Some(raw.to_string())),
+        ] {
+            assert_eq!(
+                line_background_from_git(&state, &config),
+                None,
+                "{:?}",
+                state
+            );
+        }
+    }
+
+    // With no leading git color the fill follows the nominal style; it must not adopt a
+    // within-line accent cell -- the removed last-real-section heuristic stretched that cell
+    // across the row.
+    #[test]
+    fn test_right_fill_ignores_non_leading_cell_color() {
+        let config =
+            make_config_from_args(&["--true-color", "always", "--minus-style", "black #d6a29f"]);
+        // Leading text uncolored, a green background only on the mid-line "bar".
+        let raw = "foo\x1b[42mbar\x1b[m\n";
+        let state = State::HunkMinus(DiffType::Unified, Some(raw.to_string()));
+        let sections = parse_style_sections(raw, &config);
+        let (_, fill) = Painter::get_should_right_fill_background_color_and_fill_style(
+            &sections,
+            Some(false),
+            &state,
+            line_background_from_git(&state, &config),
+            BgShouldFill::With(BgFillMethod::Spaces),
+            &config,
+        );
+        assert_eq!(
+            fill.get_background_color(),
+            config.minus_style.get_background_color(),
+            "fill must follow minus-style when git gives no line-level color"
+        );
+        let accent_bg = sections
+            .iter()
+            .find_map(|(style, _)| style.get_background_color());
+        assert!(
+            accent_bg.is_some(),
+            "test setup: the line must carry a non-leading background"
+        );
+        assert_ne!(
+            fill.get_background_color(),
+            accent_bg,
+            "fill must not adopt the within-line accent color"
+        );
     }
 }

@@ -17,6 +17,55 @@ mod tests {
             .expect_contains("\nadded: a.py\n");
     }
 
+    // End-to-end: a color-moved removed block (bold magenta) remapped by map-styles, in
+    // side-by-side mode, with a line long enough to wrap. The wrapped line, its wrap
+    // chrome, and the blank moved line must all be filled with the mapped color and never
+    // fall back to minus-style -- exercising the per-line git background threaded the whole
+    // way, including through the wrap reflow, to the right-fill.
+    #[test]
+    fn test_moved_line_fill_follows_git_color_side_by_side() {
+        let input = "diff --git a/x b/x\nindex 1111111..2222222 100644\n--- a/x\n+++ b/x\n@@ -1,3 +1,2 @@\n keep\n\x1b[1;35m-this is a fairly long removed line that should wrap across the narrow side-by-side panel\x1b[m\n\x1b[1;35m-\x1b[m\n";
+        let out = DeltaTest::with_args(&[
+            "--side-by-side",
+            "--width",
+            "80",
+            "--true-color",
+            "always",
+            "--minus-style",
+            "black #d6a29f",
+            "--map-styles",
+            "bold magenta => normal #abcdef",
+        ])
+        .with_input(input);
+        // The mapped color #abcdef fills the moved line -- its wrapped continuation and
+        // wrap symbol included.
+        assert!(
+            out.raw_output.contains("48;2;171;205;239"),
+            "moved/wrapped lines should be filled with the mapped color:\n{}",
+            out.raw_output
+        );
+        // The blank moved line gets it too, pinned to its own row: that row carries the
+        // mapped fill but no content text (the wrapped rows all contain letters; the
+        // blank one does not).
+        let blank_row_is_mapped = out.raw_output.lines().any(|line| {
+            line.contains("48;2;171;205;239")
+                && !strip_ansi_codes(line)
+                    .chars()
+                    .any(|c| c.is_ascii_alphabetic())
+        });
+        assert!(
+            blank_row_is_mapped,
+            "the blank moved line's row should be filled with the mapped color:\n{}",
+            out.raw_output
+        );
+        // Nothing falls back to minus-style #d6a29f -- the panel-fill / blank-moved bug.
+        assert!(
+            !out.raw_output.contains("48;2;214;162;159"),
+            "no line should fall back to minus-style fill:\n{}",
+            out.raw_output
+        );
+    }
+
     #[test]
     fn test_added_empty_file() {
         DeltaTest::with_args(&[])
