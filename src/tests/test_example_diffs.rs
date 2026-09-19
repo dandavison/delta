@@ -269,6 +269,9 @@ index 0123456..1234567 100644
 
     #[test]
     fn test_simple_dirty_submodule_diff() {
+        // The "+" side of this fixture is marked "-dirty" by git (its working
+        // tree has uncommitted changes), so the rendered commit must carry
+        // that marker rather than being indistinguishable from a clean commit.
         DeltaTest::with_args(&["--width", "30"])
             .with_input(SUBMODULE_DIRTY)
             .inspect()
@@ -277,7 +280,7 @@ index 0123456..1234567 100644
                 r#"
             some_submodule
             ──────────────────────────────
-            ca030fd1a022..803be42ca46a"#,
+            ca030fd1a022..803be42ca46a-dirty"#,
             );
     }
 
