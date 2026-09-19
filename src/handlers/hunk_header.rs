@@ -235,20 +235,20 @@ lazy_static! {
 fn parse_hunk_header(line: &str) -> Option<ParsedHunkHeader> {
     if let Some(caps) = HUNK_HEADER_REGEX.captures(line) {
         let file_coordinates = &caps[1];
-        let line_numbers_and_hunk_lengths: Vec<(usize, usize)> = HUNK_HEADER_FILE_COORDINATE_REGEX
+        let line_numbers_and_hunk_lengths = HUNK_HEADER_FILE_COORDINATE_REGEX
             .captures_iter(file_coordinates)
             .map(|caps| {
-                (
-                    caps[1].parse::<usize>().unwrap(),
-                    caps.get(2)
-                        .map(|m| m.as_str())
-                        // Per the specs linked above, if the hunk length is absent then it is 1.
-                        .unwrap_or("1")
-                        .parse::<usize>()
-                        .unwrap(),
-                )
+                let line_number = caps[1].parse::<usize>().ok()?;
+                let hunk_length = caps
+                    .get(2)
+                    .map(|m| m.as_str())
+                    // Per the specs linked above, if the hunk length is absent then it is 1.
+                    .unwrap_or("1")
+                    .parse::<usize>()
+                    .ok()?;
+                Some((line_number, hunk_length))
             })
-            .collect();
+            .collect::<Option<Vec<_>>>()?;
         if line_numbers_and_hunk_lengths.is_empty() {
             None
         } else {
@@ -465,6 +465,13 @@ pub mod tests {
     fn test_parse_hunk_header_with_no_hunk_lengths() {
         let result = parse_hunk_header("@@  @@\n");
         assert_eq!(result, None);
+    }
+
+    #[test]
+    fn test_parse_hunk_header_with_overflowing_coordinates() {
+        let overflow = format!("{}0", usize::MAX);
+        assert_eq!(parse_hunk_header(&format!("@@ -{overflow} +1 @@")), None);
+        assert_eq!(parse_hunk_header(&format!("@@ -1,{overflow} +1 @@")), None);
     }
 
     #[test]
