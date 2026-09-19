@@ -58,7 +58,7 @@ unicode-segmentation = "1.10.1"
 # 0.2.0 (and 0.1.13) treats \n as width 1. Lines processed by delta have, lose,
 # and re-gain \n in various stages, which complicates upgrading.
 unicode-width = ">=0.1.14, <0.2.0"
-xdg = "2.4.1"
+xdg = "3.0.0"
 
 [lints.rust]
 unexpected_cfgs = { level = "warn", check-cfg = ['cfg(tarpaulin_include)'] }
