@@ -860,6 +860,14 @@ pub struct Opt {
     /// Display diffs in side-by-side layout.
     pub side_by_side: bool,
 
+    #[arg(long = "side-by-side-fill-empty", value_name = "CHAR_AND_STYLE")]
+    /// Fill empty side. Can be "true", or a fill character, or a character plus a style.
+    ///
+    /// On "true" the unmatched side will be filled with "/" in the style of
+    /// --line-numbers-zero-style, if a single character is given this is used instead.
+    /// If the character is followed by a style, that style is used.
+    pub side_by_side_fill_empty: Option<String>,
+
     #[arg(long = "syntax-theme", value_name = "SYNTAX_THEME")]
     /// The syntax-highlighting theme to use.
     ///
