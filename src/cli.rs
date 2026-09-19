@@ -982,6 +982,8 @@ pub struct Opt {
     pub minus_file: Option<PathBuf>,
 
     /// Second file to be compared when delta is being used to diff two files.
+    ///
+    /// Note: Arguments after '--' are treated as filenames even if they start with '-'.
     pub plus_file: Option<PathBuf>,
 
     #[arg(skip)]
