@@ -79,6 +79,11 @@ Note that the package is often called `git-delta`, but the executable installed 
       <br>
       .deb files are on the <a href="https://github.com/dandavison/delta/releases">releases</a> page.
       <br>
+      To install the latest amd64 .deb from the command line:
+      <pre><code>DELTA_VERSION=$(curl -fsSL "https://api.github.com/repos/dandavison/delta/releases/latest" | awk -F\" '/"tag_name":/{print $4; exit}')
+curl -LO "https://github.com/dandavison/delta/releases/download/${DELTA_VERSION}/git-delta_${DELTA_VERSION}_amd64.deb"
+sudo apt install "./git-delta_${DELTA_VERSION}_amd64.deb"</code></pre>
+      <br>
       <sup>If you are using Ubuntu <= 19.10 or are mixing apt sources, please read <a href="https://github.com/dandavison/delta/issues/504">#504</a>.</sup>
     </td>
   </tr>
