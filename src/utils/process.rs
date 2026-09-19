@@ -3,6 +3,7 @@ use std::path::Path;
 use std::sync::atomic::AtomicUsize;
 use std::sync::{Arc, Condvar, Mutex, MutexGuard};
 
+use crate::utils;
 use lazy_static::lazy_static;
 use sysinfo::{Pid, PidExt, Process, ProcessExt, ProcessRefreshKind, SystemExt};
 
@@ -95,11 +96,14 @@ pub fn set_calling_process(args: &[String]) {
 pub fn calling_process() -> MutexGuard<'static, CallingProcess> {
     let (caller_mutex, determine_done) = &**CALLER;
 
-    determine_done
-        .wait_while(caller_mutex.lock().unwrap(), |caller| {
-            *caller == CallingProcess::Pending
-        })
-        .unwrap()
+    utils::timing::measure_completion(
+        determine_done
+            .wait_while(caller_mutex.lock().unwrap(), |caller| {
+                *caller == CallingProcess::Pending
+            })
+            .unwrap(),
+        utils::timing::Measurement::Process,
+    )
 }
 
 // The return value is duck-typed to work in place of a MutexGuard when testing.

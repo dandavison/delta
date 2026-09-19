@@ -8,6 +8,7 @@ pub mod regex_replacement;
 pub mod round_char_boundary;
 pub mod syntect;
 pub mod tabs;
+pub mod timing;
 pub mod workarounds;
 
 // Use the most (even overly) strict ordering. Atomics are not used in hot loops so
