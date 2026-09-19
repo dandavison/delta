@@ -162,7 +162,27 @@ pub fn show_config(config: &config::Config, writer: &mut dyn Write) -> std::io::
         tab_width = config.tab_cfg.width(),
         tokenization_regex = format_option_value(config.tokenization_regex.to_string()),
     )?;
+    // Environment variables that can interfere with delta's output but aren't
+    // delta options themselves — surfaced here since they're otherwise invisible
+    // (see https://github.com/dandavison/delta/issues/2151, where $LESSOPEN
+    // caused a phantom ANSI reset that took real effort to track down).
+    writeln!(
+        writer,
+        "    $LESSOPEN                     = {lessopen}
+    $LESS                         = {less}
+    $PAGER                        = {pager_env}",
+        lessopen = format_env_var("LESSOPEN"),
+        less = format_env_var("LESS"),
+        pager_env = format_env_var("PAGER"),
+    )?;
     Ok(())
+}
+
+fn format_env_var(name: &str) -> String {
+    match std::env::var(name) {
+        Ok(value) => format_option_value(value),
+        Err(_) => "unset".to_string(),
+    }
 }
 
 // Heuristics determining whether to quote string option values when printing values intended for
@@ -202,5 +222,19 @@ mod tests {
         let s = ansi::strip_ansi_codes(&s);
         assert!(s.contains("    commit-style                  = raw\n"));
         assert!(s.contains(r"    word-diff-regex               = '\w+'"));
+    }
+
+    #[test]
+    fn test_show_config_env_vars() {
+        let config = integration_test_utils::make_config_from_args(&[]);
+        let mut writer = Cursor::new(vec![0; 1024]);
+        show_config(&config, &mut writer).unwrap();
+        let mut s = String::new();
+        writer.rewind().unwrap();
+        writer.read_to_string(&mut s).unwrap();
+        let s = ansi::strip_ansi_codes(&s);
+        assert!(s.contains("$LESSOPEN"));
+        assert!(s.contains("$LESS "));
+        assert!(s.contains("$PAGER"));
     }
 }
