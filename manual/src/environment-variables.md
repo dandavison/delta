@@ -33,9 +33,14 @@ In addition to those `*PAGER` environment variables, the behavior of `less` is a
 
 ## Terminal width
 
-Delta asks the terminal on its stdout how wide it is. If `COLUMNS` is set to a positive number, delta uses that instead and does not ask the terminal. This is how a caller that gives delta no terminal, such as an editor or a TUI that renders delta's output into one of its own views, states the width to render for. Git behaves the same way, and sets `COLUMNS` for the pager it spawns.
+For normal usage you should not need to do anything: delta will ask the terminal for the current
+width.
 
-An explicit `--width` (or `delta.width` in git config) still wins over both.
+To override this you can set the `COLUMNS` environment variable to a positive number, or pass
+`--width` (or `delta.width` in git config). These cause delta not to ask the terminal and use the
+supplied width instead (`--width` wins over `COLUMNS`). This is useful if you are calling delta from
+an application that needs to render delta output in one of its own views (e.g. an editor or TUI).
+
 
 ## Delta-specific environment variables
 
