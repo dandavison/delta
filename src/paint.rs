@@ -26,6 +26,7 @@ pub type LineSections<'a, S> = Vec<(S, &'a str)>;
 pub struct Painter<'p> {
     pub minus_lines: Vec<(String, State)>,
     pub plus_lines: Vec<(String, State)>,
+    pub minus_no_newline: Option<String>,
     pub writer: &'p mut dyn Write,
     pub syntax: &'p SyntaxReference,
     pub highlighter: Option<HighlightLines<'p>>,
@@ -91,6 +92,7 @@ impl<'p> Painter<'p> {
         Self {
             minus_lines: Vec::new(),
             plus_lines: Vec::new(),
+            minus_no_newline: None,
             output_buffer: String::new(),
             syntax: default_syntax,
             highlighter: None,
@@ -163,6 +165,7 @@ impl<'p> Painter<'p> {
             &mut self.line_numbers_data,
             &mut self.highlighter,
             &mut self.output_buffer,
+            self.minus_no_newline.take().as_deref(),
             self.config,
         );
         self.minus_lines.clear();
@@ -608,6 +611,7 @@ pub fn paint_minus_and_plus_lines(
     line_numbers_data: &mut Option<LineNumbersData>,
     highlighter: &mut Option<HighlightLines>,
     output_buffer: &mut String,
+    minus_no_newline: Option<&str>,
     config: &config::Config,
 ) {
     let syntax_style_sections = MinusPlus::new(
@@ -650,7 +654,10 @@ pub fn paint_minus_and_plus_lines(
             line_numbers_data,
             output_buffer,
             config,
-        )
+        );
+        if let Some(marker) = minus_no_newline {
+            output_buffer.push_str(marker);
+        }
     } else {
         // Unified diff mode:
         if !lines[Minus].is_empty() {
@@ -665,6 +672,9 @@ pub fn paint_minus_and_plus_lines(
                 Some(config.minus_empty_line_marker_style),
                 BgShouldFill::default(),
             );
+        }
+        if let Some(marker) = minus_no_newline {
+            output_buffer.push_str(marker);
         }
         if !lines[Plus].is_empty() {
             Painter::paint_lines(

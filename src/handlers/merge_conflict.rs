@@ -161,6 +161,7 @@ impl StateMachine<'_> {
                 &mut self.painter.line_numbers_data,
                 &mut self.painter.highlighter,
                 &mut self.painter.output_buffer,
+                None,
                 self.config,
             );
             self.painter.emit()?;
