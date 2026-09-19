@@ -156,6 +156,7 @@ pub fn paint_minus_and_plus_lines_side_by_side(
         // Calculated for syntect::highlighting::style::Style and delta::Style
         wrap_minusplus_block(
             config,
+            lines,
             syntax_sections,
             diff_sections,
             &line_alignment,

@@ -28,6 +28,9 @@ pub struct WrapConfig {
     // This value is --wrap-max-lines + 1, and unlimited is 0, see
     // adapt_wrap_max_lines_argument()
     pub max_lines: usize,
+    // Maximum number of columns to scan backwards from the column-based split
+    // looking for a word-friendly break point. 0 disables the lookback.
+    pub word_lookback: usize,
     pub inline_hint_syntect_style: SyntectStyle,
 }
 
@@ -60,6 +63,7 @@ impl WrapConfig {
                 }
             },
             max_lines: adapt_wrap_max_lines_argument(opt.wrap_max_lines.clone()),
+            word_lookback: opt.wrap_word_lookback,
             inline_hint_syntect_style: SyntectStyle::from_delta_style(inline_hint_style),
         }
     }
@@ -106,6 +110,16 @@ fn ensure_display_width_1(what: &str, arg: String) -> String {
     }
 }
 
+fn is_word_grapheme(s: &str) -> bool {
+    s.chars()
+        .next()
+        .is_some_and(|c| c.is_alphanumeric() || c == '_')
+}
+
+fn is_whitespace_grapheme(s: &str) -> bool {
+    s.chars().next().is_some_and(|c| c.is_whitespace())
+}
+
 fn adapt_wrap_max_lines_argument(arg: String) -> usize {
     if arg == "∞" || arg == "unlimited" || arg.starts_with("inf") {
         0
@@ -120,6 +134,97 @@ fn adapt_wrap_max_lines_argument(arg: String) -> usize {
 enum Stop {
     StackEmpty,
     LineLimit,
+}
+
+/// How many wrapped rows to allow. If the panel is so narrow that only the wrap
+/// symbol itself would fit, wrapping is impossible, so force a single (truncated)
+/// row. Both `find_cuts` and `wrap_line`'s loop use this, so they must agree.
+fn effective_max_lines(line_width: usize, max_lines: usize) -> usize {
+    if line_width <= INLINE_SYMBOL_WIDTH_1 {
+        1
+    } else {
+        max_lines
+    }
+}
+
+/// Grapheme indices at which to cut `line` into wrapped rows.
+/// Assumes a style boundary never splits a grapheme cluster.
+fn find_cuts(config: &Config, line: &str, line_width: usize) -> Vec<usize> {
+    let wrap_symbol_width = config.wrap_config.left_symbol.width();
+    let word_lookback = config.wrap_config.word_lookback;
+    let max_lines = effective_max_lines(line_width, config.wrap_config.max_lines);
+
+    if line_width < wrap_symbol_width {
+        return Vec::new();
+    }
+    let word_lookback_start = (line_width - wrap_symbol_width).saturating_sub(word_lookback) + 1;
+
+    let mut graphemes = line.graphemes(true);
+    let mut best_break_iter = graphemes.clone();
+
+    let mut cuts: Vec<usize> = Vec::new();
+    let (mut current_row_width, mut current_row_start) = (0usize, 0usize);
+    let mut best_break = (0usize, 0usize); // (rank, absolute grapheme index)
+    let mut current_pos = 0usize;
+
+    loop {
+        // Deal with the remainder first: on overflow, cut at the best break.
+        // Re-read the next row from the cut.
+        if current_row_width > line_width {
+            let (_, cut) = best_break;
+            if max_lines > 0 && cuts.len() + 1 >= max_lines {
+                break;
+            }
+            // Best cut is the row start — a leading grapheme too wide to fit.
+            // Unbounded, so stop and leave it as the overflowing last row.
+            if cut == current_row_start && max_lines == 0 {
+                break;
+            }
+            cuts.push(cut);
+            graphemes = best_break_iter.clone();
+            current_pos = cut;
+            current_row_width = 0;
+            current_row_start = cut;
+            best_break = (0, cut);
+            continue;
+        }
+
+        // The iterator we rewind to if the cut lands here.
+        let mut break_iter = graphemes.clone();
+        let g = match graphemes.next() {
+            Some(g) => g,
+            None => break,
+        };
+        // Prefer a whitespace break over a non-word one over a word one.
+        let break_rank = if is_whitespace_grapheme(g) {
+            2
+        } else if !is_word_grapheme(g) {
+            1
+        } else {
+            0
+        };
+        current_row_width += g.width();
+        // Break after `g` if room remains for the wrap symbol, else before it.
+        let (pos, cut_width) = if current_row_width <= line_width - wrap_symbol_width {
+            break_iter.next();
+            (current_pos + 1, current_row_width)
+        } else {
+            (current_pos, current_row_width - g.width())
+        };
+        if cut_width <= line_width - wrap_symbol_width {
+            let rank = if word_lookback > 0 && cut_width >= word_lookback_start {
+                break_rank
+            } else {
+                0
+            };
+            if rank >= best_break.0 {
+                best_break = (rank, pos);
+                best_break_iter = break_iter;
+            }
+        }
+        current_pos += 1;
+    }
+    cuts
 }
 
 /// Wrap the given `line` if it is longer than `line_width`. Wrap to at most
@@ -139,6 +244,7 @@ pub fn wrap_line<'a, I, S>(
     line_width: usize,
     fill_style: &S,
     inline_hint_style: &Option<S>,
+    cuts: &[usize],
 ) -> Vec<LineSections<'a, S>>
 where
     I: IntoIterator<Item = (S, &'a str)> + std::fmt::Debug,
@@ -184,14 +290,14 @@ where
 
     let mut stack = line.into_iter().rev().collect::<Vec<_>>();
 
-    // If only the wrap symbol and no extra text fits, then wrapping is not possible.
-    let max_lines = if line_width <= INLINE_SYMBOL_WIDTH_1 {
-        1
-    } else {
-        wrap_config.max_lines
-    };
+    let max_lines = effective_max_lines(line_width, wrap_config.max_lines);
 
     let line_limit_reached = |result: &Vec<_>| max_lines > 0 && result.len() + 1 >= max_lines;
+
+    // `cuts` (absolute grapheme indices, shared by both streams) are peeked
+    // before consuming each chunk, so a chunk straddling a cut is split there.
+    let mut cuts_iter = cuts.iter().peekable();
+    let mut outer_pos: usize = 0;
 
     let stop = loop {
         if stack.is_empty() {
@@ -215,69 +321,28 @@ where
 
         let graphemes_width: usize = graphemes.iter().map(|(_, w)| w).sum();
         let new_len = curr_line.len + graphemes_width;
+        let outer_chunk_end = outer_pos + graphemes.len();
 
-        #[allow(clippy::comparison_chain)]
-        let must_split = if new_len < line_width {
+        let must_split = matches!(cuts_iter.peek(), Some(&&outer_cut) if outer_cut <= outer_chunk_end);
+
+        if !must_split {
             curr_line.push_and_set_len((style, text), new_len);
-            false
-        } else if new_len == line_width {
-            match stack.last() {
-                // Perfect fit, no need to make space for a `wrap_symbol`.
-                None => {
-                    curr_line.push_and_set_len((style, text), new_len);
-                    false
-                }
-                #[allow(clippy::identity_op)]
-                // A single '\n' left on the stack can be pushed onto the current line.
-                Some((next_style, nl)) if stack.len() == 1 && *nl == "\n" => {
-                    curr_line.push_and_set_len((style, text), new_len);
-                    // Do not count the '\n': + 0
-                    curr_line.push_and_set_len((*next_style, *nl), new_len + 0);
-                    stack.pop();
-                    false
-                }
-                _ => true,
-            }
+            outer_pos = outer_chunk_end;
         } else {
-            true
-        };
-
-        // Text must be split, one part (or just `wrap_symbol`) is added to the
-        // current line, the other is pushed onto the stack.
-        if must_split {
-            let mut width_left = graphemes_width
-                .saturating_sub(new_len - line_width)
-                .saturating_sub(wrap_config.left_symbol.width());
-
-            // The length does not matter anymore and `curr_line` will be reset
-            // at the end, so move the line segments out.
+            let outer_cut = *cuts_iter.next().unwrap();
+            let inner_cut = outer_cut - outer_pos;
+            let byte_split_pos: usize = graphemes[..inner_cut].iter().map(|(l, _)| *l).sum();
             let mut line_segments = curr_line.line_segments;
-
-            let next_line = if width_left == 0 {
-                text
-            } else {
-                let mut byte_split_pos = 0;
-                // After loop byte_split_pos may still equal to 0. If width_left
-                // is less than the width of first character, We can't display it.
-                for &(item_len, item_width) in graphemes.iter() {
-                    if width_left >= item_width {
-                        byte_split_pos += item_len;
-                        width_left -= item_width;
-                    } else {
-                        break;
-                    }
-                }
-
-                let this_line = &text[..byte_split_pos];
-                line_segments.push((style, this_line));
-                &text[byte_split_pos..]
-            };
-            stack.push((style, next_line));
-
+            if byte_split_pos > 0 {
+                line_segments.push((style, &text[..byte_split_pos]));
+            }
+            if byte_split_pos < text.len() {
+                stack.push((style, &text[byte_split_pos..]));
+            }
             line_segments.push((symbol_style, &wrap_config.left_symbol));
             result.push(line_segments);
-
             curr_line = CurrLine::reset();
+            outer_pos = outer_cut;
         }
     };
 
@@ -345,6 +410,7 @@ where
     result
 }
 
+#[allow(clippy::too_many_arguments)]
 fn wrap_if_too_long<'a, S>(
     config: &'a Config,
     wrapped: &mut Vec<LineSections<'a, S>>,
@@ -353,6 +419,7 @@ fn wrap_if_too_long<'a, S>(
     line_width: usize,
     fill_style: &S,
     inline_hint_style: &Option<S>,
+    cuts: &[usize],
 ) -> (usize, usize)
 where
     S: Copy + Default + std::fmt::Debug,
@@ -366,6 +433,7 @@ where
             line_width,
             fill_style,
             inline_hint_style,
+            cuts,
         ));
     } else {
         wrapped.push(input_vec.to_vec());
@@ -380,6 +448,7 @@ where
 #[allow(clippy::comparison_chain, clippy::type_complexity)]
 pub fn wrap_minusplus_block<'c: 'a, 'a>(
     config: &'c Config,
+    lines: MinusPlus<&Vec<(String, State)>>,
     syntax: MinusPlus<Vec<LineSections<'a, SyntectStyle>>>,
     diff: MinusPlus<Vec<LineSections<'a, Style>>>,
     alignment: &[(Option<usize>, Option<usize>)],
@@ -414,6 +483,7 @@ pub fn wrap_minusplus_block<'c: 'a, 'a>(
         syntax_iter: &mut ItSyn,
         diff_iter: &mut ItDiff,
         wrapinfo_iter: &mut ItWrap,
+        line: &str,
         line_width: usize,
         fill_style: &Style,
         errhint: &'a str,
@@ -427,6 +497,12 @@ pub fn wrap_minusplus_block<'c: 'a, 'a>(
             .next()
             .unwrap_or_else(|| panic!("bad wrap info {}", errhint));
 
+        let cuts = if must_wrap {
+            find_cuts(config, line, line_width)
+        } else {
+            Vec::new()
+        };
+
         let (start, extended_to) = wrap_if_too_long(
             config,
             wrapped_syntax,
@@ -437,6 +513,7 @@ pub fn wrap_minusplus_block<'c: 'a, 'a>(
             line_width,
             &config.null_syntect_style,
             &Some(config.wrap_config.inline_hint_syntect_style),
+            &cuts,
         );
 
         // TODO: Why is the background color set to white when
@@ -462,10 +539,11 @@ pub fn wrap_minusplus_block<'c: 'a, 'a>(
             line_width,
             fill_style,
             &inline_hint_style,
+            &cuts,
         );
 
-        // The underlying text is the same for the style and diff, so
-        // the length of the wrapping should be identical:
+        // Both wraps consume the same `cuts`, so they add the same number of
+        // rows by construction; this just guards that invariant.
         assert_eq!(
             (start, extended_to),
             (start2, extended_to2),
@@ -488,6 +566,7 @@ pub fn wrap_minusplus_block<'c: 'a, 'a>(
                 &mut syntax[$side],
                 &mut diff[$side],
                 &mut wrapinfo[$side],
+                lines[$side][*$have].0.as_str(),
                 line_width[$side],
                 &fill_style[$side],
                 $errhint,
@@ -608,12 +687,14 @@ pub fn wrap_zero_block<'c: 'a, 'a>(
     let should_wrap = line_is_too_long(line, line_width);
 
     if should_wrap {
+        let cuts = find_cuts(config, line, line_width);
         let syntax_style = wrap_line(
             config,
             syntax_style_sections.into_iter().flatten(),
             line_width,
             &SyntectStyle::default(),
             &Some(config.wrap_config.inline_hint_syntect_style),
+            &cuts,
         );
 
         // TODO: Why is the background color set to white when
@@ -638,6 +719,7 @@ pub fn wrap_zero_block<'c: 'a, 'a>(
                 ..config.null_style
             },
             &inline_hint_style,
+            &cuts,
         );
 
         states.resize_with(syntax_style.len(), || State::HunkZeroWrapped);
@@ -653,6 +735,7 @@ mod tests {
     use lazy_static::lazy_static;
     use syntect::highlighting::Style as SyntectStyle;
 
+    use super::find_cuts;
     use super::wrap_line;
     use super::WrapConfig;
     use crate::config::Config;
@@ -721,7 +804,10 @@ mod tests {
         <I as IntoIterator>::IntoIter: DoubleEndedIterator,
         S: Copy + Default + std::fmt::Debug,
     {
-        wrap_line(cfg, line, line_width, &S::default(), &None)
+        let line: Vec<(S, &'a str)> = line.into_iter().collect();
+        let line_text: String = line.iter().map(|(_, t)| *t).collect();
+        let cuts = find_cuts(cfg, &line_text, line_width);
+        wrap_line(cfg, line, line_width, &S::default(), &None, &cuts)
     }
 
     #[test]
@@ -836,6 +922,167 @@ mod tests {
     }
 
     #[test]
+    fn test_wrap_line_word_lookback() {
+        // At width 17 the column-based split lands inside "important_file_xy"
+        // (mid-word). With word_lookback=10 the split should back up to right
+        // after the "/" that follows "very".
+        let line = vec![(*S1, "src/very/important_file_xy")];
+
+        {
+            // word_lookback=0 (disabled): split exactly at column 16.
+            let cfg = mk_wrap_cfg(&TEST_WRAP_CFG);
+            let lines = wrap_test(&cfg, line.clone(), 17);
+            assert_eq!(lines[0], [(*S1, "src/very/importa"), (*SD, W)]);
+        }
+
+        {
+            let mut wc = TEST_WRAP_CFG.clone();
+            wc.word_lookback = 10;
+            let cfg = mk_wrap_cfg(&wc);
+            let lines = wrap_test(&cfg, line, 17);
+            // Lookback finds the "/" after "very" and splits there.
+            assert_eq!(lines[0], [(*S1, "src/very/"), (*SD, W)]);
+        }
+    }
+
+    #[test]
+    fn test_wrap_line_word_lookback_prefers_whitespace() {
+        // Window contains both a non-word grapheme ("/") closer to the split
+        // and a whitespace (" ") farther back. The space should win.
+        let line = vec![(*S1, "alpha beta/gammadelta")];
+        let mut wc = TEST_WRAP_CFG.clone();
+        wc.word_lookback = 10;
+        let cfg = mk_wrap_cfg(&wc);
+        let lines = wrap_test(&cfg, line, 16);
+        // Column-based split sits inside "gammadelta". The "/" at index 10 is
+        // closer, but the space at index 5 is preferred when within the window.
+        assert_eq!(lines[0], [(*S1, "alpha "), (*SD, W)]);
+    }
+
+    #[test]
+    fn test_wrap_line_word_lookback_no_break_in_window() {
+        // No non-word grapheme within lookback window — fall back to column split.
+        let line = vec![(*S1, "abcdefghijklmnopqrstuvwxyz")];
+        let mut wc = TEST_WRAP_CFG.clone();
+        wc.word_lookback = 5;
+        let cfg = mk_wrap_cfg(&wc);
+        let lines = wrap_test(&cfg, line, 11);
+        assert_eq!(lines[0], [(*S1, "abcdefghij"), (*SD, W)]);
+    }
+
+    #[test]
+    fn test_wrap_line_word_lookback_break_before_space() {
+        // The cut sits *before* the space after "cdef" (whose own column is just
+        // past the limit), filling row 1 — rather than backing up to the earlier
+        // space, which would waste the row and wrap worse than no lookback at all.
+        let line = vec![(*S1, "ab cdef ghij")];
+        let mut wc = TEST_WRAP_CFG.clone();
+        wc.word_lookback = 8;
+        let cfg = mk_wrap_cfg(&wc);
+        let lines = wrap_test(&cfg, line, 8);
+        assert_eq!(
+            lines,
+            vec![vec![(*S1, "ab cdef"), (*SD, W)], vec![(*S1, " ghij")]]
+        );
+    }
+
+    #[test]
+    fn test_wrap_line_word_lookback_break_before_nonword() {
+        // A non-word (rank 1) before-break: "/" overflows the row, so the cut
+        // lands before it and "/" leads the next row.
+        let line = vec![(*S1, "abcdefg/hij")];
+        let mut wc = TEST_WRAP_CFG.clone();
+        wc.word_lookback = 8;
+        let cfg = mk_wrap_cfg(&wc);
+        let lines = wrap_test(&cfg, line, 8);
+        assert_eq!(
+            lines,
+            vec![vec![(*S1, "abcdefg"), (*SD, W)], vec![(*S1, "/hij")]]
+        );
+    }
+
+    #[test]
+    fn test_wrap_line_segmentation_independent() {
+        // Cuts come from the line text, not the style-segment boundaries.
+        // So the syntax and diff streams wrap the same, however they split it.
+        fn row_texts(rows: &[LineSections<'_, Style>]) -> Vec<String> {
+            rows.iter()
+                .map(|row| row.iter().map(|&(_, t)| t).collect::<String>())
+                .collect()
+        }
+        let cfg = mk_wrap_cfg(&TEST_WRAP_CFG);
+        let width = 6;
+        // Segment boundaries (at 3 and 7) deliberately straddle the wrap cut at 5.
+        let whole = vec![(*S1, "abcdefghij")];
+        let split = vec![(*S1, "abc"), (*S2, "defg"), (*S1, "hij")];
+        assert_eq!(
+            row_texts(&wrap_test(&cfg, whole, width)),
+            row_texts(&wrap_test(&cfg, split, width)),
+            "wrapping must not depend on how the line is split into style segments",
+        );
+    }
+
+    #[test]
+    fn test_wrap_line_cluster_survives_segmentation() {
+        // A width-1 grapheme cluster of 7 code points: base 'e' + 6 combining marks.
+        const G: &str = "e\u{0301}\u{0300}\u{0302}\u{0303}\u{0308}\u{0304}";
+        assert_eq!(G.chars().count(), 7, "G should be a 7-code-point cluster");
+        let cfg = mk_wrap_cfg(&TEST_WRAP_CFG);
+        // "aGbcd" at width 3 cuts after the cluster, so "aG" (two columns) fills row
+        // 1 — proving G counts as one column and is never split — and it lands there
+        // identically however the surrounding segment boundaries fall.
+        let seg_a = vec![(*S1, "a"), (*S2, G), (*S1, "bcd")];
+        let seg_b = vec![(*S1, "a"), (*S2, G), (*S2, "b"), (*S1, "cd")];
+        assert_eq!(
+            wrap_test(&cfg, seg_a, 3),
+            vec![vec![(*S1, "a"), (*S2, G), (*SD, W)], vec![(*S1, "bcd")]]
+        );
+        assert_eq!(
+            wrap_test(&cfg, seg_b, 3),
+            vec![vec![(*S1, "a"), (*S2, G), (*SD, W)], vec![(*S2, "b"), (*S1, "cd")]]
+        );
+    }
+
+    #[test]
+    fn test_wrap_line_word_lookback_max_lines() {
+        // Word-lookback and --wrap-max-lines compose: this would wrap to 3
+        // word-broken rows, but max_lines = 2 truncates, leaving the remainder
+        // as the (overflowing) last row.
+        let line = vec![(*S1, "ab cdef ghij klmn")];
+        let mut wc = TEST_WRAP_CFG.clone();
+        wc.word_lookback = 8;
+        wc.max_lines = 2;
+        let cfg = mk_wrap_cfg(&wc);
+        let lines = wrap_test(&cfg, line, 8);
+        assert_eq!(
+            lines,
+            vec![
+                vec![(*S1, "ab cdef"), (*SD, W)],
+                vec![(*S1, " ghij klmn")],
+            ]
+        );
+    }
+
+    #[test]
+    fn test_wrap_line_word_lookback_wide_glyph_window() {
+        // The lookback window is measured in columns, not graphemes. At width 9 the
+        // symbol-leaving width is 8 and the floor is 8 - 4 = 4 columns; the "/" sits
+        // exactly at column 4, just outside the window, while the two double-width
+        // glyphs after it fill the window with word graphemes. So the split falls
+        // back to the column boundary, not the "/". (A grapheme-count window would
+        // have wrongly pulled the "/" in.)
+        let line = vec![(*S1, "abc/一二三四五")];
+        let mut wc = TEST_WRAP_CFG.clone();
+        wc.word_lookback = 4;
+        let cfg = mk_wrap_cfg(&wc);
+        let lines = wrap_test(&cfg, line, 9);
+        assert_eq!(
+            lines,
+            vec![vec![(*S1, "abc/一二"), (*SD, W)], vec![(*S1, "三四五")]]
+        );
+    }
+
+    #[test]
     fn test_wrap_line_newlines() {
         fn mk_input(len: usize) -> LineSections<'static, Style> {
             const IN: &str = "0123456789abcdefZ";
@@ -925,13 +1172,13 @@ mod tests {
                 ..TEST_WRAP_CFG.clone()
             });
 
-            let lines = wrap_line(&wcfg1, line.clone(), 4, &Style::default(), &None);
+            let lines = wrap_test(&wcfg1, line.clone(), 4);
             assert_eq!(lines.len(), 1);
             assert_eq!(lines.last().unwrap().last().unwrap().1, "ZZZZZ");
-            let lines = wrap_line(&wcfg2, line.clone(), 4, &Style::default(), &None);
+            let lines = wrap_test(&wcfg2, line.clone(), 4);
             assert_eq!(lines.len(), 2);
             assert_eq!(lines.last().unwrap().last().unwrap().1, "ZZZZZ");
-            let lines = wrap_line(&wcfg3, line.clone(), 4, &Style::default(), &None);
+            let lines = wrap_test(&wcfg3, line.clone(), 4);
             assert_eq!(lines.len(), 3);
             assert_eq!(lines.last().unwrap().last().unwrap().1, "ZZZZZ");
         }

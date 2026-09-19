@@ -920,6 +920,14 @@ pub struct Opt {
     /// --max-line-distance=1.0 (this is more similar to `git --word-diff`).
     pub tokenization_regex: String,
 
+    #[arg(long = "wrap-word-lookback", default_value = "0", value_name = "N")]
+    /// Prefer a word-friendly wrap point within the last N columns before the column boundary.
+    ///
+    /// Within that window delta prefers whitespace, otherwise the nearest non-word character.
+    /// 0 (default) wraps exactly at the column boundary.
+    /// Has no effect unless delta is wrapping long lines (e.g. in side-by-side mode).
+    pub wrap_word_lookback: usize,
+
     #[arg(long = "wrap-left-symbol", default_value = "↵", value_name = "STRING")]
     /// End-of-line wrapped content symbol (left-aligned).
     ///
