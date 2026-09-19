@@ -139,7 +139,7 @@ pub fn paint_minus_and_plus_lines_side_by_side(
     // Only set `should_wrap` to true if wrapping is wanted and lines which are
     // too long are found.
     // If so, remember the calculated line width and which of the lines are too
-    // long for later re-use.
+    // long for later reuse.
     let (should_wrap, line_width, long_lines) = {
         if config.wrap_config.max_lines == 1 {
             (false, LeftRight::default(), LeftRight::default())
