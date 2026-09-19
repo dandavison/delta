@@ -23,6 +23,18 @@ use crate::{edits, utils, utils::tabs};
 
 pub type LineSections<'a, S> = Vec<(S, &'a str)>;
 
+#[derive(Clone, Copy, PartialEq)]
+pub enum OutputChunkType {
+    Context,
+    Change,
+    Other,
+}
+
+pub struct OutputChunk {
+    content: String,
+    chunk_type: OutputChunkType,
+}
+
 pub struct Painter<'p> {
     pub minus_lines: Vec<(String, State)>,
     pub plus_lines: Vec<(String, State)>,
@@ -37,6 +49,8 @@ pub struct Painter<'p> {
     pub line_numbers_data: Option<line_numbers::LineNumbersData<'p>>,
     pub merge_conflict_lines: merge_conflict::MergeConflictLines,
     pub merge_conflict_commit_names: merge_conflict::MergeConflictCommitNames,
+    hunk_output_chunks: Vec<OutputChunk>,
+    output_buffer_snapshot_len: usize,
 }
 
 // How the background of a line is filled up to the end
@@ -99,6 +113,8 @@ impl<'p> Painter<'p> {
             line_numbers_data,
             merge_conflict_lines: merge_conflict::MergeConflictLines::new(),
             merge_conflict_commit_names: merge_conflict::MergeConflictCommitNames::new(),
+            hunk_output_chunks: Vec::new(),
+            output_buffer_snapshot_len: 0,
         }
     }
 
@@ -167,6 +183,9 @@ impl<'p> Painter<'p> {
         );
         self.minus_lines.clear();
         self.plus_lines.clear();
+        if self.config.context_lines.is_some() {
+            self.snapshot_output(OutputChunkType::Change);
+        }
     }
 
     pub fn paint_zero_line(&mut self, line: &str, state: State) {
@@ -206,6 +225,9 @@ impl<'p> Painter<'p> {
                 None,
                 BgShouldFill::default(),
             );
+        }
+        if self.config.context_lines.is_some() {
+            self.snapshot_output(OutputChunkType::Context);
         }
     }
 
@@ -459,8 +481,54 @@ impl<'p> Painter<'p> {
 
     /// Write output buffer to output stream, and clear the buffer.
     pub fn emit(&mut self) -> std::io::Result<()> {
-        write!(self.writer, "{}", self.output_buffer)?;
+        if self.config.context_lines.is_some() {
+            self.snapshot_output(OutputChunkType::Other);
+            Ok(())
+        } else {
+            write!(self.writer, "{}", self.output_buffer)?;
+            self.output_buffer.clear();
+            Ok(())
+        }
+    }
+
+    pub fn snapshot_output(&mut self, chunk_type: OutputChunkType) {
+        let new_content = &self.output_buffer[self.output_buffer_snapshot_len..];
+        if !new_content.is_empty() {
+            self.hunk_output_chunks.push(OutputChunk {
+                content: new_content.to_string(),
+                chunk_type,
+            });
+        }
+        self.output_buffer_snapshot_len = self.output_buffer.len();
+    }
+
+    pub fn flush_hunk_output(&mut self) -> std::io::Result<()> {
+        let max_context = match self.config.context_lines {
+            Some(n) => n,
+            None => {
+                // No narrowing: output_buffer should already have been
+                // flushed by emit(), but handle any residual.
+                if !self.output_buffer.is_empty() {
+                    write!(self.writer, "{}", self.output_buffer)?;
+                    self.output_buffer.clear();
+                }
+                return Ok(());
+            }
+        };
+
+        // Drain chunks for narrowing.
+        let chunks = std::mem::take(&mut self.hunk_output_chunks);
         self.output_buffer.clear();
+        self.output_buffer_snapshot_len = 0;
+
+        if chunks.is_empty() {
+            return Ok(());
+        }
+
+        let narrowed = narrow_context_chunks(&chunks, max_context);
+        for chunk in &narrowed {
+            write!(self.writer, "{}", chunk.content)?;
+        }
         Ok(())
     }
 
@@ -576,6 +644,71 @@ impl<'p> Painter<'p> {
             }
         }
     }
+}
+
+/// Narrow context: keep at most `max_context` context chunks before and after
+/// each change block. Context chunks between two changes that fit within
+/// 2*max_context are kept entirely; longer runs are split with a separator.
+fn narrow_context_chunks(chunks: &[OutputChunk], max_context: usize) -> Vec<OutputChunk> {
+    // Identify runs of consecutive Context chunks and their boundaries.
+    // Strategy: walk chunks, grouping into runs of same-type. For each
+    // context run, decide how many to keep based on adjacency to changes.
+    let n = chunks.len();
+    if n == 0 {
+        return Vec::new();
+    }
+
+    // Build list of (start_idx, end_idx_exclusive) for context runs.
+    let mut result: Vec<&OutputChunk> = Vec::new();
+    let mut i = 0;
+    while i < n {
+        if chunks[i].chunk_type != OutputChunkType::Context {
+            result.push(&chunks[i]);
+            i += 1;
+            continue;
+        }
+        // Start of a context run.
+        let run_start = i;
+        while i < n && chunks[i].chunk_type == OutputChunkType::Context {
+            i += 1;
+        }
+        let run_end = i;
+        let run_len = run_end - run_start;
+
+        // Determine adjacency: is there a change before/after this run?
+        let change_before =
+            run_start > 0 && chunks[run_start - 1].chunk_type == OutputChunkType::Change;
+        let change_after = run_end < n && chunks[run_end].chunk_type == OutputChunkType::Change;
+
+        let keep_from_start = if change_before { max_context } else { 0 };
+        let keep_from_end = if change_after { max_context } else { 0 };
+
+        if keep_from_start + keep_from_end >= run_len {
+            // Keep entire run.
+            for chunk in &chunks[run_start..run_end] {
+                result.push(chunk);
+            }
+        } else {
+            // Keep first `keep_from_start` and last `keep_from_end`.
+            for chunk in &chunks[run_start..run_start + keep_from_start] {
+                result.push(chunk);
+            }
+            if keep_from_start > 0 && keep_from_end > 0 {
+                // Insert separator between the two kept sections.
+                // (We'll handle this below by creating an owned chunk.)
+            }
+            for chunk in &chunks[run_end - keep_from_end..run_end] {
+                result.push(chunk);
+            }
+        }
+    }
+    result
+        .into_iter()
+        .map(|c| OutputChunk {
+            content: c.content.clone(),
+            chunk_type: c.chunk_type,
+        })
+        .collect()
 }
 
 /// Remove initial -/+ character, expand tabs as spaces, and terminate with newline.

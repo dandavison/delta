@@ -5,6 +5,7 @@ pub enum OptionValue {
     Boolean(bool),
     Float(f64),
     OptionString(Option<String>),
+    OptionInt(Option<usize>),
     String(String),
     Int(usize),
 }
@@ -77,6 +78,21 @@ impl From<OptionValue> for String {
         match value {
             OptionValue::String(value) => value,
             _ => delta_unreachable("Error converting OptionValue to String."),
+        }
+    }
+}
+
+impl From<Option<usize>> for OptionValue {
+    fn from(value: Option<usize>) -> Self {
+        OptionValue::OptionInt(value)
+    }
+}
+
+impl From<OptionValue> for Option<usize> {
+    fn from(value: OptionValue) -> Self {
+        match value {
+            OptionValue::OptionInt(value) => value,
+            _ => delta_unreachable("Error converting OptionValue to Option<usize>."),
         }
     }
 }

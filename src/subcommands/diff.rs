@@ -34,6 +34,13 @@ pub fn build_diff_cmd(
         diff_args[0] = format!("-{}", diff_args[0])
     }
 
+    // When context narrowing is active, we need full file context for correct
+    // syntax highlighting. Strip any user-supplied -U from diff_args and inject
+    // -U9999 instead.
+    if config.context_lines.is_some() {
+        diff_args.retain(|arg| !arg.starts_with("-U") && !arg.starts_with("-u"));
+    }
+
     let via_process_substitution =
         |f: &Path| f.starts_with("/proc/self/fd/") || f.starts_with("/dev/fd/");
 
@@ -45,14 +52,17 @@ pub fn build_diff_cmd(
                 || !(via_process_substitution(minus_file)
                     || via_process_substitution(plus_file)) =>
         {
-            (
-                SubCmdKind::GitDiff,
-                vec!["git", "diff", "--no-index", "--color"],
-            )
+            let mut cmd = vec!["git", "diff", "--no-index", "--color"];
+            if config.context_lines.is_some() {
+                cmd.push("-U9999");
+            }
+            (SubCmdKind::GitDiff, cmd)
         }
         _ => (
             SubCmdKind::Diff,
-            if diff_args_set_unified_context(&diff_args) {
+            if config.context_lines.is_some() {
+                vec!["diff", "-U9999"]
+            } else if diff_args_set_unified_context(&diff_args) {
                 vec!["diff"]
             } else {
                 vec!["diff", "-U3"]

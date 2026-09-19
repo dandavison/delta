@@ -139,6 +139,7 @@ pub fn set_options(
             commit_decoration_style,
             commit_regex,
             commit_style,
+            context_lines,
             default_language,
             diff_args,
             diff_stat_align_width,
