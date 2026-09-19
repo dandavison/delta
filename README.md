@@ -157,7 +157,7 @@ Here's what `git show` can look like with git configured to use delta:
     side-by-side = true
 ```
 
-By default, side-by-side view has line-numbers activated, and has syntax highlighting in both the left and right panels: [[config](#side-by-side-view-1)]
+By default, side-by-side view has line-numbers activated, and has syntax highlighting in both the left and right panels: [[config](https://dandavison.github.io/delta/delta-configs-used-in-screenshots.html#side-by-side-view)]
 
 <table><tr><td><img width=800px src="https://user-images.githubusercontent.com/52205/87230973-412eb900-c381-11ea-8aec-cc200290bd1b.png" alt="image" /></td></tr></table>
 
