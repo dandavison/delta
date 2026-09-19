@@ -376,7 +376,6 @@
     file-modified-label = [*]
     file-removed-label = [-]
     file-renamed-label = [->]
-    file-decoration-style = "#434C5E" ul
     file-decoration-style = "#84786A" ul
     # No hunk headers
     hunk-header-style = omit
