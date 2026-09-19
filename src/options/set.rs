@@ -261,7 +261,8 @@ fn set__light__dark__syntax_theme__options(
     option_names: &HashMap<String, String>,
 ) {
     let validate_light_and_dark = |opt: &cli::Opt| {
-        if opt.light && opt.dark {
+        // --show-themes documents --dark --light together, to show both theme kinds
+        if opt.light && opt.dark && !opt.show_themes {
             fatal("--light and --dark cannot be used together.");
         }
     };
