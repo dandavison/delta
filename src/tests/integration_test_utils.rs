@@ -1,6 +1,7 @@
 #![cfg(test)]
 
 use std::borrow::Cow;
+use std::env;
 use std::fs::File;
 use std::io::{BufReader, Write};
 use std::path::Path;
@@ -417,5 +418,73 @@ ignored!  2
                 (red)-1(normal)\n\
                 (green)+2(normal)",
             );
+    }
+
+    #[test]
+    fn test_env_var_guard() {
+        use super::EnvVarGuard;
+        use std::env;
+
+        const TEST_VAR: &str = "DELTA_TEST_ENV_VAR";
+
+        // Ensure the test var is not set initially
+        env::remove_var(TEST_VAR);
+        assert!(env::var(TEST_VAR).is_err());
+
+        {
+            // Create a guard that sets the variable
+            let _guard = EnvVarGuard::new(TEST_VAR, "test_value");
+            assert_eq!(env::var(TEST_VAR).unwrap(), "test_value");
+        } // Guard goes out of scope here
+
+        // Variable should be removed since it wasn't set originally
+        assert!(env::var(TEST_VAR).is_err());
+
+        // Test with existing variable
+        env::set_var(TEST_VAR, "original_value");
+        assert_eq!(env::var(TEST_VAR).unwrap(), "original_value");
+
+        {
+            let _guard = EnvVarGuard::new(TEST_VAR, "modified_value");
+            assert_eq!(env::var(TEST_VAR).unwrap(), "modified_value");
+        } // Guard goes out of scope here
+
+        // Variable should be restored to original value
+        assert_eq!(env::var(TEST_VAR).unwrap(), "original_value");
+
+        // Clean up
+        env::remove_var(TEST_VAR);
+    }
+}
+
+/// RAII guard for environment variables that ensures proper cleanup
+/// even if the test panics.
+pub struct EnvVarGuard {
+    key: &'static str,
+    original_value: Option<String>,
+}
+
+impl EnvVarGuard {
+    /// Create a new environment variable guard that sets the variable
+    /// and remembers its original value for restoration.
+    pub fn new(key: &'static str, value: &str) -> Self {
+        let original_value = env::var(key).ok();
+        env::set_var(key, value);
+        Self {
+            key,
+            original_value,
+        }
+    }
+}
+
+impl Drop for EnvVarGuard {
+    /// Restore the environment variable to its original state.
+    /// If it wasn't set originally, remove it. If it was set, restore the original value.
+    fn drop(&mut self) {
+        if let Some(val) = &self.original_value {
+            env::set_var(self.key, val);
+        } else {
+            env::remove_var(self.key);
+        }
     }
 }
