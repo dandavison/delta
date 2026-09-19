@@ -108,6 +108,12 @@ impl StateMachine<'_> {
                 return Ok(false);
             }
         };
+        let mut grep_line = grep_line;
+        truncate_ripgrep_json_line(
+            &mut grep_line,
+            self.config.max_line_length,
+            &self.config.truncation_symbol,
+        );
 
         if matches!(grep_line.line_type, LineType::Ignore) {
             return Ok(true);
@@ -368,6 +374,38 @@ impl StateMachine<'_> {
             BgShouldFill::default(),
         );
         Ok(())
+    }
+}
+
+fn truncate_ripgrep_json_line(
+    grep_line: &mut GrepLine,
+    max_line_length: usize,
+    truncation_symbol: &str,
+) {
+    if grep_line.submatches.is_none()
+        || max_line_length == 0
+        || ansi::measure_text_width(&grep_line.code) <= max_line_length
+    {
+        return;
+    }
+
+    let (code, newline) = grep_line
+        .code
+        .strip_suffix('\n')
+        .map_or((grep_line.code.as_ref(), ""), |code| (code, "\n"));
+    let tail = ansi::truncate_str(truncation_symbol, max_line_length, "");
+    let prefix = ansi::truncate_str_short(
+        code,
+        max_line_length.saturating_sub(ansi::measure_text_width(&tail)),
+    );
+    let prefix_len = prefix.len();
+
+    grep_line.code = format!("{prefix}{tail}{newline}").into();
+    if let Some(submatches) = &mut grep_line.submatches {
+        submatches.retain(|(start, _)| *start < prefix_len);
+        for (_, end) in submatches {
+            *end = (*end).min(prefix_len);
+        }
     }
 }
 
