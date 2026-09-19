@@ -63,6 +63,7 @@ Delta has many features and is very customizable; please see `delta -h` (short h
 - Style strings (foreground color, background color, font attributes) are supported for >20 stylable elements, using the same color/style language as git
 - Handles traditional unified diff output in addition to git output
 - Automatic detection of light/dark terminal background
+- Per-mode themes: activate different features for light vs dark mode with `dark-features` / `light-features` (see [custom themes](https://dandavison.github.io/delta/custom-themes.html))
 
 ## A syntax-highlighting pager for git, diff, and grep output
 

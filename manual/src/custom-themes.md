@@ -23,3 +23,30 @@ Then, add your chosen color theme to your features list, e.g.
 ```
 
 Note that this terminology differs from [bat](https://github.com/sharkdp/bat): bat does not apply background colors, and uses the term "theme" to refer to what delta calls `syntax-theme`. Delta does not have a setting named "theme": a theme is a "feature", so one uses `features` to select a theme.
+
+## Automatic light/dark themes
+
+Delta detects whether your terminal has a light or dark background (controlled by the
+`--detect-dark-light` option). Use the `dark-features` and `light-features` settings to
+activate different features depending on the detected mode. Each
+takes a space-separated feature list, just like `features`, and is applied only when delta is
+in the corresponding mode:
+
+```gitconfig
+[delta]
+    features       = side-by-side   # always applied
+    dark-features  = collared-trogon
+    light-features = woolly-mammoth
+```
+
+With auto-detection, delta now activates `collared-trogon` on a dark background and
+`woolly-mammoth` on a light one, while `side-by-side` is applied in both. This also works when
+the mode is set explicitly with `--dark` / `--light` (or `delta.dark` / `delta.light`).
+
+Because the values are ordinary feature lists, they can reference any feature — not only color
+themes. For example you can enable `side-by-side` only in dark mode, or use a different
+`syntax-theme` per mode. The per-mode lists take priority over a plain `features` list. Like
+`features`, they are part of the git-config feature list, so passing `--features` on the
+command line replaces them. To add a feature for a single invocation while keeping the
+configured features (including the per-mode lists), use the additive `DELTA_FEATURES`
+environment variable, e.g. `DELTA_FEATURES=+side-by-side`.
