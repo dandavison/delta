@@ -3,7 +3,7 @@
 ## Used by delta
 
 - [alacritty/vte](https://github.com/alacritty/vte)
-- [mitsuhiko/console](https://github.com/mitsuhiko/console)
+- [console-rs/console](https://github.com/console-rs/console)
 - [ogham/rust-ansi-term](https://github.com/ogham/rust-ansi-term)
 - [sharkdp/bat](https://github.com/sharkdp/bat)
 - [trishume/syntect](https://github.com/trishume/syntect)
