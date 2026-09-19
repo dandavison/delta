@@ -3,7 +3,7 @@
 </p>
 <p align="center">
   <a href="https://github.com/dandavison/delta/actions">
-    <img src="https://github.com/dandavison/delta/workflows/Continuous%20Integration/badge.svg" alt="CI">
+    <img src="https://github.com/dandavison/delta/workflows/CI/badge.svg" alt="CI">
   </a>
   <a href="https://coveralls.io/github/dandavison/delta?branch=main">
     <img src="https://coveralls.io/repos/github/dandavison/delta/badge.svg?branch=main" alt="Coverage Status">
