@@ -89,6 +89,9 @@ pub mod raw;
 pub mod side_by_side;
 
 #[cfg(test)]
+pub mod lesshst;
+
+#[cfg(test)]
 pub mod tests {
     use std::collections::HashSet;
     use std::fs::remove_file;
