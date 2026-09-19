@@ -827,9 +827,12 @@ pub fn parse_style_sections<'a>(
         .collect()
 }
 
+/// Paint a file/line prefix, optionally wrapping it in a hyperlink.
+/// The source byte column is used only for the hyperlink target, not displayed.
 #[allow(clippy::too_many_arguments)]
 pub fn paint_file_path_with_line_number(
     line_number: Option<usize>,
+    column_number: Option<usize>,
     file_path: &str,
     pad_line_number: bool,
     separator: &str,
@@ -883,6 +886,7 @@ pub fn paint_file_path_with_line_number(
         Some(absolute_path) => hyperlinks::format_osc8_file_hyperlink(
             absolute_path,
             line_number,
+            column_number,
             &file_with_line_number,
             config,
         )

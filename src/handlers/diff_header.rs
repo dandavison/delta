@@ -234,6 +234,7 @@ impl StateMachine<'_> {
                 (true, Some(absolute_path)) => features::hyperlinks::format_osc8_file_hyperlink(
                     absolute_path,
                     None,
+                    None,
                     file,
                     self.config,
                 ),
@@ -428,6 +429,7 @@ pub fn get_file_change_description_from_file_paths(
             match (config.hyperlinks, utils::path::absolute_path(file, config)) {
                 (true, Some(absolute_path)) => features::hyperlinks::format_osc8_file_hyperlink(
                     absolute_path,
+                    None,
                     None,
                     &formatted_file,
                     config,

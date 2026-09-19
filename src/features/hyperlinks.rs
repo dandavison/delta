@@ -84,9 +84,15 @@ pub fn format_commit_line_with_osc8_commit_hyperlink<'a>(
 }
 
 /// Create a file hyperlink, displaying `text`.
+///
+/// `column_number` is a one-based source byte position, not a display column.
+/// Missing line or column numbers expand to 1; explicit values, including a file
+/// heading's line 0, are preserved. The configured format determines which
+/// positions appear in the URL; the displayed `text` is unchanged.
 pub fn format_osc8_file_hyperlink<'a, P>(
     absolute_path: P,
     line_number: Option<usize>,
+    column_number: Option<usize>,
     text: &str,
     config: &Config,
 ) -> Cow<'a, str>
@@ -95,8 +101,11 @@ where
     P: std::fmt::Debug,
 {
     debug_assert!(absolute_path.as_ref().is_absolute());
+    // Expand `{column}` on the template before inserting paths and hostnames:
+    // literal text such as `{column}.rs` in a filename is not a placeholder.
     let mut url = config
         .hyperlinks_file_link_format
+        .replace("{column}", &column_number.unwrap_or(1).to_string())
         .replace("{path}", &absolute_path.as_ref().to_string_lossy());
     if let Some(host) = &config.hostname {
         url = url.replace("{host}", host)
@@ -136,19 +145,136 @@ pub mod tests {
         let config =
             make_config_from_args(&["--hyperlinks-file-link-format", "file://{path}:{line}"]);
 
-        let result =
-            format_osc8_file_hyperlink("/absolute/path/to/file.rs", Some(42), "file.rs", &config);
+        let result = format_osc8_file_hyperlink(
+            "/absolute/path/to/file.rs",
+            Some(42),
+            None,
+            "file.rs",
+            &config,
+        );
         assert_eq!(
             result,
             "\u{1b}]8;;file:///absolute/path/to/file.rs:42\u{1b}\\file.rs\u{1b}]8;;\u{1b}\\",
         );
 
         let result =
-            format_osc8_file_hyperlink("/absolute/path/to/file.rs", None, "file.rs", &config);
+            format_osc8_file_hyperlink("/absolute/path/to/file.rs", None, None, "file.rs", &config);
         assert_eq!(
             result,
             "\u{1b}]8;;file:///absolute/path/to/file.rs:1\u{1b}\\file.rs\u{1b}]8;;\u{1b}\\",
         );
+    }
+
+    #[rstest::rstest]
+    #[case(Some(42), Some(25), "42:25")]
+    #[case(Some(42), None, "42:1")]
+    #[case(None, None, "1:1")]
+    #[case(Some(0), None, "0:1")]
+    fn test_file_hyperlink_column_number(
+        #[case] line_number: Option<usize>,
+        #[case] column_number: Option<usize>,
+        #[case] location: &str,
+    ) {
+        let config = make_config_from_args(&[
+            "--hyperlinks-file-link-format",
+            "file://{path}:{line}:{column}",
+        ]);
+        assert_eq!(
+            format_osc8_file_hyperlink(
+                "/absolute/file.rs",
+                line_number,
+                column_number,
+                "file.rs",
+                &config,
+            ),
+            format!("\x1b]8;;file:///absolute/file.rs:{location}\x1b\\file.rs\x1b]8;;\x1b\\"),
+        );
+    }
+
+    #[test]
+    fn test_file_hyperlink_column_only_replaces_template_placeholders() {
+        let mut config = make_config_from_args(&[
+            "--hyperlinks-file-link-format",
+            "editor://{host}{path}?line={line}&column={column}&again={column}",
+        ]);
+        config.hostname = Some("host-{column}".to_string());
+        assert_eq!(
+            format_osc8_file_hyperlink(
+                "/absolute/{column}.rs",
+                Some(42),
+                Some(25),
+                "{column}.rs",
+                &config,
+            ),
+            "\x1b]8;;editor://host-{column}/absolute/{column}.rs?line=42&column=25&again=25\x1b\\{column}.rs\x1b]8;;\x1b\\",
+        );
+    }
+
+    #[test]
+    fn test_file_hyperlink_column_preserves_existing_formats() {
+        let mut config = make_config_from_args(&[]);
+        for suffix in ["", ":42"] {
+            if !suffix.is_empty() {
+                config.hyperlinks_file_link_format = "file://{path}:{line}".to_string();
+            }
+            assert_eq!(
+                format_osc8_file_hyperlink(
+                    "/absolute/{column}.rs",
+                    Some(42),
+                    Some(25),
+                    "file.rs",
+                    &config,
+                ),
+                format!(
+                    "\x1b]8;;file:///absolute/{{column}}.rs{suffix}\x1b\\file.rs\x1b]8;;\x1b\\"
+                ),
+            );
+        }
+    }
+
+    #[test]
+    fn test_diff_hyperlink_columns_default_to_one() {
+        let render = |link_format| {
+            DeltaTest::with_args(&[
+                "--hyperlinks",
+                "--hyperlinks-file-link-format",
+                link_format,
+                "--line-numbers",
+            ])
+            .with_input(&GIT_DIFF_OUTPUT.replace("__path__", "file.rs"))
+        };
+        let result = render("file://{path}:{line}:{column}");
+        let line_only = render("file://{path}:{line}");
+        let links = Regex::new("\x1b\\]8;;([^\x1b]+)\x1b\\\\").unwrap();
+        let urls: Vec<_> = links.captures_iter(&result.raw_output).collect();
+        let line_only_urls: Vec<_> = links.captures_iter(&line_only.raw_output).collect();
+        // The file header, hunk header, and both code-line numbers are linked.
+        assert_eq!(urls.len(), 4);
+        assert_eq!(urls.len(), line_only_urls.len());
+        for (url, line_only_url) in urls.iter().zip(line_only_urls) {
+            assert_eq!(&url[1], format!("{}:1", &line_only_url[1]));
+        }
+        assert_eq!(result.output, line_only.output);
+    }
+
+    #[test]
+    fn test_diff_stat_hyperlink_column_defaults_to_one() {
+        let config = make_config_from_args(&[
+            "--hyperlinks",
+            "--hyperlinks-file-link-format",
+            "file://{path}:{line}:{column}",
+        ]);
+        let result = crate::handlers::diff_stat::relativize_path_in_diff_stat_line(
+            " file.rs | 2 +-",
+            "subdir",
+            &config,
+        )
+        .unwrap();
+        let path = utils::path::fake_delta_cwd_for_tests().join("file.rs");
+        assert!(result.contains(&format!(
+            "\x1b]8;;file://{}:1:1\x1b\\../file.rs\x1b]8;;\x1b\\",
+            path.display()
+        )));
     }
 
     #[test]
