@@ -5,7 +5,10 @@ use unicode_segmentation::UnicodeSegmentation;
 
 use super::draw;
 use crate::config::Config;
-use crate::delta::{DiffType, Source, State, StateMachine};
+use crate::delta::{
+    has_nonempty_suffix, is_file_operation_line, is_mode_line, DiffType, Source, State,
+    StateMachine,
+};
 use crate::paint::Painter;
 use crate::{features, utils};
 
@@ -25,14 +28,17 @@ pub enum FileEvent {
 impl StateMachine<'_> {
     /// Check for the old mode|new mode lines and cache their info for later use.
     pub fn handle_diff_header_mode_line(&mut self) -> std::io::Result<bool> {
+        if !matches!(self.state, State::DiffHeader(_)) || !is_mode_line(&self.parse_line) {
+            return Ok(false);
+        }
         let mut handled_line = false;
-        if let Some(line_suf) = self.line.strip_prefix("old mode ") {
+        if let Some(line_suf) = self.parse_line.strip_prefix("old mode ") {
             self.state = State::DiffHeader(DiffType::Unified);
             if self.should_handle() && !self.config.color_only {
                 self.mode_info = line_suf.to_string();
                 handled_line = true;
             }
-        } else if let Some(line_suf) = self.line.strip_prefix("new mode ") {
+        } else if let Some(line_suf) = self.parse_line.strip_prefix("new mode ") {
             self.state = State::DiffHeader(DiffType::Unified);
             if self.should_handle() && !self.config.color_only && !self.mode_info.is_empty() {
                 self.mode_info = match (self.mode_info.as_str(), line_suf) {
@@ -72,10 +78,21 @@ impl StateMachine<'_> {
 
     #[inline]
     fn test_diff_header_minus_line(&self) -> bool {
-        (matches!(self.state, State::DiffHeader(_)) || self.source == Source::DiffUnified)
-            && ((self.line.starts_with("--- ") && self.minus_line_counter.three_dashes_expected())
-                || self.line.starts_with("rename from ")
-                || self.line.starts_with("copy from "))
+        let in_unified_diff = matches!(
+            self.state,
+            State::DiffHeader(_)
+                | State::HunkHeader(_, _, _, _)
+                | State::HunkMinus(_, _)
+                | State::HunkPlus(_, _)
+                | State::HunkZero(_, _)
+        );
+        (matches!(self.state, State::DiffHeader(_))
+            || (self.source == Source::DiffUnified
+                && (in_unified_diff || self.source_detected_on_current_line)))
+            && ((has_nonempty_suffix(&self.parse_line, "--- ")
+                && self.minus_line_counter.three_dashes_expected())
+                || has_nonempty_suffix(&self.parse_line, "rename from ")
+                || has_nonempty_suffix(&self.parse_line, "copy from "))
     }
 
     /// Check for and handle the "--- filename ..." line.
@@ -85,7 +102,7 @@ impl StateMachine<'_> {
         }
 
         let (mut path_or_mode, file_event) =
-            parse_diff_header_line(&self.line, self.source == Source::GitDiff);
+            parse_diff_header_line(&self.parse_line, self.source == Source::GitDiff);
 
         utils::path::relativize_path_maybe(&mut path_or_mode, self.config);
         self.minus_file = path_or_mode;
@@ -94,7 +111,7 @@ impl StateMachine<'_> {
         if self.source == Source::DiffUnified {
             self.state = State::DiffHeader(DiffType::Unified);
             self.painter
-                .set_syntax(get_filename_from_marker_line(&self.line));
+                .set_syntax(get_filename_from_marker_line(&self.parse_line));
         } else {
             self.painter
                 .set_syntax(get_filename_from_diff_header_line_file_path(
@@ -108,10 +125,10 @@ impl StateMachine<'_> {
 
     #[inline]
     fn test_diff_header_plus_line(&self) -> bool {
-        (matches!(self.state, State::DiffHeader(_)) || self.source == Source::DiffUnified)
-            && (self.line.starts_with("+++ ")
-                || self.line.starts_with("rename to ")
-                || self.line.starts_with("copy to "))
+        matches!(self.state, State::DiffHeader(_))
+            && (has_nonempty_suffix(&self.parse_line, "+++ ")
+                || has_nonempty_suffix(&self.parse_line, "rename to ")
+                || has_nonempty_suffix(&self.parse_line, "copy to "))
     }
 
     /// Check for and handle the "+++ filename ..." line.
@@ -121,7 +138,7 @@ impl StateMachine<'_> {
         }
         let mut handled_line = false;
         let (mut path_or_mode, file_event) =
-            parse_diff_header_line(&self.line, self.source == Source::GitDiff);
+            parse_diff_header_line(&self.parse_line, self.source == Source::GitDiff);
 
         utils::path::relativize_path_maybe(&mut path_or_mode, self.config);
         self.plus_file = path_or_mode;
@@ -149,8 +166,7 @@ impl StateMachine<'_> {
     #[inline]
     fn test_diff_header_file_operation_line(&self) -> bool {
         (matches!(self.state, State::DiffHeader(_)) || self.source == Source::DiffUnified)
-            && (self.line.starts_with("deleted file mode ")
-                || self.line.starts_with("new file mode "))
+            && is_file_operation_line(&self.parse_line)
     }
 
     /// Check for and handle the "deleted file ..."  line.
@@ -160,7 +176,7 @@ impl StateMachine<'_> {
         }
         let mut handled_line = false;
         let (_mode_info, file_event) =
-            parse_diff_header_line(&self.line, self.source == Source::GitDiff);
+            parse_diff_header_line(&self.parse_line, self.source == Source::GitDiff);
         let name = get_repeated_file_path_from_diff_line(&self.diff_line).unwrap_or_default();
         match file_event {
             FileEvent::Removed => {
@@ -211,7 +227,7 @@ impl StateMachine<'_> {
 
     #[inline]
     fn test_pending_line_with_diff_name(&self) -> bool {
-        matches!(self.state, State::DiffHeader(_)) || self.source == Source::DiffUnified
+        matches!(self.state, State::DiffHeader(_))
     }
 
     pub fn handle_pending_line_with_diff_name(&mut self) -> std::io::Result<()> {
@@ -354,7 +370,7 @@ pub fn get_repeated_file_path_from_diff_line(line: &str) -> Option<String> {
     if let Some(line) = line.strip_prefix("diff --git ") {
         let line: Vec<&str> = line.graphemes(true).collect();
         let midpoint = line.len() / 2;
-        if line[midpoint] == " " {
+        if line.get(midpoint).copied() == Some(" ") {
             let first_path = _parse_file_path(&line[..midpoint].join(""), true);
             let second_path = _parse_file_path(&line[midpoint + 1..].join(""), true);
             if first_path == second_path {
