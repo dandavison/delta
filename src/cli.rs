@@ -597,19 +597,24 @@ pub struct Opt {
     /// Map files matching a glob pattern to a syntax by name (analogous to `bat`'s `--map-syntax`).
     ///
     /// Each entry has the form `<glob-pattern>:<syntax-name>`, e.g. `*.ino:C++` or
-    /// `.gitconfig.local:Git Config`. The glob is matched case-insensitively against
-    /// both the full path and the file-name component. May be repeated; later
-    /// entries override earlier ones. In the `[delta]` git config section,
-    /// specify the key multiple times to define several mappings.
+    /// `*.gitconfig.local:Git Config`. The glob uses the same syntax as `bat --map-syntax`
+    /// (via the `globset` crate) and is matched case-insensitively against both the
+    /// full path and the file-name component.
+    ///
+    /// Patterns are matched with literal path separators. A pattern like `.vimrc`
+    /// matches a file exactly named `.vimrc` (anywhere in the tree, via the
+    /// file-name check) but not `foo.vimrc`; to match `*.vimrc`, use `*.vimrc`.
+    ///
+    /// May be repeated; later entries override earlier ones. In the `[delta]` git
+    /// config section, specify the key multiple times to define several mappings.
     ///
     /// Examples:
     ///
-    ///     delta --map-syntax '*.ino:C++' --map-syntax '.gitconfig.local:Git Config'
+    ///     delta --map-syntax '*.ino:C++' --map-syntax '*.gitconfig.local:Git Config'
     ///
     ///     [delta]
-    ///     map-syntax = .gitconfig.local:Git Config
-    ///     map-syntax = .zsh*:Bourne Again Shell (bash)
-    ///     map-syntax = vimrc:VimL
+    ///     map-syntax = *.gitconfig.local:Git Config
+    ///     map-syntax = *.zsh*:Bourne Again Shell (bash)
     pub map_syntax: Vec<String>,
 
     #[arg(long = "max-line-distance", default_value = "0.6", value_name = "DIST")]
