@@ -1,6 +1,7 @@
 use std::collections::{HashMap, HashSet};
 use std::ffi::OsString;
 use std::path::{Path, PathBuf};
+use std::sync::Arc;
 
 use bat::assets::HighlightingAssets;
 use clap::error::Error;
@@ -20,6 +21,7 @@ use crate::options;
 use crate::subcommands;
 use crate::utils;
 use crate::utils::bat::output::PagingMode;
+use crate::utils::syntax_mapping::SyntaxMapping;
 
 const TERM_FALLBACK_WIDTH: usize = 79;
 
@@ -590,6 +592,25 @@ pub struct Opt {
     ///
     /// An example is --map-styles='bold purple => red "#eeeeee", bold cyan => syntax "#eeeeee"'
     pub map_styles: Option<String>,
+
+    #[arg(long = "map-syntax", value_name = "GLOB:SYNTAX")]
+    /// Map files matching a glob pattern to a syntax by name (analogous to `bat`'s `--map-syntax`).
+    ///
+    /// Each entry has the form `<glob-pattern>:<syntax-name>`, e.g. `*.ino:C++` or
+    /// `.gitconfig.local:Git Config`. The glob is matched case-insensitively against
+    /// both the full path and the file-name component. May be repeated; later
+    /// entries override earlier ones. In the `[delta]` git config section,
+    /// specify the key multiple times to define several mappings.
+    ///
+    /// Examples:
+    ///
+    ///     delta --map-syntax '*.ino:C++' --map-syntax '.gitconfig.local:Git Config'
+    ///
+    ///     [delta]
+    ///     map-syntax = .gitconfig.local:Git Config
+    ///     map-syntax = .zsh*:Bourne Again Shell (bash)
+    ///     map-syntax = vimrc:VimL
+    pub map_syntax: Vec<String>,
 
     #[arg(long = "max-line-distance", default_value = "0.6", value_name = "DIST")]
     /// Maximum line pair distance parameter in within-line diff algorithm.
@@ -1185,6 +1206,7 @@ pub struct ComputedValues {
     pub paging_mode: PagingMode,
     pub syntax_set: SyntaxSet,
     pub syntax_theme: Option<SyntaxTheme>,
+    pub syntax_mapping: Arc<SyntaxMapping>,
     pub true_color: bool,
 }
 

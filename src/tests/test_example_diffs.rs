@@ -9,6 +9,7 @@ mod tests {
     use crate::tests::integration_test_utils;
     use crate::tests::integration_test_utils::DeltaTest;
     use insta::assert_snapshot;
+    use rstest::rstest;
 
     #[test]
     fn test_added_file() {
@@ -167,6 +168,47 @@ index 0123456..1234567 100644
 (normal 22)+(231)}(normal)
 ";
         assert_eq!(expected, ansi);
+    }
+
+    #[rstest]
+    #[case::cli_extension_overrides(
+        &["--color-only", "--map-syntax", "*.foo:Bash"],
+        "a.foo",
+    )]
+    #[case::cli_full_filename_match(
+        &["--color-only", "--map-syntax", ".gitconfig.local:Git Config"],
+        ".gitconfig.local",
+    )]
+    fn test_map_syntax_applies_mapping(#[case] args: &[&str], #[case] filename: &str) {
+        let config = integration_test_utils::make_config_from_args(args);
+        let input = ADDED_FILE_INPUT.replace("a.py", filename);
+        let output = integration_test_utils::run_delta(&input, &config);
+        ansi_test_utils::assert_has_color_other_than_plus_color(&output, &config);
+    }
+
+    #[test]
+    fn test_map_syntax_via_git_config() {
+        // Multi-valued `[delta] map-syntax` entries should be honored.
+        let git_config_contents = b"
+[delta]
+    map-syntax = .gitconfig.local:Git Config
+    map-syntax = *.foo:Bash
+";
+        let config = integration_test_utils::make_config_from_args_and_git_config(
+            &["--color-only"],
+            Some(git_config_contents),
+            Some("delta__test_map_syntax_via_git_config.gitconfig"),
+        );
+        let input = ADDED_FILE_INPUT.replace("a.py", ".gitconfig.local");
+        let output = integration_test_utils::run_delta(&input, &config);
+        ansi_test_utils::assert_has_color_other_than_plus_color(&output, &config);
+        std::fs::remove_file("delta__test_map_syntax_via_git_config.gitconfig").ok();
+    }
+
+    #[test]
+    #[should_panic(expected = "Invalid syntax mapping")]
+    fn test_map_syntax_invalid_format_panics() {
+        integration_test_utils::make_config_from_args(&["--map-syntax", "no-colon-here"]);
     }
 
     #[test]

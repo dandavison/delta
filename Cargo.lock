@@ -724,6 +724,7 @@ dependencies = [
  "ctrlc",
  "dirs",
  "git2",
+ "globset",
  "grep-cli",
  "insta",
  "itertools 0.10.5",
