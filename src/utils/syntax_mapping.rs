@@ -4,6 +4,12 @@
 //! (matched against the full path and the file name) to a syntect syntax name
 //! such as `"Bash"` or `"Git Config"`.
 //!
+//! Glob patterns follow [`globset`](https://docs.rs/globset) semantics with
+//! literal path separators and case-insensitive matching. A pattern like
+//! `.vimrc` matches a file named exactly `.vimrc` (anywhere in the tree, via
+//! the file-name check) but not `foo.vimrc`; use `*.vimrc` to match files
+//! with a `vimrc` extension.
+//!
 //! Later inserts take precedence over earlier ones.
 
 use std::path::Path;
@@ -53,6 +59,10 @@ impl SyntaxMapping {
     }
 
     /// Parse and insert a `<glob>:<syntax-name>` entry.
+    ///
+    /// The `glob` follows [`globset`](https://docs.rs/globset) syntax with
+    /// literal path separators; typical patterns look like `*.ino`,
+    /// or `.gitconfig.local`.
     ///
     /// Returns [`SyntaxMappingError::InvalidFormat`] if `entry` does not
     /// contain exactly one `:` separator (matching `bat`'s behavior), or

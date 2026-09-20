@@ -176,7 +176,7 @@ index 0123456..1234567 100644
         "a.foo",
     )]
     #[case::cli_full_filename_match(
-        &["--color-only", "--map-syntax", ".gitconfig.local:Git Config"],
+        &["--color-only", "--map-syntax", "*.gitconfig.local:Git Config"],
         ".gitconfig.local",
     )]
     fn test_map_syntax_applies_mapping(#[case] args: &[&str], #[case] filename: &str) {
@@ -191,7 +191,7 @@ index 0123456..1234567 100644
         // Multi-valued `[delta] map-syntax` entries should be honored.
         let git_config_contents = b"
 [delta]
-    map-syntax = .gitconfig.local:Git Config
+    map-syntax = *.gitconfig.local:Git Config
     map-syntax = *.foo:Bash
 ";
         let config = integration_test_utils::make_config_from_args_and_git_config(
