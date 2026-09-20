@@ -2,6 +2,7 @@ use std::collections::{HashMap, HashSet, VecDeque};
 use std::convert::TryInto;
 use std::result::Result;
 use std::str::FromStr;
+use std::sync::Arc;
 
 use bat::assets::HighlightingAssets;
 use console::Term;
@@ -16,6 +17,7 @@ use crate::git_config::GitConfig;
 use crate::options::option_value::{OptionValue, ProvenancedOptionValue};
 use crate::options::theme;
 use crate::utils::bat::output::PagingMode;
+use crate::utils::syntax_mapping::SyntaxMapping;
 
 macro_rules! set_options {
     ([$( $field_ident:ident ),* ],
@@ -173,6 +175,7 @@ pub fn set_options(
             keep_plus_minus_markers,
             line_buffer_size,
             map_styles,
+            map_syntax,
             max_line_distance,
             max_line_length,
             max_syntax_length,
@@ -238,6 +241,7 @@ pub fn set_options(
     set_widths_and_isatty(opt);
     set_true_color(opt);
     theme::set__color_mode__syntax_theme__syntax_set(opt, assets);
+    set__syntax_mapping(opt);
     opt.computed.inspect_raw_lines =
         cli::InspectRawLines::from_str(&opt.inspect_raw_lines).unwrap();
     opt.computed.paging_mode = parse_paging_mode(&opt.paging_mode);
@@ -902,4 +906,24 @@ pub mod tests {
         assert_eq!(width_for(Some("80")), Some(80));
         assert_eq!(width_for(Some(" 80 ")), Some(80));
     }
+}
+
+/// Build the syntax mapping from `opt.map_syntax`.
+///
+/// Entries are inserted in reverse so that, in lookup order, the last
+/// `--map-syntax` CLI argument (or the last `[delta] map-syntax = ...` line
+/// in gitconfig) wins. This matches the precedence convention used by
+/// `bat --map-syntax`.
+#[allow(non_snake_case)]
+pub fn set__syntax_mapping(opt: &mut cli::Opt) {
+    let mut mapping = SyntaxMapping::new();
+    for entry in opt.map_syntax.iter().rev() {
+        if let Err(e) = mapping.insert(entry) {
+            fatal(format!(
+                "Invalid syntax mapping: '{entry}'. The format of the --map-syntax option is \
+                 '<glob-pattern>:<syntax-name>'. For example: '*.cpp:C++'. ({e})"
+            ));
+        }
+    }
+    opt.computed.syntax_mapping = Arc::new(mapping);
 }

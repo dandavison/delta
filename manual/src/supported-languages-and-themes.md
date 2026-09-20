@@ -11,3 +11,26 @@ Delta automatically recognizes custom themes and languages added to bat. You wil
 
 The languages and color themes that ship with delta are those that ship with bat. So, to propose a new language or color theme for inclusion in delta, it would need to be a helpful addition to bat, in which case please open a PR against bat.
 
+## Mapping filename patterns to syntaxes
+
+Delta accepts user-defined glob → syntax-name mappings via the `--map-syntax` option. The format is `<glob-pattern>:<syntax-name>`, where `<syntax-name>` is one of the language names listed by `delta --list-languages`. The option has the same semantics as [`bat --map-syntax`](https://github.com/sharkdp/bat).
+
+The glob uses [`globset`](https://docs.rs/globset) syntax with literal path separators and is matched case-insensitively against both the full path and the file-name component. Note that a pattern starting with `.` (e.g. `.vimrc`) matches a file exactly named `.vimrc` anywhere in the tree via the file-name check, but does not match `foo.vimrc`. To match files by extension prefix with `*`. On the command line the option may be repeated; later entries override earlier ones. The same option may also be set via the `[delta]` section of a git config file by repeating the `map-syntax` key.
+
+Example:
+
+```ini
+[delta]
+    map-syntax = *.gitconfig.local:Git Config
+    map-syntax = *.zsh*:Bourne Again Shell (bash)
+    map-syntax = *.vimrc.local:VimL
+```
+
+The same mappings on the command line:
+
+```sh
+delta --map-syntax '*.gitconfig.local:Git Config' \
+      --map-syntax '*.zsh*:Bourne Again Shell (bash)' \
+      --map-syntax '*.vimrc.local:VimL' \
+```
+
