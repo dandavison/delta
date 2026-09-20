@@ -70,7 +70,7 @@ pub enum StyleSectionSpecifier<'l> {
 
 impl<'p> Painter<'p> {
     pub fn new(writer: &'p mut dyn Write, config: &'p config::Config) -> Self {
-        let default_syntax = Self::get_syntax(&config.syntax_set, None, &config.default_language);
+        let default_syntax = Self::get_syntax(&config.syntax_set, None, config);
         let panel_width_fix = ansifill::UseFullPanelWidth::new(config);
 
         let line_numbers_data = if config.line_numbers {
@@ -103,29 +103,33 @@ impl<'p> Painter<'p> {
     }
 
     pub fn set_syntax(&mut self, filename: Option<&str>) {
-        self.syntax = Painter::get_syntax(
-            &self.config.syntax_set,
-            filename,
-            &self.config.default_language,
-        );
+        self.syntax = Painter::get_syntax(&self.config.syntax_set, filename, self.config);
     }
 
     fn get_syntax<'a>(
         syntax_set: &'a SyntaxSet,
         filename: Option<&str>,
-        fallback: &str,
+        config: &Config,
     ) -> &'a SyntaxReference {
         if let Some(filename) = filename {
+            // 1. Try user-defined `--map-syntax` glob mappings first; they
+            //    take precedence over the default extension-based detection.
+            if let Some(name) = config.syntax_mapping.get_syntax_for(filename) {
+                if let Some(syntax) = syntax_set.find_syntax_by_name(name) {
+                    return syntax;
+                }
+            }
+
             let path = std::path::Path::new(filename);
             let file_name = path.file_name().and_then(|n| n.to_str()).unwrap_or("");
             let extension = path.extension().and_then(|x| x.to_str()).unwrap_or("");
 
-            // Like syntect's `find_syntax_for_file`, without inspecting the file content, plus:
-            // If the file has NO extension then look up the whole filename as a
-            // syntax definition (if it is longer than 4 bytes).
-            // This means file formats like Makefile/Dockerfile/Rakefile etc. will get highlighted,
-            // but 1-4 short filenames will not -- even if they, as a whole, match an extension:
-            // 'rs' will not get highlighted, while 'x.rs' will.
+            // 2. Like syntect's `find_syntax_for_file`, without inspecting the file content, plus:
+            //    If the file has NO extension then look up the whole filename as a
+            //    syntax definition (if it is longer than 4 bytes).
+            //    This means file formats like Makefile/Dockerfile/Rakefile etc. will get highlighted,
+            //    but 1-4 short filenames will not -- even if they, as a whole, match an extension:
+            //    'rs' will not get highlighted, while 'x.rs' will.
             if !extension.is_empty() || file_name.len() > 4 {
                 if let Some(syntax) = syntax_set
                     .find_syntax_by_extension(file_name)
@@ -136,7 +140,8 @@ impl<'p> Painter<'p> {
             }
         }
 
-        // Nothing found, try the user provided fallback, or the internal fallback.
+        // 3. Nothing found, try the user provided fallback, or the internal fallback.
+        let fallback = &config.default_language;
         if let Some(syntax) = syntax_set.find_syntax_for_file(fallback).unwrap_or(None) {
             syntax
         } else {

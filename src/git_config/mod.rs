@@ -156,6 +156,29 @@ impl GitConfig {
             f(name, entry.value());
         }
     }
+
+    /// Collect every value registered for the given key.
+    ///
+    /// git allows multi-valued options via repeated `key = value` lines;
+    /// `git2::Config::get_string` only returns the first. This method returns
+    /// all values in the order they appear in the config (which, for
+    /// repeated keys, is the order they were last written).
+    ///
+    /// `GIT_CONFIG_PARAMETERS` overrides are ignored because that env var
+    /// only carries a single value per key.
+    pub fn get_multi_string(&self, key: &str) -> Vec<String> {
+        let mut values = Vec::new();
+        let Ok(mut entries) = self.config.multivar(key, None) else {
+            return values;
+        };
+        while let Some(entry) = entries.next() {
+            let Ok(entry) = entry else { continue };
+            if let Some(value) = entry.value() {
+                values.push(value.to_owned());
+            }
+        }
+        values
+    }
 }
 
 fn parse_config_from_env_var(env: &DeltaEnv) -> HashMap<String, String> {
@@ -267,10 +290,25 @@ impl GitConfigGet for f64 {
     }
 }
 
+impl GitConfigGet for Vec<String> {
+    fn git_config_get(key: &str, git_config: &GitConfig) -> Option<Self> {
+        let values = git_config.get_multi_string(key);
+        if values.is_empty() {
+            None
+        } else {
+            Some(values)
+        }
+    }
+}
+
 #[cfg(test)]
 mod tests {
 
     use super::parse_config_from_env_var_value;
+    use crate::env::DeltaEnv;
+    use crate::git_config::GitConfig;
+    use crate::tests::integration_test_utils;
+    use rstest::rstest;
 
     #[test]
     fn test_parse_config_from_env_var_value() {
@@ -324,5 +362,53 @@ mod tests {
                 r##"red "#067a00""##
             );
         }
+    }
+
+    fn make_git_config_for_test(contents: &str, path: &str) -> GitConfig {
+        integration_test_utils::make_git_config(
+            &DeltaEnv::default(),
+            contents.as_bytes(),
+            path,
+            false,
+        )
+    }
+
+    #[rstest]
+    #[case::multi_value(
+        "delta__test_get_multi_string_multi_value.gitconfig",
+        "\
+[delta]
+    map-syntax = .gitconfig.local:Git Config
+    map-syntax = *.foo:Bash
+    map-syntax = vimrc:VimL
+",
+        &[
+            ".gitconfig.local:Git Config".to_owned(),
+            "*.foo:Bash".to_owned(),
+            "vimrc:VimL".to_owned(),
+        ],
+    )]
+    #[case::missing_key(
+        "delta__test_get_multi_string_missing_key.gitconfig",
+        "[some-other-section]\n    foo = bar\n",
+        &[],
+    )]
+    #[case::feature_section_isolated(
+        "delta__test_get_multi_string_feature_section_isolated.gitconfig",
+        "\
+[delta]
+    syntax-theme = Dracula
+    map-syntax = .gitconfig.local:Git Config
+
+[delta \"my-feature\"]
+    map-syntax = feature:Plain Text
+",
+        &[".gitconfig.local:Git Config".to_owned()],
+    )]
+    fn test_get_multi_string(#[case] path: &str, #[case] contents: &str, #[case] expected: &[String]) {
+        let gitconfig = make_git_config_for_test(contents, path);
+        let values = gitconfig.get_multi_string("delta.map-syntax");
+        assert_eq!(values, expected);
+        std::fs::remove_file(path).unwrap();
     }
 }
