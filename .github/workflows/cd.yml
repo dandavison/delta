@@ -14,6 +14,8 @@ jobs:
         job:
           - os: macos-latest
             target: aarch64-apple-darwin
+          - os: macos-15-intel
+            target: x86_64-apple-darwin
             use-cross: false
           - os: windows-latest
             target: x86_64-pc-windows-msvc
@@ -48,7 +50,7 @@ jobs:
           tool: cross
       - name: Cargo build
         env:
-          MACOSX_DEPLOYMENT_TARGET: 10.7
+          MACOSX_DEPLOYMENT_TARGET: 10.12
         shell: bash
         run: |
           if [[ "${{ matrix.job.use-cross }}" == "true" ]]; then
