@@ -191,12 +191,17 @@ impl From<cli::Opt> for Config {
 
         let wrap_config = WrapConfig::from_opt(&opt, styles["inline-hint-style"]);
 
+        // When minus/plus line counts match (typical 1:1 replacement hunks), allow
+        // word-diff highlighting even if the changed span sits near EOL and the
+        // relative edit distance would otherwise exceed max_line_distance
+        // (https://github.com/dandavison/delta/issues/2231). Override with
+        // DELTA_EXPERIMENTAL_MAX_LINE_DISTANCE_FOR_NAIVELY_PAIRED_LINES.
         let max_line_distance_for_naively_paired_lines = opt
             .env
             .experimental_max_line_distance_for_naively_paired_lines
             .as_ref()
-            .map(|s| s.parse::<f64>().unwrap_or(0.0))
-            .unwrap_or(0.0);
+            .map(|s| s.parse::<f64>().unwrap_or(1.0))
+            .unwrap_or(1.0);
 
         let commit_regex = Regex::new(&opt.commit_regex).unwrap_or_else(|_| {
             fatal(format!(
