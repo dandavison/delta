@@ -234,10 +234,12 @@ where
                 let n_d = distance_contribution(minus_section);
                 d_denom += 2 * n_d;
                 let is_space = minus_section.trim().is_empty();
+                // Coalesce spaces into the surrounding edit even when the
+                // change reaches the end of the line (previously skipped when
+                // both token cursors were at EOL, which suppressed highlighting
+                // for tip-of-line edits; see #2231).
                 let coalesce_space_with_previous = is_space
-                    && ((minus_op_prev == deletion
-                        && plus_op_prev == insertion
-                        && (x_offset < alignment.x.len() - 1 || y_offset < alignment.y.len() - 1))
+                    && ((minus_op_prev == deletion && plus_op_prev == insertion)
                         || (minus_op_prev == noop_deletion && plus_op_prev == noop_insertion));
                 annotated_minus_line.push((
                     if coalesce_space_with_previous {
@@ -892,6 +894,50 @@ mod tests {
                 ]],
             ),
             1.0,
+        );
+    }
+
+    #[test]
+    fn test_word_diff_near_eol_seatbelt() {
+        // Tip-of-line edits exceed max_line_distance=0.6; naive pairing (1.0)
+        // must still annotate them (#2231).
+        fn infer_near_eol<'a>(minus: Vec<&'a str>, plus: Vec<&'a str>) -> Edits<'a> {
+            let (minus_lines, noop_deletions): (Vec<&str>, Vec<EditOperation>) =
+                minus.into_iter().map(|s| (s, MinusNoop)).unzip();
+            let (plus_lines, noop_insertions): (Vec<&str>, Vec<EditOperation>) =
+                plus.into_iter().map(|s| (s, PlusNoop)).unzip();
+            let actual = infer_edits(
+                minus_lines,
+                plus_lines,
+                noop_deletions,
+                Deletion,
+                noop_insertions,
+                Insertion,
+                &DEFAULT_TOKENIZATION_REGEXP,
+                0.6,
+                1.0,
+            );
+            (actual.0, actual.1)
+        }
+
+        let (minus, plus) = infer_near_eol(vec!["the seatbelt?"], vec!["the seat belt?"]);
+        assert!(
+            minus[0].iter().any(|(op, _)| *op == Deletion),
+            "expected deletion annotation near EOL, got {:?}"
+        );
+        assert!(
+            plus[0].iter().any(|(op, _)| *op == Insertion),
+            "expected insertion annotation near EOL, got {plus:?}"
+        );
+
+        let (minus, plus) = infer_near_eol(vec!["seatbelt?"], vec!["seat belt?"]);
+        assert!(
+            minus[0].iter().any(|(op, _)| *op == Deletion),
+            "expected deletion annotation near EOL, got {:?}"
+        );
+        assert!(
+            plus[0].iter().any(|(op, _)| *op == Insertion),
+            "expected insertion annotation near EOL, got {plus:?}"
         );
     }
 
