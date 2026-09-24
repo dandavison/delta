@@ -78,6 +78,24 @@ impl StateMachine<'_> {
         if let State::HunkHeader(_, parsed_hunk_header, line, raw_line) = &self.state.clone() {
             self.emit_hunk_header_line(parsed_hunk_header, line, raw_line)?;
         }
+        // A format-patch signature looks exactly like a deleted "- " line. Only
+        // recognize it after both sides of the hunk have been consumed.
+        if self.hunk_lines_remaining == Some((0, 0)) && self.line == "-- " {
+            self.painter.paint_buffered_minus_and_plus_lines();
+            self.state = State::Unknown;
+            self.hunk_lines_remaining = None;
+            return self.emit_line_unchanged();
+        }
+        self.hunk_lines_remaining = self.hunk_lines_remaining.and_then(|(minus, plus)| {
+            match self.line.as_bytes().first() {
+                Some(b'-') => Some((minus.checked_sub(1)?, plus)),
+                Some(b'+') => Some((minus, plus.checked_sub(1)?)),
+                Some(b' ') => Some((minus.checked_sub(1)?, plus.checked_sub(1)?)),
+                // The no-newline marker consumes no lines and may be localized.
+                Some(b'\\') => Some((minus, plus)),
+                _ => None,
+            }
+        });
         self.state = match new_line_state(&self.line, &self.raw_line, &self.state, self.config) {
             Some(HunkMinus(diff_type, raw_line)) => {
                 if let HunkPlus(_, _) = self.state {
@@ -275,6 +293,101 @@ fn new_line_state(
 #[cfg(test)]
 mod tests {
     use crate::tests::integration_test_utils::DeltaTest;
+
+    #[test]
+    fn test_format_patch_signature() {
+        let input = "From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001\n\
+From: Example <example@example.com>\n\
+Date: Thu, 24 Sep 2026 00:00:00 +0000\n\
+Subject: [PATCH] Remove hyphens\n\n\
+---\n\
+ file.txt | 2 --\n\
+ 1 file changed, 2 deletions(-)\n\n\
+diff --git a/file.txt b/file.txt\n\
+index 1234567..e69de29 100644\n\
+--- a/file.txt\n\
++++ b/file.txt\n\
+@@ -1,2 +0,0 @@\n\
+--\n\
+-- \n\
+-- \n\
+Custom signature\n\n";
+        DeltaTest::with_args(&[
+            "--color-only",
+            "--minus-style",
+            "red",
+            "--minus-emph-style",
+            "red",
+            "--whitespace-error-style",
+            "red",
+        ])
+        .explain_ansi()
+        .with_input(input)
+        .expect_contains("(red)--(normal)")
+        .expect_contains("(red)-- (normal)")
+        .expect_raw_contains("\n-- \nCustom signature\n\n");
+    }
+
+    #[test]
+    fn test_format_patch_signature_hunk_boundaries() {
+        let header = "diff --git a/f b/f\n--- a/f\n+++ b/f\n";
+        let signature = "-- \n-custom\n+signature\n with context prefix\n\n";
+        for hunk in [
+            "@@ -1 +0,0 @@\n--\n",
+            "@@ -0,0 +1 @@\n+new\n",
+            "@@ -1 +1 @@\n-old\n+new\n",
+            "@@ -1,2 +1 @@\n-old\n context\n",
+            "@@ -1 +1 @@\n-old\n\\ No newline at end of file\n+new\n\\ No newline at end of file\n",
+            "@@ -1 +0,0 @@\n-old\n\\ Keine neue Zeile am Dateiende.\n",
+            "@@ -0,0 +0,0 @@\n",
+            "@@ -1 +1 @@\n-old\n+new\n@@ -5 +4,0 @@\n-- \n",
+        ] {
+            for args in [
+                vec!["--color-only"],
+                vec!["--line-numbers"],
+                vec!["--side-by-side"],
+            ] {
+                DeltaTest::with_args(&args)
+                    .with_input(&format!("{header}{hunk}{signature}"))
+                    .expect_raw_contains(&format!("\n{signature}"));
+            }
+        }
+
+        // Both plain unified diffs and later files/patches must reset the counts.
+        let diff = "--- a/f\n+++ b/f\n@@ -1 +0,0 @@\n-- \n";
+        DeltaTest::with_args(&["--color-only"])
+            .with_input(&format!("{diff}{signature}"))
+            .expect_raw_contains(&format!("\n{signature}"));
+        let patch =
+            format!("{header}@@ -1 +0,0 @@\n-old\n{header}@@ -1 +1 @@\n-- \n+new\n{signature}");
+        let output = DeltaTest::with_args(&["--color-only"]).with_input(&patch.repeat(2));
+        assert_eq!(output.raw_output.matches(signature).count(), 2);
+    }
+
+    #[test]
+    fn test_format_patch_signature_requires_complete_hunk() {
+        for hunk in [
+            "@@ -1,2 +0,0 @@\n-old\n",           // Missing old line.
+            "@@ -1 +1 @@\n-old\n",               // Missing new line.
+            "@@ -1 +0,0 @@\n-old\n-extra\n",     // Overrun.
+            "@@ -1 +0,0 @@\n-old\nunexpected\n", // Lost boundary.
+        ] {
+            DeltaTest::with_args(&[
+                "--color-only",
+                "--minus-style",
+                "red",
+                "--minus-emph-style",
+                "red",
+                "--whitespace-error-style",
+                "red",
+            ])
+            .explain_ansi()
+            .with_input(&format!(
+                "diff --git a/f b/f\n--- a/f\n+++ b/f\n{hunk}-- \n"
+            ))
+            .expect_contains("(red)-- (normal)");
+        }
+    }
 
     mod word_diff {
         use super::*;
