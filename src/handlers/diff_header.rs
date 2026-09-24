@@ -419,13 +419,16 @@ pub fn get_file_change_description_from_file_paths(
             plus_file
         )
     } else {
-        let format_file = |file| {
+        let format_file_with_hyperlink = |file, hyperlink: bool| {
             let formatted_file = if let Some(regex_replacement) = &config.file_regex_replacement {
                 regex_replacement.execute(file)
             } else {
                 Cow::from(file)
             };
-            match (config.hyperlinks, utils::path::absolute_path(file, config)) {
+            match (
+                hyperlink && config.hyperlinks,
+                utils::path::absolute_path(file, config),
+            ) {
                 (true, Some(absolute_path)) => features::hyperlinks::format_osc8_file_hyperlink(
                     absolute_path,
                     None,
@@ -435,6 +438,7 @@ pub fn get_file_change_description_from_file_paths(
                 _ => formatted_file,
             }
         };
+        let format_file = |file| format_file_with_hyperlink(file, true);
         match (minus_file, plus_file, minus_file_event, plus_file_event) {
             (minus_file, plus_file, _, _) if minus_file == plus_file => format!(
                 "{}{}",
@@ -459,7 +463,7 @@ pub fn get_file_change_description_from_file_paths(
                     FileEvent::Copy => &config.file_copied_label,
                     _ => &config.file_modified_label,
                 }),
-                format_file(minus_file),
+                format_file_with_hyperlink(minus_file, *file_event != FileEvent::Rename),
                 config.right_arrow,
                 format_file(plus_file)
             ),
@@ -936,5 +940,20 @@ index 0000000..323fae0
         (81)print(231)((186)"Hello"(231))(normal)
         (normal 52)-- World?(normal)
         "###);
+    }
+
+    #[test]
+    fn test_renamed_file_hyperlinks_only_new_path() {
+        let config = make_config_from_args(&["--hyperlinks"]);
+        let description = get_file_change_description_from_file_paths(
+            "old.rs",
+            "new.rs",
+            false,
+            &FileEvent::Rename,
+            &FileEvent::Rename,
+            &config,
+        );
+        assert!(description.starts_with("renamed: old.rs "));
+        assert_eq!(description.matches("]8;;").count(), 2);
     }
 }
