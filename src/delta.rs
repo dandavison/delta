@@ -112,6 +112,7 @@ pub struct StateMachine<'a> {
     pub handled_diff_header_header_line_file_pair: Option<(String, String)>,
     pub blame_key_colors: HashMap<String, String>,
     pub minus_line_counter: AmbiguousDiffMinusCounter,
+    pub hunk_lines_remaining: Option<(usize, usize)>,
 }
 
 pub fn delta<I>(lines: ByteLines<I>, writer: &mut dyn Write, config: &Config) -> std::io::Result<()>
@@ -140,6 +141,7 @@ impl<'a> StateMachine<'a> {
             config,
             blame_key_colors: HashMap::new(),
             minus_line_counter: AmbiguousDiffMinusCounter::not_needed(),
+            hunk_lines_remaining: None,
         }
     }
 
