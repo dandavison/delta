@@ -15,3 +15,5 @@ rg --json -C 2 handle | delta
 </td></tr></table>
 
 With `hyperlinks` enabled, the line numbers in the grep output will be clickable links. See [hyperlinks](./hyperlinks.md).
+
+If you add `{column}` to your `hyperlinks-file-link-format`, the line numbers from `rg --json` will be clickable links at the **first** match on a line instead of only on the line itself. For a URL handler that accepts `file://path:line:column`, use `hyperlinks-file-link-format = "file://{path}:{line}:{column}"`. Columns are one-based byte positions, unaffected by Delta's tab expansion. Ripgrep's `--column` option is not needed. Context lines and records without a match column use column `1`. See [linking to a match column](./hyperlinks.md#linking-to-a-match-column) for configuration details.

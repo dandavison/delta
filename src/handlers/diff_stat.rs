@@ -61,6 +61,7 @@ pub fn relativize_path_in_diff_stat_line(
         (true, Some(absolute_path)) => features::hyperlinks::format_osc8_file_hyperlink(
             absolute_path,
             None,
+            None,
             relative_path,
             config,
         ),
