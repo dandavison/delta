@@ -175,6 +175,7 @@ pub fn set_options(
             map_styles,
             max_line_distance,
             max_line_length,
+            max_line_tokens,
             max_syntax_length,
             // Hack: minus-style must come before minus-*emph-style because the latter default
             // dynamically to the value of the former.
@@ -730,6 +731,7 @@ pub mod tests {
     line-numbers-zero-style = black black
     max-line-distance = 77
     max-line-length = 77
+    max-line-tokens = 77
     minus-emph-style = black black
     minus-empty-line-marker-style = black black
     minus-non-emph-style = black black

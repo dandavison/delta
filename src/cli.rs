@@ -617,6 +617,17 @@ pub struct Opt {
     /// overwritten to fit at least all visible characters, see `--wrap-max-lines`.
     pub max_line_length: usize,
 
+    #[arg(long = "max-line-tokens", default_value = "2048", value_name = "N")]
+    /// Give up on within-line diffing for lines longer than this many tokens.
+    ///
+    /// The within-line diff algorithm allocates a table whose size is the product of the two
+    /// line lengths in tokens, so its memory use grows with the square of the line length. On
+    /// minified input that means a single line can ask for far more memory than the machine
+    /// has. Such lines are still displayed in full, but are not highlighted within the line.
+    ///
+    /// To always attempt the within-line diff, set to zero.
+    pub max_line_tokens: usize,
+
     #[arg(
         long = "merge-conflict-begin-symbol",
         default_value = "▼",

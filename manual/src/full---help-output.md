@@ -552,6 +552,21 @@ Options:
 
           [default: 3000]
 
+      --max-line-tokens <N>
+          Give up on within-line diffing for lines longer than this many
+          tokens.
+
+          The within-line diff algorithm allocates a table whose size is the
+          product of the two line lengths in tokens, so its memory use grows
+          with the square of the line length. On minified input that means a
+          single line can ask for far more memory than the machine has. Such
+          lines are still displayed in full, but are not highlighted within
+          the line.
+
+          To always attempt the within-line diff, set to zero.
+
+          [default: 2048]
+
       --merge-conflict-begin-symbol <STRING>
           String marking the beginning of a merge conflict region.
 
