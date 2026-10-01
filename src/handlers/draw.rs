@@ -86,7 +86,7 @@ pub fn write_boxed(
     text: &str,
     raw_text: &str,
     addendum: &str,
-    _line_width: &Width, // ignored
+    line_width: &Width,
     text_style: Style,
     decoration_style: ansi_term::Style,
 ) -> std::io::Result<()> {
@@ -100,6 +100,7 @@ pub fn write_boxed(
         text,
         raw_text,
         addendum,
+        line_width,
         text_style,
         decoration_style,
     )?;
@@ -123,6 +124,7 @@ fn write_boxed_with_underline(
         text,
         raw_text,
         addendum,
+        line_width,
         text_style,
         decoration_style,
     )?;
@@ -225,10 +227,9 @@ fn _write_under_or_over_lined(
     decoration_style: ansi_term::Style,
 ) -> std::io::Result<()> {
     let text = text_to_write(text, raw_text, addendum, text_style);
-    let text_width = ansi::measure_text_width(&text);
     let line_width = match *line_width {
-        Width::Fixed(n) => max(n, text_width),
-        Width::Variable => text_width,
+        Width::Fixed(n) => n,
+        Width::Variable => ansi::measure_text_width(&text),
     };
     let write_line = |writer: &mut dyn Write| -> std::io::Result<()> {
         write_horizontal_line(writer, line_width, text_style, decoration_style)?;
@@ -271,6 +272,7 @@ fn write_boxed_with_horizontal_whisker(
     text: &str,
     raw_text: &str,
     addendum: &str,
+    line_width: &Width,
     text_style: Style,
     decoration_style: ansi_term::Style,
 ) -> std::io::Result<usize> {
@@ -284,6 +286,7 @@ fn write_boxed_with_horizontal_whisker(
         text,
         raw_text,
         addendum,
+        line_width,
         text_style,
         decoration_style,
     )?;
@@ -291,13 +294,15 @@ fn write_boxed_with_horizontal_whisker(
     Ok(box_width)
 }
 
-/// Write the text surrounded by a box, leaving out the bottom right corner. Return the width of
-/// the box without its right edge.
+/// Write the text surrounded by a box, leaving out the bottom right corner. If the box would be
+/// wider than a fixed `line_width`, wrap the text inside the box. Return the width of the box
+/// without its right edge.
 fn write_boxed_partial(
     writer: &mut dyn Write,
     text: &str,
     raw_text: &str,
     addendum: &str,
+    line_width: &Width,
     text_style: Style,
     decoration_style: ansi_term::Style,
 ) -> std::io::Result<usize> {
@@ -315,7 +320,23 @@ fn write_boxed_partial(
         )
     };
     let text = text_to_write(text, raw_text, addendum, text_style);
-    let box_width = ansi::measure_text_width(&text);
+    let text_width = ansi::measure_text_width(&text);
+    let (lines, box_width) = match *line_width {
+        // The right edge of the box takes up one column.
+        Width::Fixed(n) if text_width >= n => {
+            // Keep a space between the text and the right edge on every line. This matches the
+            // space that callers add to the end of the text.
+            let wrap_width = max(n.saturating_sub(2), 1);
+            let mut lines = ansi::wrap_str(&text, wrap_width);
+            // The space that callers add to the end of the text can end up on a line of its own.
+            let is_blank = |line: &String| ansi::strip_ansi_codes(line).trim().is_empty();
+            while lines.len() > 1 && lines.last().is_some_and(is_blank) {
+                lines.pop();
+            }
+            (lines, wrap_width + 1)
+        }
+        _ => (vec![text], text_width),
+    };
     let horizontal_edge = horizontal.repeat(box_width);
     writeln!(
         writer,
@@ -323,12 +344,16 @@ fn write_boxed_partial(
         decoration_style.paint(&horizontal_edge),
         decoration_style.paint(down_left),
     )?;
-    write!(
-        writer,
-        "{}{}\n{}",
-        text,
-        decoration_style.paint(vertical),
-        decoration_style.paint(&horizontal_edge),
-    )?;
+    for line in &lines {
+        let padding = box_width.saturating_sub(ansi::measure_text_width(line));
+        writeln!(
+            writer,
+            "{}{}{}",
+            line,
+            " ".repeat(padding),
+            decoration_style.paint(vertical),
+        )?;
+    }
+    write!(writer, "{}", decoration_style.paint(&horizontal_edge))?;
     Ok(box_width)
 }
