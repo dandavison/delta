@@ -682,6 +682,23 @@ pub fn parse_grep_line(line: &str) -> Option<GrepLine<'_>> {
             {
                 None
             }
+            // `-l`/`--files-with-matches` (and `-L`/`--files-without-match`)
+            // print one bare file name per line, so there is no
+            // path/separator/code structure in the output at all. The
+            // heuristic regexes below have nothing to anchor on and misparse a
+            // name that contains a separator run as a `path-line-code` line --
+            // e.g. `2025-10-15.html` is read as `2025` `-10-` `15.html`, and is
+            // then rendered back with the separator substituted, giving
+            // `2025:10: 15.html`.
+            process::CallingProcess::GitGrep(command_line)
+                if command_line.short_options.contains("-l")
+                    || command_line.short_options.contains("-L")
+                    || command_line.long_options.contains("--files-with-matches")
+                    || command_line.long_options.contains("--files-without-match")
+                    || command_line.long_options.contains("--name-only") =>
+            {
+                None
+            }
             process::CallingProcess::GitGrep(_) | process::CallingProcess::OtherGrep => [
                 &*GREP_LINE_REGEX_ASSUMING_FILE_EXTENSION_AND_LINE_NUMBER,
                 &*GREP_LINE_REGEX_ASSUMING_FILE_EXTENSION_NO_SPACES,
@@ -1220,6 +1237,55 @@ mod tests {
         let _args = FakeParentArgs::once(fake_parent_grep_command);
 
         assert_eq!(parse_grep_line("foo=equals"), None);
+    }
+
+    #[test]
+    fn test_parse_grep_l_file_name_with_dashes_not_misparsed_as_line_number() {
+        // git grep -l prints one bare file name per matching file, so a name
+        // containing a separator run must not be misparsed as a
+        // `path-line-code` line.
+        let fake_parent_grep_command =
+            "/usr/local/bin/git --doesnt-matter grep -l --nor-this nor_this -- nor_this";
+        let _args = FakeParentArgs::once(fake_parent_grep_command);
+
+        assert_eq!(parse_grep_line("2025-10-15.html"), None);
+    }
+
+    #[test]
+    fn test_parse_grep_files_without_match_short_option_file_name_with_dashes() {
+        // git grep -L (--files-without-match) also prints bare file names.
+        let fake_parent_grep_command =
+            "/usr/local/bin/git --doesnt-matter grep -L --nor-this nor_this -- nor_this";
+        let _args = FakeParentArgs::once(fake_parent_grep_command);
+
+        assert_eq!(parse_grep_line("2025-10-15.html"), None);
+    }
+
+    #[test]
+    fn test_parse_grep_long_name_only_file_name_with_dashes_not_misparsed_as_line_number() {
+        let fake_parent_grep_command =
+            "/usr/local/bin/git --doesnt-matter grep --name-only --nor-this nor_this -- nor_this";
+        let _args = FakeParentArgs::once(fake_parent_grep_command);
+
+        assert_eq!(parse_grep_line("2025-10-15.html"), None);
+    }
+
+    #[test]
+    fn test_parse_grep_files_with_matched_file_name_with_dashes_not_misparsed() {
+        let fake_parent_grep_command =
+            "/usr/local/bin/git --doesnt-matter grep --files-with-matches --nor-this nor_this -- nor_this";
+        let _args = FakeParentArgs::once(fake_parent_grep_command);
+
+        assert_eq!(parse_grep_line("2025-10-15.html"), None);
+    }
+
+    #[test]
+    fn test_parse_grep_files_without_matched_file_name_with_dashes_not_misparsed() {
+        let fake_parent_grep_command =
+            "/usr/local/bin/git --doesnt-matter grep --files-without-match --nor-this nor_this -- nor_this";
+        let _args = FakeParentArgs::once(fake_parent_grep_command);
+
+        assert_eq!(parse_grep_line("2025-10-15.html"), None);
     }
 
     #[test]
