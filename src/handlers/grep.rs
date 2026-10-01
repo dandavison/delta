@@ -473,6 +473,7 @@ enum GrepLineRegex {
     WithFileExtensionAndLineNumber,
     WithFileExtension,
     WithFileExtensionNoSpaces,
+    WithoutFileExtensionColonSeparated,
     WithoutSeparatorCharacters,
 }
 
@@ -494,6 +495,11 @@ lazy_static! {
 lazy_static! {
     static ref GREP_LINE_REGEX_ASSUMING_FILE_EXTENSION: Regex =
         make_grep_line_regex(GrepLineRegex::WithFileExtension);
+}
+
+lazy_static! {
+    static ref GREP_LINE_REGEX_ASSUMING_NO_FILE_EXTENSION_COLON_SEPARATED: Regex =
+        make_grep_line_regex(GrepLineRegex::WithoutFileExtensionColonSeparated);
 }
 
 lazy_static! {
@@ -552,6 +558,18 @@ fn make_grep_line_regex(regex_variant: GrepLineRegex) -> Regex {
             [^\ ]\.[^.\ :=-]{1,6}   # extension
         )
         "
+        }
+        GrepLineRegex::WithoutFileExtensionColonSeparated => {
+            r#"
+        (                        # 1. file name (colons not allowed, but other separator
+                                 #    characters such as '-' and '=' are, since a path
+                                 #    with no recognizable extension may legitimately
+                                 #    contain them -- e.g. `foo-bar`)
+            [^:|\ ]                 # try to be strict about what a file path can start with
+            [^:]*                   # anything except a colon
+            [^:\ ]                  # a file name cannot end with whitespace
+        )
+        "#
         }
         GrepLineRegex::WithoutSeparatorCharacters => {
             r"
@@ -686,6 +704,7 @@ pub fn parse_grep_line(line: &str) -> Option<GrepLine<'_>> {
                 &*GREP_LINE_REGEX_ASSUMING_FILE_EXTENSION_AND_LINE_NUMBER,
                 &*GREP_LINE_REGEX_ASSUMING_FILE_EXTENSION_NO_SPACES,
                 &*GREP_LINE_REGEX_ASSUMING_FILE_EXTENSION,
+                &*GREP_LINE_REGEX_ASSUMING_NO_FILE_EXTENSION_COLON_SEPARATED,
                 &*GREP_LINE_REGEX_ASSUMING_NO_INTERNAL_SEPARATOR_CHARS,
             ]
             .iter()
@@ -919,10 +938,9 @@ mod tests {
     }
 
     #[test]
-    #[ignore]
     fn test_parse_grep_n_match_file_name_with_dashes_and_no_extension() {
-        // git grep -n
-        // This fails: we can't parse it currently.
+        // git grep -n: a file name with dashes and no extension should parse
+        // correctly. (Previously #[ignore]'d as broken.)
         let fake_parent_grep_command =
             "/usr/local/bin/git --doesnt-matter grep --nor-this nor_this -- nor_this";
         let _args = FakeParentArgs::once(fake_parent_grep_command);
@@ -935,6 +953,41 @@ mod tests {
                 line_number: Some(4),
                 line_type: LineType::Match,
                 code: "repo=$(mktemp -d)".into(),
+                submatches: None,
+            })
+        );
+    }
+
+    #[test]
+    fn test_parse_grep_match_file_name_with_dashes_and_no_extension_no_line_number() {
+        // git grep (no -n): a file name with dashes and no extension should
+        // parse correctly, with the dash treated as part of the path, not a
+        // separator. https://github.com/dandavison/delta/issues/2144
+        let fake_parent_grep_command =
+            "/usr/local/bin/git --doesnt-matter grep --nor-this nor_this -- nor_this";
+        let _args = FakeParentArgs::for_scope(fake_parent_grep_command);
+
+        assert_eq!(
+            parse_grep_line("foo-bar:content"),
+            Some(GrepLine {
+                grep_type: GrepType::Classic,
+                path: "foo-bar".into(),
+                line_number: None,
+                line_type: LineType::Match,
+                code: "content".into(),
+                submatches: None,
+            })
+        );
+
+        // With line number; colon in code should not cause misparse
+        assert_eq!(
+            parse_grep_line("foo-bar:42:key=value"),
+            Some(GrepLine {
+                grep_type: GrepType::Classic,
+                path: "foo-bar".into(),
+                line_number: Some(42),
+                line_type: LineType::Match,
+                code: "key=value".into(),
                 submatches: None,
             })
         );
