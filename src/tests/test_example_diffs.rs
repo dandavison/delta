@@ -1917,6 +1917,33 @@ src/align.rs:71: impl<'a> Alignment<'a> { │
     }
 
     #[test]
+    fn test_file_mode_change_with_box_decoration() {
+        let output = DeltaTest::with_args(&["--file-decoration-style", "box"])
+            .with_input(GIT_DIFF_FILE_MODE_CHANGE_GAIN_EXECUTABLE_BIT)
+            .output;
+        assert_snapshot!(output, @r###"
+
+
+        ───────────────────────┐
+        src/delta.rs  (mode +x)│
+        ───────────────────────┘
+        "###);
+    }
+
+    #[test]
+    fn test_file_mode_change_with_width_variable() {
+        let output = DeltaTest::with_args(&["--width=variable"])
+            .with_input(GIT_DIFF_FILE_MODE_CHANGE_GAIN_EXECUTABLE_BIT)
+            .output;
+        assert_snapshot!(output, @r###"
+
+
+        src/delta.rs (mode +x)
+        ──────────────────────
+        "###);
+    }
+
+    #[test]
     fn test_file_mode_change_lose_executable_bit() {
         DeltaTest::with_args(&[])
             .with_input(GIT_DIFF_FILE_MODE_CHANGE_LOSE_EXECUTABLE_BIT)
