@@ -2970,11 +2970,11 @@ index 0ec702f..8c75341 100644
 +   
 ";
 
-    // Delta handling is different for each of theses cases:
+    // Delta handling is different for each of these cases:
     //      * Only space in the line is added or partially removed
     //      * Space after text added or partially removed
     //      * Space in a unmodified part of the line
-    // This test regroup theses 5 cases.
+    // This test regroup these 5 cases.
     const DIFF_WITH_WHITESPACE_COMPLEX_ERROR: &str = r"
 diff --git a/a b/a
 index 0ec702f..8c75341 100644
