@@ -43,6 +43,12 @@ pub fn make_builtin_features() -> HashMap<String, BuiltinFeature> {
             hyperlinks::make_feature().into_iter().collect(),
         ),
         (
+            "keep-plus-minus-markers".to_string(),
+            keep_plus_minus_markers::make_feature()
+                .into_iter()
+                .collect(),
+        ),
+        (
             "line-numbers".to_string(),
             line_numbers::make_feature().into_iter().collect(),
         ),
@@ -84,6 +90,7 @@ pub mod diff_highlight;
 pub mod diff_line_metadata;
 pub mod diff_so_fancy;
 pub mod hyperlinks;
+pub mod keep_plus_minus_markers;
 pub mod line_numbers;
 pub mod navigate;
 pub mod raw;
@@ -114,6 +121,16 @@ pub mod tests {
         for feature in builtin_features.keys() {
             assert!(features.contains(feature.as_str()))
         }
+    }
+
+    #[test]
+    fn test_keep_plus_minus_markers_is_a_builtin_feature() {
+        let opt = make_options_from_args_and_git_config(
+            &["--features", "keep-plus-minus-markers"],
+            None,
+            None,
+        );
+        assert!(opt.keep_plus_minus_markers);
     }
 
     #[test]
@@ -155,7 +172,7 @@ pub mod tests {
             )
             .features
             .unwrap(),
-            "navigate raw"
+            "navigate keep-plus-minus-markers raw"
         );
         assert_eq!(
             make_options_from_args_and_git_config(
@@ -165,7 +182,7 @@ pub mod tests {
             )
             .features
             .unwrap(),
-            "navigate raw"
+            "navigate keep-plus-minus-markers raw"
         );
 
         remove_file(git_config_path).unwrap();
@@ -187,7 +204,7 @@ pub mod tests {
             )
             .features
             .unwrap(),
-            "my-feature navigate raw"
+            "my-feature navigate keep-plus-minus-markers raw"
         );
 
         remove_file(git_config_path).unwrap();
@@ -217,7 +234,7 @@ pub mod tests {
             )
             .features
             .unwrap(),
-            "raw diff-so-fancy f e d diff-highlight c b a"
+            "keep-plus-minus-markers raw diff-so-fancy f e d diff-highlight c b a"
         );
 
         remove_file(git_config_path).unwrap();

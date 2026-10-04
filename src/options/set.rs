@@ -388,6 +388,14 @@ fn gather_features(
     if opt.hyperlinks {
         gather_builtin_features_recursively("hyperlinks", &mut features, builtin_features, opt);
     }
+    if opt.keep_plus_minus_markers {
+        gather_builtin_features_recursively(
+            "keep-plus-minus-markers",
+            &mut features,
+            builtin_features,
+            opt,
+        );
+    }
     if opt.line_numbers {
         gather_builtin_features_recursively("line-numbers", &mut features, builtin_features, opt);
     }
