@@ -31,6 +31,17 @@ If none of these is set, delta uses `less -R`, and you should always include `-R
 
 In addition to those `*PAGER` environment variables, the behavior of `less` is also affected by the `LESS` environment variable (see `man less` or [online documentation](https://linux.die.net/man/1/less)). This env var can contain command line options and/or interactive less-commands (prefixed by a leading `+` sign; these are executed every time right after less is launched).
 
+## Terminal width
+
+For normal usage you should not need to do anything: delta will ask the terminal for the current
+width.
+
+To override this you can set the `COLUMNS` environment variable to a positive number, or pass
+`--width` (or `delta.width` in git config). These cause delta not to ask the terminal and use the
+supplied width instead (`--width` wins over `COLUMNS`). This is useful if you are calling delta from
+an application that needs to render delta output in one of its own views (e.g. an editor or TUI).
+
+
 ## Delta-specific environment variables
 
 To temporarily activate and inactivate delta features, you can use `DELTA_FEATURES`, e.g.

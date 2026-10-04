@@ -1,13 +1,13 @@
 # Installation
 
 You can download an executable for your system:
-[Linux (glibc)](https://github.com/dandavison/delta/releases/download/0.18.2/delta-0.18.2-x86_64-unknown-linux-gnu.tar.gz)
+[Linux (glibc)](https://github.com/dandavison/delta/releases/download/0.20.0/delta-0.20.0-x86_64-unknown-linux-gnu.tar.gz)
 |
-[Linux (musl)](https://github.com/dandavison/delta/releases/download/0.18.2/delta-0.18.2-x86_64-unknown-linux-musl.tar.gz)
+[Linux (musl)](https://github.com/dandavison/delta/releases/download/0.20.0/delta-0.20.0-x86_64-unknown-linux-musl.tar.gz)
 |
-[MacOS](https://github.com/dandavison/delta/releases/download/0.18.2/delta-0.18.2-x86_64-apple-darwin.tar.gz)
+[MacOS](https://github.com/dandavison/delta/releases/download/0.20.0/delta-0.20.0-x86_64-apple-darwin.tar.gz)
 |
-[Windows](https://github.com/dandavison/delta/releases/download/0.18.2/delta-0.18.2-x86_64-pc-windows-msvc.zip)
+[Windows](https://github.com/dandavison/delta/releases/download/0.20.0/delta-0.20.0-x86_64-pc-windows-msvc.zip)
 |
 [All](https://github.com/dandavison/delta/releases)
 
@@ -46,7 +46,7 @@ Note that the package is often called `git-delta`, but the executable installed 
   </tr>
   <tr>
     <td><a href="https://search.nixos.org/packages?show=delta&query=delta">Nix</a></td>
-    <td><code>nix-env -iA nixpkgs.delta</code>
+    <td><code>nix-env -iA nixpkgs.delta</code></td>
   </tr>
   <tr>
     <td><a href="https://cvsweb.openbsd.org/ports/textproc/delta/">OpenBSD</a></td>
@@ -54,11 +54,11 @@ Note that the package is often called `git-delta`, but the executable installed 
   </tr>
   <tr>
     <td><a href="https://software.opensuse.org/package/git-delta">openSUSE</a></td>
-    <td><code>zypper install git-delta</code>
+    <td><code>zypper install git-delta</code></td>
   </tr>
   <tr>
     <td><a href="https://github.com/void-linux/void-packages/tree/master/srcpkgs/delta">Void Linux</a></td>
-    <td><code>xbps-install -S delta</code>
+    <td><code>xbps-install -S delta</code></td>
   </tr>
   <tr>
     <td>Windows (<a href="https://chocolatey.org/packages/delta">Chocolatey</a>)</td>
@@ -84,7 +84,7 @@ Note that the package is often called `git-delta`, but the executable installed 
 curl -LO "https://github.com/dandavison/delta/releases/download/${DELTA_VERSION}/git-delta_${DELTA_VERSION}_amd64.deb"
 sudo apt install "./git-delta_${DELTA_VERSION}_amd64.deb"</code></pre>
       <br>
-      <sup>If you are using Ubuntu <= 19.10 or are mixing apt sources, please read <a href="https://github.com/dandavison/delta/issues/504">#504</a>.</sup>
+      <sup>If you are using Ubuntu &lt;= 19.10 or are mixing apt sources, please read <a href="https://github.com/dandavison/delta/issues/504">#504</a>.</sup>
     </td>
   </tr>
   <tr>

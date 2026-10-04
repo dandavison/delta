@@ -1,4 +1,4 @@
-To toggle features such as `side-by-side` on and off, you need to *not* turn on `line-numbers` or `side-by-side` etc in your main delta config (`~/.gitconfig`). Then, one approach is to use the [`DELTA_FEATURES](../features-named-groups-of-settings.md)` environment variable:
+To toggle features such as `side-by-side` on and off, you need to *not* turn on `line-numbers` or `side-by-side` etc in your main delta config (`~/.gitconfig`). Then, one approach is to use the [`DELTA_FEATURES`](../features-named-groups-of-settings.md) environment variable:
 
 ```sh
 export DELTA_FEATURES=+side-by-side
