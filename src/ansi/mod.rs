@@ -111,6 +111,10 @@ pub fn truncate_str_short(s: &str, display_width: usize) -> Cow<'_, str> {
 ///
 /// Each line can be printed on its own. If a style or an OSC 8 hyperlink is active where a line
 /// ends, that line ends it, and the next line starts it again.
+///
+/// This does not use `wrapping::wrap_line` because that takes unpainted `(Style, &str)` sections
+/// and applies the `--wrap-*` options, whereas `s` is already painted and may contain OSC 8
+/// hyperlinks, which `parse_style_sections` would drop.
 pub fn wrap_str(s: &str, display_width: usize) -> Vec<String> {
     let mut lines = Vec::new();
     let mut line = String::new();
