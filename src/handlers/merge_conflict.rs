@@ -159,6 +159,7 @@ impl StateMachine<'_> {
                     &self.painter.merge_conflict_lines[derived_commit_type],
                 ),
                 &mut self.painter.line_numbers_data,
+                &mut None,
                 &mut self.painter.highlighter,
                 &mut self.painter.output_buffer,
                 self.config,

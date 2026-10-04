@@ -177,6 +177,7 @@ impl StateMachine<'_> {
                 &HunkHeaderIncludeCodeFragment::YesNoSpace,
                 "",
                 self.config,
+                "",
             )?
         }
         if new_section {
@@ -240,6 +241,7 @@ impl StateMachine<'_> {
             &HunkHeaderIncludeCodeFragment::YesNoSpace,
             grep_line.line_type.file_path_separator(),
             self.config,
+            "",
         )
     }
 
@@ -266,6 +268,7 @@ impl StateMachine<'_> {
                     &HunkHeaderIncludeCodeFragment::Yes,
                     grep_line.line_type.file_path_separator(),
                     self.config,
+                    "",
                 )?
             }
             _ => {

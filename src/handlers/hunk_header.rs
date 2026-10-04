@@ -171,9 +171,29 @@ impl StateMachine<'_> {
                 .initialize_hunk(line_numbers_and_hunk_lengths, self.plus_file.to_string());
         }
 
+        if let Some(md) = self.painter.diff_line_metadata.as_mut() {
+            // Select the file path the same way the hunk-header line below does.
+            let file = if self.plus_file == "/dev/null" {
+                self.minus_file.clone()
+            } else {
+                self.plus_file.clone()
+            };
+            md.initialize_hunk(line_numbers_and_hunk_lengths, file);
+        }
+
+        // The `h` record for every row of the hunk-header decoration. Empty
+        // when no host negotiated emission, in which case the decoration is
+        // drawn unchanged.
+        let h_osc = self
+            .painter
+            .diff_line_metadata
+            .as_ref()
+            .map_or(String::new(), |md| md.osc_for_hunk_header());
+
         if self.config.hunk_header_style.is_raw {
-            write_hunk_header_raw(&mut self.painter, line, raw_line, self.config)?;
+            write_hunk_header_raw(&mut self.painter, line, raw_line, &h_osc, self.config)?;
         } else if self.config.hunk_header_style.is_omitted {
+            write!(self.painter.writer, "{h_osc}")?;
             writeln!(self.painter.writer)?;
         } else {
             // Add a blank line below the hunk-header-line for readability, unless
@@ -202,6 +222,7 @@ impl StateMachine<'_> {
                 &self.config.hunk_header_style_include_code_fragment,
                 ":",
                 self.config,
+                &h_osc,
             )?;
         };
         self.painter.set_highlighter();
@@ -267,6 +288,7 @@ fn write_hunk_header_raw(
     painter: &mut Painter,
     line: &str,
     raw_line: &str,
+    metadata_osc: &str,
     config: &Config,
 ) -> std::io::Result<()> {
     let (mut draw_fn, pad, decoration_ansi_term_style) =
@@ -274,14 +296,20 @@ fn write_hunk_header_raw(
     if config.hunk_header_style.decoration_style != DecorationStyle::NoDecoration {
         writeln!(painter.writer)?;
     }
-    draw_fn(
+    crate::features::diff_line_metadata::write_with_header_osc(
         painter.writer,
-        &format!("{}{}", line, if pad { " " } else { "" }),
-        &format!("{}{}", raw_line, if pad { " " } else { "" }),
-        "",
-        &config.decorations_width,
-        config.hunk_header_style,
-        decoration_ansi_term_style,
+        metadata_osc,
+        |w| {
+            draw_fn(
+                w,
+                &format!("{}{}", line, if pad { " " } else { "" }),
+                &format!("{}{}", raw_line, if pad { " " } else { "" }),
+                "",
+                &config.decorations_width,
+                config.hunk_header_style,
+                decoration_ansi_term_style,
+            )
+        },
     )?;
     Ok(())
 }
@@ -303,6 +331,7 @@ pub fn write_line_of_code_with_optional_path_and_line_number(
     include_code_fragment: &HunkHeaderIncludeCodeFragment,
     file_path_separator: &str,
     config: &Config,
+    metadata_osc: &str,
 ) -> std::io::Result<()> {
     let (mut draw_fn, _, decoration_ansi_term_style) = draw::get_draw_function(decoration_style);
     let line = match (config.color_only, include_code_fragment) {
@@ -338,14 +367,21 @@ pub fn write_line_of_code_with_optional_path_and_line_number(
             painter,
             config,
         );
-        draw_fn(
+        let output_buffer = &painter.output_buffer;
+        crate::features::diff_line_metadata::write_with_header_osc(
             painter.writer,
-            &painter.output_buffer,
-            &painter.output_buffer,
-            "",
-            &config.decorations_width,
-            config.null_style,
-            decoration_ansi_term_style,
+            metadata_osc,
+            |w| {
+                draw_fn(
+                    w,
+                    output_buffer,
+                    output_buffer,
+                    "",
+                    &config.decorations_width,
+                    config.null_style,
+                    decoration_ansi_term_style,
+                )
+            },
         )?;
         painter.output_buffer.clear();
     }
