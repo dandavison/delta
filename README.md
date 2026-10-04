@@ -198,7 +198,9 @@ Side-by-side view wraps long lines automatically:
 
 ### Interactive mode (experimental)
 
-`delta --gitu` is an interactive git client and pager that renders with delta: navigate, fold, stage and discard in delta's output. To use it as git's pager, set `core.pager = delta --gitu --pager`. It is [gitu](https://github.com/altsem/gitu) by altsem, a git client inspired by Magit, embedded via a [fork](https://github.com/dandavison/gitu). See `delta --gitu --help`.
+[[User manual](https://dandavison.github.io/delta/gitu.html)]
+
+`delta --gitu` is an interactive git client and pager that renders with delta: navigate, fold, stage and discard in delta's output. It is [gitu](https://github.com/altsem/gitu) by altsem, a git client inspired by Magit, embedded via a [fork](https://github.com/dandavison/gitu).
 
 ### Installation and usage
 

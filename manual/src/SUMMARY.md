@@ -20,6 +20,7 @@
   - [Navigation keybindings for large diffs](./navigation-keybindings-for-large-diffs.md)
   - [Merge conflicts](./merge-conflicts.md)
   - [Git blame](./git-blame.md)
+  - [Interactive mode (gitu)](./gitu.md)
   - [Supported languages and themes](./supported-languages-and-themes.md)
 - [Tips & tricks](./tips-and-tricks.md)
   - [Toggling side-by-side and other delta features](./tips-and-tricks/toggling-delta-features.md)
