@@ -5,23 +5,17 @@ use crate::ansi;
 use crate::cli::Width;
 use crate::style::{DecorationStyle, Style};
 
-fn paint_text(text_style: Style, text: &str, addendum: &str) -> String {
-    if addendum.is_empty() {
+/// Return `raw_text` if `text_style` is raw, and otherwise `text` and `addendum` painted in
+/// `text_style`.
+fn paint_text(text_style: Style, text: &str, raw_text: &str, addendum: &str) -> String {
+    if text_style.is_raw {
+        raw_text.to_string()
+    } else if addendum.is_empty() {
         text_style.paint(text).to_string()
     } else {
         text_style
             .paint(text.to_string() + " (" + addendum + ")")
             .to_string()
-    }
-}
-
-/// Return `raw_text` if `text_style` is raw, and otherwise `text` and `addendum` painted in
-/// `text_style`.
-fn text_to_write(text: &str, raw_text: &str, addendum: &str, text_style: Style) -> String {
-    if text_style.is_raw {
-        raw_text.to_string()
-    } else {
-        paint_text(text_style, text, addendum)
     }
 }
 
@@ -74,7 +68,7 @@ fn write_no_decoration(
     writeln!(
         writer,
         "{}",
-        text_to_write(text, raw_text, addendum, text_style)
+        paint_text(text_style, text, raw_text, addendum)
     )?;
     Ok(())
 }
@@ -226,7 +220,7 @@ fn _write_under_or_over_lined(
     text_style: Style,
     decoration_style: ansi_term::Style,
 ) -> std::io::Result<()> {
-    let text = text_to_write(text, raw_text, addendum, text_style);
+    let text = paint_text(text_style, text, raw_text, addendum);
     let line_width = match *line_width {
         Width::Fixed(n) => n,
         Width::Variable => ansi::measure_text_width(&text),
@@ -319,7 +313,7 @@ fn write_boxed_partial(
             box_drawing::light::VERTICAL,
         )
     };
-    let text = text_to_write(text, raw_text, addendum, text_style);
+    let text = paint_text(text_style, text, raw_text, addendum);
     let text_width = ansi::measure_text_width(&text);
     let (lines, box_width) = match *line_width {
         // The right edge of the box takes up one column.
