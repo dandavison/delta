@@ -117,7 +117,7 @@ Date:   Mon Jan 1 00:00:00 2024 +0000
         // The record is on the commit row, and on the decoration row the style
         // adds; the rest of the commit block carries nothing.
         assert_snapshot!(visible_metadata_records(LOG, &["--commit-decoration-style", "blue ol"]), @"
-        ⟦1;C;;;8a9c3f2b1d4e5f60718293a4b5c6d7e8f9012345⟧───────────────────────────────────────────────
+        ⟦1;C;;;8a9c3f2b1d4e5f60718293a4b5c6d7e8f9012345⟧───────────────────────────────────────────
         ⟦1;C;;;8a9c3f2b1d4e5f60718293a4b5c6d7e8f9012345⟧commit 8a9c3f2b1d4e5f60718293a4b5c6d7e8f9012345
         Author: Someone <someone@example.com>
         Date:   Mon Jan 1 00:00:00 2024 +0000
