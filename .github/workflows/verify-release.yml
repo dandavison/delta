@@ -25,6 +25,7 @@ jobs:
           expected=(
             "delta-${tag}-aarch64-apple-darwin.tar.gz"
             "delta-${tag}-aarch64-unknown-linux-gnu.tar.gz"
+            "delta-${tag}-aarch64-unknown-linux-musl.tar.gz"
             "delta-${tag}-arm-unknown-linux-gnueabihf.tar.gz"
             "delta-${tag}-i686-unknown-linux-gnu.tar.gz"
             "delta-${tag}-x86_64-pc-windows-msvc.zip"
@@ -35,6 +36,7 @@ jobs:
             "git-delta_${tag}_armhf.deb"
             "git-delta_${tag}_i386.deb"
             "git-delta-musl_${tag}_amd64.deb"
+            "git-delta-musl_${tag}_arm64.deb"
           )
           actual=$(gh release view "$tag" --repo "$GITHUB_REPOSITORY" --json assets -q '.assets[].name' | sort)
           missing=()
