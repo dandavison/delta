@@ -103,6 +103,7 @@ pub struct Config {
     pub max_line_distance_for_naively_paired_lines: f64,
     pub max_line_distance: f64,
     pub max_line_length: usize,
+    pub max_line_tokens: usize,
     pub max_syntax_length: usize,
     pub merge_conflict_begin_symbol: String,
     pub merge_conflict_ours_diff_header_style: Style,
@@ -398,6 +399,7 @@ impl From<cli::Opt> for Config {
             } else {
                 opt.max_line_length
             },
+            max_line_tokens: opt.max_line_tokens,
             max_syntax_length: opt.max_syntax_length,
             merge_conflict_begin_symbol: opt.merge_conflict_begin_symbol,
             merge_conflict_ours_diff_header_style: styles["merge-conflict-ours-diff-header-style"],

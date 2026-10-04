@@ -788,6 +788,7 @@ fn get_diff_style_sections<'a>(
             &config.tokenization_regex,
             config.max_line_distance,
             config.max_line_distance_for_naively_paired_lines,
+            config.max_line_tokens,
         );
     let diff_sections = MinusPlus::new(
         minus_line_diff_style_sections,
