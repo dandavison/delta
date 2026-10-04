@@ -196,6 +196,10 @@ Side-by-side view wraps long lines automatically:
 <img width="600px" alt="image" src="https://github.com/dandavison/open-in-editor/assets/52205/d203d380-5acb-4296-aeb9-e38c73d6c27f">
 </td></tr></table>
 
+### Interactive mode (experimental)
+
+`delta --gitu` is an interactive git client and pager that renders with delta: navigate, fold, stage and discard in delta's output. To use it as git's pager, set `core.pager = delta --gitu --pager`. It is [gitu](https://github.com/altsem/gitu) by altsem, a git client inspired by Magit, embedded via a [fork](https://github.com/dandavison/gitu). See `delta --gitu --help`.
+
 ### Installation and usage
 
 Please see the [user manual](https://dandavison.github.io/delta/) and `delta --help`.

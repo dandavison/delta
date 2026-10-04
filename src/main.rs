@@ -58,6 +58,11 @@ pub mod errors {
 
 #[cfg(not(tarpaulin_include))]
 fn main() -> std::io::Result<()> {
+    #[cfg(feature = "gitu")]
+    if std::env::args_os().nth(1).as_deref() == Some(OsStr::new("--gitu")) {
+        process::exit(subcommands::gitu::main(std::env::args_os().skip(2)));
+    }
+
     // Do this first because both parsing all the input in `run_app()` and
     // listing all processes takes about 50ms on Linux.
     // It also improves the chance that the calling process is still around when
