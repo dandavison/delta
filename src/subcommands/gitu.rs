@@ -61,13 +61,7 @@ fn run(args: &Args) -> Res<i32> {
         eprintln!("trace: \n{}", Backtrace::force_capture());
     }));
 
-    let mut term = term::backend();
-    if !args.print {
-        term.setup_term(&config).map_err(Error::Term)?;
-    }
-    let result = ::gitu::run(config.clone(), args, &mut term);
-    term.reset_term(&config).map_err(Error::Term)?;
-    result
+    ::gitu::run(config, args, &mut term::backend())
 }
 
 /// Make gitu render diffs with this delta executable, whatever gitu's own config
