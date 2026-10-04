@@ -33,6 +33,9 @@ jobs:
           - os: ubuntu-22.04
             target: aarch64-unknown-linux-gnu
             use-cross: true
+          - os: ubuntu-24.04-arm
+            target: aarch64-unknown-linux-musl
+            use-cross: false
 
     steps:
       - name: Installing Rust toolchain
@@ -41,6 +44,9 @@ jobs:
           targets: ${{ matrix.job.target }}
       - name: Checkout repository
         uses: actions/checkout@v4
+      - name: Install ARM64 musl build dependencies
+        if: matrix.job.target == 'aarch64-unknown-linux-musl'
+        run: sudo apt-get update && sudo apt-get install -y musl-tools
       - name: Install cross
         if: matrix.job.use-cross
         uses: taiki-e/install-action@v2
