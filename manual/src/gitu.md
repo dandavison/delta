@@ -21,8 +21,6 @@ Diffs are rendered by the running delta binary, configured as usual by your `[de
     log = delta --gitu --pager
 [sequence]
     editor = delta --gitu sequence-editor
-[delta]
-    navigate = true
 ```
 
 With `--quit-if-one-screen` (as less's), output that fits on the screen is printed and gitu exits; that also leaves nothing to stage from, so it suits `log` better than `diff`. Input larger than `general.max_input_bytes` (2 MB) is truncated.
@@ -33,8 +31,13 @@ Optional, at `~/.config/gitu/config.toml` (or `--config <file>`). The diff rende
 
 ```toml
 [general]
-# Toggled by `|`, together with every `[delta "name"]` feature in your git config.
-diff_renderer.features = ["side-by-side", "line-numbers", "hyperlinks"]
+# Offered by `|` (default: side-by-side, line-numbers, keep-plus-minus-markers).
+# `*` and `?` match the `[delta "name"]` features in your git config: "*"
+# offers all of them.
+diff_renderer.features = ["side-by-side", "line-numbers", "my-*"]
+# Top-level keys that toggle features. In the `|` list, a letter sets the
+# selected feature's key (again to unset it), and gitu saves it here.
+diff_renderer.feature_keys = { side-by-side = "x" }
 # Pathspecs excluded when the view is first built; `:` shows them and `_` edits them.
 hide = ["*.pb.go"]
 # Stop the cursor on unchanged lines too.
@@ -58,7 +61,7 @@ See gitu's [default config](https://github.com/dandavison/gitu/blob/diff-rendere
 | `d` | exclude the file whose header is under the cursor | `root.hide_file` |
 | `_` | edit the pathspecs limiting the view (`!` excludes) | `root.file_patterns` |
 | `U` | change the diff context (a number, or `W` for the whole function) | `root.diff_context` |
-| `\|` | toggle delta features | `root.renderer_features` |
+| `\|` | toggle delta features; in the list, a letter sets the selected feature's key | `root.renderer_features` |
 | `shift+tab` | fold all (folds all files in diff views) | `root.toggle_all_sections` |
 | `space` / `backspace` | page down / up | `root.full_page_down` / `root.full_page_up` |
 | `shift+down` / `shift+up` | extend the line selection | `root.extend_selection_down` / `root.extend_selection_up` |
