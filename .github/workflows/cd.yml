@@ -6,7 +6,11 @@ on:
       - '[0-9]+.[0-9]+.[0-9]+'
 
 jobs:
+  ci:
+    uses: ./.github/workflows/ci.yml
+
   publish:
+    needs: ci
     name: Publishing for ${{ matrix.job.os }}
     runs-on: ${{ matrix.job.os }}
     strategy:
