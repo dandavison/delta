@@ -16,6 +16,7 @@ pub const ANSI_SGR_BOLD: &str = "\x1b[1m";
 pub const ANSI_SGR_RESET: &str = "\x1b[0m";
 pub const ANSI_SGR_REVERSE: &str = "\x1b[7m";
 pub const ANSI_SGR_UNDERLINE: &str = "\x1b[4m";
+pub const OSC8_HYPERLINK_END: &str = "\x1b]8;;\x1b\\";
 
 pub fn strip_ansi_codes(s: &str) -> String {
     strip_ansi_codes_from_strings_iterator(ansi_strings_iterator(s))
@@ -102,6 +103,73 @@ pub fn truncate_str<'a>(s: &'a str, display_width: usize, tail: &str) -> Cow<'a,
 /// prefix of the input `s`.
 pub fn truncate_str_short(s: &str, display_width: usize) -> Cow<'_, str> {
     truncate_str_impl(s, display_width, "", None)
+}
+
+/// Split `s` into lines that are at most `display_width` wide, ignoring any ANSI escape sequences
+/// when calculating the width. If a single grapheme is wider than `display_width`, it gets a line
+/// of its own.
+///
+/// Each line can be printed on its own. If a style or an OSC 8 hyperlink is active where a line
+/// ends, that line ends it, and the next line starts it again.
+///
+/// This does not use `wrapping::wrap_line` because that takes unpainted `(Style, &str)` sections
+/// and applies the `--wrap-*` options, whereas `s` is already painted and may contain OSC 8
+/// hyperlinks, which `parse_style_sections` would drop.
+pub fn wrap_str(s: &str, display_width: usize) -> Vec<String> {
+    let mut lines = Vec::new();
+    let mut line = String::new();
+    let mut used = 0;
+    // The SGR sequences since the last reset, and the OSC 8 sequence of the open hyperlink.
+    let mut active_sgr = String::new();
+    let mut active_hyperlink = String::new();
+    for element in AnsiElementIterator::new(s) {
+        match element {
+            Element::Text(i, j) => {
+                for g in s[i..j].graphemes(true) {
+                    let width_of_grapheme = g.width();
+                    if used > 0 && used + width_of_grapheme > display_width {
+                        if !active_hyperlink.is_empty() {
+                            line.push_str(OSC8_HYPERLINK_END);
+                        }
+                        if !active_sgr.is_empty() {
+                            line.push_str(ANSI_SGR_RESET);
+                        }
+                        lines.push(std::mem::take(&mut line));
+                        line.push_str(&active_sgr);
+                        line.push_str(&active_hyperlink);
+                        used = 0;
+                    }
+                    line.push_str(g);
+                    used += width_of_grapheme;
+                }
+            }
+            Element::Sgr(_, i, j) => {
+                let sequence = &s[i..j];
+                if sequence == ANSI_SGR_RESET || sequence == "\x1b[m" {
+                    active_sgr.clear();
+                } else {
+                    active_sgr.push_str(sequence);
+                }
+                line.push_str(sequence);
+            }
+            Element::Osc(i, j) => {
+                let sequence = &s[i..j];
+                if let Some(params_and_uri) = sequence.strip_prefix("\x1b]8;") {
+                    let params_and_uri = params_and_uri.trim_end_matches(['\x1b', '\x07']);
+                    match params_and_uri.split_once(';') {
+                        Some((_, uri)) if !uri.is_empty() => {
+                            active_hyperlink = format!("\x1b]8;{params_and_uri}\x1b\\");
+                        }
+                        _ => active_hyperlink.clear(),
+                    }
+                }
+                line.push_str(sequence);
+            }
+            Element::Csi(i, j) | Element::Esc(i, j) => line.push_str(&s[i..j]),
+        }
+    }
+    lines.push(line);
+    lines
 }
 
 pub fn parse_style_sections(s: &str) -> Vec<(ansi_term::Style, &str)> {
@@ -223,6 +291,7 @@ mod tests {
     use super::{
         ansi_preserving_index, ansi_preserving_slice, measure_text_width, parse_first_style,
         string_starts_with_ansi_style_sequence, strip_ansi_codes, truncate_str, truncate_str_short,
+        wrap_str,
     };
 
     #[test]
@@ -363,5 +432,45 @@ mod tests {
         assert_eq!(truncate_str_short(double, 0), "");
         assert_eq!(truncate_str_short(double, 1), "");
         assert_eq!(truncate_str_short(double, 2), double);
+    }
+
+    #[test]
+    fn test_wrap_str() {
+        assert_eq!(wrap_str("", 3), vec![""]);
+        assert_eq!(wrap_str("abc", 3), vec!["abc"]);
+        assert_eq!(wrap_str("abcdefg", 3), vec!["abc", "def", "g"]);
+        assert_eq!(wrap_str("abc", 0), vec!["a", "b", "c"]);
+    }
+
+    #[test]
+    fn test_wrap_str_at_double_width_grapheme() {
+        assert_eq!(wrap_str("1＃4", 2), vec!["1", "＃", "4"]);
+        assert_eq!(wrap_str("1＃4", 3), vec!["1＃", "4"]);
+        assert_eq!(wrap_str("＃", 1), vec!["＃"]);
+    }
+
+    #[test]
+    fn test_wrap_str_restarts_style_on_each_line() {
+        assert_eq!(
+            wrap_str("\x1b[34mabc\x1b[1mdef\x1b[0mgh", 2),
+            vec![
+                "\x1b[34mab\x1b[0m",
+                "\x1b[34mc\x1b[1md\x1b[0m",
+                "\x1b[34m\x1b[1mef\x1b[0m",
+                "gh",
+            ]
+        );
+    }
+
+    #[test]
+    fn test_wrap_str_restarts_hyperlink_on_each_line() {
+        assert_eq!(
+            wrap_str("a \x1b]8;;file:///a/b.rs\x1b\\a/b.rs\x1b]8;;\x1b\\ c", 4),
+            vec![
+                "a \x1b]8;;file:///a/b.rs\x1b\\a/\x1b]8;;\x1b\\",
+                "\x1b]8;;file:///a/b.rs\x1b\\b.rs\x1b]8;;\x1b\\",
+                " c",
+            ]
+        );
     }
 }

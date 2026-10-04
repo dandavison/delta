@@ -1046,10 +1046,10 @@ Submodule sub/mod a32f27c..2d9f921 (rewind):
         ⟦1;a;1;;one.txt⟧bar
 
         ⟦1;f;;;sub/mod⟧Submodule sub/mod contains untracked content
-        ⟦1;f;;;sub/mod⟧────────────────────────────────────────────
+        ⟦1;f;;;sub/mod⟧───────────────────────────────────────────
 
         ⟦1;f;;;sub/mod⟧Submodule sub/mod a32f27c..2d9f921 (rewind):
-        ⟦1;f;;;sub/mod⟧────────────────────────────────────────────
+        ⟦1;f;;;sub/mod⟧───────────────────────────────────────────
           < make it so
         ");
     }
