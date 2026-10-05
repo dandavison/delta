@@ -1182,6 +1182,9 @@ pub struct ComputedValues {
     pub decorations_width: Width,
     pub inspect_raw_lines: InspectRawLines,
     pub color_mode: ColorMode,
+    /// Mode resolved before per-mode feature injection and frozen as authoritative for rendering
+    /// (see `theme::resolve_color_mode_for_feature_injection`). `None` until resolved.
+    pub resolved_color_mode: Option<ColorMode>,
     pub paging_mode: PagingMode,
     pub syntax_set: SyntaxSet,
     pub syntax_theme: Option<SyntaxTheme>,
