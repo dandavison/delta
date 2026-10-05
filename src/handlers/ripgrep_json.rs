@@ -260,4 +260,41 @@ mod tests {
             }
         )
     }
+
+    #[test]
+    fn test_rg_json_empty_pattern_on_multibyte_char_does_not_panic() {
+        // `rg --json ""` on a line containing `━` (U+2501, 3 UTF-8 bytes) emits
+        // 0-width submatches at every byte offset, including interiors of the
+        // character. Slicing those offsets as `&str` ranges used to panic.
+        // See https://github.com/dandavison/delta/issues/1679
+        let data = concat!(
+            r#"{"type":"begin","data":{"path":{"text":"foo.txt"}}}"#,
+            "\n",
+            r#"{"type":"match","data":{"path":{"text":"foo.txt"},"lines":{"text":"━\n"},"line_number":1,"absolute_offset":0,"submatches":[{"match":{"text":""},"start":0,"end":0},{"match":{"text":""},"start":1,"end":1},{"match":{"text":""},"start":2,"end":2},{"match":{"text":""},"start":3,"end":3}]}}"#,
+            "\n",
+            r#"{"type":"end","data":{"path":{"text":"foo.txt"},"binary_offset":null,"stats":{"elapsed":{"secs":0,"nanos":1,"human":"0.000001s"},"searches":1,"searches_with_match":1,"bytes_searched":4,"bytes_printed":1,"matched_lines":1,"matches":4}}}"#,
+            "\n",
+        );
+        DeltaTest::with_args(&[])
+            .with_input(data)
+            .expect_contains("━");
+    }
+
+    #[test]
+    fn test_rg_json_crlf_submatch_past_rewritten_newline_does_not_panic() {
+        // After parse_line rewrites `\r\n` to `\n`, a submatch whose end still
+        // covers the original two-byte terminator is past the new length.
+        // See https://github.com/dandavison/delta/issues/1679
+        let data = concat!(
+            r#"{"type":"begin","data":{"path":{"text":"test.txt"}}}"#,
+            "\n",
+            r#"{"type":"match","data":{"path":{"text":"test.txt"},"lines":{"text":"https://example.com\r\n"},"line_number":1,"absolute_offset":0,"submatches":[{"match":{"text":"https://example.com\r\n"},"start":0,"end":21}]}}"#,
+            "\n",
+            r#"{"type":"end","data":{"path":{"text":"test.txt"},"binary_offset":null,"stats":{"elapsed":{"secs":0,"nanos":1,"human":"0.000001s"},"searches":1,"searches_with_match":1,"bytes_searched":21,"bytes_printed":1,"matched_lines":1,"matches":1}}}"#,
+            "\n",
+        );
+        DeltaTest::with_args(&[])
+            .with_input(data)
+            .expect_contains("https://example.com");
+    }
 }

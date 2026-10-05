@@ -382,11 +382,21 @@ fn make_style_sections<'a>(
 ) -> StyleSectionSpecifier<'a> {
     let mut sections = Vec::new();
     let mut curr = 0;
-    for (start_, end_) in submatches {
-        let (start, end) = (*start_, *end_);
+    for &(raw_start, raw_end) in submatches {
+        // Ripgrep JSON offsets are bytes. They can sit inside a multibyte
+        // character (e.g. `rg --json ""` emits a 0-width match at every byte)
+        // or past the line after `\r\n` is rewritten to `\n`.
+        if raw_start == raw_end {
+            continue;
+        }
+        let start = floor_char_boundary(line, raw_start).max(curr);
+        let end = ceil_char_boundary(line, raw_end);
+        if start >= end {
+            continue;
+        }
         if start > curr {
-            sections.push((non_match_style, &line[curr..start]))
-        };
+            sections.push((non_match_style, &line[curr..start]));
+        }
         sections.push((match_style, &line[start..end]));
         curr = end;
     }
@@ -394,6 +404,24 @@ fn make_style_sections<'a>(
         sections.push((non_match_style, &line[curr..]))
     }
     StyleSectionSpecifier::StyleSections(sections)
+}
+
+fn floor_char_boundary(s: &str, mut i: usize) -> usize {
+    i = i.min(s.len());
+    while i > 0 && !s.is_char_boundary(i) {
+        i -= 1;
+    }
+    i
+}
+
+fn ceil_char_boundary(s: &str, mut i: usize) -> usize {
+    if i >= s.len() {
+        return s.len();
+    }
+    while !s.is_char_boundary(i) {
+        i += 1;
+    }
+    i
 }
 
 // Return style sections describing colors received from git.
