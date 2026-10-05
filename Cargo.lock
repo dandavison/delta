@@ -617,9 +617,9 @@ dependencies = [
 
 [[package]]
 name = "delta-gitu"
-version = "0.1.3"
+version = "0.1.4"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "4524c2abb0393ba27b37069b54a7900b4cc59f4d2d96a871e9a14ac080707a75"
+checksum = "2cd08ed896c9222b8ef2c8e9f425342171bf1879f01f408fb4f6e4f09dd84843"
 dependencies = [
  "anstyle-parse",
  "arboard",
@@ -648,6 +648,7 @@ dependencies = [
  "sysinfo 0.39.6",
  "tinyvec",
  "toml 0.8.23",
+ "toml_edit 0.22.27",
  "unicode-segmentation",
  "unicode-width 0.2.2",
  "url",
