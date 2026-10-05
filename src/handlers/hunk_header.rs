@@ -136,6 +136,16 @@ impl StateMachine<'_> {
                 }
             }
 
+            self.hunk_lines_remaining = match (
+                &diff_type,
+                parsed_hunk_header.line_numbers_and_hunk_lengths.as_slice(),
+            ) {
+                (Unified, &[(_, minus), (_, plus)]) if !super::hunk::is_word_diff() => {
+                    Some((minus, plus))
+                }
+                _ => None,
+            };
+
             self.state = HunkHeader(
                 diff_type,
                 parsed_hunk_header,
