@@ -69,7 +69,6 @@ fn run(args: &Args) -> Res<i32> {
 /// version and nothing has to be on `PATH`.
 fn use_delta_as_renderer(config: &mut Config, delta: &str) {
     let diff = &mut config.general.diff_renderer;
-    diff.enabled = true;
     diff.command = vec![delta.into()];
 }
 
@@ -86,7 +85,6 @@ mod tests {
     fn test_renderers_without_config_file() {
         let config = configure("");
         let diff = &config.general.diff_renderer;
-        assert!(diff.enabled);
         assert_eq!(diff.command, [DELTA]);
     }
 
@@ -95,12 +93,10 @@ mod tests {
         let config = configure(
             r#"
             [general]
-            diff_renderer.enabled = false
             diff_renderer.command = ["delta", "--color-only"]
             "#,
         );
         let diff = &config.general.diff_renderer;
-        assert!(diff.enabled);
         assert_eq!(diff.command, [DELTA]);
     }
 
