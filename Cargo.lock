@@ -165,7 +165,7 @@ dependencies = [
  "shell-words",
  "syn",
  "syntect",
- "terminal-colorsaurus 1.0.0",
+ "terminal-colorsaurus",
  "thiserror 2.0.17",
  "toml",
  "unicode-segmentation",
@@ -739,7 +739,7 @@ dependencies = [
  "smol_str",
  "syntect",
  "sysinfo",
- "terminal-colorsaurus 0.4.8",
+ "terminal-colorsaurus",
  "unicode-segmentation",
  "unicode-width 0.1.14",
  "xdg",
@@ -1724,21 +1724,6 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "ff1bc3d3f05aff0403e8ac0d92ced918ec05b666a43f83297ccef5bea8a3d449"
 dependencies = [
  "winapi-util",
-]
-
-[[package]]
-name = "terminal-colorsaurus"
-version = "0.4.8"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "b7afe4c174a3cbfb52ebcb11b28965daf74fe9111d4e07e40689d05af06e26e8"
-dependencies = [
- "cfg-if",
- "libc",
- "memchr",
- "mio 1.0.3",
- "terminal-trx",
- "windows-sys 0.59.0",
- "xterm-color",
 ]
 
 [[package]]
