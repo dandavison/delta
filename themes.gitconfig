@@ -665,3 +665,30 @@
     hunk-header-file-style = darkgoldenrod
     hunk-header-line-number-style = orange
     hunk-header-style = file line-number darkviolet
+
+[delta "cuttlefish"]
+    # author: https://github.com/nettlesh
+    dark = true
+    syntax-theme = base16
+    minus-style = "syntax auto"
+    minus-emph-style = "syntax auto"
+    line-numbers = true
+    line-numbers-minus-style = brightred
+    line-numbers-zero-style = brightblack
+    line-numbers-plus-style = brightgreen
+    line-numbers-left-style = brightblack
+    line-numbers-right-style = brightblack
+    file-style = "brightblue bold"
+    file-decoration-style = "brightblack ul"
+    file-modified-label = Δ
+    hunk-header-file-style = brightblue
+    hunk-header-line-number-style = brightyellow
+    hunk-header-decoration-style = "brightblack box"
+    commit-decoration-style = "brightblack box ul"
+    merge-conflict-ours-diff-header-style = "brightmagenta bold"
+    merge-conflict-ours-diff-header-decoration-style = "brightblack box"
+    merge-conflict-theirs-diff-header-style = "brightmagenta bold"
+    merge-conflict-theirs-diff-header-decoration-style = "brightblack box"
+    grep-file-style = brightblue
+    grep-header-file-style = brightblue
+    grep-line-number-style = brightyellow
