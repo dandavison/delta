@@ -78,9 +78,23 @@ impl StateMachine<'_> {
         if let State::HunkHeader(_, parsed_hunk_header, line, raw_line) = &self.state.clone() {
             self.emit_hunk_header_line(parsed_hunk_header, line, raw_line)?;
         }
+        // Keep the old-side EOF marker out of edit inference without splitting the subhunk.
+        // Match the prefix because Git can translate the marker text.
+        if !is_word_diff()
+            && self.line.starts_with("\\ ")
+            && matches!(self.state, HunkMinus(Unified, _))
+            && !self.painter.minus_lines.is_empty()
+            && self.painter.minus_no_newline.is_none()
+            && needs_paired_lines(self.config)
+        {
+            let mut marker = tabs::expand(&self.raw_line, &self.config.tab_cfg);
+            marker.push('\n');
+            self.painter.minus_no_newline = Some(marker);
+            return Ok(true);
+        }
         self.state = match new_line_state(&self.line, &self.raw_line, &self.state, self.config) {
             Some(HunkMinus(diff_type, raw_line)) => {
-                if let HunkPlus(_, _) = self.state {
+                if matches!(self.state, HunkPlus(_, _)) || self.painter.minus_no_newline.is_some() {
                     // We have just entered a new subhunk; process the previous one
                     // and flush the line buffers.
                     self.painter.paint_buffered_minus_and_plus_lines();
@@ -130,6 +144,32 @@ impl StateMachine<'_> {
         self.painter.emit()?;
         Ok(true)
     }
+}
+
+// Preserve the existing flush in modes such as --raw: joining potentially unbounded
+// lines across the marker would add expensive edit inference without needing emphasis.
+fn needs_paired_lines(config: &Config) -> bool {
+    config.side_by_side
+        || [
+            [
+                config.minus_style,
+                config.minus_emph_style,
+                config.minus_non_emph_style,
+            ],
+            [
+                config.plus_style,
+                config.plus_emph_style,
+                config.plus_non_emph_style,
+            ],
+        ]
+        .iter()
+        .any(|styles| {
+            let styles = styles.map(|style| style::Style {
+                is_emph: false,
+                ..style
+            });
+            styles[0] != styles[1] || styles[0] != styles[2]
+        })
 }
 
 // Return Some(prepared_raw_line) if delta should emit this line raw.
@@ -275,6 +315,30 @@ fn new_line_state(
 #[cfg(test)]
 mod tests {
     use crate::tests::integration_test_utils::DeltaTest;
+
+    #[test]
+    fn test_raw_no_newline_marker_flushes_removed_lines() {
+        use crate::delta::{DiffType, State, StateMachine};
+        use crate::tests::integration_test_utils::make_config_from_args;
+
+        let config = make_config_from_args(&["--raw", "--max-line-length=0"]);
+        let mut output = Vec::new();
+        let mut machine = StateMachine::new(&mut output, &config);
+        machine.state = State::HunkZero(DiffType::Unified, None);
+        for line in ["-old", "\\ No newline at end of file"] {
+            machine.line = line.to_string();
+            machine.raw_line = line.to_string();
+            assert!(machine.handle_hunk_line().unwrap());
+        }
+        // Raw mode must not retain these lines for an unbounded old/new comparison.
+        assert!(machine.painter.minus_lines.is_empty());
+        assert!(machine.painter.minus_no_newline.is_none());
+        drop(machine);
+        assert_eq!(
+            crate::ansi::strip_ansi_codes(&String::from_utf8(output).unwrap()),
+            "-old\n\\ No newline at end of file\n"
+        );
+    }
 
     mod word_diff {
         use super::*;

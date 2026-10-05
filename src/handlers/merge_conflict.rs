@@ -162,6 +162,7 @@ impl StateMachine<'_> {
                 &mut None,
                 &mut self.painter.highlighter,
                 &mut self.painter.output_buffer,
+                None,
                 self.config,
             );
             self.painter.emit()?;

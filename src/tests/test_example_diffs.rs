@@ -11,6 +11,141 @@ mod tests {
     use insta::assert_snapshot;
 
     #[test]
+    fn test_no_newline_marker_preserves_edit_highlighting() {
+        let input = "\
+diff --git i/test.json w/test.json
+index d89de76..34d7810 100644
+--- i/test.json
++++ w/test.json
+@@ -1,4 +1,4 @@
+ {
+   \"foo\": \"bar\",
+-  \"baz\": \"qux\"
+-}
+\\ No newline at end of file
++  \"baz\": \"\"
++}
+";
+        let marker = "\\ No newline at end of file\n";
+        let working_example = "\
+diff --git i/test.json w/test.json
+index 41557a1..eb5fe05 100644
+--- i/test.json
++++ w/test.json
+@@ -1,4 +1,4 @@
+ {
+-    \"foo\": \"bar\",
++    \"foo\": \"\",
+     \"baz\": \"qux\"
+-}
+\\ No newline at end of file
++}
+";
+        for fixture in [input, working_example] {
+            for mode in [
+                vec![],
+                vec!["--line-numbers"],
+                vec!["--side-by-side", "--width=80"],
+                vec!["--side-by-side", "--width=40"],
+                vec!["--raw", "--side-by-side", "--width=80"],
+                vec![
+                    "--minus-style=red",
+                    "--minus-emph-style=red",
+                    "--minus-non-emph-style=blue",
+                    "--plus-style=green",
+                    "--plus-emph-style=green",
+                    "--plus-non-emph-style=blue",
+                ],
+            ] {
+                let mut args = if mode.contains(&"--raw") || mode.contains(&"--minus-style=red") {
+                    vec![]
+                } else {
+                    vec![
+                        "--minus-emph-style=bold red",
+                        "--plus-emph-style=bold green",
+                    ]
+                };
+                args.extend(mode);
+                let config = integration_test_utils::make_config_from_args(&args);
+                let without_marker = fixture.replace(marker, "");
+                let expected = integration_test_utils::run_delta(&without_marker, &config);
+                // Ensure the reference actually exercises within-line emphasis.
+                if args.contains(&"--minus-emph-style=bold red") {
+                    assert!(ansi::explain_ansi(&expected, false).contains("(bold red)"));
+                }
+                for marked in [
+                    fixture.to_string(),
+                    format!("{without_marker}{marker}"),
+                    format!("{fixture}{marker}"),
+                ] {
+                    let actual = integration_test_utils::run_delta(&marked, &config);
+                    assert_eq!(
+                        actual.matches(marker).count(),
+                        marked.matches(marker).count()
+                    );
+                    if config.side_by_side {
+                        assert!(actual.ends_with(&marker.repeat(marked.matches(marker).count())));
+                    }
+                    assert_eq!(
+                        ansi::explain_ansi(&actual.replace(marker, ""), false),
+                        ansi::explain_ansi(&expected, false),
+                        "args: {args:?}, input: {marked}",
+                    );
+                }
+            }
+        }
+    }
+
+    #[test]
+    fn test_no_newline_marker_preserves_raw_order() {
+        let header =
+            "diff --git a/test.txt b/test.txt\n--- a/test.txt\n+++ b/test.txt\n@@ -1 +1 @@\n";
+        let marker = "\\ No newline at end of file\n";
+        for body in [
+            format!("-old\n{marker}+new\n"),
+            format!("-old\n+new\n{marker}"),
+            format!("-old\n{marker}+new\n{marker}"),
+            format!("-old\n{marker}"),
+            format!("+new\n{marker}"),
+            format!(" same\n{marker}"),
+            format!("-old\n{marker}{marker}+new\n"),
+            format!("-old\n{marker}-more\n+new\n"),
+            format!("-old\n{marker}other metadata\n+new\n"),
+            format!("-old\n{marker}@@ -3 +3 @@\n-next\n+next new\n"),
+            format!("-old\n{marker}{header}-next\n+next new\n"),
+            "-old\n\\ Kein Zeilenumbruch am Dateiende\n+new\n".to_string(),
+        ] {
+            for buffer_size in ["0", "1", "32"] {
+                for emph_style in ["red", "bold red"] {
+                    let config = integration_test_utils::make_config_from_args(&[
+                        "--raw",
+                        "--line-buffer-size",
+                        buffer_size,
+                        "--minus-emph-style",
+                        emph_style,
+                    ]);
+                    let input = format!("{header}{body}");
+                    let actual = integration_test_utils::run_delta(&input, &config);
+                    assert_eq!(strip_ansi_codes(&actual), input);
+                }
+            }
+        }
+    }
+
+    #[test]
+    fn test_no_newline_marker_retains_ansi() {
+        let marker = "\x1b[31m\\ No newline at end of file\x1b[m\n";
+        let input = format!("diff --git a/test.txt b/test.txt\n--- a/test.txt\n+++ b/test.txt\n@@ -1 +1 @@\n-old\n{marker}+new\n");
+        let config = integration_test_utils::make_config_from_args(&[
+            "--raw",
+            "--minus-emph-style=bold red",
+        ]);
+        let actual = integration_test_utils::run_delta(&input, &config);
+        assert!(actual.contains(marker));
+        assert_eq!(strip_ansi_codes(&actual), strip_ansi_codes(&input));
+    }
+
+    #[test]
     fn test_added_file() {
         DeltaTest::with_args(&[])
             .with_input(ADDED_FILE_INPUT)
