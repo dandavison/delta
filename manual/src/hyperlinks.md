@@ -23,6 +23,24 @@ For VSCode and JetBrains IDEs this is easy, since they support their own special
 
 Zed also supports its own URL protocol, and probably others.
 
+## Linking to a match column
+
+For `rg --json` output, add `{column}` to your `hyperlinks-file-link-format` to link to the first match on a line. For a handler that accepts `file://path:line:column`, use:
+
+```gitconfig
+[delta]
+    hyperlinks = true
+    hyperlinks-file-link-format = "file://{path}:{line}:{column}"
+```
+
+If you already use an editor-specific URL scheme, keep that scheme and add `{column}` in the position or query parameter expected by its handler. Delta constructs the link and  your terminal's URL handler opens the editor at that location. The visible line number and syntax highlighting stay the same. This works with both the default ripgrep layout and `--grep-output-type=classic`. Ripgrep's `--column` option is not needed.
+
+When no match column is available, `{column}` expands to `1`. This includes file headings, context lines, match records with no submatches (such as inverted searches), ordinary `git grep` output, and diffs.
+
+Column-aware links are opt-in: the default remains `file://{path}` and existing formats without `{column}` keep their current destinations.
+
+## Other ways to open links in an editor
+
 If your editor does not have its own URL protocol, then there are still many possibilities, although they may be more work.
 
 - The easiest is probably to write a toy HTTP server (e.g. in [Python](https://docs.python.org/3/library/http.server.html)) that opens the links in the way that you need. Then your delta config would look something like

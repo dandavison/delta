@@ -435,10 +435,13 @@ pub struct Opt {
     /// Format string for file hyperlinks (requires --hyperlinks).
     ///
     /// Placeholders "{path}" and "{line}" will be replaced by the absolute file path and the line
-    /// number; "{host}" with the hostname delta is currently running on. The default is to create
-    /// a hyperlink containing a standard file URI with only the filename, which your terminal or
-    /// OS should handle. You can specify any scheme, such as "file-line://{path}:{line}" and
-    /// register an application to handle it. See
+    /// number; "{host}" with the hostname delta is currently running on. "{column}" is the one-based
+    /// byte column of the first match on a line in ripgrep JSON output. It defaults to 1 for
+    /// context lines and other links without a match column. Tab expansion does not affect it.
+    /// For example: "file://{path}:{line}:{column}".
+    /// The default is to create a hyperlink containing a standard file URI with only the filename,
+    /// which your terminal or OS should handle. You can specify any scheme, such as
+    /// "file-line://{path}:{line}" and register an application to handle it. See
     /// <https://dandavison.github.io/delta/hyperlinks.html> for details.
     pub hyperlinks_file_link_format: String,
 

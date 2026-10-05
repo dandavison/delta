@@ -309,10 +309,14 @@ fn format_line_number(
     match (line_number, config.hyperlinks, plus_file) {
         (None, _, _) => " ".repeat(width),
         (Some(n), true, Some(file)) => match utils::path::absolute_path(file, config) {
-            Some(absolute_path) => {
-                hyperlinks::format_osc8_file_hyperlink(absolute_path, line_number, &pad(n), config)
-                    .to_string()
-            }
+            Some(absolute_path) => hyperlinks::format_osc8_file_hyperlink(
+                absolute_path,
+                line_number,
+                None,
+                &pad(n),
+                config,
+            )
+            .to_string(),
             None => pad(n),
         },
         (Some(n), _, _) => pad(n),
