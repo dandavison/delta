@@ -180,6 +180,10 @@ fn _make_process_from_less_path(
 ) -> Option<Command> {
     if let Ok(less_path) = grep_cli::resolve_binary(less_path) {
         let mut p = Command::new(less_path.clone());
+        if config.navigate {
+            // Put navigation stops at the top, unless explicit pager arguments override this.
+            p.arg("--jump-target=1");
+        }
         if args.is_empty() || replace_arguments_to_less {
             p.args(vec!["--RAW-CONTROL-CHARS"]);
 
