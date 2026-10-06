@@ -12,6 +12,12 @@ use crate::{features, utils};
 // https://git-scm.com/docs/git-config#Documentation/git-config.txt-diffmnemonicPrefix
 const DIFF_PREFIXES: [&str; 6] = ["a/", "b/", "c/", "i/", "o/", "w/"];
 
+///
+/// Display decoration appended in place to a binary file's `minus_file`/
+/// `plus_file`; `diff_header_osc` strips it again so the metadata record
+/// carries the real path.
+const BINARY_FILE_SUFFIX: &str = " (binary file)";
+
 #[derive(Debug, PartialEq, Eq)]
 pub enum FileEvent {
     Added,
@@ -220,7 +226,7 @@ impl StateMachine<'_> {
                 // (`handle_diff_header_misc_line`); the record carries the
                 // real path.
                 let file = file
-                    .strip_suffix(super::diff_header_misc::BINARY_FILE_SUFFIX)
+                    .strip_suffix(BINARY_FILE_SUFFIX)
                     .unwrap_or(file);
                 if file.is_empty() {
                     String::new()
@@ -237,6 +243,7 @@ impl StateMachine<'_> {
         let line = get_file_change_description_from_file_paths(
             &self.minus_file,
             &self.plus_file,
+            self.binary_files,
             comparing,
             &self.minus_file_event,
             &self.plus_file_event,
@@ -452,6 +459,7 @@ fn _parse_file_path(path: &str, git_diff_name: bool) -> String {
 pub fn get_file_change_description_from_file_paths(
     minus_file: &str,
     plus_file: &str,
+    binary_files: bool,
     comparing: bool,
     minus_file_event: &FileEvent,
     plus_file_event: &FileEvent,
@@ -489,7 +497,8 @@ pub fn get_file_change_description_from_file_paths(
                 _ => formatted_file,
             }
         };
-        match (minus_file, plus_file, minus_file_event, plus_file_event) {
+
+        let mut description = match (minus_file, plus_file, minus_file_event, plus_file_event) {
             (minus_file, plus_file, _, _) if minus_file == plus_file => format!(
                 "{}{}",
                 format_label(&config.file_modified_label),
@@ -517,7 +526,12 @@ pub fn get_file_change_description_from_file_paths(
                 config.right_arrow,
                 format_file(plus_file)
             ),
+        };
+
+        if binary_files {
+            description.push_str(BINARY_FILE_SUFFIX);
         }
+        description
     }
 }
 

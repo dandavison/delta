@@ -36,6 +36,7 @@ impl StateMachine<'_> {
         let name = get_repeated_file_path_from_diff_line(&self.line).unwrap_or_default();
         self.minus_file.clone_from(&name);
         self.plus_file.clone_from(&name);
+        self.binary_files = false;
         self.minus_file_event = FileEvent::Change;
         self.plus_file_event = FileEvent::Change;
         self.current_file_pair = Some((self.minus_file.clone(), self.plus_file.clone()));

@@ -1,11 +1,6 @@
 use crate::delta::{DiffType, Source, State, StateMachine};
 use crate::utils::path::relativize_path_maybe;
 
-/// Display decoration appended in place to a binary file's `minus_file`/
-/// `plus_file`; `diff_header_osc` strips it again so the metadata record
-/// carries the real path.
-pub const BINARY_FILE_SUFFIX: &str = " (binary file)";
-
 impl StateMachine<'_> {
     #[inline]
     fn test_diff_file_missing(&self) -> bool {
@@ -34,13 +29,12 @@ impl StateMachine<'_> {
                 return Ok(true);
             }
 
+            self.binary_files = true;
             if self.minus_file != "/dev/null" {
                 relativize_path_maybe(&mut self.minus_file, self.config);
-                self.minus_file.push_str(BINARY_FILE_SUFFIX);
             }
             if self.plus_file != "/dev/null" {
                 relativize_path_maybe(&mut self.plus_file, self.config);
-                self.plus_file.push_str(BINARY_FILE_SUFFIX);
             }
             return Ok(true);
         }
