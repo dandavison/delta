@@ -76,3 +76,6 @@ opt-level = 3
 
 [profile.dev.package.similar]
 opt-level = 3
+
+[package.metadata.binstall]
+bin-dir = "{ bin }-{ version }-{ target }/{ bin }{ binary-ext }"
