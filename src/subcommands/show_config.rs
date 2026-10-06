@@ -367,6 +367,14 @@ fn write_additional_values(config: &config::Config, writer: &mut dyn Write) -> s
                 .unwrap_or(""),
         ),
         (
+            "hyperlinks-line-numbers",
+            if config.hyperlinks_line_numbers {
+                "true"
+            } else {
+                "false"
+            },
+        ),
+        (
             "merge-conflict-begin-symbol",
             config.merge_conflict_begin_symbol.as_str(),
         ),
