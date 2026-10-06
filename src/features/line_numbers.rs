@@ -306,7 +306,11 @@ fn format_line_number(
     config: &config::Config,
 ) -> String {
     let pad = |n| format::pad(n, width, alignment, precision);
-    match (line_number, config.hyperlinks, plus_file) {
+    match (
+        line_number,
+        config.hyperlinks && config.hyperlinks_line_numbers,
+        plus_file,
+    ) {
         (None, _, _) => " ".repeat(width),
         (Some(n), true, Some(file)) => match utils::path::absolute_path(file, config) {
             Some(absolute_path) => {
@@ -747,6 +751,36 @@ pub mod tests {
         assert_eq!(lines.next().unwrap(), "10000⋮ 9999│a = 1");
         assert_eq!(lines.next().unwrap(), "10001⋮     │b = 2");
         assert_eq!(lines.next().unwrap(), "     ⋮10000│bb = 2");
+    }
+
+    #[test]
+    fn test_hyperlinks_in_line_number_column() {
+        let config = make_config_from_args(&["--line-numbers", "--hyperlinks"]);
+        let output = run_delta(ONE_MINUS_ONE_PLUS_LINE_DIFF, &config);
+        // Gutter rows wrap the line number in an OSC8 file hyperlink
+        let gutter = output
+            .lines()
+            .find(|l| l.contains('⋮') && l.contains("\x1b]8;;file://"))
+            .unwrap();
+        assert!(gutter.contains("\x1b]8;;file://"));
+    }
+
+    #[test]
+    fn test_hyperlinks_line_numbers_disabled_leaves_gutter_plain() {
+        let config = make_config_from_args(&[
+            "--line-numbers",
+            "--hyperlinks",
+            "--hyperlinks-line-numbers",
+            "false",
+        ]);
+        let output = run_delta(ONE_MINUS_ONE_PLUS_LINE_DIFF, &config);
+        // The gutter rows keep plain line numbers; only the hunk header
+        // (file:line) and file line still carry hyperlinks.
+        for line in output.lines() {
+            if line.contains('⋮') {
+                assert!(!line.contains("\x1b]8;;file://"));
+            }
+        }
     }
 
     #[test]

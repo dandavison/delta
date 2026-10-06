@@ -443,6 +443,18 @@ pub struct Opt {
     pub hyperlinks_file_link_format: String,
 
     #[arg(
+        long = "hyperlinks-line-numbers",
+        default_value = "true",
+        value_name = "true|false",
+        value_parser = ["true", "false"],
+    )]
+    /// Whether to render line numbers as hyperlinks (requires --hyperlinks).
+    ///
+    /// Set this to "false" to keep hyperlinks on commit hashes and file paths while leaving the
+    /// line-number column as plain text.
+    pub hyperlinks_line_numbers: String,
+
+    #[arg(
         long = "inline-hint-style",
         default_value = "blue",
         value_name = "STYLE"
@@ -1180,6 +1192,7 @@ pub struct ComputedValues {
     pub stdout_is_term: bool,
     pub background_color_extends_to_terminal_width: bool,
     pub decorations_width: Width,
+    pub hyperlinks_line_numbers: bool,
     pub inspect_raw_lines: InspectRawLines,
     pub color_mode: ColorMode,
     pub paging_mode: PagingMode,

@@ -168,6 +168,7 @@ pub fn set_options(
             hyperlinks,
             hyperlinks_commit_link_format,
             hyperlinks_file_link_format,
+            hyperlinks_line_numbers,
             inline_hint_style,
             inspect_raw_lines,
             keep_plus_minus_markers,
@@ -237,6 +238,7 @@ pub fn set_options(
     // Setting ComputedValues
     set_widths_and_isatty(opt);
     set_true_color(opt);
+    opt.computed.hyperlinks_line_numbers = opt.hyperlinks_line_numbers == "true";
     theme::set__color_mode__syntax_theme__syntax_set(opt, assets);
     opt.computed.inspect_raw_lines =
         cli::InspectRawLines::from_str(&opt.inspect_raw_lines).unwrap();
