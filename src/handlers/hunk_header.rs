@@ -157,6 +157,7 @@ impl StateMachine<'_> {
         self.painter.paint_buffered_minus_and_plus_lines();
         self.painter.set_highlighter();
         self.painter.emit()?;
+        self.painter.flush_hunk_output()?;
 
         let ParsedHunkHeader {
             code_fragment,
