@@ -82,10 +82,17 @@ fn get_color_mode_and_syntax_theme_name(
 
 fn get_color_mode(opt: &cli::Opt) -> Option<ColorMode> {
     if opt.light {
-        Some(Light)
-    } else if opt.dark {
-        Some(Dark)
-    } else if should_detect_color_mode(opt) {
+        return Some(Light);
+    }
+    if opt.dark {
+        return Some(Dark);
+    }
+    if opt.detect_dark_light == DetectDarkLight::SystemGlobal {
+        if let Some(detected) = detect_color_mode_system_global() {
+            return Some(detected);
+        }
+    }
+    if should_detect_color_mode(opt) {
         detect_color_mode()
     } else {
         None
@@ -95,7 +102,9 @@ fn get_color_mode(opt: &cli::Opt) -> Option<ColorMode> {
 /// See [`cli::Opt::detect_dark_light`] for a detailed explanation.
 fn should_detect_color_mode(opt: &cli::Opt) -> bool {
     match opt.detect_dark_light {
-        DetectDarkLight::Auto => opt.color_only || stdout().is_terminal(),
+        DetectDarkLight::Auto | DetectDarkLight::SystemGlobal => {
+            opt.color_only || stdout().is_terminal()
+        }
         DetectDarkLight::Always => true,
         DetectDarkLight::Never => false,
     }
@@ -106,6 +115,37 @@ fn detect_color_mode() -> Option<ColorMode> {
     color_scheme(QueryOptions::default())
         .ok()
         .map(ColorMode::from)
+}
+
+// `dark_light::detect()` only returns `Result` on these targets (mirrors dark-light's own cfg);
+// elsewhere it returns a bare `Mode`, so gate the call to avoid a build break.
+#[cfg(all(not(test), feature = "system-global"))]
+fn detect_color_mode_system_global() -> Option<ColorMode> {
+    cfg_if::cfg_if! {
+        if #[cfg(any(
+            target_os = "macos",
+            target_os = "windows",
+            target_os = "linux",
+            target_os = "freebsd",
+            target_os = "dragonfly",
+            target_os = "netbsd",
+            target_os = "openbsd",
+            target_arch = "wasm32"
+        ))] {
+            match dark_light::detect() {
+                Ok(dark_light::Mode::Dark) => Some(Dark),
+                Ok(dark_light::Mode::Light) => Some(Light),
+                _ => None,
+            }
+        } else {
+            None
+        }
+    }
+}
+
+#[cfg(any(test, not(feature = "system-global")))]
+fn detect_color_mode_system_global() -> Option<ColorMode> {
+    None
 }
 
 impl From<terminal_colorsaurus::ColorScheme> for ColorMode {
@@ -127,6 +167,27 @@ mod tests {
     use super::*;
     use crate::color;
     use crate::tests::integration_test_utils;
+
+    #[test]
+    fn test_should_detect_color_mode_system_global() {
+        // `--color-only` forces the terminal fallback regardless of the terminal.
+        let color_only = integration_test_utils::make_options_from_args(&[
+            "--detect-dark-light",
+            "system-global",
+            "--color-only",
+        ]);
+        assert!(should_detect_color_mode(&color_only));
+        // Gating matches Auto exactly, independent of how the test suite is invoked.
+        let sys = integration_test_utils::make_options_from_args(&[
+            "--detect-dark-light",
+            "system-global",
+        ]);
+        let auto = integration_test_utils::make_options_from_args(&["--detect-dark-light", "auto"]);
+        assert_eq!(
+            should_detect_color_mode(&sys),
+            should_detect_color_mode(&auto)
+        );
+    }
 
     // TODO: Test influence of BAT_THEME env var. E.g. see utils::process::tests::FakeParentArgs.
     #[test]

@@ -27,6 +27,8 @@ bat = { version = "0.26.0", default-features = false, features = [
 bitflags = "2.2.1"
 box_drawing = "0.1.2"
 bytelines = { version = "2.5.0", default-features = false }
+cfg-if = { version = "1", optional = true }
+dark-light = { version = "2", optional = true }
 chrono = "0.4.26"
 chrono-humanize = "0.2.2"
 clap_complete = "4.4.4"
@@ -59,6 +61,12 @@ unicode-segmentation = "1.10.1"
 # and re-gain \n in various stages, which complicates upgrading.
 unicode-width = ">=0.1.14, <0.2.0"
 xdg = "2.4.1"
+
+[features]
+default = ["system-global"]
+# OS-appearance light/dark detection for `detect-dark-light = system-global`. Pulls in `dark-light`
+# (an async/D-Bus stack on Linux). Disable to drop it; `system-global` then degrades to `auto`.
+system-global = ["dep:dark-light", "dep:cfg-if"]
 
 [lints.rust]
 unexpected_cfgs = { level = "warn", check-cfg = ['cfg(tarpaulin_include)'] }
