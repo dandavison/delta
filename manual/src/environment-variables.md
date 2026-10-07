@@ -44,7 +44,7 @@ an application that needs to render delta output in one of its own views (e.g. a
 
 ## Delta-specific environment variables
 
-To temporarily activate and inactivate delta features, you can use `DELTA_FEATURES`, e.g.
+To temporarily activate and deactivate delta features, you can use `DELTA_FEATURES`, e.g.
 
 ```sh
 export DELTA_FEATURES='+side-by-side my-feature'
