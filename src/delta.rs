@@ -153,7 +153,9 @@ impl<'a> StateMachine<'a> {
     where
         I: BufRead,
     {
+        let mut has_input = false;
         while let Some(Ok(raw_line_bytes)) = lines.next() {
+            has_input = true;
             self.ingest_line(raw_line_bytes);
 
             if self.source == Source::Unknown {
@@ -187,6 +189,10 @@ impl<'a> StateMachine<'a> {
                 || self.handle_grep_line()?
                 || self.should_skip_line()
                 || self.emit_line_unchanged()?;
+        }
+
+        if !has_input {
+            return Ok(());
         }
 
         self.handle_pending_line_with_diff_name()?;
