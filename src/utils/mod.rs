@@ -10,6 +10,10 @@ pub mod syntect;
 pub mod tabs;
 pub mod workarounds;
 
+mod debug;
+pub use debug::PrintNoticeOnPanic;
+pub use debug::RecordDeltaCall;
+
 // Use the most (even overly) strict ordering. Atomics are not used in hot loops so
 // a one-size-fits-all approach which is never incorrect is okay.
 pub const DELTA_ATOMIC_ORDERING: std::sync::atomic::Ordering = std::sync::atomic::Ordering::SeqCst;
