@@ -385,16 +385,19 @@ pub fn wrap_minusplus_block<'c: 'a, 'a>(
     alignment: &[(Option<usize>, Option<usize>)],
     line_width: &SideBySideLineWidth,
     wrapinfo: &'a MinusPlus<Vec<bool>>,
+    lines_background: &MinusPlus<Vec<Option<Style>>>,
 ) -> (
     Vec<(Option<usize>, Option<usize>)>,
     MinusPlus<Vec<State>>,
     MinusPlus<Vec<LineSections<'a, SyntectStyle>>>,
     MinusPlus<Vec<LineSections<'a, Style>>>,
+    MinusPlus<Vec<Option<Style>>>,
 ) {
     let mut new_alignment = Vec::new();
     let mut new_states = MinusPlus::<Vec<State>>::default();
     let mut new_wrapped_syntax = MinusPlus::default();
     let mut new_wrapped_diff = MinusPlus::default();
+    let mut new_background = MinusPlus::<Vec<Option<Style>>>::default();
 
     // Turn all these into pairs of iterators so they can be advanced according
     // to the alignment and independently.
@@ -481,6 +484,13 @@ pub fn wrap_minusplus_block<'c: 'a, 'a>(
             assert_eq!(*$have, $expected, "bad alignment index {}", $errhint);
             $expected += 1;
 
+            // The wrap symbol and padding take the line's git background (see
+            // `line_background_from_git`), falling back to the nominal minus/plus style.
+            let line_fill = lines_background[$side]
+                .get(*$have)
+                .copied()
+                .flatten()
+                .unwrap_or(*fill_style[$side]);
             wrap_syntax_and_diff(
                 &config,
                 &mut new_wrapped_syntax[$side],
@@ -489,7 +499,7 @@ pub fn wrap_minusplus_block<'c: 'a, 'a>(
                 &mut diff[$side],
                 &mut wrapinfo[$side],
                 line_width[$side],
-                &fill_style[$side],
+                &line_fill,
                 $errhint,
             )
         }};
@@ -553,16 +563,29 @@ pub fn wrap_minusplus_block<'c: 'a, 'a>(
             _ => unreachable!("None-None alignment"),
         };
 
+        // Each wrapped sub-line inherits its source line's git background.
+        let minus_base = match minus {
+            Some(m) => lines_background[Left].get(*m).copied().flatten(),
+            None => None,
+        };
+        let plus_base = match plus {
+            Some(p) => lines_background[Right].get(*p).copied().flatten(),
+            None => None,
+        };
         if minus_extended > 0 {
             new_states[Left].push(State::HunkMinus(DiffType::Unified, None));
+            new_background[Left].push(minus_base);
             for _ in 1..minus_extended {
                 new_states[Left].push(State::HunkMinusWrapped);
+                new_background[Left].push(minus_base);
             }
         }
         if plus_extended > 0 {
             new_states[Right].push(State::HunkPlus(DiffType::Unified, None));
+            new_background[Right].push(plus_base);
             for _ in 1..plus_extended {
                 new_states[Right].push(State::HunkPlusWrapped);
+                new_background[Right].push(plus_base);
             }
         }
     }
@@ -572,6 +595,7 @@ pub fn wrap_minusplus_block<'c: 'a, 'a>(
         new_states,
         new_wrapped_syntax,
         new_wrapped_diff,
+        new_background,
     )
 }
 

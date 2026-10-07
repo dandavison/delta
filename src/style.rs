@@ -114,7 +114,7 @@ impl Style {
     }
 
     pub fn is_applied_to(&self, s: &str) -> bool {
-        match ansi::parse_first_style(s) {
+        match ansi::parse_leading_style(s) {
             Some(parsed_style) => ansi_term_style_equality(parsed_style, self.ansi_term_style),
             None => false,
         }
