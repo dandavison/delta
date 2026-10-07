@@ -42,10 +42,8 @@ impl GitConfig {
     pub fn try_create(env: &DeltaEnv) -> Option<Self> {
         use crate::fatal;
 
-        let repo = match &env.current_dir {
-            Some(dir) => git2::Repository::discover(dir).ok(),
-            _ => None,
-        };
+        let repo = git2::Repository::open_from_env().ok();
+
         let config = match &repo {
             Some(repo) => repo.config().ok(),
             None => git2::Config::open_default().ok(),
