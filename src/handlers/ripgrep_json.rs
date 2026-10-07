@@ -171,6 +171,17 @@ mod tests {
     }
 
     #[test]
+    fn test_max_line_length_truncates_rg_json_match() {
+        let data = r#"{"type":"match","data":{"path":{"text":"test.txt"},"lines":{"text":"abcdefghijklmno\n"},"line_number":1,"absolute_offset":0,"submatches":[{"match":{"text":"a"},"start":0,"end":1},{"match":{"text":"m"},"start":12,"end":13}]}}"#;
+        let result = DeltaTest::with_args(&["--max-line-length=10"])
+            .set_config(|config| config.truncation_symbol = ">".into())
+            .with_input(data);
+
+        assert!(result.output.contains("abcdefghi>"));
+        assert!(!result.output.contains("abcdefghijklmno"));
+    }
+
+    #[test]
     fn test_deserialize() {
         let line = r#"{"type":"match","data":{"path":{"text":"src/cli.rs"},"lines":{"text":"    fn from_clap_and_git_config(\n"},"line_number":null,"absolute_offset":35837,"submatches":[{"match":{"text":"fn"},"start":4,"end":6}]}}"#;
         let ripgrep_line: RipGrepLine = serde_json::from_str(line).unwrap();
