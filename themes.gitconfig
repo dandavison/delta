@@ -415,20 +415,20 @@
 
 [delta "discord"]
     commit-style                  = omit
-    file-style                    = 34 ul
+    file-style                    = blue ul
     file-decoration-style         = none
     hunk-header-style             = omit
-    minus-style                   = 31
-    minus-non-emph-style          = 31
-    minus-emph-style              = 40
-    minus-empty-line-marker-style = 31
-    zero-style                    = 30
-    plus-style                    = 32
-    plus-non-emph-style           = 32
-    plus-emph-style               = 40
-    grep-file-style               = 34
-    grep-line-number-style        = 34
-    whitespace-error-style        = 41
+    minus-style                   = red
+    minus-non-emph-style          = red
+    minus-emph-style              = white red
+    minus-empty-line-marker-style = red
+    zero-style                    = white
+    plus-style                    = green
+    plus-non-emph-style           = green
+    plus-emph-style               = white green
+    grep-file-style               = blue
+    grep-line-number-style        = blue
+    whitespace-error-style        = red reverse
     blame-code-style              = omit
     true-color                    = never
     file-modified-label           = changed:
