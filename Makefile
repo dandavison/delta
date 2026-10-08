@@ -26,6 +26,14 @@ release:
 version:
 	@grep version Cargo.toml | head -n1 | sed -E 's,.*version = "([^"]+)",\1,'
 
+# Depend on the latest published delta-gitu
+bump-gitu:
+	v=$$(cargo search delta-gitu --limit 1 | sed -n 's/^delta-gitu = "\([^"]*\)".*/\1/p') && \
+	perl -pi -e 's/^(delta-gitu = \{ version = ")[^"]+/$${1}'$$v'/' Cargo.toml && \
+	cargo update -p delta-gitu && \
+	$(MAKE) build && \
+	git commit -m "delta-gitu v$$v" Cargo.toml Cargo.lock
+
 BENCHMARK_INPUT_FILE = /tmp/delta-benchmark-input.gitdiff
 BENCHMARK_COMMAND = git log -p 23c292d3f25c67082a2ba315a187268be1a9b0ab
 benchmark: build
@@ -41,4 +49,4 @@ flamegraph: build
 chronologer:
 	chronologer etc/performance/chronologer.yaml
 
-.PHONY: build format lint test unit-test end-to-end-test release shell-completion version benchmark flamegraph chronologer
+.PHONY: bump-gitu build format lint test unit-test end-to-end-test release shell-completion version benchmark flamegraph chronologer
