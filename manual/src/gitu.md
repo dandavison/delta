@@ -38,7 +38,7 @@ diff_renderer.features = ["side-by-side", "line-numbers", "my-*"]
 # Top-level keys that toggle features. In the `|` list, a letter sets the
 # selected feature's key (again to unset it), and gitu saves it here.
 diff_renderer.feature_keys = { side-by-side = "x" }
-# Pathspecs excluded when the view is first built; `:` shows them and `_` edits them.
+# Pathspecs excluded when the view is first built; `:` shows them and `&` edits them.
 hide = ["*.pb.go"]
 # Stop the cursor on unchanged lines too.
 visit_context_lines = true
@@ -59,7 +59,7 @@ See gitu's [default config](https://github.com/dandavison/gitu/blob/diff-rendere
 |---|---|---|
 | `:` | edit the git command that produced the view (read-only commands only) | `root.edit_git_command` |
 | `d` | exclude the file whose header is under the cursor | `root.hide_file` |
-| `_` | edit the pathspecs limiting the view (`!` excludes) | `root.file_patterns` |
+| `&` | edit the pathspecs limiting the view (`!` excludes) | `root.file_patterns` |
 | `U` | change the diff context (a number, or `W` for the whole function) | `root.diff_context` |
 | `\|` | toggle delta features; in the list, a letter sets the selected feature's key | `root.renderer_features` |
 | `shift+tab` | fold all (folds all files in diff views) | `root.toggle_all_sections` |
