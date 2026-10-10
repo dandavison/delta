@@ -1,5 +1,6 @@
 use std::collections::HashMap;
 use std::path::PathBuf;
+use std::sync::Arc;
 
 use clap::parser::ValueSource;
 use regex::Regex;
@@ -27,6 +28,7 @@ use crate::tests::TESTING;
 use crate::utils;
 use crate::utils::bat::output::PagingMode;
 use crate::utils::regex_replacement::RegexReplacement;
+use crate::utils::syntax_mapping::SyntaxMapping;
 use crate::wrapping::WrapConfig;
 
 pub const INLINE_SYMBOL_WIDTH_1: usize = 1;
@@ -128,6 +130,7 @@ pub struct Config {
     pub show_themes: bool,
     pub side_by_side_data: side_by_side::SideBySideData,
     pub side_by_side: bool,
+    pub syntax_mapping: Arc<SyntaxMapping>,
     pub syntax_set: SyntaxSet,
     pub syntax_theme: Option<SyntaxTheme>,
     pub tab_cfg: utils::tabs::TabCfg,
@@ -427,6 +430,7 @@ impl From<cli::Opt> for Config {
             side_by_side: opt.side_by_side && !handlers::hunk::is_word_diff(),
             side_by_side_data,
             styles_map,
+            syntax_mapping: opt.computed.syntax_mapping.clone(),
             syntax_set: opt.computed.syntax_set,
             syntax_theme: opt.computed.syntax_theme,
             tab_cfg: utils::tabs::TabCfg::new(opt.tab_width),
