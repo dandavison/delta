@@ -12,6 +12,7 @@ use crate::features;
 use crate::handlers::grep;
 use crate::handlers::hunk_header::{AmbiguousDiffMinusCounter, ParsedHunkHeader};
 use crate::handlers::{self, merge_conflict};
+use crate::minusplus::MinusPlus;
 use crate::paint::Painter;
 use crate::style::DecorationStyle;
 use crate::utils;
@@ -112,6 +113,8 @@ pub struct StateMachine<'a> {
     pub handled_diff_header_header_line_file_pair: Option<(String, String)>,
     pub blame_key_colors: HashMap<String, String>,
     pub minus_line_counter: AmbiguousDiffMinusCounter,
+    // Input lines consumed by the conflict handler, in first-parent/result coordinates.
+    pub merge_conflict_line_counts: MinusPlus<usize>,
 }
 
 pub fn delta<I>(lines: ByteLines<I>, writer: &mut dyn Write, config: &Config) -> std::io::Result<()>
@@ -146,6 +149,7 @@ impl<'a> StateMachine<'a> {
             config,
             blame_key_colors: HashMap::new(),
             minus_line_counter: AmbiguousDiffMinusCounter::not_needed(),
+            merge_conflict_line_counts: MinusPlus::default(),
         }
     }
 
