@@ -405,7 +405,11 @@ mod tests {
 ",
         &[".gitconfig.local:Git Config".to_owned()],
     )]
-    fn test_get_multi_string(#[case] path: &str, #[case] contents: &str, #[case] expected: &[String]) {
+    fn test_get_multi_string(
+        #[case] path: &str,
+        #[case] contents: &str,
+        #[case] expected: &[String],
+    ) {
         let gitconfig = make_git_config_for_test(contents, path);
         let values = gitconfig.get_multi_string("delta.map-syntax");
         assert_eq!(values, expected);

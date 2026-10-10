@@ -23,10 +23,7 @@ pub enum SyntaxMappingError {
     /// `:` separator.
     InvalidFormat(String),
     /// The glob pattern could not be compiled.
-    InvalidGlob {
-        glob: String,
-        message: String,
-    },
+    InvalidGlob { glob: String, message: String },
 }
 
 impl std::fmt::Display for SyntaxMappingError {
@@ -168,7 +165,10 @@ mod tests {
     #[case::multiple_colons("*.foo:Bar:Baz")]
     fn invalid_format_rejected(#[case] entry: &str) {
         let mut m = SyntaxMapping::new();
-        assert!(matches!(m.insert(entry), Err(SyntaxMappingError::InvalidFormat(_))));
+        assert!(matches!(
+            m.insert(entry),
+            Err(SyntaxMappingError::InvalidFormat(_))
+        ));
     }
 
     #[test]

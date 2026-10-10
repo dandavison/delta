@@ -6,8 +6,8 @@ pub mod path;
 pub mod process;
 pub mod regex_replacement;
 pub mod round_char_boundary;
-pub mod syntect;
 pub mod syntax_mapping;
+pub mod syntect;
 pub mod tabs;
 pub mod workarounds;
 
