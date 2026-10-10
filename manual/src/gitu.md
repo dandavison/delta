@@ -80,9 +80,9 @@ In the rebase instruction list:
 | `d` | drop | `rebase_todo.rebase_todo_drop` |
 | `alt+j` / `alt+k` | move the commit down / up | `rebase_todo.rebase_todo_move_down` / `rebase_todo.rebase_todo_move_up` |
 | `enter` | start the rebase | `rebase_todo.rebase_todo_start` |
-| `Q` | call the rebase off | `rebase_todo.rebase_todo_abort` |
+| `q` / `esc` | leave; as git's sequence editor, call the rebase off | `rebase_todo.quit` |
 
-Movement, folding and `q` in the list are bound separately from the main view, as `rebase_todo.move_down` etc.
+Movement and folding in the list are bound separately from the main view, as `rebase_todo.move_down` etc.
 
 ### gitu
 
