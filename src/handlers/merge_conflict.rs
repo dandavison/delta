@@ -39,12 +39,17 @@ impl StateMachine<'_> {
             return Ok(handled_line);
         }
 
+        if let MergeConflict(merge_parents, _) = &self.state {
+            let n_parents = Combined(merge_parents.clone(), InMergeConflict::Yes).n_parents();
+            self.count_merge_conflict_line(n_parents);
+        }
+
         match self.state.clone() {
             HunkHeader(Combined(merge_parents, InMergeConflict::No), _, _, _)
             | HunkMinus(Combined(merge_parents, InMergeConflict::No), _)
             | HunkZero(Combined(merge_parents, InMergeConflict::No), _)
             | HunkPlus(Combined(merge_parents, InMergeConflict::No), _) => {
-                handled_line = self.enter_merge_conflict(&merge_parents)
+                handled_line = self.enter_merge_conflict(&merge_parents)?
             }
             MergeConflict(merge_parents, Ours) => {
                 handled_line = self.enter_ancestral(&merge_parents)
@@ -76,14 +81,34 @@ impl StateMachine<'_> {
         Ok(handled_line)
     }
 
-    fn enter_merge_conflict(&mut self, merge_parents: &MergeParents) -> bool {
+    fn enter_merge_conflict(&mut self, merge_parents: &MergeParents) -> std::io::Result<bool> {
         use State::*;
         if let Some(commit) = parse_merge_marker(&self.line, "++<<<<<<<") {
+            let commit = commit.to_string();
+            if let HunkHeader(_, parsed_hunk_header, line, raw_line) = &self.state.clone() {
+                self.emit_hunk_header_line(parsed_hunk_header, line, raw_line)?;
+            }
+            self.painter.paint_buffered_minus_and_plus_lines();
             self.state = MergeConflict(merge_parents.clone(), Ours);
-            self.painter.merge_conflict_commit_names[Ours] = Some(commit.to_string());
-            true
+            self.painter.merge_conflict_commit_names = MergeConflictCommitNames::new();
+            self.painter.merge_conflict_commit_names[Ours] = Some(commit);
+            // The opening marker is present only in the result.
+            self.merge_conflict_line_counts = MinusPlus::new(0, 1);
+            Ok(true)
         } else {
-            false
+            Ok(false)
+        }
+    }
+
+    fn count_merge_conflict_line(&mut self, n_parents: usize) {
+        if let Some(prefix) = self.line.get(..n_parents) {
+            if !prefix.bytes().all(|c| matches!(c, b' ' | b'+' | b'-')) {
+                return;
+            }
+            let in_result = !prefix.contains('-');
+            let in_first_parent = prefix.starts_with('-') || in_result && prefix.starts_with(' ');
+            self.merge_conflict_line_counts.minus += usize::from(in_first_parent);
+            self.merge_conflict_line_counts.plus += usize::from(in_result);
         }
     }
 
@@ -136,6 +161,11 @@ impl StateMachine<'_> {
         use DiffType::*;
         use State::*;
         self.painter.emit()?;
+        let line_numbers = self
+            .painter
+            .line_numbers_data
+            .as_ref()
+            .map(|data| data.line_number.clone());
 
         write_merge_conflict_bar(
             &self.config.merge_conflict_begin_symbol,
@@ -146,6 +176,13 @@ impl StateMachine<'_> {
             (Ours, self.config.merge_conflict_ours_diff_header_style),
             (Theirs, self.config.merge_conflict_theirs_diff_header_style),
         ] {
+            // Both derived views describe the same region. Preserve the enclosing hunk's
+            // first-parent/result convention; the combined diff has no ancestor offset.
+            if let (Some(data), Some(line_numbers)) =
+                (&mut self.painter.line_numbers_data, &line_numbers)
+            {
+                data.line_number = line_numbers.clone();
+            }
             write_diff_header(
                 derived_commit_type,
                 *header_style,
@@ -165,6 +202,16 @@ impl StateMachine<'_> {
                 self.config,
             );
             self.painter.emit()?;
+        }
+        // Resume the enclosing combined diff from consumed input, rather than from either
+        // derived view (whose ancestor and side lengths can all differ).
+        if let (Some(data), Some(line_numbers)) =
+            (&mut self.painter.line_numbers_data, line_numbers)
+        {
+            data.line_number = MinusPlus::new(
+                line_numbers.minus + self.merge_conflict_line_counts.minus,
+                line_numbers.plus + self.merge_conflict_line_counts.plus,
+            );
         }
         // write_merge_conflict_decoration("bold ol", &mut self.painter, self.config)?;
         write_merge_conflict_bar(
@@ -304,6 +351,261 @@ impl MergeConflictCommitNames {
 mod tests {
     use crate::ansi::strip_ansi_codes;
     use crate::tests::integration_test_utils;
+
+    // Compare content and counters in either layout without depending on panel padding.
+    fn numbered_lines(input: &str, side_by_side: bool) -> Vec<(String, char, usize)> {
+        let mut args = vec![
+            "--line-numbers",
+            "--line-numbers-left-format",
+            "L{nm}|",
+            "--line-numbers-right-format",
+            "R{np}|",
+            "--hunk-header-style",
+            "raw",
+            "--width",
+            "80",
+        ];
+        if side_by_side {
+            args.push("--side-by-side");
+        }
+        let config = integration_test_utils::make_config_from_args(&args);
+        let output = strip_ansi_codes(&integration_test_utils::run_delta(input, &config));
+        let mut numbered = Vec::new();
+        for line in output.lines().filter_map(|line| line.strip_prefix('L')) {
+            let (left_number, rest) = line.split_once('|').unwrap();
+            let (left_content, rest) = rest.split_once('R').unwrap();
+            let (right_number, right_content) = rest.split_once('|').unwrap();
+            if let Ok(number) = left_number.trim().parse() {
+                let content = if side_by_side {
+                    left_content
+                } else {
+                    right_content
+                };
+                numbered.push((content.trim().to_string(), 'L', number));
+            }
+            if let Ok(number) = right_number.trim().parse() {
+                numbered.push((right_content.trim().to_string(), 'R', number));
+            }
+        }
+        numbered.sort();
+        numbered
+    }
+
+    fn expect_numbered_lines(input: &str, expected: &[(&str, char, usize)]) {
+        let mut expected: Vec<_> = expected
+            .iter()
+            .map(|(content, side, number)| (content.to_string(), *side, *number))
+            .collect();
+        expected.sort();
+        for side_by_side in [false, true] {
+            assert_eq!(
+                numbered_lines(input, side_by_side),
+                expected,
+                "side_by_side={side_by_side}"
+            );
+        }
+    }
+
+    #[test]
+    fn test_merge_conflict_line_numbers_no_context() {
+        for start in [1, 50] {
+            for ancestor in [false, true] {
+                let base = if ancestor {
+                    "++||||||| base\n++base\n"
+                } else {
+                    ""
+                };
+                let input = format!(
+                    "diff --cc file.txt\n--- a/file.txt\n+++ b/file.txt\n\
+@@@ -{start},1 -{start},1 +{start},{} @@@\n\
+++<<<<<<< HEAD\n +ours\n{base}++=======\n+ theirs\n++>>>>>>> other\n",
+                    if ancestor { 7 } else { 5 }
+                );
+                let mut expected = vec![("ours", 'R', start), ("theirs", 'R', start)];
+                if ancestor {
+                    expected.extend([("base", 'L', start), ("base", 'L', start)]);
+                }
+                expect_numbered_lines(&input, &expected);
+                let config =
+                    integration_test_utils::make_config_from_args(&["--hunk-header-style", "raw"]);
+                let output = strip_ansi_codes(&integration_test_utils::run_delta(&input, &config));
+                assert!(output.contains(&format!("@@@ -{start},1")));
+            }
+        }
+    }
+
+    #[test]
+    fn test_merge_conflict_line_numbers_unequal_lengths_and_multiple_conflicts() {
+        // Combined numbering uses the first parent and result, even when the second parent
+        // has a different offset. The input does not contain an ancestor-file offset.
+        let input = "\
+diff --cc file.txt
+--- a/file.txt
++++ b/file.txt
+@@@ -50,7 -70,5 +90,20 @@@
+  before
+++<<<<<<< HEAD
+ +ours1
+ +ours2
+ +ours3
+++||||||| base
+++base1
+++base2
+++=======
++ theirs1
+++>>>>>>> other
+  between
+++<<<<<<< HEAD
+ +ours4
+++||||||| base
+++base3
+++=======
++ theirs2
+++>>>>>>> other
+  after
+";
+        expect_numbered_lines(
+            input,
+            &[
+                ("before", 'L', 50),
+                ("before", 'R', 90),
+                ("base1", 'L', 51),
+                ("base1", 'L', 51),
+                ("base2", 'L', 52),
+                ("base2", 'L', 52),
+                ("ours1", 'R', 91),
+                ("ours2", 'R', 92),
+                ("ours3", 'R', 93),
+                ("theirs1", 'R', 91),
+                ("between", 'L', 54),
+                ("between", 'R', 101),
+                ("base3", 'L', 55),
+                ("base3", 'L', 55),
+                ("ours4", 'R', 102),
+                ("theirs2", 'R', 102),
+                ("after", 'L', 56),
+                ("after", 'R', 109),
+            ],
+        );
+    }
+
+    #[test]
+    fn test_merge_conflict_line_numbers_flush_pending_changes() {
+        let input = "\
+diff --cc file.txt
+--- a/file.txt
++++ b/file.txt
+@@@ -50,3 -70,2 +90,9 @@@
+- old
+++new
+++<<<<<<< HEAD
+ +ours
+++||||||| base
+++base
+++=======
++ theirs
+++>>>>>>> other
+  after
+";
+        for side_by_side in [false, true] {
+            // Unified combined diffs retain the two-column prefixes; side-by-side does not.
+            let (old, new) = if side_by_side {
+                ("old", "new")
+            } else {
+                ("- old", "++new")
+            };
+            let mut expected = vec![
+                (old, 'L', 50),
+                (new, 'R', 90),
+                ("base", 'L', 51),
+                ("base", 'L', 51),
+                ("ours", 'R', 91),
+                ("theirs", 'R', 91),
+                ("after", 'L', 52),
+                ("after", 'R', 98),
+            ]
+            .into_iter()
+            .map(|(s, side, n)| (s.to_string(), side, n))
+            .collect::<Vec<_>>();
+            expected.sort();
+            assert_eq!(numbered_lines(input, side_by_side), expected);
+        }
+    }
+
+    #[test]
+    fn test_merge_conflict_line_numbers_edited_region() {
+        // A new line edited into ours is absent from the first parent, so the left
+        // counter after the conflict must not simply advance by the ours buffer length.
+        let input = "\
+diff --cc file.txt
+--- a/file.txt
++++ b/file.txt
+@@@ -50,2 -70,2 +90,9 @@@
+++<<<<<<< HEAD
+ +ours
+++manual
+++||||||| base
+++base
+++=======
++ theirs
+++>>>>>>> other
+  after
+";
+        expect_numbered_lines(
+            input,
+            &[
+                ("base", 'L', 50),
+                ("base", 'L', 50),
+                ("ours", 'R', 90),
+                ("manual", 'R', 91),
+                ("theirs", 'R', 90),
+                ("after", 'L', 51),
+                ("after", 'R', 98),
+            ],
+        );
+    }
+
+    #[test]
+    fn test_merge_conflict_line_numbers_without_ancestor_after_diff3() {
+        let input = "\
+diff --cc file.txt
+--- a/file.txt
++++ b/file.txt
+@@@ -50,4 -70,4 +90,14 @@@
+++<<<<<<< HEAD
+ +ours1
+++||||||| base
+++base1
+++=======
++ theirs1
+++>>>>>>> other
+  between
+++<<<<<<< HEAD
+ +ours2
+++=======
++ theirs2
+++>>>>>>> other
+  after
+";
+        expect_numbered_lines(
+            input,
+            &[
+                ("base1", 'L', 50),
+                ("base1", 'L', 50),
+                ("ours1", 'R', 90),
+                ("theirs1", 'R', 90),
+                ("between", 'L', 51),
+                ("between", 'R', 97),
+                ("ours2", 'R', 98),
+                ("theirs2", 'R', 98),
+                ("after", 'L', 53),
+                ("after", 'R', 103),
+            ],
+        );
+        let config = integration_test_utils::make_config_from_args(&[]);
+        let output = strip_ansi_codes(&integration_test_utils::run_delta(input, &config));
+        assert_eq!(output.matches("ancestor ⟶").count(), 2);
+    }
 
     #[test]
     fn test_toy_merge_conflict_no_context() {
