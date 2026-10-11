@@ -12,7 +12,11 @@ use crate::style;
 use crate::utils::bat::output::PagingMode;
 
 pub fn show_config(opt: cli::Opt, writer: &mut dyn Write) -> std::io::Result<()> {
-    let options = option_values(&opt);
+    // Sort the user-options list before writing so multi-valued options
+    // (e.g. `map-syntax`) produce a contiguous block of lines that survives
+    // the global alphabetical sort applied below.
+    let mut options = option_values(&opt);
+    options.sort();
     let config = config::Config::from(opt);
     let mut output = Vec::new();
     write_config(&config, &mut output)?;
@@ -60,6 +64,11 @@ fn option_values(opt: &cli::Opt) -> Vec<(String, String)> {
         wrap_right_percent,
     );
     optional_strings!(features, map_styles);
+    // `map_syntax` is a multi-valued option; emit one line per entry,
+    // analogous to `git config --list` repeating the key.
+    for entry in &opt.map_syntax {
+        options.push(("map-syntax".to_string(), format_option_value(entry)));
+    }
     options.push((
         "file-transformation".to_string(),
         format_option_value(opt.file_regex_replacement.as_deref().unwrap_or("")),
@@ -481,7 +490,12 @@ mod tests {
 
     #[test]
     fn test_show_config_includes_all_config_keys() {
-        let opt = integration_test_utils::make_options_from_args(&[]);
+        // Include a `map-syntax` entry so the multi-value branch is exercised
+        // (otherwise the empty default would not show up in the output).
+        let opt = integration_test_utils::make_options_from_args(&[
+            "--map-syntax",
+            "*.ino:C++",
+        ]);
         let mut writer = Vec::new();
         show_config(opt, &mut writer).unwrap();
         let output = String::from_utf8(writer).unwrap();
@@ -490,8 +504,9 @@ mod tests {
             .lines()
             .map(|line| line.split_once('=').unwrap().0.trim())
             .collect();
+        // Multi-valued options (e.g. `map-syntax`) legitimately produce
+        // duplicate keys, so we deduplicate only for the membership check.
         let actual: BTreeSet<_> = keys.iter().copied().collect();
-        assert_eq!(keys.len(), actual.len(), "duplicate config keys");
         let names = cli::Opt::get_argument_and_option_names();
         let expected: BTreeSet<_> = names
             .values()
@@ -505,7 +520,7 @@ mod tests {
             .collect();
         assert_eq!(actual, expected);
         assert!(
-            keys.windows(2).all(|pair| pair[0] < pair[1]),
+            keys.windows(2).all(|pair| pair[0] <= pair[1]),
             "config keys are not sorted alphabetically"
         );
     }
