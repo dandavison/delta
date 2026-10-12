@@ -7,6 +7,7 @@ pub enum OptionValue {
     OptionString(Option<String>),
     String(String),
     Int(usize),
+    StringList(Vec<String>),
 }
 
 /// An OptionValue, tagged according to its provenance/semantics.
@@ -92,6 +93,21 @@ impl From<OptionValue> for usize {
         match value {
             OptionValue::Int(value) => value,
             _ => delta_unreachable("Error converting OptionValue to usize."),
+        }
+    }
+}
+
+impl From<Vec<String>> for OptionValue {
+    fn from(value: Vec<String>) -> Self {
+        OptionValue::StringList(value)
+    }
+}
+
+impl From<OptionValue> for Vec<String> {
+    fn from(value: OptionValue) -> Self {
+        match value {
+            OptionValue::StringList(value) => value,
+            _ => delta_unreachable("Error converting OptionValue to Vec<String>."),
         }
     }
 }
