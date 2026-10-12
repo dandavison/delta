@@ -12,41 +12,78 @@ use crate::style;
 use crate::utils::bat::output::PagingMode;
 
 pub fn show_config(opt: cli::Opt, writer: &mut dyn Write) -> std::io::Result<()> {
-    // Sort the user-options list before writing so multi-valued options
-    // (e.g. `map-syntax`) produce a contiguous block of lines that survives
-    // the global alphabetical sort applied below.
-    let mut options = option_values(&opt);
-    options.sort();
+    let UserOptions {
+        single_value,
+        multi_value,
+    } = option_values(&opt);
     let config = config::Config::from(opt);
     let mut output = Vec::new();
     write_config(&config, &mut output)?;
     write_additional_styles(&config, &mut output)?;
     write_decoration_styles(&config, &mut output)?;
     write_additional_values(&config, &mut output)?;
-    for (key, value) in options {
+
+    // Multi-value options stay in insertion order in the final output.
+    // delta applies them with "later overrides earlier" semantics, so
+    // within a group the last entry is the one that wins — users read
+    // top-to-bottom to see which mapping applies last.
+    let mut entries: Vec<(String, String)> = single_value;
+    for (key, values) in &multi_value {
+        for value in values {
+            entries.push((key.clone(), format_option_value(value)));
+        }
+    }
+
+    // First pass: group entries by key (stable) and order within each
+    // group by the index they were inserted. We tag each entry with its
+    // 0-based insertion index before sorting.
+    let mut indexed: Vec<(usize, &str, &str)> = entries
+        .iter()
+        .enumerate()
+        .map(|(i, (k, v))| (i, k.as_str(), v.as_str()))
+        .collect();
+    indexed.sort_by(|a, b| a.1.cmp(b.1).then_with(|| a.0.cmp(&b.0)));
+    for (_, key, value) in indexed {
         writeln!(output, "    {key:29} = {value}")?;
     }
-    for line in output.split_inclusive(|&byte| byte == b'\n').sorted() {
+
+    // Second pass: stable alphabetical sort on the full lines. The
+    // group structure from the first pass is preserved because lines
+    // belonging to the same multi-value group are identical up to the
+    // value field, and the value-based comparison is deterministic.
+    let mut lines: Vec<&[u8]> = output
+        .split_inclusive(|&byte| byte == b'\n')
+        .collect();
+    lines.sort_by(|a, b| a.cmp(b));
+    for line in lines {
         writer.write_all(line)?;
     }
     Ok(())
 }
 
-fn option_values(opt: &cli::Opt) -> Vec<(String, String)> {
-    let mut options = Vec::new();
+/// User-supplied options, separated by whether they are single-valued
+/// or multi-valued. Multi-valued options keep their insertion order so
+/// the output preserves delta's "later overrides earlier" semantics.
+struct UserOptions {
+    single_value: Vec<(String, String)>,
+    multi_value: Vec<(String, Vec<String>)>,
+}
+
+fn option_values(opt: &cli::Opt) -> UserOptions {
+    let mut single_value = Vec::new();
     macro_rules! values {
         ($($field:ident),* $(,)?) => {
-            $(options.push((stringify!($field).replace('_', "-"), opt.$field.to_string()));)*
+            $(single_value.push((stringify!($field).replace('_', "-"), opt.$field.to_string()));)*
         };
     }
     macro_rules! strings {
         ($($field:ident),* $(,)?) => {
-            $(options.push((stringify!($field).replace('_', "-"), format_option_value(&opt.$field)));)*
+            $(single_value.push((stringify!($field).replace('_', "-"), format_option_value(&opt.$field)));)*
         };
     }
     macro_rules! optional_strings {
         ($($field:ident),* $(,)?) => {
-            $(options.push((stringify!($field).replace('_', "-"), format_option_value(opt.$field.as_deref().unwrap_or(""))));)*
+            $(single_value.push((stringify!($field).replace('_', "-"), format_option_value(opt.$field.as_deref().unwrap_or(""))));)*
         };
     }
     values!(
@@ -64,16 +101,11 @@ fn option_values(opt: &cli::Opt) -> Vec<(String, String)> {
         wrap_right_percent,
     );
     optional_strings!(features, map_styles);
-    // `map_syntax` is a multi-valued option; emit one line per entry,
-    // analogous to `git config --list` repeating the key.
-    for entry in &opt.map_syntax {
-        options.push(("map-syntax".to_string(), format_option_value(entry)));
-    }
-    options.push((
+    single_value.push((
         "file-transformation".to_string(),
         format_option_value(opt.file_regex_replacement.as_deref().unwrap_or("")),
     ));
-    options.push((
+    single_value.push((
         "detect-dark-light".to_string(),
         opt.detect_dark_light
             .to_possible_value()
@@ -82,7 +114,12 @@ fn option_values(opt: &cli::Opt) -> Vec<(String, String)> {
             .to_string(),
     ));
 
-    options
+    let multi_value = vec![("map-syntax".to_string(), opt.map_syntax.clone())];
+
+    UserOptions {
+        single_value,
+        multi_value,
+    }
 }
 
 fn write_config(config: &config::Config, writer: &mut dyn Write) -> std::io::Result<()> {
@@ -490,8 +527,7 @@ mod tests {
 
     #[test]
     fn test_show_config_includes_all_config_keys() {
-        // Include a `map-syntax` entry so the multi-value branch is exercised
-        // (otherwise the empty default would not show up in the output).
+        // A non-empty `map-syntax` is needed for it to appear in the output.
         let opt = integration_test_utils::make_options_from_args(&[
             "--map-syntax",
             "*.ino:C++",
@@ -504,8 +540,8 @@ mod tests {
             .lines()
             .map(|line| line.split_once('=').unwrap().0.trim())
             .collect();
-        // Multi-valued options (e.g. `map-syntax`) legitimately produce
-        // duplicate keys, so we deduplicate only for the membership check.
+        // Multi-valued options (e.g. `map-syntax`) appear once per
+        // value; use a set to test membership rather than exact match.
         let actual: BTreeSet<_> = keys.iter().copied().collect();
         let names = cli::Opt::get_argument_and_option_names();
         let expected: BTreeSet<_> = names
@@ -522,6 +558,33 @@ mod tests {
         assert!(
             keys.windows(2).all(|pair| pair[0] <= pair[1]),
             "config keys are not sorted alphabetically"
+        );
+    }
+
+    #[test]
+    fn test_show_config_preserves_map_syntax_insertion_order() {
+        // Insertion order is preserved in --show-config so that
+        // "later overrides earlier" remains visible to users reading
+        // the output top-to-bottom.
+        let opt = integration_test_utils::make_options_from_args(&[
+            "--map-syntax", "AAA:first",
+            "--map-syntax", "BBB:second",
+            "--map-syntax", "CCC:third",
+        ]);
+        let mut writer = Vec::new();
+        show_config(opt, &mut writer).unwrap();
+        let output = ansi::strip_ansi_codes(&String::from_utf8(writer).unwrap());
+        let map_syntax_lines: Vec<&str> = output
+            .lines()
+            .filter(|l| l.contains("map-syntax"))
+            .collect();
+        assert_eq!(
+            map_syntax_lines,
+            vec![
+                "    map-syntax                    = 'AAA:first'",
+                "    map-syntax                    = 'BBB:second'",
+                "    map-syntax                    = 'CCC:third'",
+            ],
         );
     }
 
