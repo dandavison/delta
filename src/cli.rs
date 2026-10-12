@@ -863,9 +863,10 @@ pub struct Opt {
     #[arg(long = "syntax-theme", value_name = "SYNTAX_THEME")]
     /// The syntax-highlighting theme to use.
     ///
-    /// Use --show-syntax-themes to demo available themes. Defaults to the value of the BAT_THEME
-    /// environment variable, if that contains a valid theme name. --syntax-theme=none disables all
-    /// syntax highlighting.
+    /// Use --show-syntax-themes to demo available themes. Can also be set in git config as
+    /// `syntax-theme` under the `[delta]` section. If neither the CLI option nor git config
+    /// provides a value, defaults to the BAT_THEME environment variable, if it contains a valid
+    /// theme name. --syntax-theme=none disables all syntax highlighting.
     pub syntax_theme: Option<String>,
 
     #[arg(long = "tabs", default_value = "8", value_name = "N")]
