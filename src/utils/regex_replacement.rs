@@ -12,7 +12,7 @@ pub struct RegexReplacement {
 impl RegexReplacement {
     pub fn from_sed_command(sed_command: &str) -> Option<Self> {
         let sep = sed_command.chars().nth(1)?;
-        let mut parts = sed_command[2..].split(sep);
+        let mut parts = sed_command.get(2..)?.split(sep);
         let regex = parts.next()?;
         let replacement = parts.next()?.to_string();
         let flags = parts.next()?;
@@ -97,6 +97,28 @@ mod tests {
         let command = r"s/(?P<last>[^,\s]+),\s+(?P<first>\S+)/$first $last/";
         let rr = RegexReplacement::from_sed_command(command).unwrap();
         assert_eq!(rr.execute("Springsteen, Bruce"), "Bruce Springsteen");
+    }
+
+    #[test]
+    fn test_sed_command_unicode_pattern_and_replacement() {
+        let rr = RegexReplacement::from_sed_command("s/旧/新/g").unwrap();
+        assert_eq!(rr.execute("旧/旧.rs"), "新/新.rs");
+    }
+
+    #[test]
+    fn test_sed_command_invalid_unicode_prefix() {
+        for command in [
+            "sé",
+            "s│",
+            "s🦀",
+            "séfooébaré",
+            "s│foo│bar│",
+            "s🦀foo🦀bar🦀",
+            "中/foo/bar/",
+            "🦀/foo/bar/",
+        ] {
+            assert!(RegexReplacement::from_sed_command(command).is_none());
+        }
     }
 
     #[test]
