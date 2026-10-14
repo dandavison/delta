@@ -41,6 +41,9 @@ pub struct Painter<'p> {
     pub diff_line_metadata: Option<DiffLineMetadata>,
     pub merge_conflict_lines: merge_conflict::MergeConflictLines,
     pub merge_conflict_commit_names: merge_conflict::MergeConflictCommitNames,
+    // Hunk header that immediately preceded a merge conflict, kept so that the
+    // derived diffs can be numbered from the hunk's start line (#2273).
+    pub merge_conflict_hunk_header: Option<crate::handlers::hunk_header::ParsedHunkHeader>,
 }
 
 // How the background of a line is filled up to the end
@@ -104,6 +107,7 @@ impl<'p> Painter<'p> {
             diff_line_metadata: DiffLineMetadata::from_env(),
             merge_conflict_lines: merge_conflict::MergeConflictLines::new(),
             merge_conflict_commit_names: merge_conflict::MergeConflictCommitNames::new(),
+            merge_conflict_hunk_header: None,
         }
     }
 
