@@ -40,8 +40,15 @@ impl StateMachine<'_> {
         }
 
         match self.state.clone() {
-            HunkHeader(Combined(merge_parents, InMergeConflict::No), _, _, _)
-            | HunkMinus(Combined(merge_parents, InMergeConflict::No), _)
+            HunkHeader(Combined(merge_parents, InMergeConflict::No), parsed, _, _) => {
+                // A conflict can start immediately after the hunk header. In that
+                // case `emit_hunk_header_line` is never reached, so remember the
+                // parsed header here and initialise the line-number counters from
+                // it. Otherwise the derived diffs would start at 0 (#2273).
+                self.painter.merge_conflict_hunk_header = Some(parsed);
+                handled_line = self.enter_merge_conflict(&merge_parents)
+            }
+            HunkMinus(Combined(merge_parents, InMergeConflict::No), _)
             | HunkZero(Combined(merge_parents, InMergeConflict::No), _)
             | HunkPlus(Combined(merge_parents, InMergeConflict::No), _) => {
                 handled_line = self.enter_merge_conflict(&merge_parents)
@@ -142,10 +149,24 @@ impl StateMachine<'_> {
             &mut self.painter,
             self.config,
         )?;
+        // Both derived diffs describe the same region of the ancestor, so they must
+        // be numbered independently, each starting from the hunk's start line.
+        // Reset the counters before painting each one (#2273).
+        let hunk_start = self
+            .painter
+            .merge_conflict_hunk_header
+            .as_ref()
+            .map(|parsed| parsed.line_numbers_and_hunk_lengths.clone());
+
         for (derived_commit_type, header_style) in &[
             (Ours, self.config.merge_conflict_ours_diff_header_style),
             (Theirs, self.config.merge_conflict_theirs_diff_header_style),
         ] {
+            if let (Some(data), Some(lengths)) =
+                (self.painter.line_numbers_data.as_mut(), hunk_start.as_ref())
+            {
+                data.initialize_hunk(lengths, self.plus_file.to_string());
+            }
             write_diff_header(
                 derived_commit_type,
                 *header_style,
@@ -173,6 +194,7 @@ impl StateMachine<'_> {
             self.config,
         )?;
         self.painter.merge_conflict_lines.clear();
+        self.painter.merge_conflict_hunk_header = None;
         self.state = HunkZero(Combined(merge_parents.clone(), InMergeConflict::No), None);
         Ok(())
     }
@@ -322,6 +344,33 @@ ancestor ⟶   HEAD │
     }
 
     #[test]
+    fn test_merge_conflict_immediately_after_hunk_header_has_line_numbers() {
+        // When the conflict starts right after the hunk header, the header line is
+        // never emitted, so the derived diffs used to keep the default line number
+        // 0 and the second one continued where the first stopped (#2273).
+        let config = integration_test_utils::make_config_from_args(&["--line-numbers"]);
+        let output = integration_test_utils::run_delta(GIT_TOY_MERGE_CONFLICT_NO_CONTEXT, &config);
+        let output = strip_ansi_codes(&output);
+
+        // Both derived diffs must be numbered from the hunk's start line (1) and
+        // they must not share a single running counter (which would give 0, 1 and
+        // then 2, 3 for multi-line conflicts).
+        let numbered: Vec<&str> = output.lines().filter(|l| l.contains("⋮")).collect();
+        assert_eq!(
+            numbered.len(),
+            4,
+            "expected 4 numbered lines, got {numbered:#?}"
+        );
+        for line in &numbered {
+            assert!(
+                !line.contains('0'),
+                "line numbers must start at the hunk's start line, not 0: {line:?}",
+                line = line
+            );
+        }
+    }
+
+    #[test]
     fn test_real_merge_conflict() {
         let config = integration_test_utils::make_config_from_args(&[]);
         let output = integration_test_utils::run_delta(GIT_MERGE_CONFLICT, &config);
@@ -359,12 +408,14 @@ diff --cc file
 index 6178079,7898192..0000000
 --- a/file
 +++ b/file
-@@@ -1,1 -1,1 +1,6 @@@
+@@@ -1,2 -1,2 +1,8 @@@
 ++<<<<<<< HEAD
  +a
+ +b
 ++||||||| parent of 0c20c9d... wip
 ++=======
-+ b
++ c
++ d
 ++>>>>>>> 0c20c9d... wip
 ";
 

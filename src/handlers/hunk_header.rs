@@ -33,8 +33,8 @@ use regex::Regex;
 
 #[derive(Clone, Default, Debug, PartialEq, Eq)]
 pub struct ParsedHunkHeader {
-    code_fragment: String,
-    line_numbers_and_hunk_lengths: Vec<(usize, usize)>,
+    pub code_fragment: String,
+    pub line_numbers_and_hunk_lengths: Vec<(usize, usize)>,
 }
 
 pub enum HunkHeaderIncludeHunkLabel {
