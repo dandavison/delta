@@ -4,9 +4,10 @@ use std::io::Write;
 
 use ansi_term::ANSIString;
 use itertools::Itertools;
-use syntect::easy::HighlightLines;
-use syntect::highlighting::Style as SyntectStyle;
-use syntect::parsing::{SyntaxReference, SyntaxSet};
+use syntect::highlighting::{
+    HighlightIterator, HighlightState, Highlighter, Style as SyntectStyle, Theme,
+};
+use syntect::parsing::{ParseState, ScopeStack, SyntaxReference, SyntaxSet};
 
 use crate::config::{self, delta_unreachable, Config};
 use crate::delta::{DiffType, InMergeConflict, MergeParents, State};
@@ -24,12 +25,70 @@ use crate::{edits, utils, utils::tabs};
 
 pub type LineSections<'a, S> = Vec<(S, &'a str)>;
 
+/// Like syntect's `HighlightLines`, but able to highlight a line without advancing its state.
+pub struct SyntaxHighlighter<'a> {
+    highlighter: Highlighter<'a>,
+    parse_state: ParseState,
+    highlight_state: HighlightState,
+}
+
+impl<'a> SyntaxHighlighter<'a> {
+    pub fn new(syntax: &SyntaxReference, theme: &'a Theme) -> Self {
+        let highlighter = Highlighter::new(theme);
+        let highlight_state = HighlightState::new(&highlighter, ScopeStack::new());
+        Self {
+            highlighter,
+            parse_state: ParseState::new(syntax),
+            highlight_state,
+        }
+    }
+
+    pub fn highlight_line<'b>(
+        &mut self,
+        line: &'b str,
+        syntax_set: &SyntaxSet,
+    ) -> Result<LineSections<'b, SyntectStyle>, syntect::Error> {
+        Self::highlight(
+            &self.highlighter,
+            &mut self.parse_state,
+            &mut self.highlight_state,
+            line,
+            syntax_set,
+        )
+    }
+
+    pub fn highlight_line_without_advancing<'b>(
+        &self,
+        line: &'b str,
+        syntax_set: &SyntaxSet,
+    ) -> Result<LineSections<'b, SyntectStyle>, syntect::Error> {
+        Self::highlight(
+            &self.highlighter,
+            &mut self.parse_state.clone(),
+            &mut self.highlight_state.clone(),
+            line,
+            syntax_set,
+        )
+    }
+
+    fn highlight<'b>(
+        highlighter: &Highlighter,
+        parse_state: &mut ParseState,
+        highlight_state: &mut HighlightState,
+        line: &'b str,
+        syntax_set: &SyntaxSet,
+    ) -> Result<LineSections<'b, SyntectStyle>, syntect::Error> {
+        let ops = parse_state.parse_line(line, syntax_set)?;
+        Ok(HighlightIterator::new(highlight_state, &ops, line, highlighter).collect())
+    }
+}
+
 pub struct Painter<'p> {
     pub minus_lines: Vec<(String, State)>,
     pub plus_lines: Vec<(String, State)>,
     pub writer: &'p mut dyn Write,
     pub syntax: &'p SyntaxReference,
-    pub highlighter: Option<HighlightLines<'p>>,
+    pub highlighter: Option<SyntaxHighlighter<'p>>,
     pub config: &'p config::Config,
     pub output_buffer: String,
     // If config.line_numbers is true, then the following is always Some().
@@ -155,7 +214,7 @@ impl<'p> Painter<'p> {
 
     pub fn set_highlighter(&mut self) {
         if let Some(ref syntax_theme) = self.config.syntax_theme {
-            self.highlighter = Some(HighlightLines::new(self.syntax, syntax_theme))
+            self.highlighter = Some(SyntaxHighlighter::new(self.syntax, syntax_theme))
         };
     }
 
@@ -622,7 +681,7 @@ pub fn paint_minus_and_plus_lines(
     lines: MinusPlus<&Vec<(String, State)>>,
     line_numbers_data: &mut Option<LineNumbersData>,
     diff_line_metadata: &mut Option<&mut DiffLineMetadata>,
-    highlighter: &mut Option<HighlightLines>,
+    highlighter: &mut Option<SyntaxHighlighter>,
     output_buffer: &mut String,
     config: &config::Config,
 ) {
@@ -703,7 +762,7 @@ pub fn paint_minus_and_plus_lines(
 
 pub fn get_syntax_style_sections_for_lines<'a>(
     lines: &'a [(String, State)],
-    highlighter: Option<&mut HighlightLines>,
+    highlighter: Option<&mut SyntaxHighlighter>,
     config: &config::Config,
 ) -> Vec<LineSections<'a, SyntectStyle>> {
     let mut line_sections = Vec::new();
@@ -730,15 +789,18 @@ pub fn get_syntax_style_sections_for_lines<'a>(
                     // SAFETY: slicing the string is safe because `truncate_str_short` always
                     // returns a prefix of the input and only cuts at grapheme borders.
                     let (with_syntax, plain) = line.split_at(line_syntax.len());
-                    // Note: splitting a line and only feeding one half to the highlighter may
-                    // result in wrong highlighting until it is reset the next hunk.
+                    // The state after the prefix describes the cut, not the line: a string or
+                    // Markdown code span opened before the cut and closed after it would color
+                    // every following line. So the next line starts from the state before this
+                    // one, as if this line were balanced. A construct the line opens and leaves
+                    // open, such as a block comment, is then lost after it.
                     //
                     // Also, as lines are no longer newline terminated they might not be
                     // highlighted correctly, and because of lifetimes inserting '\n' here is not
                     // possible, also see `prepare()`.
                     line_sections.push(
                         highlighter
-                            .highlight_line(with_syntax, &config.syntax_set)
+                            .highlight_line_without_advancing(with_syntax, &config.syntax_set)
                             .unwrap(),
                     );
 
