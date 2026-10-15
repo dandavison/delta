@@ -2207,6 +2207,27 @@ src/align.rs:71: impl<'a> Alignment<'a> { │
     }
 
     #[test]
+    fn test_syntax_state_does_not_leak_past_cut_line() {
+        // The cut at 30 falls inside the code span, so the highlighter never sees it close.
+        let result = DeltaTest::with_args(&[
+            "--syntax-theme=Monokai Extended",
+            "--true-color=always",
+            "--max-syntax-highlighting-length=30",
+        ])
+        .with_input(GIT_DIFF_MARKDOWN_CODE_SPAN_ACROSS_CUT);
+        let code_color = "38;2;236;53;51m";
+        let line = |text| {
+            result
+                .raw_output
+                .lines()
+                .find(|l| ansi::strip_ansi_codes(l).contains(text))
+                .unwrap()
+        };
+        assert!(line("then a").contains(code_color));
+        assert!(!line("2. Plain context").contains(code_color));
+    }
+
+    #[test]
     fn test_lines_with_syntax_width_unicode() {
         let result = DeltaTest::with_args(&["--max-syntax-highlighting-length=11"])
             .explain_ansi()
@@ -3274,6 +3295,17 @@ diff --git a a
 new file mode 100644
 index 0000000..e69de29
 ";
+
+    const GIT_DIFF_MARKDOWN_CODE_SPAN_ACROSS_CUT: &str = r#"\
+diff --git a/a.md b/a.md
+index 1111111..2222222 100644
+--- a/a.md
++++ b/a.md
+@@ -1,2 +1,2 @@
+-1. Some text
++1. Some text then a `code span` after the cut
+ 2. Plain context
+"#;
 
     const GIT_DIFF_ALL_UNICODE_W_FULLWIDTH: &str = "
 diff --git a/src/a b/src/a
