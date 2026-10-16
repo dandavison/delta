@@ -26,6 +26,7 @@ lazy_static! {
     // when more objects are in a repository.
     // Note: pure numbers are filtered out later again.
     static ref COMMIT_HASH_REGEX: Regex = Regex::new(r"\b[0-9a-f]{7,40}\b").unwrap();
+    static ref FILE_LINK_PLACEHOLDER_REGEX: Regex = Regex::new(r"\{(path|host|line)\}").unwrap();
 }
 
 pub fn format_commit_line_with_osc8_commit_hyperlink<'a>(
@@ -95,14 +96,18 @@ where
     P: std::fmt::Debug,
 {
     debug_assert!(absolute_path.as_ref().is_absolute());
-    let mut url = config
-        .hyperlinks_file_link_format
-        .replace("{path}", &absolute_path.as_ref().to_string_lossy());
-    if let Some(host) = &config.hostname {
-        url = url.replace("{host}", host)
-    }
-    let n = line_number.unwrap_or(1);
-    url = url.replace("{line}", &format!("{n}"));
+    let path = absolute_path.as_ref().to_string_lossy();
+    let line = line_number.unwrap_or(1).to_string();
+    // Only template tokens are expanded; inserted paths may contain the same text.
+    let url = FILE_LINK_PLACEHOLDER_REGEX.replace_all(
+        &config.hyperlinks_file_link_format,
+        |captures: &regex::Captures| match &captures[1] {
+            "path" => path.as_ref(),
+            "host" => config.hostname.as_deref().unwrap_or("{host}"),
+            "line" => &line,
+            _ => unreachable!(),
+        },
+    );
     Cow::from(format_osc8_hyperlink(&url, text))
 }
 
@@ -149,6 +154,66 @@ pub mod tests {
             result,
             "\u{1b}]8;;file:///absolute/path/to/file.rs:1\u{1b}\\file.rs\u{1b}]8;;\u{1b}\\",
         );
+    }
+
+    #[test]
+    fn test_file_hyperlink_preserves_placeholders_in_paths() {
+        let mut config = make_config_from_args(&[]);
+        config.hostname = Some("test-host".into());
+        for path in [
+            "/absolute/{line}.rs",
+            "/absolute/{host}.rs",
+            "/absolute/é/{path}-{host}-{line}-$1.rs",
+        ] {
+            let result = format_osc8_file_hyperlink(path, Some(42), "file.rs", &config);
+            assert_eq!(
+                result,
+                format_osc8_hyperlink(&format!("file://{path}"), "file.rs")
+            );
+        }
+    }
+
+    #[test]
+    fn test_file_hyperlink_only_expands_template_tokens() {
+        let mut config = make_config_from_args(&[
+            "--hyperlinks-file-link-format",
+            "editor://{host}/{path}:{line}?again={path}:{line}&unknown={unknown}&braces={{line}}",
+        ]);
+        config.hostname = Some("test-host".into());
+        let path = "/absolute/{line}-{host}.rs";
+        for (line, expected_line) in [(Some(42), 42), (None, 1)] {
+            let result = format_osc8_file_hyperlink(path, line, "file.rs", &config);
+            let expected_url = format!(
+                "editor://test-host/{path}:{expected_line}?again={path}:{expected_line}&unknown={{unknown}}&braces={{{expected_line}}}"
+            );
+            assert_eq!(result, format_osc8_hyperlink(&expected_url, "file.rs"));
+        }
+    }
+
+    #[test]
+    fn test_file_hyperlink_preserves_unavailable_host() {
+        let mut config = make_config_from_args(&[
+            "--hyperlinks-file-link-format",
+            "editor://{host}{path}:{line}",
+        ]);
+        config.hostname = None;
+        let result = format_osc8_file_hyperlink("/absolute/{line}.rs", None, "file.rs", &config);
+        assert_eq!(
+            result,
+            format_osc8_hyperlink("editor://{host}/absolute/{line}.rs:1", "file.rs"),
+        );
+    }
+
+    #[test]
+    fn test_diff_file_hyperlink_preserves_literal_placeholders() {
+        let mut config = make_config_from_args(&["--hyperlinks"]);
+        config.hostname = Some("test-host".into());
+        let path = "file-{host}-{line}.rs";
+        let absolute_path = utils::path::fake_delta_cwd_for_tests().join(path);
+        let expected_url = format!("file://{}", absolute_path.display());
+        DeltaTest::with_config(&config)
+            .with_input(&GIT_DIFF_OUTPUT.replace("__path__", path))
+            .expect_raw_contains(&format!("\x1b]8;;{expected_url}\x1b\\"));
     }
 
     #[test]
