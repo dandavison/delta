@@ -40,8 +40,25 @@ impl StateMachine<'_> {
         }
 
         match self.state.clone() {
-            HunkHeader(Combined(merge_parents, InMergeConflict::No), _, _, _)
-            | HunkMinus(Combined(merge_parents, InMergeConflict::No), _)
+            HunkHeader(
+                Combined(merge_parents, InMergeConflict::No),
+                parsed_hunk_header,
+                line,
+                raw_line,
+            ) => {
+                // `handle_merge_conflict_line` runs before `handle_hunk_line` in the
+                // handler chain. When a conflict starts on the first line of the hunk,
+                // the hunk header would otherwise never be emitted and the line-number
+                // counters would never be seeded for this hunk, so its lines would be
+                // numbered as a continuation of the previous hunk. Emit the header
+                // first, but only when we are actually about to consume the line, so
+                // that `handle_hunk_line` still emits it for ordinary hunk lines.
+                if parse_merge_marker(&self.line, "++<<<<<<<").is_some() {
+                    self.emit_hunk_header_line(&parsed_hunk_header, &line, &raw_line)?;
+                }
+                handled_line = self.enter_merge_conflict(&merge_parents)
+            }
+            HunkMinus(Combined(merge_parents, InMergeConflict::No), _)
             | HunkZero(Combined(merge_parents, InMergeConflict::No), _)
             | HunkPlus(Combined(merge_parents, InMergeConflict::No), _) => {
                 handled_line = self.enter_merge_conflict(&merge_parents)
@@ -142,10 +159,25 @@ impl StateMachine<'_> {
             &mut self.painter,
             self.config,
         )?;
+        // Both derived diffs describe the same hunk, so both must number their lines
+        // starting from the hunk's start lines. Painting a derived diff advances the
+        // shared line-number counters, so re-seed them from the hunk start before each
+        // one; otherwise the second derived diff continues where the first stopped.
+        let hunk_start_line_numbers = self
+            .painter
+            .line_numbers_data
+            .as_ref()
+            .map(|line_numbers_data| line_numbers_data.line_number.clone());
         for (derived_commit_type, header_style) in &[
             (Ours, self.config.merge_conflict_ours_diff_header_style),
             (Theirs, self.config.merge_conflict_theirs_diff_header_style),
         ] {
+            if let (Some(line_numbers_data), Some(hunk_start)) = (
+                self.painter.line_numbers_data.as_mut(),
+                hunk_start_line_numbers.as_ref(),
+            ) {
+                line_numbers_data.line_number = hunk_start.clone();
+            }
             write_diff_header(
                 derived_commit_type,
                 *header_style,
@@ -319,6 +351,23 @@ ancestor ⟶   HEAD │
 "
         ));
         assert!(output.contains("\n▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲"));
+    }
+
+    #[test]
+    fn test_toy_merge_conflict_no_context_line_numbers() {
+        // The conflict starts on the first line of the hunk, so
+        // `handle_merge_conflict_line` consumes that line before `handle_hunk_line`
+        // gets a chance to emit the hunk header and seed the line-number counters.
+        // Both derived diffs (ancestor -> ours, ancestor -> theirs) also have to be
+        // numbered from the hunk start rather than continuing from each other.
+        let config = integration_test_utils::make_config_from_args(&["--line-numbers"]);
+        let output = integration_test_utils::run_delta(GIT_TOY_MERGE_CONFLICT_NO_CONTEXT, &config);
+        let output = strip_ansi_codes(&output);
+        assert!(output.contains("───┐\n1: │\n───┘"), "{}", output);
+        assert!(output.contains("⋮  1 │a"), "{}", output);
+        assert!(output.contains("⋮  1 │b"), "{}", output);
+        assert!(!output.contains("⋮  0 │"), "{}", output);
+        assert!(!output.contains("⋮  2 │"), "{}", output);
     }
 
     #[test]
