@@ -639,8 +639,8 @@ Options:
           Activate diff navigation.
 
           Use n to jump forwards and N to jump backwards. To change the file
-          labels used see --file-added-label, --file-copied-label,
-          --file-modified-label, --file-removed-label, --file-renamed-label.
+          labels used see --file-added-label, --file-modified-label,
+          --file-removed-label, --file-renamed-label.
 
       --navigate-regex <REGEX>
           Regular expression defining navigation stop points
