@@ -617,9 +617,9 @@ dependencies = [
 
 [[package]]
 name = "delta-gitu"
-version = "0.1.7"
+version = "0.1.8"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "144929c5c9eb2b41809b9ad83a258c35e4ab1a4c99bee4b92819168751a7b766"
+checksum = "dae036e916fa90c2ec6557784621348d3d93d82eeae7b6e48cb6e6632483f4b3"
 dependencies = [
  "anstyle-parse",
  "arboard",
@@ -635,6 +635,7 @@ dependencies = [
  "git2",
  "imara-diff",
  "itertools 0.14.0",
+ "libc",
  "log",
  "nom",
  "notify",
