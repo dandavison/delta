@@ -1,4 +1,5 @@
 use std::borrow::Cow;
+use std::io::Write;
 use std::path::Path;
 
 use unicode_segmentation::UnicodeSegmentation;
@@ -6,7 +7,6 @@ use unicode_segmentation::UnicodeSegmentation;
 use super::draw;
 use crate::config::Config;
 use crate::delta::{DiffType, Source, State, StateMachine};
-use crate::paint::Painter;
 use crate::{features, utils};
 
 // https://git-scm.com/docs/git-config#Documentation/git-config.txt-diffmnemonicPrefix
@@ -57,15 +57,16 @@ impl StateMachine<'_> {
         // (it connects the plus_file and minus_file),
         // and to call fn handle_generic_diff_header_header_line directly.
         if self.config.color_only {
-            let osc = self.diff_header_osc();
+            let mut row = Vec::new();
             write_generic_diff_header_header_line(
                 &self.line,
                 &self.raw_line,
-                &mut self.painter,
+                &mut row,
                 &mut self.mode_info,
                 self.config,
-                &osc,
+                "",
             )?;
+            self.write_color_only_header_row(&row)?;
             Ok(true)
         } else {
             Ok(false)
@@ -205,9 +206,8 @@ impl StateMachine<'_> {
     ///
     /// The path can still be unknown at some header rows -- a rename's rows
     /// before `rename to` has been parsed, or a `---` row that no `diff --git`
-    /// line pre-filled. Such rows carry no record (the spec makes tagging
-    /// every header row a recommendation, not a requirement): a record naming
-    /// a wrong or empty path would hand the host a second file identity.
+    /// line pre-filled. For those this is empty: a record naming a wrong or
+    /// empty path would hand the host a second file identity.
     pub(crate) fn diff_header_osc(&self) -> String {
         match self.painter.diff_line_metadata.as_ref() {
             Some(md) => {
@@ -232,6 +232,33 @@ impl StateMachine<'_> {
         }
     }
 
+    /// With `--color-only`, write a file header row carrying the file's `f`
+    /// record. A row written before the file's path is known (a rename's rows
+    /// before `rename to`, the `---` row of `diff -u`) is held, and written with
+    /// the record once the path is known.
+    pub(crate) fn write_color_only_header_row(&mut self, row: &[u8]) -> std::io::Result<()> {
+        if self.painter.diff_line_metadata.is_none() {
+            return self.painter.writer.write_all(row);
+        }
+        let osc = self.diff_header_osc();
+        if osc.is_empty() {
+            self.held_header_rows.extend_from_slice(row);
+            return Ok(());
+        }
+        let held = std::mem::take(&mut self.held_header_rows);
+        features::diff_line_metadata::write_with_header_osc(self.painter.writer, &osc, |w| {
+            w.write_all(&held)?;
+            w.write_all(row)
+        })
+    }
+
+    /// Write, without a record, the rows held for a file header that ended
+    /// with the file's path still unknown.
+    pub(crate) fn release_held_header_rows(&mut self) -> std::io::Result<()> {
+        let held = std::mem::take(&mut self.held_header_rows);
+        self.painter.writer.write_all(&held)
+    }
+
     /// Construct file change line from minus and plus file and write with DiffHeader styling.
     fn _handle_diff_header_header_line(&mut self, comparing: bool) -> std::io::Result<()> {
         let line = get_file_change_description_from_file_paths(
@@ -247,7 +274,7 @@ impl StateMachine<'_> {
         write_generic_diff_header_header_line(
             &line,
             &line,
-            &mut self.painter,
+            self.painter.writer,
             &mut self.mode_info,
             self.config,
             &osc,
@@ -291,7 +318,7 @@ impl StateMachine<'_> {
             write_generic_diff_header_header_line(
                 &line,
                 &line,
-                &mut self.painter,
+                self.painter.writer,
                 &mut self.mode_info,
                 self.config,
                 &osc,
@@ -314,7 +341,7 @@ impl StateMachine<'_> {
 pub fn write_generic_diff_header_header_line(
     line: &str,
     raw_line: &str,
-    painter: &mut Painter,
+    writer: &mut dyn Write,
     mode_info: &mut String,
     config: &Config,
     metadata_osc: &str,
@@ -329,23 +356,19 @@ pub fn write_generic_diff_header_header_line(
         draw::get_draw_function(config.file_style.decoration_style);
     if !config.color_only {
         // Maintain 1-1 correspondence between input and output lines.
-        writeln!(painter.writer)?;
+        writeln!(writer)?;
     }
-    crate::features::diff_line_metadata::write_with_header_osc(
-        painter.writer,
-        metadata_osc,
-        |w| {
-            draw_fn(
-                w,
-                &format!("{}{}", line, if pad { " " } else { "" }),
-                &format!("{}{}", raw_line, if pad { " " } else { "" }),
-                mode_info,
-                &config.decorations_width,
-                config.file_style,
-                decoration_ansi_term_style,
-            )
-        },
-    )?;
+    crate::features::diff_line_metadata::write_with_header_osc(writer, metadata_osc, |w| {
+        draw_fn(
+            w,
+            &format!("{}{}", line, if pad { " " } else { "" }),
+            &format!("{}{}", raw_line, if pad { " " } else { "" }),
+            mode_info,
+            &config.decorations_width,
+            config.file_style,
+            decoration_ansi_term_style,
+        )
+    })?;
     if !mode_info.is_empty() {
         mode_info.clear();
     }
@@ -353,6 +376,29 @@ pub fn write_generic_diff_header_header_line(
 }
 
 #[allow(clippy::tabs_in_doc_comments)]
+/// Whether `line` is one of the rows git writes after a `diff` row to head a
+/// file's diff (`git help diff`, "Generating patch text with -p").
+pub fn continues_file_header(line: &str) -> bool {
+    [
+        "index ",
+        "old mode ",
+        "new mode ",
+        "deleted file mode ",
+        "new file mode ",
+        "similarity index ",
+        "dissimilarity index ",
+        "rename from ",
+        "rename to ",
+        "copy from ",
+        "copy to ",
+        "--- ",
+        "+++ ",
+        "Binary files ",
+    ]
+    .iter()
+    .any(|prefix| line.starts_with(prefix))
+}
+
 /// Given input like
 /// "--- a/zero/one.rs	2019-11-20 06:16:08.000000000 +0100"
 /// Return "one.rs"
