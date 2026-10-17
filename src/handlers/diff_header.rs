@@ -295,7 +295,10 @@ impl StateMachine<'_> {
                 &mut self.mode_info,
                 self.config,
                 &osc,
-            )
+            )?;
+            self.handled_diff_header_header_line_file_pair
+                .clone_from(&self.current_file_pair);
+            Ok(())
         } else if !self.config.color_only
             && self.should_handle()
             && self.handled_diff_header_header_line_file_pair != self.current_file_pair
@@ -767,6 +770,40 @@ new mode 100755
 
         c.txt (mode +x)
         ───────────────────────────────────────────
+        ");
+    }
+
+    #[test]
+    fn test_diff_header_mode_change_not_repeated_in_next_commit() {
+        let input = "\
+commit 1111111111111111111111111111111111111111
+diff --git a/a.sh b/a.sh
+old mode 100644
+new mode 100755
+commit 2222222222222222222222222222222222222222
+diff --git a/b.txt b/b.txt
+new file mode 100644
+index 0000000..6178079
+--- /dev/null
++++ b/b.txt
+@@ -0,0 +1 @@
++b
+";
+
+        let result = DeltaTest::with_args(&["--file-decoration-style", "none"]).with_input(input);
+
+        assert_snapshot!(result.output, @r"
+        commit 1111111111111111111111111111111111111111
+
+        a.sh (mode +x)
+        commit 2222222222222222222222222222222222222222
+
+        added: b.txt
+
+        ───┐
+        1: │
+        ───┘
+        b
         ");
     }
 
