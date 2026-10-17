@@ -939,9 +939,9 @@ index 0000000..323fae0
     #[test]
     fn test_file_header_records_in_color_only_unified_diff() {
         // Plain `diff -u` input has no `diff --git` line, so at a `---` row the
-        // new-file path is not known yet: the row must carry no `f` record --
-        // in particular not an empty path (first file) or the previous file's
-        // (later files). Each `+++` row carries its file's record, and file 1's
+        // new-file path is not known yet. The row is held until the `+++` row
+        // names the file, and then carries that file's record -- not an empty
+        // path (first file) or the previous file's (later files). File 1's
         // content records must name file 1 even though delta's buffering emits
         // them after file 2's header rows (a delta `--color-only` quirk that
         // predates the metadata feature).
@@ -958,10 +958,10 @@ index 0000000..323fae0
 +bar
 ";
         assert_snapshot!(visible_metadata_records(input, &["--color-only"]), @r"
-        --- old1.txt
+        ⟦1;f;;;new1.txt⟧--- old1.txt
         ⟦1;f;;;new1.txt⟧+++ new1.txt
         ⟦1;h;1;;new1.txt⟧@@ -1 +1 @@
-        --- old2.txt
+        ⟦1;f;;;new2.txt⟧--- old2.txt
         ⟦1;f;;;new2.txt⟧+++ new2.txt
         ⟦1;d;1;1;new1.txt⟧-foo
         ⟦1;a;1;;new1.txt⟧+bar
@@ -974,8 +974,8 @@ index 0000000..323fae0
     #[test]
     fn test_file_header_records_for_rename_in_color_only_mode() {
         // For a rename the two paths in the `diff --git` line differ, so
-        // nothing pre-fills `plus_file`: until the `rename to` line is parsed
-        // the header rows must carry no `f` record rather than an empty path.
+        // nothing pre-fills `plus_file`: the header rows are held until the
+        // `rename to` row names the file, and then all carry its record.
         let input = "\
 diff --git a/old.txt b/new.txt
 similarity index 90%
@@ -983,10 +983,46 @@ rename from old.txt
 rename to new.txt
 ";
         assert_snapshot!(visible_metadata_records(input, &["--color-only"]), @r"
-        diff --git a/old.txt b/new.txt
-        similarity index 90%
-        rename from old.txt
+        ⟦1;f;;;new.txt⟧diff --git a/old.txt b/new.txt
+        ⟦1;f;;;new.txt⟧similarity index 90%
+        ⟦1;f;;;new.txt⟧rename from old.txt
         ⟦1;f;;;new.txt⟧rename to new.txt
+        ");
+    }
+
+    #[test]
+    fn test_every_header_row_carries_the_file_record_in_color_only_mode() {
+        // Including the rows delta passes through unhandled, and the only rows
+        // of a binary file and a mode-only change.
+        let input = "\
+diff --git a/img.png b/img.png
+index 0000000..a5d0c46 100644
+Binary files a/img.png and b/img.png differ
+diff --git a/run.sh b/run.sh
+old mode 100644
+new mode 100755
+diff --git a/one.txt b/one.txt
+index 257cc56..5716ca5 100644
+--- a/one.txt
++++ b/one.txt
+@@ -1 +1 @@
+-foo
++bar
+";
+        assert_snapshot!(visible_metadata_records(input, &["--color-only"]), @r"
+        ⟦1;f;;;img.png⟧diff --git a/img.png b/img.png
+        ⟦1;f;;;img.png⟧index 0000000..a5d0c46 100644
+        ⟦1;f;;;img.png⟧Binary files a/img.png and b/img.png differ
+        ⟦1;f;;;run.sh⟧diff --git a/run.sh b/run.sh
+        ⟦1;f;;;run.sh⟧old mode 100644
+        ⟦1;f;;;run.sh⟧new mode 100755
+        ⟦1;f;;;one.txt⟧diff --git a/one.txt b/one.txt
+        ⟦1;f;;;one.txt⟧index 257cc56..5716ca5 100644
+        ⟦1;f;;;one.txt⟧--- a/one.txt
+        ⟦1;f;;;one.txt⟧+++ b/one.txt
+        ⟦1;h;1;;one.txt⟧@@ -1 +1 @@
+        ⟦1;d;1;1;one.txt⟧-foo
+        ⟦1;a;1;;one.txt⟧+bar
         ");
     }
 
