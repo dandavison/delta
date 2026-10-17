@@ -5,7 +5,7 @@ use std::ffi::OsString;
 use std::sync::Arc;
 use std::{backtrace::Backtrace, env, panic};
 
-use ::gitu::cli::{Args, Commands};
+use ::gitu::cli::Args;
 use ::gitu::config::{self, Config};
 use ::gitu::{error::Error, term, Res};
 use clap::{CommandFactory, FromArgMatches};
@@ -21,7 +21,6 @@ pub fn main(args: impl Iterator<Item = OsString>) -> i32 {
         .name("delta --gitu")
         .bin_name("delta --gitu")
         .about(ABOUT)
-        .mut_subcommand("completion", |completion| completion.hide(true))
         .get_matches_from(std::iter::once("delta --gitu".into()).chain(args));
     let args = Args::from_arg_matches(&matches).unwrap_or_else(|err| err.exit());
     match run(&args) {
@@ -37,10 +36,6 @@ fn run(args: &Args) -> Res<i32> {
     if args.version {
         println!("delta {}", env!("CARGO_PKG_VERSION"));
         return Ok(0);
-    }
-    if let Some(Commands::Completion { .. }) = args.command {
-        eprintln!("delta --gitu does not generate completions");
-        return Ok(2);
     }
     if args.log {
         simple_logging::log_to_file(::gitu::LOG_FILE_NAME, log::LevelFilter::Debug)
