@@ -793,7 +793,7 @@ Options:
           Defaults to color.diff.whitespace if that is set in git config, or
           else 'magenta reverse'.
 
-          [default: "auto auto"]
+          [default: "magenta reverse"]
 
   -w, --width <N>
           The width of underline/overline decorations.
