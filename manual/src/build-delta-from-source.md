@@ -1,8 +1,10 @@
 # Build delta from source
 
-You'll need to [install the rust tools](https://www.rust-lang.org/learn/get-started). Then:
+You'll need to [install the rust tools](https://www.rust-lang.org/learn/get-started). Then clone the repository and build it:
 
 ```sh
+git clone https://github.com/dandavison/delta.git
+cd delta
 cargo build --release
 ```
 
