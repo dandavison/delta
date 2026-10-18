@@ -894,7 +894,7 @@ pub struct Opt {
 
     #[arg(
         long = "whitespace-error-style",
-        default_value = "auto auto",
+        default_value = "magenta reverse",
         value_name = "STYLE"
     )]
     /// Style string for whitespace errors.
