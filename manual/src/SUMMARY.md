@@ -24,6 +24,7 @@
 - [Tips & tricks](./tips-and-tricks.md)
   - [Toggling side-by-side and other delta features](./tips-and-tricks/toggling-delta-features.md)
   - [24 bit color (truecolor)](./tips-and-tricks/24-bit-color-truecolor.md)
+  - [Git's diff colors overriding delta's colors](./tips-and-tricks/git-diff-colors.md)
   - [Mouse scrolling](./tips-and-tricks/mouse-scrolling.md)
   - [Save output with colors to HTML/PDF etc](./tips-and-tricks/export-to-html.md)
   - [Using Delta on Windows](./tips-and-tricks/using-delta-on-windows.md)
