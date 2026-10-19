@@ -260,6 +260,22 @@ impl<'a> StateMachine<'a> {
         Ok(handled_line)
     }
 
+    /// Emit the current raw line unchanged, prefixed with `osc`, a file header
+    /// metadata record. `--color-only` passes some header rows through
+    /// verbatim; such a row still has to announce its file, or a change with
+    /// no decorated header (a binary file, a mode-only change) is invisible to
+    /// a host consuming the records.
+    pub fn emit_line_unchanged_with_metadata(&mut self, osc: &str) -> std::io::Result<bool> {
+        self.painter.emit()?;
+        let line = format_raw_line(&self.raw_line, self.config).to_string();
+        crate::features::diff_line_metadata::write_with_header_osc(
+            self.painter.writer,
+            osc,
+            |w| writeln!(w, "{line}"),
+        )?;
+        Ok(true)
+    }
+
     /// Should a handle_* function be called on this element?
     // TODO: I'm not sure the above description is accurate; I think this
     // function needs a more accurate name.

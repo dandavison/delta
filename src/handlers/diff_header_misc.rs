@@ -56,6 +56,12 @@ impl StateMachine<'_> {
         } else {
             String::new()
         };
+        // In --color-only mode this row is passed through verbatim, so it must
+        // be emitted here for it to carry the binary file's record: the file
+        // has no other header row to carry it.
+        if self.config.color_only && !osc.is_empty() && !self.should_handle() {
+            return self.emit_line_unchanged_with_metadata(&osc);
+        }
         self.handle_additional_cases(
             match self.state {
                 State::DiffHeader(_) => self.state.clone(),
