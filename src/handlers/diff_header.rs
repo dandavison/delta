@@ -31,6 +31,15 @@ impl StateMachine<'_> {
             if self.should_handle() && !self.config.color_only {
                 self.mode_info = line_suf.to_string();
                 handled_line = true;
+            } else if self.config.color_only {
+                // In --color-only mode this row is passed through verbatim and
+                // no header is drawn for a mode-only change. The row is the
+                // file's only header row, so it has to carry the file's
+                // record.
+                let osc = self.diff_header_osc();
+                if !osc.is_empty() {
+                    return self.emit_line_unchanged_with_metadata(&osc);
+                }
             }
         } else if let Some(line_suf) = self.line.strip_prefix("new mode ") {
             self.state = State::DiffHeader(DiffType::Unified);
@@ -1097,6 +1106,29 @@ Binary files a/img.png and b/img.png differ
         ⟦1;f;;;img.png⟧img.png (binary file)
         ⟦1;f;;;img.png⟧───────────────────────────────────────────
         ");
+    }
+
+    #[test]
+    fn test_file_header_records_in_color_only_mode_for_binary_and_mode_only_files() {
+        // --color-only passes a file's header rows through verbatim. A binary
+        // file and a mode-only change have no decorated header at all, so the
+        // file's record has to go on one of the rows delta passes through.
+        let input = "\
+diff --git a/img.png b/img.png
+index 0000000..a5d0c46 100644
+Binary files a/img.png and b/img.png differ
+diff --git a/run.sh b/run.sh
+old mode 100644
+new mode 100755
+";
+        assert_snapshot!(visible_metadata_records(input, &["--color-only"]), @r#"
+        diff --git a/img.png b/img.png
+        index 0000000..a5d0c46 100644
+        ⟦1;f;;;img.png⟧Binary files a/img.png and b/img.png differ
+        diff --git a/run.sh b/run.sh
+        ⟦1;f;;;run.sh⟧old mode 100644
+        new mode 100755
+        "#);
     }
 
     #[test]
