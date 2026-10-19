@@ -436,7 +436,7 @@ pub struct Opt {
     ///
     /// Placeholders "{path}" and "{line}" will be replaced by the absolute file path and the line
     /// number; "{host}" with the hostname delta is currently running on. The default is to create
-    /// a hyperlink containing a standard file URI with only the filename, which your terminal or
+    /// a hyperlink containing a standard file URI with the file's absolute path, which your terminal or
     /// OS should handle. You can specify any scheme, such as "file-line://{path}:{line}" and
     /// register an application to handle it. See
     /// <https://dandavison.github.io/delta/hyperlinks.html> for details.
