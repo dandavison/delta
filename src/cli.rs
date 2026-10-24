@@ -450,7 +450,8 @@ pub struct Opt {
     /// Style string for short inline hint text.
     ///
     /// This styles certain content added by delta to the original diff such as special characters
-    /// to highlight tabs, and the symbols used to indicate wrapped lines. See STYLES section.
+    /// to highlight tabs, and the symbols used to indicate wrapped or truncated lines. See STYLES
+    /// section.
     pub inline_hint_style: String,
 
     #[arg(

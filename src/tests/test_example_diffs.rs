@@ -2127,8 +2127,8 @@ src/align.rs:71: impl<'a> Alignment<'a> { │
         .explain_ansi()
         .with_input(GIT_DIFF_SINGLE_HUNK);
         assert_snapshot!(result.output, @r###"
-        (normal)commit 94907c0f136f46dc46ffae2dc92dca9af7(reverse normal)→(normal)
-        Author: Dan Davison <dandavison7@gmail.co(reverse normal)→(normal)
+        (normal)commit 94907c0f136f46dc46ffae2dc92dca9af7(blue)→(normal)
+        Author: Dan Davison <dandavison7@gmail.co(blue)→(normal)
         Date:   Thu May 14 11:13:17 2020 -0400
 
             rustfmt
@@ -2185,13 +2185,13 @@ src/align.rs:71: impl<'a> Alignment<'a> { │
         (blue)─────────────────────────────(blue)┘(normal)
 
         (blue)│(238) 71 (blue)│(231)        (203)for(231) (i, x_i)(blue)↵(blue) │(238) 71 (blue)│(231)        (203)for(231) (i, x_i)(blue)↵(normal)
-        (blue)│(238)    (blue)│(231) i(normal)n self.x.iter().en(reverse normal)→(blue) │(238)    (blue)│(231) i(normal)n self.x.iter().en(reverse normal)→(normal)
+        (blue)│(238)    (blue)│(231) i(normal)n self.x.iter().en(blue)→(blue) │(238)    (blue)│(231) i(normal)n self.x.iter().en(blue)→(normal)
         (blue)│(238) 72 (blue)│(231)            (203)for(231) (j, (blue)↵(blue) │(238) 72 (blue)│(231)            (203)for(231) (j, (blue)↵(normal)
-        (blue)│(238)    (blue)│(231)y_(normal)j) in self.y.iter((reverse normal)→(blue) │(238)    (blue)│(231)y_(normal)j) in self.y.iter((reverse normal)→(normal)
+        (blue)│(238)    (blue)│(231)y_(normal)j) in self.y.iter((blue)→(blue) │(238)    (blue)│(231)y_(normal)j) in self.y.iter((blue)→(normal)
         (blue)│(88) 73 (blue)│(231 52)                (81)let(231) (blue)↵(blue) │(28) 73 (blue)│(231 22)                (81)let(231) (blue)↵(normal)
         (blue)│(88)    (blue)│(231 52)(l(normal 52)eft, diag, up) =(normal 124) ((normal 52) (blue) │(28)    (blue)│(231 22)(l(normal 22)eft, diag, up) =(normal)
         (blue)│(88) 74 (blue)│(231 52)                    (blue)↵(blue) │(28) 74 (blue)│(231 22)                    (blue)↵(normal)
-        (blue)│(88)    (blue)│(231 52)se(normal 52)lf.index(i, j + 1),(blue) │(28)    (blue)│(231 28)((normal 22)s(normal 22)elf.index(i, j + 1(reverse normal)→(normal)
+        (blue)│(88)    (blue)│(231 52)se(normal 52)lf.index(i, j + 1),(blue) │(28)    (blue)│(231 28)((normal 22)s(normal 22)elf.index(i, j + 1(blue)→(normal)
         (blue)│(88) 75 (blue)│(231 52)                    (blue)↵(blue) │(28)    (blue)│(normal)
         (blue)│(88)    (blue)│(231 52)se(normal 52)lf.index(i, j),(normal 52)    (blue) │(28)    (blue)│(normal)
         (blue)│(88) 76 (blue)│(231 52)                    (blue)↵(blue) │(28)    (blue)│(normal)

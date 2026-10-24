@@ -1012,6 +1012,77 @@ index 223ca50..e69de29 100644
         ".........1.........2.........3.........4.........5.........6\n";
 
     #[test]
+    fn test_truncation_uses_inline_hint_style() {
+        use ansi_term::{Color, Style};
+
+        let styles = [
+            (None, Color::Blue.normal()),
+            (
+                Some("bold magenta yellow"),
+                Color::Purple.on(Color::Yellow).bold(),
+            ),
+            (Some("normal"), Style::new()),
+            (Some("reverse cyan"), Color::Cyan.reverse()),
+            (Some("#123456"), Color::RGB(0x12, 0x34, 0x56).normal()),
+        ];
+        for width in ["24", "40"] {
+            for wrap_max_lines in ["0", "1", "2"] {
+                let mut expected_text = None;
+                for (hint_style, expected_style) in styles {
+                    let mut args = vec![
+                        "--side-by-side",
+                        "--width",
+                        width,
+                        "--wrap-max-lines",
+                        wrap_max_lines,
+                        "--file-style",
+                        "omit",
+                        "--hunk-header-style",
+                        "omit",
+                        "--true-color",
+                        "always",
+                    ];
+                    if let Some(hint_style) = hint_style {
+                        args.extend(["--inline-hint-style", hint_style]);
+                    }
+                    let output = DeltaTest::with_args(&args).with_input(HUNK_MP_DIFF);
+                    // Both copies of the context line and the two changed lines are truncated.
+                    assert_eq!(output.output.matches('→').count(), 4);
+                    for (style, text) in crate::ansi::parse_style_sections(&output.raw_output) {
+                        if text.contains('→') {
+                            assert_eq!(style, expected_style, "{args:?}: {text:?}");
+                        }
+                    }
+                    for line in output.output.lines() {
+                        assert!(crate::ansi::measure_text_width(line) <= width.parse().unwrap());
+                    }
+                    if let Some(expected_text) = &expected_text {
+                        assert_eq!(&output.output, expected_text);
+                    } else {
+                        expected_text = Some(output.output);
+                    }
+                }
+            }
+        }
+    }
+
+    #[test]
+    fn test_truncation_style_at_max_line_length() {
+        let output = DeltaTest::with_args(&[
+            "--max-line-length",
+            "8",
+            "--inline-hint-style",
+            "bold magenta",
+        ])
+        .with_input("abcdefghi\nabcdefgh\nshort\n");
+        assert_eq!(output.output, "abcdefg→\nabcdefgh\nshort\n");
+        assert_eq!(
+            output.raw_output,
+            "abcdefg\x1b[1;35m→\x1b[0m\nabcdefgh\nshort\n"
+        );
+    }
+
+    #[test]
     fn test_wrap_with_unequal_hunk_zero_width() {
         DeltaTest::with_args(&default_wrap_cfg_plus(&[
             "--side-by-side",
