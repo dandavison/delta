@@ -355,6 +355,19 @@ ancestor ⟶   HEAD │
         assert!(output.contains("\n▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲"));
     }
 
+    #[test]
+    fn test_merge_conflict_is_side_by_side_under_side_by_side_hunk() {
+        let side_by_side = integration_test_utils::make_config_from_args(&["--side-by-side"]);
+        let side_by_side_hunk =
+            integration_test_utils::make_config_from_args(&["--side-by-side=hunk"]);
+        for input in [GIT_TOY_MERGE_CONFLICT_NO_CONTEXT, GIT_MERGE_CONFLICT] {
+            assert_eq!(
+                integration_test_utils::run_delta(input, &side_by_side_hunk),
+                integration_test_utils::run_delta(input, &side_by_side),
+            );
+        }
+    }
+
     const GIT_TOY_MERGE_CONFLICT_NO_CONTEXT: &str = "\
 diff --cc file
 index 6178079,7898192..0000000

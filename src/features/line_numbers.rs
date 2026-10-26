@@ -120,10 +120,15 @@ pub fn format_and_paint_line_numbers<'a>(
         Some(Left) => (true, false),
         Some(Right) => (false, true),
     };
+    let format_data = match (side_by_side_panel, &line_numbers_data.unified_format_data) {
+        (None, Some(unified_format_data)) => unified_format_data,
+        _ => &line_numbers_data.format_data,
+    };
 
     if emit_left {
         formatted_numbers.extend(format_and_paint_line_number_field(
             line_numbers_data,
+            format_data,
             Minus,
             &styles,
             &line_numbers,
@@ -134,6 +139,7 @@ pub fn format_and_paint_line_numbers<'a>(
     if emit_right {
         formatted_numbers.extend(format_and_paint_line_number_field(
             line_numbers_data,
+            format_data,
             Plus,
             &styles,
             &line_numbers,
@@ -151,6 +157,9 @@ lazy_static! {
 #[derive(Default, Debug)]
 pub struct LineNumbersData<'a> {
     pub format_data: MinusPlus<format::FormatStringData<'a>>,
+    /// The format of the lines displayed in a single column, when it differs from
+    /// `format_data`, i.e. in the unified hunks of --side-by-side=hunk.
+    pub unified_format_data: Option<MinusPlus<format::FormatStringData<'a>>>,
     pub line_number: MinusPlus<usize>,
     pub hunk_max_line_number_width: usize,
     pub plus_file: String,
@@ -181,6 +190,17 @@ impl<'a> LineNumbersData<'a> {
             ),
             ..Self::default()
         }
+    }
+
+    pub fn set_unified_format(&mut self, format: &'a MinusPlus<String>) {
+        self.unified_format_data = Some(MinusPlus::new(
+            format::parse_line_number_format(&format[Left], &LINE_NUMBERS_PLACEHOLDER_REGEX, false),
+            format::parse_line_number_format(
+                &format[Right],
+                &LINE_NUMBERS_PLACEHOLDER_REGEX,
+                false,
+            ),
+        ));
     }
 
     /// Initialize line number data for a hunk.
@@ -243,6 +263,7 @@ impl<'a> LineNumbersData<'a> {
 #[allow(clippy::too_many_arguments)]
 fn format_and_paint_line_number_field<'a>(
     line_numbers_data: &'a LineNumbersData,
+    format_data: &'a MinusPlus<format::FormatStringData<'a>>,
     side: MinusPlusIndex,
     styles: &MinusPlus<Style>,
     line_numbers: &MinusPlus<Option<usize>>,
@@ -250,7 +271,7 @@ fn format_and_paint_line_number_field<'a>(
 ) -> Vec<ansi_term::ANSIGenericString<'a, str>> {
     let min_field_width = line_numbers_data.hunk_max_line_number_width;
 
-    let format_data = &line_numbers_data.format_data[side];
+    let format_data = &format_data[side];
     let plus_file = &line_numbers_data.plus_file;
     let style = &config.line_numbers_style_leftright[side];
 
