@@ -31,6 +31,9 @@ pub struct Painter<'p> {
     pub syntax: &'p SyntaxReference,
     pub highlighter: Option<HighlightLines<'p>>,
     pub config: &'p config::Config,
+    // Whether the lines being painted are laid out side-by-side. Starts out as
+    // config.side_by_side, but can be changed between hunks.
+    pub side_by_side: bool,
     pub output_buffer: String,
     // If config.line_numbers is true, then the following is always Some().
     // In side-by-side mode it is always Some (but possibly an empty one), even
@@ -100,6 +103,7 @@ impl<'p> Painter<'p> {
             highlighter: None,
             writer,
             config,
+            side_by_side: config.side_by_side,
             line_numbers_data,
             diff_line_metadata: DiffLineMetadata::from_env(),
             merge_conflict_lines: merge_conflict::MergeConflictLines::new(),
@@ -169,6 +173,7 @@ impl<'p> Painter<'p> {
             &mut self.diff_line_metadata.as_mut(),
             &mut self.highlighter,
             &mut self.output_buffer,
+            self.side_by_side,
             self.config,
         );
         self.minus_lines.clear();
@@ -188,7 +193,7 @@ impl<'p> Painter<'p> {
             &[false],
             self.config,
         );
-        if self.config.side_by_side {
+        if self.side_by_side {
             // `lines[0].0` so the line has the '\n' already added (as in the +- case)
             side_by_side::paint_zero_lines_side_by_side(
                 &lines[0].0,
@@ -624,6 +629,7 @@ pub fn paint_minus_and_plus_lines(
     diff_line_metadata: &mut Option<&mut DiffLineMetadata>,
     highlighter: &mut Option<HighlightLines>,
     output_buffer: &mut String,
+    side_by_side: bool,
     config: &config::Config,
 ) {
     let syntax_style_sections = MinusPlus::new(
@@ -656,7 +662,7 @@ pub fn paint_minus_and_plus_lines(
         &lines_have_homolog[Plus],
         config,
     );
-    if config.side_by_side {
+    if side_by_side {
         side_by_side::paint_minus_and_plus_lines_side_by_side(
             lines,
             syntax_style_sections,
