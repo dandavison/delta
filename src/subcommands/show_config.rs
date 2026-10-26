@@ -236,7 +236,10 @@ fn write_config(config: &config::Config, writer: &mut dyn Write) -> std::io::Res
             PagingMode::QuitIfOneScreen => "auto",
             PagingMode::Capture => unreachable!("capture can not be set"),
         },
-        side_by_side = config.side_by_side,
+        side_by_side = match (config.side_by_side, config.side_by_side_scope) {
+            (true, cli::SideBySideScope::Hunk) => "hunk".to_string(),
+            (side_by_side, _) => side_by_side.to_string(),
+        },
         syntax_theme = config
             .syntax_theme
             .clone()
@@ -477,6 +480,15 @@ mod tests {
         let s = ansi::strip_ansi_codes(&s);
         assert!(s.contains("    commit-style                  = raw\n"));
         assert!(s.contains(r"    word-diff-regex               = '\w+'"));
+    }
+
+    #[test]
+    fn test_show_config_side_by_side_hunk() {
+        let opt = integration_test_utils::make_options_from_args(&["--side-by-side=hunk"]);
+        let mut writer = Vec::new();
+        show_config(opt, &mut writer).unwrap();
+        let s = ansi::strip_ansi_codes(&String::from_utf8(writer).unwrap());
+        assert!(s.contains("    side-by-side                  = hunk\n"));
     }
 
     #[test]

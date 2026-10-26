@@ -21,7 +21,7 @@ pub fn make_feature() -> Vec<(String, OptionValueFunction)> {
             "side-by-side",
             cli::SideBySide,
             None,
-            _opt => cli::SideBySide::On
+            _opt => cli::SideBySide::On(cli::SideBySideScope::All)
         ),
         ("features", bool, None, _opt => "line-numbers"),
         ("line-numbers-left-format", String, None, _opt => "│{nm:^4}│".to_string()),
@@ -808,4 +808,175 @@ pub mod tests {
             │    │三 │    │"#,
         );
     }
+
+    #[test]
+    fn test_side_by_side_hunk_only_mixed_hunks_are_side_by_side() {
+        DeltaTest::with_args(&["--side-by-side=hunk", "--width", "40"])
+            .with_input(MIXED_ADDED_AND_NEW_FILE_DIFF)
+            .expect_after_skip(
+                1,
+                r#"
+            #indent_mark
+            a.txt
+            ────────────────────────────────────────
+            
+            ───┐
+            1: │
+            ───┘
+            │  1 │one           │  1 │one
+            │  2 │two           │    │
+            │    │              │  2 │TWO
+            │  3 │three         │  3 │three
+            
+            ────┐
+            10: │
+            ────┘
+             10 ⋮ 10 │ten
+             11 ⋮ 11 │eleven
+                ⋮ 12 │extra1
+                ⋮ 13 │extra2
+             12 ⋮ 14 │twelve
+            
+            added: b.txt
+            ────────────────────────────────────────
+            
+            ───┐
+            1: │
+            ───┘
+                ⋮  1 │new 1
+                ⋮  2 │new 2"#,
+            );
+    }
+
+    #[test]
+    fn test_side_by_side_hunk_switches_layout_after_buffered_lines() {
+        DeltaTest::with_args(&["--side-by-side=hunk", "--width", "40"])
+            .with_input(ZERO_CONTEXT_DIFF)
+            .expect_after_skip(
+                1,
+                r#"
+            #indent_mark
+            a.txt
+            ────────────────────────────────────────
+            
+            ───┐
+            2: │
+            ───┘
+            │  2 │two           │    │
+            │    │              │  2 │TWO
+            
+            ───┐
+            6: │
+            ───┘
+                ⋮  6 │extra1
+                ⋮  7 │extra2
+            
+            ───┐
+            9: │
+            ───┘
+              8 ⋮    │eight"#,
+            );
+    }
+
+    #[test]
+    fn test_side_by_side_hunk_without_line_numbers() {
+        DeltaTest::with_args(&["--side-by-side=hunk", "--width", "40"])
+            .set_config(|cfg| cfg.line_numbers = false)
+            .with_input(MIXED_ADDED_AND_NEW_FILE_DIFF)
+            .expect_after_skip(
+                1,
+                r#"
+            #indent_mark
+            a.txt
+            ────────────────────────────────────────
+            
+            ───┐
+            1: │
+            ───┘
+            one                 one
+            two                 
+                                TWO
+            three               three
+            
+            ────┐
+            10: │
+            ────┘
+            ten
+            eleven
+            extra1
+            extra2
+            twelve
+            
+            added: b.txt
+            ────────────────────────────────────────
+            
+            ───┐
+            1: │
+            ───┘
+            new 1
+            new 2"#,
+            );
+    }
+
+    #[test]
+    fn test_side_by_side_hunk_with_min_width_wider_than_terminal_is_unified() {
+        let unified = DeltaTest::with_args(&["--side-by-side=99999", "--width", "40"])
+            .with_input(MIXED_ADDED_AND_NEW_FILE_DIFF);
+        DeltaTest::with_args(&["--side-by-side=hunk,99999", "--width", "40"])
+            .with_input(MIXED_ADDED_AND_NEW_FILE_DIFF)
+            .expect(&format!("\n{}", unified.output));
+    }
+
+    #[test]
+    fn test_side_by_side_hunk_odd_width_without_line_numbers() {
+        // An odd width pads the right panel (see `UseFullPanelWidth`), but not unified lines.
+        DeltaTest::with_args(&["--side-by-side=hunk", "--width", "41"])
+            .set_config(|cfg| cfg.line_numbers = false)
+            .with_input(MIXED_ADDED_AND_NEW_FILE_DIFF)
+            .expect_contains("\nextra1\n")
+            .expect_contains("\nnew 1\n");
+    }
+
+    const MIXED_ADDED_AND_NEW_FILE_DIFF: &str = "\
+diff --git a/a.txt b/a.txt
+index 1111111..2222222 100644
+--- a/a.txt
++++ b/a.txt
+@@ -1,3 +1,3 @@
+ one
+-two
++TWO
+ three
+@@ -10,3 +10,5 @@
+ ten
+ eleven
++extra1
++extra2
+ twelve
+diff --git a/b.txt b/b.txt
+new file mode 100644
+index 0000000..3333333
+--- /dev/null
++++ b/b.txt
+@@ -0,0 +1,2 @@
++new 1
++new 2
+";
+
+    // As produced by git diff -U0: the first hunk ends with buffered minus and plus lines, and
+    // the hunk lengths of 0 decide the layout of the next hunks without reading ahead.
+    const ZERO_CONTEXT_DIFF: &str = "\
+diff --git a/a.txt b/a.txt
+index 1111111..2222222 100644
+--- a/a.txt
++++ b/a.txt
+@@ -2 +2 @@
+-two
++TWO
+@@ -5,0 +6,2 @@
++extra1
++extra2
+@@ -8 +9,0 @@
+-eight
+";
 }

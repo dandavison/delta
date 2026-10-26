@@ -1,10 +1,11 @@
 use std::borrow::Cow;
-use std::collections::HashMap;
+use std::collections::{HashMap, VecDeque};
 use std::io::{self, BufRead, IsTerminal, Write};
 
 use bytelines::ByteLines;
 
 use crate::ansi;
+use crate::cli;
 use crate::config::delta_unreachable;
 use crate::config::Config;
 use crate::config::GrepType;
@@ -112,6 +113,9 @@ pub struct StateMachine<'a> {
     pub handled_diff_header_header_line_file_pair: Option<(String, String)>,
     pub blame_key_colors: HashMap<String, String>,
     pub minus_line_counter: AmbiguousDiffMinusCounter,
+    // With --side-by-side=hunk, the layout of the hunk whose header has been read but not yet
+    // emitted. See look_ahead_at_hunk.
+    pub hunk_side_by_side: Option<bool>,
 }
 
 pub fn delta<I>(lines: ByteLines<I>, writer: &mut dyn Write, config: &Config) -> std::io::Result<()>
@@ -146,6 +150,7 @@ impl<'a> StateMachine<'a> {
             config,
             blame_key_colors: HashMap::new(),
             minus_line_counter: AmbiguousDiffMinusCounter::not_needed(),
+            hunk_side_by_side: None,
         }
     }
 
@@ -153,46 +158,85 @@ impl<'a> StateMachine<'a> {
     where
         I: BufRead,
     {
-        while let Some(Ok(raw_line_bytes)) = lines.next() {
-            self.ingest_line(raw_line_bytes);
-
-            if self.source == Source::Unknown {
-                self.source = detect_source(&self.line);
-                // Handle (rare) plain `diff -u file1 file2` header. Done here to avoid having
-                // to introduce and handle a Source::DiffUnifiedAmbiguous variant everywhere.
-                if self.line.starts_with("--- ") {
-                    self.minus_line_counter = AmbiguousDiffMinusCounter::prepare_to_count();
+        // Lines read ahead of the line being handled, see look_ahead_at_hunk.
+        let mut lookahead: VecDeque<Vec<u8>> = VecDeque::new();
+        loop {
+            if let Some(raw_line_bytes) = lookahead.pop_front() {
+                self.handle_line(&raw_line_bytes)?;
+            } else if let Some(Ok(raw_line_bytes)) = lines.next() {
+                self.handle_line(raw_line_bytes)?;
+            } else {
+                break;
+            }
+            if self.config.side_by_side
+                && self.config.side_by_side_scope == cli::SideBySideScope::Hunk
+            {
+                if let State::HunkHeader(..) = self.state {
+                    self.look_ahead_at_hunk(&mut lines, &mut lookahead);
                 }
             }
-
-            // Every method named handle_* must return std::io::Result<bool>.
-            // The bool indicates whether the line has been handled by that
-            // method (in which case no subsequent handlers are permitted to
-            // handle it).
-            let _ = self.handle_commit_meta_header_line()?
-                || self.handle_diff_stat_line()?
-                || self.handle_diff_header_diff_line()?
-                || self.handle_diff_header_file_operation_line()?
-                || self.handle_diff_header_minus_line()?
-                || self.handle_diff_header_plus_line()?
-                || self.handle_hunk_header_line()?
-                || self.handle_diff_header_mode_line()?
-                || self.handle_diff_header_misc_line()?
-                || self.handle_submodule_log_line()?
-                || self.handle_submodule_short_line()?
-                || self.handle_merge_conflict_line()?
-                || self.handle_hunk_line()?
-                || self.handle_git_show_file_line()?
-                || self.handle_blame_line()?
-                || self.handle_grep_line()?
-                || self.should_skip_line()
-                || self.emit_line_unchanged()?;
         }
 
         self.handle_pending_line_with_diff_name()?;
         self.painter.paint_buffered_minus_and_plus_lines();
         self.painter.emit()?;
         Ok(())
+    }
+
+    fn handle_line(&mut self, raw_line_bytes: &[u8]) -> std::io::Result<()> {
+        self.ingest_line(raw_line_bytes);
+
+        if self.source == Source::Unknown {
+            self.source = detect_source(&self.line);
+            // Handle (rare) plain `diff -u file1 file2` header. Done here to avoid having
+            // to introduce and handle a Source::DiffUnifiedAmbiguous variant everywhere.
+            if self.line.starts_with("--- ") {
+                self.minus_line_counter = AmbiguousDiffMinusCounter::prepare_to_count();
+            }
+        }
+
+        // Every method named handle_* must return std::io::Result<bool>.
+        // The bool indicates whether the line has been handled by that
+        // method (in which case no subsequent handlers are permitted to
+        // handle it).
+        let _ = self.handle_commit_meta_header_line()?
+            || self.handle_diff_stat_line()?
+            || self.handle_diff_header_diff_line()?
+            || self.handle_diff_header_file_operation_line()?
+            || self.handle_diff_header_minus_line()?
+            || self.handle_diff_header_plus_line()?
+            || self.handle_hunk_header_line()?
+            || self.handle_diff_header_mode_line()?
+            || self.handle_diff_header_misc_line()?
+            || self.handle_submodule_log_line()?
+            || self.handle_submodule_short_line()?
+            || self.handle_merge_conflict_line()?
+            || self.handle_hunk_line()?
+            || self.handle_git_show_file_line()?
+            || self.handle_blame_line()?
+            || self.handle_grep_line()?
+            || self.should_skip_line()
+            || self.emit_line_unchanged()?;
+        Ok(())
+    }
+
+    /// With --side-by-side=hunk, decide whether the hunk whose header was just read is displayed
+    /// side-by-side. Lines read ahead to decide are queued in `lookahead`, to be handled as usual
+    /// afterwards.
+    fn look_ahead_at_hunk<I>(&mut self, lines: &mut ByteLines<I>, lookahead: &mut VecDeque<Vec<u8>>)
+    where
+        I: BufRead,
+    {
+        let State::HunkHeader(_, parsed_hunk_header, _, _) = &self.state else {
+            return;
+        };
+        self.hunk_side_by_side = Some(match parsed_hunk_header.unified_hunk_lengths() {
+            Some((minus_length, plus_length)) => {
+                hunk_removes_and_adds_lines(minus_length, plus_length, lines, lookahead)
+            }
+            // A combined diff hunk (merge commit) keeps the configured layout.
+            None => self.config.side_by_side,
+        });
     }
 
     fn ingest_line(&mut self, raw_line_bytes: &[u8]) {
@@ -267,6 +311,56 @@ impl<'a> StateMachine<'a> {
         let style = self.config.get_style(&self.state);
         !(style.is_raw && style.decoration_style == DecorationStyle::NoDecoration)
     }
+}
+
+/// Whether a unified diff hunk, with the given numbers of minus and plus side lines, contains both
+/// removed and added lines. Reads the hunk's lines into `lookahead`, but stops as soon as the
+/// answer is known: at once if one side is empty (e.g. an added or deleted file), when both kinds
+/// of lines have been seen, or at the end of the hunk, so that it never waits for input beyond it.
+fn hunk_removes_and_adds_lines<I>(
+    minus_length: usize,
+    plus_length: usize,
+    lines: &mut ByteLines<I>,
+    lookahead: &mut VecDeque<Vec<u8>>,
+) -> bool
+where
+    I: BufRead,
+{
+    let (mut minus_remaining, mut plus_remaining) = (minus_length, plus_length);
+    let (mut has_minus, mut has_plus) = (false, false);
+    let mut index = 0;
+    // Keep reading while each kind of line not yet seen could still come.
+    while (has_minus || minus_remaining > 0)
+        && (has_plus || plus_remaining > 0)
+        && !(has_minus && has_plus)
+    {
+        if index == lookahead.len() {
+            match lines.next() {
+                Some(Ok(raw_line_bytes)) => lookahead.push_back(raw_line_bytes.to_vec()),
+                _ => break,
+            }
+        }
+        let line = ansi::strip_ansi_codes(&String::from_utf8_lossy(&lookahead[index]));
+        index += 1;
+        match line.bytes().next() {
+            Some(b'-') => {
+                has_minus = true;
+                minus_remaining = minus_remaining.saturating_sub(1);
+            }
+            Some(b'+') => {
+                has_plus = true;
+                plus_remaining = plus_remaining.saturating_sub(1);
+            }
+            // An empty line is an unchanged line whose trailing space was stripped.
+            Some(b' ') | None => {
+                minus_remaining = minus_remaining.saturating_sub(1);
+                plus_remaining = plus_remaining.saturating_sub(1);
+            }
+            Some(b'\\') => {} // "\ No newline at end of file"
+            Some(_) => break, // Not a hunk line: the hunk is shorter than its header says.
+        }
+    }
+    has_minus && has_plus
 }
 
 /// If output is going to a tty, emit hyperlinks if requested.
