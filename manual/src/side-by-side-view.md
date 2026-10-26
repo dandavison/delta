@@ -22,6 +22,8 @@ Or from the command line:
 delta --side-by-side=140
 ```
 
+If `--width` is set, the minimum applies to that width instead of the terminal width. This matters when delta's output does not go to a terminal, so delta cannot measure it: a program that captures delta's output can pass the width with `--width`.
+
 Setting `side-by-side = 0` disables side-by-side mode.
 
 To activate and deactivate side-by-side view from the command line, consider using the [`DELTA_FEATURES`](./features-named-groups-of-settings.md) environment variable. For example:

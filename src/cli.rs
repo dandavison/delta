@@ -871,7 +871,8 @@ pub struct Opt {
     /// Display diffs in side-by-side layout. Optionally, set the minimum terminal width
     /// required to enable side-by-side mode (e.g. --side-by-side=80). If the terminal is
     /// narrower than this value, side-by-side mode will be disabled and delta will fall
-    /// back to unified diff. Without a value (or with `true`), side-by-side is always enabled.
+    /// back to unified diff. If --width is set, the minimum applies to that width instead.
+    /// Without a value (or with `true`), side-by-side is always enabled.
     pub side_by_side: SideBySide,
 
     #[arg(long = "syntax-theme", value_name = "SYNTAX_THEME")]
@@ -1201,6 +1202,7 @@ pub struct ComputedValues {
     /// Features that the command line turned off, by turning off the option they are named after.
     /// None of them is gathered, whatever git config or DELTA_FEATURES says.
     pub features_turned_off: HashSet<String>,
+    pub side_by_side_width: usize,
     pub syntax_set: SyntaxSet,
     pub syntax_theme: Option<SyntaxTheme>,
     pub true_color: bool,
