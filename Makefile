@@ -21,7 +21,7 @@ shell-completion:
 	for shell in bash fish zsh; do ./target/release/delta --generate-completion $$shell > etc/completion/completion.$$shell; done
 
 release:
-	@make -f release.Makefile release
+	@make -f etc/release.Makefile release
 
 version:
 	@grep version Cargo.toml | head -n1 | sed -E 's,.*version = "([^"]+)",\1,'

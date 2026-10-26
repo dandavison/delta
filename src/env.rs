@@ -1,6 +1,7 @@
 use std::env;
 
 const COLORTERM: &str = "COLORTERM";
+const COLUMNS: &str = "COLUMNS";
 const BAT_THEME: &str = "BAT_THEME";
 const GIT_CONFIG_PARAMETERS: &str = "GIT_CONFIG_PARAMETERS";
 const GIT_PREFIX: &str = "GIT_PREFIX";
@@ -14,6 +15,7 @@ const DELTA_PAGER: &str = "DELTA_PAGER";
 pub struct DeltaEnv {
     pub bat_theme: Option<String>,
     pub colorterm: Option<String>,
+    pub columns: Option<String>,
     pub current_dir: Option<std::path::PathBuf>,
     pub experimental_max_line_distance_for_naively_paired_lines: Option<String>,
     pub features: Option<String>,
@@ -29,6 +31,7 @@ impl DeltaEnv {
     pub fn init() -> Self {
         let bat_theme = env::var(BAT_THEME).ok();
         let colorterm = env::var(COLORTERM).ok();
+        let columns = env::var(COLUMNS).ok();
         let experimental_max_line_distance_for_naively_paired_lines =
             env::var(DELTA_EXPERIMENTAL_MAX_LINE_DISTANCE_FOR_NAIVELY_PAIRED_LINES).ok();
         let features = env::var(DELTA_FEATURES).ok();
@@ -50,6 +53,7 @@ impl DeltaEnv {
         Self {
             bat_theme,
             colorterm,
+            columns,
             current_dir,
             experimental_max_line_distance_for_naively_paired_lines,
             features,

@@ -5,8 +5,12 @@ use crate::ansi;
 use crate::cli::Width;
 use crate::style::{DecorationStyle, Style};
 
-fn paint_text(text_style: Style, text: &str, addendum: &str) -> String {
-    if addendum.is_empty() {
+/// Return `raw_text` if `text_style` is raw, and otherwise `text` and `addendum` painted in
+/// `text_style`.
+fn paint_text(text_style: Style, text: &str, raw_text: &str, addendum: &str) -> String {
+    if text_style.is_raw {
+        raw_text.to_string()
+    } else if addendum.is_empty() {
         text_style.paint(text).to_string()
     } else {
         text_style
@@ -61,11 +65,11 @@ fn write_no_decoration(
     text_style: Style,
     _decoration_style: ansi_term::Style,
 ) -> std::io::Result<()> {
-    if text_style.is_raw {
-        writeln!(writer, "{raw_text}")?;
-    } else {
-        writeln!(writer, "{}", paint_text(text_style, text, addendum))?;
-    }
+    writeln!(
+        writer,
+        "{}",
+        paint_text(text_style, text, raw_text, addendum)
+    )?;
     Ok(())
 }
 
@@ -76,7 +80,7 @@ pub fn write_boxed(
     text: &str,
     raw_text: &str,
     addendum: &str,
-    _line_width: &Width, // ignored
+    line_width: &Width,
     text_style: Style,
     decoration_style: ansi_term::Style,
 ) -> std::io::Result<()> {
@@ -85,13 +89,12 @@ pub fn write_boxed(
     } else {
         box_drawing::light::UP_LEFT
     };
-    let box_width = ansi::measure_text_width(text);
     write_boxed_partial(
         writer,
         text,
         raw_text,
         addendum,
-        box_width,
+        line_width,
         text_style,
         decoration_style,
     )?;
@@ -110,13 +113,12 @@ fn write_boxed_with_underline(
     text_style: Style,
     decoration_style: ansi_term::Style,
 ) -> std::io::Result<()> {
-    let box_width = ansi::measure_text_width(text);
-    write_boxed_with_horizontal_whisker(
+    let box_width = write_boxed_with_horizontal_whisker(
         writer,
         text,
         raw_text,
         addendum,
-        box_width,
+        line_width,
         text_style,
         decoration_style,
     )?;
@@ -218,10 +220,10 @@ fn _write_under_or_over_lined(
     text_style: Style,
     decoration_style: ansi_term::Style,
 ) -> std::io::Result<()> {
-    let text_width = ansi::measure_text_width(text);
+    let text = paint_text(text_style, text, raw_text, addendum);
     let line_width = match *line_width {
-        Width::Fixed(n) => max(n, text_width),
-        Width::Variable => text_width,
+        Width::Fixed(n) => n,
+        Width::Variable => ansi::measure_text_width(&text),
     };
     let write_line = |writer: &mut dyn Write| -> std::io::Result<()> {
         write_horizontal_line(writer, line_width, text_style, decoration_style)?;
@@ -232,11 +234,7 @@ fn _write_under_or_over_lined(
         UnderOverline::Under => {}
         _ => write_line(writer)?,
     }
-    if text_style.is_raw {
-        writeln!(writer, "{raw_text}")?;
-    } else {
-        writeln!(writer, "{}", paint_text(text_style, text, addendum))?;
-    }
+    writeln!(writer, "{text}")?;
     match underoverline {
         UnderOverline::Over => {}
         _ => write_line(writer)?,
@@ -262,42 +260,46 @@ fn write_horizontal_line(
     )
 }
 
+/// Return the width of the box without its right edge.
 fn write_boxed_with_horizontal_whisker(
     writer: &mut dyn Write,
     text: &str,
     raw_text: &str,
     addendum: &str,
-    box_width: usize,
+    line_width: &Width,
     text_style: Style,
     decoration_style: ansi_term::Style,
-) -> std::io::Result<()> {
+) -> std::io::Result<usize> {
     let up_horizontal = if decoration_style.is_bold {
         box_drawing::heavy::UP_HORIZONTAL
     } else {
         box_drawing::light::UP_HORIZONTAL
     };
-    write_boxed_partial(
+    let box_width = write_boxed_partial(
         writer,
         text,
         raw_text,
         addendum,
-        box_width,
+        line_width,
         text_style,
         decoration_style,
     )?;
     write!(writer, "{}", decoration_style.paint(up_horizontal))?;
-    Ok(())
+    Ok(box_width)
 }
 
+/// Write the text surrounded by a box, leaving out the bottom right corner. If the box would be
+/// wider than a fixed `line_width`, wrap the text inside the box. Return the width of the box
+/// without its right edge.
 fn write_boxed_partial(
     writer: &mut dyn Write,
     text: &str,
     raw_text: &str,
     addendum: &str,
-    box_width: usize,
+    line_width: &Width,
     text_style: Style,
     decoration_style: ansi_term::Style,
-) -> std::io::Result<()> {
+) -> std::io::Result<usize> {
     let (horizontal, down_left, vertical) = if decoration_style.is_bold {
         (
             box_drawing::heavy::HORIZONTAL,
@@ -311,6 +313,24 @@ fn write_boxed_partial(
             box_drawing::light::VERTICAL,
         )
     };
+    let text = paint_text(text_style, text, raw_text, addendum);
+    let text_width = ansi::measure_text_width(&text);
+    let (lines, box_width) = match *line_width {
+        // The right edge of the box takes up one column.
+        Width::Fixed(n) if text_width >= n => {
+            // Keep a space between the text and the right edge on every line. This matches the
+            // space that callers add to the end of the text.
+            let wrap_width = max(n.saturating_sub(2), 1);
+            let mut lines = ansi::wrap_str(&text, wrap_width);
+            // The space that callers add to the end of the text can end up on a line of its own.
+            let is_blank = |line: &String| ansi::strip_ansi_codes(line).trim().is_empty();
+            while lines.len() > 1 && lines.last().is_some_and(is_blank) {
+                lines.pop();
+            }
+            (lines, wrap_width + 1)
+        }
+        _ => (vec![text], text_width),
+    };
     let horizontal_edge = horizontal.repeat(box_width);
     writeln!(
         writer,
@@ -318,15 +338,16 @@ fn write_boxed_partial(
         decoration_style.paint(&horizontal_edge),
         decoration_style.paint(down_left),
     )?;
-    if text_style.is_raw {
-        write!(writer, "{raw_text}")?;
-    } else {
-        write!(writer, "{}", paint_text(text_style, text, addendum))?;
+    for line in &lines {
+        let padding = box_width.saturating_sub(ansi::measure_text_width(line));
+        writeln!(
+            writer,
+            "{}{}{}",
+            line,
+            " ".repeat(padding),
+            decoration_style.paint(vertical),
+        )?;
     }
-    write!(
-        writer,
-        "{}\n{}",
-        decoration_style.paint(vertical),
-        decoration_style.paint(&horizontal_edge),
-    )
+    write!(writer, "{}", decoration_style.paint(&horizontal_edge))?;
+    Ok(box_width)
 }

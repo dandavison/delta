@@ -1,6 +1,11 @@
 use crate::delta::{DiffType, Source, State, StateMachine};
 use crate::utils::path::relativize_path_maybe;
 
+/// Display decoration appended in place to a binary file's `minus_file`/
+/// `plus_file`; `diff_header_osc` strips it again so the metadata record
+/// carries the real path.
+pub const BINARY_FILE_SUFFIX: &str = " (binary file)";
+
 impl StateMachine<'_> {
     #[inline]
     fn test_diff_file_missing(&self) -> bool {
@@ -31,18 +36,32 @@ impl StateMachine<'_> {
 
             if self.minus_file != "/dev/null" {
                 relativize_path_maybe(&mut self.minus_file, self.config);
-                self.minus_file.push_str(" (binary file)");
+                self.minus_file.push_str(BINARY_FILE_SUFFIX);
             }
             if self.plus_file != "/dev/null" {
                 relativize_path_maybe(&mut self.plus_file, self.config);
-                self.plus_file.push_str(" (binary file)");
+                self.plus_file.push_str(BINARY_FILE_SUFFIX);
             }
             return Ok(true);
         }
 
-        self.handle_additional_cases(match self.state {
-            State::DiffHeader(_) => self.state.clone(),
-            _ => State::DiffHeader(DiffType::Unified),
-        })
+        // A "Binary files ..." row in a git diff is about the current file:
+        // the paths are fresh, (re-)set at the `diff --git` line just above.
+        // An "Only in dir: file" row names a file delta never parses, so it
+        // carries no record -- and in this format (plain `diff -ur`; git
+        // never emits it) a binary row's paths may be the previous file's,
+        // since no `diff --git` line resets them between sections.
+        let osc = if self.test_diff_is_binary() && self.source == Source::GitDiff {
+            self.diff_header_osc()
+        } else {
+            String::new()
+        };
+        self.handle_additional_cases(
+            match self.state {
+                State::DiffHeader(_) => self.state.clone(),
+                _ => State::DiffHeader(DiffType::Unified),
+            },
+            osc,
+        )
     }
 }

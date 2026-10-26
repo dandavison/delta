@@ -6,7 +6,7 @@ Use the `--generate-completion` subcommand to print the completion script to std
 ```sh
 delta --generate-completion <SHELL>
 ```
-<SHELL> should be replaced with the lowercase name of the shell for which the script is to be generated.
+`<SHELL>` should be replaced with the lowercase name of the shell for which the script is to be generated.
 Currently bash, elvish, fish, powershell and zsh are supported.
 
 The completion files in `etc/completion` were also generated with this function and may not be up-to-date.

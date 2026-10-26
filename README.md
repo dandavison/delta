@@ -38,6 +38,7 @@ Or run:
 git config --global core.pager delta
 git config --global interactive.diffFilter 'delta --color-only'
 git config --global delta.navigate true
+git config --global delta.dark true  # or `delta.light true`, or omit for auto-detection
 git config --global merge.conflictStyle zdiff3
 ```
 
@@ -198,6 +199,8 @@ Side-by-side view wraps long lines automatically:
 ### Installation and usage
 
 Please see the [user manual](https://dandavison.github.io/delta/) and `delta --help`.
+
+[![Live demo by Demoshell](https://build.demoshell.com/v1/embed/badge.svg)](https://build.demoshell.com/launch?snapshot=demoshell%2Ftui%3Adelta)
 
 ### Maintainers
 
