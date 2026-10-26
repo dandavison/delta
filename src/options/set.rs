@@ -96,6 +96,7 @@ pub fn set_options(
     // Needed before gathering features because a side-by-side min width can rule out the
     // side-by-side feature.
     set_available_terminal_width(opt);
+    set_side_by_side_width(opt);
     let features = gather_features(opt, &builtin_features, git_config);
     opt.features = Some(features.join(" "));
 
@@ -246,7 +247,7 @@ pub fn set_options(
     opt.computed.paging_mode = parse_paging_mode(&opt.paging_mode);
 
     opt.computed.side_by_side =
-        side_by_side_is_active(opt.side_by_side, opt.computed.available_terminal_width);
+        side_by_side_is_active(opt.side_by_side, opt.computed.side_by_side_width);
 
     // --color-only is used for interactive.diffFilter (git add -p). side-by-side, and
     // **-decoration-style cannot be used there (does not emit lines in 1-1 correspondence with raw git output).
@@ -408,7 +409,7 @@ fn gather_features(
     if opt.navigate {
         gather_builtin_features_recursively("navigate", &mut features, builtin_features, opt);
     }
-    if side_by_side_is_active(opt.side_by_side, opt.computed.available_terminal_width) {
+    if side_by_side_is_active(opt.side_by_side, opt.computed.side_by_side_width) {
         gather_builtin_features_recursively("side-by-side", &mut features, builtin_features, opt);
     }
 
@@ -490,7 +491,7 @@ fn gather_builtin_features_from_flags_in_gitconfig(
             git_config
                 .get::<cli::SideBySide>(&key)
                 .is_some_and(|side_by_side| {
-                    side_by_side_is_active(side_by_side, opt.computed.available_terminal_width)
+                    side_by_side_is_active(side_by_side, opt.computed.side_by_side_width)
                 })
         } else {
             git_config.get::<bool>(&key) == Some(true)
@@ -554,11 +555,11 @@ fn split_feature_string(features: &str) -> impl Iterator<Item = &str> {
     features.split_whitespace().rev()
 }
 
-fn side_by_side_is_active(side_by_side: cli::SideBySide, available_terminal_width: usize) -> bool {
+fn side_by_side_is_active(side_by_side: cli::SideBySide, side_by_side_width: usize) -> bool {
     match side_by_side {
         cli::SideBySide::Off => false,
         cli::SideBySide::On => true,
-        cli::SideBySide::MinWidth(min_width) => available_terminal_width >= min_width,
+        cli::SideBySide::MinWidth(min_width) => side_by_side_width >= min_width,
     }
 }
 
@@ -677,6 +678,19 @@ fn set_available_terminal_width(opt: &mut cli::Opt) {
         width_from_columns_env_var(&opt.env).unwrap_or_else(|| {
             crate::utils::workarounds::windows_msys2_width_fix(term_stdout.size(), &term_stdout)
         });
+}
+
+/// Set the width that the side-by-side minimum width applies to: --width if it is a number,
+/// otherwise the terminal width. When delta's output is captured, not written to a terminal,
+/// --width is the only way to tell delta the width. Only --width from the command line counts,
+/// because the side-by-side feature is decided before --width is read from git config.
+fn set_side_by_side_width(opt: &mut cli::Opt) {
+    let terminal_width = opt.computed.available_terminal_width;
+    opt.computed.side_by_side_width = opt
+        .width
+        .as_deref()
+        .and_then(|width| parse_width_specifier(width, terminal_width).ok())
+        .unwrap_or(terminal_width);
 }
 
 fn set_widths_and_isatty(opt: &mut cli::Opt) {
@@ -1111,6 +1125,26 @@ pub mod tests {
         // min-width of 1 is smaller than TERMINAL_WIDTH_IN_TESTS (43), so sbs should be enabled.
         let opt = integration_test_utils::make_options_from_args(&["--side-by-side=1"]);
         assert!(opt.computed.side_by_side);
+    }
+
+    #[test]
+    fn test_side_by_side_min_width_applies_to_width_option() {
+        // With --width, the minimum applies to that width, whatever the terminal width is. The
+        // side-by-side feature, which brings line numbers, follows the same decision.
+        let side_by_side = |args: &[&str]| {
+            let opt = integration_test_utils::make_options_from_args(args);
+            let features = opt.features.unwrap_or_default();
+            assert_eq!(
+                opt.computed.side_by_side,
+                features.split_whitespace().any(|f| f == "side-by-side"),
+                "{args:?}: features {features:?}"
+            );
+            opt.computed.side_by_side
+        };
+        assert!(side_by_side(&["--side-by-side=99999", "--width=100000"]));
+        assert!(!side_by_side(&["--side-by-side=2", "--width=1"]));
+        // --width=variable paints at the terminal width.
+        assert!(!side_by_side(&["--side-by-side=99999", "--width=variable"]));
     }
 
     #[test]
