@@ -114,11 +114,11 @@ pub fn format_and_paint_line_numbers<'a>(
 ) -> Vec<ansi_term::ANSIGenericString<'a, str>> {
     let mut formatted_numbers = Vec::new();
 
-    let (emit_left, emit_right) = match (config.side_by_side, side_by_side_panel) {
-        (false, _) => (true, true),
-        (true, Some(Left)) => (true, false),
-        (true, Some(Right)) => (false, true),
-        (true, None) => unreachable!(),
+    // A unified line shows both fields; a side-by-side panel only its own.
+    let (emit_left, emit_right) = match side_by_side_panel {
+        None => (true, true),
+        Some(Left) => (true, false),
+        Some(Right) => (false, true),
     };
 
     if emit_left {
