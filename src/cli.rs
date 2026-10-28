@@ -861,6 +861,7 @@ pub struct Opt {
         long = "side-by-side",
         num_args(0..=1),
         require_equals(true),
+        default_value("false"),
         default_missing_value("true"),
         value_name = "MIN_WIDTH",
     )]
@@ -868,7 +869,7 @@ pub struct Opt {
     /// required to enable side-by-side mode (e.g. --side-by-side=80). If the terminal is
     /// narrower than this value, side-by-side mode will be disabled and delta will fall
     /// back to unified diff. Without a value (or with `true`), side-by-side is always enabled.
-    pub side_by_side: Option<String>,
+    pub side_by_side: SideBySide,
 
     #[arg(long = "syntax-theme", value_name = "SYNTAX_THEME")]
     /// The syntax-highlighting theme to use.
@@ -1197,6 +1198,13 @@ pub struct ComputedValues {
     pub syntax_set: SyntaxSet,
     pub syntax_theme: Option<SyntaxTheme>,
     pub true_color: bool,
+}
+
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum SideBySide {
+    Off,
+    On,
+    MinWidth(usize),
 }
 
 #[derive(Clone, Debug, Default, PartialEq, Eq)]

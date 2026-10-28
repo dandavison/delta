@@ -1,3 +1,4 @@
+use crate::cli;
 use crate::config::delta_unreachable;
 
 /// A value associated with a Delta command-line option name.
@@ -7,6 +8,7 @@ pub enum OptionValue {
     OptionString(Option<String>),
     String(String),
     Int(usize),
+    SideBySide(cli::SideBySide),
 }
 
 /// An OptionValue, tagged according to its provenance/semantics.
@@ -92,6 +94,21 @@ impl From<OptionValue> for usize {
         match value {
             OptionValue::Int(value) => value,
             _ => delta_unreachable("Error converting OptionValue to usize."),
+        }
+    }
+}
+
+impl From<cli::SideBySide> for OptionValue {
+    fn from(value: cli::SideBySide) -> Self {
+        OptionValue::SideBySide(value)
+    }
+}
+
+impl From<OptionValue> for cli::SideBySide {
+    fn from(value: OptionValue) -> Self {
+        match value {
+            OptionValue::SideBySide(value) => value,
+            _ => delta_unreachable("Error converting OptionValue to SideBySide."),
         }
     }
 }
