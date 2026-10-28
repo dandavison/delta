@@ -128,6 +128,7 @@ impl GetOptionValue for String {}
 impl GetOptionValue for bool {}
 impl GetOptionValue for f64 {}
 impl GetOptionValue for usize {}
+impl GetOptionValue for cli::SideBySide {}
 
 #[cfg(test)]
 pub mod tests {
