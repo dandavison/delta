@@ -93,6 +93,9 @@ pub fn set_options(
         builtin_features.remove("side-by-side");
     }
 
+    // Needed before gathering features because a side-by-side min width can rule out the
+    // side-by-side feature.
+    set_available_terminal_width(opt);
     let features = gather_features(opt, &builtin_features, git_config);
     opt.features = Some(features.join(" "));
 
@@ -242,10 +245,8 @@ pub fn set_options(
         cli::InspectRawLines::from_str(&opt.inspect_raw_lines).unwrap();
     opt.computed.paging_mode = parse_paging_mode(&opt.paging_mode);
 
-    // Resolve side-by-side: parse the optional min-width value and apply terminal width check.
-    let (sbs_enabled, sbs_min_width) = parse_side_by_side(&opt.side_by_side);
-    opt.computed.side_by_side = sbs_enabled
-        && (sbs_min_width == 0 || opt.computed.available_terminal_width >= sbs_min_width);
+    opt.computed.side_by_side =
+        side_by_side_is_active(&opt.side_by_side, opt.computed.available_terminal_width);
 
     // --color-only is used for interactive.diffFilter (git add -p). side-by-side, and
     // **-decoration-style cannot be used there (does not emit lines in 1-1 correspondence with raw git output).
@@ -407,7 +408,7 @@ fn gather_features(
     if opt.navigate {
         gather_builtin_features_recursively("navigate", &mut features, builtin_features, opt);
     }
-    if side_by_side_enabled(&opt.side_by_side) {
+    if side_by_side_is_active(&opt.side_by_side, opt.computed.available_terminal_width) {
         gather_builtin_features_recursively("side-by-side", &mut features, builtin_features, opt);
     }
 
@@ -484,7 +485,16 @@ fn gather_builtin_features_from_flags_in_gitconfig(
     git_config: &GitConfig,
 ) {
     for child_feature in builtin_features.keys() {
-        if let Some(true) = git_config.get::<bool>(&format!("{git_config_key}.{child_feature}")) {
+        let key = format!("{git_config_key}.{child_feature}");
+        let is_active = if child_feature == "side-by-side" {
+            side_by_side_is_active(
+                &git_config.get::<Option<String>>(&key).flatten(),
+                opt.computed.available_terminal_width,
+            )
+        } else {
+            git_config.get::<bool>(&key) == Some(true)
+        };
+        if is_active {
             gather_builtin_features_recursively(child_feature, features, builtin_features, opt);
         }
     }
@@ -543,9 +553,9 @@ fn split_feature_string(features: &str) -> impl Iterator<Item = &str> {
     features.split_whitespace().rev()
 }
 
-/// Returns true if the side-by-side option value indicates side-by-side should be enabled.
-fn side_by_side_enabled(value: &Option<String>) -> bool {
-    parse_side_by_side(value).0
+fn side_by_side_is_active(value: &Option<String>, available_terminal_width: usize) -> bool {
+    let (enabled, min_width) = parse_side_by_side(value);
+    enabled && available_terminal_width >= min_width
 }
 
 /// Parse the side-by-side option value into (enabled, min_width).
@@ -640,16 +650,18 @@ fn parse_width_specifier(width_arg: &str, terminal_width: usize) -> Result<usize
     Ok(width)
 }
 
-fn set_widths_and_isatty(opt: &mut cli::Opt) {
+fn set_available_terminal_width(opt: &mut cli::Opt) {
     let term_stdout = Term::stdout();
-    opt.computed.stdout_is_term = term_stdout.is_term();
-
     // If one extra character for e.g. `less --status-column` is required use "-1"
     // as an argument, also see #41, #10, #115 and #727.
     opt.computed.available_terminal_width =
         width_from_columns_env_var(&opt.env).unwrap_or_else(|| {
             crate::utils::workarounds::windows_msys2_width_fix(term_stdout.size(), &term_stdout)
         });
+}
+
+fn set_widths_and_isatty(opt: &mut cli::Opt) {
+    opt.computed.stdout_is_term = Term::stdout().is_term();
 
     let (decorations_width, background_color_extends_to_terminal_width) = match opt.width.as_deref()
     {
@@ -1081,5 +1093,119 @@ pub mod tests {
         // min-width of 1 is smaller than TERMINAL_WIDTH_IN_TESTS (43), so sbs should be enabled.
         let opt = integration_test_utils::make_options_from_args(&["--side-by-side=1"]);
         assert!(opt.computed.side_by_side);
+    }
+
+    #[test]
+    fn test_side_by_side_min_width_fallback_is_identical_to_unified() {
+        let git_config_path =
+            "delta__test_side_by_side_min_width_fallback_is_identical_to_unified.gitconfig";
+        let unified = run_delta_in_100_columns(&[], None, None, git_config_path);
+        let side_by_side =
+            run_delta_in_100_columns(&["--side-by-side"], None, None, git_config_path);
+        assert_ne!(side_by_side, unified);
+        let custom_feature = |line: &str| {
+            format!("[delta]\n    features = my-feature\n[delta \"my-feature\"]\n    {line}\n")
+        };
+        // (args, git config contents, GIT_CONFIG_PARAMETERS, expected output)
+        type Case<'a> = (&'a [&'a str], Option<String>, Option<&'a str>, &'a String);
+        let cases: &[Case] = &[
+            (&["--side-by-side=100"], None, None, &side_by_side),
+            (&["--side-by-side=101"], None, None, &unified),
+            (
+                &[],
+                Some("[delta]\n    side-by-side = 100\n".into()),
+                None,
+                &side_by_side,
+            ),
+            (
+                &[],
+                Some("[delta]\n    side-by-side = 101\n".into()),
+                None,
+                &unified,
+            ),
+            (
+                &[],
+                Some(custom_feature("side-by-side = 100")),
+                None,
+                &side_by_side,
+            ),
+            (
+                &[],
+                Some(custom_feature("side-by-side = 101")),
+                None,
+                &unified,
+            ),
+            (
+                &[],
+                Some("".into()),
+                Some("'delta.side-by-side=100'"),
+                &side_by_side,
+            ),
+            (
+                &[],
+                Some("".into()),
+                Some("'delta.side-by-side=101'"),
+                &unified,
+            ),
+        ];
+        let mismatches: Vec<String> = cases
+            .iter()
+            .filter(
+                |(args, git_config_contents, git_config_parameters, expected)| {
+                    run_delta_in_100_columns(
+                        args,
+                        git_config_contents.as_deref(),
+                        *git_config_parameters,
+                        git_config_path,
+                    ) != **expected
+                },
+            )
+            .map(
+                |(args, git_config_contents, git_config_parameters, expected)| {
+                    let expected = if *expected == &unified {
+                        "unified"
+                    } else {
+                        "side-by-side"
+                    };
+                    format!(
+                        "args={args:?} git_config={git_config_contents:?} \
+                     GIT_CONFIG_PARAMETERS={git_config_parameters:?}: expected {expected} output"
+                    )
+                },
+            )
+            .collect();
+        remove_file(git_config_path).ok();
+        assert!(mismatches.is_empty(), "{}", mismatches.join("\n"));
+    }
+
+    fn run_delta_in_100_columns(
+        args: &[&str],
+        git_config_contents: Option<&str>,
+        git_config_parameters: Option<&str>,
+        git_config_path: &str,
+    ) -> String {
+        let opt = integration_test_utils::make_options_from_args_and_git_config_honoring_env_var_with_custom_env(
+            crate::env::DeltaEnv {
+                columns: Some("100".to_string()),
+                git_config_parameters: git_config_parameters.map(str::to_string),
+                ..crate::env::DeltaEnv::default()
+            },
+            args,
+            git_config_contents.map(str::as_bytes),
+            git_config_contents.map(|_| git_config_path),
+        );
+        integration_test_utils::run_delta(
+            "\
+diff --git a/a.txt b/a.txt
+index 1111111..2222222 100644
+--- a/a.txt
++++ b/a.txt
+@@ -1,2 +1,2 @@
+ a
+-b
++c
+",
+            &crate::config::Config::from(opt),
+        )
     }
 }
