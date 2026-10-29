@@ -58,7 +58,7 @@ lazy_static! {
     static ref GITLAB_REMOTE_URL: Regex = Regex::new(
         r"(?x)
         ^
-        (?:https://|git@)? # Support both HTTPS and SSH URLs, SSH URLs optionally omitting the git@
+        (?:https://|[^@]+@)? # Support both HTTPS and SSH URLs, SSH URLs optionally omitting the user
         gitlab\.com
         [:/]              # This separator differs between SSH and HTTPS URLs
         ([^/]+)           # Capture the user/org name
@@ -73,7 +73,7 @@ lazy_static! {
     static ref SOURCEHUT_REMOTE_URL: Regex = Regex::new(
         r"(?x)
         ^
-        (?:https://|git@)? # Support both HTTPS and SSH URLs, SSH URLs optionally omitting the git@
+        (?:https://|[^@]+@)? # Support both HTTPS and SSH URLs, SSH URLs optionally omitting the user
         git\.sr\.ht
         [:/]              # This separator differs between SSH and HTTPS URLs
         ~([^/]+)          # Capture the username
@@ -86,7 +86,7 @@ lazy_static! {
     static ref CODEBERG_REMOTE_URL: Regex = Regex::new(
         r"(?x)
         ^
-        (?:https://|git@)? # Support both HTTPS and SSH URLs, SSH URLs optionally omitting the git@
+        (?:https://|[^@]+@)? # Support both HTTPS and SSH URLs, SSH URLs optionally omitting the user
         codeberg\.org
         [:/]              # This separator differs between SSH and HTTPS URLs
         ([^/]+)           # Capture the user/org name
@@ -287,5 +287,48 @@ mod tests {
             repo.format_commit_url(commit_hash),
             format!("https://codeberg.org/dnkl/foot/commit/{commit_hash}")
         )
+    }
+
+    #[test]
+    fn test_parse_urls_with_user_info_or_scheme_prefix() {
+        let cases = &[
+            (
+                "https://someuser@gitlab.com/proj/grp/repo.git",
+                GitRemoteRepo::GitLab {
+                    slug: "proj/grp/repo".to_string(),
+                },
+            ),
+            (
+                "ssh://git@gitlab.com/proj/repo.git",
+                GitRemoteRepo::GitLab {
+                    slug: "proj/repo".to_string(),
+                },
+            ),
+            (
+                "https://someuser@codeberg.org/someuser/somerepo.git",
+                GitRemoteRepo::Codeberg {
+                    slug: "someuser/somerepo".to_string(),
+                },
+            ),
+            (
+                "ssh://git@codeberg.org/someuser/somerepo.git",
+                GitRemoteRepo::Codeberg {
+                    slug: "someuser/somerepo".to_string(),
+                },
+            ),
+            (
+                "ssh://git@git.sr.ht/~someuser/somerepo",
+                GitRemoteRepo::SourceHut {
+                    slug: "~someuser/somerepo".to_string(),
+                },
+            ),
+        ];
+        for (url, expected) in cases {
+            assert_eq!(
+                GitRemoteRepo::from_str(url).ok().as_ref(),
+                Some(expected),
+                "{url}"
+            );
+        }
     }
 }
