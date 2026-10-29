@@ -1,0 +1,46 @@
+#!/bin/bash
+set -euo pipefail
+
+DELTA_BIN=${1:-./target/release/delta}
+DELTA_BIN=$(cd "$(dirname "$DELTA_BIN")" && pwd)/$(basename "$DELTA_BIN")
+ANSI_FILTER=$(cd "$(dirname "$0")/../etc/bin" && pwd)/ansifilter
+test_dir=$(mktemp -d)
+trap 'rm -rf "$test_dir"' EXIT
+
+export GIT_CONFIG_GLOBAL="$test_dir/gitconfig"
+export GIT_CONFIG_NOSYSTEM=1
+export DELTA_TEST_EXTERNAL_DIFF_MARKER="$test_dir/external-called"
+unset GIT_CONFIG_COUNT GIT_CONFIG_PARAMETERS GIT_EXTERNAL_DIFF GIT_DIFF_OPTS
+
+printf 'old-line\n' > "$test_dir/old.txt"
+printf 'new-line\n' > "$test_dir/new.txt"
+cat > "$test_dir/external-diff" <<'SCRIPT'
+#!/bin/sh
+printf 'called\n' >> "$DELTA_TEST_EXTERNAL_DIFF_MARKER"
+printf 'external diff output\n'
+SCRIPT
+chmod +x "$test_dir/external-diff"
+cd "$test_dir"
+
+for source in config environment; do
+    if [[ $source == config ]]; then
+        git config --file "$GIT_CONFIG_GLOBAL" diff.external "$test_dir/external-diff"
+    else
+        git config --file "$GIT_CONFIG_GLOBAL" --unset diff.external
+        export GIT_EXTERNAL_DIFF="$test_dir/external-diff"
+    fi
+
+    # Confirm this fixture really invokes the external differ when explicitly enabled.
+    git diff --no-index --ext-diff -- old.txt new.txt > control-output || [[ $? == 1 ]]
+    test -s "$DELTA_TEST_EXTERNAL_DIFF_MARKER"
+    rm "$DELTA_TEST_EXTERNAL_DIFF_MARKER"
+
+    status=0
+    "$DELTA_BIN" --no-gitconfig --raw --paging=never \
+        old.txt new.txt > delta-output || status=$?
+    test "$status" == 1
+    test ! -e "$DELTA_TEST_EXTERNAL_DIFF_MARKER"
+    bash "$ANSI_FILTER" < delta-output > plain-output
+    grep -qx -- '-old-line' plain-output
+    grep -qx -- '+new-line' plain-output
+done

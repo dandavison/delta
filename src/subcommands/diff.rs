@@ -47,7 +47,10 @@ pub fn build_diff_cmd(
         {
             (
                 SubCmdKind::GitDiff,
-                vec!["git", "diff", "--no-index", "--color"],
+                // `--no-ext-diff` ensures the user's `diff.external` git config
+                // (e.g. `difft`) is not used here: delta needs git's own diff
+                // output to colorize, not a third-party differ's output. See #2046.
+                vec!["git", "diff", "--no-index", "--no-ext-diff", "--color"],
             )
         }
         _ => (
