@@ -136,15 +136,13 @@ pub fn run_app(
         return Ok(0);
     };
 
-    let _show_config = opt.show_config;
-    let config = config::Config::from(opt);
-
-    if _show_config {
+    if opt.show_config {
         let stdout = io::stdout();
         let mut stdout = stdout.lock();
-        subcommands::show_config::show_config(&config, &mut stdout)?;
+        subcommands::show_config::show_config(opt, &mut stdout)?;
         return Ok(0);
     }
+    let config = config::Config::from(opt);
 
     // The following block structure is because of `writer` and related lifetimes:
     let pager_cfg = (&config).into();

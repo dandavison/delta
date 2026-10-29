@@ -1,7 +1,5 @@
 # TODO:
 # - Check for a bat upgrade as it might bring new language support/themes
-# - Update README prior to release
-# - Update help text in README, with BAT_THEME unset
 
 release: \
 	clean \
@@ -19,6 +17,7 @@ check-environment:
 	[ -n  "$$DELTA_OLD_VERSION" ]
 	[ -n  "$$DELTA_NEW_VERSION" ]
 	mkdir -p .make-sentinels
+	cargo test
 	@echo "Release: $$DELTA_OLD_VERSION => $$DELTA_NEW_VERSION"
 
 

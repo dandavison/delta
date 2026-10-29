@@ -200,6 +200,8 @@ Side-by-side view wraps long lines automatically:
 
 Please see the [user manual](https://dandavison.github.io/delta/) and `delta --help`.
 
+[![Live demo by Demoshell](https://build.demoshell.com/v1/embed/badge.svg)](https://build.demoshell.com/launch?snapshot=demoshell%2Ftui%3Adelta)
+
 ### Maintainers
 
 - [@dandavison](https://github.com/dandavison)
