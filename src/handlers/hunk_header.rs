@@ -37,6 +37,17 @@ pub struct ParsedHunkHeader {
     line_numbers_and_hunk_lengths: Vec<(usize, usize)>,
 }
 
+impl ParsedHunkHeader {
+    /// The number of lines on the minus and plus sides of a unified diff hunk, or None for a
+    /// combined diff hunk.
+    pub fn unified_hunk_lengths(&self) -> Option<(usize, usize)> {
+        match self.line_numbers_and_hunk_lengths.as_slice() {
+            &[(_, minus_length), (_, plus_length)] => Some((minus_length, plus_length)),
+            _ => None,
+        }
+    }
+}
+
 pub enum HunkHeaderIncludeHunkLabel {
     Yes,
     No,
@@ -155,6 +166,10 @@ impl StateMachine<'_> {
         raw_line: &str,
     ) -> std::io::Result<bool> {
         self.painter.paint_buffered_minus_and_plus_lines();
+        // Switch layout only now: the lines just painted belong to the previous hunk.
+        if let Some(side_by_side) = self.hunk_side_by_side.take() {
+            self.painter.side_by_side = side_by_side;
+        }
         self.painter.set_highlighter();
         self.painter.emit()?;
 

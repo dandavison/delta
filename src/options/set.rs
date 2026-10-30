@@ -96,7 +96,10 @@ pub fn set_options(
     // Needed before gathering features because a side-by-side min width can rule out the
     // side-by-side feature.
     set_available_terminal_width(opt);
+    set_side_by_side_width(opt);
     let features = gather_features(opt, &builtin_features, git_config);
+    let features_without_side_by_side =
+        gather_features_without_side_by_side(opt, &mut builtin_features, git_config);
     opt.features = Some(features.join(" "));
 
     // Set light, dark, and syntax-theme.
@@ -127,6 +130,14 @@ pub fn set_options(
         }
         .unwrap_or_else(|| "magenta reverse".to_string())
     }
+
+    set_unified_line_numbers_formats(
+        opt,
+        &features_without_side_by_side,
+        &builtin_features,
+        git_config,
+        arg_matches,
+    );
 
     set_options!(
         [
@@ -246,7 +257,11 @@ pub fn set_options(
     opt.computed.paging_mode = parse_paging_mode(&opt.paging_mode);
 
     opt.computed.side_by_side =
-        side_by_side_is_active(opt.side_by_side, opt.computed.available_terminal_width);
+        side_by_side_is_active(opt.side_by_side, opt.computed.side_by_side_width);
+    opt.computed.side_by_side_scope = match opt.side_by_side {
+        cli::SideBySide::Off => cli::SideBySideScope::default(),
+        cli::SideBySide::On(scope) | cli::SideBySide::MinWidth(_, scope) => scope,
+    };
 
     // --color-only is used for interactive.diffFilter (git add -p). side-by-side, and
     // **-decoration-style cannot be used there (does not emit lines in 1-1 correspondence with raw git output).
@@ -408,7 +423,7 @@ fn gather_features(
     if opt.navigate {
         gather_builtin_features_recursively("navigate", &mut features, builtin_features, opt);
     }
-    if side_by_side_is_active(opt.side_by_side, opt.computed.available_terminal_width) {
+    if side_by_side_is_active(opt.side_by_side, opt.computed.side_by_side_width) {
         gather_builtin_features_recursively("side-by-side", &mut features, builtin_features, opt);
     }
 
@@ -490,7 +505,7 @@ fn gather_builtin_features_from_flags_in_gitconfig(
             git_config
                 .get::<cli::SideBySide>(&key)
                 .is_some_and(|side_by_side| {
-                    side_by_side_is_active(side_by_side, opt.computed.available_terminal_width)
+                    side_by_side_is_active(side_by_side, opt.computed.side_by_side_width)
                 })
         } else {
             git_config.get::<bool>(&key) == Some(true)
@@ -550,15 +565,68 @@ fn gather_builtin_features_recursively(
     }
 }
 
+/// Gather the features as if side-by-side were disabled, see `set_unified_line_numbers_formats`.
+fn gather_features_without_side_by_side(
+    opt: &mut cli::Opt,
+    builtin_features: &mut HashMap<String, features::BuiltinFeature>,
+    git_config: &Option<GitConfig>,
+) -> Vec<String> {
+    let side_by_side = builtin_features.remove("side-by-side");
+    let features = gather_features(opt, builtin_features, git_config);
+    if let Some(side_by_side) = side_by_side {
+        builtin_features.insert("side-by-side".to_string(), side_by_side);
+    }
+    features
+        .into_iter()
+        .filter(|feature| feature != "side-by-side")
+        .collect()
+}
+
+/// The side-by-side feature sets the line numbers format for its panels. With
+/// --side-by-side=hunk the hunks displayed in a single column use the format they would have
+/// without side-by-side, so resolve these options again without it. This must run before
+/// `set_options!`, while the fields still hold their command line (or default) values.
+fn set_unified_line_numbers_formats(
+    opt: &mut cli::Opt,
+    features_without_side_by_side: &[String],
+    builtin_features: &HashMap<String, features::BuiltinFeature>,
+    git_config: &mut Option<GitConfig>,
+    arg_matches: &clap::ArgMatches,
+) {
+    let features = opt
+        .features
+        .replace(features_without_side_by_side.join(" "));
+    macro_rules! get_unified_option_value {
+        ($field_ident:ident, $option_name:literal) => {
+            if config::user_supplied_option(stringify!($field_ident), arg_matches) {
+                None
+            } else {
+                crate::options::get::get_option_value(
+                    $option_name,
+                    builtin_features,
+                    opt,
+                    git_config,
+                )
+            }
+            .unwrap_or_else(|| opt.$field_ident.clone())
+        };
+    }
+    opt.computed.unified_line_numbers_left_format =
+        get_unified_option_value!(line_numbers_left_format, "line-numbers-left-format");
+    opt.computed.unified_line_numbers_right_format =
+        get_unified_option_value!(line_numbers_right_format, "line-numbers-right-format");
+    opt.features = features;
+}
+
 fn split_feature_string(features: &str) -> impl Iterator<Item = &str> {
     features.split_whitespace().rev()
 }
 
-fn side_by_side_is_active(side_by_side: cli::SideBySide, available_terminal_width: usize) -> bool {
+fn side_by_side_is_active(side_by_side: cli::SideBySide, side_by_side_width: usize) -> bool {
     match side_by_side {
         cli::SideBySide::Off => false,
-        cli::SideBySide::On => true,
-        cli::SideBySide::MinWidth(min_width) => available_terminal_width >= min_width,
+        cli::SideBySide::On(_) => true,
+        cli::SideBySide::MinWidth(min_width, _) => side_by_side_width >= min_width,
     }
 }
 
@@ -568,12 +636,31 @@ impl FromStr for cli::SideBySide {
         if let Ok(min_width) = s.parse::<usize>() {
             return Ok(min_width.into());
         }
+        let invalid = || {
+            format!(
+                r#"expected "true", "false", "hunk", a minimum terminal width (e.g. 80), or "hunk" and a minimum terminal width separated by a comma (e.g. hunk,80), got "{s}""#
+            )
+        };
+        let (mut min_width, mut scope) = (None, None);
         match s.to_lowercase().as_str() {
-            "true" | "yes" | "on" => Ok(Self::On),
+            "true" | "yes" | "on" => Ok(Self::On(cli::SideBySideScope::All)),
             "false" | "no" | "off" | "" => Ok(Self::Off),
-            _ => Err(format!(
-                r#"expected "true", "false", or a minimum terminal width (e.g. 80), got "{s}""#
-            )),
+            list => {
+                for word in list.split(',').map(str::trim) {
+                    match (word, word.parse::<usize>()) {
+                        ("hunk", _) if scope.is_none() => scope = Some(cli::SideBySideScope::Hunk),
+                        (_, Ok(width)) if width > 0 && min_width.is_none() => {
+                            min_width = Some(width)
+                        }
+                        _ => return Err(invalid()),
+                    }
+                }
+                let scope = scope.unwrap_or_default();
+                Ok(match min_width {
+                    Some(min_width) => Self::MinWidth(min_width, scope),
+                    None => Self::On(scope),
+                })
+            }
         }
     }
 }
@@ -582,7 +669,7 @@ impl From<usize> for cli::SideBySide {
     fn from(min_width: usize) -> Self {
         match min_width {
             0 => Self::Off,
-            min_width => Self::MinWidth(min_width),
+            min_width => Self::MinWidth(min_width, cli::SideBySideScope::All),
         }
     }
 }
@@ -590,7 +677,7 @@ impl From<usize> for cli::SideBySide {
 impl From<bool> for cli::SideBySide {
     fn from(enabled: bool) -> Self {
         if enabled {
-            Self::On
+            Self::On(cli::SideBySideScope::All)
         } else {
             Self::Off
         }
@@ -677,6 +764,19 @@ fn set_available_terminal_width(opt: &mut cli::Opt) {
         width_from_columns_env_var(&opt.env).unwrap_or_else(|| {
             crate::utils::workarounds::windows_msys2_width_fix(term_stdout.size(), &term_stdout)
         });
+}
+
+/// Set the width that the side-by-side minimum width applies to: --width if it is a number,
+/// otherwise the terminal width. When delta's output is captured, not written to a terminal,
+/// --width is the only way to tell delta the width. Only --width from the command line counts,
+/// because the side-by-side feature is decided before --width is read from git config.
+fn set_side_by_side_width(opt: &mut cli::Opt) {
+    let terminal_width = opt.computed.available_terminal_width;
+    opt.computed.side_by_side_width = opt
+        .width
+        .as_deref()
+        .and_then(|width| parse_width_specifier(width, terminal_width).ok())
+        .unwrap_or(terminal_width);
 }
 
 fn set_widths_and_isatty(opt: &mut cli::Opt) {
@@ -989,20 +1089,32 @@ pub mod tests {
     #[test]
     fn test_parse_side_by_side() {
         use cli::SideBySide::*;
+        use cli::SideBySideScope::*;
         let parse = |s: &str| s.parse::<cli::SideBySide>();
-        assert_eq!(parse("true"), Ok(On));
-        assert_eq!(parse("yes"), Ok(On));
-        assert_eq!(parse("on"), Ok(On));
+        assert_eq!(parse("true"), Ok(On(All)));
+        assert_eq!(parse("yes"), Ok(On(All)));
+        assert_eq!(parse("on"), Ok(On(All)));
         assert_eq!(parse("false"), Ok(Off));
         assert_eq!(parse("no"), Ok(Off));
         assert_eq!(parse("off"), Ok(Off));
-        assert_eq!(parse("80"), Ok(MinWidth(80)));
-        assert_eq!(parse("40"), Ok(MinWidth(40)));
+        assert_eq!(parse("80"), Ok(MinWidth(80, All)));
+        assert_eq!(parse("40"), Ok(MinWidth(40, All)));
         assert_eq!(parse("0"), Ok(Off));
-        assert_eq!(parse("True"), Ok(On));
+        assert_eq!(parse("True"), Ok(On(All)));
         assert_eq!(parse(""), Ok(Off));
         assert!(parse("maybe").is_err());
         assert!(parse("-1").is_err());
+        // hunk → enabled per hunk, optionally with a min-width, in either order
+        assert_eq!(parse("hunk"), Ok(On(Hunk)));
+        assert_eq!(parse("Hunk"), Ok(On(Hunk)));
+        assert_eq!(parse("hunk,140"), Ok(MinWidth(140, Hunk)));
+        assert_eq!(parse("140, hunk"), Ok(MinWidth(140, Hunk)));
+        assert!(parse("hunk,0").is_err());
+        assert!(parse("true,hunk").is_err());
+        assert!(parse("hunk,hunk").is_err());
+        assert!(parse("80,120").is_err());
+        assert!(parse("hunk,").is_err());
+        assert!(parse("file").is_err());
     }
 
     #[test]
@@ -1111,6 +1223,26 @@ pub mod tests {
         // min-width of 1 is smaller than TERMINAL_WIDTH_IN_TESTS (43), so sbs should be enabled.
         let opt = integration_test_utils::make_options_from_args(&["--side-by-side=1"]);
         assert!(opt.computed.side_by_side);
+    }
+
+    #[test]
+    fn test_side_by_side_min_width_applies_to_width_option() {
+        // With --width, the minimum applies to that width, whatever the terminal width is. The
+        // side-by-side feature, which brings line numbers, follows the same decision.
+        let side_by_side = |args: &[&str]| {
+            let opt = integration_test_utils::make_options_from_args(args);
+            let features = opt.features.unwrap_or_default();
+            assert_eq!(
+                opt.computed.side_by_side,
+                features.split_whitespace().any(|f| f == "side-by-side"),
+                "{args:?}: features {features:?}"
+            );
+            opt.computed.side_by_side
+        };
+        assert!(side_by_side(&["--side-by-side=99999", "--width=100000"]));
+        assert!(!side_by_side(&["--side-by-side=2", "--width=1"]));
+        // --width=variable paints at the terminal width.
+        assert!(!side_by_side(&["--side-by-side=99999", "--width=variable"]));
     }
 
     #[test]
@@ -1255,6 +1387,11 @@ index 1111111..2222222 100644
             ("side-by-side = -1", false),
             ("side-by-side = 1k", false),
             ("side-by-side = maybe", false),
+            // The case's diff hunk removes and adds a line, so hunk displays it side-by-side.
+            ("side-by-side = hunk", true),
+            ("side-by-side = Hunk, 100", true),
+            ("side-by-side = hunk,101", false),
+            ("side-by-side = hunk,0", false),
         ];
         assert_side_by_side_cases(
             "delta__test_side_by_side_git_config_values.gitconfig",
@@ -1341,5 +1478,31 @@ index 1111111..2222222 100644
             .collect();
         remove_file(git_config_path).unwrap();
         assert!(mismatches.is_empty(), "{}", mismatches.join("\n"));
+    }
+
+    #[test]
+    fn test_side_by_side_hunk_from_git_config() {
+        use crate::cli::SideBySideScope;
+        use std::fs::remove_file;
+        let git_config_contents = b"
+[delta]
+    side-by-side = hunk
+";
+        let git_config_path = "delta__test_side_by_side_hunk_from_git_config.gitconfig";
+        let opt = integration_test_utils::make_options_from_args_and_git_config(
+            &[],
+            Some(git_config_contents),
+            Some(git_config_path),
+        );
+        assert!(opt.computed.side_by_side);
+        assert_eq!(opt.computed.side_by_side_scope, SideBySideScope::Hunk);
+        assert!(opt.features.as_ref().unwrap().contains("line-numbers"));
+        remove_file(git_config_path).unwrap();
+    }
+
+    #[test]
+    fn test_side_by_side_hunk_with_min_width_wider_than_terminal_disables_sbs() {
+        let opt = integration_test_utils::make_options_from_args(&["--side-by-side=hunk,99999"]);
+        assert!(!opt.computed.side_by_side);
     }
 }

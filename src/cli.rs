@@ -863,12 +863,19 @@ pub struct Opt {
         require_equals(true),
         default_value("false"),
         default_missing_value("true"),
-        value_name = "MIN_WIDTH",
+        value_name = "WHEN",
     )]
     /// Display diffs in side-by-side layout. Optionally, set the minimum terminal width
     /// required to enable side-by-side mode (e.g. --side-by-side=80). If the terminal is
     /// narrower than this value, side-by-side mode will be disabled and delta will fall
-    /// back to unified diff. Without a value (or with `true`), side-by-side is always enabled.
+    /// back to unified diff. If --width is set, the minimum applies to that width instead.
+    /// Without a value (or with `true`), side-by-side is always enabled.
+    ///
+    /// With --side-by-side=hunk, side-by-side is decided per hunk: a hunk that both removes and
+    /// adds lines is displayed side-by-side, and a hunk that only removes or only adds lines is
+    /// displayed in a single column, as is every hunk of an added or deleted file. A minimum
+    /// width can be combined with it, separated by a comma (e.g. --side-by-side=hunk,140):
+    /// below that width, every hunk is displayed in a single column.
     pub side_by_side: SideBySide,
 
     #[arg(long = "syntax-theme", value_name = "SYNTAX_THEME")]
@@ -1195,16 +1202,30 @@ pub struct ComputedValues {
     pub color_mode: ColorMode,
     pub paging_mode: PagingMode,
     pub side_by_side: bool,
+    pub side_by_side_scope: SideBySideScope,
+    pub side_by_side_width: usize,
     pub syntax_set: SyntaxSet,
     pub syntax_theme: Option<SyntaxTheme>,
     pub true_color: bool,
+    pub unified_line_numbers_left_format: String,
+    pub unified_line_numbers_right_format: String,
 }
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum SideBySide {
     Off,
-    On,
-    MinWidth(usize),
+    On(SideBySideScope),
+    MinWidth(usize, SideBySideScope),
+}
+
+/// How much of the diff the side-by-side decision covers, when side-by-side is enabled.
+#[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
+pub enum SideBySideScope {
+    /// Every hunk is displayed side-by-side.
+    #[default]
+    All,
+    /// Only hunks that both remove and add lines are displayed side-by-side.
+    Hunk,
 }
 
 #[derive(Clone, Debug, Default, PartialEq, Eq)]

@@ -261,6 +261,18 @@ index 0123456..1234567 100644
     }
 
     #[test]
+    fn test_diff_with_merge_conflict_is_side_by_side_under_side_by_side_hunk() {
+        // A combined diff hunk keeps the side-by-side layout.
+        let side_by_side = integration_test_utils::make_config_from_args(&["--side-by-side"]);
+        let side_by_side_hunk =
+            integration_test_utils::make_config_from_args(&["--side-by-side=hunk"]);
+        assert_eq!(
+            integration_test_utils::run_delta(DIFF_WITH_MERGE_CONFLICT, &side_by_side_hunk),
+            integration_test_utils::run_delta(DIFF_WITH_MERGE_CONFLICT, &side_by_side),
+        );
+    }
+
+    #[test]
     fn test_diff_with_merge_conflict_is_passed_on_unchanged_under_raw() {
         let config = integration_test_utils::make_config_from_args(&["--raw"]);
         let output = integration_test_utils::run_delta(DIFF_WITH_MERGE_CONFLICT, &config);
@@ -998,6 +1010,7 @@ src/align.rs
             &["--color-only", "--dark"],
             &["--color-only", "--line-numbers"],
             &["--color-only", "--side-by-side"],
+            &["--color-only", "--side-by-side=hunk"],
             &["--color-only", "--diff-highlight"],
             &["--color-only", "--diff-so-fancy"],
             &["--color-only", "--navigate"],

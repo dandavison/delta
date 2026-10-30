@@ -8,6 +8,7 @@ use syntect::easy::HighlightLines;
 use syntect::highlighting::Style as SyntectStyle;
 use syntect::parsing::{SyntaxReference, SyntaxSet};
 
+use crate::cli;
 use crate::config::{self, delta_unreachable, Config};
 use crate::delta::{DiffType, InMergeConflict, MergeParents, State};
 use crate::features::diff_line_metadata::DiffLineMetadata;
@@ -31,6 +32,9 @@ pub struct Painter<'p> {
     pub syntax: &'p SyntaxReference,
     pub highlighter: Option<HighlightLines<'p>>,
     pub config: &'p config::Config,
+    // Whether the lines being painted are laid out side-by-side. Starts out as
+    // config.side_by_side, but can be changed between hunks.
+    pub side_by_side: bool,
     pub output_buffer: String,
     // If config.line_numbers is true, then the following is always Some().
     // In side-by-side mode it is always Some (but possibly an empty one), even
@@ -78,10 +82,14 @@ impl<'p> Painter<'p> {
         let panel_width_fix = ansifill::UseFullPanelWidth::new(config);
 
         let line_numbers_data = if config.line_numbers {
-            Some(line_numbers::LineNumbersData::from_format_strings(
+            let mut data = line_numbers::LineNumbersData::from_format_strings(
                 &config.line_numbers_format,
                 panel_width_fix,
-            ))
+            );
+            if config.side_by_side && config.side_by_side_scope == cli::SideBySideScope::Hunk {
+                data.set_unified_format(&config.unified_line_numbers_format);
+            }
+            Some(data)
         } else if config.side_by_side {
             // If line numbers are disabled in side-by-side then the data is still used
             // for width calculation and to pad odd width to even, see `UseFullPanelWidth`
@@ -100,6 +108,7 @@ impl<'p> Painter<'p> {
             highlighter: None,
             writer,
             config,
+            side_by_side: config.side_by_side,
             line_numbers_data,
             diff_line_metadata: DiffLineMetadata::from_env(),
             merge_conflict_lines: merge_conflict::MergeConflictLines::new(),
@@ -169,6 +178,7 @@ impl<'p> Painter<'p> {
             &mut self.diff_line_metadata.as_mut(),
             &mut self.highlighter,
             &mut self.output_buffer,
+            self.side_by_side,
             self.config,
         );
         self.minus_lines.clear();
@@ -188,7 +198,7 @@ impl<'p> Painter<'p> {
             &[false],
             self.config,
         );
-        if self.config.side_by_side {
+        if self.side_by_side {
             // `lines[0].0` so the line has the '\n' already added (as in the +- case)
             side_by_side::paint_zero_lines_side_by_side(
                 &lines[0].0,
@@ -209,7 +219,7 @@ impl<'p> Painter<'p> {
                 &[false],
                 &mut self.output_buffer,
                 self.config,
-                &mut self.line_numbers_data.as_mut(),
+                &mut unified_line_numbers_data(&mut self.line_numbers_data, self.config),
                 &mut self.diff_line_metadata.as_mut(),
                 None,
                 BgShouldFill::default(),
@@ -618,12 +628,23 @@ pub fn prepare_raw_line(raw_line: &str, prefix_length: usize, config: &config::C
     ansi::ansi_preserving_slice(&line, prefix_length)
 }
 
+/// The line numbers data for painting unified lines. Side-by-side mode always has line numbers
+/// data, even with line numbers disabled (see `UseFullPanelWidth`), but with --side-by-side=hunk
+/// some hunks are unified, and these must not paint it.
+fn unified_line_numbers_data<'a, 'p>(
+    line_numbers_data: &'a mut Option<LineNumbersData<'p>>,
+    config: &config::Config,
+) -> Option<&'a mut LineNumbersData<'p>> {
+    line_numbers_data.as_mut().filter(|_| config.line_numbers)
+}
+
 pub fn paint_minus_and_plus_lines(
     lines: MinusPlus<&Vec<(String, State)>>,
     line_numbers_data: &mut Option<LineNumbersData>,
     diff_line_metadata: &mut Option<&mut DiffLineMetadata>,
     highlighter: &mut Option<HighlightLines>,
     output_buffer: &mut String,
+    side_by_side: bool,
     config: &config::Config,
 ) {
     let syntax_style_sections = MinusPlus::new(
@@ -656,7 +677,7 @@ pub fn paint_minus_and_plus_lines(
         &lines_have_homolog[Plus],
         config,
     );
-    if config.side_by_side {
+    if side_by_side {
         side_by_side::paint_minus_and_plus_lines_side_by_side(
             lines,
             syntax_style_sections,
@@ -678,7 +699,7 @@ pub fn paint_minus_and_plus_lines(
                 &lines_have_homolog[Minus],
                 output_buffer,
                 config,
-                &mut line_numbers_data.as_mut(),
+                &mut unified_line_numbers_data(line_numbers_data, config),
                 diff_line_metadata,
                 Some(config.minus_empty_line_marker_style),
                 BgShouldFill::default(),
@@ -692,7 +713,7 @@ pub fn paint_minus_and_plus_lines(
                 &lines_have_homolog[Plus],
                 output_buffer,
                 config,
-                &mut line_numbers_data.as_mut(),
+                &mut unified_line_numbers_data(line_numbers_data, config),
                 diff_line_metadata,
                 Some(config.plus_empty_line_marker_style),
                 BgShouldFill::default(),
