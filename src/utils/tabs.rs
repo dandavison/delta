@@ -28,6 +28,18 @@ pub fn expand(line: &str, tab_cfg: &TabCfg) -> String {
     }
 }
 
+/// Byte offset of `offset` (an offset into `line`) in `tabs::expand(line, tab_cfg)`.
+pub fn expand_offset(line: &str, offset: usize, tab_cfg: &TabCfg) -> usize {
+    if !tab_cfg.replace() {
+        return offset;
+    }
+    let num_tabs_before_offset = line.as_bytes()[..offset]
+        .iter()
+        .filter(|&&b| b == b'\t')
+        .count();
+    offset + num_tabs_before_offset * (tab_cfg.width() - 1)
+}
+
 /// Remove `prefix` chars from `line`, then call `tabs::expand()`.
 pub fn remove_prefix_and_expand(prefix: usize, line: &str, tab_cfg: &TabCfg) -> String {
     let line_bytes = line.as_bytes();
