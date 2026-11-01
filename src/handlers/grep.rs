@@ -29,19 +29,22 @@ pub struct GrepLine<'b> {
 
 impl GrepLine<'_> {
     fn expand_tabs(&mut self, tab_cfg: &tabs::TabCfg) {
-        let old_len = self.code.len();
-        self.code = tabs::expand(&self.code, tab_cfg).into();
-        let shift = self.code.len().saturating_sub(old_len);
-        // HACK: it is not necessarily the case that all submatch coordinates
-        // should be shifted in this way. It should be true in a common case of:
-        // (a) the only tabs were at the beginning of the line, and (b) the user
-        // was not searching for tabs.
+        // Submatch coordinates are byte offsets into the un-expanded code (rg
+        // --json reports byte offsets), so they must be recomputed per offset:
+        // a tab that appears after a match does not move the match, whereas a
+        // tab before the match does (issues #1441, #1588).
         self.submatches = self.submatches.as_ref().map(|submatches| {
             submatches
                 .iter()
-                .map(|(a, b)| (a + shift, b + shift))
+                .map(|(a, b)| {
+                    (
+                        tabs::expand_offset(&self.code, *a, tab_cfg),
+                        tabs::expand_offset(&self.code, *b, tab_cfg),
+                    )
+                })
                 .collect()
         });
+        self.code = tabs::expand(&self.code, tab_cfg).into();
     }
 }
 
@@ -751,6 +754,38 @@ mod tests {
         parse_grep_line, parse_raw_grep_line, GrepLine, GrepType, LineType,
     };
     use crate::utils::process::tests::FakeParentArgs;
+    use crate::utils::tabs::TabCfg;
+
+    fn rg_match_line(code: &'static str, submatches: Vec<(usize, usize)>) -> GrepLine<'static> {
+        GrepLine {
+            grep_type: GrepType::Ripgrep,
+            path: "t.txt".into(),
+            line_number: Some(1),
+            line_type: LineType::Match,
+            code: code.into(),
+            submatches: Some(submatches),
+        }
+    }
+
+    // rg --json submatch coordinates are byte offsets into the un-expanded
+    // code, so a tab after the match must not move it (issue #1588).
+    #[test]
+    fn test_expand_tabs_keeps_submatch_before_tab_in_place() {
+        let mut grep_line = rg_match_line("x\ty z\n", vec![(0, 1)]);
+        grep_line.expand_tabs(&TabCfg::new(8));
+        assert_eq!(grep_line.code, "x        y z\n");
+        assert_eq!(grep_line.submatches, Some(vec![(0, 1)]));
+    }
+
+    // A tab that precedes the match does move it (issue #1441).
+    #[test]
+    fn test_expand_tabs_shifts_submatch_after_leading_tab() {
+        let mut grep_line = rg_match_line("\tx\n", vec![(1, 2)]);
+        grep_line.expand_tabs(&TabCfg::new(8));
+        assert_eq!(grep_line.code, "        x\n");
+        assert_eq!(grep_line.submatches, Some(vec![(8, 9)]));
+    }
+
 
     #[test]
     fn test_parse_grep_match() {
