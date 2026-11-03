@@ -94,6 +94,7 @@ pub struct StateMachine<'a> {
     pub raw_line: String,
     pub state: State,
     pub source: Source,
+    pub svn_diff: bool,
     pub minus_file: String,
     pub plus_file: String,
     pub minus_file_event: handlers::diff_header::FileEvent,
@@ -134,6 +135,7 @@ impl<'a> StateMachine<'a> {
             raw_line: "".to_string(),
             state: State::Unknown,
             source: Source::Unknown,
+            svn_diff: false,
             minus_file: "".to_string(),
             plus_file: "".to_string(),
             minus_file_event: handlers::diff_header::FileEvent::NoEvent,
@@ -155,6 +157,40 @@ impl<'a> StateMachine<'a> {
     {
         while let Some(Ok(raw_line_bytes)) = lines.next() {
             self.ingest_line(raw_line_bytes);
+
+            // SVN uses Index: lines to separate files instead of diff --git.
+            if self.line.starts_with("Index: ") && (self.source == Source::Unknown || self.svn_diff)
+            {
+                self.painter.paint_buffered_minus_and_plus_lines();
+                self.painter.emit()?;
+                self.source = Source::DiffUnified;
+                self.svn_diff = true;
+                self.state = State::DiffHeader(DiffType::Unified);
+                self.minus_file.clear();
+                self.plus_file.clear();
+                self.minus_file_event = handlers::diff_header::FileEvent::NoEvent;
+                self.plus_file_event = handlers::diff_header::FileEvent::NoEvent;
+                self.current_file_pair = None;
+                self.handled_diff_header_header_line_file_pair = None;
+                self.minus_line_counter = AmbiguousDiffMinusCounter::not_needed();
+
+                if self.config.color_only || !self.should_handle() {
+                    self.emit_line_unchanged()?;
+                }
+                continue;
+            }
+
+            // SVN's separator is metadata, not part of the diff.
+            if self.svn_diff
+                && matches!(self.state, State::DiffHeader(_))
+                && self.line.len() >= 3
+                && self.line.bytes().all(|byte| byte == b'=')
+            {
+                if self.config.color_only || !self.should_handle() {
+                    self.emit_line_unchanged()?;
+                }
+                continue;
+            }
 
             if self.source == Source::Unknown {
                 self.source = detect_source(&self.line);
