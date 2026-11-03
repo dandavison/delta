@@ -22,6 +22,15 @@ impl StateMachine<'_> {
             return Ok(false);
         }
 
+        // Do not consume binary-file lines when the file header is raw.
+        // Let the normal fallback emit the original line unchanged.
+        if self.test_diff_is_binary()
+            && matches!(self.state, State::DiffHeader(_))
+            && !self.should_handle()
+        {
+            return Ok(false);
+        }
+
         // Preserve the "Binary files" line when diff lines should be kept unchanged.
         if !self.config.color_only && self.test_diff_is_binary() {
             // Print the "Binary files" line verbatim, if there was no "diff" line, or it
@@ -63,5 +72,31 @@ impl StateMachine<'_> {
             },
             osc,
         )
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use crate::tests::integration_test_utils::DeltaTest;
+
+    #[test]
+    fn test_raw_preserves_binary_file_lines() {
+        let input = "\\
+diff --git a/modified.bin b/modified.bin
+index aaaaaaa..bbbbbbb 100644
+Binary files a/modified.bin and b/modified.bin differ
+diff --git a/removed.bin b/removed.bin
+deleted file mode 100644
+index ccccccc..0000000
+Binary files a/removed.bin and /dev/null differ
+diff --git a/added.bin b/added.bin
+new file mode 100644
+index 0000000..ddddddd
+Binary files /dev/null and b/added.bin differ
+";
+
+        let output = DeltaTest::with_args(&["--raw"]).with_input(input).output;
+
+        assert_eq!(crate::ansi::strip_ansi_codes(&output), input);
     }
 }
