@@ -89,6 +89,14 @@ impl StateMachine<'_> {
         let (mut path_or_mode, file_event) =
             parse_diff_header_line(&self.line, self.source == Source::GitDiff);
 
+        // SVN marks missing files with a (nonexistent) revision.
+        if self.svn_diff
+            && (self.line.trim_end().ends_with("\t(nonexistent)")
+                || self.line.trim_end().ends_with(" (nonexistent)"))
+        {
+            path_or_mode = "/dev/null".to_string();
+        }
+
         utils::path::relativize_path_maybe(&mut path_or_mode, self.config);
         self.minus_file = path_or_mode;
         self.minus_file_event = file_event;
@@ -131,6 +139,14 @@ impl StateMachine<'_> {
         let (mut path_or_mode, file_event) =
             parse_diff_header_line(&self.line, self.source == Source::GitDiff);
 
+        // SVN marks missing files with a (nonexistent) revision.
+        if self.svn_diff
+            && (self.line.trim_end().ends_with("\t(nonexistent)")
+                || self.line.trim_end().ends_with(" (nonexistent)"))
+        {
+            path_or_mode = "/dev/null".to_string();
+        }
+
         utils::path::relativize_path_maybe(&mut path_or_mode, self.config);
         self.plus_file = path_or_mode;
         self.plus_file_event = file_event;
@@ -147,7 +163,9 @@ impl StateMachine<'_> {
             && self.handled_diff_header_header_line_file_pair != self.current_file_pair
         {
             self.painter.emit()?;
-            self._handle_diff_header_header_line(self.source == Source::DiffUnified)?;
+            self._handle_diff_header_header_line(
+                self.source == Source::DiffUnified && !self.svn_diff,
+            )?;
             self.handled_diff_header_header_line_file_pair
                 .clone_from(&self.current_file_pair);
         }
@@ -264,6 +282,15 @@ impl StateMachine<'_> {
             return Ok(());
         }
 
+        // Raw SVN output must not gain a synthesized file header.
+        if self.svn_diff
+            && self.config.file_style.is_raw
+            && self.config.file_style.decoration_style
+                == crate::style::DecorationStyle::NoDecoration
+        {
+            return Ok(());
+        }
+
         if !self.mode_info.is_empty() {
             let format_label = |label: &str| {
                 if !label.is_empty() {
@@ -300,7 +327,9 @@ impl StateMachine<'_> {
             && self.should_handle()
             && self.handled_diff_header_header_line_file_pair != self.current_file_pair
         {
-            self._handle_diff_header_header_line(self.source == Source::DiffUnified)?;
+            self._handle_diff_header_header_line(
+                self.source == Source::DiffUnified && !self.svn_diff,
+            )?;
             self.handled_diff_header_header_line_file_pair
                 .clone_from(&self.current_file_pair);
             Ok(())
@@ -528,6 +557,84 @@ mod tests {
         make_config_from_args, run_delta_with_diff_line_metadata, DeltaTest,
     };
     use insta::assert_snapshot;
+
+    #[test]
+    fn test_svn_diff_file_headers() {
+        let input = "\\
+Index: modified.txt
+===================================================================
+--- modified.txt\t(revision 5)
++++ modified.txt\t(working copy)
+@@ -1 +1 @@
+-before
++after
+Index: added.txt
+===================================================================
+--- added.txt\t(nonexistent)
++++ added.txt\t(working copy)
+@@ -0,0 +1 @@
++new
+Index: removed.txt
+===================================================================
+--- removed.txt\t(revision 5)
++++ removed.txt\t(nonexistent)
+@@ -1 +0,0 @@
+-old
+";
+        let output = DeltaTest::with_args(&[]).with_input(input).output;
+
+        assert!(output.contains("modified.txt"));
+        assert!(output.contains("added: added.txt"));
+        assert!(output.contains("removed: removed.txt"));
+        assert!(!output.contains("Index:"));
+        assert!(!output.contains("===="));
+        assert!(!output.contains("modified.txt ⟶"));
+        assert!(!output.contains("added.txt ⟶"));
+        assert!(!output.contains("removed.txt ⟶"));
+    }
+
+    #[test]
+    fn test_svn_space_separated_nonexistent() {
+        let input = "\
+Index: new file.txt
+===================================================================
+--- new file.txt (nonexistent)
++++ new file.txt	(working copy)
+@@ -0,0 +1 @@
++new
+Index: old file.txt
+===================================================================
+--- old file.txt	(revision 3)
++++ old file.txt (nonexistent)
+@@ -1 +0,0 @@
+-old
+";
+        let output = DeltaTest::with_args(&[]).with_input(input).output;
+
+        assert!(output.contains("added: new file.txt"));
+        assert!(output.contains("removed: old file.txt"));
+        assert!(!output.contains("Index:"));
+    }
+
+    #[test]
+    fn test_svn_metadata_preserved_in_raw_modes() {
+        let input = "Index: example.txt\n===================================================================\n--- example.txt\t(revision 1)\n+++ example.txt\t(working copy)\n@@ -1 +1 @@\n-before\n+after\n";
+
+        for option in ["--raw", "--color-only"] {
+            let output = DeltaTest::with_args(&[option]).with_input(input).output;
+            let plain = crate::ansi::strip_ansi_codes(&output);
+
+            assert!(plain.contains("Index: example.txt"), "{}", option);
+            assert_eq!(plain, input, "{}", option);
+            assert!(
+                plain.contains(
+                    "==================================================================="
+                ),
+                "{}",
+                option
+            );
+        }
+    }
 
     #[test]
     fn test_get_filename_from_marker_line() {
