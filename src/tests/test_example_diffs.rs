@@ -2207,6 +2207,36 @@ src/align.rs:71: impl<'a> Alignment<'a> { │
     }
 
     #[test]
+    fn test_lines_with_syntax_width_and_escape_sequence_after_cut() {
+        // Regression test for #2316. Lines that are not valid UTF-8 keep their escape sequences, and
+        // one after the syntax highlighting cut used to make delta split the line inside a
+        // multi-byte U+FFFD replacement character and panic.
+        let mut input = b"\
+diff --git a/file.txt b/file.txt
+index 30e86d9..05bd17a 100644
+--- a/file.txt
++++ b/file.txt
+@@ -1 +1,2 @@
+ "
+        .to_vec();
+        input.extend_from_slice(&[0xa4; 10]);
+        input.extend_from_slice(b"\x1b[K\n+new line\n");
+
+        let config =
+            integration_test_utils::make_config_from_args(&["--max-syntax-highlighting-length=5"]);
+        let mut writer: Vec<u8> = Vec::new();
+        crate::delta::delta(
+            bytelines::ByteLines::new(std::io::BufReader::new(&input[..])),
+            &mut writer,
+            &config,
+        )
+        .unwrap();
+        let output = strip_ansi_codes(&String::from_utf8(writer).unwrap());
+        assert!(output.contains(&"\u{FFFD}".repeat(10)));
+        assert!(output.contains("new line"));
+    }
+
+    #[test]
     fn test_lines_with_syntax_width_unicode() {
         let result = DeltaTest::with_args(&["--max-syntax-highlighting-length=11"])
             .explain_ansi()

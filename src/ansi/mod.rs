@@ -100,9 +100,21 @@ pub fn truncate_str<'a>(s: &'a str, display_width: usize, tail: &str) -> Cow<'a,
 /// Truncate string `s` so it fits into `display_width`, ignoring any ANSI escape sequences when
 /// calculating the width. If a double-width ("fullwidth") grapheme has to be cut, it is omitted and
 /// the resulting string is *shorter* than `display_width`. But this way the result is always a
-/// prefix of the input `s`.
+/// prefix of the input `s`: unlike `truncate_str`, ANSI escape sequences after the cut are dropped.
 pub fn truncate_str_short(s: &str, display_width: usize) -> Cow<'_, str> {
-    truncate_str_impl(s, display_width, "", None)
+    let mut used = 0;
+    for element in AnsiElementIterator::new(s) {
+        if let Element::Text(i, j) = element {
+            for (offset, g) in s[i..j].grapheme_indices(true) {
+                let width_of_grapheme = g.width();
+                if used + width_of_grapheme > display_width {
+                    return Cow::from(&s[..i + offset]);
+                }
+                used += width_of_grapheme;
+            }
+        }
+    }
+    Cow::from(s)
 }
 
 /// Split `s` into lines that are at most `display_width` wide, ignoring any ANSI escape sequences
@@ -432,6 +444,24 @@ mod tests {
         assert_eq!(truncate_str_short(double, 0), "");
         assert_eq!(truncate_str_short(double, 1), "");
         assert_eq!(truncate_str_short(double, 2), double);
+    }
+
+    #[test]
+    fn test_truncate_str_short_is_prefix_with_trailing_ansi() {
+        // ANSI escape sequences after the cut must not be appended, otherwise the result is no
+        // longer a prefix of the input (#2316).
+        assert_eq!(truncate_str_short("abc\x1b[K", 2), "ab");
+        assert_eq!(truncate_str_short("ab\x1b[31mcd\x1b[0m", 3), "ab\x1b[31mc");
+        assert_eq!(
+            truncate_str_short("ab\x1b[31mcd\x1b[0m", 4),
+            "ab\x1b[31mcd\x1b[0m"
+        );
+        assert_eq!(truncate_str_short("\x1b[31m", 0), "\x1b[31m");
+
+        let s = format!("{}\x1b[K", "\u{FFFD}".repeat(10));
+        let truncated = truncate_str_short(&s, 4);
+        assert_eq!(truncated, "\u{FFFD}".repeat(4));
+        assert!(s.starts_with(truncated.as_ref()));
     }
 
     #[test]
