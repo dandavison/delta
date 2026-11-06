@@ -2262,6 +2262,24 @@ src/align.rs:71: impl<'a> Alignment<'a> { │
     }
 
     #[test]
+    fn test_invalid_utf8_line_with_escape_sequence_does_not_panic() {
+        // Regression test for https://github.com/dandavison/delta/issues/2316:
+        // a long line of invalid UTF-8 bytes followed by an ANSI escape
+        // sequence crashed delta with "not a char boundary" when syntax
+        // highlighting truncated the line at max-syntax-length.
+        let mut input =
+            b"diff --git a/file.txt b/file.txt\n--- a/file.txt\n+++ b/file.txt\n@@ -1 +1,2 @@\n "
+                .to_vec();
+        input.extend(vec![0xA4; 500]);
+        input.extend(b"\x1b[K\n+new line\n");
+        let output = DeltaTest::with_args(&[]).with_input_bytes(&input);
+        let output = String::from_utf8(output).unwrap();
+        // The whole invalid line must still be rendered (as replacement
+        // characters), not swallowed or cut short by the syntax truncation.
+        assert_eq!(output.matches('\u{FFFD}').count(), 500);
+    }
+
+    #[test]
     fn test_color_only_diff_filter_zero_style_bg() {
         let result =
             DeltaTest::with_args(&["--color-only", r##"--zero-style='syntax "#1d1f21" dim'"##])
