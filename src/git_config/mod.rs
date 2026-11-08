@@ -2,6 +2,7 @@ mod remote;
 
 pub use remote::GitRemoteRepo;
 
+use crate::cli;
 use crate::env::DeltaEnv;
 use regex::Regex;
 use std::cell::OnceCell;
@@ -235,6 +236,20 @@ impl GitConfigGet for bool {
             Some("true") => Some(true),
             Some("false") => Some(false),
             _ => git_config.config.get_bool(key).ok(),
+        }
+    }
+}
+
+impl GitConfigGet for cli::SideBySide {
+    fn git_config_get(key: &str, git_config: &GitConfig) -> Option<Self> {
+        if let Some(Ok(value)) = git_config.config_from_env_var.get(key).map(|s| s.parse()) {
+            return Some(value);
+        }
+        let entry = git_config.config.get_entry(key).ok()?;
+        if entry.has_value() {
+            entry.value()?.parse().ok()
+        } else {
+            Some(Self::On)
         }
     }
 }

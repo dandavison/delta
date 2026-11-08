@@ -19,9 +19,9 @@ pub fn make_feature() -> Vec<(String, OptionValueFunction)> {
     builtin_feature!([
         (
             "side-by-side",
-            bool,
+            cli::SideBySide,
             None,
-            _opt => true
+            _opt => cli::SideBySide::On
         ),
         ("features", bool, None, _opt => "line-numbers"),
         ("line-numbers-left-format", String, None, _opt => "│{nm:^4}│".to_string()),
