@@ -1425,4 +1425,81 @@ index 1111111..2222222 100644
         );
         remove_file(git_config_path).unwrap();
     }
+
+    /// `-name` in DELTA_FEATURES removes a feature, even if git config turns it on.
+    /// Removing a builtin feature turns off the option it is named after.
+    #[test]
+    fn test_delta_features_removes_features() {
+        let git_config_contents = b"
+[delta]
+    side-by-side = true
+    keep-plus-minus-markers = true
+    features = mine
+[delta \"mine\"]
+    hyperlinks = true
+    line-numbers-left-style = red
+";
+        let git_config_path = "delta__test_delta_features_removes_features.gitconfig";
+        let opt = |delta_features: &str, args: &[&str]| {
+            integration_test_utils::make_options_from_args_and_git_config_with_custom_env(
+                crate::env::DeltaEnv {
+                    features: Some(delta_features.into()),
+                    ..crate::env::DeltaEnv::default()
+                },
+                args,
+                Some(git_config_contents),
+                Some(git_config_path),
+            )
+        };
+        let has_feature = |opt: &cli::Opt, name: &str| {
+            opt.features
+                .as_deref()
+                .unwrap_or_default()
+                .split_whitespace()
+                .any(|f| f == name)
+        };
+
+        let configured = opt("+", &[]);
+        assert!(configured.computed.side_by_side);
+        assert!(configured.line_numbers);
+        assert!(configured.keep_plus_minus_markers);
+        assert!(has_feature(&configured, "mine"));
+        assert!(configured.hyperlinks);
+
+        // The side-by-side feature goes, and with it the line numbers it brings.
+        let opt_ = opt("+-side-by-side", &[]);
+        assert!(!opt_.computed.side_by_side);
+        assert!(!opt_.line_numbers);
+        assert!(!has_feature(&opt_, "side-by-side"));
+        assert!(!has_feature(&opt_, "line-numbers"));
+        assert!(opt_.keep_plus_minus_markers);
+
+        let opt_ = opt("+ -keep-plus-minus-markers", &[]);
+        assert!(!opt_.keep_plus_minus_markers);
+        assert!(opt_.computed.side_by_side);
+
+        // A user's own feature goes, and so does what it sets.
+        let opt_ = opt("+-mine", &[]);
+        assert!(!has_feature(&opt_, "mine"));
+        assert!(!opt_.hyperlinks);
+        assert!(opt_.computed.side_by_side);
+
+        // Features can be added and removed together.
+        let opt_ = opt("+navigate -mine -side-by-side", &[]);
+        assert!(opt_.navigate);
+        assert!(!has_feature(&opt_, "mine"));
+        assert!(!opt_.computed.side_by_side);
+
+        // The command line beats DELTA_FEATURES.
+        let opt_ = opt("+-side-by-side", &["--side-by-side"]);
+        assert!(opt_.computed.side_by_side);
+        assert!(opt_.line_numbers);
+
+        // --features removes features as DELTA_FEATURES does.
+        let opt_ = opt("+", &["--features=-side-by-side"]);
+        assert!(!opt_.computed.side_by_side);
+        assert!(!opt_.line_numbers);
+
+        remove_file(git_config_path).unwrap();
+    }
 }
