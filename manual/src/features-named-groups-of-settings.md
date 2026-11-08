@@ -39,3 +39,9 @@ and to undo that:
 ```sh
 export DELTA_FEATURES=+
 ```
+
+A name preceded with `-` removes that feature, even if git config turns it on. Removing a builtin feature such as `side-by-side` or `line-numbers` also turns off the option of that name. For example, to switch off side-by-side mode that your git config turns on:
+
+```sh
+export DELTA_FEATURES="+-side-by-side"
+```

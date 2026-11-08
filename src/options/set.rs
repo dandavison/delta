@@ -96,7 +96,7 @@ pub fn set_options(
     // Needed before gathering features because a side-by-side min width can rule out the
     // side-by-side feature.
     set_available_terminal_width(opt);
-    let features = gather_features(opt, &builtin_features, git_config);
+    let features = gather_features(opt, &builtin_features, git_config, arg_matches);
     opt.features = Some(features.join(" "));
 
     // Set light, dark, and syntax-theme.
@@ -237,6 +237,13 @@ pub fn set_options(
         true
     );
 
+    // A turned-off builtin feature turns off the option of the same name.
+    for (feature, _, turn_off) in FEATURE_OPTIONS {
+        if opt.computed.features_turned_off.contains(feature) {
+            turn_off(opt);
+        }
+    }
+
     // Setting ComputedValues
     set_widths_and_isatty(opt);
     set_true_color(opt);
@@ -345,10 +352,55 @@ fn set__light__dark__syntax_theme__options(
 //
 // [delta "d"]
 //     features = f e
+/// An option that turns on the builtin feature of the same name: the name, whether the option is
+/// on, and how to turn it off.
+type FeatureOption = (&'static str, fn(&cli::Opt) -> bool, fn(&mut cli::Opt));
+
+const FEATURE_OPTIONS: [FeatureOption; 9] = [
+    ("raw", |opt| opt.raw, |opt| opt.raw = false),
+    (
+        "color-only",
+        |opt| opt.color_only,
+        |opt| opt.color_only = false,
+    ),
+    (
+        "diff-highlight",
+        |opt| opt.diff_highlight,
+        |opt| opt.diff_highlight = false,
+    ),
+    (
+        "diff-so-fancy",
+        |opt| opt.diff_so_fancy,
+        |opt| opt.diff_so_fancy = false,
+    ),
+    (
+        "hyperlinks",
+        |opt| opt.hyperlinks,
+        |opt| opt.hyperlinks = false,
+    ),
+    (
+        "keep-plus-minus-markers",
+        |opt| opt.keep_plus_minus_markers,
+        |opt| opt.keep_plus_minus_markers = false,
+    ),
+    (
+        "line-numbers",
+        |opt| opt.line_numbers,
+        |opt| opt.line_numbers = false,
+    ),
+    ("navigate", |opt| opt.navigate, |opt| opt.navigate = false),
+    (
+        "side-by-side",
+        |opt| side_by_side_is_active(opt.side_by_side, opt.computed.available_terminal_width),
+        |opt| opt.side_by_side = cli::SideBySide::Off,
+    ),
+];
+
 fn gather_features(
     opt: &mut cli::Opt,
     builtin_features: &HashMap<String, features::BuiltinFeature>,
     git_config: &Option<GitConfig>,
+    arg_matches: &clap::ArgMatches,
 ) -> Vec<String> {
     let from_env_var = &opt.env.features;
     let from_args = opt.features.as_deref().unwrap_or("");
@@ -363,6 +415,26 @@ fn gather_features(
         }
         None => split_feature_string(from_args).collect(),
     };
+    let (removed, input_features): (Vec<&str>, Vec<&str>) = input_features
+        .into_iter()
+        .partition(|feature| feature.starts_with('-'));
+
+    // A feature is turned off by -name in DELTA_FEATURES or --features, or by the command line
+    // turning off the option of the same name. The command line beats DELTA_FEATURES. A
+    // turned-off feature is not gathered from anywhere.
+    let user_supplied =
+        |feature: &str| config::user_supplied_option(&feature.replace('-', "_"), arg_matches);
+    for feature in removed.iter().map(|feature| &feature[1..]) {
+        let is_feature_option = FEATURE_OPTIONS.iter().any(|(name, ..)| *name == feature);
+        if !(is_feature_option && user_supplied(feature)) {
+            opt.computed.features_turned_off.insert(feature.to_string());
+        }
+    }
+    for (feature, is_on, _) in FEATURE_OPTIONS {
+        if user_supplied(feature) && !is_on(opt) {
+            opt.computed.features_turned_off.insert(feature.to_string());
+        }
+    }
 
     let mut features = VecDeque::new();
 
@@ -373,43 +445,17 @@ fn gather_features(
         }
     } else {
         for feature in input_features {
-            features.push_front(feature.to_string());
+            if !opt.computed.features_turned_off.contains(feature) {
+                features.push_front(feature.to_string());
+            }
         }
     }
 
-    // Gather builtin feature flags supplied on command line.
-    // TODO: Iterate over programmatically-obtained names of builtin features.
-    if opt.raw {
-        gather_builtin_features_recursively("raw", &mut features, builtin_features, opt);
-    }
-    if opt.color_only {
-        gather_builtin_features_recursively("color-only", &mut features, builtin_features, opt);
-    }
-    if opt.diff_highlight {
-        gather_builtin_features_recursively("diff-highlight", &mut features, builtin_features, opt);
-    }
-    if opt.diff_so_fancy {
-        gather_builtin_features_recursively("diff-so-fancy", &mut features, builtin_features, opt);
-    }
-    if opt.hyperlinks {
-        gather_builtin_features_recursively("hyperlinks", &mut features, builtin_features, opt);
-    }
-    if opt.keep_plus_minus_markers {
-        gather_builtin_features_recursively(
-            "keep-plus-minus-markers",
-            &mut features,
-            builtin_features,
-            opt,
-        );
-    }
-    if opt.line_numbers {
-        gather_builtin_features_recursively("line-numbers", &mut features, builtin_features, opt);
-    }
-    if opt.navigate {
-        gather_builtin_features_recursively("navigate", &mut features, builtin_features, opt);
-    }
-    if side_by_side_is_active(opt.side_by_side, opt.computed.available_terminal_width) {
-        gather_builtin_features_recursively("side-by-side", &mut features, builtin_features, opt);
+    // Gather the builtin features that options of the same name turn on.
+    for (feature, is_on, _) in FEATURE_OPTIONS {
+        if is_on(opt) {
+            gather_builtin_features_recursively(feature, &mut features, builtin_features, opt);
+        }
     }
 
     if let Some(git_config) = git_config {
@@ -448,6 +494,9 @@ fn gather_features_recursively(
     opt: &cli::Opt,
     git_config: &GitConfig,
 ) {
+    if opt.computed.features_turned_off.contains(feature) {
+        return;
+    }
     if builtin_features.contains_key(feature) {
         gather_builtin_features_recursively(feature, features, builtin_features, opt);
     } else {
@@ -514,7 +563,7 @@ fn gather_builtin_features_recursively(
     opt: &cli::Opt,
 ) {
     let feature_string = feature.to_string();
-    if features.contains(&feature_string) {
+    if features.contains(&feature_string) || opt.computed.features_turned_off.contains(feature) {
         return;
     }
     features.push_front(feature_string);
@@ -1341,5 +1390,152 @@ index 1111111..2222222 100644
             .collect();
         remove_file(git_config_path).unwrap();
         assert!(mismatches.is_empty(), "{}", mismatches.join("\n"));
+    }
+
+    /// --side-by-side=false turns off side-by-side and its line numbers, even if git config turns them on.
+    #[test]
+    fn test_side_by_side_off_on_the_command_line_overrides_git_config() {
+        let configs: [(&str, &[u8]); 4] = [
+            ("flag", b"[delta]\n    side-by-side = true\n"),
+            ("features", b"[delta]\n    features = side-by-side\n"),
+            (
+                "feature-flag",
+                b"[delta]\n    features = mine\n[delta \"mine\"]\n    side-by-side = true\n",
+            ),
+            (
+                "feature-features",
+                b"[delta]\n    features = mine\n[delta \"mine\"]\n    features = side-by-side\n",
+            ),
+        ];
+        for (name, git_config_contents) in configs {
+            let git_config_path =
+                format!("delta__test_side_by_side_off_overrides_{name}.gitconfig");
+            let opt = |args: &[&str]| {
+                integration_test_utils::make_options_from_args_and_git_config(
+                    args,
+                    Some(git_config_contents),
+                    Some(&git_config_path),
+                )
+            };
+            let configured = opt(&[]);
+            assert!(configured.computed.side_by_side, "{}", name);
+            assert!(configured.line_numbers, "{}", name);
+
+            let off = opt(&["--side-by-side=false"]);
+            let features = off.features.clone().unwrap_or_default();
+            assert!(!off.computed.side_by_side, "{}", name);
+            assert!(!off.line_numbers, "{}: line numbers", name);
+            assert!(
+                !features
+                    .split_whitespace()
+                    .any(|f| f == "side-by-side" || f == "line-numbers"),
+                "{}: features {:?}",
+                name,
+                features
+            );
+            remove_file(&git_config_path).unwrap();
+        }
+    }
+
+    #[test]
+    fn test_side_by_side_off_on_the_command_line_overrides_delta_features() {
+        let git_config_path = "delta__test_side_by_side_off_overrides_delta_features.gitconfig";
+        let opt = integration_test_utils::make_options_from_args_and_git_config_with_custom_env(
+            crate::env::DeltaEnv {
+                features: Some("+side-by-side".into()),
+                ..crate::env::DeltaEnv::default()
+            },
+            &["--side-by-side=false"],
+            Some(b"[delta]\n"),
+            Some(git_config_path),
+        );
+        let features = opt.features.clone().unwrap_or_default();
+        assert!(!opt.computed.side_by_side);
+        assert!(!opt.line_numbers);
+        assert!(
+            !features
+                .split_whitespace()
+                .any(|f| f == "side-by-side" || f == "line-numbers"),
+            "features {:?}",
+            features
+        );
+        remove_file(git_config_path).unwrap();
+    }
+
+    /// `-name` in DELTA_FEATURES removes a feature, even if git config turns it on.
+    /// Removing a builtin feature turns off the option it is named after.
+    #[test]
+    fn test_delta_features_removes_features() {
+        let git_config_contents = b"
+[delta]
+    side-by-side = true
+    keep-plus-minus-markers = true
+    features = mine
+[delta \"mine\"]
+    hyperlinks = true
+    line-numbers-left-style = red
+";
+        let git_config_path = "delta__test_delta_features_removes_features.gitconfig";
+        let opt = |delta_features: &str, args: &[&str]| {
+            integration_test_utils::make_options_from_args_and_git_config_with_custom_env(
+                crate::env::DeltaEnv {
+                    features: Some(delta_features.into()),
+                    ..crate::env::DeltaEnv::default()
+                },
+                args,
+                Some(git_config_contents),
+                Some(git_config_path),
+            )
+        };
+        let has_feature = |opt: &cli::Opt, name: &str| {
+            opt.features
+                .as_deref()
+                .unwrap_or_default()
+                .split_whitespace()
+                .any(|f| f == name)
+        };
+
+        let configured = opt("+", &[]);
+        assert!(configured.computed.side_by_side);
+        assert!(configured.line_numbers);
+        assert!(configured.keep_plus_minus_markers);
+        assert!(has_feature(&configured, "mine"));
+        assert!(configured.hyperlinks);
+
+        // The side-by-side feature goes, and with it the line numbers it brings.
+        let opt_ = opt("+-side-by-side", &[]);
+        assert!(!opt_.computed.side_by_side);
+        assert!(!opt_.line_numbers);
+        assert!(!has_feature(&opt_, "side-by-side"));
+        assert!(!has_feature(&opt_, "line-numbers"));
+        assert!(opt_.keep_plus_minus_markers);
+
+        let opt_ = opt("+ -keep-plus-minus-markers", &[]);
+        assert!(!opt_.keep_plus_minus_markers);
+        assert!(opt_.computed.side_by_side);
+
+        // A user's own feature goes, and so does what it sets.
+        let opt_ = opt("+-mine", &[]);
+        assert!(!has_feature(&opt_, "mine"));
+        assert!(!opt_.hyperlinks);
+        assert!(opt_.computed.side_by_side);
+
+        // Features can be added and removed together.
+        let opt_ = opt("+navigate -mine -side-by-side", &[]);
+        assert!(opt_.navigate);
+        assert!(!has_feature(&opt_, "mine"));
+        assert!(!opt_.computed.side_by_side);
+
+        // The command line beats DELTA_FEATURES.
+        let opt_ = opt("+-side-by-side", &["--side-by-side"]);
+        assert!(opt_.computed.side_by_side);
+        assert!(opt_.line_numbers);
+
+        // --features removes features as DELTA_FEATURES does.
+        let opt_ = opt("+", &["--features=-side-by-side"]);
+        assert!(!opt_.computed.side_by_side);
+        assert!(!opt_.line_numbers);
+
+        remove_file(git_config_path).unwrap();
     }
 }

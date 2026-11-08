@@ -210,6 +210,9 @@ pub struct Opt {
     /// If this is preceded with a + character, the features from the environment variable will be added
     /// to those specified in git config. E.g. DELTA_FEATURES=+side-by-side can be used to activate
     /// side-by-side temporarily (use DELTA_FEATURES=+ to go back to just the features from git config).
+    /// A name preceded with - removes that feature, even if git config turns it on, e.g.
+    /// DELTA_FEATURES="+-side-by-side" or --features=-side-by-side; removing a builtin feature such
+    /// as side-by-side or line-numbers also turns off the option of that name.
     pub features: Option<String>,
 
     #[arg(
@@ -1195,6 +1198,9 @@ pub struct ComputedValues {
     pub color_mode: ColorMode,
     pub paging_mode: PagingMode,
     pub side_by_side: bool,
+    /// Features that the command line turned off, by turning off the option they are named after.
+    /// None of them is gathered, whatever git config or DELTA_FEATURES says.
+    pub features_turned_off: HashSet<String>,
     pub syntax_set: SyntaxSet,
     pub syntax_theme: Option<SyntaxTheme>,
     pub true_color: bool,
