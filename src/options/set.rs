@@ -96,25 +96,7 @@ pub fn set_options(
     // Needed before gathering features because a side-by-side min width can rule out the
     // side-by-side feature.
     set_available_terminal_width(opt);
-    // If the command line turns side-by-side off, don't use the side-by-side feature.
-    if config::user_supplied_option("side_by_side", arg_matches)
-        && !side_by_side_is_active(opt.side_by_side, opt.computed.available_terminal_width)
-    {
-        opt.computed
-            .features_turned_off
-            .insert("side-by-side".to_string());
-    }
-    // -name in DELTA_FEATURES or --features removes a feature, unless the command line sets the
-    // option it is named after.
-    let removed: Vec<String> = removed_features(opt)
-        .filter(|feature| {
-            !(FEATURE_OPTIONS.contains(feature)
-                && config::user_supplied_option(&feature.replace('-', "_"), arg_matches))
-        })
-        .map(str::to_string)
-        .collect();
-    opt.computed.features_turned_off.extend(removed);
-    let features = gather_features(opt, &builtin_features, git_config);
+    let features = gather_features(opt, &builtin_features, git_config, arg_matches);
     opt.features = Some(features.join(" "));
 
     // Set light, dark, and syntax-theme.
@@ -255,7 +237,12 @@ pub fn set_options(
         true
     );
 
-    turn_off_options_of_removed_features(opt);
+    // A turned-off builtin feature turns off the option of the same name.
+    for (feature, _, turn_off) in FEATURE_OPTIONS {
+        if opt.computed.features_turned_off.contains(feature) {
+            turn_off(opt);
+        }
+    }
 
     // Setting ComputedValues
     set_widths_and_isatty(opt);
@@ -365,47 +352,55 @@ fn set__light__dark__syntax_theme__options(
 //
 // [delta "d"]
 //     features = f e
-/// The builtin features named after an option.
-const FEATURE_OPTIONS: [&str; 7] = [
-    "diff-highlight",
-    "diff-so-fancy",
-    "hyperlinks",
-    "keep-plus-minus-markers",
-    "line-numbers",
-    "navigate",
-    "side-by-side",
+/// An option that turns on the builtin feature of the same name: the name, whether the option is
+/// on, and how to turn it off.
+type FeatureOption = (&'static str, fn(&cli::Opt) -> bool, fn(&mut cli::Opt));
+
+const FEATURE_OPTIONS: [FeatureOption; 9] = [
+    ("raw", |opt| opt.raw, |opt| opt.raw = false),
+    (
+        "color-only",
+        |opt| opt.color_only,
+        |opt| opt.color_only = false,
+    ),
+    (
+        "diff-highlight",
+        |opt| opt.diff_highlight,
+        |opt| opt.diff_highlight = false,
+    ),
+    (
+        "diff-so-fancy",
+        |opt| opt.diff_so_fancy,
+        |opt| opt.diff_so_fancy = false,
+    ),
+    (
+        "hyperlinks",
+        |opt| opt.hyperlinks,
+        |opt| opt.hyperlinks = false,
+    ),
+    (
+        "keep-plus-minus-markers",
+        |opt| opt.keep_plus_minus_markers,
+        |opt| opt.keep_plus_minus_markers = false,
+    ),
+    (
+        "line-numbers",
+        |opt| opt.line_numbers,
+        |opt| opt.line_numbers = false,
+    ),
+    ("navigate", |opt| opt.navigate, |opt| opt.navigate = false),
+    (
+        "side-by-side",
+        |opt| side_by_side_is_active(opt.side_by_side, opt.computed.available_terminal_width),
+        |opt| opt.side_by_side = cli::SideBySide::Off,
+    ),
 ];
-
-/// The features that DELTA_FEATURES and --features remove, written `-name`.
-fn removed_features(opt: &cli::Opt) -> impl Iterator<Item = &str> {
-    let from_env_var = opt.env.features.as_deref().unwrap_or("");
-    let from_args = opt.features.as_deref().unwrap_or("");
-    from_env_var
-        .trim_start_matches('+')
-        .split_whitespace()
-        .chain(from_args.split_whitespace())
-        .filter_map(|feature| feature.strip_prefix('-'))
-}
-
-/// A removed builtin feature turns off the option it is named after.
-fn turn_off_options_of_removed_features(opt: &mut cli::Opt) {
-    let removed = opt.computed.features_turned_off.clone();
-    let off = |feature: &str| removed.contains(feature);
-    opt.diff_highlight &= !off("diff-highlight");
-    opt.diff_so_fancy &= !off("diff-so-fancy");
-    opt.hyperlinks &= !off("hyperlinks");
-    opt.keep_plus_minus_markers &= !off("keep-plus-minus-markers");
-    opt.line_numbers &= !off("line-numbers");
-    opt.navigate &= !off("navigate");
-    if off("side-by-side") {
-        opt.side_by_side = cli::SideBySide::Off;
-    }
-}
 
 fn gather_features(
     opt: &mut cli::Opt,
     builtin_features: &HashMap<String, features::BuiltinFeature>,
     git_config: &Option<GitConfig>,
+    arg_matches: &clap::ArgMatches,
 ) -> Vec<String> {
     let from_env_var = &opt.env.features;
     let from_args = opt.features.as_deref().unwrap_or("");
@@ -420,10 +415,26 @@ fn gather_features(
         }
         None => split_feature_string(from_args).collect(),
     };
-    let input_features: Vec<&str> = input_features
+    let (removed, input_features): (Vec<&str>, Vec<&str>) = input_features
         .into_iter()
-        .filter(|feature| !feature.starts_with('-'))
-        .collect();
+        .partition(|feature| feature.starts_with('-'));
+
+    // A feature is turned off by -name in DELTA_FEATURES or --features, or by the command line
+    // turning off the option of the same name. The command line beats DELTA_FEATURES. A
+    // turned-off feature is not gathered from anywhere.
+    let user_supplied =
+        |feature: &str| config::user_supplied_option(&feature.replace('-', "_"), arg_matches);
+    for feature in removed.iter().map(|feature| &feature[1..]) {
+        let is_feature_option = FEATURE_OPTIONS.iter().any(|(name, ..)| *name == feature);
+        if !(is_feature_option && user_supplied(feature)) {
+            opt.computed.features_turned_off.insert(feature.to_string());
+        }
+    }
+    for (feature, is_on, _) in FEATURE_OPTIONS {
+        if user_supplied(feature) && !is_on(opt) {
+            opt.computed.features_turned_off.insert(feature.to_string());
+        }
+    }
 
     let mut features = VecDeque::new();
 
@@ -440,39 +451,11 @@ fn gather_features(
         }
     }
 
-    // Gather builtin feature flags supplied on command line.
-    // TODO: Iterate over programmatically-obtained names of builtin features.
-    if opt.raw {
-        gather_builtin_features_recursively("raw", &mut features, builtin_features, opt);
-    }
-    if opt.color_only {
-        gather_builtin_features_recursively("color-only", &mut features, builtin_features, opt);
-    }
-    if opt.diff_highlight {
-        gather_builtin_features_recursively("diff-highlight", &mut features, builtin_features, opt);
-    }
-    if opt.diff_so_fancy {
-        gather_builtin_features_recursively("diff-so-fancy", &mut features, builtin_features, opt);
-    }
-    if opt.hyperlinks {
-        gather_builtin_features_recursively("hyperlinks", &mut features, builtin_features, opt);
-    }
-    if opt.keep_plus_minus_markers {
-        gather_builtin_features_recursively(
-            "keep-plus-minus-markers",
-            &mut features,
-            builtin_features,
-            opt,
-        );
-    }
-    if opt.line_numbers {
-        gather_builtin_features_recursively("line-numbers", &mut features, builtin_features, opt);
-    }
-    if opt.navigate {
-        gather_builtin_features_recursively("navigate", &mut features, builtin_features, opt);
-    }
-    if side_by_side_is_active(opt.side_by_side, opt.computed.available_terminal_width) {
-        gather_builtin_features_recursively("side-by-side", &mut features, builtin_features, opt);
+    // Gather the builtin features that options of the same name turn on.
+    for (feature, is_on, _) in FEATURE_OPTIONS {
+        if is_on(opt) {
+            gather_builtin_features_recursively(feature, &mut features, builtin_features, opt);
+        }
     }
 
     if let Some(git_config) = git_config {
