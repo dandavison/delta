@@ -1342,4 +1342,75 @@ index 1111111..2222222 100644
         remove_file(git_config_path).unwrap();
         assert!(mismatches.is_empty(), "{}", mismatches.join("\n"));
     }
+
+
+	/// --side-by-side=false turns off side-by-side and its line numbers, even if git config turns them on.
+    #[test]
+    fn test_side_by_side_off_on_the_command_line_overrides_git_config() {
+        let configs: [(&str, &[u8]); 4] = [
+            ("flag", b"[delta]\n    side-by-side = true\n"),
+            ("features", b"[delta]\n    features = side-by-side\n"),
+            (
+                "feature-flag",
+                b"[delta]\n    features = mine\n[delta \"mine\"]\n    side-by-side = true\n",
+            ),
+            (
+                "feature-features",
+                b"[delta]\n    features = mine\n[delta \"mine\"]\n    features = side-by-side\n",
+            ),
+        ];
+        for (name, git_config_contents) in configs {
+            let git_config_path =
+                format!("delta__test_side_by_side_off_overrides_{name}.gitconfig");
+            let opt = |args: &[&str]| {
+                integration_test_utils::make_options_from_args_and_git_config(
+                    args,
+                    Some(git_config_contents),
+                    Some(&git_config_path),
+                )
+            };
+            let configured = opt(&[]);
+            assert!(configured.computed.side_by_side, "{}", name);
+            assert!(configured.line_numbers, "{}", name);
+
+            let off = opt(&["--side-by-side=false"]);
+            let features = off.features.clone().unwrap_or_default();
+            assert!(!off.computed.side_by_side, "{}", name);
+            assert!(!off.line_numbers, "{}: line numbers", name);
+            assert!(
+                !features
+                    .split_whitespace()
+                    .any(|f| f == "side-by-side" || f == "line-numbers"),
+                "{}: features {:?}",
+                name,
+                features
+            );
+            remove_file(&git_config_path).unwrap();
+        }
+    }
+
+    #[test]
+    fn test_side_by_side_off_on_the_command_line_overrides_delta_features() {
+        let git_config_path = "delta__test_side_by_side_off_overrides_delta_features.gitconfig";
+        let opt = integration_test_utils::make_options_from_args_and_git_config_with_custom_env(
+            crate::env::DeltaEnv {
+                features: Some("+side-by-side".into()),
+                ..crate::env::DeltaEnv::default()
+            },
+            &["--side-by-side=false"],
+            Some(b"[delta]\n"),
+            Some(git_config_path),
+        );
+        let features = opt.features.clone().unwrap_or_default();
+        assert!(!opt.computed.side_by_side);
+        assert!(!opt.line_numbers);
+        assert!(
+            !features
+                .split_whitespace()
+                .any(|f| f == "side-by-side" || f == "line-numbers"),
+            "features {:?}",
+            features
+        );
+        remove_file(git_config_path).unwrap();
+    }
 }
