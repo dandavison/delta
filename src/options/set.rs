@@ -96,6 +96,14 @@ pub fn set_options(
     // Needed before gathering features because a side-by-side min width can rule out the
     // side-by-side feature.
     set_available_terminal_width(opt);
+    // If the command line turns side-by-side off, don't use the side-by-side feature.
+    if config::user_supplied_option("side_by_side", arg_matches)
+        && !side_by_side_is_active(opt.side_by_side, opt.computed.available_terminal_width)
+    {
+        opt.computed
+            .features_turned_off
+            .insert("side-by-side".to_string());
+    }
     let features = gather_features(opt, &builtin_features, git_config);
     opt.features = Some(features.join(" "));
 
@@ -373,7 +381,9 @@ fn gather_features(
         }
     } else {
         for feature in input_features {
-            features.push_front(feature.to_string());
+            if !opt.computed.features_turned_off.contains(feature) {
+                features.push_front(feature.to_string());
+            }
         }
     }
 
@@ -448,6 +458,9 @@ fn gather_features_recursively(
     opt: &cli::Opt,
     git_config: &GitConfig,
 ) {
+    if opt.computed.features_turned_off.contains(feature) {
+        return;
+    }
     if builtin_features.contains_key(feature) {
         gather_builtin_features_recursively(feature, features, builtin_features, opt);
     } else {
@@ -514,7 +527,7 @@ fn gather_builtin_features_recursively(
     opt: &cli::Opt,
 ) {
     let feature_string = feature.to_string();
-    if features.contains(&feature_string) {
+    if features.contains(&feature_string) || opt.computed.features_turned_off.contains(feature) {
         return;
     }
     features.push_front(feature_string);
@@ -1343,8 +1356,7 @@ index 1111111..2222222 100644
         assert!(mismatches.is_empty(), "{}", mismatches.join("\n"));
     }
 
-
-	/// --side-by-side=false turns off side-by-side and its line numbers, even if git config turns them on.
+    /// --side-by-side=false turns off side-by-side and its line numbers, even if git config turns them on.
     #[test]
     fn test_side_by_side_off_on_the_command_line_overrides_git_config() {
         let configs: [(&str, &[u8]); 4] = [

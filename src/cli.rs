@@ -1195,6 +1195,9 @@ pub struct ComputedValues {
     pub color_mode: ColorMode,
     pub paging_mode: PagingMode,
     pub side_by_side: bool,
+    /// Features that the command line turned off, by turning off the option they are named after.
+    /// None of them is gathered, whatever git config or DELTA_FEATURES says.
+    pub features_turned_off: HashSet<String>,
     pub syntax_set: SyntaxSet,
     pub syntax_theme: Option<SyntaxTheme>,
     pub true_color: bool,
