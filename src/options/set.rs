@@ -104,6 +104,16 @@ pub fn set_options(
             .features_turned_off
             .insert("side-by-side".to_string());
     }
+    // -name in DELTA_FEATURES or --features removes a feature, unless the command line sets the
+    // option it is named after.
+    let removed: Vec<String> = removed_features(opt)
+        .filter(|feature| {
+            !(FEATURE_OPTIONS.contains(feature)
+                && config::user_supplied_option(&feature.replace('-', "_"), arg_matches))
+        })
+        .map(str::to_string)
+        .collect();
+    opt.computed.features_turned_off.extend(removed);
     let features = gather_features(opt, &builtin_features, git_config);
     opt.features = Some(features.join(" "));
 
@@ -245,6 +255,8 @@ pub fn set_options(
         true
     );
 
+    turn_off_options_of_removed_features(opt);
+
     // Setting ComputedValues
     set_widths_and_isatty(opt);
     set_true_color(opt);
@@ -353,6 +365,43 @@ fn set__light__dark__syntax_theme__options(
 //
 // [delta "d"]
 //     features = f e
+/// The builtin features named after an option.
+const FEATURE_OPTIONS: [&str; 7] = [
+    "diff-highlight",
+    "diff-so-fancy",
+    "hyperlinks",
+    "keep-plus-minus-markers",
+    "line-numbers",
+    "navigate",
+    "side-by-side",
+];
+
+/// The features that DELTA_FEATURES and --features remove, written `-name`.
+fn removed_features(opt: &cli::Opt) -> impl Iterator<Item = &str> {
+    let from_env_var = opt.env.features.as_deref().unwrap_or("");
+    let from_args = opt.features.as_deref().unwrap_or("");
+    from_env_var
+        .trim_start_matches('+')
+        .split_whitespace()
+        .chain(from_args.split_whitespace())
+        .filter_map(|feature| feature.strip_prefix('-'))
+}
+
+/// A removed builtin feature turns off the option it is named after.
+fn turn_off_options_of_removed_features(opt: &mut cli::Opt) {
+    let removed = opt.computed.features_turned_off.clone();
+    let off = |feature: &str| removed.contains(feature);
+    opt.diff_highlight &= !off("diff-highlight");
+    opt.diff_so_fancy &= !off("diff-so-fancy");
+    opt.hyperlinks &= !off("hyperlinks");
+    opt.keep_plus_minus_markers &= !off("keep-plus-minus-markers");
+    opt.line_numbers &= !off("line-numbers");
+    opt.navigate &= !off("navigate");
+    if off("side-by-side") {
+        opt.side_by_side = cli::SideBySide::Off;
+    }
+}
+
 fn gather_features(
     opt: &mut cli::Opt,
     builtin_features: &HashMap<String, features::BuiltinFeature>,
@@ -371,6 +420,10 @@ fn gather_features(
         }
         None => split_feature_string(from_args).collect(),
     };
+    let input_features: Vec<&str> = input_features
+        .into_iter()
+        .filter(|feature| !feature.starts_with('-'))
+        .collect();
 
     let mut features = VecDeque::new();
 
