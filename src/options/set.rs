@@ -1499,8 +1499,8 @@ index 1111111..2222222 100644
 ";
         let with_flag = format!("{features}[delta]\n    side-by-side = true\n");
         let cases: [(&str, &[&str], &str); 2] = [
-            ("git config", &[], &with_flag),
-            ("command line", &["--side-by-side"], features),
+            ("git-config", &[], &with_flag),
+            ("command-line", &["--side-by-side"], features),
         ];
         for (name, args, git_config_contents) in cases {
             let git_config_path =
