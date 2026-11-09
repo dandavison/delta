@@ -139,6 +139,27 @@ mod tests {
     }
 
     #[test]
+    fn test_removed_file_is_syntax_highlighted() {
+        // The plus file is /dev/null, so the language must come from the minus file.
+        // Use color-only so that we can refer to the line numbers from the input diff.
+        let config = integration_test_utils::make_config_from_args(&[
+            "--color-only",
+            "--minus-style",
+            "syntax",
+        ]);
+        let output = integration_test_utils::run_delta(REMOVED_RS_FILE, &config);
+        ansi_test_utils::assert_line_has_syntax_highlighted_substring(
+            &output,
+            6,
+            1,
+            "fn main() {}",
+            "main.rs",
+            State::HunkMinus(DiffType::Unified, None),
+            &config,
+        );
+    }
+
+    #[test]
     fn test_full_filename_used_to_detect_language() {
         let config = integration_test_utils::make_config_from_args(&[
             "--color-only",
@@ -2526,6 +2547,16 @@ index 2e73468..8d8b89d 100644
  
              Console.WriteLine(message);
          }
+";
+
+    const REMOVED_RS_FILE: &str = "\
+diff --git a/main.rs b/main.rs
+deleted file mode 100644
+index 1111111..0000000
+--- a/main.rs
++++ /dev/null
+@@ -1 +0,0 @@
+-fn main() {}
 ";
 
     const MODIFIED_DOCKER_AND_RS_FILES: &str = "\

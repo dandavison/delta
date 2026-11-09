@@ -134,10 +134,10 @@ impl StateMachine<'_> {
         utils::path::relativize_path_maybe(&mut path_or_mode, self.config);
         self.plus_file = path_or_mode;
         self.plus_file_event = file_event;
-        self.painter
-            .set_syntax(get_filename_from_diff_header_line_file_path(
-                &self.plus_file,
-            ));
+        // For a removed file the plus file is /dev/null: keep the syntax set from the minus file.
+        if let Some(filename) = get_filename_from_diff_header_line_file_path(&self.plus_file) {
+            self.painter.set_syntax(Some(filename));
+        }
         self.current_file_pair = Some((self.minus_file.clone(), self.plus_file.clone()));
 
         self.painter.paint_buffered_minus_and_plus_lines();
