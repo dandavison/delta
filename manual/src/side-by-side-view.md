@@ -22,7 +22,27 @@ Or from the command line:
 delta --side-by-side=140
 ```
 
+If `--width` is set, the minimum applies to that width instead of the terminal width. This matters when delta's output does not go to a terminal, so delta cannot measure it: a program that captures delta's output can pass the width with `--width`.
+
 Setting `side-by-side = 0` disables side-by-side mode.
+
+Side-by-side view helps to compare removed lines with the lines that replaced them, but a hunk that only adds lines leaves the left panel empty, and a hunk that only removes lines leaves the right panel empty. To display only the hunks that both remove and add lines side-by-side, and the others in a single column, use `hunk`:
+
+```gitconfig
+[delta]
+    side-by-side = hunk
+```
+
+An added or deleted file is then displayed in a single column, using the full terminal width. The single-column hunks show line numbers whenever the side-by-side hunks do, using the same `line-numbers-left-format` and `line-numbers-right-format` as without side-by-side. To set formats only for the side-by-side panels, put them in a `[delta "side-by-side"]` section. As in unified mode, delta does not wrap long lines in the single-column hunks.
+
+`hunk` can be combined with a minimum terminal width, separated by a comma. Below that width, every hunk is displayed in a single column:
+
+```gitconfig
+[delta]
+    side-by-side = hunk,140
+```
+
+Or from the command line: `delta --side-by-side=hunk,140`.
 
 To activate and deactivate side-by-side view from the command line, consider using the [`DELTA_FEATURES`](./features-named-groups-of-settings.md) environment variable. For example:
 
@@ -30,6 +50,8 @@ To activate and deactivate side-by-side view from the command line, consider usi
 export DELTA_FEATURES=+side-by-side # activate
 export DELTA_FEATURES=+             # deactivate
 ```
+
+This works when `side-by-side` is not set in the main `[delta]` section: like any option set there, a `side-by-side` value (`false`, a minimum width, or `hunk`) takes precedence over the `side-by-side` feature.
 
 To disable the line numbers in side-by-side view, but keep a vertical delimiter line between the left and right panels, use the line-numbers format options. For example:
 
