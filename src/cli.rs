@@ -142,8 +142,10 @@ pub struct Opt {
     #[arg(long = "default-language", value_name = "LANG", default_value = "txt")]
     /// Default language used for syntax highlighting.
     ///
-    /// Used as a fallback when the language cannot be inferred from a filename. It will
-    /// typically make sense to set this in the per-repository config file '.git/config'.
+    /// Used as a fallback when the language cannot be inferred from a filename, nor from the
+    /// first line of the file (e.g. a shebang such as '#!/usr/bin/env python3', when the diff
+    /// includes it). It will typically make sense to set this in the per-repository config file
+    /// '.git/config'.
     pub default_language: String,
 
     /// Detect whether or not the terminal is dark or light by querying for its colors.

@@ -75,8 +75,17 @@ impl StateMachine<'_> {
         {
             self.painter.paint_buffered_minus_and_plus_lines();
         }
-        if let State::HunkHeader(_, parsed_hunk_header, line, raw_line) = &self.state.clone() {
+        if let State::HunkHeader(diff_type, parsed_hunk_header, line, raw_line) =
+            &self.state.clone()
+        {
             self.emit_hunk_header_line(parsed_hunk_header, line, raw_line)?;
+            if parsed_hunk_header.starts_at_first_line() {
+                // This line is the first line of the file: if the file name did not identify
+                // the language, try the first line (e.g. a shebang).
+                if let Some(first_line) = self.line.get(diff_type.n_parents()..) {
+                    self.painter.set_syntax_from_first_line(first_line);
+                }
+            }
         }
         self.state = match new_line_state(&self.line, &self.raw_line, &self.state, self.config) {
             Some(HunkMinus(diff_type, raw_line)) => {

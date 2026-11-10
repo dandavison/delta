@@ -30,6 +30,10 @@ pub struct Painter<'p> {
     pub plus_lines: Vec<(String, State)>,
     pub writer: &'p mut dyn Write,
     pub syntax: &'p SyntaxReference,
+    /// Whether `syntax` was detected from the file name or the file's first line. If not, the
+    /// fallback language is in use and the first line of the file (e.g. a shebang) may still be
+    /// used to detect the language.
+    syntax_detected: bool,
     pub highlighter: Option<HighlightLines<'p>>,
     pub config: &'p config::Config,
     // Whether the lines being painted are laid out side-by-side. Starts out as
@@ -78,7 +82,8 @@ pub enum StyleSectionSpecifier<'l> {
 
 impl<'p> Painter<'p> {
     pub fn new(writer: &'p mut dyn Write, config: &'p config::Config) -> Self {
-        let default_syntax = Self::get_syntax(&config.syntax_set, None, &config.default_language);
+        let default_syntax =
+            Self::get_fallback_syntax(&config.syntax_set, &config.default_language);
         let panel_width_fix = ansifill::UseFullPanelWidth::new(config);
 
         let line_numbers_data = if config.line_numbers {
@@ -105,6 +110,7 @@ impl<'p> Painter<'p> {
             plus_lines: Vec::new(),
             output_buffer: String::new(),
             syntax: default_syntax,
+            syntax_detected: false,
             highlighter: None,
             writer,
             config,
@@ -117,40 +123,60 @@ impl<'p> Painter<'p> {
     }
 
     pub fn set_syntax(&mut self, filename: Option<&str>) {
-        self.syntax = Painter::get_syntax(
-            &self.config.syntax_set,
-            filename,
-            &self.config.default_language,
-        );
-    }
-
-    fn get_syntax<'a>(
-        syntax_set: &'a SyntaxSet,
-        filename: Option<&str>,
-        fallback: &str,
-    ) -> &'a SyntaxReference {
-        if let Some(filename) = filename {
-            let path = std::path::Path::new(filename);
-            let file_name = path.file_name().and_then(|n| n.to_str()).unwrap_or("");
-            let extension = path.extension().and_then(|x| x.to_str()).unwrap_or("");
-
-            // Like syntect's `find_syntax_for_file`, without inspecting the file content, plus:
-            // If the file has NO extension then look up the whole filename as a
-            // syntax definition (if it is longer than 4 bytes).
-            // This means file formats like Makefile/Dockerfile/Rakefile etc. will get highlighted,
-            // but 1-4 short filenames will not -- even if they, as a whole, match an extension:
-            // 'rs' will not get highlighted, while 'x.rs' will.
-            if !extension.is_empty() || file_name.len() > 4 {
-                if let Some(syntax) = syntax_set
-                    .find_syntax_by_extension(file_name)
-                    .or_else(|| syntax_set.find_syntax_by_extension(extension))
-                {
-                    return syntax;
-                }
+        match filename.and_then(|f| Painter::get_syntax_for_filename(&self.config.syntax_set, f)) {
+            Some(syntax) => {
+                self.syntax = syntax;
+                self.syntax_detected = true;
+            }
+            None => {
+                self.syntax = Painter::get_fallback_syntax(
+                    &self.config.syntax_set,
+                    &self.config.default_language,
+                );
+                self.syntax_detected = false;
             }
         }
+    }
 
-        // Nothing found, try the user provided fallback, or the internal fallback.
+    /// If the language could not be determined from the file name, try to detect it from the
+    /// first line of the file, e.g. a shebang (`#!/usr/bin/env python3`) or an editor modeline.
+    /// `first_line` must be line 1 of the file, without the diff prefix.
+    pub fn set_syntax_from_first_line(&mut self, first_line: &str) {
+        if self.syntax_detected {
+            return;
+        }
+        if let Some(syntax) = self.config.syntax_set.find_syntax_by_first_line(first_line) {
+            self.syntax = syntax;
+            self.syntax_detected = true;
+            self.set_highlighter();
+        }
+    }
+
+    fn get_syntax_for_filename<'a>(
+        syntax_set: &'a SyntaxSet,
+        filename: &str,
+    ) -> Option<&'a SyntaxReference> {
+        let path = std::path::Path::new(filename);
+        let file_name = path.file_name().and_then(|n| n.to_str()).unwrap_or("");
+        let extension = path.extension().and_then(|x| x.to_str()).unwrap_or("");
+
+        // Like syntect's `find_syntax_for_file`, without inspecting the file content, plus:
+        // If the file has NO extension then look up the whole filename as a
+        // syntax definition (if it is longer than 4 bytes).
+        // This means file formats like Makefile/Dockerfile/Rakefile etc. will get highlighted,
+        // but 1-4 short filenames will not -- even if they, as a whole, match an extension:
+        // 'rs' will not get highlighted, while 'x.rs' will.
+        if !extension.is_empty() || file_name.len() > 4 {
+            syntax_set
+                .find_syntax_by_extension(file_name)
+                .or_else(|| syntax_set.find_syntax_by_extension(extension))
+        } else {
+            None
+        }
+    }
+
+    /// The user provided fallback (`--default-language`), or the internal fallback.
+    fn get_fallback_syntax<'a>(syntax_set: &'a SyntaxSet, fallback: &str) -> &'a SyntaxReference {
         if let Some(syntax) = syntax_set.find_syntax_for_file(fallback).unwrap_or(None) {
             syntax
         } else {

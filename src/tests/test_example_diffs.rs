@@ -190,6 +190,70 @@ index 0123456..1234567 100644
         assert_eq!(expected, ansi);
     }
 
+    /// Lines `range` of the color-only output for `FILES_WITH_SHEBANG`, with the file `deploy`
+    /// renamed to `deploy_name`.
+    fn shebang_output_lines(deploy_name: &str, range: std::ops::Range<usize>) -> Vec<String> {
+        let config = integration_test_utils::make_config_from_args(&["--color-only"]);
+        let input = FILES_WITH_SHEBANG.replace("deploy", deploy_name);
+        let output = integration_test_utils::run_delta(&input, &config);
+        output
+            .lines()
+            .skip(range.start)
+            .take(range.len())
+            .map(str::to_owned)
+            .collect()
+    }
+
+    #[test]
+    fn test_shebang_used_to_detect_language() {
+        // `deploy` has no extension, so the language comes from its shebang: the hunk lines must
+        // be highlighted exactly as if the file were called `deploy.py`.
+        let from_shebang = shebang_output_lines("deploy", 6..9);
+        let from_extension = shebang_output_lines("deploy.py", 6..9);
+        let plain = shebang_output_lines("deploy.txt", 6..9);
+        assert_eq!(strip_ansi_codes(&from_shebang[2]), "+print(os.getcwd())");
+        assert_eq!(from_shebang, from_extension);
+        assert_ne!(from_shebang, plain);
+    }
+
+    #[test]
+    fn test_shebang_does_not_override_language_from_filename() {
+        // `deploy.txt` is recognized from its extension, so its Python shebang is ignored.
+        let from_txt_with_shebang = shebang_output_lines("deploy.txt", 6..9);
+        let from_extension = shebang_output_lines("deploy.py", 6..9);
+        assert_ne!(from_txt_with_shebang, from_extension);
+    }
+
+    #[test]
+    fn test_shebang_is_ignored_when_hunk_does_not_start_at_first_line() {
+        // In `notes` the hunk starts at line 5, so its first line is not the file's shebang, even
+        // though it looks like one: the lines are highlighted like those of `notes.txt`.
+        let config = integration_test_utils::make_config_from_args(&["--color-only"]);
+        let output = integration_test_utils::run_delta(FILES_WITH_SHEBANG, &config);
+        let as_txt = integration_test_utils::run_delta(
+            &FILES_WITH_SHEBANG.replace("notes", "notes.txt"),
+            &config,
+        );
+        let as_py = integration_test_utils::run_delta(
+            &FILES_WITH_SHEBANG.replace("notes", "notes.py"),
+            &config,
+        );
+        let hunk = |output: &str| {
+            output
+                .lines()
+                .skip(14)
+                .take(3)
+                .collect::<Vec<_>>()
+                .join("\n")
+        };
+        assert_eq!(
+            strip_ansi_codes(&hunk(&output)).lines().last(),
+            Some("+print(os.getcwd())")
+        );
+        assert_eq!(hunk(&output), hunk(&as_txt));
+        assert_ne!(hunk(&output), hunk(&as_py));
+    }
+
     #[test]
     fn test_diff_unified_two_files() {
         let config =
@@ -2588,6 +2652,26 @@ index 0123456..1234567 100644
 +fn foobar() -> i8 {
 +    8
 +}
+";
+
+    const FILES_WITH_SHEBANG: &str = "\
+diff --git a/deploy b/deploy
+new file mode 100755
+index 0000000..1234567
+--- /dev/null
++++ b/deploy
+@@ -0,0 +1,3 @@
++#!/usr/bin/env python3
++import os
++print(os.getcwd())
+diff --git a/notes b/notes
+index 0123456..1234567 100644
+--- a/notes
++++ b/notes
+@@ -5,2 +5,3 @@
+ #!/usr/bin/env python3
+ import os
++print(os.getcwd())
 ";
 
     const RENAMED_FILE_INPUT: &str = "\
