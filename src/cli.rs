@@ -1255,6 +1255,8 @@ pub struct ComputedValues {
     pub decorations_width: Width,
     pub inspect_raw_lines: InspectRawLines,
     pub color_mode: ColorMode,
+    /// The terminal's background, if this delta asked the terminal.
+    pub terminal_color_mode: Option<ColorMode>,
     pub paging_mode: PagingMode,
     pub side_by_side: bool,
     /// Features that the command line turned off, by turning off the option they are named after.

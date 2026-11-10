@@ -155,3 +155,15 @@ Each of these modules must export a function named `make_feature` whose job is t
 | `paint`          | to take a string without ANSI color sequences and return a new one with ANSI color sequences                                 |
 | `hunk`           | a [diff hunk](https://www.gnu.org/software/diffutils/manual/html_node/Detailed-Unified.html)                                 |
 | `subhunk`        | a consecutive sequence of minus and/or plus lines, without any zero line                                                     |
+
+## TUI mode (`delta --tui`)
+
+`delta --tui` runs gitu, from the [`delta-gitu`](https://crates.io/crates/delta-gitu) crate (a [fork](https://github.com/dandavison/gitu) of [gitu](https://github.com/altsem/gitu)), inside the delta process ([`src/subcommands/gitu.rs`](src/subcommands/gitu.rs)). It sets the running delta binary as gitu's diff renderer. delta is still a one-pass filter: gitu runs it as a child process for each diff it draws.
+
+<img width="800px" src="etc/architecture/gitu.svg" alt="delta --gitu processes" />
+
+- **Rows carry patch identity.** gitu starts delta with `OSC1717=V1`. delta then writes an OSC 1717 record on each row it draws: file header, hunk header, diff line (with its type and old and new line numbers) and commit ([`src/features/diff_line_metadata.rs`](src/features/diff_line_metadata.rs)). The records are invisible in a terminal. gitu parses the patch itself and uses the records to map each rendered row to a line of the patch, so it can navigate, fold and stage whatever delta's layout (side-by-side, line numbers, no `+`/`-` markers). Staging builds a patch from the selected lines and passes it to `git apply`.
+- **gitu runs git's command again.** git does not tell its pager what command it ran. gitu finds the git process in the process tree, as delta does to find the calling process, and runs that command itself, in the directory git ran it, without reading what git piped. It runs it again after each change, so `:` accepts only read-only git commands. The command decides which operations are offered: `git diff` can stage, `git diff --cached` can unstage, and a diff involving a commit can be applied and reversed.
+- **Streaming.** gitu passes git's output to delta as a shell pipeline would. It draws the first screen from what delta has drawn so far, cut back to whole hunks, and rebuilds the view when delta finishes.
+- **Features.** gitu passes the features turned on in the session as `DELTA_FEATURES=+name ...`, which delta adds to the user's config.
+- **Stat rows.** delta draws a file's header before it reads the file's hunks, so it cannot draw a `--stat` row in place of the header. gitu counts stat rows from the patch and lays them out as git does.

@@ -1,0 +1,8 @@
+[delta]
+    light = false
+    dark = true
+[delta-tui "style"]
+    section-header = yellow
+[delta "my-theme"]
+    # The owner's file-style, with a dark grey background in place of a light grey one.
+    file-style = "bold cyan #3a3a3a"

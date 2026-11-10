@@ -1,0 +1,471 @@
+# The themes a recording's theme selector offers, eight for each background so that the same keys
+# reach the same kinds of theme in both: delta-* themes made for these recordings, whose boxed and ruled
+# ones head files and hunks differently from the owner's config, and themes copied from this repository's
+# themes.gitconfig that keep syntax highlighting and change nothing else.
+
+[delta "colibri"]
+    # author: https://github.com/pablospe
+    # Based on woolly-mammoth: https://github.com/Kr1ss-XD.
+    commit-decoration-style = 130 box
+    dark = true
+    file-decoration-style = "#606018" overline
+    file-added-label = [●]
+    file-copied-label = [C]
+    file-modified-label = [+]
+    file-removed-label = [⛌]
+    file-renamed-label = [→]
+    file-style = 232 bold 184
+    hunk-header-style = syntax bold italic 237
+    line-numbers = true
+    line-numbers-left-format = "{nm:>1}┊"
+    line-numbers-left-style = red
+    line-numbers-minus-style = red bold
+    line-numbers-plus-style = green bold
+    line-numbers-right-format = " {np:>1}┊"
+    line-numbers-right-style = green
+    line-numbers-zero-style = "#545474" italic
+    minus-emph-style = normal "#80002a"
+    minus-style = normal "#5e0000"
+    plus-emph-style = syntax bold "#007e5e"
+    plus-style = syntax "#003500"
+    syntax-theme = OneHalfDark
+    whitespace-error-style = "#80002a" reverse
+    zero-style = syntax
+    blame-format = "{author:<18} ({commit:>7}) ┊{timestamp:^16}┊ "
+
+[delta "coracias-caudatus"]
+    # author: https://github.com/clnoll
+    commit-decoration-style = ol "#7536ff"
+    commit-style = "#200078"
+    file-decoration-style = none
+    file-style = omit
+    hunk-header-decoration-style = "#cfd6ff" ul
+    hunk-header-file-style = "#858dff"
+    hunk-header-line-number-style = "#7536ff"
+    hunk-header-style = file line-number syntax
+    light = true
+    line-numbers = true
+    line-numbers-left-format = "{nm:>4} ."
+    line-numbers-left-style = "#e3ab02"
+    line-numbers-minus-style = "#ff38b6"
+    line-numbers-plus-style = "#00e0c2"
+    line-numbers-right-format = "{np:>4}  "
+    line-numbers-right-style = white
+    line-numbers-zero-style = "#cccccc"
+    minus-emph-style = bold "#ff3838" "#ffe3f7"
+    minus-style = "#ff0080"
+    plus-emph-style = "#008a81" bold "#00ffbf"
+    plus-style = syntax "#cffff3"
+    syntax-theme = GitHub
+
+[delta "hoopoe"]
+    # author: https://github.com/dandavison
+    light = true
+    pink = "#ffe0e0"
+    dark-pink = "#ffc0c0"
+    green = "#d0ffd0"
+    dark-green = "#a0efa0"
+    dark-green-2 = "#067a00"
+    minus-style = normal hoopoe.pink
+    minus-emph-style = normal hoopoe.dark-pink
+    minus-non-emph-style = minus-style
+    plus-style = syntax hoopoe.green
+    plus-emph-style = syntax hoopoe.dark-green
+    plus-non-emph-style = plus-style
+    minus-empty-line-marker-style = minus-style
+    plus-empty-line-marker-style = plus-style
+    commit-decoration-style = blue ol
+    commit-style = raw
+    file-style = omit
+    hunk-header-decoration-style = blue box
+    hunk-header-file-style = red
+    hunk-header-line-number-style = hoopoe.dark-green-2
+    hunk-header-style = file line-number syntax
+    syntax-theme = GitHub
+    zero-style = syntax
+
+[delta "gruvmax-fang"]
+    # author: https://github.com/maxfangx
+    # General appearance
+    dark = true
+    syntax-theme = gruvbox-dark
+    # File
+    file-style = "#FFFFFF" bold
+    file-added-label = [+]
+    file-copied-label = [==]
+    file-modified-label = [*]
+    file-removed-label = [-]
+    file-renamed-label = [->]
+    file-decoration-style = "#434C5E" ul
+    file-decoration-style = "#84786A" ul
+    # No hunk headers
+    hunk-header-style = omit
+    # Line numbers
+    line-numbers = true
+    line-numbers-left-style = "#84786A"
+    line-numbers-right-style = "#84786A"
+    line-numbers-minus-style = "#A02A11"
+    line-numbers-plus-style = "#479B36"
+    line-numbers-zero-style = "#84786A"
+    line-numbers-left-format = " {nm:>3} │"
+    line-numbers-right-format = " {np:>3} │"
+    # Diff contents
+    inline-hint-style = syntax
+    minus-style = syntax "#330011"
+    minus-emph-style = syntax "#80002a"
+    minus-non-emph-style = syntax auto
+    plus-style = syntax "#001a00"
+    plus-emph-style = syntax "#003300"
+    plus-non-emph-style = syntax auto
+    whitespace-error-style = "#FB4934" reverse
+    # Commit hash
+    commit-decoration-style = normal box
+    commit-style = "#ffffff" bold
+    # Blame
+    blame-code-style = syntax
+    blame-format = "{author:>18} ({commit:>8}) {timestamp:<13} "
+    blame-palette = "#000000" "#1d2021" "#282828" "#3c3836"
+    # Merge conflicts
+    merge-conflict-begin-symbol = ⌃
+    merge-conflict-end-symbol = ⌄
+    merge-conflict-ours-diff-header-style = "#FABD2F" bold
+    merge-conflict-theirs-diff-header-style = "#FABD2F" bold overline
+    merge-conflict-ours-diff-header-decoration-style = ''
+    merge-conflict-theirs-diff-header-decoration-style = ''
+
+[delta "arctic-fox"]
+    # author: https://github.com/anthony-halim
+    dark = true
+    syntax-theme = Nord
+    file-added-label = [+]
+    file-copied-label = [==]
+    file-modified-label = [*]
+    file-removed-label = [-]
+    file-renamed-label = [->]
+    file-style = omit
+    hunk-header-decoration-style = "#5E81AC" ul
+    hunk-header-file-style = blue ul bold
+    hunk-header-line-number-style = yellow box bold
+    hunk-header-style = file line-number syntax bold italic
+    plus-style = brightgreen
+    plus-emph-style = black green
+    minus-style = brightred
+    minus-emph-style = black red
+    line-numbers = true
+    line-numbers-minus-style = brightred
+    line-numbers-plus-style = brightgreen
+    line-numbers-left-style = "#5E81AC"
+    line-numbers-right-style = "#5E81AC"
+    line-numbers-zero-style = "#4C566A"
+    zero-style = syntax
+    whitespace-error-style = black bold
+    blame-code-style = syntax
+    blame-format = "{author:<18} {commit:<6} {timestamp:<15}"
+    blame-palette = "#2E3440" "#3B4252" "#434C5E"
+    merge-conflict-begin-symbol = ~
+    merge-conflict-end-symbol = ~
+    merge-conflict-ours-diff-header-style = yellow bold
+    merge-conflict-ours-diff-header-decoration-style = "#5E81AC" box
+    merge-conflict-theirs-diff-header-style = yellow bold
+    merge-conflict-theirs-diff-header-decoration-style = "#5E81AC" box
+
+[delta "weeping-willow"]
+    # See 'mirthful-willow' for light mode version.
+    # Heavily inspired by the themes above. Thank you. <3
+    # author: https://github.com/lvdh
+    # colors: `pastel list`
+    dark = true
+    right-arrow = >
+    syntax-theme = Coldark-Dark
+    # -- git
+    blame-format = " ({commit:>7}) {author:<18} {timestamp:^13} "
+    blame-palette = "normal midnightblue indigo navy darkblue darkslateblue purple rebeccapurple darkviolet"
+    commit-decoration-style = none
+    commit-style = bold black orange
+    # -- grep
+    grep-file-style = olive
+    grep-line-number-style = olive
+    # -- diff
+    keep-plus-minus-markers = true
+    line-numbers = true
+    line-numbers-minus-style = red
+    line-numbers-plus-style = green
+    line-numbers-left-style = gray
+    line-numbers-left-format = "{nm:>1}┊"
+    line-numbers-right-style = gray
+    line-numbers-right-format = "{np:>1}┊"
+    line-numbers-zero-style = gray
+    minus-emph-style = ghostwhite crimson underline
+    minus-empty-line-marker-style = syntax maroon
+    minus-style = syntax darkred
+    plus-emph-style = ghostwhite olivedrab underline
+    plus-empty-line-marker-style = syntax seagreen
+    plus-style = syntax darkgreen
+    whitespace-error-style = black ghostwhite
+    zero-style = syntax
+    # -- decorations
+    file-decoration-style = olive overline
+    file-added-label = [+]
+    file-copied-label = [*]
+    file-modified-label = [~]
+    file-removed-label = [-]
+    file-renamed-label = [>]
+    file-style = orange bold
+    hunk-header-decoration-style = none
+    hunk-header-file-style = olive
+    hunk-header-line-number-style = orange
+    hunk-header-style = file line-number orchid
+
+[delta "mirthful-willow"]
+    # See 'weeping-willow' for dark mode version.
+    # Heavily inspired by the themes above. Thank you. <3
+    # author: https://github.com/lvdh
+    # colors: `pastel list`
+    light = true
+    right-arrow = >
+    syntax-theme = Coldark-Cold
+    # -- git
+    blame-format = " ({commit:>7}) {author:<18} {timestamp:^13} "
+    blame-palette = "powderblue papayawhip thistle skyblue lavender plum paleturquoise lightcyan violet"
+    commit-decoration-style = none
+    commit-style = bold black orange
+    # -- grep
+    grep-file-style = darkgoldenrod
+    grep-line-number-style = darkgoldenrod
+    # -- diff
+    keep-plus-minus-markers = true
+    line-numbers = true
+    line-numbers-minus-style = red
+    line-numbers-plus-style = green
+    line-numbers-left-style = gray
+    line-numbers-left-format = "{nm:>1}┊"
+    line-numbers-right-style = gray
+    line-numbers-right-format = "{np:>1}┊"
+    line-numbers-zero-style = gray
+    minus-emph-style = ghostwhite tomato underline
+    minus-empty-line-marker-style = syntax orangered
+    minus-style = syntax lightpink
+    plus-emph-style = ghostwhite limegreen underline
+    plus-empty-line-marker-style = syntax forestgreen
+    plus-style = syntax lightgreen
+    whitespace-error-style = black ghostwhite
+    zero-style = syntax
+    # -- decorations
+    file-decoration-style = darkgoldenrod overline
+    file-added-label = [+]
+    file-copied-label = [*]
+    file-modified-label = [~]
+    file-removed-label = [-]
+    file-renamed-label = [>]
+    file-style = orange bold
+    hunk-header-decoration-style = none
+    hunk-header-file-style = darkgoldenrod
+    hunk-header-line-number-style = orange
+    hunk-header-style = file line-number darkviolet
+
+[delta "delta-dark-1"]
+    # Red/green, equal lightness for removed and added lines.
+    # Backgrounds in OKLCH: lines L=0.235 C=0.062, emph L=0.36 C=0.1, hues 22/145.
+    dark = true
+    syntax-theme = Monokai Extended
+    minus-style = syntax "#360f10"
+    minus-emph-style = syntax "#682224"
+    plus-style = syntax "#062509"
+    plus-emph-style = syntax "#104a17"
+    line-numbers-minus-style = "#c86362"
+    line-numbers-plus-style = "#67b36a"
+    line-numbers-zero-style = "#4d4d4d"
+    line-numbers-left-style = "#333333"
+    line-numbers-right-style = "#333333"
+    file-style = bold "#b1d2f4"
+    file-decoration-style = "#44576b" ul
+    hunk-header-line-number-style = "#868686"
+    hunk-header-decoration-style = "#353e47" box
+    commit-decoration-style = "#bb9951" box
+    blame-palette = "#000000" "#0f0f0f" "#1d1d1d"
+
+[delta "delta-dark-2"]
+    # Orange/blue: removed and added stay distinct under red-green color blindness.
+    # Backgrounds in OKLCH: lines L=0.235 C=0.055, emph L=0.36 C=0.095, hues 50/255.
+    dark = true
+    syntax-theme = Coldark-Dark
+    minus-style = syntax "#321504"
+    minus-emph-style = syntax "#632b00"
+    plus-style = syntax "#0a1e37"
+    plus-emph-style = syntax "#153d6d"
+    line-numbers-minus-style = "#c36c36"
+    line-numbers-plus-style = "#64a1ee"
+    line-numbers-zero-style = "#4d4d4d"
+    line-numbers-left-style = "#333333"
+    line-numbers-right-style = "#333333"
+    file-style = bold "#b1d2f4"
+    file-decoration-style = "#44576b" ul
+    hunk-header-line-number-style = "#868686"
+    hunk-header-decoration-style = "#353e47" box
+    commit-decoration-style = "#bb9951" box
+    blame-palette = "#000000" "#0f0f0f" "#1d1d1d"
+
+[delta "delta-light-1"]
+    # Red/green, equal lightness for removed and added lines.
+    # Backgrounds in OKLCH: lines L=0.955 C=0.035, emph L=0.895 C=0.075, hues 22/148.
+    light = true
+    syntax-theme = Monokai Extended Light
+    minus-style = syntax "#ffe8e6"
+    minus-emph-style = syntax "#ffc9c6"
+    plus-style = syntax "#e1f7e3"
+    plus-emph-style = syntax "#bbebc1"
+    line-numbers-minus-style = "#af3c40"
+    line-numbers-plus-style = "#257c3a"
+    line-numbers-zero-style = "#929292"
+    line-numbers-left-style = "#bebebe"
+    line-numbers-right-style = "#bebebe"
+    file-style = bold "#194f81"
+    file-decoration-style = "#8da8c3" ul
+    hunk-header-line-number-style = "#636363"
+    hunk-header-decoration-style = "#bccdde" box
+    commit-decoration-style = "#a36e09" box
+    blame-palette = "#ffffff" "#f3f3f3" "#e6e6e6"
+
+[delta "delta-light-2"]
+    # Orange/blue: removed and added stay distinct under red-green color blindness.
+    # Backgrounds in OKLCH: lines L=0.96 C=0.03, emph L=0.9 C=0.07, hues 60/240.
+    light = true
+    syntax-theme = Coldark-Cold
+    minus-style = syntax "#ffeede"
+    minus-emph-style = syntax "#ffd4b0"
+    plus-style = syntax "#e1f5ff"
+    plus-emph-style = syntax "#b4e5ff"
+    line-numbers-minus-style = "#a24f00"
+    line-numbers-plus-style = "#0070ab"
+    line-numbers-zero-style = "#929292"
+    line-numbers-left-style = "#bebebe"
+    line-numbers-right-style = "#bebebe"
+    file-style = bold "#194f81"
+    file-decoration-style = "#8da8c3" ul
+    hunk-header-line-number-style = "#636363"
+    hunk-header-decoration-style = "#bccdde" box
+    commit-decoration-style = "#a36e09" box
+    blame-palette = "#ffffff" "#f3f3f3" "#e6e6e6"
+
+[delta "delta-light-3"]
+    # Red/green, low chroma and lighter: quieter than delta-light-1.
+    # Backgrounds in OKLCH: lines L=0.968 C=0.022, emph L=0.925 C=0.05, hues 22/148.
+    light = true
+    syntax-theme = Catppuccin Latte
+    minus-style = syntax "#ffefee"
+    minus-emph-style = syntax "#ffdad7"
+    plus-style = syntax "#ebf9ec"
+    plus-emph-style = syntax "#d1f0d4"
+    line-numbers-minus-style = "#af3c40"
+    line-numbers-plus-style = "#257c3a"
+    line-numbers-zero-style = "#929292"
+    line-numbers-left-style = "#bebebe"
+    line-numbers-right-style = "#bebebe"
+    file-style = bold "#434582"
+    file-decoration-style = "#9ea2c4" ul
+    hunk-header-line-number-style = "#636363"
+    hunk-header-decoration-style = "#c6c9de" box
+    commit-decoration-style = "#a36e09" box
+    blame-palette = "#ffffff" "#f3f3f3" "#e6e6e6"
+
+[delta "delta-light-boxed"]
+    # delta-light-1's colors with another structure: each file in a box, each hunk headed by its
+    # file and line number, and one line-number column.
+    light = true
+    syntax-theme = Monokai Extended Light
+    minus-style = syntax "#ffe8e6"
+    minus-emph-style = syntax "#ffc9c6"
+    plus-style = syntax "#e1f7e3"
+    plus-emph-style = syntax "#bbebc1"
+    file-style = bold "#194f81"
+    file-decoration-style = "#8da8c3" box
+    file-added-label = added:
+    file-modified-label = modified:
+    file-removed-label = removed:
+    file-renamed-label = renamed:
+    hunk-header-style = file line-number syntax
+    hunk-header-file-style = "#194f81"
+    hunk-header-line-number-style = "#636363"
+    hunk-header-decoration-style = "#bccdde" ul
+    line-numbers-left-format = "{nm:>4} "
+    line-numbers-right-format = "{np:>4} │ "
+    line-numbers-minus-style = "#af3c40"
+    line-numbers-plus-style = "#257c3a"
+    line-numbers-zero-style = "#929292"
+    line-numbers-left-style = "#bebebe"
+    line-numbers-right-style = "#bebebe"
+    commit-decoration-style = "#a36e09" box
+
+[delta "delta-light-ruled"]
+    # delta-light-2's colors with another structure: each file between rules, each hunk headed by
+    # its line number alone, and line-number columns divided by a dotted rule.
+    light = true
+    syntax-theme = Coldark-Cold
+    minus-style = syntax "#ffeede"
+    minus-emph-style = syntax "#ffd4b0"
+    plus-style = syntax "#e1f5ff"
+    plus-emph-style = syntax "#b4e5ff"
+    file-style = bold "#0070ab"
+    file-decoration-style = "#8db7d1" ol ul
+    hunk-header-style = line-number
+    hunk-header-line-number-style = bold "#0070ab"
+    hunk-header-decoration-style = none
+    line-numbers-left-format = "{nm:>4}┊"
+    line-numbers-right-format = "{np:>4}┊"
+    line-numbers-minus-style = "#a24f00"
+    line-numbers-plus-style = "#0070ab"
+    line-numbers-zero-style = "#929292"
+    line-numbers-left-style = "#c8c8c8"
+    line-numbers-right-style = "#c8c8c8"
+    commit-decoration-style = "#0070ab" ol
+
+[delta "delta-dark-boxed"]
+    # delta-dark-1's colors with another structure: each file in a box, each hunk headed by its
+    # file and line number, and one line-number column.
+    dark = true
+    syntax-theme = Monokai Extended
+    minus-style = syntax "#360f10"
+    minus-emph-style = syntax "#682224"
+    plus-style = syntax "#062509"
+    plus-emph-style = syntax "#104a17"
+    file-style = bold "#b1d2f4"
+    file-decoration-style = "#44576b" box
+    file-added-label = added:
+    file-modified-label = modified:
+    file-removed-label = removed:
+    file-renamed-label = renamed:
+    hunk-header-style = file line-number syntax
+    hunk-header-file-style = "#b1d2f4"
+    hunk-header-line-number-style = "#868686"
+    hunk-header-decoration-style = "#353e47" ul
+    line-numbers-left-format = "{nm:>4} "
+    line-numbers-right-format = "{np:>4} │ "
+    line-numbers-minus-style = "#c86362"
+    line-numbers-plus-style = "#67b36a"
+    line-numbers-zero-style = "#4d4d4d"
+    line-numbers-left-style = "#333333"
+    line-numbers-right-style = "#333333"
+    commit-decoration-style = "#bb9951" box
+
+[delta "delta-dark-ruled"]
+    # delta-dark-2's colors with another structure: each file between rules, each hunk headed by
+    # its line number alone, and line-number columns divided by a dotted rule.
+    dark = true
+    syntax-theme = Coldark-Dark
+    minus-style = syntax "#321504"
+    minus-emph-style = syntax "#632b00"
+    plus-style = syntax "#0a1e37"
+    plus-emph-style = syntax "#153d6d"
+    file-style = bold "#64a1ee"
+    file-decoration-style = "#2f4a6b" ol ul
+    hunk-header-style = line-number
+    hunk-header-line-number-style = bold "#64a1ee"
+    hunk-header-decoration-style = none
+    line-numbers-left-format = "{nm:>4}┊"
+    line-numbers-right-format = "{np:>4}┊"
+    line-numbers-minus-style = "#c36c36"
+    line-numbers-plus-style = "#64a1ee"
+    line-numbers-zero-style = "#4d4d4d"
+    line-numbers-left-style = "#3a3a3a"
+    line-numbers-right-style = "#3a3a3a"
+    commit-decoration-style = "#64a1ee" ol

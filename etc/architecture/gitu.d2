@@ -1,0 +1,25 @@
+direction: right
+
+user: "git diff\ngit show\ngit log"
+git_pager: "git"
+
+process: "delta --gitu --pager (one process)" {
+  gitu: "gitu\n(delta-gitu crate)"
+}
+
+children: "Child processes gitu runs" {
+  style.stroke-dash: 3
+  git: "git <the same command>"
+  delta: "delta\nOSC1717=V1\nDELTA_FEATURES=+…"
+}
+
+apply: "git apply"
+
+user -> git_pager
+git_pager -> process.gitu: "starts as pager\n(output not read)"
+process.gitu -> git_pager: "finds argv in\nthe process tree" {style.stroke-dash: 3}
+process.gitu -> children.git: "runs, and re-runs\nafter each change"
+children.git -> process.gitu: "patch"
+process.gitu -> children.delta: "patch"
+children.delta -> process.gitu: "rows + OSC 1717 records" {style.stroke: "#2a2"}
+process.gitu -> apply: "stage / unstage / apply / reverse:\npatch built from the selected lines"
