@@ -26,7 +26,7 @@ pack() {
 
     # copying the main binary
     cp "target/$TARGET/release/$PROJECT_NAME" "$tempdir/$package_name/"
-    if [ "$OS_NAME" != windows-latest ]; then
+    if [[ $TARGET != *-windows-* ]]; then
         "${gcc_prefix}"strip "$tempdir/$package_name/$PROJECT_NAME"
     fi
 
@@ -36,7 +36,7 @@ pack() {
 
     # archiving
     pushd "$tempdir"
-    if [ "$OS_NAME" = windows-latest ]; then
+    if [[ $TARGET = *-windows-* ]]; then
         7z a "$out_dir/$package_name.zip" "$package_name"/*
     else
         tar czf "$out_dir/$package_name.tar.gz" "$package_name"/*
