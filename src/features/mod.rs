@@ -204,7 +204,7 @@ pub mod tests {
             )
             .features
             .unwrap(),
-            "my-feature navigate keep-plus-minus-markers raw"
+            "navigate my-feature keep-plus-minus-markers raw"
         );
 
         remove_file(git_config_path).unwrap();

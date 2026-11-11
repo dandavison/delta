@@ -249,7 +249,7 @@ pub fn set_options(
     );
 
     // A turned-off builtin feature turns off the option of the same name.
-    for (feature, _, turn_off) in FEATURE_OPTIONS {
+    for (feature, _, turn_off, _) in FEATURE_OPTIONS {
         if opt.computed.features_turned_off.contains(feature) {
             turn_off(opt);
         }
@@ -368,46 +368,61 @@ fn set__light__dark__syntax_theme__options(
 // [delta "d"]
 //     features = f e
 /// An option that turns on the builtin feature of the same name: the name, whether the option is
-/// on, and how to turn it off.
-type FeatureOption = (&'static str, fn(&cli::Opt) -> bool, fn(&mut cli::Opt));
+/// on, how to turn it off, and whether the feature is a style, such as raw, that on the command
+/// line ranks above the user's features. The other features rank below them, as they do when the
+/// option is set in git config, so that, for example, --side-by-side keeps the user's line-number
+/// formats.
+type FeatureOption = (&'static str, fn(&cli::Opt) -> bool, fn(&mut cli::Opt), bool);
 
 const FEATURE_OPTIONS: [FeatureOption; 9] = [
-    ("raw", |opt| opt.raw, |opt| opt.raw = false),
+    ("raw", |opt| opt.raw, |opt| opt.raw = false, true),
     (
         "color-only",
         |opt| opt.color_only,
         |opt| opt.color_only = false,
+        true,
     ),
     (
         "diff-highlight",
         |opt| opt.diff_highlight,
         |opt| opt.diff_highlight = false,
+        true,
     ),
     (
         "diff-so-fancy",
         |opt| opt.diff_so_fancy,
         |opt| opt.diff_so_fancy = false,
+        true,
     ),
     (
         "hyperlinks",
         |opt| opt.hyperlinks,
         |opt| opt.hyperlinks = false,
+        false,
     ),
     (
         "keep-plus-minus-markers",
         |opt| opt.keep_plus_minus_markers,
         |opt| opt.keep_plus_minus_markers = false,
+        false,
     ),
     (
         "line-numbers",
         |opt| opt.line_numbers,
         |opt| opt.line_numbers = false,
+        false,
     ),
-    ("navigate", |opt| opt.navigate, |opt| opt.navigate = false),
+    (
+        "navigate",
+        |opt| opt.navigate,
+        |opt| opt.navigate = false,
+        false,
+    ),
     (
         "side-by-side",
         |opt| side_by_side_is_active(opt.side_by_side, opt.computed.side_by_side_width),
         |opt| opt.side_by_side = cli::SideBySide::Off,
+        false,
     ),
 ];
 
@@ -445,7 +460,7 @@ fn gather_features(
             opt.computed.features_turned_off.insert(feature.to_string());
         }
     }
-    for (feature, is_on, _) in FEATURE_OPTIONS {
+    for (feature, is_on, ..) in FEATURE_OPTIONS {
         if user_supplied(feature) && !is_on(opt) {
             opt.computed.features_turned_off.insert(feature.to_string());
         }
@@ -466,9 +481,10 @@ fn gather_features(
         }
     }
 
-    // Gather the builtin features that options of the same name turn on.
-    for (feature, is_on, _) in FEATURE_OPTIONS {
-        if is_on(opt) {
+    // Gather the builtin features that style options of the same name turn on, above the user's
+    // features (see FeatureOption).
+    for (feature, is_on, _, is_style) in FEATURE_OPTIONS {
+        if is_style && is_on(opt) {
             gather_builtin_features_recursively(feature, &mut features, builtin_features, opt);
         }
     }
@@ -496,6 +512,14 @@ fn gather_features(
             opt,
             git_config,
         );
+    }
+
+    // Gather the builtin features that the other options of the same name turn on, below the user's
+    // features (see FeatureOption).
+    for (feature, is_on, _, is_style) in FEATURE_OPTIONS {
+        if !is_style && is_on(opt) {
+            gather_builtin_features_recursively(feature, &mut features, builtin_features, opt);
+        }
     }
 
     Vec::<String>::from(features)
@@ -1597,6 +1621,59 @@ index 1111111..2222222 100644
             "features {:?}",
             features
         );
+        remove_file(git_config_path).unwrap();
+    }
+
+    /// --side-by-side keeps the line-number formats from the user's features, as side-by-side = true
+    /// in git config does.
+    #[test]
+    fn test_side_by_side_on_the_command_line_keeps_line_number_formats_from_features() {
+        let features = "
+[delta]
+    features = mine
+[delta \"mine\"]
+    line-numbers-left-format = \"{nm:>1}L\"
+    line-numbers-right-format = \"{np:>1}R\"
+";
+        let with_flag = format!("{features}[delta]\n    side-by-side = true\n");
+        let cases: [(&str, &[&str], &str); 2] = [
+            ("git-config", &[], &with_flag),
+            ("command-line", &["--side-by-side"], features),
+        ];
+        for (name, args, git_config_contents) in cases {
+            let git_config_path =
+                format!("delta__test_side_by_side_keeps_line_number_formats_{name}.gitconfig");
+            let opt = integration_test_utils::make_options_from_args_and_git_config(
+                args,
+                Some(git_config_contents.as_bytes()),
+                Some(&git_config_path),
+            );
+            assert!(opt.computed.side_by_side, "{}", name);
+            assert!(opt.line_numbers, "{}", name);
+            assert_eq!(opt.line_numbers_left_format, "{nm:>1}L", "{}", name);
+            assert_eq!(opt.line_numbers_right_format, "{np:>1}R", "{}", name);
+            remove_file(&git_config_path).unwrap();
+        }
+    }
+
+    /// A style such as --raw still overrides the user's features.
+    #[test]
+    fn test_style_on_the_command_line_overrides_features() {
+        let git_config_contents = b"
+[delta]
+    features = mine
+[delta \"mine\"]
+    file-style = bold yellow
+    file-decoration-style = box
+";
+        let git_config_path = "delta__test_style_on_the_command_line_overrides_features.gitconfig";
+        let opt = integration_test_utils::make_options_from_args_and_git_config(
+            &["--raw"],
+            Some(git_config_contents),
+            Some(git_config_path),
+        );
+        assert_eq!(opt.file_style, "raw");
+        assert_eq!(opt.file_decoration_style, "none");
         remove_file(git_config_path).unwrap();
     }
 
