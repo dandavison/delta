@@ -77,7 +77,9 @@ pub fn set_options(
             git_config.enabled = false;
         }
     }
-    opt.navigate = opt.navigate || opt.env.navigate.is_some();
+    if !config::user_supplied_option("navigate", arg_matches) {
+        opt.navigate = opt.navigate || opt.env.navigate.is_some();
+    }
     if opt.syntax_theme.is_none() {
         opt.syntax_theme.clone_from(&opt.env.bat_theme);
     }

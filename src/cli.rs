@@ -4,7 +4,10 @@ use std::path::{Path, PathBuf};
 
 use bat::assets::HighlightingAssets;
 use clap::error::Error;
-use clap::{ArgMatches, ColorChoice, CommandFactory, FromArgMatches, Parser, ValueEnum, ValueHint};
+use clap::{
+    ArgAction, ArgMatches, ColorChoice, CommandFactory, FromArgMatches, Parser, ValueEnum,
+    ValueHint,
+};
 use clap_complete::Shell;
 use console::Term;
 use lazy_static::lazy_static;
@@ -184,13 +187,29 @@ pub struct Opt {
     /// doesn't support it, then delta will fall back to `diff` instead of `git diff`.
     pub diff_args: String,
 
-    #[arg(long = "diff-highlight")]
+    #[arg(
+        long = "diff-highlight",
+        action = ArgAction::Set,
+        num_args(0..=1),
+        require_equals(true),
+        default_value_t = false,
+        default_missing_value("true"),
+        value_name = "BOOL"
+    )]
     /// Emulate diff-highlight.
     ///
     /// <https://github.com/git/git/tree/master/contrib/diff-highlight>
     pub diff_highlight: bool,
 
-    #[arg(long = "diff-so-fancy")]
+    #[arg(
+        long = "diff-so-fancy",
+        action = ArgAction::Set,
+        num_args(0..=1),
+        require_equals(true),
+        default_value_t = false,
+        default_missing_value("true"),
+        value_name = "BOOL"
+    )]
     /// Emulate diff-so-fancy.
     ///
     /// <https://github.com/so-fancy/diff-so-fancy>
@@ -409,7 +428,15 @@ pub struct Opt {
     /// Used in the default value of navigate-regex.
     pub hunk_label: String,
 
-    #[arg(long = "hyperlinks")]
+    #[arg(
+        long = "hyperlinks",
+        action = ArgAction::Set,
+        num_args(0..=1),
+        require_equals(true),
+        default_value_t = false,
+        default_missing_value("true"),
+        value_name = "BOOL"
+    )]
     /// Render commit hashes, file names, and line numbers as hyperlinks.
     ///
     /// Following the hyperlink spec for terminal emulators:
@@ -469,7 +496,15 @@ pub struct Opt {
     /// Git's --color-moved feature. Set this to "false" to disable this behavior.
     pub inspect_raw_lines: String,
 
-    #[arg(long = "keep-plus-minus-markers")]
+    #[arg(
+        long = "keep-plus-minus-markers",
+        action = ArgAction::Set,
+        num_args(0..=1),
+        require_equals(true),
+        default_value_t = false,
+        default_missing_value("true"),
+        value_name = "BOOL"
+    )]
     /// Prefix added/removed lines with a +/- character, as git does.
     ///
     /// By default, delta does not emit any prefix, so code can be copied directly from delta's
@@ -500,7 +535,16 @@ pub struct Opt {
     /// --width=variable is given.
     pub line_fill_method: Option<String>,
 
-    #[arg(short = 'n', long = "line-numbers")]
+    #[arg(
+        short = 'n',
+        long = "line-numbers",
+        action = ArgAction::Set,
+        num_args(0..=1),
+        require_equals(true),
+        default_value_t = false,
+        default_missing_value("true"),
+        value_name = "BOOL"
+    )]
     /// Display line numbers next to the diff.
     ///
     /// See LINE NUMBERS section.
@@ -725,7 +769,15 @@ pub struct Opt {
     /// See STYLES section.
     pub minus_style: String,
 
-    #[arg(long = "navigate")]
+    #[arg(
+        long = "navigate",
+        action = ArgAction::Set,
+        num_args(0..=1),
+        require_equals(true),
+        default_value_t = false,
+        default_missing_value("true"),
+        value_name = "BOOL"
+    )]
     /// Activate diff navigation.
     ///
     /// Use n to jump forwards and N to jump backwards. To change the file labels used see
