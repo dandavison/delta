@@ -524,6 +524,28 @@ fn gather_features(
     opt.computed
         .command_line_switch_features
         .extend(command_line_switch_features);
+    // [delta] has priority over every feature, so an option it turns off keeps out the feature of
+    // the same name, wherever git config turns that on. The command line beats [delta].
+    if let Some(git_config) = git_config {
+        for option in FEATURE_OPTIONS {
+            if user_supplied(option.name) || input_features.contains(&option.name) {
+                continue;
+            }
+            let key = format!("delta.{}", option.name);
+            let off = if option.name == "side-by-side" {
+                git_config.get::<cli::SideBySide>(&key).map(|side_by_side| {
+                    !side_by_side_is_active(side_by_side, opt.computed.side_by_side_width)
+                })
+            } else {
+                git_config.get::<bool>(&key).map(|on| !on)
+            };
+            if off == Some(true) {
+                opt.computed
+                    .features_off_in_delta_section
+                    .insert(option.name.to_string());
+            }
+        }
+    }
 
     let mut features = VecDeque::new();
 
@@ -534,7 +556,7 @@ fn gather_features(
         }
     } else {
         for feature in input_features {
-            if !opt.computed.features_turned_off.contains(feature) {
+            if !is_kept_out(opt, feature) {
                 features.push_front(feature.to_string());
             }
         }
@@ -575,6 +597,13 @@ fn gather_features(
     Vec::<String>::from(features)
 }
 
+/// Whether `feature` is not gathered from anywhere: turned off, or its option turned off in
+/// [delta].
+fn is_kept_out(opt: &cli::Opt, feature: &str) -> bool {
+    opt.computed.features_turned_off.contains(feature)
+        || opt.computed.features_off_in_delta_section.contains(feature)
+}
+
 /// Add to feature list `features` all features in the tree rooted at `feature`.
 fn gather_features_recursively(
     feature: &str,
@@ -583,7 +612,7 @@ fn gather_features_recursively(
     opt: &cli::Opt,
     git_config: &GitConfig,
 ) {
-    if opt.computed.features_turned_off.contains(feature) {
+    if is_kept_out(opt, feature) {
         return;
     }
     if builtin_features.contains_key(feature) {
@@ -652,7 +681,7 @@ fn gather_builtin_features_recursively(
     opt: &cli::Opt,
 ) {
     let feature_string = feature.to_string();
-    if features.contains(&feature_string) || opt.computed.features_turned_off.contains(feature) {
+    if features.contains(&feature_string) || is_kept_out(opt, feature) {
         return;
     }
     features.push_front(feature_string);
