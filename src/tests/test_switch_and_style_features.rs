@@ -1,9 +1,10 @@
 //! How delta combines a builtin feature turned on by an option of the same name with the user's
 //! own settings.
 //!
-//! A switch feature (side-by-side, line-numbers, keep-plus-minus-markers, navigate, hyperlinks) is
-//! a layout or display choice, independent of the look. A style feature (raw, color-only,
-//! diff-highlight, diff-so-fancy) is a whole look.
+//! A switch feature (side-by-side, line-numbers, keep-plus-minus-markers, navigate, hyperlinks)
+//! turns on one capability of delta; its other values are only defaults for how that capability
+//! looks. A style feature (raw, color-only, diff-highlight, diff-so-fancy) is a set of values for
+//! how delta looks.
 //!
 //! The requirements on delta's TUI (toggle keys, re-rendering on resize) are not tested here.
 

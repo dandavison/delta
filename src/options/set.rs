@@ -386,9 +386,9 @@ struct FeatureOption {
     /// What the bare flag does.
     turn_on: fn(&mut cli::Opt),
     turn_off: fn(&mut cli::Opt),
-    /// A switch feature, such as side-by-side, is a layout or display choice, independent of the
-    /// look. A style feature, such as raw, is a whole look. See `get_option_value` for how each
-    /// ranks.
+    /// A switch feature, such as side-by-side, turns on one capability of delta; its other values
+    /// are only defaults for how that capability looks. A style feature, such as raw, is a set of
+    /// values for how delta looks. See `get_option_value` for how each ranks.
     is_switch_feature: bool,
 }
 
