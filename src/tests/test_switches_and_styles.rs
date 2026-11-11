@@ -506,3 +506,66 @@ fn in_git_config_a_theme_beats_a_style_set_in_the_delta_section() {
     }
     assert_no_failures(failures);
 }
+
+/// Backward compatibility: a bare switch flag means on and does not take the files after it, and
+/// `-n` still combines with `-s`.
+#[test]
+fn a_bare_switch_flag_means_on_and_leaves_the_files_after_it() {
+    let mut failures = Vec::new();
+    for flag in [
+        "-n",
+        "--line-numbers",
+        "--keep-plus-minus-markers",
+        "--navigate",
+        "--hyperlinks",
+        "-s",
+        "--side-by-side",
+    ] {
+        let opt = cli::Opt::from_iter_and_git_config(
+            &DeltaEnv::default(),
+            ["delta", "--no-gitconfig", flag, "a", "b"],
+            None,
+        );
+        let on = match flag {
+            "-n" | "--line-numbers" => opt.line_numbers,
+            "--keep-plus-minus-markers" => opt.keep_plus_minus_markers,
+            "--navigate" => opt.navigate,
+            "--hyperlinks" => opt.hyperlinks,
+            _ => opt.computed.side_by_side,
+        };
+        if !on {
+            failures.push(format!("{flag} is not on"));
+        }
+        if (opt.minus_file.as_deref(), opt.plus_file.as_deref())
+            != (Some("a".as_ref()), Some("b".as_ref()))
+        {
+            failures.push(format!("{flag} takes a file"));
+        }
+    }
+    for cluster in ["-ns", "-sn"] {
+        let opt = cli::Opt::from_iter_and_git_config(
+            &DeltaEnv::default(),
+            ["delta", "--no-gitconfig", cluster],
+            None,
+        );
+        if !(opt.line_numbers && opt.computed.side_by_side) {
+            failures.push(format!("{cluster} is not -n -s"));
+        }
+    }
+    assert_no_failures(failures);
+}
+
+/// The command line beats DELTA_NAVIGATE: `--navigate=false` turns navigate off.
+#[test]
+fn navigate_turned_off_on_the_command_line_beats_delta_navigate() {
+    let opt = integration_test_utils::make_options_from_args_and_git_config_with_custom_env(
+        DeltaEnv {
+            navigate: Some("1".to_string()),
+            ..DeltaEnv::default()
+        },
+        &["--navigate=false"],
+        None,
+        None,
+    );
+    assert!(!opt.navigate);
+}
