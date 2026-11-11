@@ -250,10 +250,14 @@ pub fn set_options(
         true
     );
 
-    // A switch named in --features or DELTA_FEATURES does what its bare flag does, and a
+    // A switch feature named in --features or DELTA_FEATURES does what its bare flag does, and a
     // turned-off builtin feature turns off the option of the same name.
     for option in FEATURE_OPTIONS {
-        if opt.computed.command_line_switches.contains(option.name) {
+        if opt
+            .computed
+            .command_line_switch_features
+            .contains(option.name)
+        {
             (option.turn_on)(opt);
         }
         if opt.computed.features_turned_off.contains(option.name) {
@@ -331,7 +335,7 @@ fn set__light__dark__syntax_theme__options(
 // and moves leftward, examining each feature in turn until a feature that associates a value with
 // the option name is encountered. Two kinds of value are taken out of this order: the user's
 // sections with the same name as a builtin feature, such as [delta "side-by-side"], are searched
-// first, and the builtin values of the switches, such as side-by-side, last. This search is
+// first, and the values of the switch features, such as side-by-side, last. This search is
 // documented in `get_option_value::get_option_value`.
 //
 // The feature list comprises features deriving from the following sources, listed in order of
@@ -382,9 +386,10 @@ struct FeatureOption {
     /// What the bare flag does.
     turn_on: fn(&mut cli::Opt),
     turn_off: fn(&mut cli::Opt),
-    /// A switch, such as side-by-side, is a layout or display choice, independent of the look. A
-    /// style, such as raw, is a whole look. See `get_option_value` for how each ranks.
-    is_switch: bool,
+    /// A switch feature, such as side-by-side, is a layout or display choice, independent of the
+    /// look. A style feature, such as raw, is a whole look. See `get_option_value` for how each
+    /// ranks.
+    is_switch_feature: bool,
 }
 
 const FEATURE_OPTIONS: [FeatureOption; 9] = [
@@ -393,71 +398,71 @@ const FEATURE_OPTIONS: [FeatureOption; 9] = [
         is_on: |opt| opt.raw,
         turn_on: |opt| opt.raw = true,
         turn_off: |opt| opt.raw = false,
-        is_switch: false,
+        is_switch_feature: false,
     },
     FeatureOption {
         name: "color-only",
         is_on: |opt| opt.color_only,
         turn_on: |opt| opt.color_only = true,
         turn_off: |opt| opt.color_only = false,
-        is_switch: false,
+        is_switch_feature: false,
     },
     FeatureOption {
         name: "diff-highlight",
         is_on: |opt| opt.diff_highlight,
         turn_on: |opt| opt.diff_highlight = true,
         turn_off: |opt| opt.diff_highlight = false,
-        is_switch: false,
+        is_switch_feature: false,
     },
     FeatureOption {
         name: "diff-so-fancy",
         is_on: |opt| opt.diff_so_fancy,
         turn_on: |opt| opt.diff_so_fancy = true,
         turn_off: |opt| opt.diff_so_fancy = false,
-        is_switch: false,
+        is_switch_feature: false,
     },
     FeatureOption {
         name: "hyperlinks",
         is_on: |opt| opt.hyperlinks,
         turn_on: |opt| opt.hyperlinks = true,
         turn_off: |opt| opt.hyperlinks = false,
-        is_switch: true,
+        is_switch_feature: true,
     },
     FeatureOption {
         name: "keep-plus-minus-markers",
         is_on: |opt| opt.keep_plus_minus_markers,
         turn_on: |opt| opt.keep_plus_minus_markers = true,
         turn_off: |opt| opt.keep_plus_minus_markers = false,
-        is_switch: true,
+        is_switch_feature: true,
     },
     FeatureOption {
         name: "line-numbers",
         is_on: |opt| opt.line_numbers,
         turn_on: |opt| opt.line_numbers = true,
         turn_off: |opt| opt.line_numbers = false,
-        is_switch: true,
+        is_switch_feature: true,
     },
     FeatureOption {
         name: "navigate",
         is_on: |opt| opt.navigate,
         turn_on: |opt| opt.navigate = true,
         turn_off: |opt| opt.navigate = false,
-        is_switch: true,
+        is_switch_feature: true,
     },
     FeatureOption {
         name: "side-by-side",
         is_on: |opt| side_by_side_is_active(opt.side_by_side, opt.computed.side_by_side_width),
         turn_on: |opt| opt.side_by_side = cli::SideBySide::On(cli::SideBySideScope::All),
         turn_off: |opt| opt.side_by_side = cli::SideBySide::Off,
-        is_switch: true,
+        is_switch_feature: true,
     },
 ];
 
-/// Whether `feature` is a builtin switch, such as side-by-side.
-pub fn is_switch(feature: &str) -> bool {
+/// Whether `feature` is a switch feature, such as side-by-side.
+pub fn is_switch_feature(feature: &str) -> bool {
     FEATURE_OPTIONS
         .iter()
-        .any(|option| option.is_switch && option.name == feature)
+        .any(|option| option.is_switch_feature && option.name == feature)
 }
 
 fn gather_features(
@@ -501,13 +506,14 @@ fn gather_features(
                 .insert(option.name.to_string());
         }
     }
-    // A switch named in --features or DELTA_FEATURES is the same as its bare flag, so it beats
-    // git config, and the flag given on the command line beats it. This adds to the set because
-    // gather_features_without_side_by_side runs this again without the side-by-side feature.
-    let command_line_switches: Vec<String> = FEATURE_OPTIONS
+    // A switch feature named in --features or DELTA_FEATURES is the same as its bare flag, so it
+    // beats git config, and the flag given on the command line beats it. This adds to the set
+    // because gather_features_without_side_by_side runs this again without the side-by-side
+    // feature.
+    let command_line_switch_features: Vec<String> = FEATURE_OPTIONS
         .iter()
         .filter(|option| {
-            option.is_switch
+            option.is_switch_feature
                 && input_features.contains(&option.name)
                 && builtin_features.contains_key(option.name)
                 && !user_supplied(option.name)
@@ -516,8 +522,8 @@ fn gather_features(
         .map(|option| option.name.to_string())
         .collect();
     opt.computed
-        .command_line_switches
-        .extend(command_line_switches);
+        .command_line_switch_features
+        .extend(command_line_switch_features);
 
     let mut features = VecDeque::new();
 
@@ -1700,7 +1706,7 @@ index 1111111..2222222 100644
         }
     }
 
-    /// A style such as --raw still overrides the user's features.
+    /// A style feature such as --raw still overrides the user's features.
     #[test]
     fn test_style_on_the_command_line_overrides_features() {
         let git_config_contents = b"

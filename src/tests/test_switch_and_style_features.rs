@@ -1,9 +1,9 @@
 //! How delta combines a builtin feature turned on by an option of the same name with the user's
 //! own settings.
 //!
-//! A switch (side-by-side, line-numbers, keep-plus-minus-markers, navigate, hyperlinks) is a layout
-//! or display choice, independent of the look. A style (raw, color-only, diff-highlight,
-//! diff-so-fancy) is a whole look.
+//! A switch feature (side-by-side, line-numbers, keep-plus-minus-markers, navigate, hyperlinks) is
+//! a layout or display choice, independent of the look. A style feature (raw, color-only,
+//! diff-highlight, diff-so-fancy) is a whole look.
 //!
 //! The requirements on delta's TUI (toggle keys, re-rendering on resize) are not tested here.
 
@@ -17,7 +17,7 @@ use crate::config::Config;
 use crate::env::DeltaEnv;
 use crate::tests::integration_test_utils;
 
-const SWITCHES: [&str; 5] = [
+const SWITCH_FEATURES: [&str; 5] = [
     "side-by-side",
     "line-numbers",
     "keep-plus-minus-markers",
@@ -40,7 +40,7 @@ const USER_FEATURE: &str = r#"
     hunk-label = H
 "#;
 
-/// A theme that sets what each style sets.
+/// A theme that sets what each style feature sets.
 const THEME: &str = r#"
 [delta "t"]
     dark = true
@@ -93,7 +93,7 @@ fn options(
 
     static N: AtomicUsize = AtomicUsize::new(0);
     let path = std::env::temp_dir().join(format!(
-        "delta__test_switches_and_styles_{}_{}.gitconfig",
+        "delta__test_switch_and_style_features_{}_{}.gitconfig",
         std::process::id(),
         N.fetch_add(1, Ordering::SeqCst)
     ));
@@ -151,12 +151,12 @@ fn assert_no_failures(failures: Vec<String>) {
     assert!(failures.is_empty(), "\n{}", failures.join("\n"));
 }
 
-/// A switch gives the same output however it is turned on: in [delta], in a feature,
+/// A switch feature gives the same output however it is turned on: in [delta], in a feature,
 /// `--name`, `DELTA_FEATURES=+name`, or added to the list in `--features`.
 #[test]
-fn a_switch_gives_the_same_output_however_it_is_turned_on() {
+fn a_switch_feature_gives_the_same_output_however_it_is_turned_on() {
     let mut failures = Vec::new();
-    for switch in SWITCHES {
+    for switch in SWITCH_FEATURES {
         let expected = output(&[], None, &user_config(&format!("    {switch} = true\n")));
         let flag = format!("--{switch}");
         let added = format!("+{switch}");
@@ -183,9 +183,9 @@ fn a_switch_gives_the_same_output_however_it_is_turned_on() {
 /// `--name` is the same as adding `name` to the feature list, and `--name=false` the same as
 /// removing it.
 #[test]
-fn a_switch_flag_is_the_same_as_adding_or_removing_the_feature() {
+fn a_switch_feature_flag_is_the_same_as_adding_or_removing_the_feature() {
     let mut failures = Vec::new();
-    for switch in SWITCHES {
+    for switch in SWITCH_FEATURES {
         let on = format!("--{switch}");
         let added = format!("+{switch}");
         let expected = output(&[], Some(&added), &user_config(""));
@@ -208,10 +208,10 @@ fn a_switch_flag_is_the_same_as_adding_or_removing_the_feature() {
     assert_no_failures(failures);
 }
 
-/// What a switch's builtin feature sets besides the switch itself are defaults: the user's own
-/// settings win, however the switch was turned on.
+/// What a switch feature sets besides its own option are defaults: the user's own settings win,
+/// however the switch feature was turned on.
 #[test]
-fn a_switch_keeps_what_the_user_sets() {
+fn a_switch_feature_keeps_what_the_user_sets() {
     let mut failures = Vec::new();
     let mut check = |case: &str, opt: Result<cli::Opt, String>, field: &str, expected: &str| {
         let actual = opt.map(|opt| match field {
@@ -435,12 +435,12 @@ fn a_section_with_the_same_name_as_a_builtin_applies_whenever_the_builtin_is_on(
     assert_no_failures(failures);
 }
 
-/// Turning a switch off removes everything it brought in: the output is as if the switch had
-/// never been turned on.
+/// Turning a switch feature off removes everything it brought in: the output is as if the switch
+/// feature had never been turned on.
 #[test]
-fn turning_a_switch_off_removes_everything_it_brought_in() {
+fn turning_a_switch_feature_off_removes_everything_it_brought_in() {
     let mut failures = Vec::new();
-    for switch in SWITCHES {
+    for switch in SWITCH_FEATURES {
         let expected = output(&[], None, &user_config(""));
         let in_delta = user_config(&format!("    {switch} = true\n"));
         let in_feature = format!("{}    {switch} = true\n", user_config(""));
@@ -464,11 +464,12 @@ fn turning_a_switch_off_removes_everything_it_brought_in() {
     assert_no_failures(failures);
 }
 
-/// The command line beats git config: `--name=false` turns off a switch git config turns on.
+/// The command line beats git config: `--name=false` turns off a switch feature git config turns
+/// on.
 #[test]
-fn a_switch_turned_off_on_the_command_line_beats_git_config() {
+fn a_switch_feature_turned_off_on_the_command_line_beats_git_config() {
     let mut failures = Vec::new();
-    for switch in SWITCHES {
+    for switch in SWITCH_FEATURES {
         let off = format!("--{switch}=false");
         match options(
             &[&off],
@@ -494,10 +495,10 @@ fn a_switch_turned_off_on_the_command_line_beats_git_config() {
     assert_no_failures(failures);
 }
 
-/// The command line beats git config: a style asked for on the command line beats the user's
-/// theme.
+/// The command line beats git config: a style feature asked for on the command line beats the
+/// user's theme.
 #[test]
-fn a_style_on_the_command_line_beats_the_users_theme() {
+fn a_style_feature_on_the_command_line_beats_the_users_theme() {
     type Field = (&'static str, fn(&cli::Opt) -> &str);
     let commit: Field = ("commit-style", |opt| &opt.commit_style);
     let file: Field = ("file-style", |opt| &opt.file_style);
@@ -560,10 +561,10 @@ fn a_feature_added_on_the_command_line_beats_the_features_in_git_config() {
     assert_eq!(opt.file_modified_label, "O");
 }
 
-/// Backward compatibility: a switch's builtin defaults are used where the user sets nothing,
-/// however the switch is turned on.
+/// Backward compatibility: a switch feature's builtin defaults are used where the user sets
+/// nothing, however the switch feature is turned on.
 #[test]
-fn a_switch_uses_its_builtin_defaults_where_the_user_sets_nothing() {
+fn a_switch_feature_uses_its_builtin_defaults_where_the_user_sets_nothing() {
     let mut failures = Vec::new();
     let cases: [(&str, &[&str], &str); 4] = [
         (
@@ -596,9 +597,9 @@ fn a_switch_uses_its_builtin_defaults_where_the_user_sets_nothing() {
     assert_no_failures(failures);
 }
 
-/// Backward compatibility: in git config, a theme beats a style set in [delta].
+/// Backward compatibility: in git config, a theme beats a style feature set in [delta].
 #[test]
-fn in_git_config_a_theme_beats_a_style_set_in_the_delta_section() {
+fn in_git_config_a_theme_beats_a_style_feature_set_in_the_delta_section() {
     let mut failures = Vec::new();
     for style in ["raw", "diff-so-fancy"] {
         let git_config = format!("[delta]\n    features = t\n    {style} = true\n{THEME}");
@@ -613,10 +614,10 @@ fn in_git_config_a_theme_beats_a_style_set_in_the_delta_section() {
     assert_no_failures(failures);
 }
 
-/// Backward compatibility: a bare switch flag means on and does not take the files after it, and
-/// `-n` still combines with `-s`.
+/// Backward compatibility: a bare switch feature flag means on and does not take the files after
+/// it, and `-n` still combines with `-s`.
 #[test]
-fn a_bare_switch_flag_means_on_and_leaves_the_files_after_it() {
+fn a_bare_switch_feature_flag_means_on_and_leaves_the_files_after_it() {
     let mut failures = Vec::new();
     for flag in [
         "-n",
@@ -679,9 +680,9 @@ fn navigate_turned_off_on_the_command_line_beats_delta_navigate() {
 /// `--name` is the same as adding `name` to the feature list, so both beat `name = false` in
 /// [delta].
 #[test]
-fn a_switch_added_to_the_feature_list_beats_it_turned_off_in_git_config() {
+fn a_switch_feature_added_to_the_feature_list_beats_it_turned_off_in_git_config() {
     let mut failures = Vec::new();
-    for switch in SWITCHES {
+    for switch in SWITCH_FEATURES {
         let git_config = user_config(&format!("    {switch} = false\n"));
         let flag = format!("--{switch}");
         let added = format!("+{switch}");

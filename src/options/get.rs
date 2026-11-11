@@ -17,14 +17,14 @@ use ProvenancedOptionValue::*;
 //        such as [delta "side-by-side"], in order of priority.
 //
 //    2.2 The other features in order of priority: for each, the user's git config section
-//        [delta "feature"], or else the builtin feature's values, unless it is a switch.
+//        [delta "feature"], or else the builtin feature's values, unless it is a switch feature.
 //
-//    2.3 The builtin values of the switches that are on, such as side-by-side, in order of
+//    2.3 The values of the switch features that are on, such as side-by-side, in order of
 //        priority.
 //
-// So what a switch's builtin feature sets besides the switch itself, such as side-by-side's
-// line-number formats, is a default that anything the user sets beats, however the switch was
-// turned on; and a section with the same name as a builtin feature beats every other feature.
+// So what a switch feature sets besides its own option, such as side-by-side's line-number
+// formats, is a default that anything the user sets beats, however the switch feature was turned
+// on; and a section with the same name as a builtin feature beats every other feature.
 pub fn get_option_value<T>(
     option_name: &str,
     builtin_features: &HashMap<String, features::BuiltinFeature>,
@@ -79,7 +79,7 @@ pub trait GetOptionValue {
         }
         let features: Vec<&str> = opt.features.as_ref()?.split_whitespace().rev().collect();
         let is_builtin = |feature: &&str| builtin_features.contains_key(*feature);
-        let is_switch = |feature: &&str| crate::options::set::is_switch(feature);
+        let is_switch_feature = |feature: &&str| crate::options::set::is_switch_feature(feature);
         let user_section = |feature: &str| {
             git_config
                 .as_ref()?
@@ -100,14 +100,14 @@ pub trait GetOptionValue {
                 in_order().find_map(|feature| {
                     if !is_builtin(&feature) {
                         user_section(feature)
-                    } else if !is_switch(&feature) {
+                    } else if !is_switch_feature(&feature) {
                         builtin(feature)
                     } else {
                         None
                     }
                 })
             })
-            .or_else(|| in_order().filter(is_switch).find_map(builtin))
+            .or_else(|| in_order().filter(is_switch_feature).find_map(builtin))
             .map(Into::into)
     }
 }
