@@ -1,8 +1,14 @@
 # Using Delta with GNU Screen
 
-True color output in GNU Screen is currently only possible when using a development build, as support for it is not yet implemented in the (v4) release versions. A snapshot of the latest Git trunk can be obtained via https://git.savannah.gnu.org/cgit/screen.git/snapshot/screen-master.tar.gz - the required build steps are described in the `src/INSTALL` file. After installing the program, 24-bit color support can be activated by including `truecolor on` in either the system's or the user's `screenrc` file.
+GNU Screen 5.x supports true color (24-bit). Install a current Screen package (for example from your OS packages or https://ftp.gnu.org/gnu/screen/), then enable it in the system or user `screenrc`:
 
-When working in Screen without true color output, it might be that colors supposed to be different look the same in XTerm compatible terminals. If that is the case, make sure the following settings are included in your `screenrc` file:
+```
+truecolor on
+```
+
+(Default is off; Screen does not reliably auto-detect terminal truecolor support.)
+
+When working in Screen without true color output (for example Screen 4.x packages, or Screen 5 with `truecolor` left off), colors that should differ may look the same in XTerm-compatible terminals. If that is the case, make sure the following settings are included in your `screenrc` file:
 
 ```Shell
 term screen-256color
