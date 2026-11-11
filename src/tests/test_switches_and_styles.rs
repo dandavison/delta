@@ -675,3 +675,30 @@ fn navigate_turned_off_on_the_command_line_beats_delta_navigate() {
     );
     assert!(!opt.navigate);
 }
+
+/// `--name` is the same as adding `name` to the feature list, so both beat `name = false` in
+/// [delta].
+#[test]
+fn a_switch_added_to_the_feature_list_beats_it_turned_off_in_git_config() {
+    let mut failures = Vec::new();
+    for switch in SWITCHES {
+        let git_config = user_config(&format!("    {switch} = false\n"));
+        let flag = format!("--{switch}");
+        let added = format!("+{switch}");
+        let features = format!("--features=mine {switch}");
+        let expected = output(&[&flag], None, &git_config);
+        let cases: [(&str, &[&str], Option<&str>); 2] = [
+            ("DELTA_FEATURES", &[], Some(&added)),
+            (&features, &[&features], None),
+        ];
+        for (case, args, delta_features) in cases {
+            let actual = output(args, delta_features, &git_config);
+            if let Some(difference) = difference(&expected, &actual) {
+                failures.push(format!(
+                    "{switch} added by {case} is not as {flag}, with {switch} = false in [delta]: {difference}"
+                ));
+            }
+        }
+    }
+    assert_no_failures(failures);
+}
