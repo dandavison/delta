@@ -465,6 +465,46 @@ fn turning_a_switch_feature_off_removes_everything_it_brought_in() {
     assert_no_failures(failures);
 }
 
+/// A switch feature turned off in [delta] is off however a feature turns it on, and brings in
+/// nothing: [delta] has priority over every feature.
+#[test]
+fn a_switch_feature_turned_off_in_the_delta_section_brings_in_nothing() {
+    let mut failures = Vec::new();
+    for switch in SWITCH_FEATURES {
+        // With the user's feature, which sets some of what the switch feature sets, and without.
+        let with_user_feature = (
+            user_config(""),
+            format!("[delta]\n    features = mine {switch}\n    {switch} = false\n{USER_FEATURE}"),
+            format!(
+                "{}    {switch} = true\n",
+                user_config(&format!("    {switch} = false\n"))
+            ),
+        );
+        let without = (
+            "[delta]\n".to_string(),
+            format!("[delta]\n    features = {switch}\n    {switch} = false\n"),
+            format!(
+                "[delta]\n    features = other\n    {switch} = false\n[delta \"other\"]\n    {switch} = true\n"
+            ),
+        );
+        for (base, listed, in_feature) in [with_user_feature, without] {
+            let expected = output(&[], None, &base);
+            for (on, git_config) in [
+                ("listed in features", &listed),
+                ("in a feature", &in_feature),
+            ] {
+                let actual = output(&[], None, git_config);
+                if let Some(difference) = difference(&expected, &actual) {
+                    failures.push(format!(
+                        "{switch} turned on {on} and off in [delta] leaves something: {difference}"
+                    ));
+                }
+            }
+        }
+    }
+    assert_no_failures(failures);
+}
+
 /// The command line beats git config: `--name=false` turns off a switch feature git config turns
 /// on.
 #[test]
