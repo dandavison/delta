@@ -290,7 +290,8 @@ fn a_switch_keeps_what_the_user_sets() {
     assert_no_failures(failures);
 }
 
-/// Line-number formats the user sets apply to both the unified and the side-by-side view.
+/// Line-number formats the user sets, other than in a section with the same name as side-by-side,
+/// apply to both the unified and the side-by-side view.
 #[test]
 fn the_users_line_number_formats_apply_to_both_views() {
     let mut failures = Vec::new();
@@ -326,6 +327,111 @@ fn the_users_line_number_formats_apply_to_both_views() {
         )),
         Err(err) => failures.push(err),
     }
+    assert_no_failures(failures);
+}
+
+/// A section with the same name as a builtin feature adds to it: its settings apply whenever the
+/// builtin is on, however it was turned on, and beat both the builtin's own settings and the
+/// user's other features.
+#[test]
+fn a_section_with_the_same_name_as_a_builtin_applies_whenever_the_builtin_is_on() {
+    let sections = r#"
+[delta "side-by-side"]
+    line-numbers-left-format = "{nm:>1}S"
+[delta "navigate"]
+    file-modified-label = N
+"#;
+    let mut failures = Vec::new();
+    let mut check = |case: String, opt: Result<cli::Opt, String>, field: &str, expected: &str| {
+        let actual = opt.map(|opt| match field {
+            "line-numbers-left-format" => opt.line_numbers_left_format,
+            "file-modified-label" => opt.file_modified_label,
+            _ => unreachable!(),
+        });
+        match actual {
+            Ok(actual) if actual == expected => {}
+            Ok(actual) => failures.push(format!("{case}: {field} is {actual:?}, not {expected:?}")),
+            Err(err) => failures.push(format!("{case}: {err}")),
+        }
+    };
+    let cases: [(&str, &str, &str); 2] = [
+        ("side-by-side", "line-numbers-left-format", "{nm:>1}S"),
+        ("navigate", "file-modified-label", "N"),
+    ];
+    for (builtin, field, expected) in cases {
+        let flag = format!("--{builtin}");
+        let added = format!("+{builtin}");
+        let features = format!("--features=mine {builtin}");
+        let with_user_feature = |extra: &str| format!("{}{sections}", user_config(extra));
+        let ways: [(String, Vec<&str>, Option<&str>, String); 5] = [
+            (
+                format!("{builtin} = true in [delta]"),
+                vec![],
+                None,
+                with_user_feature(&format!("    {builtin} = true\n")),
+            ),
+            (
+                format!("{builtin} = true in a feature"),
+                vec![],
+                None,
+                format!("{}    {builtin} = true\n{sections}", user_config("")),
+            ),
+            (flag.clone(), vec![&flag], None, with_user_feature("")),
+            (
+                format!("DELTA_FEATURES={added}"),
+                vec![],
+                Some(&added),
+                with_user_feature(""),
+            ),
+            (
+                features.clone(),
+                vec![&features],
+                None,
+                with_user_feature(""),
+            ),
+        ];
+        for (case, args, delta_features, git_config) in ways {
+            check(
+                format!("{case}, with the user's other feature"),
+                options(&args, delta_features, &git_config),
+                field,
+                expected,
+            );
+        }
+        // Without the user's other feature, the section beats the builtin's own settings.
+        check(
+            format!("{flag}, without the user's other feature"),
+            options(&[&flag], None, &format!("[delta]\n{sections}")),
+            field,
+            expected,
+        );
+    }
+
+    // When the builtin is off, the section does not apply.
+    let unified = format!("{}{sections}", user_config("    line-numbers = true\n"));
+    check(
+        "unified".to_string(),
+        options(&[], None, &unified),
+        "line-numbers-left-format",
+        "{nm:>1}L",
+    );
+    check(
+        "navigate off".to_string(),
+        options(&[], None, &unified),
+        "file-modified-label",
+        "M",
+    );
+
+    // A setting in [delta] itself still beats every feature.
+    let in_delta = format!(
+        "[delta]\n    side-by-side = true\n    line-numbers-left-format = \"{{nm:>1}}D\"\n{sections}"
+    );
+    check(
+        "line-numbers-left-format in [delta]".to_string(),
+        options(&[], None, &in_delta),
+        "line-numbers-left-format",
+        "{nm:>1}D",
+    );
     assert_no_failures(failures);
 }
 
