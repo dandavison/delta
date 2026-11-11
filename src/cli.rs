@@ -4,7 +4,10 @@ use std::path::{Path, PathBuf};
 
 use bat::assets::HighlightingAssets;
 use clap::error::Error;
-use clap::{ArgMatches, ColorChoice, CommandFactory, FromArgMatches, Parser, ValueEnum, ValueHint};
+use clap::{
+    ArgAction, ArgMatches, ColorChoice, CommandFactory, FromArgMatches, Parser, ValueEnum,
+    ValueHint,
+};
 use clap_complete::Shell;
 use console::Term;
 use lazy_static::lazy_static;
@@ -184,13 +187,29 @@ pub struct Opt {
     /// doesn't support it, then delta will fall back to `diff` instead of `git diff`.
     pub diff_args: String,
 
-    #[arg(long = "diff-highlight")]
+    #[arg(
+        long = "diff-highlight",
+        action = ArgAction::Set,
+        num_args(0..=1),
+        require_equals(true),
+        default_value_t = false,
+        default_missing_value("true"),
+        value_name = "BOOL"
+    )]
     /// Emulate diff-highlight.
     ///
     /// <https://github.com/git/git/tree/master/contrib/diff-highlight>
     pub diff_highlight: bool,
 
-    #[arg(long = "diff-so-fancy")]
+    #[arg(
+        long = "diff-so-fancy",
+        action = ArgAction::Set,
+        num_args(0..=1),
+        require_equals(true),
+        default_value_t = false,
+        default_missing_value("true"),
+        value_name = "BOOL"
+    )]
     /// Emulate diff-so-fancy.
     ///
     /// <https://github.com/so-fancy/diff-so-fancy>
@@ -409,7 +428,15 @@ pub struct Opt {
     /// Used in the default value of navigate-regex.
     pub hunk_label: String,
 
-    #[arg(long = "hyperlinks")]
+    #[arg(
+        long = "hyperlinks",
+        action = ArgAction::Set,
+        num_args(0..=1),
+        require_equals(true),
+        default_value_t = false,
+        default_missing_value("true"),
+        value_name = "BOOL"
+    )]
     /// Render commit hashes, file names, and line numbers as hyperlinks.
     ///
     /// Following the hyperlink spec for terminal emulators:
@@ -469,7 +496,15 @@ pub struct Opt {
     /// Git's --color-moved feature. Set this to "false" to disable this behavior.
     pub inspect_raw_lines: String,
 
-    #[arg(long = "keep-plus-minus-markers")]
+    #[arg(
+        long = "keep-plus-minus-markers",
+        action = ArgAction::Set,
+        num_args(0..=1),
+        require_equals(true),
+        default_value_t = false,
+        default_missing_value("true"),
+        value_name = "BOOL"
+    )]
     /// Prefix added/removed lines with a +/- character, as git does.
     ///
     /// By default, delta does not emit any prefix, so code can be copied directly from delta's
@@ -500,7 +535,16 @@ pub struct Opt {
     /// --width=variable is given.
     pub line_fill_method: Option<String>,
 
-    #[arg(short = 'n', long = "line-numbers")]
+    #[arg(
+        short = 'n',
+        long = "line-numbers",
+        action = ArgAction::Set,
+        num_args(0..=1),
+        require_equals(true),
+        default_value_t = false,
+        default_missing_value("true"),
+        value_name = "BOOL"
+    )]
     /// Display line numbers next to the diff.
     ///
     /// See LINE NUMBERS section.
@@ -725,7 +769,15 @@ pub struct Opt {
     /// See STYLES section.
     pub minus_style: String,
 
-    #[arg(long = "navigate")]
+    #[arg(
+        long = "navigate",
+        action = ArgAction::Set,
+        num_args(0..=1),
+        require_equals(true),
+        default_value_t = false,
+        default_missing_value("true"),
+        value_name = "BOOL"
+    )]
     /// Activate diff navigation.
     ///
     /// Use n to jump forwards and N to jump backwards. To change the file labels used see
@@ -1061,9 +1113,9 @@ A feature name may not contain whitespace. You can activate multiple features:
 {l}[delta]
 {l}    features = my-highlight-styles-colors-feature my-line-number-styles-feature
 
-If more than one feature sets the same option, the last one wins.
+If more than one feature sets the same option, the last one wins, with two exceptions. A section with the same name as a builtin feature, such as [delta "side-by-side"], beats every other feature while that builtin feature is in effect. And what a switch feature (side-by-side, line-numbers, keep-plus-minus-markers, navigate, hyperlinks) sets besides its own option, such as side-by-side's line-number formats, is a default that any of your features beats.
 
-If an option is present in the [delta] section, then features are not considered at all.
+If an option is present in the [delta] section, then features are not considered at all. The exception is a switch feature named in --features or DELTA_FEATURES, which is the same as its flag: DELTA_FEATURES=+side-by-side turns side-by-side on even if [delta] has side-by-side = false.
 
 If you want an option to be fully overridable by a feature and also have a non default value when no features are used, then you need to define a "default" feature and include it in the main delta configuration.
 
@@ -1208,6 +1260,12 @@ pub struct ComputedValues {
     /// Features that the command line turned off, by turning off the option they are named after.
     /// None of them is gathered, whatever git config or DELTA_FEATURES says.
     pub features_turned_off: HashSet<String>,
+    /// Features named after an option that [delta] turns off. None of them is gathered from a
+    /// feature in git config, but unlike a turned-off feature, the option keeps [delta]'s value.
+    pub features_off_in_delta_section: HashSet<String>,
+    /// Switch features, such as side-by-side, named in --features or DELTA_FEATURES. Each does
+    /// what its bare flag does.
+    pub command_line_switch_features: HashSet<String>,
     pub side_by_side_scope: SideBySideScope,
     pub side_by_side_width: usize,
     pub syntax_set: SyntaxSet,
