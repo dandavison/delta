@@ -11,15 +11,15 @@ use ProvenancedOptionValue::*;
 // 1. If there is a value associated with `option_name` in the main [delta] git config
 //    section, then stop searching and return that value.
 //
-// 2. Otherwise search the enabled features in these groups, and return the first value found:
+// 2. Otherwise search the features in effect in these groups, and return the first value found:
 //
-//    2.1 The user's git config sections with the same name as a builtin feature that is on,
+//    2.1 The user's git config sections with the same name as a builtin feature that is in effect,
 //        such as [delta "side-by-side"], in order of priority.
 //
 //    2.2 The other features in order of priority: for each, the user's git config section
 //        [delta "feature"], or else the builtin feature's values, unless it is a switch feature.
 //
-//    2.3 The values of the switch features that are on, such as side-by-side, in order of
+//    2.3 The values of the switch features that are in effect, such as side-by-side, in order of
 //        priority.
 //
 // So what a switch feature sets besides its own option, such as side-by-side's line-number
