@@ -255,35 +255,49 @@ pub mod tests {
     #[test]
     fn test_side_by_side_value_in_git_config_takes_precedence_over_side_by_side_feature() {
         // The side-by-side feature sets side-by-side to "true", but like any option, a value in
-        // the main [delta] section wins: booleans, minimum widths and hunk alike.
+        // the main [delta] section wins over the feature turned on in git config: booleans,
+        // minimum widths and hunk alike. Adding side-by-side to the feature list on the command
+        // line is the same as --side-by-side, which beats git config.
         for (i, value) in ["false", "99999", "hunk", "hunk,99999", "true"]
             .iter()
             .enumerate()
         {
             let git_config_contents = format!("[delta]\n    side-by-side = {value}\n");
+            let with_feature = format!("{git_config_contents}    features = side-by-side\n");
             let git_config_path =
                 format!("delta__test_side_by_side_feature_precedence_{i}.gitconfig");
-            let side_by_side = |features: Option<&str>| {
-                let opt =
+            let side_by_side =
+                |git_config_contents: &str, features: Option<&str>, args: &[&str]| {
+                    let opt =
                     integration_test_utils::make_options_from_args_and_git_config_with_custom_env(
                         DeltaEnv {
                             features: features.map(str::to_string),
                             ..DeltaEnv::default()
                         },
-                        &[],
+                        args,
                         Some(git_config_contents.as_bytes()),
                         Some(&git_config_path),
                     );
-                (
-                    opt.side_by_side,
-                    opt.computed.side_by_side,
-                    opt.computed.side_by_side_scope,
-                )
-            };
-            let without_feature = side_by_side(None);
+                    (
+                        opt.side_by_side,
+                        opt.computed.side_by_side,
+                        opt.computed.side_by_side_scope,
+                    )
+                };
+            let without_feature = side_by_side(&git_config_contents, None, &[]);
             assert_eq!(without_feature.0, value.parse().unwrap());
-            assert_eq!(side_by_side(Some("+side-by-side")), without_feature);
-            assert_eq!(side_by_side(Some("side-by-side")), without_feature);
+            assert_eq!(side_by_side(&with_feature, None, &[]), without_feature);
+
+            let with_flag = side_by_side(&git_config_contents, None, &["--side-by-side"]);
+            assert_eq!(with_flag.0, "true".parse().unwrap());
+            assert_eq!(
+                side_by_side(&git_config_contents, Some("+side-by-side"), &[]),
+                with_flag
+            );
+            assert_eq!(
+                side_by_side(&git_config_contents, Some("side-by-side"), &[]),
+                with_flag
+            );
             remove_file(git_config_path).unwrap();
         }
     }
