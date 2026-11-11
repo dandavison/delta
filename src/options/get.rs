@@ -9,20 +9,22 @@ use ProvenancedOptionValue::*;
 // Look up a value of type `T` associated with `option name`. The search rules are:
 //
 // 1. If there is a value associated with `option_name` in the main [delta] git config
-//    section, then stop searching and return that value (steps 2 and 3 are not executed at all).
+//    section, then stop searching and return that value.
 //
-// 2. For each feature in the ordered list of enabled features:
+// 2. Otherwise search the enabled features in these groups, and return the first value found:
 //
-//    2.1 Look-up the value, treating `feature` as a custom feature.
-//        I.e., if there is a value associated with `option_name` in a git config section
-//        named [delta "`feature`"] then stop searching and return that value.
+//    2.1 The user's git config sections with the same name as a builtin feature that is on,
+//        such as [delta "side-by-side"], in order of priority.
 //
-//    2.2 Look-up the value, treating `feature` as a builtin feature.
-//        I.e., if there is a value (not a default value) associated with `option_name` in a
-//        builtin feature named `feature`, then stop searching and return that value.
-//        Otherwise, record the default value and continue searching.
+//    2.2 The other features in order of priority: for each, the user's git config section
+//        [delta "feature"], or else the builtin feature's values, unless it is a switch.
 //
-// 3. Return the last default value that was encountered.
+//    2.3 The builtin values of the switches that are on, such as side-by-side, in order of
+//        priority.
+//
+// So what a switch's builtin feature sets besides the switch itself, such as side-by-side's
+// line-number formats, is a default that anything the user sets beats, however the switch was
+// turned on; and a section with the same name as a builtin feature beats every other feature.
 pub fn get_option_value<T>(
     option_name: &str,
     builtin_features: &HashMap<String, features::BuiltinFeature>,
@@ -75,51 +77,38 @@ pub trait GetOptionValue {
                 return Some(value);
             }
         }
-        if let Some(features) = &opt.features {
-            for feature in features.split_whitespace().rev() {
-                match Self::get_provenanced_value_for_feature(
-                    option_name,
-                    feature,
-                    builtin_features,
-                    opt,
-                    git_config,
-                ) {
-                    Some(GitConfigValue(value)) | Some(DefaultValue(value)) => {
-                        return Some(value.into());
+        let features: Vec<&str> = opt.features.as_ref()?.split_whitespace().rev().collect();
+        let is_builtin = |feature: &&str| builtin_features.contains_key(*feature);
+        let is_switch = |feature: &&str| crate::options::set::is_switch(feature);
+        let user_section = |feature: &str| {
+            git_config
+                .as_ref()?
+                .get::<Self>(&format!("delta.{feature}.{option_name}"))
+                .map(Into::into)
+        };
+        let builtin = |feature: &str| {
+            let value_function = builtin_features.get(feature)?.get(option_name)?;
+            match value_function(opt, git_config) {
+                GitConfigValue(value) | DefaultValue(value) => Some(value),
+            }
+        };
+        let in_order = || features.iter().copied();
+        in_order()
+            .filter(is_builtin)
+            .find_map(user_section)
+            .or_else(|| {
+                in_order().find_map(|feature| {
+                    if !is_builtin(&feature) {
+                        user_section(feature)
+                    } else if !is_switch(&feature) {
+                        builtin(feature)
+                    } else {
+                        None
                     }
-                    None => {}
-                }
-            }
-        }
-        None
-    }
-
-    /// Return the value, or default value, associated with `option_name` under feature name
-    /// `feature`. This may refer to a custom feature, or a builtin feature, or both. Only builtin
-    /// features have defaults. See `GetOptionValue::get_option_value`.
-    fn get_provenanced_value_for_feature(
-        option_name: &str,
-        feature: &str,
-        builtin_features: &HashMap<String, features::BuiltinFeature>,
-        opt: &cli::Opt,
-        git_config: &mut Option<git_config::GitConfig>,
-    ) -> Option<ProvenancedOptionValue>
-    where
-        Self: Sized,
-        Self: GitConfigGet,
-        Self: Into<OptionValue>,
-    {
-        if let Some(git_config) = git_config {
-            if let Some(value) = git_config.get::<Self>(&format!("delta.{feature}.{option_name}")) {
-                return Some(GitConfigValue(value.into()));
-            }
-        }
-        if let Some(builtin_feature) = builtin_features.get(feature) {
-            if let Some(value_function) = builtin_feature.get(option_name) {
-                return Some(value_function(opt, git_config));
-            }
-        }
-        None
+                })
+            })
+            .or_else(|| in_order().filter(is_switch).find_map(builtin))
+            .map(Into::into)
     }
 }
 

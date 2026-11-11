@@ -251,9 +251,9 @@ pub fn set_options(
     );
 
     // A turned-off builtin feature turns off the option of the same name.
-    for (feature, _, turn_off, _) in FEATURE_OPTIONS {
-        if opt.computed.features_turned_off.contains(feature) {
-            turn_off(opt);
+    for option in FEATURE_OPTIONS {
+        if opt.computed.features_turned_off.contains(option.name) {
+            (option.turn_off)(opt);
         }
     }
 
@@ -325,8 +325,10 @@ fn set__light__dark__syntax_theme__options(
 // (space-separated string) of enabled features. The list is arranged in order of increasing
 // priority in the sense that, when searching for a option value, one starts at the right-hand end
 // and moves leftward, examining each feature in turn until a feature that associates a value with
-// the option name is encountered. This search is documented in
-// `get_option_value::get_option_value`.
+// the option name is encountered. Two kinds of value are taken out of this order: the user's
+// sections with the same name as a builtin feature, such as [delta "side-by-side"], are searched
+// first, and the builtin values of the switches, such as side-by-side, last. This search is
+// documented in `get_option_value::get_option_value`.
 //
 // The feature list comprises features deriving from the following sources, listed in order of
 // decreasing priority:
@@ -369,64 +371,79 @@ fn set__light__dark__syntax_theme__options(
 //
 // [delta "d"]
 //     features = f e
-/// An option that turns on the builtin feature of the same name: the name, whether the option is
-/// on, how to turn it off, and whether the feature is a style, such as raw, that on the command
-/// line ranks above the user's features. The other features rank below them, as they do when the
-/// option is set in git config, so that, for example, --side-by-side keeps the user's line-number
-/// formats.
-type FeatureOption = (&'static str, fn(&cli::Opt) -> bool, fn(&mut cli::Opt), bool);
+/// An option that turns on the builtin feature of the same name.
+struct FeatureOption {
+    name: &'static str,
+    is_on: fn(&cli::Opt) -> bool,
+    turn_off: fn(&mut cli::Opt),
+    /// A switch, such as side-by-side, is a layout or display choice, independent of the look. A
+    /// style, such as raw, is a whole look. See `get_option_value` for how each ranks.
+    is_switch: bool,
+}
 
 const FEATURE_OPTIONS: [FeatureOption; 9] = [
-    ("raw", |opt| opt.raw, |opt| opt.raw = false, true),
-    (
-        "color-only",
-        |opt| opt.color_only,
-        |opt| opt.color_only = false,
-        true,
-    ),
-    (
-        "diff-highlight",
-        |opt| opt.diff_highlight,
-        |opt| opt.diff_highlight = false,
-        true,
-    ),
-    (
-        "diff-so-fancy",
-        |opt| opt.diff_so_fancy,
-        |opt| opt.diff_so_fancy = false,
-        true,
-    ),
-    (
-        "hyperlinks",
-        |opt| opt.hyperlinks,
-        |opt| opt.hyperlinks = false,
-        false,
-    ),
-    (
-        "keep-plus-minus-markers",
-        |opt| opt.keep_plus_minus_markers,
-        |opt| opt.keep_plus_minus_markers = false,
-        false,
-    ),
-    (
-        "line-numbers",
-        |opt| opt.line_numbers,
-        |opt| opt.line_numbers = false,
-        false,
-    ),
-    (
-        "navigate",
-        |opt| opt.navigate,
-        |opt| opt.navigate = false,
-        false,
-    ),
-    (
-        "side-by-side",
-        |opt| side_by_side_is_active(opt.side_by_side, opt.computed.side_by_side_width),
-        |opt| opt.side_by_side = cli::SideBySide::Off,
-        false,
-    ),
+    FeatureOption {
+        name: "raw",
+        is_on: |opt| opt.raw,
+        turn_off: |opt| opt.raw = false,
+        is_switch: false,
+    },
+    FeatureOption {
+        name: "color-only",
+        is_on: |opt| opt.color_only,
+        turn_off: |opt| opt.color_only = false,
+        is_switch: false,
+    },
+    FeatureOption {
+        name: "diff-highlight",
+        is_on: |opt| opt.diff_highlight,
+        turn_off: |opt| opt.diff_highlight = false,
+        is_switch: false,
+    },
+    FeatureOption {
+        name: "diff-so-fancy",
+        is_on: |opt| opt.diff_so_fancy,
+        turn_off: |opt| opt.diff_so_fancy = false,
+        is_switch: false,
+    },
+    FeatureOption {
+        name: "hyperlinks",
+        is_on: |opt| opt.hyperlinks,
+        turn_off: |opt| opt.hyperlinks = false,
+        is_switch: true,
+    },
+    FeatureOption {
+        name: "keep-plus-minus-markers",
+        is_on: |opt| opt.keep_plus_minus_markers,
+        turn_off: |opt| opt.keep_plus_minus_markers = false,
+        is_switch: true,
+    },
+    FeatureOption {
+        name: "line-numbers",
+        is_on: |opt| opt.line_numbers,
+        turn_off: |opt| opt.line_numbers = false,
+        is_switch: true,
+    },
+    FeatureOption {
+        name: "navigate",
+        is_on: |opt| opt.navigate,
+        turn_off: |opt| opt.navigate = false,
+        is_switch: true,
+    },
+    FeatureOption {
+        name: "side-by-side",
+        is_on: |opt| side_by_side_is_active(opt.side_by_side, opt.computed.side_by_side_width),
+        turn_off: |opt| opt.side_by_side = cli::SideBySide::Off,
+        is_switch: true,
+    },
 ];
+
+/// Whether `feature` is a builtin switch, such as side-by-side.
+pub fn is_switch(feature: &str) -> bool {
+    FEATURE_OPTIONS
+        .iter()
+        .any(|option| option.is_switch && option.name == feature)
+}
 
 fn gather_features(
     opt: &mut cli::Opt,
@@ -457,14 +474,16 @@ fn gather_features(
     let user_supplied =
         |feature: &str| config::user_supplied_option(&feature.replace('-', "_"), arg_matches);
     for feature in removed.iter().map(|feature| &feature[1..]) {
-        let is_feature_option = FEATURE_OPTIONS.iter().any(|(name, ..)| *name == feature);
+        let is_feature_option = FEATURE_OPTIONS.iter().any(|option| option.name == feature);
         if !(is_feature_option && user_supplied(feature)) {
             opt.computed.features_turned_off.insert(feature.to_string());
         }
     }
-    for (feature, is_on, ..) in FEATURE_OPTIONS {
-        if user_supplied(feature) && !is_on(opt) {
-            opt.computed.features_turned_off.insert(feature.to_string());
+    for option in FEATURE_OPTIONS {
+        if user_supplied(option.name) && !(option.is_on)(opt) {
+            opt.computed
+                .features_turned_off
+                .insert(option.name.to_string());
         }
     }
 
@@ -483,11 +502,10 @@ fn gather_features(
         }
     }
 
-    // Gather the builtin features that style options of the same name turn on, above the user's
-    // features (see FeatureOption).
-    for (feature, is_on, _, is_style) in FEATURE_OPTIONS {
-        if is_style && is_on(opt) {
-            gather_builtin_features_recursively(feature, &mut features, builtin_features, opt);
+    // Gather the builtin features that options of the same name turn on.
+    for option in FEATURE_OPTIONS {
+        if (option.is_on)(opt) {
+            gather_builtin_features_recursively(option.name, &mut features, builtin_features, opt);
         }
     }
 
@@ -514,14 +532,6 @@ fn gather_features(
             opt,
             git_config,
         );
-    }
-
-    // Gather the builtin features that the other options of the same name turn on, below the user's
-    // features (see FeatureOption).
-    for (feature, is_on, _, is_style) in FEATURE_OPTIONS {
-        if !is_style && is_on(opt) {
-            gather_builtin_features_recursively(feature, &mut features, builtin_features, opt);
-        }
     }
 
     Vec::<String>::from(features)
