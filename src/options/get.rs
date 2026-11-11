@@ -6,7 +6,18 @@ use crate::git_config::{self, GitConfigGet};
 use crate::options::option_value::{OptionValue, ProvenancedOptionValue};
 use ProvenancedOptionValue::*;
 
-// Look up a value of type `T` associated with `option name`. The search rules are:
+// Look up a value of type `T` associated with `option name`.
+//
+// A feature is enabled when the user's config or the command line turns it on, for example with
+// side-by-side = 140 or features = side-by-side. A feature that another builtin feature brings in
+// as a default, such as side-by-side's line numbers, can be in effect without being enabled. A
+// feature is in effect when delta uses it for this output. delta decides that once per run, at
+// the width it renders at (COLUMNS, or else the terminal's width), before it gathers the
+// features: side-by-side = 140 enables side-by-side, but side-by-side is in effect, and gathered,
+// only at 140 columns or more. So the feature list that this searches holds the features in
+// effect.
+//
+// The search rules are:
 //
 // 1. If there is a value associated with `option_name` in the main [delta] git config
 //    section, then stop searching and return that value.
