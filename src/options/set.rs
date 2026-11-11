@@ -250,8 +250,12 @@ pub fn set_options(
         true
     );
 
-    // A turned-off builtin feature turns off the option of the same name.
+    // A switch named in --features or DELTA_FEATURES does what its bare flag does, and a
+    // turned-off builtin feature turns off the option of the same name.
     for option in FEATURE_OPTIONS {
+        if opt.computed.command_line_switches.contains(option.name) {
+            (option.turn_on)(opt);
+        }
         if opt.computed.features_turned_off.contains(option.name) {
             (option.turn_off)(opt);
         }
@@ -375,6 +379,8 @@ fn set__light__dark__syntax_theme__options(
 struct FeatureOption {
     name: &'static str,
     is_on: fn(&cli::Opt) -> bool,
+    /// What the bare flag does.
+    turn_on: fn(&mut cli::Opt),
     turn_off: fn(&mut cli::Opt),
     /// A switch, such as side-by-side, is a layout or display choice, independent of the look. A
     /// style, such as raw, is a whole look. See `get_option_value` for how each ranks.
@@ -385,54 +391,63 @@ const FEATURE_OPTIONS: [FeatureOption; 9] = [
     FeatureOption {
         name: "raw",
         is_on: |opt| opt.raw,
+        turn_on: |opt| opt.raw = true,
         turn_off: |opt| opt.raw = false,
         is_switch: false,
     },
     FeatureOption {
         name: "color-only",
         is_on: |opt| opt.color_only,
+        turn_on: |opt| opt.color_only = true,
         turn_off: |opt| opt.color_only = false,
         is_switch: false,
     },
     FeatureOption {
         name: "diff-highlight",
         is_on: |opt| opt.diff_highlight,
+        turn_on: |opt| opt.diff_highlight = true,
         turn_off: |opt| opt.diff_highlight = false,
         is_switch: false,
     },
     FeatureOption {
         name: "diff-so-fancy",
         is_on: |opt| opt.diff_so_fancy,
+        turn_on: |opt| opt.diff_so_fancy = true,
         turn_off: |opt| opt.diff_so_fancy = false,
         is_switch: false,
     },
     FeatureOption {
         name: "hyperlinks",
         is_on: |opt| opt.hyperlinks,
+        turn_on: |opt| opt.hyperlinks = true,
         turn_off: |opt| opt.hyperlinks = false,
         is_switch: true,
     },
     FeatureOption {
         name: "keep-plus-minus-markers",
         is_on: |opt| opt.keep_plus_minus_markers,
+        turn_on: |opt| opt.keep_plus_minus_markers = true,
         turn_off: |opt| opt.keep_plus_minus_markers = false,
         is_switch: true,
     },
     FeatureOption {
         name: "line-numbers",
         is_on: |opt| opt.line_numbers,
+        turn_on: |opt| opt.line_numbers = true,
         turn_off: |opt| opt.line_numbers = false,
         is_switch: true,
     },
     FeatureOption {
         name: "navigate",
         is_on: |opt| opt.navigate,
+        turn_on: |opt| opt.navigate = true,
         turn_off: |opt| opt.navigate = false,
         is_switch: true,
     },
     FeatureOption {
         name: "side-by-side",
         is_on: |opt| side_by_side_is_active(opt.side_by_side, opt.computed.side_by_side_width),
+        turn_on: |opt| opt.side_by_side = cli::SideBySide::On(cli::SideBySideScope::All),
         turn_off: |opt| opt.side_by_side = cli::SideBySide::Off,
         is_switch: true,
     },
@@ -486,6 +501,23 @@ fn gather_features(
                 .insert(option.name.to_string());
         }
     }
+    // A switch named in --features or DELTA_FEATURES is the same as its bare flag, so it beats
+    // git config, and the flag given on the command line beats it. This adds to the set because
+    // gather_features_without_side_by_side runs this again without the side-by-side feature.
+    let command_line_switches: Vec<String> = FEATURE_OPTIONS
+        .iter()
+        .filter(|option| {
+            option.is_switch
+                && input_features.contains(&option.name)
+                && builtin_features.contains_key(option.name)
+                && !user_supplied(option.name)
+                && !opt.computed.features_turned_off.contains(option.name)
+        })
+        .map(|option| option.name.to_string())
+        .collect();
+    opt.computed
+        .command_line_switches
+        .extend(command_line_switches);
 
     let mut features = VecDeque::new();
 

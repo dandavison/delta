@@ -1113,9 +1113,9 @@ A feature name may not contain whitespace. You can activate multiple features:
 {l}[delta]
 {l}    features = my-highlight-styles-colors-feature my-line-number-styles-feature
 
-If more than one feature sets the same option, the last one wins.
+If more than one feature sets the same option, the last one wins, with two exceptions. A section with the same name as a builtin feature, such as [delta "side-by-side"], beats every other feature while that builtin feature is on. And what a builtin switch (side-by-side, line-numbers, keep-plus-minus-markers, navigate, hyperlinks) sets besides the switch itself, such as side-by-side's line-number formats, is a default that any of your features beats.
 
-If an option is present in the [delta] section, then features are not considered at all.
+If an option is present in the [delta] section, then features are not considered at all. The exception is a switch named in --features or DELTA_FEATURES, which is the same as its flag: DELTA_FEATURES=+side-by-side turns side-by-side on even if [delta] has side-by-side = false.
 
 If you want an option to be fully overridable by a feature and also have a non default value when no features are used, then you need to define a "default" feature and include it in the main delta configuration.
 
@@ -1260,6 +1260,9 @@ pub struct ComputedValues {
     /// Features that the command line turned off, by turning off the option they are named after.
     /// None of them is gathered, whatever git config or DELTA_FEATURES says.
     pub features_turned_off: HashSet<String>,
+    /// Switches, such as side-by-side, named in --features or DELTA_FEATURES. Each does what its
+    /// bare flag does.
+    pub command_line_switches: HashSet<String>,
     pub side_by_side_scope: SideBySideScope,
     pub side_by_side_width: usize,
     pub syntax_set: SyntaxSet,
