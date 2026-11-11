@@ -6,7 +6,7 @@ use std::sync::Arc;
 use std::{backtrace::Backtrace, env, panic};
 
 use ::gitu::cli::Args;
-use ::gitu::config::{self, ColorMode, Config};
+use ::gitu::config::{self, ColorMode, Config, EnabledFeatures};
 use ::gitu::{error::Error, term, Res};
 use clap::{CommandFactory, FromArgMatches};
 
@@ -84,18 +84,44 @@ fn use_delta_as_renderer(config: &mut Config, delta: &str) {
 }
 
 /// Tell gitu what delta does with the user's config: the mode it renders in, so
-/// gitu can offer the themes for that mode first, and the features it uses, so
-/// gitu can show them as on and turn them off.
+/// gitu can offer the themes for that mode first, and how to ask which features
+/// the user's config enables, so gitu can show them as on and turn them off.
 fn tell_gitu_about_delta(config: &mut Config, opt: &crate::cli::Opt) {
     let renderer = &mut config.general.diff_renderer;
     renderer.color_mode = Some(color_mode(opt));
-    renderer.features_in_force = opt
-        .features
+    renderer.enabled_features = EnabledFeatures::new(|dir| {
+        let env = crate::env::DeltaEnv {
+            current_dir: Some(dir.to_path_buf()),
+            ..crate::env::DeltaEnv::init()
+        };
+        enabled_features(&env, GitConfig::try_create(&env))
+    });
+}
+
+/// The features that `git_config`, as it is now, enables, by delta's name: those it names, not
+/// those a builtin feature brings in as its defaults. gitu asks this
+/// during the session, so the user's git config is read again each time. A feature
+/// enabled with a minimum width, such as side-by-side = 140, counts whatever the
+/// terminal's width: the user's rule decides whether it is in effect.
+fn enabled_features(env: &crate::env::DeltaEnv, git_config: Option<GitConfig>) -> Vec<String> {
+    let env = crate::env::DeltaEnv {
+        // Wider than any minimum width a config gives, so that every one is met. delta only
+        // settles its options here; nothing is rendered at this width.
+        columns: Some(u32::MAX.to_string()),
+        ..env.clone()
+    };
+    // gitu has the terminal, so delta must not ask it its background.
+    let args = ["delta", "--detect-dark-light=never"];
+    let opt = crate::cli::Opt::from_iter_and_git_config(&env, args, git_config);
+    // What a builtin feature brings in as a default, such as side-by-side's line numbers, is not
+    // enabled by the user's config.
+    opt.features
         .as_deref()
         .unwrap_or_default()
         .split_whitespace()
+        .filter(|feature| opt.computed.features_named_by_user.contains(*feature))
         .map(String::from)
-        .collect();
+        .collect()
 }
 
 /// delta's options as `git_config` and the terminal settle them. They are settled
@@ -167,15 +193,14 @@ mod tests {
         color_mode(&options_with(git_config))
     }
 
-    /// gitu is told the features delta uses with the user's config, so that it
-    /// shows them as on and turns them off when toggled.
+    /// gitu is told the features the user's config enables, so that it shows them
+    /// as on and turns them off when toggled.
     #[test]
     fn test_gitu_is_told_the_features_delta_uses() {
-        let config = configure_with_git_config(
+        let in_force = enabled_with(
             "[delta]\n    side-by-side = true\n    features = mine\n[delta \"mine\"]\n    navigate = true\n",
         );
-        let in_force = &config.general.diff_renderer.features_in_force;
-        for feature in ["side-by-side", "line-numbers", "mine", "navigate"] {
+        for feature in ["side-by-side", "mine", "navigate"] {
             assert!(
                 in_force.iter().any(|f| f == feature),
                 "{}: {:?}",
@@ -183,7 +208,102 @@ mod tests {
                 in_force
             );
         }
-        assert!(!in_force.iter().any(|f| f == "keep-plus-minus-markers"));
+        // side-by-side brings in line numbers as one of its defaults: the user's config does not
+        // enable them.
+        for feature in ["line-numbers", "keep-plus-minus-markers"] {
+            assert!(
+                !in_force.iter().any(|f| f == feature),
+                "{}: {:?}",
+                feature,
+                in_force
+            );
+        }
+    }
+
+    /// A key toggles a feature between enabled and disabled, starting from whether the user's
+    /// config enables it. That is decided as delta decides it, for any name: a builtin switch
+    /// feature, a builtin style feature, the user's own feature, or a builtin name the user also
+    /// has a section for. A switch feature enabled with a minimum width is enabled whatever the
+    /// width: the user's rule decides whether it is in effect.
+    #[test]
+    fn test_gitu_is_told_each_feature_the_users_config_enables_whatever_the_width() {
+        let cases: [(&str, &str, bool); 19] = [
+            // What a builtin feature brings in as a default is not enabled by the user's config,
+            // unless the user's config also names it.
+            ("[delta]\n    side-by-side = true\n", "line-numbers", false),
+            ("[delta]\n    side-by-side = 99999\n", "line-numbers", false),
+            ("[delta]\n    raw = true\n", "keep-plus-minus-markers", false),
+            (
+                "[delta]\n    side-by-side = true\n    line-numbers = true\n",
+                "line-numbers",
+                true,
+            ),
+            (
+                "[delta]\n    features = side-by-side line-numbers\n",
+                "line-numbers",
+                true,
+            ),
+            (
+                "[delta]\n    side-by-side = true\n    features = mine\n[delta \"mine\"]\n    line-numbers = true\n",
+                "line-numbers",
+                true,
+            ),
+            ("[delta]\n    side-by-side = 99999\n", "side-by-side", true),
+            ("[delta]\n    side-by-side = hunk,99999\n", "side-by-side", true),
+            ("[delta]\n    features = side-by-side\n", "side-by-side", true),
+            (
+                "[delta]\n    features = mine\n[delta \"mine\"]\n    side-by-side = 99999\n",
+                "side-by-side",
+                true,
+            ),
+            (
+                "[delta]\n    side-by-side = false\n    features = side-by-side\n",
+                "side-by-side",
+                false,
+            ),
+            (
+                "[delta \"side-by-side\"]\n    line-numbers-left-format = x\n",
+                "side-by-side",
+                false,
+            ),
+            (
+                "[delta]\n    side-by-side = true\n[delta \"side-by-side\"]\n    line-numbers-left-format = x\n",
+                "side-by-side",
+                true,
+            ),
+            ("[delta]\n    raw = true\n", "raw", true),
+            ("[delta \"raw\"]\n    file-style = red\n", "raw", false),
+            (
+                "[delta]\n    features = raw\n[delta \"raw\"]\n    file-style = red\n",
+                "raw",
+                true,
+            ),
+            ("[delta \"mine\"]\n    file-style = red\n", "mine", false),
+            (
+                "[delta]\n    features = mine\n[delta \"mine\"]\n    file-style = red\n",
+                "mine",
+                true,
+            ),
+            (
+                "[delta]\n    features = mine\n[delta \"mine\"]\n    features = child\n[delta \"child\"]\n    file-style = red\n",
+                "child",
+                true,
+            ),
+        ];
+        let failures: Vec<String> = cases
+            .iter()
+            .filter_map(|(git_config, feature, expected)| {
+                let in_force = enabled_with(git_config);
+                let enabled = in_force.iter().any(|f| f == feature);
+                (enabled != *expected).then(|| {
+                    format!(
+                        "{feature} should be {} with {git_config:?}: {in_force:?}",
+                        if *expected { "enabled" } else { "disabled" }
+                    )
+                })
+            })
+            .collect();
+        assert!(failures.is_empty(), "\n{}", failures.join("\n"));
     }
 
     fn options_with(git_config: &str) -> crate::cli::Opt {
@@ -204,11 +324,23 @@ mod tests {
         opt
     }
 
-    /// gitu's config as `delta --tui` gives it, with `git_config` as the user's.
-    fn configure_with_git_config(git_config: &str) -> Config {
-        let mut config = configure("");
-        tell_gitu_about_delta(&mut config, &options_with(git_config));
-        config
+    /// The features gitu is told `git_config` enables, when it asks.
+    fn enabled_with(git_config: &str) -> Vec<String> {
+        let path = std::env::temp_dir().join(format!(
+            "delta-gitu-test-enabled-{}-{:?}.gitconfig",
+            std::process::id(),
+            std::thread::current().id()
+        ));
+        let env = crate::env::DeltaEnv::default();
+        let git_config = crate::tests::integration_test_utils::make_git_config(
+            &env,
+            git_config.as_bytes(),
+            path.to_str().unwrap(),
+            false,
+        );
+        let enabled = enabled_features(&env, Some(git_config));
+        fs::remove_file(path).unwrap();
+        enabled
     }
 
     fn configure(toml: &str) -> Config {
