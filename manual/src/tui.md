@@ -28,9 +28,9 @@ GIT_PAGER='delta --tui --pager' git diff
 
 ## Side-by-side, line numbers and +/- markers
 
-`S` toggles side-by-side, `L` line numbers, and `+` keeps the `+`/`-` at the start of each line, for copying a diff as a patch (`plus-minus-markers`, which is delta's `keep-plus-minus-markers`). Each turns the feature on or off whether or not your delta config turns it on. This holds for the session; nothing is written to your `[delta]` config.
+`S` toggles side-by-side and `L` line numbers. Each enables or disables the feature whether or not your delta config enables it. This holds for the session; nothing is written to your `[delta]` config.
 
-`-` lists these and any other delta features you configure (see TUI config below); `enter` turns the selected one on or off. In the list, typing a key makes it the selected feature's key, and typing the feature's own key removes it. The TUI saves the keys in git config. Or set them yourself:
+`H` lists these, `plus-minus-markers` (which keeps the `+`/`-` at the start of each line, for copying a diff as a patch; delta calls it `keep-plus-minus-markers`), and every feature defined in your git config as `[delta "name"]` (see TUI config below). In the list, `space` enables or disables the selected feature and keeps the list open, and `enter` does so and closes it. Typing a key makes it the selected feature's key, and typing the feature's own key removes it. The TUI saves the keys in git config. Or set them yourself:
 
 ```gitconfig
 # These are the defaults. Keys set here replace all of them. A key that is
@@ -38,7 +38,6 @@ GIT_PAGER='delta --tui --pager' git diff
 [delta-tui "general.diff-renderer.feature-keys"]
     side-by-side = S
     line-numbers = L
-    plus-minus-markers = +
 ```
 
 ## Color themes
@@ -106,12 +105,12 @@ Values below are the defaults except where marked as an example.
 
 ```gitconfig
 [delta-tui "general.diff-renderer"]
-    # Features offered by `-`. `*` and `?` match the `[delta "name"]` features
-    # in your git config. Example (the default omits "my-*"):
+    # Features offered by `H`. `*` and `?` match the `[delta "name"]` features
+    # in your git config. These are the defaults:
     features = side-by-side
     features = line-numbers
     features = plus-minus-markers
-    features = my-*
+    features = *
 ```
 
 ### Other settings
@@ -235,7 +234,7 @@ These re-run the git command and redraw the view.
 - `:` edits the command, for example to add `--cached`, `-M` or `-S <text>`, or to change `git log` to `git log -p`. Only read-only git commands are accepted.
 - `d` on a file header hides that file.
 - `&` sets which files to show, as git pathspecs: `src !*_test.go` shows `src` without its tests.
-- `U` sets the number of context lines; `W` shows the whole function; an empty answer restores the default.
+- `U` sets the number of context lines; `W` shows the whole function; an empty answer restores the default. `+` and `-` widen and narrow the context by powers of two: from git's 3 to 4, 8, 16, and back down to none.
 
 ### Commits
 
@@ -297,8 +296,9 @@ Prompts take readline keys (`ctrl+a`, `ctrl+e`, `alt+b`, `alt+f`, `ctrl+w`, `ctr
 | `d` | hide the file under the cursor | `root.hide_file` |
 | `&` | set which files to show | `root.file_patterns` |
 | `U` | set the diff context | `root.diff_context` |
-| `-` | delta features | `root.renderer_features` |
-| `S` `L` `+` | side-by-side, line numbers, +/- markers | `general.diff_renderer.feature_keys` |
+| `+` / `-` | wider / narrower diff context | `root.wider_diff_context` / `root.narrower_diff_context` |
+| `H` | delta features | `root.renderer_features` |
+| `S` `L` | side-by-side, line numbers | `general.diff_renderer.feature_keys` |
 | `T` | color themes | `root.renderer_themes` |
 | `/` `n` `N` | search, next, previous | `root.search`, `root.search_next`, `root.search_previous` |
 | `y` | copy hash | `root.copy_hash` |
