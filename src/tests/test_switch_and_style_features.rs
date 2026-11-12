@@ -851,14 +851,17 @@ fn a_section_with_the_name_of_a_builtin_feature_brings_in_its_features_however_i
         "[delta \"navigate\"]\n    features = x\n[delta \"line-numbers\"]\n    features = y\n[delta \"x\"]\n    file-modified-label = X\n[delta \"y\"]\n    line-numbers-left-style = green\n";
     let label: fn(&cli::Opt) -> &str = |opt| &opt.file_modified_label;
     let style: fn(&cli::Opt) -> &str = |opt| &opt.line_numbers_left_style;
-    let cases: [(
-        &str,
-        &[&str],
-        Option<&str>,
-        &str,
+    // A case: its name, the arguments, DELTA_FEATURES, what [delta] adds, the value to check,
+    // and what it should be.
+    type Case<'a> = (
+        &'a str,
+        &'a [&'a str],
+        Option<&'a str>,
+        &'a str,
         fn(&cli::Opt) -> &str,
-        &str,
-    ); 5] = [
+        &'a str,
+    );
+    let cases: [Case; 5] = [
         ("--navigate", &["--navigate"], None, "", label, "X"),
         (
             "--features=navigate",
