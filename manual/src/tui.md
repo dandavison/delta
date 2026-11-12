@@ -30,7 +30,7 @@ GIT_PAGER='delta --tui --pager' git diff
 
 `S` toggles side-by-side and `L` line numbers. Each enables or disables the feature whether or not your delta config enables it. This holds for the session; nothing is written to your `[delta]` config.
 
-`H` lists these, `plus-minus-markers` (which keeps the `+`/`-` at the start of each line, for copying a diff as a patch; delta calls it `keep-plus-minus-markers`), and every feature defined in your git config as `[delta "name"]` (see TUI config below). In the list, `space` enables or disables the selected feature and keeps the list open, and `enter` does so and closes it. Typing a key makes it the selected feature's key, and typing the feature's own key removes it. The TUI saves the keys in git config. Or set them yourself:
+`H` lists these, `plus-minus-markers` (which keeps the `+`/`-` at the start of each line, for copying a diff as a patch; delta calls it `keep-plus-minus-markers`), every feature defined in your git config as `[delta "name"]` (see TUI config below), and your shell commands (see Shell commands below). In the list, `space` enables or disables the selected feature and keeps the list open, and `enter` does so and closes it. Typing a key makes it the selected feature's key, and typing the feature's own key removes it. The TUI saves the keys in git config. Or set them yourself:
 
 ```gitconfig
 # These are the defaults. Keys set here replace all of them. A key that is
@@ -39,6 +39,27 @@ GIT_PAGER='delta --tui --pager' git diff
     side-by-side = S
     line-numbers = L
 ```
+
+## Shell commands
+
+Shell commands of your own can be run from a key, with the commit, file or branch under the cursor:
+
+```gitconfig
+[delta-tui "general.commands"]
+    open-pr = gh pr view --web {commit}
+    test-file = cargo test -- {file}
+```
+
+`H` lists them after the features, marked `$`, and a key is set for one as for a feature; `?` lists it by its name. Or set the key yourself, beside the feature keys:
+
+```gitconfig
+[delta-tui "general.diff-renderer.feature-keys"]
+    open-pr = o
+```
+
+The key runs the command with `sh -c` in the repository's root, so pipes, redirection and the rest of POSIX shell syntax work. `{commit}`, `{file}` and `{branch}` are filled in, quoted for the shell, from the row under the cursor: a commit, a file or a line of its diff, or a branch (or a commit a branch points to). A command using one that the row does not have is not run, and says which. The TUI stays usable while the command runs, and redraws its views when it exits.
+
+The command's output is not shown, unless with `--debug`; a command that fails says so, with its exit code. One command runs at a time, and it cannot be cancelled. A command that writes more than about 64 KB of output never finishes, since its output is read only once it exits. Commands need `sh`, so they do not run on Windows without one on the `PATH`.
 
 ## Color themes
 
@@ -208,14 +229,14 @@ rebase_todo.drop = { fg = "red", mods = "BOLD" }
 - `ctrl+j` / `ctrl+k` (or `ctrl+down` / `ctrl+up`) move the same way but skip over a diff's lines, stopping at file headers, hunk headers and commits.
 - `alt+j` / `alt+k` (or `alt+down` / `alt+up`) move to the next / previous section at the same level; `alt+h` (or `alt+left`) moves to the file or commit containing the cursor.
 - `space` / `backspace` move a page, `ctrl+d` / `ctrl+u` half a page, `g g` / `G` to the top / bottom; `ctrl+e` / `ctrl+y` scroll without moving the cursor.
-- `/` searches (a regex over the text on screen); `n` / `N` go to the next / previous match. A match inside a fold is unfolded.
+- `/` searches (a regex over the text on screen), moving to the first match as you type; `enter` keeps it and `esc` goes back to where you were. Case is ignored unless the search has a capital. `n` / `N` go to the next / previous match. A match inside a fold is unfolded.
 - `enter` on a commit opens it as `git show`; `q` goes back. `g s` opens the status view from any view.
 
 ### Folding
 
 - `tab` folds or unfolds the file, hunk or commit under the cursor.
 - `shift+tab` folds every file; pressing it again unfolds everything. In `git log -p` the second press folds every commit and the third unfolds everything.
-- `git diff --stat` opens with every file folded to its stat row; `tab` unfolds a file to its diff.
+- `git diff --stat` opens with every file folded to its stat row; `tab` unfolds a file to its diff. A patch asked for with its stat (`git log -p --stat`, `--patch-with-stat`) has each file headed by its stat row, unfolded. `git log --stat` and `git show --stat` show git's own stat.
 - `file-header = stat` heads every file with its stat row, folded or not. After `shift+tab` unfolds everything, files are headed by delta's file headers.
 - `start-folded = true` opens a large patch of several files folded.
 
@@ -261,11 +282,13 @@ With `sequence.editor` set as above, `git rebase -i` opens its instruction list 
 | `enter` | start the rebase | `rebase_todo.rebase_todo_start` |
 | `q` / `esc` | leave; as git's sequence editor, call the rebase off | `rebase_todo.quit` |
 
+Moving a commit, or marking one and moving on to the next, keeps the commits either side of the cursor in view, so you can see whether to go further.
+
 Movement and folding in the list are bound separately from the main view, as `rebase_todo.move_down` etc.
 
 ### Prompts
 
-Prompts take readline keys (`ctrl+a`, `ctrl+e`, `alt+b`, `alt+f`, `ctrl+w`, `ctrl+k`, `ctrl+u`, `ctrl+y`, `ctrl+t`). `up` / `down` step through the history of `:` and `&`, kept per worktree.
+Prompts take readline keys (`ctrl+a`, `ctrl+e`, `alt+b`, `alt+f`, `ctrl+w`, `ctrl+k`, `ctrl+u`, `ctrl+y`, `ctrl+t`). `up` / `down` step through the history of `:`, `&` and `/`, kept per worktree.
 
 ### Other
 
@@ -299,6 +322,7 @@ Prompts take readline keys (`ctrl+a`, `ctrl+e`, `alt+b`, `alt+f`, `ctrl+w`, `ctr
 | `+` / `-` | wider / narrower diff context | `root.wider_diff_context` / `root.narrower_diff_context` |
 | `H` | delta features | `root.renderer_features` |
 | `S` `L` | side-by-side, line numbers | `general.diff_renderer.feature_keys` |
+| your keys | your shell commands | `general.diff_renderer.feature_keys` |
 | `T` | color themes | `root.renderer_themes` |
 | `/` `n` `N` | search, next, previous | `root.search`, `root.search_next`, `root.search_previous` |
 | `y` | copy hash | `root.copy_hash` |
@@ -328,4 +352,4 @@ Prompts take readline keys (`ctrl+a`, `ctrl+e`, `alt+b`, `alt+f`, `ctrl+w`, `ctr
 - delta does not mark merge conflict rows or `\ No newline at end of file` rows, so the TUI does not show them.
 - Output beyond `max-input-bytes` is dropped; a row at the end says so.
 - A shell alias (`!…`) is not recognised as the git command it runs.
-- A feature key cannot be set in git config for a feature whose name has capitals, since git lowercases config names.
+- A feature key cannot be set in git config for a feature whose name has capitals, since git lowercases config names. For the same reason, a shell command's name given in git config is lowercased.
