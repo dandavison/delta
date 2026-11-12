@@ -104,8 +104,20 @@ pub fn set_options(
         gather_features_without_side_by_side(opt, &mut builtin_features, git_config, arg_matches);
     opt.features = Some(features.join(" "));
 
-    // Set light, dark, and syntax-theme.
+    // Set light, dark, and syntax-theme, and decide the mode from them, before other option
+    // values are read, since some depend on the mode, such as the line-numbers feature's colours.
+    // Whether to ask the terminal its background depends on color-only.
     set__light__dark__syntax_theme__options(opt, git_config, arg_matches, &option_names);
+    set_options!(
+        [color_only],
+        opt,
+        builtin_features,
+        git_config,
+        arg_matches,
+        &option_names,
+        false
+    );
+    theme::set_color_mode(opt);
 
     // HACK: make minus-line styles have syntax-highlighting iff side-by-side.
     if features.contains(&"side-by-side".to_string()) {
@@ -268,7 +280,7 @@ pub fn set_options(
     // Setting ComputedValues
     set_widths_and_isatty(opt);
     set_true_color(opt);
-    theme::set__color_mode__syntax_theme__syntax_set(opt, assets);
+    theme::set__syntax_theme__syntax_set(opt, assets);
     opt.computed.inspect_raw_lines =
         cli::InspectRawLines::from_str(&opt.inspect_raw_lines).unwrap();
     opt.computed.paging_mode = parse_paging_mode(&opt.paging_mode);

@@ -23,11 +23,22 @@ use terminal_colorsaurus::{color_scheme, QueryOptions};
 use crate::cli::{self, DetectDarkLight};
 use crate::color::{ColorMode, ColorMode::*};
 
+/// Decide the mode delta renders in, light or dark: from `--light`, `--dark` or git config, else
+/// from the terminal's background, else from the syntax theme, else dark. It is decided before
+/// `dark-features` or `light-features` are added, so that those cannot change the mode that
+/// selects them.
+pub fn set_color_mode(opt: &mut cli::Opt) {
+    opt.computed.color_mode =
+        get_color_mode_and_syntax_theme_name(opt.syntax_theme.as_ref(), get_color_mode(opt)).0;
+}
+
+/// Set the syntax theme, and the syntax set, for the mode [`set_color_mode`] decided.
 #[allow(non_snake_case)]
-pub fn set__color_mode__syntax_theme__syntax_set(opt: &mut cli::Opt, assets: HighlightingAssets) {
-    let (color_mode, syntax_theme_name) =
-        get_color_mode_and_syntax_theme_name(opt.syntax_theme.as_ref(), get_color_mode(opt));
-    opt.computed.color_mode = color_mode;
+pub fn set__syntax_theme__syntax_set(opt: &mut cli::Opt, assets: HighlightingAssets) {
+    let (_, syntax_theme_name) = get_color_mode_and_syntax_theme_name(
+        opt.syntax_theme.as_ref(),
+        Some(opt.computed.color_mode),
+    );
 
     opt.computed.syntax_theme = if is_no_syntax_highlighting_syntax_theme_name(&syntax_theme_name) {
         None
