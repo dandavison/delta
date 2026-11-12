@@ -965,6 +965,15 @@ pub struct Opt {
     /// need to do anything.
     pub true_color: String,
 
+    #[cfg(feature = "gitu")]
+    #[arg(long = "tui", visible_alias = "gitu")]
+    /// Run delta as a live interactive git interface, based on gitu.
+    ///
+    /// See <https://dandavison.github.io/delta/tui.html>.
+    /// Must be the first argument; the arguments after it are gitu's (see `delta --tui --help`).
+    /// To use it as git's pager, set e.g. pager.diff to `delta --tui`.
+    pub tui: bool,
+
     #[arg(
         long = "whitespace-error-style",
         default_value = "auto auto",
@@ -1519,7 +1528,20 @@ lazy_static! {
         "list-syntax-themes",
         "show-config",
         "show-syntax-themes",
+        "tui",
     ]
     .into_iter()
     .collect();
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[cfg(feature = "gitu")]
+    #[test]
+    fn help_lists_tui() {
+        let help = Opt::command().render_help().to_string();
+        assert!(help.contains("--tui"), "{help}");
+    }
 }

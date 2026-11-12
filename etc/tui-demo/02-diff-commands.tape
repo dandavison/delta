@@ -3,7 +3,7 @@ Hide
 # strings, in a clone whose remote is delta on GitHub, for gh, which pages with delta --tui.
 Type "git checkout -q -b hunk-styles 2245582f && git branch -q -f main 2245582f~" Enter
 Type "git remote add origin https://github.com/dandavison/delta.git" Enter
-Type "export GH_PAGER='delta --tui --pager' && clear" Enter
+Type "export GH_PAGER='delta --tui' && clear" Enter
 Sleep 500ms
 Show
 
@@ -79,7 +79,7 @@ Down@80ms 7 Sleep 500ms Tab Sleep 2s
 Announce@3s "To use delta's TUI as shown in this video put the following in git config:"
 Hide
 Type "q" Sleep 1s
-Type "clear; show_config \"# For gh pr diff, also in your shell:\" \"# export GH_PAGER='delta --tui --pager'\"" Enter
+Type "clear; show_config \"# For gh pr diff, also in your shell:\" \"# export GH_PAGER='delta --tui'\"" Enter
 Sleep 1s
 Show
 Sleep 8s

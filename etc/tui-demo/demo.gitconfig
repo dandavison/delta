@@ -8,9 +8,9 @@
     # The commit chapter's commit message editor.
     editor = micro
 [pager]
-    diff = delta --tui --pager
-    show = delta --tui --pager
-    log = delta --tui --pager
+    diff = delta --tui
+    show = delta --tui
+    log = delta --tui
 
 [delta]
     navigate = true
@@ -46,7 +46,7 @@ commit-format = tformat:%n%n▸ %h %C(blue)%an %C(blue)%ar%C(auto)%d%C(reset)%n%
 commit-format-full = tformat:%n%n▸ %h %C(blue)%an %C(blue)%ar%C(auto)%d%C(reset)%n%n%w(0,4,4)%C(green)%s%C(reset)%n%+b
 
 
-# delta --gitu (the TUI). A key is its gitu config path, with dashes for
+# delta --tui (the TUI). A key is its gitu config path, with dashes for
 # underscores; no subsection means "general". A list is one line per item.
 [delta-tui]
     collapsed-sections = branch_status

@@ -20,6 +20,10 @@ end-to-end-test: build
 shell-completion:
 	for shell in bash fish zsh; do ./target/release/delta --generate-completion $$shell > etc/completion/completion.$$shell; done
 
+# Piped, delta wraps --help at a fixed width, so the page does not depend on the terminal
+help-output: build
+	{ printf '# Full --help output\n\n```txt\n'; ./target/release/delta --help; printf '```\n'; } > manual/src/full---help-output.md
+
 release:
 	@make -f etc/release.Makefile release
 
@@ -55,4 +59,4 @@ THEMES ?= light dark
 video:
 	etc/demo/demo record --voice $(VOICE) --themes $(THEMES)
 
-.PHONY: bump-gitu build format lint test unit-test end-to-end-test release shell-completion version benchmark flamegraph chronologer video
+.PHONY: bump-gitu build format lint test unit-test end-to-end-test help-output release shell-completion version benchmark flamegraph chronologer video
