@@ -107,12 +107,13 @@ pub fn set_options(
         &input_features,
         arg_matches,
     );
-    let features_without_side_by_side = gather_features_without_side_by_side(
-        opt,
-        &mut builtin_features,
-        git_config,
-        &input_features,
-    );
+    // The features of the hunks that --side-by-side=hunk draws in a single column: those in
+    // effect, without side-by-side's own values, but with the line-numbers it brings in.
+    let features_without_side_by_side: Vec<String> = features
+        .iter()
+        .filter(|feature| *feature != "side-by-side")
+        .cloned()
+        .collect();
     opt.features = Some(features.join(" "));
 
     // Set light, dark, and syntax-theme.
@@ -793,27 +794,9 @@ fn own_option_is_on(
     }
 }
 
-/// Gather the features as if side-by-side were disabled, see `set_unified_line_numbers_formats`.
-fn gather_features_without_side_by_side(
-    opt: &cli::Opt,
-    builtin_features: &mut HashMap<String, features::BuiltinFeature>,
-    git_config: &Option<GitConfig>,
-    input_features: &[String],
-) -> Vec<String> {
-    let side_by_side = builtin_features.remove("side-by-side");
-    let (features, _) = gather_features(opt, builtin_features, git_config, input_features);
-    if let Some(side_by_side) = side_by_side {
-        builtin_features.insert("side-by-side".to_string(), side_by_side);
-    }
-    features
-        .into_iter()
-        .filter(|feature| feature != "side-by-side")
-        .collect()
-}
-
 /// The side-by-side feature sets the line numbers format for its panels. With
 /// --side-by-side=hunk the hunks displayed in a single column use the format they would have
-/// without side-by-side, so resolve these options again without it. This must run before
+/// without side-by-side's own values, so resolve these options again without it. This must run before
 /// `set_options!`, while the fields still hold their command line (or default) values.
 fn set_unified_line_numbers_formats(
     opt: &mut cli::Opt,
