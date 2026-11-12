@@ -759,7 +759,7 @@ fn gather_features_without_switches_that_are_off(
                 features.iter().any(|feature| feature == name)
                     && !config::user_supplied_option(&name.replace('-', "_"), arg_matches)
                     && !opt.computed.command_line_features.contains(*name)
-                    && !own_option_is_on(name, builtin_features, opt, git_config)
+                    && own_option_is_turned_off(name, builtin_features, opt, git_config)
             })
             .collect();
         opt.features = given;
@@ -772,9 +772,10 @@ fn gather_features_without_switches_that_are_off(
     }
 }
 
-/// Whether the option named after the builtin feature `name` is on, as `opt.features` and git
-/// config give it.
-fn own_option_is_on(
+/// Whether something sets the option named after the builtin feature `name` to off, as
+/// `opt.features` and git config give it. An option that nothing sets is not turned off: a style
+/// feature such as raw does not set an option of its own name.
+fn own_option_is_turned_off(
     name: &str,
     builtin_features: &HashMap<String, features::BuiltinFeature>,
     opt: &cli::Opt,
@@ -788,18 +789,18 @@ fn own_option_is_on(
             git_config,
         )
         .is_some_and(|side_by_side| {
-            side_by_side_is_active(side_by_side, opt.computed.side_by_side_width)
+            !side_by_side_is_active(side_by_side, opt.computed.side_by_side_width)
         })
     } else {
         crate::options::get::get_option_value::<bool>(name, builtin_features, opt, git_config)
-            .unwrap_or(false)
+            == Some(false)
     }
 }
 
 /// The side-by-side feature sets the line numbers format for its panels. With
 /// --side-by-side=hunk the hunks displayed in a single column use the format they would have
-/// without side-by-side's own values, so resolve these options again without it. This must run before
-/// `set_options!`, while the fields still hold their command line (or default) values.
+/// without side-by-side's own values, so resolve these options again without it. This must run
+/// before `set_options!`, while the fields still hold their command line (or default) values.
 fn set_unified_line_numbers_formats(
     opt: &mut cli::Opt,
     features_without_side_by_side: &[String],
