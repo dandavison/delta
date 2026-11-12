@@ -115,10 +115,13 @@ fn enabled_features(env: &crate::env::DeltaEnv, git_config: Option<GitConfig>) -
     // gitu has the terminal, so delta must not ask it its background.
     let args = ["delta", "--detect-dark-light=never"];
     let opt = crate::cli::Opt::from_iter_and_git_config(&env, args, git_config);
+    // What a builtin feature brings in as a default, such as side-by-side's line numbers, is not
+    // enabled by the user's config.
     opt.features
         .as_deref()
         .unwrap_or_default()
         .split_whitespace()
+        .filter(|feature| opt.computed.features_named_by_user.contains(*feature))
         .map(String::from)
         .collect()
 }
