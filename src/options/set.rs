@@ -99,14 +99,20 @@ pub fn set_options(
     // side-by-side feature.
     set_available_terminal_width(opt);
     set_side_by_side_width(opt);
+    let input_features = decide_features_on_the_command_line(opt, &builtin_features, arg_matches);
     let features = gather_features_without_switches_that_are_off(
         opt,
         &builtin_features,
         git_config,
+        &input_features,
         arg_matches,
     );
-    let features_without_side_by_side =
-        gather_features_without_side_by_side(opt, &mut builtin_features, git_config, arg_matches);
+    let features_without_side_by_side = gather_features_without_side_by_side(
+        opt,
+        &mut builtin_features,
+        git_config,
+        &input_features,
+    );
     opt.features = Some(features.join(" "));
 
     // Set light, dark, and syntax-theme.
@@ -472,26 +478,31 @@ pub fn is_switch_feature(feature: &str) -> bool {
         .any(|option| option.is_switch_feature && option.name == feature)
 }
 
-fn gather_features(
+/// What the command line decides about features, whatever git config says, made once before
+/// any gathering. Returns the features named in --features or DELTA_FEATURES.
+fn decide_features_on_the_command_line(
     opt: &mut cli::Opt,
     builtin_features: &HashMap<String, features::BuiltinFeature>,
-    git_config: &Option<GitConfig>,
     arg_matches: &clap::ArgMatches,
 ) -> Vec<String> {
     let from_env_var = &opt.env.features;
     let from_args = opt.features.as_deref().unwrap_or("");
-    let input_features: Vec<&str> = match from_env_var.as_deref() {
+    let input_features: Vec<String> = match from_env_var.as_deref() {
         Some(from_env_var) if from_env_var.starts_with('+') => from_env_var[1..]
             .split_whitespace()
             .chain(split_feature_string(from_args))
+            .map(String::from)
             .collect(),
         Some(from_env_var) => {
+            let input = split_feature_string(from_env_var)
+                .map(String::from)
+                .collect();
             opt.features = Some(from_env_var.to_string());
-            split_feature_string(from_env_var).collect()
+            input
         }
-        None => split_feature_string(from_args).collect(),
+        None => split_feature_string(from_args).map(String::from).collect(),
     };
-    let (removed, input_features): (Vec<&str>, Vec<&str>) = input_features
+    let (removed, input_features): (Vec<String>, Vec<String>) = input_features
         .into_iter()
         .partition(|feature| feature.starts_with('-'));
 
@@ -513,24 +524,34 @@ fn gather_features(
                 .insert(option.name.to_string());
         }
     }
+    opt.computed
+        .features_kept_out
+        .extend(opt.computed.features_turned_off.iter().cloned());
     // A switch feature named in --features or DELTA_FEATURES is the same as its bare flag, so it
-    // beats git config, and the flag given on the command line beats it. This adds to the set
-    // because gather_features_without_side_by_side runs this again without the side-by-side
-    // feature.
-    let command_line_switch_features: Vec<String> = FEATURE_OPTIONS
+    // beats git config, and the flag given on the command line beats it.
+    opt.computed.command_line_switch_features = FEATURE_OPTIONS
         .iter()
         .filter(|option| {
             option.is_switch_feature
-                && input_features.contains(&option.name)
+                && input_features.iter().any(|feature| feature == option.name)
                 && builtin_features.contains_key(option.name)
                 && !user_supplied(option.name)
                 && !opt.computed.features_turned_off.contains(option.name)
         })
         .map(|option| option.name.to_string())
         .collect();
-    opt.computed
-        .command_line_switch_features
-        .extend(command_line_switch_features);
+    input_features
+}
+
+/// The features in effect, in order of priority, gathered from `input_features` (those named in
+/// --features or DELTA_FEATURES), the flags, and git config; and those of them that the command
+/// line brings in.
+fn gather_features(
+    opt: &cli::Opt,
+    builtin_features: &HashMap<String, features::BuiltinFeature>,
+    git_config: &Option<GitConfig>,
+    input_features: &[String],
+) -> (Vec<String>, HashSet<String>) {
     let mut features = VecDeque::new();
 
     // Gather features from command line.
@@ -552,7 +573,7 @@ fn gather_features(
             gather_builtin_features_recursively(option.name, &mut features, builtin_features, opt);
         }
     }
-    opt.computed.command_line_features = features.iter().cloned().collect();
+    let from_command_line = features.iter().cloned().collect();
 
     if let Some(git_config) = git_config {
         // Gather features from [delta] section if --features was not passed.
@@ -579,14 +600,12 @@ fn gather_features(
         );
     }
 
-    Vec::<String>::from(features)
+    (Vec::from(features), from_command_line)
 }
 
-/// Whether `feature` is not gathered from anywhere: turned off, or its option turned off by the
-/// user's config.
+/// Whether `feature` is not gathered from anywhere (see `ComputedValues::features_kept_out`).
 fn is_kept_out(opt: &cli::Opt, feature: &str) -> bool {
-    opt.computed.features_turned_off.contains(feature)
-        || opt.computed.features_off_in_config.contains(feature)
+    opt.computed.features_kept_out.contains(feature)
 }
 
 /// Add to feature list `features` all features in the tree rooted at `feature`.
@@ -722,11 +741,14 @@ fn gather_features_without_switches_that_are_off(
     opt: &mut cli::Opt,
     builtin_features: &HashMap<String, features::BuiltinFeature>,
     git_config: &mut Option<GitConfig>,
+    input_features: &[String],
     arg_matches: &clap::ArgMatches,
 ) -> Vec<String> {
     loop {
-        let features = gather_features(opt, builtin_features, git_config, arg_matches);
-        let gathered = opt.features.replace(features.join(" "));
+        let (features, from_command_line) =
+            gather_features(opt, builtin_features, git_config, input_features);
+        opt.computed.command_line_features = from_command_line;
+        let given = opt.features.replace(features.join(" "));
         let off: Vec<&str> = FEATURE_OPTIONS
             .iter()
             .map(|option| option.name)
@@ -737,13 +759,13 @@ fn gather_features_without_switches_that_are_off(
                     && !own_option_is_on(name, builtin_features, opt, git_config)
             })
             .collect();
-        opt.features = gathered;
+        opt.features = given;
         if off.is_empty() {
             return features;
         }
-        for name in off {
-            opt.computed.features_off_in_config.insert(name.to_string());
-        }
+        opt.computed
+            .features_kept_out
+            .extend(off.into_iter().map(String::from));
     }
 }
 
@@ -773,15 +795,13 @@ fn own_option_is_on(
 
 /// Gather the features as if side-by-side were disabled, see `set_unified_line_numbers_formats`.
 fn gather_features_without_side_by_side(
-    opt: &mut cli::Opt,
+    opt: &cli::Opt,
     builtin_features: &mut HashMap<String, features::BuiltinFeature>,
     git_config: &Option<GitConfig>,
-    arg_matches: &clap::ArgMatches,
+    input_features: &[String],
 ) -> Vec<String> {
     let side_by_side = builtin_features.remove("side-by-side");
-    let command_line_features = std::mem::take(&mut opt.computed.command_line_features);
-    let features = gather_features(opt, builtin_features, git_config, arg_matches);
-    opt.computed.command_line_features = command_line_features;
+    let (features, _) = gather_features(opt, builtin_features, git_config, input_features);
     if let Some(side_by_side) = side_by_side {
         builtin_features.insert("side-by-side".to_string(), side_by_side);
     }

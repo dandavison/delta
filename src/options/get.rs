@@ -111,32 +111,28 @@ pub trait GetOptionValue {
         let in_order = || features.iter().copied();
         let from_command_line =
             |feature: &&str| opt.computed.command_line_features.contains(*feature);
-        // A feature's own value: its user section, then a builtin style feature's values, or of a
-        // switch feature only the value of its own option, which keeps its place in the list.
-        let own_value = |feature: &str, with_section: bool| {
-            let section = if with_section || !is_builtin(&feature) {
-                user_section(feature)
-            } else {
-                None
-            };
-            section.or_else(|| {
-                let builtin_value = is_builtin(&feature)
+        // The value a feature gives at its place in the list: its user section, or else a builtin
+        // style feature's value, or a switch feature's value for its own option only.
+        let in_place = |feature: &str| {
+            user_section(feature).or_else(|| {
+                let keeps_place = is_builtin(&feature)
                     && (!is_switch_feature(&feature) || feature == option_name);
-                builtin_value.then(|| builtin(feature)).flatten()
+                keeps_place.then(|| builtin(feature)).flatten()
             })
         };
         in_order()
             .filter(from_command_line)
-            .find_map(|feature| own_value(feature, true))
+            .find_map(in_place)
             .or_else(|| {
                 in_order()
                     .filter(|feature| is_builtin(feature) && !from_command_line(feature))
                     .find_map(user_section)
             })
             .or_else(|| {
+                // A builtin feature's section was looked up just above, and gives nothing here.
                 in_order()
                     .filter(|feature| !from_command_line(feature))
-                    .find_map(|feature| own_value(feature, false))
+                    .find_map(in_place)
             })
             .or_else(|| in_order().filter(is_switch_feature).find_map(builtin))
             .map(Into::into)

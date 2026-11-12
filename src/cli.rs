@@ -1257,13 +1257,14 @@ pub struct ComputedValues {
     pub color_mode: ColorMode,
     pub paging_mode: PagingMode,
     pub side_by_side: bool,
-    /// Features that the command line turned off, by turning off the option they are named after.
-    /// None of them is gathered, whatever git config or DELTA_FEATURES says.
+    /// Features that are not gathered from anywhere: those the command line turns off, and the
+    /// builtin features whose own option the user's config turns off, in [delta] or in a feature
+    /// with priority.
+    pub features_kept_out: HashSet<String>,
+    /// The features the command line turns off, with -name or by turning off the option of the
+    /// same name. That option is turned off, whatever git config says; an option turned off by the
+    /// user's config keeps the config's value.
     pub features_turned_off: HashSet<String>,
-    /// Builtin features whose own option the user's config turns off, in [delta] or in a feature
-    /// with priority. None of them is gathered from git config, but unlike a turned-off feature,
-    /// the option keeps the config's value.
-    pub features_off_in_config: HashSet<String>,
     /// The features gathered from the command line: --features, DELTA_FEATURES and flags, and the
     /// features they bring in.
     pub command_line_features: HashSet<String>,
