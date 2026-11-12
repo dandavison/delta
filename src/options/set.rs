@@ -392,6 +392,8 @@ struct FeatureOption {
     is_switch_feature: bool,
 }
 
+/// In an order in which a builtin feature comes before the builtin features it brings in, such as
+/// side-by-side before line-numbers, so that it is gathered first and has priority over them.
 const FEATURE_OPTIONS: [FeatureOption; 9] = [
     FeatureOption {
         name: "raw",
@@ -436,6 +438,13 @@ const FEATURE_OPTIONS: [FeatureOption; 9] = [
         is_switch_feature: true,
     },
     FeatureOption {
+        name: "side-by-side",
+        is_on: |opt| side_by_side_is_active(opt.side_by_side, opt.computed.side_by_side_width),
+        turn_on: |opt| opt.side_by_side = cli::SideBySide::On(cli::SideBySideScope::All),
+        turn_off: |opt| opt.side_by_side = cli::SideBySide::Off,
+        is_switch_feature: true,
+    },
+    FeatureOption {
         name: "line-numbers",
         is_on: |opt| opt.line_numbers,
         turn_on: |opt| opt.line_numbers = true,
@@ -447,13 +456,6 @@ const FEATURE_OPTIONS: [FeatureOption; 9] = [
         is_on: |opt| opt.navigate,
         turn_on: |opt| opt.navigate = true,
         turn_off: |opt| opt.navigate = false,
-        is_switch_feature: true,
-    },
-    FeatureOption {
-        name: "side-by-side",
-        is_on: |opt| side_by_side_is_active(opt.side_by_side, opt.computed.side_by_side_width),
-        turn_on: |opt| opt.side_by_side = cli::SideBySide::On(cli::SideBySideScope::All),
-        turn_off: |opt| opt.side_by_side = cli::SideBySide::Off,
         is_switch_feature: true,
     },
 ];
@@ -642,6 +644,17 @@ fn gather_features_recursively(
     );
 }
 
+/// The names of `builtin_features` in the order of FEATURE_OPTIONS, so that gathering them gives
+/// the same list on each run.
+fn in_feature_option_order(
+    builtin_features: &HashMap<String, features::BuiltinFeature>,
+) -> impl Iterator<Item = &'static str> + '_ {
+    FEATURE_OPTIONS
+        .iter()
+        .map(|option| option.name)
+        .filter(move |name| builtin_features.contains_key(*name))
+}
+
 /// Look for builtin features requested via boolean feature flags (as opposed to via a "features"
 /// list) in a custom feature section in git config and add them to the features list.
 fn gather_builtin_features_from_flags_in_gitconfig(
@@ -651,7 +664,7 @@ fn gather_builtin_features_from_flags_in_gitconfig(
     opt: &cli::Opt,
     git_config: &GitConfig,
 ) {
-    for child_feature in builtin_features.keys() {
+    for child_feature in in_feature_option_order(builtin_features) {
         let key = format!("{git_config_key}.{child_feature}");
         let is_active = if child_feature == "side-by-side" {
             git_config
@@ -700,7 +713,7 @@ fn gather_builtin_features_recursively(
                 }
             }
         }
-        for child_feature in builtin_features.keys() {
+        for child_feature in in_feature_option_order(builtin_features) {
             if let Some(child_features_fn) = feature_data.get(child_feature) {
                 if let ProvenancedOptionValue::DefaultValue(OptionValue::Boolean(true)) =
                     child_features_fn(opt, &None)
