@@ -2,6 +2,8 @@ pub mod ansi_test_utils;
 pub mod integration_test_utils;
 pub mod test_example_diffs;
 #[cfg(test)]
+mod test_per_mode_features;
+#[cfg(test)]
 mod test_switch_and_style_features;
 pub mod test_utils;
 
