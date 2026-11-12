@@ -548,25 +548,15 @@ fn gather_features(
     }
 
     let mut features = VecDeque::new();
-    // The features the user names, as opposed to those a builtin feature brings in as defaults.
-    let mut named = HashSet::new();
 
     // Gather features from command line.
     if let Some(git_config) = git_config {
         for feature in input_features {
-            gather_features_recursively(
-                feature,
-                &mut features,
-                &mut named,
-                builtin_features,
-                opt,
-                git_config,
-            );
+            gather_features_recursively(feature, &mut features, builtin_features, opt, git_config);
         }
     } else {
         for feature in input_features {
             if !is_kept_out(opt, feature) {
-                named.insert(feature.to_string());
                 features.push_front(feature.to_string());
             }
         }
@@ -575,7 +565,6 @@ fn gather_features(
     // Gather the builtin features that options of the same name turn on.
     for option in FEATURE_OPTIONS {
         if (option.is_on)(opt) {
-            named.insert(option.name.to_string());
             gather_builtin_features_recursively(option.name, &mut features, builtin_features, opt);
         }
     }
@@ -588,7 +577,6 @@ fn gather_features(
                     gather_features_recursively(
                         feature,
                         &mut features,
-                        &mut named,
                         builtin_features,
                         opt,
                         git_config,
@@ -600,17 +588,12 @@ fn gather_features(
         gather_builtin_features_from_flags_in_gitconfig(
             "delta",
             &mut features,
-            &mut named,
             builtin_features,
             opt,
             git_config,
         );
     }
 
-    opt.computed.features_named_by_user = named
-        .into_iter()
-        .filter(|feature| features.contains(feature))
-        .collect();
     Vec::<String>::from(features)
 }
 
@@ -625,7 +608,6 @@ fn is_kept_out(opt: &cli::Opt, feature: &str) -> bool {
 fn gather_features_recursively(
     feature: &str,
     features: &mut VecDeque<String>,
-    named: &mut HashSet<String>,
     builtin_features: &HashMap<String, features::BuiltinFeature>,
     opt: &cli::Opt,
     git_config: &GitConfig,
@@ -633,7 +615,6 @@ fn gather_features_recursively(
     if is_kept_out(opt, feature) {
         return;
     }
-    named.insert(feature.to_string());
     if builtin_features.contains_key(feature) {
         gather_builtin_features_recursively(feature, features, builtin_features, opt);
     } else {
@@ -645,20 +626,16 @@ fn gather_features_recursively(
                 gather_features_recursively(
                     child_feature,
                     features,
-                    named,
                     builtin_features,
                     opt,
                     git_config,
                 )
-            } else if !is_kept_out(opt, child_feature) {
-                named.insert(child_feature.to_string());
             }
         }
     }
     gather_builtin_features_from_flags_in_gitconfig(
         &format!("delta.{feature}"),
         features,
-        named,
         builtin_features,
         opt,
         git_config,
@@ -670,7 +647,6 @@ fn gather_features_recursively(
 fn gather_builtin_features_from_flags_in_gitconfig(
     git_config_key: &str,
     features: &mut VecDeque<String>,
-    named: &mut HashSet<String>,
     builtin_features: &HashMap<String, features::BuiltinFeature>,
     opt: &cli::Opt,
     git_config: &GitConfig,
@@ -687,7 +663,6 @@ fn gather_builtin_features_from_flags_in_gitconfig(
             git_config.get::<bool>(&key) == Some(true)
         };
         if is_active {
-            named.insert(child_feature.to_string());
             gather_builtin_features_recursively(child_feature, features, builtin_features, opt);
         }
     }
@@ -750,10 +725,7 @@ fn gather_features_without_side_by_side(
     arg_matches: &clap::ArgMatches,
 ) -> Vec<String> {
     let side_by_side = builtin_features.remove("side-by-side");
-    // The features the user names are those of the gathering with side-by-side.
-    let named = std::mem::take(&mut opt.computed.features_named_by_user);
     let features = gather_features(opt, builtin_features, git_config, arg_matches);
-    opt.computed.features_named_by_user = named;
     if let Some(side_by_side) = side_by_side {
         builtin_features.insert("side-by-side".to_string(), side_by_side);
     }

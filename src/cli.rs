@@ -1265,10 +1265,6 @@ pub struct ComputedValues {
     /// Features named after an option that [delta] turns off. None of them is gathered from a
     /// feature in git config, but unlike a turned-off feature, the option keeps [delta]'s value.
     pub features_off_in_delta_section: HashSet<String>,
-    /// The gathered features that the user names: in --features, DELTA_FEATURES, a flag, a
-    /// features list, or an option in git config. A feature that only a builtin feature brings
-    /// in as a default, such as side-by-side's line-numbers, is not among them.
-    pub features_named_by_user: HashSet<String>,
     /// Switch features, such as side-by-side, named in --features or DELTA_FEATURES. Each does
     /// what its bare flag does.
     pub command_line_switch_features: HashSet<String>,
