@@ -129,6 +129,120 @@
     syntax-theme = GitHub
     zero-style = syntax
 
+[delta "octopus-light"]
+  # cleaner view: +𝐁𝐨𝐥𝐝  /−u̲n̲d̲e̲r̲l̲i̲n̲e̲ text instead of full background color highlighting for
+    #             +added/−removed lines
+    # line №    : +green/−red color only
+    # ⋮ light and gray ⋮ column separators ⋮
+  # key                   	= value          	 ≝¦alt      	 comment
+  light                   	= true           	            		 
+  features                	= 🐙base          	            	 
+  # ━+ Lines Added        	                 	            		 
+  line-numbers-plus-style 	="#00c600 bold"  	#auto       	━№ +file 00ff00 = 142°100%84% Okhsl ortholigh↓.8 142°100%67%=00c600
+  line-numbers-right-style	="#4d4d4d auto"  	#auto       	━№ column› 0°0%33% Okhsl
+  # ━− Lines Removed      	                 	            	 
+  minus-emph-style        	="normal #ffd8d8"	#normal auto	━−     emphasized sections ffd8d8 = 18°100%90% Okhsl
+  line-numbers-left-style 	="#4d4d4d auto"  	#auto       	━№ ‹column −file
+  line-numbers-minus-style	="#c90000 bold"  	#auto       	━№ −file  ff0000 = 29°100%57% Okhsl ortholigh↓.8 29°100%45%=c90000
+  # ━0 Lines Unchanged    	                 	            	 
+  #line-numbers-zero-style	="#333333"       	#444444     	 
+  # File
+  file-style                   	="blue"   	#blue    	file section  'omit' to remove the file section from the output
+  file-decoration-style        	="none"   	#blue ul 	           	 
+  # Hunk                       	          	         	           	 
+  hunk-header-decoration-style 	="blue ul"	#blue box	           	 
+  # hunk-header-file-style     	="blue"   	#blue    	file path  	part of hunk-header (only with 'file')
+  hunk-header-line-number-style	="black"  	#blue    	line number	part of hunk-header (only with 'line-number') applies to label (bug https://github.com/dandavison/delta/issues/968)
+  # Blame                      	          	 
+  # blame-code-style           	="syntax" 	#syntax bg=palette	Code section, bg color=blame format section of the line (the background color is determined by blame-palette)
+  blame-palette                	="normal" 	#''               	line bg colors (space-separated string), same commit=same color
+  # blame-separator-style      	=         	#''               	Style string for the blame-separator-format
+  # Merge
+  merge-conflict-ours-diff-header-style  	="blue italic"	#normal
+  merge-conflict-theirs-diff-header-style	="blue italic"	#normal
+[delta "octopus-dark"]
+  # key                   	= value       	        	 ≝¦alt      	comment
+  dark                    	= true        	        	            	 
+  features                	= 🐙base       	        	            	 
+  syntax-theme            	= Nord        	        	#           	Monokai Extended, Nord, DarkNeon
+  # ━+ Lines Added        	              	        	            	 
+  plus-emph-style         	="syntax      	#20441e"	#           	━− emphasized sections okHSL: 20441e=142° 80%25%
+  line-numbers-plus-style 	="#00c600 bold	"       	#auto       	━№ +file 00ff00 = 142°100%84% Okhsl ortholigh↓.8 142°100%67%=00c600
+  line-numbers-right-style	="#a1a1a1     	auto"   	#auto       	━№ column› 0°0%66% Okhsl
+  # ━− Lines Removed      	              	        	            	 
+  minus-emph-style        	="normal      	#681822"	#normal auto	━− emphasized sections okHSL: 681822= 18° 80%25%  71001c=.100%.
+  line-numbers-left-style 	="#a1a1a1     	"       	#auto       	━№ ‹column −file
+  line-numbers-minus-style	="#c90000 bold	"       	#auto       	━№ −file  ff0000 = 29°100%57% Okhsl ortholigh↓.8 29°100%45%=c90000
+  # ━0 Lines Unchanged    	              	        	 
+  line-numbers-zero-style 	="#d4d4d4     	"       	#444444	fcdfa8 d4d4d4 = 0°0%85% okhsl
+  # File
+  file-style                   	="blue    	"        	#blue   	file section  'omit' to remove the file section from the output
+  file-decoration-style        	="none    	"        	#blue ul	 
+  # Hunk                       	          	         	 
+  hunk-header-decoration-style 	="blue ul"	#blue box	           	 
+  # hunk-header-file-style     	="blue"   	#blue    	file path  	part of hunk-header (only with 'file')
+  hunk-header-line-number-style	="white"  	#blue    	line number	part of hunk-header (only with 'line-number') applies to label (bug https://github.com/dandavison/delta/issues/968)
+  # Blame                      	          	 
+  # blame-code-style           	="syntax" 	#syntax bg=palette	Code section, bg color=blame format section of the line (the background color is determined by blame-palette)
+  # blame-palette              	="normal" 	#''               	line bg colors (space-separated string), same commit=same color
+  # blame-separator-style      	=         	#''               	Style string for the blame-separator-format
+  # Merge
+  merge-conflict-ours-diff-header-style  	="blue italic"	#normal
+  merge-conflict-theirs-diff-header-style	="blue italic"	#normal
+[delta "🐙base"]
+  features                     	= 🐙git       	       	 
+  line-numbers                 	= true       	#F     	━№
+  # ━+ Lines Added             	             	       	 
+  plus-style                   	="syntax bold	normal"	#syntax auto¦edfff0	━+
+  plus-emph-style              	="syntax     	auto"  	#syntax auto       	━+     emphasized sections
+  plus-non-emph-style          	= plus-style 	       	#plus-style        	━+ non-emphasized sections (∃emph)
+  plus-empty-line-marker-style 	="normal     	auto"  	#normal auto       	added empty line marker. Used only if --plus-style has no background color.
+  # ━− Lines Removed           	             	       	 
+  minus-style                  	="syntax ul  	normal"	#normal auto¦ffefef	━−
+  minus-non-emph-style         	= minus-style	       	#minus-style       	━− non-emphasized sections (∃emph)
+  minus-empty-line-marker-style	="normal     	auto"  	#normal auto       	━−removed empty line marker. Used only if --minus-style has no background color.
+  # Hunk
+  hunk-header-style        	= line-number     	#line-number syntax	remove code text when fixed https://github.com/dandavison/delta/issues/1032
+  #                        	                  	#'file' for file path, 'line-number' ━№ 1st hunk line, 'omit' to remove
+  # Labels                 	                  	 
+  line-numbers-right-format	="{np:>3}⋮"       	#{np:^4}│       	━№ column›: +file align› ␠pad3
+  line-numbers-left-format 	="{nm:>3}⋮"       	#{nm:^4}⋮       	━№ ‹column: −file align› ␠pad3
+  file-copied-label        	="㏄"              	#copied:¦㏄🅭🗐    	Text before a copied ␜
+  file-added-label         	="+"              	#added:¦➕⨁⊕    	  … added    ␜ (used by `navigate-regex`)
+  file-removed-label       	="−"              	#removed:¦➖⊖✗ 	  … removed  ␜ (…)
+  file-modified-label      	="Δ"              	#||•▪🄼🅼        	  … modified ␜ (…)
+  file-renamed-label       	="🠺"              	#renamed:¦📝🔖🏷🠺	  … renamed  ␜ (…)
+  hunk-label               	="🐙  "            	#•¦🍰            	Text to display before a hunk header (used by 'navigate-regex')
+  # Other                  	                  	 
+  word-diff-regex          	="."              	#\w+	highlight by letter
+  # Grep                   	                  	 
+  grep-match-line-style    	="plus-style"     	#plus-style¦syntax auto       	    matching lines
+  grep-match-word-style    	="plus-emph-style"	#plus-style                   	  matching substrings within a matching line
+  grep-context-line-style  	="zero-style"     	#zero-style¦syntax normal     	non-matching lines
+  # grep-line-number-style 	=                 	#hunk-header-line-number-style	━№
+  grep-separator-symbol    	="keep"           	#:¦keep¦⋮                     	after file path/line number, ':' for both match and context lines, since many terminal emulators recognize constructs like "/path/to/file:7:". However, standard grep output uses "-" for context lines: 'keep' to restore
+  # grep-file-style        	="hunk-header-file-style" #hunk-header-file-style  file paths
+  # Blame
+  blame-separator-format       	="{n:>3_block}⋮"       	#│{n:^4}│¦none       	blame←→code separator with ━№. "{n:}" placeholder displays ━№ on every line, with '_block' — only when a new blame block starts; '_every-N' block + every N-th (modulo) line
+  blame-timestamp-output-format	="‘%_y.%_d.%_m %_H:%_M"	#%H:%M:%S            	timestamps in git blame output `strftime` syntax (https://docs.rs/chrono/latest/chrono/format/strftime/index.html)
+  # blame-timestamp-format     	="%Y-%m-%d %H:%M:%S %z"	#%Y-%m-%d %H:%M:%S %z	`git blame` timestamp in raw git output
+  blame-format                 	="{timestamp:<15}🗿{author:<5.5} {commit:<8}" #{timestamp:<15} {author:<15.14} {commit:<8}   Format string for git blame commit metadata
+  # Merge
+  merge-conflict-begin-symbol                       	= ▽▽▽▽▽▽▽▽▽▼	#▼¦⧨▽🔻
+  merge-conflict-end-symbol                         	= △△△△△△△△△▲	#▲¦◭◮🔺
+  merge-conflict-ours-diff-header-decoration-style  	=""         	#box
+  merge-conflict-theirs-diff-header-decoration-style	=""         	#box
+[delta "🐙git"]
+  # Use `git show --color=always | delta --parse-ansi` to learn that moved color is bold purple
+  # git colorMoved mode	# (zebra) → italic      	# must end in "-style"
+  movSrc-style         	="bold                  	purple"
+  movSrcTo-style       	="syntax italic strike  	"
+  movDst-style         	="bold                  	cyan"
+  movDstTo-style       	="syntax italic         	"
+  map-styles           	=                       	\
+   "🐙git.movSrc-style  	=> 🐙git.movSrcTo-style",	\
+   "🐙git.movDst-style  	=> 🐙git.movDstTo-style"
+
 [delta "tangara-chilensis"]
     # author: https://github.com/clnoll
     commit-decoration-style = bold box ul "#34fd50"
