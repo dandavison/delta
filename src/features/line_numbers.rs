@@ -351,6 +351,30 @@ pub mod tests {
 
     use super::*;
 
+    /// The line-numbers feature colours line numbers for the mode delta renders in.
+    #[test]
+    fn test_line_number_styles_follow_the_mode() {
+        let styles = |mode: &str| {
+            let opt = crate::tests::integration_test_utils::make_options_from_args(&[
+                mode,
+                "--line-numbers",
+            ]);
+            (
+                opt.line_numbers_minus_style,
+                opt.line_numbers_zero_style,
+                opt.line_numbers_plus_style,
+            )
+        };
+        assert_eq!(
+            styles("--light"),
+            ("red".into(), "#dddddd".into(), "green".into())
+        );
+        assert_eq!(
+            styles("--dark"),
+            ("88".into(), "#444444".into(), "28".into())
+        );
+    }
+
     pub fn parse_line_number_format_with_default_regex(
         format_string: &str,
     ) -> FormatStringData<'_> {
