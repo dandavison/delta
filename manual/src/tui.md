@@ -57,7 +57,7 @@ Shell commands of your own can be run from a key, with the commit, file or branc
     open-pr = o
 ```
 
-The key runs the command with `sh -c` in the repository's root, so pipes, redirection and the rest of POSIX shell syntax work. `{commit}`, `{file}` and `{branch}` are filled in, quoted for the shell, from the row under the cursor: a commit, a file or a line of its diff, or a branch (or a commit a branch points to). A command using one that the row does not have is not run, and says which. The TUI stays usable while the command runs, and redraws its views when it exits.
+The key runs the command with `sh -c` in the repository's root, so pipes, redirection and the rest of POSIX shell syntax work. `{commit}`, `{file}` and `{branch}` are filled in, quoted for the shell, from the row under the cursor: a commit, a file or a line of its diff, or a branch (or a commit a branch points to). `{command}` is the git command the screen is showing, as `:` shows it. A command using one that is not there is not run, and says which. The TUI stays usable while the command runs, and redraws its views when it exits.
 
 The command's output is not shown, unless with `--debug`; a command that fails says so, with its exit code. One command runs at a time, and it cannot be cancelled. A command that writes more than about 64 KB of output never finishes, since its output is read only once it exits. Commands need `sh`, so they do not run on Windows without one on the `PATH`.
 
@@ -68,11 +68,13 @@ A view is a `git diff`, `git show` or `git log` of your own, opened from a key, 
 ```gitconfig
 [delta-tui "general.views"]
     diff-since = git diff {commit}...
+    word-diff = {command} --word-diff
 [delta-tui "general.diff-renderer.feature-keys"]
     diff-since = D
+    word-diff = W
 ```
 
-The key opens the view on top of the one it is pressed on, as `enter` opens a commit, and `q` goes back. `{commit}`, `{file}` and `{branch}` are filled in as for shell commands, but a view is not run by a shell: it is a git command the TUI shows, run again after each change, and `:`, `U` and `&` change it as they change any other. A view that is not `git diff`, `git show` or `git log` is refused. `H` lists views in a column of their own.
+The key opens the view on top of the one it is pressed on, as `enter` opens a commit, and `q` goes back. `{commit}`, `{file}` and `{branch}` are filled in as for shell commands, but a view is not run by a shell: `{command}` is a word of its own there, standing for the words of the git command the screen is showing, so that a view such as `word-diff` above changes the command in view. A view is a git command the TUI shows, run again after each change, and `:`, `U` and `&` change it as they change any other. A view that is not `git diff`, `git show` or `git log` is refused. `H` lists views in a column of their own.
 
 ## Color themes
 
