@@ -99,6 +99,7 @@ impl OutputType {
         config: &PagerCfg,
     ) -> Result<Self> {
         let mut replace_arguments_to_less = false;
+        let mut pager_is_executable = false;
 
         let pager_from_env = match env.pagers.clone() {
             (Some(delta_pager), _) => Some(delta_pager),
@@ -108,6 +109,7 @@ impl OutputType {
                 // overwrite the arguments and add '-R'.
                 // We only do this for PAGER, since it is used in other contexts.
                 replace_arguments_to_less = true;
+                pager_is_executable = true;
                 Some(pager)
             }
             _ => None,
@@ -115,14 +117,15 @@ impl OutputType {
 
         if pager_from_config.is_some() {
             replace_arguments_to_less = false;
+            pager_is_executable = false;
         }
 
-        let pager_cmd = shell_words::split(
-            &pager_from_config
+        let pager_cmd = pager_command(
+            pager_from_config
                 .or(pager_from_env)
                 .unwrap_or_else(|| String::from("less")),
-        )
-        .context("Could not parse pager command.")?;
+            pager_is_executable,
+        )?;
 
         Ok(match pager_cmd.split_first() {
             Some((pager_path, args)) => {
@@ -236,6 +239,15 @@ fn _make_process_from_less_path(
     }
 }
 
+fn pager_command(pager: String, pager_is_executable: bool) -> Result<Vec<String>> {
+    if pager_is_executable {
+        // bat has already split PAGER and kept only the executable; splitting
+        // it again would mangle Windows paths containing backslashes or spaces.
+        return Ok(vec![pager]);
+    }
+    shell_words::split(&pager).context("Could not parse pager command.")
+}
+
 fn _make_process_from_pager_path(pager_path: PathBuf, args: &[String]) -> Option<Command> {
     if pager_path.file_stem() == Some(&OsString::from("delta")) {
         fatal(
@@ -252,5 +264,24 @@ delta is not an appropriate value for $PAGER \
         Some(p)
     } else {
         None
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::pager_command;
+
+    #[test]
+    fn test_pager_command_keeps_executable_path_intact() {
+        let path = r"C:\Program Files\Git\usr\bin\less.exe".to_string();
+        assert_eq!(pager_command(path.clone(), true).unwrap(), vec![path]);
+    }
+
+    #[test]
+    fn test_pager_command_splits_configured_command() {
+        assert_eq!(
+            pager_command("less -R".to_string(), false).unwrap(),
+            vec!["less", "-R"]
+        );
     }
 }
