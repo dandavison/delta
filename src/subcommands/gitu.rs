@@ -193,6 +193,33 @@ mod tests {
         color_mode(&options_with(git_config))
     }
 
+    /// gitu offers themes from the git config delta reads, so that a theme it offers is one delta
+    /// can find.
+    #[test]
+    fn test_gitu_reads_the_git_config_delta_reads() {
+        let repo = std::env::temp_dir().join(format!(
+            "delta-gitu-test-repo-{}-{:?}",
+            std::process::id(),
+            std::thread::current().id()
+        ));
+        let git_repo = git2::Repository::init(&repo).unwrap();
+        git_repo
+            .config()
+            .unwrap()
+            .set_bool("delta.mine.dark", true)
+            .unwrap();
+
+        let mut config = configure("");
+        tell_gitu_about_delta(&mut config, &options_with("[delta]\n"));
+        let git_config = config.general.diff_renderer.git_config.open(&repo);
+        fs::remove_dir_all(&repo).unwrap();
+
+        let git_config = git_config
+            .expect("delta says how it opens git config")
+            .unwrap();
+        assert_eq!(git_config.get_bool("delta.mine.dark").ok(), Some(true));
+    }
+
     /// gitu is told the features the user's config enables, so that it shows them
     /// as on and turns them off when toggled.
     #[test]
