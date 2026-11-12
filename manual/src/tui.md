@@ -57,7 +57,12 @@ Shell commands of your own can be run from a key, with the commit, file or branc
     open-pr = o
 ```
 
-The key runs the command with `sh -c` in the repository's root, so pipes, redirection and the rest of POSIX shell syntax work. `{commit}`, `{file}` and `{branch}` are filled in, quoted for the shell, from the row under the cursor: a commit, a file or a line of its diff, or a branch (or a commit a branch points to). `{command}` is the git command the screen is showing, as `:` shows it. A command using one that is not there is not run, and says which. The TUI stays usable while the command runs, and redraws its views when it exits.
+The key runs the command with `sh -c` in the repository's root, so pipes, redirection and the rest of POSIX shell syntax work. It has `COLUMNS` and `DELTA_FEATURES` set as the TUI sets them for the delta it draws with, so a delta it runs draws as the screen is drawn, with the features and theme chosen in the TUI, though without the TUI's folds and counted stat rows. For example, to open the screen's git command as a web page (git drops colors in a pipe, hence `--color=always`):
+
+```gitconfig
+[delta-tui "general.commands"]
+    html = {command} --color=always | delta | aha > /tmp/diff.html && open /tmp/diff.html
+``` `{commit}`, `{file}` and `{branch}` are filled in, quoted for the shell, from the row under the cursor: a commit, a file or a line of its diff, or a branch (or a commit a branch points to). `{command}` is the git command the screen is showing, as `:` shows it. A command using one that is not there is not run, and says which. The TUI stays usable while the command runs, and redraws its views when it exits.
 
 The command's output is not shown, unless with `--debug`; a command that fails says so, with its exit code. One command runs at a time, and it cannot be cancelled. A command that writes more than about 64 KB of output never finishes, since its output is read only once it exits. Commands need `sh`, so they do not run on Windows without one on the `PATH`.
 
