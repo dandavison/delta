@@ -30,7 +30,7 @@ GIT_PAGER='delta --tui --pager' git diff
 
 `S` toggles side-by-side and `L` line numbers. Each enables or disables the feature whether or not your delta config enables it. This holds for the session; nothing is written to your `[delta]` config.
 
-`H` lists these, `plus-minus-markers` (which keeps the `+`/`-` at the start of each line, for copying a diff as a patch; delta calls it `keep-plus-minus-markers`), every feature defined in your git config as `[delta "name"]` (see TUI config below), and your shell commands (see Shell commands below). In the list, `space` enables or disables the selected feature and keeps the list open, and `enter` does so and closes it. Typing a key makes it the selected feature's key, and typing the feature's own key removes it. The TUI saves the keys in git config. Or set them yourself:
+`H` lists these, `plus-minus-markers` (which keeps the `+`/`-` at the start of each line, for copying a diff as a patch; delta calls it `keep-plus-minus-markers`), and every feature defined in your git config as `[delta "name"]` (see TUI config below), in a column beside your shell commands and views (see below). `up` / `down` move within a column and `left` / `right` between them. `space` enables or disables the selected feature and keeps the list open, and `enter` does so and closes it; `enter` on a command runs it, and on a view opens it. Typing a key makes it the selected item's key, and typing its own key removes it. The TUI saves the keys in git config. Or set them yourself:
 
 ```gitconfig
 # These are the defaults. Keys set here replace all of them. A key that is
@@ -50,7 +50,7 @@ Shell commands of your own can be run from a key, with the commit, file or branc
     test-file = cargo test -- {file}
 ```
 
-`H` lists them after the features, marked `$`, and a key is set for one as for a feature; `?` lists it by its name. Or set the key yourself, beside the feature keys:
+`H` lists them in a column of their own, and a key is set for one as for a feature; `?` lists it by its name. Or set the key yourself, beside the feature keys:
 
 ```gitconfig
 [delta-tui "general.diff-renderer.feature-keys"]
@@ -60,6 +60,19 @@ Shell commands of your own can be run from a key, with the commit, file or branc
 The key runs the command with `sh -c` in the repository's root, so pipes, redirection and the rest of POSIX shell syntax work. `{commit}`, `{file}` and `{branch}` are filled in, quoted for the shell, from the row under the cursor: a commit, a file or a line of its diff, or a branch (or a commit a branch points to). A command using one that the row does not have is not run, and says which. The TUI stays usable while the command runs, and redraws its views when it exits.
 
 The command's output is not shown, unless with `--debug`; a command that fails says so, with its exit code. One command runs at a time, and it cannot be cancelled. A command that writes more than about 64 KB of output never finishes, since its output is read only once it exits. Commands need `sh`, so they do not run on Windows without one on the `PATH`.
+
+## Views
+
+A view is a `git diff`, `git show` or `git log` of your own, opened from a key, with the commit, file or branch under the cursor:
+
+```gitconfig
+[delta-tui "general.views"]
+    diff-since = git diff {commit}...
+[delta-tui "general.diff-renderer.feature-keys"]
+    diff-since = D
+```
+
+The key opens the view on top of the one it is pressed on, as `enter` opens a commit, and `q` goes back. `{commit}`, `{file}` and `{branch}` are filled in as for shell commands, but a view is not run by a shell: it is a git command the TUI shows, run again after each change, and `:`, `U` and `&` change it as they change any other. A view that is not `git diff`, `git show` or `git log` is refused. `H` lists views in a column of their own.
 
 ## Color themes
 
@@ -322,7 +335,7 @@ Prompts take readline keys (`ctrl+a`, `ctrl+e`, `alt+b`, `alt+f`, `ctrl+w`, `ctr
 | `+` / `-` | wider / narrower diff context | `root.wider_diff_context` / `root.narrower_diff_context` |
 | `H` | delta features | `root.renderer_features` |
 | `S` `L` | side-by-side, line numbers | `general.diff_renderer.feature_keys` |
-| your keys | your shell commands | `general.diff_renderer.feature_keys` |
+| your keys | your shell commands and views | `general.diff_renderer.feature_keys` |
 | `T` | color themes | `root.renderer_themes` |
 | `/` `n` `N` | search, next, previous | `root.search`, `root.search_next`, `root.search_previous` |
 | `y` | copy hash | `root.copy_hash` |
@@ -352,4 +365,4 @@ Prompts take readline keys (`ctrl+a`, `ctrl+e`, `alt+b`, `alt+f`, `ctrl+w`, `ctr
 - delta does not mark merge conflict rows or `\ No newline at end of file` rows, so the TUI does not show them.
 - Output beyond `max-input-bytes` is dropped; a row at the end says so.
 - A shell alias (`!…`) is not recognised as the git command it runs.
-- A feature key cannot be set in git config for a feature whose name has capitals, since git lowercases config names. For the same reason, a shell command's name given in git config is lowercased.
+- A feature key cannot be set in git config for a feature whose name has capitals, since git lowercases config names. For the same reason, the name of a shell command or view given in git config is lowercased.
