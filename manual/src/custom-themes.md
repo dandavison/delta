@@ -22,4 +22,14 @@ Then, add your chosen color theme to your features list, e.g.
     ...
 ```
 
+To use one theme on a dark background and another on a light one, list them in `dark-features` and `light-features`:
+
+```gitconfig
+[delta]
+    dark-features = collared-trogon
+    light-features = hoopoe
+```
+
+Delta decides whether the background is dark or light as it does without these: from `dark` or `light` in your config or on the command line, else from your terminal's background, else from your `syntax-theme`, else dark. A feature in `dark-features` or `light-features` cannot change that decision, even if it sets `dark`, `light` or a `syntax-theme` for the other mode. These features rank above those in `features`, and below those on the command line. `--features`, or `DELTA_FEATURES` without a leading `+`, replaces them, as it replaces `features`. Any feature can be listed, not only a theme.
+
 Note that this terminology differs from [bat](https://github.com/sharkdp/bat): bat does not apply background colors, and uses the term "theme" to refer to what delta calls `syntax-theme`. Delta does not have a setting named "theme": a theme is a "feature", so one uses `features` to select a theme.

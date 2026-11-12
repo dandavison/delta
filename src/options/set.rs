@@ -7,6 +7,7 @@ use bat::assets::HighlightingAssets;
 use console::Term;
 
 use crate::cli;
+use crate::color::ColorMode;
 use crate::config;
 use crate::env::DeltaEnv;
 use crate::errors::*;
@@ -99,13 +100,59 @@ pub fn set_options(
     // side-by-side feature.
     set_available_terminal_width(opt);
     set_side_by_side_width(opt);
-    let features = gather_features(opt, &builtin_features, git_config, arg_matches);
-    let features_without_side_by_side =
-        gather_features_without_side_by_side(opt, &mut builtin_features, git_config, arg_matches);
+    // gather_features reads --features from opt.features, and its result replaces that, so each
+    // gathering starts from the command line's value.
+    let features_arg = opt.features.clone();
+    let mut features = gather_features(opt, &builtin_features, git_config, arg_matches, None);
     opt.features = Some(features.join(" "));
 
-    // Set light, dark, and syntax-theme.
+    // Set light, dark, and syntax-theme, and decide the mode from them, before other option
+    // values are read, since some depend on the mode, such as the line-numbers feature's colours.
+    // The mode is decided from the features without dark-features or light-features, so that a
+    // feature in those cannot change the mode that selects it. Whether to ask the terminal its
+    // background depends on color-only.
     set__light__dark__syntax_theme__options(opt, git_config, arg_matches, &option_names);
+    set_options!(
+        [color_only],
+        opt,
+        builtin_features,
+        git_config,
+        arg_matches,
+        &option_names,
+        false
+    );
+    theme::set_color_mode(opt);
+    let mode = Some(opt.computed.color_mode).filter(|mode| {
+        git_config.as_ref().is_some_and(|git_config| {
+            git_config
+                .get::<String>(features_for_mode_key(*mode))
+                .is_some()
+        })
+    });
+    if mode.is_some() {
+        opt.features = features_arg.clone();
+        features = gather_features(opt, &builtin_features, git_config, arg_matches, mode);
+        opt.features = Some(features.join(" "));
+        // A feature for the mode may set the syntax theme.
+        set_options!(
+            [syntax_theme],
+            opt,
+            HashMap::<String, features::BuiltinFeature>::new(),
+            git_config,
+            arg_matches,
+            &option_names,
+            false
+        );
+    }
+    opt.features = features_arg;
+    let features_without_side_by_side = gather_features_without_side_by_side(
+        opt,
+        &mut builtin_features,
+        git_config,
+        arg_matches,
+        mode,
+    );
+    opt.features = Some(features.join(" "));
 
     // HACK: make minus-line styles have syntax-highlighting iff side-by-side.
     if features.contains(&"side-by-side".to_string()) {
@@ -268,7 +315,7 @@ pub fn set_options(
     // Setting ComputedValues
     set_widths_and_isatty(opt);
     set_true_color(opt);
-    theme::set__color_mode__syntax_theme__syntax_set(opt, assets);
+    theme::set__syntax_theme__syntax_set(opt, assets);
     opt.computed.inspect_raw_lines =
         cli::InspectRawLines::from_str(&opt.inspect_raw_lines).unwrap();
     opt.computed.paging_mode = parse_paging_mode(&opt.paging_mode);
@@ -349,11 +396,16 @@ fn set__light__dark__syntax_theme__options(
 //    - `diff-so-fancy`
 //    - `navigate`
 //
-// 3. Suppose the main [delta] section has `features = d e`. Then
+// 3. Suppose the main [delta] section has `dark-features = g h`, and delta renders for a dark
+//    background (`light-features` for a light one). Then
+//    - `h`, followed by h's "ordered descendents"
+//    - `g`, followed by g's "ordered descendents"
+//
+// 4. Suppose the main [delta] section has `features = d e`. Then
 //    - `e`, followed by e's "ordered descendents"
 //    - `d`, followed by d's "ordered descendents"
 //
-// 4. Suppose the main [delta] section has `diff-highlight = true` followed by `raw = true`.
+// 5. Suppose the main [delta] section has `diff-highlight = true` followed by `raw = true`.
 //    Then
 //    - `diff-highlight`
 //    - `raw`
@@ -465,11 +517,14 @@ pub fn is_switch_feature(feature: &str) -> bool {
         .any(|option| option.is_switch_feature && option.name == feature)
 }
 
+/// `mode`, if given, adds the features that git config lists for it in `dark-features` or
+/// `light-features`.
 fn gather_features(
     opt: &mut cli::Opt,
     builtin_features: &HashMap<String, features::BuiltinFeature>,
     git_config: &Option<GitConfig>,
     arg_matches: &clap::ArgMatches,
+    mode: Option<ColorMode>,
 ) -> Vec<String> {
     let from_env_var = &opt.env.features;
     let from_args = opt.features.as_deref().unwrap_or("");
@@ -570,8 +625,22 @@ fn gather_features(
     }
 
     if let Some(git_config) = git_config {
-        // Gather features from [delta] section if --features was not passed.
+        // Gather features from [delta] section if --features was not passed: those for the mode,
+        // which rank above the others.
         if opt.features.is_none() {
+            let for_mode =
+                mode.and_then(|mode| git_config.get::<String>(features_for_mode_key(mode)));
+            if let Some(feature_string) = for_mode {
+                for feature in split_feature_string(&feature_string) {
+                    gather_features_recursively(
+                        feature,
+                        &mut features,
+                        builtin_features,
+                        opt,
+                        git_config,
+                    )
+                }
+            }
             if let Some(feature_string) = git_config.get::<String>("delta.features") {
                 for feature in split_feature_string(&feature_string) {
                     gather_features_recursively(
@@ -723,9 +792,10 @@ fn gather_features_without_side_by_side(
     builtin_features: &mut HashMap<String, features::BuiltinFeature>,
     git_config: &Option<GitConfig>,
     arg_matches: &clap::ArgMatches,
+    mode: Option<ColorMode>,
 ) -> Vec<String> {
     let side_by_side = builtin_features.remove("side-by-side");
-    let features = gather_features(opt, builtin_features, git_config, arg_matches);
+    let features = gather_features(opt, builtin_features, git_config, arg_matches, mode);
     if let Some(side_by_side) = side_by_side {
         builtin_features.insert("side-by-side".to_string(), side_by_side);
     }
@@ -769,6 +839,14 @@ fn set_unified_line_numbers_formats(
     opt.computed.unified_line_numbers_right_format =
         get_unified_option_value!(line_numbers_right_format, "line-numbers-right-format");
     opt.features = features;
+}
+
+/// The git config key that lists the features for `mode`.
+fn features_for_mode_key(mode: ColorMode) -> &'static str {
+    match mode {
+        ColorMode::Dark => "delta.dark-features",
+        ColorMode::Light => "delta.light-features",
+    }
 }
 
 fn split_feature_string(features: &str) -> impl Iterator<Item = &str> {
