@@ -24,19 +24,23 @@ use ProvenancedOptionValue::*;
 //
 // 2. Otherwise search the features in effect in these groups, and return the first value found:
 //
-//    2.1 The user's git config sections with the same name as a builtin feature that is in effect,
-//        such as [delta "side-by-side"], in order of priority.
+//    2.1 The features from the command line (--features, DELTA_FEATURES, flags, and what they bring
+//        in), in order of priority: for each, the user's git config section [delta "feature"],
+//        or else the builtin feature's values; of a switch feature, only the value of its own
+//        option, such as side-by-side's side-by-side.
 //
-//    2.2 The other features in order of priority: for each, the user's git config section
-//        [delta "feature"], or else the builtin feature's values; of a switch feature, only the
-//        value of its own option, such as side-by-side's side-by-side.
+//    2.2 The user's git config sections with the same name as a builtin feature that is in
+//        effect, such as [delta "side-by-side"], in order of priority.
 //
-//    2.3 The values of the switch features that are in effect, such as side-by-side, in order of
+//    2.3 The other features, as in 2.1, in order of priority.
+//
+//    2.4 The values of the switch features that are in effect, such as side-by-side, in order of
 //        priority.
 //
 // So what a switch feature sets besides its own option, such as side-by-side's line-number
 // formats, is a default that anything the user sets beats, however the switch feature was turned
-// on; and a section with the same name as a builtin feature beats every other feature.
+// on; a section with the same name as a builtin feature beats the other features in git config;
+// and the command line beats git config.
 pub fn get_option_value<T>(
     option_name: &str,
     builtin_features: &HashMap<String, features::BuiltinFeature>,
@@ -105,20 +109,34 @@ pub trait GetOptionValue {
             }
         };
         let in_order = || features.iter().copied();
+        let from_command_line =
+            |feature: &&str| opt.computed.command_line_features.contains(*feature);
+        // A feature's own value: its user section, then a builtin style feature's values, or of a
+        // switch feature only the value of its own option, which keeps its place in the list.
+        let own_value = |feature: &str, with_section: bool| {
+            let section = if with_section || !is_builtin(&feature) {
+                user_section(feature)
+            } else {
+                None
+            };
+            section.or_else(|| {
+                let builtin_value = is_builtin(&feature)
+                    && (!is_switch_feature(&feature) || feature == option_name);
+                builtin_value.then(|| builtin(feature)).flatten()
+            })
+        };
         in_order()
-            .filter(is_builtin)
-            .find_map(user_section)
+            .filter(from_command_line)
+            .find_map(|feature| own_value(feature, true))
             .or_else(|| {
-                in_order().find_map(|feature| {
-                    if !is_builtin(&feature) {
-                        user_section(feature)
-                    } else if !is_switch_feature(&feature) || feature == option_name {
-                        // A switch feature's own option keeps its place in the list.
-                        builtin(feature)
-                    } else {
-                        None
-                    }
-                })
+                in_order()
+                    .filter(|feature| is_builtin(feature) && !from_command_line(feature))
+                    .find_map(user_section)
+            })
+            .or_else(|| {
+                in_order()
+                    .filter(|feature| !from_command_line(feature))
+                    .find_map(|feature| own_value(feature, false))
             })
             .or_else(|| in_order().filter(is_switch_feature).find_map(builtin))
             .map(Into::into)
