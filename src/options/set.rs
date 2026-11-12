@@ -558,7 +558,13 @@ fn gather_features(
     // Gather features from command line.
     if let Some(git_config) = git_config {
         for feature in input_features {
-            gather_features_recursively(feature, &mut features, builtin_features, opt, git_config);
+            gather_features_recursively(
+                feature,
+                &mut features,
+                builtin_features,
+                opt,
+                Some(git_config),
+            );
         }
     } else {
         for feature in input_features {
@@ -571,7 +577,13 @@ fn gather_features(
     // Gather the builtin features that options of the same name turn on.
     for option in FEATURE_OPTIONS {
         if (option.is_on)(opt) {
-            gather_builtin_features_recursively(option.name, &mut features, builtin_features, opt);
+            gather_features_recursively(
+                option.name,
+                &mut features,
+                builtin_features,
+                opt,
+                git_config.as_ref(),
+            );
         }
     }
     let from_command_line = features.iter().cloned().collect();
@@ -586,7 +598,7 @@ fn gather_features(
                         &mut features,
                         builtin_features,
                         opt,
-                        git_config,
+                        Some(git_config),
                     )
                 }
             }
@@ -607,44 +619,6 @@ fn gather_features(
 /// Whether `feature` is not gathered from anywhere (see `ComputedValues::features_kept_out`).
 fn is_kept_out(opt: &cli::Opt, feature: &str) -> bool {
     opt.computed.features_kept_out.contains(feature)
-}
-
-/// Add to feature list `features` all features in the tree rooted at `feature`.
-fn gather_features_recursively(
-    feature: &str,
-    features: &mut VecDeque<String>,
-    builtin_features: &HashMap<String, features::BuiltinFeature>,
-    opt: &cli::Opt,
-    git_config: &GitConfig,
-) {
-    if is_kept_out(opt, feature) {
-        return;
-    }
-    if builtin_features.contains_key(feature) {
-        gather_builtin_features_recursively(feature, features, builtin_features, opt);
-    } else {
-        features.push_front(feature.to_string());
-    }
-    if let Some(child_features) = git_config.get::<String>(&format!("delta.{feature}.features")) {
-        for child_feature in split_feature_string(&child_features) {
-            if !features.contains(&child_feature.to_string()) {
-                gather_features_recursively(
-                    child_feature,
-                    features,
-                    builtin_features,
-                    opt,
-                    git_config,
-                )
-            }
-        }
-    }
-    gather_builtin_features_from_flags_in_gitconfig(
-        &format!("delta.{feature}"),
-        features,
-        builtin_features,
-        opt,
-        git_config,
-    );
 }
 
 /// The names of `builtin_features` in the order of FEATURE_OPTIONS, so that gathering them gives
@@ -679,39 +653,45 @@ fn gather_builtin_features_from_flags_in_gitconfig(
             git_config.get::<bool>(&key) == Some(true)
         };
         if is_active {
-            gather_builtin_features_recursively(child_feature, features, builtin_features, opt);
+            gather_features_recursively(
+                child_feature,
+                features,
+                builtin_features,
+                opt,
+                Some(git_config),
+            );
         }
     }
 }
 
-/// Add to feature list `features` all builtin features in the tree rooted at `builtin_feature`. A
-/// builtin feature is a named collection of (option-name, value) pairs. This tree arises because
-/// those option names might include (a) a "features" list, and (b) boolean feature flags. I.e. the
-/// children of a node in the tree are features in (a) and (b). (In both cases the features
-/// referenced will be other builtin features, since a builtin feature is determined at compile
-/// time and therefore cannot know of the existence of a non-builtin custom features in gitconfig).
-fn gather_builtin_features_recursively(
+/// Add to feature list `features` all features in the tree rooted at `feature`, unless it is there
+/// already. The children of a feature are those a builtin feature of that name turns on, by a
+/// "features" list or by an option such as line-numbers = true; and those that the user's git
+/// config section [delta "feature"] turns on, in the same two ways. So a section with the name of
+/// a builtin feature brings in its features however the builtin feature is turned on.
+fn gather_features_recursively(
     feature: &str,
     features: &mut VecDeque<String>,
     builtin_features: &HashMap<String, features::BuiltinFeature>,
     opt: &cli::Opt,
+    git_config: Option<&GitConfig>,
 ) {
-    let feature_string = feature.to_string();
-    if features.contains(&feature_string) || is_kept_out(opt, feature) {
+    if features.iter().any(|f| f == feature) || is_kept_out(opt, feature) {
         return;
     }
-    features.push_front(feature_string);
+    features.push_front(feature.to_string());
     if let Some(feature_data) = builtin_features.get(feature) {
         if let Some(child_features_fn) = feature_data.get("features") {
             if let ProvenancedOptionValue::DefaultValue(OptionValue::String(features_string)) =
                 child_features_fn(opt, &None)
             {
                 for child_feature in split_feature_string(&features_string) {
-                    gather_builtin_features_recursively(
+                    gather_features_recursively(
                         child_feature,
                         features,
                         builtin_features,
                         opt,
+                        git_config,
                     );
                 }
             }
@@ -721,16 +701,38 @@ fn gather_builtin_features_recursively(
                 if let ProvenancedOptionValue::DefaultValue(OptionValue::Boolean(true)) =
                     child_features_fn(opt, &None)
                 {
-                    gather_builtin_features_recursively(
+                    gather_features_recursively(
                         child_feature,
                         features,
                         builtin_features,
                         opt,
+                        git_config,
                     );
                 }
             }
         }
     }
+    let Some(git_config) = git_config else {
+        return;
+    };
+    if let Some(child_features) = git_config.get::<String>(&format!("delta.{feature}.features")) {
+        for child_feature in split_feature_string(&child_features) {
+            gather_features_recursively(
+                child_feature,
+                features,
+                builtin_features,
+                opt,
+                Some(git_config),
+            );
+        }
+    }
+    gather_builtin_features_from_flags_in_gitconfig(
+        &format!("delta.{feature}"),
+        features,
+        builtin_features,
+        opt,
+        git_config,
+    );
 }
 
 /// Gather the features, leaving out each builtin feature whose own option the user's config turns
