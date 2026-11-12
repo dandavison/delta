@@ -915,3 +915,31 @@ fn unified_hunks_use_the_line_numbers_section_when_side_by_side_brings_in_line_n
     let opt = options(&[], None, git_config).unwrap();
     assert_eq!(opt.computed.unified_line_numbers_left_format, "L{nm}");
 }
+
+/// A builtin feature named in a features list in git config is in effect, as with its flag: a
+/// style feature does not set an option of its own name, and is not left out for that.
+#[test]
+fn a_builtin_feature_named_in_a_features_list_is_in_effect() {
+    let mut failures = Vec::new();
+    for feature in [
+        "raw",
+        "color-only",
+        "diff-highlight",
+        "diff-so-fancy",
+        "side-by-side",
+        "line-numbers",
+        "keep-plus-minus-markers",
+        "navigate",
+        "hyperlinks",
+    ] {
+        let flag = format!("--{feature}");
+        let expected = output(&[&flag], None, "[delta]\n");
+        let actual = output(&[], None, &format!("[delta]\n    features = {feature}\n"));
+        if let Some(difference) = difference(&expected, &actual) {
+            failures.push(format!(
+                "features = {feature} is not as {flag}: {difference}"
+            ));
+        }
+    }
+    assert_no_failures(failures);
+}
