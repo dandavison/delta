@@ -28,7 +28,8 @@ use ProvenancedOptionValue::*;
 //        such as [delta "side-by-side"], in order of priority.
 //
 //    2.2 The other features in order of priority: for each, the user's git config section
-//        [delta "feature"], or else the builtin feature's values, unless it is a switch feature.
+//        [delta "feature"], or else the builtin feature's values; of a switch feature, only the
+//        value of its own option, such as side-by-side's side-by-side.
 //
 //    2.3 The values of the switch features that are in effect, such as side-by-side, in order of
 //        priority.
@@ -111,7 +112,8 @@ pub trait GetOptionValue {
                 in_order().find_map(|feature| {
                     if !is_builtin(&feature) {
                         user_section(feature)
-                    } else if !is_switch_feature(&feature) {
+                    } else if !is_switch_feature(&feature) || feature == option_name {
+                        // A switch feature's own option keeps its place in the list.
                         builtin(feature)
                     } else {
                         None
