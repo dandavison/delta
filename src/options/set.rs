@@ -99,9 +99,21 @@ pub fn set_options(
     // side-by-side feature.
     set_available_terminal_width(opt);
     set_side_by_side_width(opt);
-    let features = gather_features(opt, &builtin_features, git_config, arg_matches);
-    let features_without_side_by_side =
-        gather_features_without_side_by_side(opt, &mut builtin_features, git_config, arg_matches);
+    let input_features = decide_features_on_the_command_line(opt, &builtin_features, arg_matches);
+    let features = gather_features_without_switches_that_are_off(
+        opt,
+        &builtin_features,
+        git_config,
+        &input_features,
+        arg_matches,
+    );
+    // The features of the hunks that --side-by-side=hunk draws in a single column: those in
+    // effect, without side-by-side's own values, but with the line-numbers it brings in.
+    let features_without_side_by_side: Vec<String> = features
+        .iter()
+        .filter(|feature| *feature != "side-by-side")
+        .cloned()
+        .collect();
     opt.features = Some(features.join(" "));
 
     // Set light, dark, and syntax-theme.
@@ -392,6 +404,8 @@ struct FeatureOption {
     is_switch_feature: bool,
 }
 
+/// In an order in which a builtin feature comes before the builtin features it brings in, such as
+/// side-by-side before line-numbers, so that it is gathered first and has priority over them.
 const FEATURE_OPTIONS: [FeatureOption; 9] = [
     FeatureOption {
         name: "raw",
@@ -436,6 +450,13 @@ const FEATURE_OPTIONS: [FeatureOption; 9] = [
         is_switch_feature: true,
     },
     FeatureOption {
+        name: "side-by-side",
+        is_on: |opt| side_by_side_is_active(opt.side_by_side, opt.computed.side_by_side_width),
+        turn_on: |opt| opt.side_by_side = cli::SideBySide::On(cli::SideBySideScope::All),
+        turn_off: |opt| opt.side_by_side = cli::SideBySide::Off,
+        is_switch_feature: true,
+    },
+    FeatureOption {
         name: "line-numbers",
         is_on: |opt| opt.line_numbers,
         turn_on: |opt| opt.line_numbers = true,
@@ -449,13 +470,6 @@ const FEATURE_OPTIONS: [FeatureOption; 9] = [
         turn_off: |opt| opt.navigate = false,
         is_switch_feature: true,
     },
-    FeatureOption {
-        name: "side-by-side",
-        is_on: |opt| side_by_side_is_active(opt.side_by_side, opt.computed.side_by_side_width),
-        turn_on: |opt| opt.side_by_side = cli::SideBySide::On(cli::SideBySideScope::All),
-        turn_off: |opt| opt.side_by_side = cli::SideBySide::Off,
-        is_switch_feature: true,
-    },
 ];
 
 /// Whether `feature` is a switch feature, such as side-by-side.
@@ -465,26 +479,31 @@ pub fn is_switch_feature(feature: &str) -> bool {
         .any(|option| option.is_switch_feature && option.name == feature)
 }
 
-fn gather_features(
+/// What the command line decides about features, whatever git config says, made once before
+/// any gathering. Returns the features named in --features or DELTA_FEATURES.
+fn decide_features_on_the_command_line(
     opt: &mut cli::Opt,
     builtin_features: &HashMap<String, features::BuiltinFeature>,
-    git_config: &Option<GitConfig>,
     arg_matches: &clap::ArgMatches,
 ) -> Vec<String> {
     let from_env_var = &opt.env.features;
     let from_args = opt.features.as_deref().unwrap_or("");
-    let input_features: Vec<&str> = match from_env_var.as_deref() {
+    let input_features: Vec<String> = match from_env_var.as_deref() {
         Some(from_env_var) if from_env_var.starts_with('+') => from_env_var[1..]
             .split_whitespace()
             .chain(split_feature_string(from_args))
+            .map(String::from)
             .collect(),
         Some(from_env_var) => {
+            let input = split_feature_string(from_env_var)
+                .map(String::from)
+                .collect();
             opt.features = Some(from_env_var.to_string());
-            split_feature_string(from_env_var).collect()
+            input
         }
-        None => split_feature_string(from_args).collect(),
+        None => split_feature_string(from_args).map(String::from).collect(),
     };
-    let (removed, input_features): (Vec<&str>, Vec<&str>) = input_features
+    let (removed, input_features): (Vec<String>, Vec<String>) = input_features
         .into_iter()
         .partition(|feature| feature.starts_with('-'));
 
@@ -506,53 +525,46 @@ fn gather_features(
                 .insert(option.name.to_string());
         }
     }
+    opt.computed
+        .features_kept_out
+        .extend(opt.computed.features_turned_off.iter().cloned());
     // A switch feature named in --features or DELTA_FEATURES is the same as its bare flag, so it
-    // beats git config, and the flag given on the command line beats it. This adds to the set
-    // because gather_features_without_side_by_side runs this again without the side-by-side
-    // feature.
-    let command_line_switch_features: Vec<String> = FEATURE_OPTIONS
+    // beats git config, and the flag given on the command line beats it.
+    opt.computed.command_line_switch_features = FEATURE_OPTIONS
         .iter()
         .filter(|option| {
             option.is_switch_feature
-                && input_features.contains(&option.name)
+                && input_features.iter().any(|feature| feature == option.name)
                 && builtin_features.contains_key(option.name)
                 && !user_supplied(option.name)
                 && !opt.computed.features_turned_off.contains(option.name)
         })
         .map(|option| option.name.to_string())
         .collect();
-    opt.computed
-        .command_line_switch_features
-        .extend(command_line_switch_features);
-    // [delta] has priority over every feature, so an option it turns off keeps out the feature of
-    // the same name, wherever git config turns that on. The command line beats [delta].
-    if let Some(git_config) = git_config {
-        for option in FEATURE_OPTIONS {
-            if user_supplied(option.name) || input_features.contains(&option.name) {
-                continue;
-            }
-            let key = format!("delta.{}", option.name);
-            let off = if option.name == "side-by-side" {
-                git_config.get::<cli::SideBySide>(&key).map(|side_by_side| {
-                    !side_by_side_is_active(side_by_side, opt.computed.side_by_side_width)
-                })
-            } else {
-                git_config.get::<bool>(&key).map(|on| !on)
-            };
-            if off == Some(true) {
-                opt.computed
-                    .features_off_in_delta_section
-                    .insert(option.name.to_string());
-            }
-        }
-    }
+    input_features
+}
 
+/// The features in effect, in order of priority, gathered from `input_features` (those named in
+/// --features or DELTA_FEATURES), the flags, and git config; and those of them that the command
+/// line brings in.
+fn gather_features(
+    opt: &cli::Opt,
+    builtin_features: &HashMap<String, features::BuiltinFeature>,
+    git_config: &Option<GitConfig>,
+    input_features: &[String],
+) -> (Vec<String>, HashSet<String>) {
     let mut features = VecDeque::new();
 
     // Gather features from command line.
     if let Some(git_config) = git_config {
         for feature in input_features {
-            gather_features_recursively(feature, &mut features, builtin_features, opt, git_config);
+            gather_features_recursively(
+                feature,
+                &mut features,
+                builtin_features,
+                opt,
+                Some(git_config),
+            );
         }
     } else {
         for feature in input_features {
@@ -565,9 +577,16 @@ fn gather_features(
     // Gather the builtin features that options of the same name turn on.
     for option in FEATURE_OPTIONS {
         if (option.is_on)(opt) {
-            gather_builtin_features_recursively(option.name, &mut features, builtin_features, opt);
+            gather_features_recursively(
+                option.name,
+                &mut features,
+                builtin_features,
+                opt,
+                git_config.as_ref(),
+            );
         }
     }
+    let from_command_line = features.iter().cloned().collect();
 
     if let Some(git_config) = git_config {
         // Gather features from [delta] section if --features was not passed.
@@ -579,7 +598,7 @@ fn gather_features(
                         &mut features,
                         builtin_features,
                         opt,
-                        git_config,
+                        Some(git_config),
                     )
                 }
             }
@@ -594,52 +613,23 @@ fn gather_features(
         );
     }
 
-    Vec::<String>::from(features)
+    (Vec::from(features), from_command_line)
 }
 
-/// Whether `feature` is not gathered from anywhere: turned off, or its option turned off in
-/// [delta].
+/// Whether `feature` is not gathered from anywhere (see `ComputedValues::features_kept_out`).
 fn is_kept_out(opt: &cli::Opt, feature: &str) -> bool {
-    opt.computed.features_turned_off.contains(feature)
-        || opt.computed.features_off_in_delta_section.contains(feature)
+    opt.computed.features_kept_out.contains(feature)
 }
 
-/// Add to feature list `features` all features in the tree rooted at `feature`.
-fn gather_features_recursively(
-    feature: &str,
-    features: &mut VecDeque<String>,
+/// The names of `builtin_features` in the order of FEATURE_OPTIONS, so that gathering them gives
+/// the same list on each run.
+fn in_feature_option_order(
     builtin_features: &HashMap<String, features::BuiltinFeature>,
-    opt: &cli::Opt,
-    git_config: &GitConfig,
-) {
-    if is_kept_out(opt, feature) {
-        return;
-    }
-    if builtin_features.contains_key(feature) {
-        gather_builtin_features_recursively(feature, features, builtin_features, opt);
-    } else {
-        features.push_front(feature.to_string());
-    }
-    if let Some(child_features) = git_config.get::<String>(&format!("delta.{feature}.features")) {
-        for child_feature in split_feature_string(&child_features) {
-            if !features.contains(&child_feature.to_string()) {
-                gather_features_recursively(
-                    child_feature,
-                    features,
-                    builtin_features,
-                    opt,
-                    git_config,
-                )
-            }
-        }
-    }
-    gather_builtin_features_from_flags_in_gitconfig(
-        &format!("delta.{feature}"),
-        features,
-        builtin_features,
-        opt,
-        git_config,
-    );
+) -> impl Iterator<Item = &'static str> + '_ {
+    FEATURE_OPTIONS
+        .iter()
+        .map(|option| option.name)
+        .filter(move |name| builtin_features.contains_key(*name))
 }
 
 /// Look for builtin features requested via boolean feature flags (as opposed to via a "features"
@@ -651,7 +641,7 @@ fn gather_builtin_features_from_flags_in_gitconfig(
     opt: &cli::Opt,
     git_config: &GitConfig,
 ) {
-    for child_feature in builtin_features.keys() {
+    for child_feature in in_feature_option_order(builtin_features) {
         let key = format!("{git_config_key}.{child_feature}");
         let is_active = if child_feature == "side-by-side" {
             git_config
@@ -663,81 +653,152 @@ fn gather_builtin_features_from_flags_in_gitconfig(
             git_config.get::<bool>(&key) == Some(true)
         };
         if is_active {
-            gather_builtin_features_recursively(child_feature, features, builtin_features, opt);
+            gather_features_recursively(
+                child_feature,
+                features,
+                builtin_features,
+                opt,
+                Some(git_config),
+            );
         }
     }
 }
 
-/// Add to feature list `features` all builtin features in the tree rooted at `builtin_feature`. A
-/// builtin feature is a named collection of (option-name, value) pairs. This tree arises because
-/// those option names might include (a) a "features" list, and (b) boolean feature flags. I.e. the
-/// children of a node in the tree are features in (a) and (b). (In both cases the features
-/// referenced will be other builtin features, since a builtin feature is determined at compile
-/// time and therefore cannot know of the existence of a non-builtin custom features in gitconfig).
-fn gather_builtin_features_recursively(
+/// Add to feature list `features` all features in the tree rooted at `feature`, unless it is there
+/// already. The children of a feature are those a builtin feature of that name turns on, by a
+/// "features" list or by an option such as line-numbers = true; and those that the user's git
+/// config section [delta "feature"] turns on, in the same two ways. So a section with the name of
+/// a builtin feature brings in its features however the builtin feature is turned on.
+fn gather_features_recursively(
     feature: &str,
     features: &mut VecDeque<String>,
     builtin_features: &HashMap<String, features::BuiltinFeature>,
     opt: &cli::Opt,
+    git_config: Option<&GitConfig>,
 ) {
-    let feature_string = feature.to_string();
-    if features.contains(&feature_string) || is_kept_out(opt, feature) {
+    if features.iter().any(|f| f == feature) || is_kept_out(opt, feature) {
         return;
     }
-    features.push_front(feature_string);
+    features.push_front(feature.to_string());
     if let Some(feature_data) = builtin_features.get(feature) {
         if let Some(child_features_fn) = feature_data.get("features") {
             if let ProvenancedOptionValue::DefaultValue(OptionValue::String(features_string)) =
                 child_features_fn(opt, &None)
             {
                 for child_feature in split_feature_string(&features_string) {
-                    gather_builtin_features_recursively(
+                    gather_features_recursively(
                         child_feature,
                         features,
                         builtin_features,
                         opt,
+                        git_config,
                     );
                 }
             }
         }
-        for child_feature in builtin_features.keys() {
+        for child_feature in in_feature_option_order(builtin_features) {
             if let Some(child_features_fn) = feature_data.get(child_feature) {
                 if let ProvenancedOptionValue::DefaultValue(OptionValue::Boolean(true)) =
                     child_features_fn(opt, &None)
                 {
-                    gather_builtin_features_recursively(
+                    gather_features_recursively(
                         child_feature,
                         features,
                         builtin_features,
                         opt,
+                        git_config,
                     );
                 }
             }
         }
     }
+    let Some(git_config) = git_config else {
+        return;
+    };
+    if let Some(child_features) = git_config.get::<String>(&format!("delta.{feature}.features")) {
+        for child_feature in split_feature_string(&child_features) {
+            gather_features_recursively(
+                child_feature,
+                features,
+                builtin_features,
+                opt,
+                Some(git_config),
+            );
+        }
+    }
+    gather_builtin_features_from_flags_in_gitconfig(
+        &format!("delta.{feature}"),
+        features,
+        builtin_features,
+        opt,
+        git_config,
+    );
 }
 
-/// Gather the features as if side-by-side were disabled, see `set_unified_line_numbers_formats`.
-fn gather_features_without_side_by_side(
+/// Gather the features, leaving out each builtin feature whose own option the user's config turns
+/// off, wherever that is: [delta], or a feature or theme with priority over the one that turns it
+/// on. Such a feature is not in effect, so it brings in nothing, such as side-by-side's line
+/// numbers. The command line decides for itself. Leaving a feature out can change what the others
+/// set, so this gathers again until no more are left out.
+fn gather_features_without_switches_that_are_off(
     opt: &mut cli::Opt,
-    builtin_features: &mut HashMap<String, features::BuiltinFeature>,
-    git_config: &Option<GitConfig>,
+    builtin_features: &HashMap<String, features::BuiltinFeature>,
+    git_config: &mut Option<GitConfig>,
+    input_features: &[String],
     arg_matches: &clap::ArgMatches,
 ) -> Vec<String> {
-    let side_by_side = builtin_features.remove("side-by-side");
-    let features = gather_features(opt, builtin_features, git_config, arg_matches);
-    if let Some(side_by_side) = side_by_side {
-        builtin_features.insert("side-by-side".to_string(), side_by_side);
+    loop {
+        let (features, from_command_line) =
+            gather_features(opt, builtin_features, git_config, input_features);
+        opt.computed.command_line_features = from_command_line;
+        let given = opt.features.replace(features.join(" "));
+        let off: Vec<&str> = FEATURE_OPTIONS
+            .iter()
+            .map(|option| option.name)
+            .filter(|name| {
+                features.iter().any(|feature| feature == name)
+                    && !config::user_supplied_option(&name.replace('-', "_"), arg_matches)
+                    && !opt.computed.command_line_features.contains(*name)
+                    && !own_option_is_on(name, builtin_features, opt, git_config)
+            })
+            .collect();
+        opt.features = given;
+        if off.is_empty() {
+            return features;
+        }
+        opt.computed
+            .features_kept_out
+            .extend(off.into_iter().map(String::from));
     }
-    features
-        .into_iter()
-        .filter(|feature| feature != "side-by-side")
-        .collect()
+}
+
+/// Whether the option named after the builtin feature `name` is on, as `opt.features` and git
+/// config give it.
+fn own_option_is_on(
+    name: &str,
+    builtin_features: &HashMap<String, features::BuiltinFeature>,
+    opt: &cli::Opt,
+    git_config: &mut Option<GitConfig>,
+) -> bool {
+    if name == "side-by-side" {
+        crate::options::get::get_option_value::<cli::SideBySide>(
+            name,
+            builtin_features,
+            opt,
+            git_config,
+        )
+        .is_some_and(|side_by_side| {
+            side_by_side_is_active(side_by_side, opt.computed.side_by_side_width)
+        })
+    } else {
+        crate::options::get::get_option_value::<bool>(name, builtin_features, opt, git_config)
+            .unwrap_or(false)
+    }
 }
 
 /// The side-by-side feature sets the line numbers format for its panels. With
 /// --side-by-side=hunk the hunks displayed in a single column use the format they would have
-/// without side-by-side, so resolve these options again without it. This must run before
+/// without side-by-side's own values, so resolve these options again without it. This must run before
 /// `set_options!`, while the fields still hold their command line (or default) values.
 fn set_unified_line_numbers_formats(
     opt: &mut cli::Opt,

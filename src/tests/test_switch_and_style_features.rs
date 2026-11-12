@@ -744,3 +744,174 @@ fn a_switch_feature_added_to_the_feature_list_beats_it_turned_off_in_git_config(
     }
     assert_no_failures(failures);
 }
+
+/// When the sections with the names of two builtin features in effect set the same option, the
+/// result does not change between runs: side-by-side's section beats the section of the
+/// line-numbers that side-by-side brings in.
+#[test]
+fn two_sections_with_builtin_names_give_the_same_result_on_each_run() {
+    let git_config = format!(
+        "{}[delta \"line-numbers\"]\n    line-numbers-left-format = L\n[delta \"side-by-side\"]\n    line-numbers-left-format = S\n",
+        user_config("    side-by-side = true\n    line-numbers = true\n")
+    );
+    let formats: std::collections::BTreeSet<String> = (0..20)
+        .map(|_| {
+            options(&[], None, &git_config)
+                .unwrap()
+                .line_numbers_left_format
+        })
+        .collect();
+    assert_eq!(
+        formats,
+        ["S".to_string()].into(),
+        "line-numbers-left-format over 20 runs"
+    );
+}
+
+/// A switch feature that a feature or theme of the user's turns off is not in effect, and brings
+/// in nothing.
+#[test]
+fn a_switch_feature_turned_off_by_a_users_feature_brings_in_nothing() {
+    let mut failures = Vec::new();
+    for switch in SWITCH_FEATURES {
+        let expected = output(&[], None, "[delta]\n");
+        let git_config = format!(
+            "[delta]\n    features = {switch} off\n[delta \"off\"]\n    {switch} = false\n"
+        );
+        let actual = output(&[], None, &git_config);
+        if let Some(difference) = difference(&expected, &actual) {
+            failures.push(format!(
+                "{switch} listed and turned off by a later feature leaves something: {difference}"
+            ));
+        }
+    }
+    assert_no_failures(failures);
+}
+
+/// A switch feature's own option keeps the priority of where it is set; only the other values
+/// of the switch feature are defaults. Of two features, the later in the list has priority.
+#[test]
+fn a_switch_features_own_option_keeps_its_place_in_the_feature_list() {
+    let mut failures = Vec::new();
+    for (switch, on) in [
+        (
+            "line-numbers",
+            (|opt: &cli::Opt| opt.line_numbers) as fn(&cli::Opt) -> bool,
+        ),
+        ("keep-plus-minus-markers", |opt: &cli::Opt| {
+            opt.keep_plus_minus_markers
+        }),
+    ] {
+        let off = format!("[delta \"off\"]\n    {switch} = false\n");
+        for (list, expected) in [
+            (format!("off {switch}"), true),
+            (format!("{switch} off"), false),
+        ] {
+            let git_config = format!("[delta]\n    features = {list}\n{off}");
+            match options(&[], None, &git_config) {
+                Ok(opt) if on(&opt) == expected => {}
+                Ok(_) => failures.push(format!("features = {list}: {switch} is not {expected}")),
+                Err(err) => failures.push(err),
+            }
+        }
+    }
+    assert_no_failures(failures);
+}
+
+/// The command line beats a section with the name of a builtin feature: that section beats only
+/// the features in git config.
+#[test]
+fn the_command_line_beats_a_section_with_the_name_of_a_builtin_feature() {
+    let mut failures = Vec::new();
+    let git_config =
+        "[delta]\n    line-numbers = true\n[delta \"line-numbers\"]\n    file-style = blue box\n";
+    match options(&["--raw"], None, git_config) {
+        Ok(opt) if opt.file_style == "raw" => {}
+        Ok(opt) => failures.push(format!("--raw: file-style is {:?}", opt.file_style)),
+        Err(err) => failures.push(err),
+    }
+    let git_config = "[delta]\n    navigate = true\n[delta \"navigate\"]\n    file-modified-label = S\n[delta \"o\"]\n    file-modified-label = O\n";
+    match options(&[], Some("+o"), git_config) {
+        Ok(opt) if opt.file_modified_label == "O" => {}
+        Ok(opt) => failures.push(format!(
+            "DELTA_FEATURES=+o: file-modified-label is {:?}",
+            opt.file_modified_label
+        )),
+        Err(err) => failures.push(err),
+    }
+    assert_no_failures(failures);
+}
+
+/// A section with the name of a builtin feature adds to it, including the features it lists, however
+/// the builtin feature is turned on.
+#[test]
+fn a_section_with_the_name_of_a_builtin_feature_brings_in_its_features_however_it_is_turned_on() {
+    let mut failures = Vec::new();
+    let sections =
+        "[delta \"navigate\"]\n    features = x\n[delta \"line-numbers\"]\n    features = y\n[delta \"x\"]\n    file-modified-label = X\n[delta \"y\"]\n    line-numbers-left-style = green\n";
+    let label: fn(&cli::Opt) -> &str = |opt| &opt.file_modified_label;
+    let style: fn(&cli::Opt) -> &str = |opt| &opt.line_numbers_left_style;
+    // A case: its name, the arguments, DELTA_FEATURES, what [delta] adds, the value to check,
+    // and what it should be.
+    type Case<'a> = (
+        &'a str,
+        &'a [&'a str],
+        Option<&'a str>,
+        &'a str,
+        fn(&cli::Opt) -> &str,
+        &'a str,
+    );
+    let cases: [Case; 5] = [
+        ("--navigate", &["--navigate"], None, "", label, "X"),
+        (
+            "--features=navigate",
+            &["--features=navigate"],
+            None,
+            "",
+            label,
+            "X",
+        ),
+        (
+            "DELTA_FEATURES=+navigate",
+            &[],
+            Some("+navigate"),
+            "",
+            label,
+            "X",
+        ),
+        (
+            "navigate = true",
+            &[],
+            None,
+            "    navigate = true\n",
+            label,
+            "X",
+        ),
+        (
+            "line-numbers brought in by side-by-side",
+            &[],
+            None,
+            "    side-by-side = true\n",
+            style,
+            "green",
+        ),
+    ];
+    for (case, args, delta_features, in_delta, value, expected) in cases {
+        let git_config = format!("[delta]\n{in_delta}{sections}");
+        match options(args, delta_features, &git_config) {
+            Ok(opt) if value(&opt) == expected => {}
+            Ok(opt) => failures.push(format!("{case}: {:?}, not {expected:?}", value(&opt))),
+            Err(err) => failures.push(err),
+        }
+    }
+    assert_no_failures(failures);
+}
+
+/// With side-by-side = hunk, the hunks drawn in the unified layout use the formats of
+/// [delta "line-numbers"] when line-numbers is in effect, as side-by-side brings it in.
+#[test]
+fn unified_hunks_use_the_line_numbers_section_when_side_by_side_brings_in_line_numbers() {
+    let git_config = "[delta]\n    side-by-side = hunk\n[delta \"line-numbers\"]\n    line-numbers-left-format = L{nm}\n";
+    let opt = options(&[], None, git_config).unwrap();
+    assert_eq!(opt.computed.unified_line_numbers_left_format, "L{nm}");
+}
