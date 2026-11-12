@@ -6,7 +6,7 @@ use std::sync::Arc;
 use std::{backtrace::Backtrace, env, panic};
 
 use ::gitu::cli::Args;
-use ::gitu::config::{self, ColorMode, Config, EnabledFeatures};
+use ::gitu::config::{self, ColorMode, Config, EnabledFeatures, RendererGitConfig};
 use ::gitu::{error::Error, term, Res};
 use clap::{CommandFactory, FromArgMatches};
 
@@ -84,8 +84,9 @@ fn use_delta_as_renderer(config: &mut Config, delta: &str) {
 }
 
 /// Tell gitu what delta does with the user's config: the mode it renders in, so
-/// gitu can offer the themes for that mode first, and how to ask which features
-/// the user's config enables, so gitu can show them as on and turn them off.
+/// gitu can offer the themes for that mode first, how to ask which features the
+/// user's config enables, so gitu can show them as on and turn them off, and how
+/// delta opens git config, so that gitu offers themes delta can find.
 fn tell_gitu_about_delta(config: &mut Config, opt: &crate::cli::Opt) {
     let renderer = &mut config.general.diff_renderer;
     renderer.color_mode = Some(color_mode(opt));
@@ -96,6 +97,7 @@ fn tell_gitu_about_delta(config: &mut Config, opt: &crate::cli::Opt) {
         };
         enabled_features(&env, GitConfig::try_create(&env))
     });
+    renderer.git_config = RendererGitConfig::new(|dir| crate::git_config::open(Some(dir)).1);
 }
 
 /// The features that `git_config`, as it is now, enables, by delta's name: those it names, not
