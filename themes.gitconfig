@@ -63,38 +63,14 @@
 
 [delta "colibri-colorblind"]
     # author: https://github.com/pablospe
-    # Based on woolly-mammoth: https://github.com/Kr1ss-XD.
-    commit-decoration-style = 130 box
+    # colibri, with blue instead of green for added lines.
+    features = colibri
     dark = true
-    file-decoration-style = "#2d2c35" box "#2d2c35"
-    file-added-label = [+]
-    file-copied-label = [=]
-    file-modified-label = [*]
-    file-removed-label = [⛌]
-    file-renamed-label = [→]
-    file-style = orange bold "#2d2c35"
     hunk-header-file-style = "#21a44d" bold
-    hunk-header-line-number-style = orange
-    hunk-header-decoration-style = gray box ul
-    hunk-header-style = file line-number syntax bold italic 237
-    hunk-label = "@"
-    line-numbers = true
-    line-numbers-left-format = "{nm:>1}┊"
-    line-numbers-left-style = red
-    line-numbers-minus-style = red bold
     line-numbers-plus-style = blue bold
-    line-numbers-right-format = " {np:>1}┊"
     line-numbers-right-style = blue
-    line-numbers-zero-style = "#545474" italic
-    minus-emph-style = syntax "#80002a"
-    minus-style = syntax "#400000"
     plus-emph-style = syntax bold "#005488"
     plus-style = syntax "#003a70"
-    syntax-theme = OneHalfDark
-    whitespace-error-style = black reverse
-    zero-style = syntax
-    blame-format = "{author:<18} ({commit:>7}) ┊{timestamp:^16}┊ "
-    blame-palette = "#000000" "#003500" "#282828" "#3c3836"
 
 [delta "collared-trogon"]
     # author: https://github.com/clnoll
