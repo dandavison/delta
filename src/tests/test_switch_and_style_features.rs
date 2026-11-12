@@ -943,3 +943,227 @@ fn a_builtin_feature_named_in_a_features_list_is_in_effect() {
     }
     assert_no_failures(failures);
 }
+
+/// Every builtin feature: the switch features and the style features.
+const BUILTIN_FEATURES: [&str; 9] = [
+    "side-by-side",
+    "line-numbers",
+    "keep-plus-minus-markers",
+    "navigate",
+    "hyperlinks",
+    "raw",
+    "color-only",
+    "diff-highlight",
+    "diff-so-fancy",
+];
+
+/// The builtin features whose flag takes `=false`.
+const TAKES_FALSE: [&str; 7] = [
+    "side-by-side",
+    "line-numbers",
+    "keep-plus-minus-markers",
+    "navigate",
+    "hyperlinks",
+    "diff-highlight",
+    "diff-so-fancy",
+];
+
+/// What a table case starts from: no config, or the user's own feature, which sets what the
+/// builtin side-by-side, line-numbers and navigate features also set.
+struct Base {
+    name: &'static str,
+    features: &'static [&'static str],
+    sections: &'static str,
+}
+
+const BASES: [Base; 2] = [
+    Base {
+        name: "no config",
+        features: &[],
+        sections: "",
+    },
+    Base {
+        name: "the user's feature",
+        features: &["mine"],
+        sections: USER_FEATURE,
+    },
+];
+
+impl Base {
+    /// git config with `listed` after the base's features in [delta] `features`, `delta` in the
+    /// [delta] section, and `sections` after the base's sections.
+    fn git_config(&self, listed: &[&str], delta: &str, sections: &str) -> String {
+        let features: Vec<&str> = self.features.iter().chain(listed).copied().collect();
+        let features = if features.is_empty() {
+            String::new()
+        } else {
+            format!("    features = {}\n", features.join(" "))
+        };
+        format!("[delta]\n{features}{delta}{}{sections}", self.sections)
+    }
+
+    /// `--features` naming the base's features and then `listed`.
+    fn features_arg(&self, listed: &str) -> String {
+        let features: Vec<&str> = self.features.iter().copied().chain([listed]).collect();
+        format!("--features={}", features.join(" "))
+    }
+}
+
+/// Record a failure unless `feature` is in effect, that is, among the features delta gathers, just
+/// when `expected`. Where output cannot show it, as for navigate when the user's feature sets
+/// navigate's labels, this does.
+fn check_in_effect(
+    failures: &mut Vec<String>,
+    case: &str,
+    args: &[&str],
+    delta_features: Option<&str>,
+    git_config: &str,
+    feature: &str,
+    expected: bool,
+) {
+    match options(args, delta_features, git_config) {
+        Ok(opt) => {
+            let features = opt.features.unwrap_or_default();
+            if features.split_whitespace().any(|f| f == feature) != expected {
+                failures.push(format!(
+                    "{case}: {feature} in effect is not {expected}: {features:?}"
+                ));
+            }
+        }
+        Err(err) => failures.push(format!("{case}: {err}")),
+    }
+}
+
+/// Every builtin feature gives the same output however it is turned on: as its flag, as an
+/// option in [delta], named in --features, added in DELTA_FEATURES, named in a features list in
+/// git config, or as an option in a feature of the user's. This holds with no config, and with a
+/// feature of the user's that sets what some builtin features also set.
+#[test]
+fn every_builtin_feature_gives_the_same_output_however_it_is_turned_on() {
+    let mut failures = Vec::new();
+    for base in &BASES {
+        for feature in BUILTIN_FEATURES {
+            let flag = format!("--{feature}");
+            let expected = output(&[&flag], None, &base.git_config(&[], "", ""));
+            let option = format!("    {feature} = true\n");
+            let features_arg = base.features_arg(feature);
+            let added = format!("+{feature}");
+            let in_a_feature = format!("[delta \"on\"]\n{option}");
+            let ways: [(&str, &[&str], Option<&str>, String); 5] = [
+                ("in [delta]", &[], None, base.git_config(&[], &option, "")),
+                (
+                    "named in --features",
+                    &[&features_arg],
+                    None,
+                    base.git_config(&[], "", ""),
+                ),
+                (
+                    "added in DELTA_FEATURES",
+                    &[],
+                    Some(&added),
+                    base.git_config(&[], "", ""),
+                ),
+                (
+                    "named in a features list",
+                    &[],
+                    None,
+                    base.git_config(&[feature], "", ""),
+                ),
+                (
+                    "in a feature of the user's",
+                    &[],
+                    None,
+                    base.git_config(&["on"], "", &in_a_feature),
+                ),
+            ];
+            for (way, args, delta_features, git_config) in ways {
+                let case = format!("{}: {feature} turned on {way}", base.name);
+                check_in_effect(
+                    &mut failures,
+                    &case,
+                    args,
+                    delta_features,
+                    &git_config,
+                    feature,
+                    true,
+                );
+                let actual = output(args, delta_features, &git_config);
+                if let Some(difference) = difference(&expected, &actual) {
+                    failures.push(format!("{case} is not as {flag}: {difference}"));
+                }
+            }
+        }
+    }
+    assert_no_failures(failures);
+}
+
+/// Every builtin feature, turned off in any way, brings in nothing, however git config turns it
+/// on: the output is as if it had never been turned on. It is turned off by its flag with
+/// `=false`, by `-name` in DELTA_FEATURES, by an option in [delta], or by an option in a feature of
+/// the user's with priority over the one that turns it on. [delta] has priority over every feature,
+/// so a feature of the user's cannot turn off what [delta] turns on.
+#[test]
+fn every_builtin_feature_turned_off_brings_in_nothing_however_it_is_turned_on() {
+    let mut failures = Vec::new();
+    for base in &BASES {
+        for feature in BUILTIN_FEATURES {
+            let expected = output(&[], None, &base.git_config(&[], "", ""));
+            let on_option = format!("    {feature} = true\n");
+            let off_option = format!("    {feature} = false\n");
+            let in_a_feature = format!("[delta \"on\"]\n{on_option}");
+            let off_feature = format!("[delta \"off\"]\n{off_option}");
+            let flag_off = format!("--{feature}=false");
+            let removed = format!("+-{feature}");
+            // How git config turns it on: the [delta] options, the features listed, the sections.
+            let ons: [(&str, &str, &[&str], &str); 3] = [
+                ("in [delta]", &on_option, &[], ""),
+                ("named in a features list", "", &[feature], ""),
+                ("in a feature of the user's", "", &["on"], &in_a_feature),
+            ];
+            for (on, on_delta, on_listed, on_sections) in ons {
+                let git_config = base.git_config(on_listed, on_delta, on_sections);
+                let mut offs: Vec<(&str, Vec<&str>, Option<&str>, String)> = vec![(
+                    "-name in DELTA_FEATURES",
+                    vec![],
+                    Some(&removed),
+                    git_config.clone(),
+                )];
+                if TAKES_FALSE.contains(&feature) {
+                    offs.push(("its flag", vec![&flag_off], None, git_config.clone()));
+                }
+                if on_delta.is_empty() {
+                    offs.push((
+                        "an option in [delta]",
+                        vec![],
+                        None,
+                        base.git_config(on_listed, &off_option, on_sections),
+                    ));
+                    let listed: Vec<&str> = on_listed.iter().copied().chain(["off"]).collect();
+                    offs.push((
+                        "a later feature of the user's",
+                        vec![],
+                        None,
+                        base.git_config(&listed, "", &format!("{on_sections}{off_feature}")),
+                    ));
+                }
+                for (off, args, delta_features, git_config) in offs {
+                    let case = format!("{}: {feature} turned on {on} and off by {off}", base.name);
+                    check_in_effect(
+                        &mut failures,
+                        &case,
+                        &args,
+                        delta_features,
+                        &git_config,
+                        feature,
+                        false,
+                    );
+                    let actual = output(&args, delta_features, &git_config);
+                    if let Some(difference) = difference(&expected, &actual) {
+                        failures.push(format!("{case} leaves something: {difference}"));
+                    }
+                }
+            }
+        }
+    }
+    assert_no_failures(failures);
+}
