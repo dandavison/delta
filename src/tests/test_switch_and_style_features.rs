@@ -841,3 +841,74 @@ fn the_command_line_beats_a_section_with_the_name_of_a_builtin_feature() {
     }
     assert_no_failures(failures);
 }
+
+/// A section with the name of a builtin feature adds to it, including the features it lists, however
+/// the builtin feature is turned on.
+#[test]
+fn a_section_with_the_name_of_a_builtin_feature_brings_in_its_features_however_it_is_turned_on() {
+    let mut failures = Vec::new();
+    let sections =
+        "[delta \"navigate\"]\n    features = x\n[delta \"line-numbers\"]\n    features = y\n[delta \"x\"]\n    file-modified-label = X\n[delta \"y\"]\n    line-numbers-left-style = green\n";
+    let label: fn(&cli::Opt) -> &str = |opt| &opt.file_modified_label;
+    let style: fn(&cli::Opt) -> &str = |opt| &opt.line_numbers_left_style;
+    let cases: [(
+        &str,
+        &[&str],
+        Option<&str>,
+        &str,
+        fn(&cli::Opt) -> &str,
+        &str,
+    ); 5] = [
+        ("--navigate", &["--navigate"], None, "", label, "X"),
+        (
+            "--features=navigate",
+            &["--features=navigate"],
+            None,
+            "",
+            label,
+            "X",
+        ),
+        (
+            "DELTA_FEATURES=+navigate",
+            &[],
+            Some("+navigate"),
+            "",
+            label,
+            "X",
+        ),
+        (
+            "navigate = true",
+            &[],
+            None,
+            "    navigate = true\n",
+            label,
+            "X",
+        ),
+        (
+            "line-numbers brought in by side-by-side",
+            &[],
+            None,
+            "    side-by-side = true\n",
+            style,
+            "green",
+        ),
+    ];
+    for (case, args, delta_features, in_delta, value, expected) in cases {
+        let git_config = format!("[delta]\n{in_delta}{sections}");
+        match options(args, delta_features, &git_config) {
+            Ok(opt) if value(&opt) == expected => {}
+            Ok(opt) => failures.push(format!("{case}: {:?}, not {expected:?}", value(&opt))),
+            Err(err) => failures.push(err),
+        }
+    }
+    assert_no_failures(failures);
+}
+
+/// With side-by-side = hunk, the hunks drawn in the unified layout use the formats of
+/// [delta "line-numbers"] when line-numbers is in effect, as side-by-side brings it in.
+#[test]
+fn unified_hunks_use_the_line_numbers_section_when_side_by_side_brings_in_line_numbers() {
+    let git_config = "[delta]\n    side-by-side = hunk\n[delta \"line-numbers\"]\n    line-numbers-left-format = L{nm}\n";
+    let opt = options(&[], None, git_config).unwrap();
+    assert_eq!(opt.computed.unified_line_numbers_left_format, "L{nm}");
+}
