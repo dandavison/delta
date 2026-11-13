@@ -125,8 +125,8 @@ Options:
           [default: txt]
 
       --detect-dark-light <DETECT_DARK_LIGHT>
-          Detect whether or not the terminal is dark or light by querying for
-          its colors.
+          Detect whether the terminal background is dark or light, by
+          querying the terminal or (with `system-global`) the OS appearance.
 
           Ignored if either `--dark` or `--light` is specified.
 
@@ -148,10 +148,12 @@ Options:
           from the terminal even though the output is redirected.
 
           Possible values:
-          - auto:   Only query the terminal for its colors if the output is
-            not redirected
-          - always: Always query the terminal for its colors
-          - never:  Never query the terminal for its colors
+          - auto:          Only query the terminal for its colors if the
+            output is not redirected
+          - system-global: Use the OS-wide light/dark appearance instead of
+            querying the terminal; works when piped
+          - always:        Always query the terminal for its colors
+          - never:         Never query the terminal for its colors
 
           [default: auto]
 
