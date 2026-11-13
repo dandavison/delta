@@ -443,6 +443,7 @@ impl<'p> Painter<'p> {
             if let Some((line_numbers, styles)) = line_numbers::linenumbers_and_styles(
                 line_numbers_data.as_mut().unwrap(),
                 state,
+                side_by_side_panel,
                 config,
                 increment,
             ) {

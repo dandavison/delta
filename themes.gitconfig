@@ -45,11 +45,11 @@
     hunk-label = "@"
     line-numbers = true
     line-numbers-left-format = "{nm:>1}┊"
-    line-numbers-left-style = red
+    line-numbers-left-style = line
     line-numbers-minus-style = red bold
     line-numbers-plus-style = green bold
     line-numbers-right-format = " {np:>1}┊"
-    line-numbers-right-style = green
+    line-numbers-right-style = line
     line-numbers-zero-style = "#545474" italic
     minus-emph-style = syntax "#80002a"
     minus-style = syntax "#400000"
@@ -68,7 +68,6 @@
     dark = true
     hunk-header-file-style = "#21a44d" bold
     line-numbers-plus-style = blue bold
-    line-numbers-right-style = blue
     plus-emph-style = syntax bold "#005488"
     plus-style = syntax "#003a70"
 
