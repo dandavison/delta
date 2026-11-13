@@ -33,13 +33,13 @@ Other basics: `j` / `k` move by line and `ctrl+down` / `ctrl+up` by file, hunk o
 
 ## Configuration
 
-The TUI is configured in git config, in the `[delta-tui]` section and its subsections, beside your `[delta]` section. For example, to open a large diff as a list of its files, one row each, which `tab` or `right` unfolds:
+The TUI is configured in git config, in the `[delta-tui]` section and its subsections, beside your `[delta]` section. For example, to open every diff as a list of its files, one row each, which `tab` or `right` unfolds:
 
 ```gitconfig
 [delta-tui]
     # Head each file with its `git diff --stat` row.
     file-header = stat
-    # Open a patch of several files folded, if it does not fit on one screen.
+    # Open every patch with its files folded.
     start-folded = true
 ```
 
@@ -83,7 +83,7 @@ A search is a regex over the text on screen, and moves to the first match as you
 - `left` folds a section you unfolded on this screen (with `right` or `tab`) when the cursor is on it or anywhere inside it, and moves the cursor onto it. So `right` then `left` returns to where you were, whether `right` opened a commit or unfolded a file. On the first screen `left` does not quit.
 - `right` on a blame line opens its commit at that line. `enter` opens a file in the editor named by the first of `GITU_SHOW_EDITOR`, `VISUAL`, `EDITOR` and `GIT_EDITOR` that is set, at the hunk or line.
 - In `git log -p`, the second `shift+tab` folds every commit and the third unfolds everything.
-- `git diff --stat` opens with every file folded to its stat row; `tab` unfolds a file to its diff. A patch asked for with its stat (`git log -p --stat`, `--patch-with-stat`) has each file headed by its stat row, unfolded. `git log --stat` and `git show --stat` show git's own stat. `file-header = stat` heads every file with its stat row, folded or not; after `shift+tab` unfolds everything, files are headed by delta's file headers. `start-folded = true` opens a large patch of several files folded.
+- `git diff --stat` opens with every file folded to its stat row; `tab` unfolds a file to its diff. A patch asked for with its stat (`git log -p --stat`, `--patch-with-stat`) has each file headed by its stat row, unfolded. `git log --stat` and `git show --stat` show git's own stat. `file-header = stat` heads every file with its stat row, folded or not; after `shift+tab` unfolds everything, files are headed by delta's file headers. `start-folded = true` opens every patch with its files folded.
 
 ### Staging
 
@@ -346,8 +346,7 @@ Values below are the defaults except where marked as an example.
     # What heads each file: delta's file header ("delta"), or the file's
     # `git diff --stat` row, counted by the TUI ("stat").
     file-header = delta
-    # Open a patch of more than one file with its files folded, if it does not
-    # fit on one screen.
+    # Open every patch with its files folded.
     start-folded = false
     # Let the cursor stop on unchanged lines.
     visit-context-lines = true
