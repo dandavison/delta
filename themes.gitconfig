@@ -68,7 +68,6 @@
     dark = true
     hunk-header-file-style = "#21a44d" bold
     line-numbers-plus-style = blue bold
-    line-numbers-right-style = blue
     plus-emph-style = syntax bold "#005488"
     plus-style = syntax "#003a70"
 
