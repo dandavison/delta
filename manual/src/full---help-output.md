@@ -271,9 +271,8 @@ Options:
       --grep-header-decoration-style <STYLE>
           Style string for the header decoration in grep output.
 
-          Default is "none" when grep-output-type-is "ripgrep", otherwise
-          defaults to value of header-decoration-style. See
-          hunk-header-decoration-style.
+          Default is "none" when grep-output-type is "ripgrep", otherwise
+          defaults to the value of hunk-header-decoration-style.
 
       --grep-header-file-style <STYLE>
           Style string for the file path part of the header in grep output.
