@@ -215,7 +215,6 @@ pub fn set_options(
             line_numbers_plus_style,
             line_numbers_right_format,
             line_numbers_right_style,
-            line_numbers_separators_follow_line,
             line_numbers_zero_style,
             pager,
             paging_mode,

@@ -65,6 +65,12 @@ pub fn make_feature() -> Vec<(String, OptionValueFunction)> {
     ])
 }
 
+/// Whether a --line-numbers-left-style / --line-numbers-right-style value is the special value
+/// "line", meaning the style of the line.
+pub fn is_line_style(style_string: &str) -> bool {
+    style_string.trim() == "line"
+}
+
 /// The line numbers of a line, and the styles of its two number fields.
 ///
 /// Both fields take the style of the line: a removed line's fields are both in the minus style,
@@ -286,7 +292,7 @@ fn format_and_paint_line_number_field<'a>(
     let format_data = &format_data[side];
     let plus_file = &line_numbers_data.plus_file;
     // The text around the number, e.g. the dividing characters.
-    let style = if config.line_numbers_separators_follow_line {
+    let style = if config.line_numbers_style_leftright_is_line[side] {
         &styles[side]
     } else {
         &config.line_numbers_style_leftright[side]
@@ -771,10 +777,10 @@ pub mod tests {
         );
     }
 
-    /// With --line-numbers-separators-follow-line, the text around the numbers is in the style of
-    /// the line instead of the left/right style.
+    /// With --line-numbers-left-style=line and --line-numbers-right-style=line, the text around the
+    /// numbers is in the style of the line.
     #[test]
-    fn test_separators_follow_line() {
+    fn test_left_right_style_line() {
         DeltaTest::with_args(&[
             "--line-numbers",
             "--line-numbers-left-format",
@@ -782,16 +788,15 @@ pub mod tests {
             "--line-numbers-right-format",
             "{np:^4}│",
             "--line-numbers-left-style",
-            "blue",
+            "line",
             "--line-numbers-right-style",
-            "blue",
+            "line",
             "--line-numbers-minus-style",
             "red",
             "--line-numbers-plus-style",
             "green",
             "--line-numbers-zero-style",
             "yellow",
-            "--line-numbers-separators-follow-line",
         ])
         .explain_ansi()
         .with_input(ONE_MINUS_ONE_PLUS_LINE_DIFF)

@@ -569,7 +569,11 @@ pub struct Opt {
     )]
     /// Style string for the left column of line numbers.
     ///
-    /// See STYLES and LINE NUMBERS sections.
+    /// This styles the text around the line numbers in --line-numbers-left-format, such as the
+    /// dividing characters. The special value "line" paints that text in the style of the line
+    /// instead: --line-numbers-minus-style in a removed line, --line-numbers-plus-style in an added
+    /// line, and --line-numbers-zero-style in an unchanged line. See STYLES and LINE NUMBERS
+    /// sections.
     pub line_numbers_left_style: String,
 
     #[arg(
@@ -611,19 +615,12 @@ pub struct Opt {
     )]
     /// Style string for the right column of line numbers.
     ///
-    /// See STYLES and LINE NUMBERS sections.
+    /// This styles the text around the line numbers in --line-numbers-right-format, such as the
+    /// dividing characters. The special value "line" paints that text in the style of the line
+    /// instead: --line-numbers-minus-style in a removed line, --line-numbers-plus-style in an added
+    /// line, and --line-numbers-zero-style in an unchanged line. See STYLES and LINE NUMBERS
+    /// sections.
     pub line_numbers_right_style: String,
-
-    #[arg(long = "line-numbers-separators-follow-line")]
-    /// Paint the text around the line numbers in the style of the line.
-    ///
-    /// The text around the line numbers in --line-numbers-left-format and
-    /// --line-numbers-right-format, such as the dividing characters, is normally painted in
-    /// --line-numbers-left-style and --line-numbers-right-style. With this option it takes the
-    /// style of the line instead: --line-numbers-minus-style in a removed line,
-    /// --line-numbers-plus-style in an added line, and --line-numbers-zero-style in an unchanged
-    /// line. See LINE NUMBERS section.
-    pub line_numbers_separators_follow_line: bool,
 
     #[arg(
         long = "line-numbers-zero-style",
@@ -1239,7 +1236,6 @@ The following options allow the line number display to be customized:
 --line-numbers-minus-style:  Change the style applied to line numbers in minus lines
 --line-numbers-zero-style:   Change the style applied to line numbers in unchanged lines
 --line-numbers-plus-style:   Change the style applied to line numbers in plus lines
---line-numbers-separators-follow-line: Paint the text around the line numbers in the style of the line, instead of the left/right style
 
 Options --line-numbers-left-format and --line-numbers-right-format allow you to change the contents of the line number columns. Their values are arbitrary format strings, which are allowed to contain the placeholders {{nm}} for the line number associated with the old version of the file and {{np}} for the line number associated with the new version of the file. The placeholders support a subset of the string formatting syntax documented here: <https://doc.rust-lang.org/std/fmt/#formatting-parameters>. Specifically, you can use the alignment and width syntax.
 
