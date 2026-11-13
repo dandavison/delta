@@ -46,6 +46,14 @@ impl ParsedHunkHeader {
             _ => None,
         }
     }
+
+    /// Whether the hunk starts at line 1 of the minus or the plus file, i.e. whether the first
+    /// line of the hunk is the first line of a file.
+    pub fn starts_at_first_line(&self) -> bool {
+        self.line_numbers_and_hunk_lengths
+            .iter()
+            .any(|&(line_number, length)| line_number == 1 && length > 0)
+    }
 }
 
 pub enum HunkHeaderIncludeHunkLabel {
