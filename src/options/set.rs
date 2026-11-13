@@ -77,7 +77,9 @@ pub fn set_options(
             git_config.enabled = false;
         }
     }
-    opt.navigate = opt.navigate || opt.env.navigate.is_some();
+    if !config::user_supplied_option("navigate", arg_matches) {
+        opt.navigate = opt.navigate || opt.env.navigate.is_some();
+    }
     if opt.syntax_theme.is_none() {
         opt.syntax_theme.clone_from(&opt.env.bat_theme);
     }
@@ -93,7 +95,25 @@ pub fn set_options(
         builtin_features.remove("side-by-side");
     }
 
-    let features = gather_features(opt, &builtin_features, git_config);
+    // Needed before gathering features because a side-by-side min width can rule out the
+    // side-by-side feature.
+    set_available_terminal_width(opt);
+    set_side_by_side_width(opt);
+    let input_features = decide_features_on_the_command_line(opt, &builtin_features, arg_matches);
+    let features = gather_features_without_switches_that_are_off(
+        opt,
+        &builtin_features,
+        git_config,
+        &input_features,
+        arg_matches,
+    );
+    // The features of the hunks that --side-by-side=hunk draws in a single column: those in
+    // effect, without side-by-side's own values, but with the line-numbers it brings in.
+    let features_without_side_by_side: Vec<String> = features
+        .iter()
+        .filter(|feature| *feature != "side-by-side")
+        .cloned()
+        .collect();
     opt.features = Some(features.join(" "));
 
     // Set light, dark, and syntax-theme.
@@ -124,6 +144,14 @@ pub fn set_options(
         }
         .unwrap_or_else(|| "magenta reverse".to_string())
     }
+
+    set_unified_line_numbers_formats(
+        opt,
+        &features_without_side_by_side,
+        &builtin_features,
+        git_config,
+        arg_matches,
+    );
 
     set_options!(
         [
@@ -234,6 +262,21 @@ pub fn set_options(
         true
     );
 
+    // A switch feature named in --features or DELTA_FEATURES does what its bare flag does, and a
+    // turned-off builtin feature turns off the option of the same name.
+    for option in FEATURE_OPTIONS {
+        if opt
+            .computed
+            .command_line_switch_features
+            .contains(option.name)
+        {
+            (option.turn_on)(opt);
+        }
+        if opt.computed.features_turned_off.contains(option.name) {
+            (option.turn_off)(opt);
+        }
+    }
+
     // Setting ComputedValues
     set_widths_and_isatty(opt);
     set_true_color(opt);
@@ -242,11 +285,18 @@ pub fn set_options(
         cli::InspectRawLines::from_str(&opt.inspect_raw_lines).unwrap();
     opt.computed.paging_mode = parse_paging_mode(&opt.paging_mode);
 
+    opt.computed.side_by_side =
+        side_by_side_is_active(opt.side_by_side, opt.computed.side_by_side_width);
+    opt.computed.side_by_side_scope = match opt.side_by_side {
+        cli::SideBySide::Off => cli::SideBySideScope::default(),
+        cli::SideBySide::On(scope) | cli::SideBySide::MinWidth(_, scope) => scope,
+    };
+
     // --color-only is used for interactive.diffFilter (git add -p). side-by-side, and
     // **-decoration-style cannot be used there (does not emit lines in 1-1 correspondence with raw git output).
     // See #274.
     if opt.color_only {
-        opt.side_by_side = false;
+        opt.computed.side_by_side = false;
         opt.file_decoration_style = "none".to_string();
         opt.commit_decoration_style = "none".to_string();
         opt.hunk_header_decoration_style = "none".to_string();
@@ -295,8 +345,10 @@ fn set__light__dark__syntax_theme__options(
 // (space-separated string) of enabled features. The list is arranged in order of increasing
 // priority in the sense that, when searching for a option value, one starts at the right-hand end
 // and moves leftward, examining each feature in turn until a feature that associates a value with
-// the option name is encountered. This search is documented in
-// `get_option_value::get_option_value`.
+// the option name is encountered. Two kinds of value are taken out of this order: the user's
+// sections with the same name as a builtin feature, such as [delta "side-by-side"], are searched
+// first, and the values of the switch features, such as side-by-side, last. This search is
+// documented in `get_option_value::get_option_value`.
 //
 // The feature list comprises features deriving from the following sources, listed in order of
 // decreasing priority:
@@ -339,72 +391,202 @@ fn set__light__dark__syntax_theme__options(
 //
 // [delta "d"]
 //     features = f e
-fn gather_features(
+/// An option that turns on the builtin feature of the same name.
+struct FeatureOption {
+    name: &'static str,
+    is_on: fn(&cli::Opt) -> bool,
+    /// What the bare flag does.
+    turn_on: fn(&mut cli::Opt),
+    turn_off: fn(&mut cli::Opt),
+    /// A switch feature, such as side-by-side, turns on one capability of delta; its other values
+    /// are only defaults for how that capability looks. A style feature, such as raw, is a set of
+    /// values for how delta looks. See `get_option_value` for how each ranks.
+    is_switch_feature: bool,
+}
+
+/// In an order in which a builtin feature comes before the builtin features it brings in, such as
+/// side-by-side before line-numbers, so that it is gathered first and has priority over them.
+const FEATURE_OPTIONS: [FeatureOption; 9] = [
+    FeatureOption {
+        name: "raw",
+        is_on: |opt| opt.raw,
+        turn_on: |opt| opt.raw = true,
+        turn_off: |opt| opt.raw = false,
+        is_switch_feature: false,
+    },
+    FeatureOption {
+        name: "color-only",
+        is_on: |opt| opt.color_only,
+        turn_on: |opt| opt.color_only = true,
+        turn_off: |opt| opt.color_only = false,
+        is_switch_feature: false,
+    },
+    FeatureOption {
+        name: "diff-highlight",
+        is_on: |opt| opt.diff_highlight,
+        turn_on: |opt| opt.diff_highlight = true,
+        turn_off: |opt| opt.diff_highlight = false,
+        is_switch_feature: false,
+    },
+    FeatureOption {
+        name: "diff-so-fancy",
+        is_on: |opt| opt.diff_so_fancy,
+        turn_on: |opt| opt.diff_so_fancy = true,
+        turn_off: |opt| opt.diff_so_fancy = false,
+        is_switch_feature: false,
+    },
+    FeatureOption {
+        name: "hyperlinks",
+        is_on: |opt| opt.hyperlinks,
+        turn_on: |opt| opt.hyperlinks = true,
+        turn_off: |opt| opt.hyperlinks = false,
+        is_switch_feature: true,
+    },
+    FeatureOption {
+        name: "keep-plus-minus-markers",
+        is_on: |opt| opt.keep_plus_minus_markers,
+        turn_on: |opt| opt.keep_plus_minus_markers = true,
+        turn_off: |opt| opt.keep_plus_minus_markers = false,
+        is_switch_feature: true,
+    },
+    FeatureOption {
+        name: "side-by-side",
+        is_on: |opt| side_by_side_is_active(opt.side_by_side, opt.computed.side_by_side_width),
+        turn_on: |opt| opt.side_by_side = cli::SideBySide::On(cli::SideBySideScope::All),
+        turn_off: |opt| opt.side_by_side = cli::SideBySide::Off,
+        is_switch_feature: true,
+    },
+    FeatureOption {
+        name: "line-numbers",
+        is_on: |opt| opt.line_numbers,
+        turn_on: |opt| opt.line_numbers = true,
+        turn_off: |opt| opt.line_numbers = false,
+        is_switch_feature: true,
+    },
+    FeatureOption {
+        name: "navigate",
+        is_on: |opt| opt.navigate,
+        turn_on: |opt| opt.navigate = true,
+        turn_off: |opt| opt.navigate = false,
+        is_switch_feature: true,
+    },
+];
+
+/// Whether `feature` is a switch feature, such as side-by-side.
+pub fn is_switch_feature(feature: &str) -> bool {
+    FEATURE_OPTIONS
+        .iter()
+        .any(|option| option.is_switch_feature && option.name == feature)
+}
+
+/// What the command line decides about features, whatever git config says, made once before
+/// any gathering. Returns the features named in --features or DELTA_FEATURES.
+fn decide_features_on_the_command_line(
     opt: &mut cli::Opt,
     builtin_features: &HashMap<String, features::BuiltinFeature>,
-    git_config: &Option<GitConfig>,
+    arg_matches: &clap::ArgMatches,
 ) -> Vec<String> {
     let from_env_var = &opt.env.features;
     let from_args = opt.features.as_deref().unwrap_or("");
-    let input_features: Vec<&str> = match from_env_var.as_deref() {
+    let input_features: Vec<String> = match from_env_var.as_deref() {
         Some(from_env_var) if from_env_var.starts_with('+') => from_env_var[1..]
             .split_whitespace()
             .chain(split_feature_string(from_args))
+            .map(String::from)
             .collect(),
         Some(from_env_var) => {
+            let input = split_feature_string(from_env_var)
+                .map(String::from)
+                .collect();
             opt.features = Some(from_env_var.to_string());
-            split_feature_string(from_env_var).collect()
+            input
         }
-        None => split_feature_string(from_args).collect(),
+        None => split_feature_string(from_args).map(String::from).collect(),
     };
+    let (removed, input_features): (Vec<String>, Vec<String>) = input_features
+        .into_iter()
+        .partition(|feature| feature.starts_with('-'));
 
+    // A feature is turned off by -name in DELTA_FEATURES or --features, or by the command line
+    // turning off the option of the same name. The command line beats DELTA_FEATURES. A
+    // turned-off feature is not gathered from anywhere.
+    let user_supplied =
+        |feature: &str| config::user_supplied_option(&feature.replace('-', "_"), arg_matches);
+    for feature in removed.iter().map(|feature| &feature[1..]) {
+        let is_feature_option = FEATURE_OPTIONS.iter().any(|option| option.name == feature);
+        if !(is_feature_option && user_supplied(feature)) {
+            opt.computed.features_turned_off.insert(feature.to_string());
+        }
+    }
+    for option in FEATURE_OPTIONS {
+        if user_supplied(option.name) && !(option.is_on)(opt) {
+            opt.computed
+                .features_turned_off
+                .insert(option.name.to_string());
+        }
+    }
+    opt.computed
+        .features_kept_out
+        .extend(opt.computed.features_turned_off.iter().cloned());
+    // A switch feature named in --features or DELTA_FEATURES is the same as its bare flag, so it
+    // beats git config, and the flag given on the command line beats it.
+    opt.computed.command_line_switch_features = FEATURE_OPTIONS
+        .iter()
+        .filter(|option| {
+            option.is_switch_feature
+                && input_features.iter().any(|feature| feature == option.name)
+                && builtin_features.contains_key(option.name)
+                && !user_supplied(option.name)
+                && !opt.computed.features_turned_off.contains(option.name)
+        })
+        .map(|option| option.name.to_string())
+        .collect();
+    input_features
+}
+
+/// The features in effect, in order of priority, gathered from `input_features` (those named in
+/// --features or DELTA_FEATURES), the flags, and git config; and those of them that the command
+/// line brings in.
+fn gather_features(
+    opt: &cli::Opt,
+    builtin_features: &HashMap<String, features::BuiltinFeature>,
+    git_config: &Option<GitConfig>,
+    input_features: &[String],
+) -> (Vec<String>, HashSet<String>) {
     let mut features = VecDeque::new();
 
     // Gather features from command line.
     if let Some(git_config) = git_config {
         for feature in input_features {
-            gather_features_recursively(feature, &mut features, builtin_features, opt, git_config);
+            gather_features_recursively(
+                feature,
+                &mut features,
+                builtin_features,
+                opt,
+                Some(git_config),
+            );
         }
     } else {
         for feature in input_features {
-            features.push_front(feature.to_string());
+            if !is_kept_out(opt, feature) {
+                features.push_front(feature.to_string());
+            }
         }
     }
 
-    // Gather builtin feature flags supplied on command line.
-    // TODO: Iterate over programmatically-obtained names of builtin features.
-    if opt.raw {
-        gather_builtin_features_recursively("raw", &mut features, builtin_features, opt);
+    // Gather the builtin features that options of the same name turn on.
+    for option in FEATURE_OPTIONS {
+        if (option.is_on)(opt) {
+            gather_features_recursively(
+                option.name,
+                &mut features,
+                builtin_features,
+                opt,
+                git_config.as_ref(),
+            );
+        }
     }
-    if opt.color_only {
-        gather_builtin_features_recursively("color-only", &mut features, builtin_features, opt);
-    }
-    if opt.diff_highlight {
-        gather_builtin_features_recursively("diff-highlight", &mut features, builtin_features, opt);
-    }
-    if opt.diff_so_fancy {
-        gather_builtin_features_recursively("diff-so-fancy", &mut features, builtin_features, opt);
-    }
-    if opt.hyperlinks {
-        gather_builtin_features_recursively("hyperlinks", &mut features, builtin_features, opt);
-    }
-    if opt.keep_plus_minus_markers {
-        gather_builtin_features_recursively(
-            "keep-plus-minus-markers",
-            &mut features,
-            builtin_features,
-            opt,
-        );
-    }
-    if opt.line_numbers {
-        gather_builtin_features_recursively("line-numbers", &mut features, builtin_features, opt);
-    }
-    if opt.navigate {
-        gather_builtin_features_recursively("navigate", &mut features, builtin_features, opt);
-    }
-    if opt.side_by_side {
-        gather_builtin_features_recursively("side-by-side", &mut features, builtin_features, opt);
-    }
+    let from_command_line = features.iter().cloned().collect();
 
     if let Some(git_config) = git_config {
         // Gather features from [delta] section if --features was not passed.
@@ -416,7 +598,7 @@ fn gather_features(
                         &mut features,
                         builtin_features,
                         opt,
-                        git_config,
+                        Some(git_config),
                     )
                 }
             }
@@ -431,42 +613,23 @@ fn gather_features(
         );
     }
 
-    Vec::<String>::from(features)
+    (Vec::from(features), from_command_line)
 }
 
-/// Add to feature list `features` all features in the tree rooted at `feature`.
-fn gather_features_recursively(
-    feature: &str,
-    features: &mut VecDeque<String>,
+/// Whether `feature` is not gathered from anywhere (see `ComputedValues::features_kept_out`).
+fn is_kept_out(opt: &cli::Opt, feature: &str) -> bool {
+    opt.computed.features_kept_out.contains(feature)
+}
+
+/// The names of `builtin_features` in the order of FEATURE_OPTIONS, so that gathering them gives
+/// the same list on each run.
+fn in_feature_option_order(
     builtin_features: &HashMap<String, features::BuiltinFeature>,
-    opt: &cli::Opt,
-    git_config: &GitConfig,
-) {
-    if builtin_features.contains_key(feature) {
-        gather_builtin_features_recursively(feature, features, builtin_features, opt);
-    } else {
-        features.push_front(feature.to_string());
-    }
-    if let Some(child_features) = git_config.get::<String>(&format!("delta.{feature}.features")) {
-        for child_feature in split_feature_string(&child_features) {
-            if !features.contains(&child_feature.to_string()) {
-                gather_features_recursively(
-                    child_feature,
-                    features,
-                    builtin_features,
-                    opt,
-                    git_config,
-                )
-            }
-        }
-    }
-    gather_builtin_features_from_flags_in_gitconfig(
-        &format!("delta.{feature}"),
-        features,
-        builtin_features,
-        opt,
-        git_config,
-    );
+) -> impl Iterator<Item = &'static str> + '_ {
+    FEATURE_OPTIONS
+        .iter()
+        .map(|option| option.name)
+        .filter(move |name| builtin_features.contains_key(*name))
 }
 
 /// Look for builtin features requested via boolean feature flags (as opposed to via a "features"
@@ -478,64 +641,262 @@ fn gather_builtin_features_from_flags_in_gitconfig(
     opt: &cli::Opt,
     git_config: &GitConfig,
 ) {
-    for child_feature in builtin_features.keys() {
-        if let Some(true) = git_config.get::<bool>(&format!("{git_config_key}.{child_feature}")) {
-            gather_builtin_features_recursively(child_feature, features, builtin_features, opt);
+    for child_feature in in_feature_option_order(builtin_features) {
+        let key = format!("{git_config_key}.{child_feature}");
+        let is_active = if child_feature == "side-by-side" {
+            git_config
+                .get::<cli::SideBySide>(&key)
+                .is_some_and(|side_by_side| {
+                    side_by_side_is_active(side_by_side, opt.computed.side_by_side_width)
+                })
+        } else {
+            git_config.get::<bool>(&key) == Some(true)
+        };
+        if is_active {
+            gather_features_recursively(
+                child_feature,
+                features,
+                builtin_features,
+                opt,
+                Some(git_config),
+            );
         }
     }
 }
 
-/// Add to feature list `features` all builtin features in the tree rooted at `builtin_feature`. A
-/// builtin feature is a named collection of (option-name, value) pairs. This tree arises because
-/// those option names might include (a) a "features" list, and (b) boolean feature flags. I.e. the
-/// children of a node in the tree are features in (a) and (b). (In both cases the features
-/// referenced will be other builtin features, since a builtin feature is determined at compile
-/// time and therefore cannot know of the existence of a non-builtin custom features in gitconfig).
-fn gather_builtin_features_recursively(
+/// Add to feature list `features` all features in the tree rooted at `feature`, unless it is there
+/// already. The children of a feature are those a builtin feature of that name turns on, by a
+/// "features" list or by an option such as line-numbers = true; and those that the user's git
+/// config section [delta "feature"] turns on, in the same two ways. So a section with the name of
+/// a builtin feature brings in its features however the builtin feature is turned on.
+fn gather_features_recursively(
     feature: &str,
     features: &mut VecDeque<String>,
     builtin_features: &HashMap<String, features::BuiltinFeature>,
     opt: &cli::Opt,
+    git_config: Option<&GitConfig>,
 ) {
-    let feature_string = feature.to_string();
-    if features.contains(&feature_string) {
+    if features.iter().any(|f| f == feature) || is_kept_out(opt, feature) {
         return;
     }
-    features.push_front(feature_string);
+    features.push_front(feature.to_string());
     if let Some(feature_data) = builtin_features.get(feature) {
         if let Some(child_features_fn) = feature_data.get("features") {
             if let ProvenancedOptionValue::DefaultValue(OptionValue::String(features_string)) =
                 child_features_fn(opt, &None)
             {
                 for child_feature in split_feature_string(&features_string) {
-                    gather_builtin_features_recursively(
+                    gather_features_recursively(
                         child_feature,
                         features,
                         builtin_features,
                         opt,
+                        git_config,
                     );
                 }
             }
         }
-        for child_feature in builtin_features.keys() {
+        for child_feature in in_feature_option_order(builtin_features) {
             if let Some(child_features_fn) = feature_data.get(child_feature) {
                 if let ProvenancedOptionValue::DefaultValue(OptionValue::Boolean(true)) =
                     child_features_fn(opt, &None)
                 {
-                    gather_builtin_features_recursively(
+                    gather_features_recursively(
                         child_feature,
                         features,
                         builtin_features,
                         opt,
+                        git_config,
                     );
                 }
             }
         }
     }
+    let Some(git_config) = git_config else {
+        return;
+    };
+    if let Some(child_features) = git_config.get::<String>(&format!("delta.{feature}.features")) {
+        for child_feature in split_feature_string(&child_features) {
+            gather_features_recursively(
+                child_feature,
+                features,
+                builtin_features,
+                opt,
+                Some(git_config),
+            );
+        }
+    }
+    gather_builtin_features_from_flags_in_gitconfig(
+        &format!("delta.{feature}"),
+        features,
+        builtin_features,
+        opt,
+        git_config,
+    );
+}
+
+/// Gather the features, leaving out each builtin feature whose own option the user's config turns
+/// off, wherever that is: [delta], or a feature or theme with priority over the one that turns it
+/// on. Such a feature is not in effect, so it brings in nothing, such as side-by-side's line
+/// numbers. The command line decides for itself. Leaving a feature out can change what the others
+/// set, so this gathers again until no more are left out.
+fn gather_features_without_switches_that_are_off(
+    opt: &mut cli::Opt,
+    builtin_features: &HashMap<String, features::BuiltinFeature>,
+    git_config: &mut Option<GitConfig>,
+    input_features: &[String],
+    arg_matches: &clap::ArgMatches,
+) -> Vec<String> {
+    loop {
+        let (features, from_command_line) =
+            gather_features(opt, builtin_features, git_config, input_features);
+        opt.computed.command_line_features = from_command_line;
+        let given = opt.features.replace(features.join(" "));
+        let off: Vec<&str> = FEATURE_OPTIONS
+            .iter()
+            .map(|option| option.name)
+            .filter(|name| {
+                features.iter().any(|feature| feature == name)
+                    && !config::user_supplied_option(&name.replace('-', "_"), arg_matches)
+                    && !opt.computed.command_line_features.contains(*name)
+                    && own_option_is_turned_off(name, builtin_features, opt, git_config)
+            })
+            .collect();
+        opt.features = given;
+        if off.is_empty() {
+            return features;
+        }
+        opt.computed
+            .features_kept_out
+            .extend(off.into_iter().map(String::from));
+    }
+}
+
+/// Whether something sets the option named after the builtin feature `name` to off, as
+/// `opt.features` and git config give it. An option that nothing sets is not turned off: a style
+/// feature such as raw does not set an option of its own name.
+fn own_option_is_turned_off(
+    name: &str,
+    builtin_features: &HashMap<String, features::BuiltinFeature>,
+    opt: &cli::Opt,
+    git_config: &mut Option<GitConfig>,
+) -> bool {
+    if name == "side-by-side" {
+        crate::options::get::get_option_value::<cli::SideBySide>(
+            name,
+            builtin_features,
+            opt,
+            git_config,
+        )
+        .is_some_and(|side_by_side| {
+            !side_by_side_is_active(side_by_side, opt.computed.side_by_side_width)
+        })
+    } else {
+        crate::options::get::get_option_value::<bool>(name, builtin_features, opt, git_config)
+            == Some(false)
+    }
+}
+
+/// The side-by-side feature sets the line numbers format for its panels. With
+/// --side-by-side=hunk the hunks displayed in a single column use the format they would have
+/// without side-by-side's own values, so resolve these options again without it. This must run
+/// before `set_options!`, while the fields still hold their command line (or default) values.
+fn set_unified_line_numbers_formats(
+    opt: &mut cli::Opt,
+    features_without_side_by_side: &[String],
+    builtin_features: &HashMap<String, features::BuiltinFeature>,
+    git_config: &mut Option<GitConfig>,
+    arg_matches: &clap::ArgMatches,
+) {
+    let features = opt
+        .features
+        .replace(features_without_side_by_side.join(" "));
+    macro_rules! get_unified_option_value {
+        ($field_ident:ident, $option_name:literal) => {
+            if config::user_supplied_option(stringify!($field_ident), arg_matches) {
+                None
+            } else {
+                crate::options::get::get_option_value(
+                    $option_name,
+                    builtin_features,
+                    opt,
+                    git_config,
+                )
+            }
+            .unwrap_or_else(|| opt.$field_ident.clone())
+        };
+    }
+    opt.computed.unified_line_numbers_left_format =
+        get_unified_option_value!(line_numbers_left_format, "line-numbers-left-format");
+    opt.computed.unified_line_numbers_right_format =
+        get_unified_option_value!(line_numbers_right_format, "line-numbers-right-format");
+    opt.features = features;
 }
 
 fn split_feature_string(features: &str) -> impl Iterator<Item = &str> {
     features.split_whitespace().rev()
+}
+
+fn side_by_side_is_active(side_by_side: cli::SideBySide, side_by_side_width: usize) -> bool {
+    match side_by_side {
+        cli::SideBySide::Off => false,
+        cli::SideBySide::On(_) => true,
+        cli::SideBySide::MinWidth(min_width, _) => side_by_side_width >= min_width,
+    }
+}
+
+impl FromStr for cli::SideBySide {
+    type Err = String;
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        if let Ok(min_width) = s.parse::<usize>() {
+            return Ok(min_width.into());
+        }
+        let invalid = || {
+            format!(
+                r#"expected "true", "false", "hunk", a minimum terminal width (e.g. 80), or "hunk" and a minimum terminal width separated by a comma (e.g. hunk,80), got "{s}""#
+            )
+        };
+        let (mut min_width, mut scope) = (None, None);
+        match s.to_lowercase().as_str() {
+            "true" | "yes" | "on" => Ok(Self::On(cli::SideBySideScope::All)),
+            "false" | "no" | "off" | "" => Ok(Self::Off),
+            list => {
+                for word in list.split(',').map(str::trim) {
+                    match (word, word.parse::<usize>()) {
+                        ("hunk", _) if scope.is_none() => scope = Some(cli::SideBySideScope::Hunk),
+                        (_, Ok(width)) if width > 0 && min_width.is_none() => {
+                            min_width = Some(width)
+                        }
+                        _ => return Err(invalid()),
+                    }
+                }
+                let scope = scope.unwrap_or_default();
+                Ok(match min_width {
+                    Some(min_width) => Self::MinWidth(min_width, scope),
+                    None => Self::On(scope),
+                })
+            }
+        }
+    }
+}
+
+impl From<usize> for cli::SideBySide {
+    fn from(min_width: usize) -> Self {
+        match min_width {
+            0 => Self::Off,
+            min_width => Self::MinWidth(min_width, cli::SideBySideScope::All),
+        }
+    }
+}
+
+impl From<bool> for cli::SideBySide {
+    fn from(enabled: bool) -> Self {
+        if enabled {
+            Self::On(cli::SideBySideScope::All)
+        } else {
+            Self::Off
+        }
+    }
 }
 
 impl FromStr for cli::InspectRawLines {
@@ -610,16 +971,31 @@ fn parse_width_specifier(width_arg: &str, terminal_width: usize) -> Result<usize
     Ok(width)
 }
 
-fn set_widths_and_isatty(opt: &mut cli::Opt) {
+fn set_available_terminal_width(opt: &mut cli::Opt) {
     let term_stdout = Term::stdout();
-    opt.computed.stdout_is_term = term_stdout.is_term();
-
     // If one extra character for e.g. `less --status-column` is required use "-1"
     // as an argument, also see #41, #10, #115 and #727.
     opt.computed.available_terminal_width =
         width_from_columns_env_var(&opt.env).unwrap_or_else(|| {
             crate::utils::workarounds::windows_msys2_width_fix(term_stdout.size(), &term_stdout)
         });
+}
+
+/// Set the width that the side-by-side minimum width applies to: --width if it is a number,
+/// otherwise the terminal width. When delta's output is captured, not written to a terminal,
+/// --width is the only way to tell delta the width. Only --width from the command line counts,
+/// because the side-by-side feature is decided before --width is read from git config.
+fn set_side_by_side_width(opt: &mut cli::Opt) {
+    let terminal_width = opt.computed.available_terminal_width;
+    opt.computed.side_by_side_width = opt
+        .width
+        .as_deref()
+        .and_then(|width| parse_width_specifier(width, terminal_width).ok())
+        .unwrap_or(terminal_width);
+}
+
+fn set_widths_and_isatty(opt: &mut cli::Opt) {
+    opt.computed.stdout_is_term = Term::stdout().is_term();
 
     let (decorations_width, background_color_extends_to_terminal_width) = match opt.width.as_deref()
     {
@@ -816,7 +1192,7 @@ pub mod tests {
         assert_eq!(opt.plus_non_emph_style, "black black");
         assert_eq!(opt.plus_style, "black black");
         assert!(opt.raw);
-        assert!(opt.side_by_side);
+        assert!(opt.computed.side_by_side);
         assert_eq!(opt.syntax_theme, Some("xxxyyyzzz".to_string()));
         assert_eq!(opt.tab_width, 77);
         assert_eq!(opt.true_color, "never");
@@ -909,5 +1285,639 @@ pub mod tests {
 
         assert_eq!(width_for(Some("80")), Some(80));
         assert_eq!(width_for(Some(" 80 ")), Some(80));
+    }
+
+    #[test]
+    fn test_side_by_side_min_width_disables_sbs_when_terminal_narrow() {
+        // Use a min-width much larger than any reasonable terminal to guarantee it's disabled.
+        let opt = integration_test_utils::make_options_from_args(&["--side-by-side=99999"]);
+        assert!(!opt.computed.side_by_side);
+    }
+
+    #[test]
+    fn test_side_by_side_always_enables_without_value() {
+        // --side-by-side without a value always sets: enabled=true, min_width=0
+        let opt = integration_test_utils::make_options_from_args(&["--side-by-side"]);
+        assert!(opt.computed.side_by_side);
+    }
+
+    #[test]
+    fn test_parse_side_by_side() {
+        use cli::SideBySide::*;
+        use cli::SideBySideScope::*;
+        let parse = |s: &str| s.parse::<cli::SideBySide>();
+        assert_eq!(parse("true"), Ok(On(All)));
+        assert_eq!(parse("yes"), Ok(On(All)));
+        assert_eq!(parse("on"), Ok(On(All)));
+        assert_eq!(parse("false"), Ok(Off));
+        assert_eq!(parse("no"), Ok(Off));
+        assert_eq!(parse("off"), Ok(Off));
+        assert_eq!(parse("80"), Ok(MinWidth(80, All)));
+        assert_eq!(parse("40"), Ok(MinWidth(40, All)));
+        assert_eq!(parse("0"), Ok(Off));
+        assert_eq!(parse("True"), Ok(On(All)));
+        assert_eq!(parse(""), Ok(Off));
+        assert!(parse("maybe").is_err());
+        assert!(parse("-1").is_err());
+        // hunk → enabled per hunk, optionally with a min-width, in either order
+        assert_eq!(parse("hunk"), Ok(On(Hunk)));
+        assert_eq!(parse("Hunk"), Ok(On(Hunk)));
+        assert_eq!(parse("hunk,140"), Ok(MinWidth(140, Hunk)));
+        assert_eq!(parse("140, hunk"), Ok(MinWidth(140, Hunk)));
+        assert!(parse("hunk,0").is_err());
+        assert!(parse("true,hunk").is_err());
+        assert!(parse("hunk,hunk").is_err());
+        assert!(parse("80,120").is_err());
+        assert!(parse("hunk,").is_err());
+        assert!(parse("file").is_err());
+    }
+
+    #[test]
+    fn test_side_by_side_min_width_from_git_config() {
+        use std::fs::remove_file;
+        let git_config_contents = b"
+[delta]
+    side-by-side = 99999
+";
+        let git_config_path = "delta__test_side_by_side_min_width_from_git_config.gitconfig";
+        let opt = integration_test_utils::make_options_from_args_and_git_config(
+            &[],
+            Some(git_config_contents),
+            Some(git_config_path),
+        );
+        // min-width of 99999 is larger than any terminal, so side-by-side should be disabled
+        assert!(!opt.computed.side_by_side);
+        remove_file(git_config_path).unwrap();
+    }
+
+    #[test]
+    fn test_side_by_side_true_from_git_config() {
+        use std::fs::remove_file;
+        let git_config_contents = b"
+[delta]
+    side-by-side = true
+";
+        let git_config_path = "delta__test_side_by_side_true_from_git_config.gitconfig";
+        let opt = integration_test_utils::make_options_from_args_and_git_config(
+            &[],
+            Some(git_config_contents),
+            Some(git_config_path),
+        );
+        assert!(opt.computed.side_by_side);
+        remove_file(git_config_path).unwrap();
+    }
+
+    #[test]
+    fn test_side_by_side_true_from_git_config_activates_line_numbers() {
+        use std::fs::remove_file;
+        // side-by-side = true should activate child features (line-numbers)
+        let git_config_contents = b"
+[delta]
+    side-by-side = true
+";
+        let git_config_path = "delta__test_side_by_side_numeric_activates_line_numbers.gitconfig";
+        let opt = integration_test_utils::make_options_from_args_and_git_config(
+            &[],
+            Some(git_config_contents),
+            Some(git_config_path),
+        );
+        assert!(opt.computed.side_by_side);
+        // The side-by-side feature should activate line-numbers as a child feature
+        assert!(
+            opt.features.as_ref().unwrap().contains("line-numbers"),
+            "side-by-side = true should activate line-numbers feature, got: {:?}",
+            opt.features
+        );
+        remove_file(git_config_path).unwrap();
+    }
+
+    #[test]
+    fn test_side_by_side_numeric_value_from_git_config_activates_line_numbers() {
+        use std::fs::remove_file;
+        // side-by-side = <number> should activate child features (line-numbers)
+        // Using 10 which is smaller than TERMINAL_WIDTH_IN_TESTS (43)
+        let git_config_contents = b"
+[delta]
+    side-by-side = 10
+";
+        let git_config_path =
+            "delta__test_side_by_side_numeric_value_activates_line_numbers.gitconfig";
+        let opt = integration_test_utils::make_options_from_args_and_git_config(
+            &[],
+            Some(git_config_contents),
+            Some(git_config_path),
+        );
+        assert!(opt.computed.side_by_side);
+        assert!(
+            opt.features.as_ref().unwrap().contains("line-numbers"),
+            "side-by-side = 10 should activate line-numbers feature, got: {:?}",
+            opt.features
+        );
+        remove_file(git_config_path).unwrap();
+    }
+
+    #[test]
+    fn test_side_by_side_zero_from_git_config_disables() {
+        use std::fs::remove_file;
+        let git_config_contents = b"
+[delta]
+    side-by-side = 0
+";
+        let git_config_path = "delta__test_side_by_side_zero_disables.gitconfig";
+        let opt = integration_test_utils::make_options_from_args_and_git_config(
+            &[],
+            Some(git_config_contents),
+            Some(git_config_path),
+        );
+        assert!(!opt.computed.side_by_side);
+        remove_file(git_config_path).unwrap();
+    }
+
+    #[test]
+    fn test_side_by_side_min_width_enables_sbs_when_terminal_wide() {
+        // min-width of 1 is smaller than TERMINAL_WIDTH_IN_TESTS (43), so sbs should be enabled.
+        let opt = integration_test_utils::make_options_from_args(&["--side-by-side=1"]);
+        assert!(opt.computed.side_by_side);
+    }
+
+    #[test]
+    fn test_side_by_side_min_width_applies_to_width_option() {
+        // With --width, the minimum applies to that width, whatever the terminal width is. The
+        // side-by-side feature, which brings line numbers, follows the same decision.
+        let side_by_side = |args: &[&str]| {
+            let opt = integration_test_utils::make_options_from_args(args);
+            let features = opt.features.unwrap_or_default();
+            assert_eq!(
+                opt.computed.side_by_side,
+                features.split_whitespace().any(|f| f == "side-by-side"),
+                "{args:?}: features {features:?}"
+            );
+            opt.computed.side_by_side
+        };
+        assert!(side_by_side(&["--side-by-side=99999", "--width=100000"]));
+        assert!(!side_by_side(&["--side-by-side=2", "--width=1"]));
+        // --width=variable paints at the terminal width.
+        assert!(!side_by_side(&["--side-by-side=99999", "--width=variable"]));
+    }
+
+    #[test]
+    fn test_side_by_side_min_width_fallback_is_identical_to_unified() {
+        let git_config_path =
+            "delta__test_side_by_side_min_width_fallback_is_identical_to_unified.gitconfig";
+        let unified = run_delta_in_100_columns(&[], None, None, git_config_path);
+        let side_by_side =
+            run_delta_in_100_columns(&["--side-by-side"], None, None, git_config_path);
+        assert_ne!(side_by_side, unified);
+        let custom_feature = |line: &str| {
+            format!("[delta]\n    features = my-feature\n[delta \"my-feature\"]\n    {line}\n")
+        };
+        // (args, git config contents, GIT_CONFIG_PARAMETERS, expected output)
+        type Case<'a> = (&'a [&'a str], Option<String>, Option<&'a str>, &'a String);
+        let cases: &[Case] = &[
+            (&["--side-by-side=100"], None, None, &side_by_side),
+            (&["--side-by-side=101"], None, None, &unified),
+            (
+                &[],
+                Some("[delta]\n    side-by-side = 100\n".into()),
+                None,
+                &side_by_side,
+            ),
+            (
+                &[],
+                Some("[delta]\n    side-by-side = 101\n".into()),
+                None,
+                &unified,
+            ),
+            (
+                &[],
+                Some(custom_feature("side-by-side = 100")),
+                None,
+                &side_by_side,
+            ),
+            (
+                &[],
+                Some(custom_feature("side-by-side = 101")),
+                None,
+                &unified,
+            ),
+            (
+                &[],
+                Some("".into()),
+                Some("'delta.side-by-side=100'"),
+                &side_by_side,
+            ),
+            (
+                &[],
+                Some("".into()),
+                Some("'delta.side-by-side=101'"),
+                &unified,
+            ),
+        ];
+        let mismatches: Vec<String> = cases
+            .iter()
+            .filter(
+                |(args, git_config_contents, git_config_parameters, expected)| {
+                    run_delta_in_100_columns(
+                        args,
+                        git_config_contents.as_deref(),
+                        *git_config_parameters,
+                        git_config_path,
+                    ) != **expected
+                },
+            )
+            .map(
+                |(args, git_config_contents, git_config_parameters, expected)| {
+                    let expected = if *expected == &unified {
+                        "unified"
+                    } else {
+                        "side-by-side"
+                    };
+                    format!(
+                        "args={args:?} git_config={git_config_contents:?} \
+                     GIT_CONFIG_PARAMETERS={git_config_parameters:?}: expected {expected} output"
+                    )
+                },
+            )
+            .collect();
+        remove_file(git_config_path).ok();
+        assert!(mismatches.is_empty(), "{}", mismatches.join("\n"));
+    }
+
+    fn run_delta_in_100_columns(
+        args: &[&str],
+        git_config_contents: Option<&str>,
+        git_config_parameters: Option<&str>,
+        git_config_path: &str,
+    ) -> String {
+        let opt = integration_test_utils::make_options_from_args_and_git_config_honoring_env_var_with_custom_env(
+            crate::env::DeltaEnv {
+                columns: Some("100".to_string()),
+                git_config_parameters: git_config_parameters.map(str::to_string),
+                ..crate::env::DeltaEnv::default()
+            },
+            args,
+            git_config_contents.map(str::as_bytes),
+            git_config_contents.map(|_| git_config_path),
+        );
+        integration_test_utils::run_delta(
+            "\
+diff --git a/a.txt b/a.txt
+index 1111111..2222222 100644
+--- a/a.txt
++++ b/a.txt
+@@ -1,2 +1,2 @@
+ a
+-b
++c
+",
+            &crate::config::Config::from(opt),
+        )
+    }
+
+    #[test]
+    fn test_side_by_side_git_config_values() {
+        // Git boolean spellings are accepted, as they were before side-by-side accepted a min
+        // width. Unlike git, negative and suffixed integers (e.g. -1, 1k) are invalid. Invalid
+        // values are ignored.
+        let cases: &[(&str, bool)] = &[
+            ("side-by-side = true", true),
+            ("side-by-side = True", true),
+            ("side-by-side = TRUE", true),
+            ("side-by-side = yes", true),
+            ("side-by-side = Yes", true),
+            ("side-by-side = on", true),
+            ("side-by-side = ON", true),
+            ("side-by-side", true),
+            ("side-by-side = false", false),
+            ("side-by-side = False", false),
+            ("side-by-side = no", false),
+            ("side-by-side = NO", false),
+            ("side-by-side = off", false),
+            ("side-by-side = Off", false),
+            ("side-by-side =", false),
+            ("side-by-side = 0", false),
+            ("side-by-side = 1", true),
+            ("side-by-side = 100", true),
+            ("side-by-side = 101", false),
+            ("side-by-side = -1", false),
+            ("side-by-side = 1k", false),
+            ("side-by-side = maybe", false),
+            // The case's diff hunk removes and adds a line, so hunk displays it side-by-side.
+            ("side-by-side = hunk", true),
+            ("side-by-side = Hunk, 100", true),
+            ("side-by-side = hunk,101", false),
+            ("side-by-side = hunk,0", false),
+        ];
+        assert_side_by_side_cases(
+            "delta__test_side_by_side_git_config_values.gitconfig",
+            cases,
+            |line| format!("[delta]\n    {line}\n"),
+            |_| None,
+        );
+    }
+
+    #[test]
+    fn test_side_by_side_git_config_values_in_custom_feature() {
+        let cases: &[(&str, bool)] = &[
+            ("side-by-side = True", true),
+            ("side-by-side", true),
+            ("side-by-side = off", false),
+            ("side-by-side = 100", true),
+            ("side-by-side = 101", false),
+        ];
+        assert_side_by_side_cases(
+            "delta__test_side_by_side_git_config_values_in_custom_feature.gitconfig",
+            cases,
+            |line| {
+                format!("[delta]\n    features = my-feature\n[delta \"my-feature\"]\n    {line}\n")
+            },
+            |_| None,
+        );
+    }
+
+    #[test]
+    fn test_side_by_side_git_config_parameters_env_var() {
+        let cases: &[(&str, bool)] = &[
+            ("'delta.side-by-side=true'", true),
+            ("'delta.side-by-side=false'", false),
+            ("'delta.side-by-side=0'", false),
+            ("'delta.side-by-side=100'", true),
+            ("'delta.side-by-side=101'", false),
+        ];
+        assert_side_by_side_cases(
+            "delta__test_side_by_side_git_config_parameters_env_var.gitconfig",
+            cases,
+            |_| "[delta]\n    side-by-side = true\n".to_string(),
+            |parameters| Some(parameters.to_string()),
+        );
+    }
+
+    /// Assert that, in a 100-column terminal, each case produces the same output as
+    /// `--side-by-side` if the case's bool is true, and the same output as no side-by-side
+    /// option otherwise. All mismatches are reported together.
+    fn assert_side_by_side_cases(
+        git_config_path: &str,
+        cases: &[(&str, bool)],
+        make_git_config_contents: impl Fn(&str) -> String,
+        make_git_config_parameters: impl Fn(&str) -> Option<String>,
+    ) {
+        let unified = run_delta_in_100_columns(&[], None, None, git_config_path);
+        let side_by_side =
+            run_delta_in_100_columns(&["--side-by-side"], None, None, git_config_path);
+        let mismatches: Vec<String> = cases
+            .iter()
+            .filter_map(|&(case, expected_side_by_side)| {
+                let contents = make_git_config_contents(case);
+                let parameters = make_git_config_parameters(case);
+                let output = std::panic::catch_unwind(|| {
+                    run_delta_in_100_columns(
+                        &[],
+                        Some(&contents),
+                        parameters.as_deref(),
+                        git_config_path,
+                    )
+                });
+                let (expected, expected_name) = if expected_side_by_side {
+                    (&side_by_side, "side-by-side")
+                } else {
+                    (&unified, "unified")
+                };
+                match output {
+                    Ok(output) if output == *expected => None,
+                    Ok(_) => Some(format!("{case:?}: expected {expected_name} output")),
+                    Err(_) => Some(format!(
+                        "{case:?}: expected {expected_name} output, got panic"
+                    )),
+                }
+            })
+            .collect();
+        remove_file(git_config_path).unwrap();
+        assert!(mismatches.is_empty(), "{}", mismatches.join("\n"));
+    }
+
+    /// --side-by-side=false turns off side-by-side and its line numbers, even if git config turns them on.
+    #[test]
+    fn test_side_by_side_off_on_the_command_line_overrides_git_config() {
+        let configs: [(&str, &[u8]); 4] = [
+            ("flag", b"[delta]\n    side-by-side = true\n"),
+            ("features", b"[delta]\n    features = side-by-side\n"),
+            (
+                "feature-flag",
+                b"[delta]\n    features = mine\n[delta \"mine\"]\n    side-by-side = true\n",
+            ),
+            (
+                "feature-features",
+                b"[delta]\n    features = mine\n[delta \"mine\"]\n    features = side-by-side\n",
+            ),
+        ];
+        for (name, git_config_contents) in configs {
+            let git_config_path =
+                format!("delta__test_side_by_side_off_overrides_{name}.gitconfig");
+            let opt = |args: &[&str]| {
+                integration_test_utils::make_options_from_args_and_git_config(
+                    args,
+                    Some(git_config_contents),
+                    Some(&git_config_path),
+                )
+            };
+            let configured = opt(&[]);
+            assert!(configured.computed.side_by_side, "{}", name);
+            assert!(configured.line_numbers, "{}", name);
+
+            let off = opt(&["--side-by-side=false"]);
+            let features = off.features.clone().unwrap_or_default();
+            assert!(!off.computed.side_by_side, "{}", name);
+            assert!(!off.line_numbers, "{}: line numbers", name);
+            assert!(
+                !features
+                    .split_whitespace()
+                    .any(|f| f == "side-by-side" || f == "line-numbers"),
+                "{}: features {:?}",
+                name,
+                features
+            );
+            remove_file(&git_config_path).unwrap();
+        }
+    }
+
+    #[test]
+    fn test_side_by_side_off_on_the_command_line_overrides_delta_features() {
+        let git_config_path = "delta__test_side_by_side_off_overrides_delta_features.gitconfig";
+        let opt = integration_test_utils::make_options_from_args_and_git_config_with_custom_env(
+            crate::env::DeltaEnv {
+                features: Some("+side-by-side".into()),
+                ..crate::env::DeltaEnv::default()
+            },
+            &["--side-by-side=false"],
+            Some(b"[delta]\n"),
+            Some(git_config_path),
+        );
+        let features = opt.features.clone().unwrap_or_default();
+        assert!(!opt.computed.side_by_side);
+        assert!(!opt.line_numbers);
+        assert!(
+            !features
+                .split_whitespace()
+                .any(|f| f == "side-by-side" || f == "line-numbers"),
+            "features {:?}",
+            features
+        );
+        remove_file(git_config_path).unwrap();
+    }
+
+    /// --side-by-side keeps the line-number formats from the user's features, as side-by-side = true
+    /// in git config does.
+    #[test]
+    fn test_side_by_side_on_the_command_line_keeps_line_number_formats_from_features() {
+        let features = "
+[delta]
+    features = mine
+[delta \"mine\"]
+    line-numbers-left-format = \"{nm:>1}L\"
+    line-numbers-right-format = \"{np:>1}R\"
+";
+        let with_flag = format!("{features}[delta]\n    side-by-side = true\n");
+        let cases: [(&str, &[&str], &str); 2] = [
+            ("git-config", &[], &with_flag),
+            ("command-line", &["--side-by-side"], features),
+        ];
+        for (name, args, git_config_contents) in cases {
+            let git_config_path =
+                format!("delta__test_side_by_side_keeps_line_number_formats_{name}.gitconfig");
+            let opt = integration_test_utils::make_options_from_args_and_git_config(
+                args,
+                Some(git_config_contents.as_bytes()),
+                Some(&git_config_path),
+            );
+            assert!(opt.computed.side_by_side, "{}", name);
+            assert!(opt.line_numbers, "{}", name);
+            assert_eq!(opt.line_numbers_left_format, "{nm:>1}L", "{}", name);
+            assert_eq!(opt.line_numbers_right_format, "{np:>1}R", "{}", name);
+            remove_file(&git_config_path).unwrap();
+        }
+    }
+
+    /// A style feature such as --raw still overrides the user's features.
+    #[test]
+    fn test_style_on_the_command_line_overrides_features() {
+        let git_config_contents = b"
+[delta]
+    features = mine
+[delta \"mine\"]
+    file-style = bold yellow
+    file-decoration-style = box
+";
+        let git_config_path = "delta__test_style_on_the_command_line_overrides_features.gitconfig";
+        let opt = integration_test_utils::make_options_from_args_and_git_config(
+            &["--raw"],
+            Some(git_config_contents),
+            Some(git_config_path),
+        );
+        assert_eq!(opt.file_style, "raw");
+        assert_eq!(opt.file_decoration_style, "none");
+        remove_file(git_config_path).unwrap();
+    }
+
+    /// `-name` in DELTA_FEATURES removes a feature, even if git config turns it on.
+    /// Removing a builtin feature turns off the option it is named after.
+    #[test]
+    fn test_delta_features_removes_features() {
+        let git_config_contents = b"
+[delta]
+    side-by-side = true
+    keep-plus-minus-markers = true
+    features = mine
+[delta \"mine\"]
+    hyperlinks = true
+    line-numbers-left-style = red
+";
+        let git_config_path = "delta__test_delta_features_removes_features.gitconfig";
+        let opt = |delta_features: &str, args: &[&str]| {
+            integration_test_utils::make_options_from_args_and_git_config_with_custom_env(
+                crate::env::DeltaEnv {
+                    features: Some(delta_features.into()),
+                    ..crate::env::DeltaEnv::default()
+                },
+                args,
+                Some(git_config_contents),
+                Some(git_config_path),
+            )
+        };
+        let has_feature = |opt: &cli::Opt, name: &str| {
+            opt.features
+                .as_deref()
+                .unwrap_or_default()
+                .split_whitespace()
+                .any(|f| f == name)
+        };
+
+        let configured = opt("+", &[]);
+        assert!(configured.computed.side_by_side);
+        assert!(configured.line_numbers);
+        assert!(configured.keep_plus_minus_markers);
+        assert!(has_feature(&configured, "mine"));
+        assert!(configured.hyperlinks);
+
+        // The side-by-side feature goes, and with it the line numbers it brings.
+        let opt_ = opt("+-side-by-side", &[]);
+        assert!(!opt_.computed.side_by_side);
+        assert!(!opt_.line_numbers);
+        assert!(!has_feature(&opt_, "side-by-side"));
+        assert!(!has_feature(&opt_, "line-numbers"));
+        assert!(opt_.keep_plus_minus_markers);
+
+        let opt_ = opt("+ -keep-plus-minus-markers", &[]);
+        assert!(!opt_.keep_plus_minus_markers);
+        assert!(opt_.computed.side_by_side);
+
+        // A user's own feature goes, and so does what it sets.
+        let opt_ = opt("+-mine", &[]);
+        assert!(!has_feature(&opt_, "mine"));
+        assert!(!opt_.hyperlinks);
+        assert!(opt_.computed.side_by_side);
+
+        // Features can be added and removed together.
+        let opt_ = opt("+navigate -mine -side-by-side", &[]);
+        assert!(opt_.navigate);
+        assert!(!has_feature(&opt_, "mine"));
+        assert!(!opt_.computed.side_by_side);
+
+        // The command line beats DELTA_FEATURES.
+        let opt_ = opt("+-side-by-side", &["--side-by-side"]);
+        assert!(opt_.computed.side_by_side);
+        assert!(opt_.line_numbers);
+
+        // --features removes features as DELTA_FEATURES does.
+        let opt_ = opt("+", &["--features=-side-by-side"]);
+        assert!(!opt_.computed.side_by_side);
+        assert!(!opt_.line_numbers);
+
+        remove_file(git_config_path).unwrap();
+    }
+
+    #[test]
+    fn test_side_by_side_hunk_from_git_config() {
+        use crate::cli::SideBySideScope;
+        use std::fs::remove_file;
+        let git_config_contents = b"
+[delta]
+    side-by-side = hunk
+";
+        let git_config_path = "delta__test_side_by_side_hunk_from_git_config.gitconfig";
+        let opt = integration_test_utils::make_options_from_args_and_git_config(
+            &[],
+            Some(git_config_contents),
+            Some(git_config_path),
+        );
+        assert!(opt.computed.side_by_side);
+        assert_eq!(opt.computed.side_by_side_scope, SideBySideScope::Hunk);
+        assert!(opt.features.as_ref().unwrap().contains("line-numbers"));
+        remove_file(git_config_path).unwrap();
+    }
+
+    #[test]
+    fn test_side_by_side_hunk_with_min_width_wider_than_terminal_disables_sbs() {
+        let opt = integration_test_utils::make_options_from_args(&["--side-by-side=hunk,99999"]);
+        assert!(!opt.computed.side_by_side);
     }
 }

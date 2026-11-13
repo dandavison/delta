@@ -4,7 +4,10 @@ use std::path::{Path, PathBuf};
 
 use bat::assets::HighlightingAssets;
 use clap::error::Error;
-use clap::{ArgMatches, ColorChoice, CommandFactory, FromArgMatches, Parser, ValueEnum, ValueHint};
+use clap::{
+    ArgAction, ArgMatches, ColorChoice, CommandFactory, FromArgMatches, Parser, ValueEnum,
+    ValueHint,
+};
 use clap_complete::Shell;
 use console::Term;
 use lazy_static::lazy_static;
@@ -184,13 +187,29 @@ pub struct Opt {
     /// doesn't support it, then delta will fall back to `diff` instead of `git diff`.
     pub diff_args: String,
 
-    #[arg(long = "diff-highlight")]
+    #[arg(
+        long = "diff-highlight",
+        action = ArgAction::Set,
+        num_args(0..=1),
+        require_equals(true),
+        default_value_t = false,
+        default_missing_value("true"),
+        value_name = "BOOL"
+    )]
     /// Emulate diff-highlight.
     ///
     /// <https://github.com/git/git/tree/master/contrib/diff-highlight>
     pub diff_highlight: bool,
 
-    #[arg(long = "diff-so-fancy")]
+    #[arg(
+        long = "diff-so-fancy",
+        action = ArgAction::Set,
+        num_args(0..=1),
+        require_equals(true),
+        default_value_t = false,
+        default_missing_value("true"),
+        value_name = "BOOL"
+    )]
     /// Emulate diff-so-fancy.
     ///
     /// <https://github.com/so-fancy/diff-so-fancy>
@@ -210,6 +229,9 @@ pub struct Opt {
     /// If this is preceded with a + character, the features from the environment variable will be added
     /// to those specified in git config. E.g. DELTA_FEATURES=+side-by-side can be used to activate
     /// side-by-side temporarily (use DELTA_FEATURES=+ to go back to just the features from git config).
+    /// A name preceded with - removes that feature, even if git config turns it on, e.g.
+    /// DELTA_FEATURES="+-side-by-side" or --features=-side-by-side; removing a builtin feature such
+    /// as side-by-side or line-numbers also turns off the option of that name.
     pub features: Option<String>,
 
     #[arg(
@@ -406,7 +428,15 @@ pub struct Opt {
     /// Used in the default value of navigate-regex.
     pub hunk_label: String,
 
-    #[arg(long = "hyperlinks")]
+    #[arg(
+        long = "hyperlinks",
+        action = ArgAction::Set,
+        num_args(0..=1),
+        require_equals(true),
+        default_value_t = false,
+        default_missing_value("true"),
+        value_name = "BOOL"
+    )]
     /// Render commit hashes, file names, and line numbers as hyperlinks.
     ///
     /// Following the hyperlink spec for terminal emulators:
@@ -416,8 +446,8 @@ pub struct Opt {
     /// --hyperlinks-file-link-format for full control over the file URLs emitted. Hyperlinks are
     /// supported by several common terminal emulators. To make them work, you must use less
     /// version >= 581 with the -R flag (or use -r with older less versions, but this will break
-    /// e.g. --navigate). If you use tmux, then you will also need a patched fork of tmux (see
-    /// <https://github.com/dandavison/tmux>).
+    /// e.g. --navigate). If you use tmux, version 3.4 or later is required. You may need to enable
+    /// the hyperlinks feature in tmux's terminal-features option for your terminal.
     pub hyperlinks: bool,
 
     #[arg(long = "hyperlinks-commit-link-format", value_name = "FMT")]
@@ -467,7 +497,15 @@ pub struct Opt {
     /// Git's --color-moved feature. Set this to "false" to disable this behavior.
     pub inspect_raw_lines: String,
 
-    #[arg(long = "keep-plus-minus-markers")]
+    #[arg(
+        long = "keep-plus-minus-markers",
+        action = ArgAction::Set,
+        num_args(0..=1),
+        require_equals(true),
+        default_value_t = false,
+        default_missing_value("true"),
+        value_name = "BOOL"
+    )]
     /// Prefix added/removed lines with a +/- character, as git does.
     ///
     /// By default, delta does not emit any prefix, so code can be copied directly from delta's
@@ -498,7 +536,16 @@ pub struct Opt {
     /// --width=variable is given.
     pub line_fill_method: Option<String>,
 
-    #[arg(short = 'n', long = "line-numbers")]
+    #[arg(
+        short = 'n',
+        long = "line-numbers",
+        action = ArgAction::Set,
+        num_args(0..=1),
+        require_equals(true),
+        default_value_t = false,
+        default_missing_value("true"),
+        value_name = "BOOL"
+    )]
     /// Display line numbers next to the diff.
     ///
     /// See LINE NUMBERS section.
@@ -723,7 +770,15 @@ pub struct Opt {
     /// See STYLES section.
     pub minus_style: String,
 
-    #[arg(long = "navigate")]
+    #[arg(
+        long = "navigate",
+        action = ArgAction::Set,
+        num_args(0..=1),
+        require_equals(true),
+        default_value_t = false,
+        default_missing_value("true"),
+        value_name = "BOOL"
+    )]
     /// Activate diff navigation.
     ///
     /// Use n to jump forwards and N to jump backwards. To change the file labels used see
@@ -857,9 +912,27 @@ pub struct Opt {
     /// shown, use --dark or --light, or both, on the command line together with this option.
     pub show_themes: bool,
 
-    #[arg(short = 's', long = "side-by-side")]
-    /// Display diffs in side-by-side layout.
-    pub side_by_side: bool,
+    #[arg(
+        short = 's',
+        long = "side-by-side",
+        num_args(0..=1),
+        require_equals(true),
+        default_value("false"),
+        default_missing_value("true"),
+        value_name = "WHEN",
+    )]
+    /// Display diffs in side-by-side layout. Optionally, set the minimum terminal width
+    /// required to enable side-by-side mode (e.g. --side-by-side=80). If the terminal is
+    /// narrower than this value, side-by-side mode will be disabled and delta will fall
+    /// back to unified diff. If --width is set, the minimum applies to that width instead.
+    /// Without a value (or with `true`), side-by-side is always enabled.
+    ///
+    /// With --side-by-side=hunk, side-by-side is decided per hunk: a hunk that both removes and
+    /// adds lines is displayed side-by-side, and a hunk that only removes or only adds lines is
+    /// displayed in a single column, as is every hunk of an added or deleted file. A minimum
+    /// width can be combined with it, separated by a comma (e.g. --side-by-side=hunk,140):
+    /// below that width, every hunk is displayed in a single column.
+    pub side_by_side: SideBySide,
 
     #[arg(long = "syntax-theme", value_name = "SYNTAX_THEME")]
     /// The syntax-highlighting theme to use.
@@ -1041,9 +1114,9 @@ A feature name may not contain whitespace. You can activate multiple features:
 {l}[delta]
 {l}    features = my-highlight-styles-colors-feature my-line-number-styles-feature
 
-If more than one feature sets the same option, the last one wins.
+If more than one feature sets the same option, the last one wins, with two exceptions. A section with the same name as a builtin feature, such as [delta "side-by-side"], beats every other feature while that builtin feature is in effect. And what a switch feature (side-by-side, line-numbers, keep-plus-minus-markers, navigate, hyperlinks) sets besides its own option, such as side-by-side's line-number formats, is a default that any of your features beats.
 
-If an option is present in the [delta] section, then features are not considered at all.
+If an option is present in the [delta] section, then features are not considered at all. The exception is a switch feature named in --features or DELTA_FEATURES, which is the same as its flag: DELTA_FEATURES=+side-by-side turns side-by-side on even if [delta] has side-by-side = false.
 
 If you want an option to be fully overridable by a feature and also have a non default value when no features are used, then you need to define a "default" feature and include it in the main delta configuration.
 
@@ -1184,9 +1257,45 @@ pub struct ComputedValues {
     pub inspect_raw_lines: InspectRawLines,
     pub color_mode: ColorMode,
     pub paging_mode: PagingMode,
+    pub side_by_side: bool,
+    /// Features that are not gathered from anywhere: those the command line turns off, and the
+    /// builtin features whose own option the user's config turns off, in [delta] or in a feature
+    /// with priority.
+    pub features_kept_out: HashSet<String>,
+    /// The features the command line turns off, with -name or by turning off the option of the
+    /// same name. That option is turned off, whatever git config says; an option turned off by the
+    /// user's config keeps the config's value.
+    pub features_turned_off: HashSet<String>,
+    /// The features gathered from the command line: --features, DELTA_FEATURES and flags, and the
+    /// features they bring in.
+    pub command_line_features: HashSet<String>,
+    /// Switch features, such as side-by-side, named in --features or DELTA_FEATURES. Each does
+    /// what its bare flag does.
+    pub command_line_switch_features: HashSet<String>,
+    pub side_by_side_scope: SideBySideScope,
+    pub side_by_side_width: usize,
     pub syntax_set: SyntaxSet,
     pub syntax_theme: Option<SyntaxTheme>,
     pub true_color: bool,
+    pub unified_line_numbers_left_format: String,
+    pub unified_line_numbers_right_format: String,
+}
+
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum SideBySide {
+    Off,
+    On(SideBySideScope),
+    MinWidth(usize, SideBySideScope),
+}
+
+/// How much of the diff the side-by-side decision covers, when side-by-side is enabled.
+#[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
+pub enum SideBySideScope {
+    /// Every hunk is displayed side-by-side.
+    #[default]
+    All,
+    /// Only hunks that both remove and add lines are displayed side-by-side.
+    Hunk,
 }
 
 #[derive(Clone, Debug, Default, PartialEq, Eq)]

@@ -6,23 +6,41 @@ use crate::git_config::{self, GitConfigGet};
 use crate::options::option_value::{OptionValue, ProvenancedOptionValue};
 use ProvenancedOptionValue::*;
 
-// Look up a value of type `T` associated with `option name`. The search rules are:
+// Look up a value of type `T` associated with `option name`.
+//
+// A feature is enabled when the user's config or the command line turns it on, for example with
+// side-by-side = 140 or features = side-by-side. A feature that another builtin feature brings in
+// as a default, such as side-by-side's line numbers, can be in effect without being enabled. A
+// feature is in effect when delta uses it for this output. delta decides that once per run, at
+// the width it renders at (COLUMNS, or else the terminal's width), before it gathers the
+// features: side-by-side = 140 enables side-by-side, but side-by-side is in effect, and gathered,
+// only at 140 columns or more. So the feature list that this searches holds the features in
+// effect.
+//
+// The search rules are:
 //
 // 1. If there is a value associated with `option_name` in the main [delta] git config
-//    section, then stop searching and return that value (steps 2 and 3 are not executed at all).
+//    section, then stop searching and return that value.
 //
-// 2. For each feature in the ordered list of enabled features:
+// 2. Otherwise search the features in effect in these groups, and return the first value found:
 //
-//    2.1 Look-up the value, treating `feature` as a custom feature.
-//        I.e., if there is a value associated with `option_name` in a git config section
-//        named [delta "`feature`"] then stop searching and return that value.
+//    2.1 The features from the command line (--features, DELTA_FEATURES, flags, and what they bring
+//        in), in order of priority: for each, the user's git config section [delta "feature"],
+//        or else the builtin feature's values; of a switch feature, only the value of its own
+//        option, such as side-by-side's side-by-side.
 //
-//    2.2 Look-up the value, treating `feature` as a builtin feature.
-//        I.e., if there is a value (not a default value) associated with `option_name` in a
-//        builtin feature named `feature`, then stop searching and return that value.
-//        Otherwise, record the default value and continue searching.
+//    2.2 The user's git config sections with the same name as a builtin feature that is in
+//        effect, such as [delta "side-by-side"], in order of priority.
 //
-// 3. Return the last default value that was encountered.
+//    2.3 The other features, as in 2.1, in order of priority.
+//
+//    2.4 The values of the switch features that are in effect, such as side-by-side, in order of
+//        priority.
+//
+// So what a switch feature sets besides its own option, such as side-by-side's line-number
+// formats, is a default that anything the user sets beats, however the switch feature was turned
+// on; a section with the same name as a builtin feature beats the other features in git config;
+// and the command line beats git config.
 pub fn get_option_value<T>(
     option_name: &str,
     builtin_features: &HashMap<String, features::BuiltinFeature>,
@@ -75,51 +93,49 @@ pub trait GetOptionValue {
                 return Some(value);
             }
         }
-        if let Some(features) = &opt.features {
-            for feature in features.split_whitespace().rev() {
-                match Self::get_provenanced_value_for_feature(
-                    option_name,
-                    feature,
-                    builtin_features,
-                    opt,
-                    git_config,
-                ) {
-                    Some(GitConfigValue(value)) | Some(DefaultValue(value)) => {
-                        return Some(value.into());
-                    }
-                    None => {}
-                }
+        let features: Vec<&str> = opt.features.as_ref()?.split_whitespace().rev().collect();
+        let is_builtin = |feature: &&str| builtin_features.contains_key(*feature);
+        let is_switch_feature = |feature: &&str| crate::options::set::is_switch_feature(feature);
+        let user_section = |feature: &str| {
+            git_config
+                .as_ref()?
+                .get::<Self>(&format!("delta.{feature}.{option_name}"))
+                .map(Into::into)
+        };
+        let builtin = |feature: &str| {
+            let value_function = builtin_features.get(feature)?.get(option_name)?;
+            match value_function(opt, git_config) {
+                GitConfigValue(value) | DefaultValue(value) => Some(value),
             }
-        }
-        None
-    }
-
-    /// Return the value, or default value, associated with `option_name` under feature name
-    /// `feature`. This may refer to a custom feature, or a builtin feature, or both. Only builtin
-    /// features have defaults. See `GetOptionValue::get_option_value`.
-    fn get_provenanced_value_for_feature(
-        option_name: &str,
-        feature: &str,
-        builtin_features: &HashMap<String, features::BuiltinFeature>,
-        opt: &cli::Opt,
-        git_config: &mut Option<git_config::GitConfig>,
-    ) -> Option<ProvenancedOptionValue>
-    where
-        Self: Sized,
-        Self: GitConfigGet,
-        Self: Into<OptionValue>,
-    {
-        if let Some(git_config) = git_config {
-            if let Some(value) = git_config.get::<Self>(&format!("delta.{feature}.{option_name}")) {
-                return Some(GitConfigValue(value.into()));
-            }
-        }
-        if let Some(builtin_feature) = builtin_features.get(feature) {
-            if let Some(value_function) = builtin_feature.get(option_name) {
-                return Some(value_function(opt, git_config));
-            }
-        }
-        None
+        };
+        let in_order = || features.iter().copied();
+        let from_command_line =
+            |feature: &&str| opt.computed.command_line_features.contains(*feature);
+        // The value a feature gives at its place in the list: its user section, or else a builtin
+        // style feature's value, or a switch feature's value for its own option only.
+        let in_place = |feature: &str| {
+            user_section(feature).or_else(|| {
+                let keeps_place = is_builtin(&feature)
+                    && (!is_switch_feature(&feature) || feature == option_name);
+                keeps_place.then(|| builtin(feature)).flatten()
+            })
+        };
+        in_order()
+            .filter(from_command_line)
+            .find_map(in_place)
+            .or_else(|| {
+                in_order()
+                    .filter(|feature| is_builtin(feature) && !from_command_line(feature))
+                    .find_map(user_section)
+            })
+            .or_else(|| {
+                // A builtin feature's section was looked up just above, and gives nothing here.
+                in_order()
+                    .filter(|feature| !from_command_line(feature))
+                    .find_map(in_place)
+            })
+            .or_else(|| in_order().filter(is_switch_feature).find_map(builtin))
+            .map(Into::into)
     }
 }
 
@@ -128,6 +144,7 @@ impl GetOptionValue for String {}
 impl GetOptionValue for bool {}
 impl GetOptionValue for f64 {}
 impl GetOptionValue for usize {}
+impl GetOptionValue for cli::SideBySide {}
 
 #[cfg(test)]
 pub mod tests {
@@ -225,8 +242,8 @@ pub mod tests {
             git_config_contents,
             git_config_path,
             "'delta.side-by-side=false'".into(),
-            &|opt: Opt| assert!(opt.side_by_side),
-            &|opt: Opt| assert!(!opt.side_by_side),
+            &|opt: Opt| assert!(opt.computed.side_by_side),
+            &|opt: Opt| assert!(!opt.computed.side_by_side),
         );
     }
 
@@ -263,6 +280,56 @@ pub mod tests {
     }
 
     #[test]
+    fn test_side_by_side_value_in_git_config_takes_precedence_over_side_by_side_feature() {
+        // The side-by-side feature sets side-by-side to "true", but like any option, a value in
+        // the main [delta] section wins over the feature turned on in git config: booleans,
+        // minimum widths and hunk alike. Adding side-by-side to the feature list on the command
+        // line is the same as --side-by-side, which beats git config.
+        for (i, value) in ["false", "99999", "hunk", "hunk,99999", "true"]
+            .iter()
+            .enumerate()
+        {
+            let git_config_contents = format!("[delta]\n    side-by-side = {value}\n");
+            let with_feature = format!("{git_config_contents}    features = side-by-side\n");
+            let git_config_path =
+                format!("delta__test_side_by_side_feature_precedence_{i}.gitconfig");
+            let side_by_side =
+                |git_config_contents: &str, features: Option<&str>, args: &[&str]| {
+                    let opt =
+                    integration_test_utils::make_options_from_args_and_git_config_with_custom_env(
+                        DeltaEnv {
+                            features: features.map(str::to_string),
+                            ..DeltaEnv::default()
+                        },
+                        args,
+                        Some(git_config_contents.as_bytes()),
+                        Some(&git_config_path),
+                    );
+                    (
+                        opt.side_by_side,
+                        opt.computed.side_by_side,
+                        opt.computed.side_by_side_scope,
+                    )
+                };
+            let without_feature = side_by_side(&git_config_contents, None, &[]);
+            assert_eq!(without_feature.0, value.parse().unwrap());
+            assert_eq!(side_by_side(&with_feature, None, &[]), without_feature);
+
+            let with_flag = side_by_side(&git_config_contents, None, &["--side-by-side"]);
+            assert_eq!(with_flag.0, "true".parse().unwrap());
+            assert_eq!(
+                side_by_side(&git_config_contents, Some("+side-by-side"), &[]),
+                with_flag
+            );
+            assert_eq!(
+                side_by_side(&git_config_contents, Some("side-by-side"), &[]),
+                with_flag
+            );
+            remove_file(git_config_path).unwrap();
+        }
+    }
+
+    #[test]
     fn test_delta_features_env_var() {
         let git_config_contents = b"
 [delta]
@@ -276,7 +343,7 @@ pub mod tests {
             Some(git_config_path),
         );
         assert_eq!(opt.features.unwrap(), "feature-from-gitconfig");
-        assert!(!opt.side_by_side);
+        assert!(!opt.computed.side_by_side);
 
         let opt = integration_test_utils::make_options_from_args_and_git_config_with_custom_env(
             DeltaEnv {
@@ -289,7 +356,7 @@ pub mod tests {
         );
         // `line-numbers` is a builtin feature induced by side-by-side
         assert_eq!(opt.features.unwrap(), "line-numbers side-by-side");
-        assert!(opt.side_by_side);
+        assert!(opt.computed.side_by_side);
 
         let opt = integration_test_utils::make_options_from_args_and_git_config_with_custom_env(
             DeltaEnv {
@@ -304,7 +371,7 @@ pub mod tests {
             opt.features.unwrap(),
             "feature-from-gitconfig line-numbers side-by-side"
         );
-        assert!(opt.side_by_side);
+        assert!(opt.computed.side_by_side);
 
         remove_file(git_config_path).unwrap();
     }
