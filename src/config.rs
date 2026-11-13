@@ -7,7 +7,6 @@ use syntect::highlighting::Style as SyntectStyle;
 use syntect::highlighting::Theme as SyntaxTheme;
 use syntect::parsing::SyntaxSet;
 
-use crate::ansi;
 use crate::cli;
 use crate::color::{self, ColorMode};
 use crate::delta::State;
@@ -439,7 +438,7 @@ impl From<cli::Opt> for Config {
                 opt.computed.unified_line_numbers_left_format,
                 opt.computed.unified_line_numbers_right_format,
             ),
-            truncation_symbol: format!("{}→{}", ansi::ANSI_SGR_REVERSE, ansi::ANSI_SGR_RESET),
+            truncation_symbol: styles["inline-hint-style"].paint("→").to_string(),
             wrap_config,
             whitespace_error_style: styles["whitespace-error-style"],
             zero_style: styles["zero-style"],
