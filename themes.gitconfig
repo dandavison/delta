@@ -50,6 +50,7 @@
     line-numbers-plus-style = green bold
     line-numbers-right-format = " {np:>1}┊"
     line-numbers-right-style = green
+    line-numbers-separators-follow-line = true
     line-numbers-zero-style = "#545474" italic
     minus-emph-style = syntax "#80002a"
     minus-style = syntax "#400000"

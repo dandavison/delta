@@ -285,7 +285,12 @@ fn format_and_paint_line_number_field<'a>(
 
     let format_data = &format_data[side];
     let plus_file = &line_numbers_data.plus_file;
-    let style = &config.line_numbers_style_leftright[side];
+    // The text around the number, e.g. the dividing characters.
+    let style = if config.line_numbers_separators_follow_line {
+        &styles[side]
+    } else {
+        &config.line_numbers_style_leftright[side]
+    };
 
     let mut ansi_strings = Vec::new();
     let mut suffix = "";
@@ -763,6 +768,38 @@ pub mod tests {
         (yellow)  1 (blue)⋮(yellow)  1 (blue)│(231)a (203)=(231) (141)1(normal)
         (red)  2 (blue)⋮(red)    (blue)│(normal 124)b(normal 52) = 2(normal)
         (green)    (blue)⋮(green)  2 (blue)│(231 28)bb(normal 22) (203)=(231) (141)2(normal)"#,
+        );
+    }
+
+    /// With --line-numbers-separators-follow-line, the text around the numbers is in the style of
+    /// the line instead of the left/right style.
+    #[test]
+    fn test_separators_follow_line() {
+        DeltaTest::with_args(&[
+            "--line-numbers",
+            "--line-numbers-left-format",
+            "{nm:^4}⋮",
+            "--line-numbers-right-format",
+            "{np:^4}│",
+            "--line-numbers-left-style",
+            "blue",
+            "--line-numbers-right-style",
+            "blue",
+            "--line-numbers-minus-style",
+            "red",
+            "--line-numbers-plus-style",
+            "green",
+            "--line-numbers-zero-style",
+            "yellow",
+            "--line-numbers-separators-follow-line",
+        ])
+        .explain_ansi()
+        .with_input(ONE_MINUS_ONE_PLUS_LINE_DIFF)
+        .expect_after_header(
+            r#"
+            (yellow)  1 ⋮  1 │(231)a (203)=(231) (141)1(normal)
+            (red)  2 ⋮    │(normal 124)b(normal 52) = 2(normal)
+            (green)    ⋮  2 │(231 28)bb(normal 22) (203)=(231) (141)2(normal)"#,
         );
     }
 

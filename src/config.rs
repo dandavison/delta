@@ -95,6 +95,7 @@ pub struct Config {
     pub line_buffer_size: usize,
     pub line_fill_method: BgFillMethod,
     pub line_numbers_format: LeftRight<String>,
+    pub line_numbers_separators_follow_line: bool,
     pub line_numbers_style_leftright: LeftRight<Style>,
     pub line_numbers_style_minusplus: MinusPlus<Style>,
     pub line_numbers_zero_style: Style,
@@ -380,6 +381,7 @@ impl From<cli::Opt> for Config {
                 opt.line_numbers_left_format,
                 opt.line_numbers_right_format,
             ),
+            line_numbers_separators_follow_line: opt.line_numbers_separators_follow_line,
             line_numbers_style_leftright: LeftRight::new(
                 styles["line-numbers-left-style"],
                 styles["line-numbers-right-style"],
