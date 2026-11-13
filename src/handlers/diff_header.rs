@@ -57,6 +57,9 @@ impl StateMachine<'_> {
         // (it connects the plus_file and minus_file),
         // and to call fn handle_generic_diff_header_header_line directly.
         if self.config.color_only {
+            // The header is written directly to the writer, so emit buffered
+            // content first to preserve line order across file boundaries.
+            self.painter.emit()?;
             let osc = self.diff_header_osc();
             write_generic_diff_header_header_line(
                 &self.line,
@@ -942,9 +945,8 @@ index 0000000..323fae0
         // new-file path is not known yet: the row must carry no `f` record --
         // in particular not an empty path (first file) or the previous file's
         // (later files). Each `+++` row carries its file's record, and file 1's
-        // content records must name file 1 even though delta's buffering emits
-        // them after file 2's header rows (a delta `--color-only` quirk that
-        // predates the metadata feature).
+        // content records must name file 1 and appear before file 2's header
+        // rows: color-only mode must preserve the input line order.
         let input = "\
 --- old1.txt
 +++ new1.txt
@@ -961,10 +963,10 @@ index 0000000..323fae0
         --- old1.txt
         ⟦1;f;;;new1.txt⟧+++ new1.txt
         ⟦1;h;1;;new1.txt⟧@@ -1 +1 @@
-        --- old2.txt
-        ⟦1;f;;;new2.txt⟧+++ new2.txt
         ⟦1;d;1;1;new1.txt⟧-foo
         ⟦1;a;1;;new1.txt⟧+bar
+        --- old2.txt
+        ⟦1;f;;;new2.txt⟧+++ new2.txt
         ⟦1;h;1;;new2.txt⟧@@ -1 +1 @@
         ⟦1;d;1;1;new2.txt⟧-foo
         ⟦1;a;1;;new2.txt⟧+bar
