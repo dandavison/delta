@@ -212,7 +212,7 @@ impl StateMachine<'_> {
                     &self.raw_line,
                     self.config.grep_match_word_style,
                     self.config.grep_match_line_style,
-                    &grep_line.path,
+                    &tabs::expand(&grep_line.path, &self.config.tab_cfg),
                     grep_line.line_number,
                 )
                 .unwrap_or(StyleSectionSpecifier::Style(
@@ -355,7 +355,7 @@ impl StateMachine<'_> {
                     &self.raw_line,
                     self.config.grep_match_word_style,
                     self.config.grep_match_line_style,
-                    &grep_line.path,
+                    &tabs::expand(&grep_line.path, &self.config.tab_cfg),
                     grep_line.line_number,
                 )
                 .unwrap_or(StyleSectionSpecifier::Style(
@@ -1250,6 +1250,21 @@ mod tests {
         // No fake parent grep command
         let apparently_grep_output = "src/co-7-fig.rs:xxx";
         assert_eq!(parse_grep_line(apparently_grep_output), None);
+    }
+
+    #[test]
+    fn test_grep_misparsed_path_containing_tab_does_not_panic() {
+        // https://github.com/dandavison/delta/issues/2221
+        // This context line is misparsed as a match line with path
+        // "gcc/ChangeLog-2004-\tdoc/sourcebuild.texi, doc/tm.texi".
+        use crate::tests::integration_test_utils::DeltaTest;
+
+        for args in [&[][..], &["--grep-output-type", "ripgrep"]] {
+            DeltaTest::with_args(args)
+                .with_calling_process("git grep -C20 'case ASM_EXPR'")
+                .with_input("gcc/ChangeLog-2004-\tdoc/sourcebuild.texi, doc/tm.texi: Likewise.\n")
+                .expect_contains("Likewise.");
+        }
     }
 
     #[test]
