@@ -61,9 +61,14 @@ fn main() -> std::io::Result<()> {
     #[cfg(feature = "gitu")]
     if std::env::args_os()
         .nth(1)
-        .is_some_and(|arg| arg == "--tui" || arg == "--gitu")
+        .is_some_and(|arg| subcommands::gitu::is_tui(&arg))
     {
         process::exit(subcommands::gitu::main(std::env::args_os().skip(2)));
+    }
+    #[cfg(feature = "gitu")]
+    if let Some(message) = subcommands::gitu::misplaced_tui(std::env::args_os()) {
+        eprintln!("{message}");
+        process::exit(2);
     }
 
     // Do this first because both parsing all the input in `run_app()` and

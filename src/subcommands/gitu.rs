@@ -17,15 +17,25 @@ const ABOUT: &str = "An interactive git client and pager, with delta as its rend
 Based on gitu by altsem (https://github.com/altsem/gitu), a git client inspired \
 by Magit, embedded via the delta-gitu fork (https://github.com/dandavison/gitu).";
 
+/// Where delta's own options go, for a user who gave them to `delta --tui`.
+const DELTA_OPTIONS_GO_IN_GIT_CONFIG: &str = "delta's own options cannot be given with --tui. \
+Set them in git config's [delta] section, or turn delta features on and off in the TUI with S, L and H.";
+
 /// Run gitu with `args`, which start after `--tui` or `--gitu`, returning the
 /// exit code.
-pub fn main(args: impl Iterator<Item = OsString>) -> i32 {
-    let matches = Args::command()
-        .name("delta --tui")
-        .bin_name("delta --tui")
-        .about(ABOUT)
-        .get_matches_from(std::iter::once("delta --tui".into()).chain(args));
-    let args = Args::from_arg_matches(&matches).unwrap_or_else(|err| err.exit());
+pub fn main(args: impl IntoIterator<Item = OsString>) -> i32 {
+    let args = match parse(args) {
+        Ok(args) => args,
+        Err(err) => {
+            let message = error_message(&err);
+            if err.use_stderr() {
+                eprint!("{message}");
+            } else {
+                print!("{message}");
+            }
+            return err.exit_code();
+        }
+    };
     match run(&args) {
         Ok(code) => code,
         Err(err) => {
@@ -33,6 +43,42 @@ pub fn main(args: impl Iterator<Item = OsString>) -> i32 {
             2
         }
     }
+}
+
+fn parse(args: impl IntoIterator<Item = OsString>) -> Result<Args, clap::Error> {
+    let matches = Args::command()
+        .name("delta --tui")
+        .bin_name("delta --tui")
+        .about(ABOUT)
+        .try_get_matches_from(std::iter::once("delta --tui".into()).chain(args))?;
+    Args::from_arg_matches(&matches)
+}
+
+/// What clap says of `err`, and, for an argument gitu does not take, where
+/// delta's options go: that argument is most likely one of them.
+fn error_message(err: &clap::Error) -> String {
+    let mut message = err.render().to_string();
+    if err.kind() == clap::error::ErrorKind::UnknownArgument {
+        message.push_str(&format!("\n{DELTA_OPTIONS_GO_IN_GIT_CONFIG}\n"));
+    }
+    message
+}
+
+/// What to tell a user whose `--tui` is not delta's first argument (`args`
+/// include the program), where delta would take it as one of its own options
+/// and go on to read a diff that is not coming.
+pub fn misplaced_tui(args: impl IntoIterator<Item = OsString>) -> Option<String> {
+    let mut args = args.into_iter().skip(1);
+    if args.next().is_some_and(|arg| is_tui(&arg)) {
+        return None;
+    }
+    args.any(|arg| is_tui(&arg)).then(|| {
+        format!("--tui must be delta's first argument, as in `delta --tui`. {DELTA_OPTIONS_GO_IN_GIT_CONFIG}")
+    })
+}
+
+pub fn is_tui(arg: &OsString) -> bool {
+    arg == "--tui" || arg == "--gitu"
 }
 
 fn run(args: &Args) -> Res<i32> {
@@ -158,15 +204,15 @@ mod tests {
     fn test_deltas_options_given_to_delta_tui_say_where_they_go() {
         let err = parse(os_args(&["--side-by-side"])).unwrap_err();
         let message = error_message(&err);
-        assert!(message.contains("'--side-by-side'"), "{message}");
-        assert!(message.contains("[delta]"), "{message}");
+        assert!(message.contains("'--side-by-side'"), "{}", message);
+        assert!(message.contains("[delta]"), "{}", message);
     }
 
     #[test]
     fn test_tui_after_other_arguments_says_it_must_come_first() {
         let message = misplaced_tui(os_args(&["delta", "--side-by-side", "--tui"])).unwrap();
-        assert!(message.contains("first"), "{message}");
-        assert!(message.contains("[delta]"), "{message}");
+        assert!(message.contains("first"), "{}", message);
+        assert!(message.contains("[delta]"), "{}", message);
         assert_eq!(misplaced_tui(os_args(&["delta", "--tui"])), None);
         assert_eq!(misplaced_tui(os_args(&["delta", "a", "b"])), None);
     }
