@@ -52,7 +52,7 @@ impl StateMachine<'_> {
             diff_header::write_generic_diff_header_header_line(
                 &self.line,
                 &self.raw_line,
-                &mut self.painter,
+                self.painter.writer,
                 &mut self.mode_info,
                 self.config,
                 &osc,

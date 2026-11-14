@@ -544,23 +544,46 @@ fn decide_features_on_the_command_line(
     input_features
 }
 
-/// The features in effect, in order of priority, gathered from `input_features` (those named in
-/// --features or DELTA_FEATURES), the flags, and git config; and those of them that the command
-/// line brings in.
+/// What `gather_features` gathers.
+struct Gathered {
+    /// The features in effect, in order of priority.
+    features: Vec<String>,
+    /// Those of them that the command line brings in.
+    from_command_line: HashSet<String>,
+    /// Those of them that the user names, as opposed to those only a builtin feature brings in as
+    /// defaults (see `ComputedValues::features_named_by_user`).
+    named_by_user: HashSet<String>,
+}
+
+/// Where a feature being gathered comes from.
+#[derive(Clone, Copy)]
+enum Origin {
+    /// The user names it: in --features, DELTA_FEATURES, a flag, a features list, or an option in
+    /// git config.
+    User,
+    /// A builtin feature brings it in as a default, as side-by-side brings in line-numbers.
+    BuiltinDefault,
+}
+
+/// The features gathered from `input_features` (those named in --features or DELTA_FEATURES), the
+/// flags, and git config.
 fn gather_features(
     opt: &cli::Opt,
     builtin_features: &HashMap<String, features::BuiltinFeature>,
     git_config: &Option<GitConfig>,
     input_features: &[String],
-) -> (Vec<String>, HashSet<String>) {
+) -> Gathered {
     let mut features = VecDeque::new();
+    let mut named = HashSet::new();
 
     // Gather features from command line.
     if let Some(git_config) = git_config {
         for feature in input_features {
             gather_features_recursively(
                 feature,
+                Origin::User,
                 &mut features,
+                &mut named,
                 builtin_features,
                 opt,
                 Some(git_config),
@@ -569,6 +592,7 @@ fn gather_features(
     } else {
         for feature in input_features {
             if !is_kept_out(opt, feature) {
+                named.insert(feature.to_string());
                 features.push_front(feature.to_string());
             }
         }
@@ -579,7 +603,9 @@ fn gather_features(
         if (option.is_on)(opt) {
             gather_features_recursively(
                 option.name,
+                Origin::User,
                 &mut features,
+                &mut named,
                 builtin_features,
                 opt,
                 git_config.as_ref(),
@@ -595,7 +621,9 @@ fn gather_features(
                 for feature in split_feature_string(&feature_string) {
                     gather_features_recursively(
                         feature,
+                        Origin::User,
                         &mut features,
+                        &mut named,
                         builtin_features,
                         opt,
                         Some(git_config),
@@ -607,13 +635,22 @@ fn gather_features(
         gather_builtin_features_from_flags_in_gitconfig(
             "delta",
             &mut features,
+            &mut named,
             builtin_features,
             opt,
             git_config,
         );
     }
 
-    (Vec::from(features), from_command_line)
+    let features = Vec::from(features);
+    Gathered {
+        named_by_user: named
+            .into_iter()
+            .filter(|feature| features.contains(feature))
+            .collect(),
+        features,
+        from_command_line,
+    }
 }
 
 /// Whether `feature` is not gathered from anywhere (see `ComputedValues::features_kept_out`).
@@ -637,6 +674,7 @@ fn in_feature_option_order(
 fn gather_builtin_features_from_flags_in_gitconfig(
     git_config_key: &str,
     features: &mut VecDeque<String>,
+    named: &mut HashSet<String>,
     builtin_features: &HashMap<String, features::BuiltinFeature>,
     opt: &cli::Opt,
     git_config: &GitConfig,
@@ -655,7 +693,9 @@ fn gather_builtin_features_from_flags_in_gitconfig(
         if is_active {
             gather_features_recursively(
                 child_feature,
+                Origin::User,
                 features,
+                named,
                 builtin_features,
                 opt,
                 Some(git_config),
@@ -671,12 +711,21 @@ fn gather_builtin_features_from_flags_in_gitconfig(
 /// a builtin feature brings in its features however the builtin feature is turned on.
 fn gather_features_recursively(
     feature: &str,
+    origin: Origin,
     features: &mut VecDeque<String>,
+    named: &mut HashSet<String>,
     builtin_features: &HashMap<String, features::BuiltinFeature>,
     opt: &cli::Opt,
     git_config: Option<&GitConfig>,
 ) {
-    if features.iter().any(|f| f == feature) || is_kept_out(opt, feature) {
+    if is_kept_out(opt, feature) {
+        return;
+    }
+    // Before the check below: the user may name a feature that a builtin feature brought in.
+    if let Origin::User = origin {
+        named.insert(feature.to_string());
+    }
+    if features.iter().any(|f| f == feature) {
         return;
     }
     features.push_front(feature.to_string());
@@ -688,7 +737,9 @@ fn gather_features_recursively(
                 for child_feature in split_feature_string(&features_string) {
                     gather_features_recursively(
                         child_feature,
+                        Origin::BuiltinDefault,
                         features,
+                        named,
                         builtin_features,
                         opt,
                         git_config,
@@ -703,7 +754,9 @@ fn gather_features_recursively(
                 {
                     gather_features_recursively(
                         child_feature,
+                        Origin::BuiltinDefault,
                         features,
+                        named,
                         builtin_features,
                         opt,
                         git_config,
@@ -719,7 +772,9 @@ fn gather_features_recursively(
         for child_feature in split_feature_string(&child_features) {
             gather_features_recursively(
                 child_feature,
+                Origin::User,
                 features,
+                named,
                 builtin_features,
                 opt,
                 Some(git_config),
@@ -729,6 +784,7 @@ fn gather_features_recursively(
     gather_builtin_features_from_flags_in_gitconfig(
         &format!("delta.{feature}"),
         features,
+        named,
         builtin_features,
         opt,
         git_config,
@@ -748,9 +804,13 @@ fn gather_features_without_switches_that_are_off(
     arg_matches: &clap::ArgMatches,
 ) -> Vec<String> {
     loop {
-        let (features, from_command_line) =
-            gather_features(opt, builtin_features, git_config, input_features);
+        let Gathered {
+            features,
+            from_command_line,
+            named_by_user,
+        } = gather_features(opt, builtin_features, git_config, input_features);
         opt.computed.command_line_features = from_command_line;
+        opt.computed.features_named_by_user = named_by_user;
         let given = opt.features.replace(features.join(" "));
         let off: Vec<&str> = FEATURE_OPTIONS
             .iter()

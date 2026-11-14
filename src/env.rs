@@ -10,6 +10,7 @@ const DELTA_NAVIGATE: &str = "DELTA_NAVIGATE";
 const DELTA_EXPERIMENTAL_MAX_LINE_DISTANCE_FOR_NAIVELY_PAIRED_LINES: &str =
     "DELTA_EXPERIMENTAL_MAX_LINE_DISTANCE_FOR_NAIVELY_PAIRED_LINES";
 const DELTA_PAGER: &str = "DELTA_PAGER";
+pub const DELTA_TERMINAL_COLOR_MODE: &str = "DELTA_TERMINAL_COLOR_MODE";
 
 #[derive(Default, Clone)]
 pub struct DeltaEnv {
@@ -24,6 +25,9 @@ pub struct DeltaEnv {
     pub hostname: Option<String>,
     pub navigate: Option<String>,
     pub pagers: (Option<String>, Option<String>),
+    /// The terminal's background, `dark` or `light`, as told by a process that could ask the
+    /// terminal when this one cannot.
+    pub terminal_color_mode: Option<String>,
 }
 
 impl DeltaEnv {
@@ -39,6 +43,7 @@ impl DeltaEnv {
         let git_prefix = env::var(GIT_PREFIX).ok();
         let hostname = hostname();
         let navigate = env::var(DELTA_NAVIGATE).ok();
+        let terminal_color_mode = env::var(DELTA_TERMINAL_COLOR_MODE).ok();
 
         let current_dir = env::current_dir().ok();
         let pagers = (
@@ -62,6 +67,7 @@ impl DeltaEnv {
             hostname,
             navigate,
             pagers,
+            terminal_color_mode,
         }
     }
 }

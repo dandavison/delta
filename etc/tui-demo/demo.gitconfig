@@ -1,0 +1,66 @@
+# The git config of every recording, with the themes of this directory's themes.gitconfig, and
+# light.gitconfig or dark.gitconfig. The [pretty] and [delta-tui] sections are the owner's
+# delta-tui.gitconfig, and [delta] the owner's delta settings.
+[user]
+    name = Dan Davison
+    email = dandavison7@gmail.com
+[core]
+    # The commit chapter's commit message editor.
+    editor = micro
+[pager]
+    diff = delta --tui
+    show = delta --tui
+    log = delta --tui
+
+[delta]
+    navigate = true
+    wrap-max-lines = unlimited
+    # The custom log format and git's own, so delta marks the commit in either and gitu can make
+    # the rows of both navigable.
+    commit-regex = ^(▸|commit )
+    relative-paths = true
+    grep-file-style = red
+    commit-decoration-style = blue ol
+    commit-style = raw
+    side-by-side-fill-empty = true
+    # Line numbers in the unified view too; side-by-side always has them.
+    line-numbers = true
+    features = my-theme
+
+# The owner's file headers, in a feature rather than in [delta], whose settings no feature can
+# override, so that a theme chosen in the TUI can head files its own way. dark.gitconfig gives
+# file-style a dark background.
+[delta "my-theme"]
+    file-style = "bold cyan #EEEEEE"
+    file-decoration-style = "magenta ul"
+    file-added-label = •
+    file-modified-label = •
+    file-removed-label = •
+    file-renamed-label = •
+    navigate-regex = ^•
+
+[pretty]
+# Shared by shell log aliases (_gl) and gitu's log renderer.
+commit-format = tformat:%n%n▸ %h %C(blue)%an %C(blue)%ar%C(auto)%d%C(reset)%n%n    %C(green)%s%C(auto)
+# With whole message; shared by gs and gitu's commit view.
+commit-format-full = tformat:%n%n▸ %h %C(blue)%an %C(blue)%ar%C(auto)%d%C(reset)%n%n%w(0,4,4)%C(green)%s%C(reset)%n%+b
+
+
+# delta --tui (the TUI). A key is its gitu config path, with dashes for
+# underscores; no subsection means "general". A list is one line per item.
+[delta-tui]
+    collapsed-sections = branch_status
+    recent-commits-limit = 0
+    stash-list-limit = 0
+    max-input-bytes = 3000000
+    # The --pretty formats are defined in git config.
+    log-args = --stat
+    log-args = --date=relative
+    log-args = --pretty=commit-format
+    show-args = --pretty=commit-format-full
+    file-header = stat
+    start-folded = true
+
+# delta's diff-so-fancy look, offered by theme mode after the themes.
+[delta-tui "general.diff-renderer"]
+    builtin-themes = diff-so-fancy

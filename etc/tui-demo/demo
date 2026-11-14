@@ -1,0 +1,489 @@
+#!/usr/bin/env -S uv run --script
+#
+# /// script
+# requires-python = ">=3.12"
+# dependencies = ["httpx"]
+# ///
+"""Records the TUI demo videos, scene by scene, with a voice saying each announcement.
+
+A chapter tape is split into scenes at lines `# scene`. Each scene is recorded on its own: the
+scenes before it are replayed while hidden, without their announcements and with short sleeps, to
+reach the state it starts from. Scenes are recorded in parallel, each one's video is cached by a
+hash of everything that affects it, and the chapter is the scenes' videos joined.
+
+Each `Announce` text is a fragment, identified by a hash of its text, so that changing the text
+makes any audio of it out of date. A fragment is spoken by the ElevenLabs voice, cached in
+voice/elevenlabs/<voice id>/<fragment id>.mp3, or by the user, recorded with `voice-record` to
+voice/me/<fragment id>.wav. Each announcement is held at least as long as its audio, and the audio
+is mixed into the scene from the moment betamax reports starting the `Announce`.
+"""
+
+import argparse
+import hashlib
+import os
+import re
+import subprocess
+import sys
+import time
+from concurrent.futures import ThreadPoolExecutor
+from dataclasses import dataclass
+from pathlib import Path
+
+import httpx
+
+DEMO = Path(__file__).resolve().parent
+DELTA = DEMO.parent.parent / "target" / "release" / "delta"
+THEMES = ("light", "dark")
+ELEVENLABS_VOICE = "9ISSk3oFsqs9NPkOMAZ9"
+ELEVENLABS_MODEL = "eleven_multilingual_v2"
+# Silence after the speech before the announcement clears.
+SPEECH_TAIL_MS = 400
+ANNOUNCE = re.compile(r'^Announce(?:@(?P<duration>\S+))?\s+"(?P<text>.*)"\s*$')
+DEFAULT_ANNOUNCE_MS = 2000
+SCENE = re.compile(r"^# scene\b(?P<other_theme>\s+other-theme)?")
+SLEEP = re.compile(r"\bSleep \S+")
+# After an announcement clears, before the step it announced: time to take in the screen.
+AFTER_ANNOUNCE = "Sleep 1200ms"
+# Sleeps in a replayed scene: long enough for a key to take effect, not to watch.
+REPLAY_SLEEP = "Sleep 100ms"
+PROGRESS = re.compile(r"\d+/\d+: (?P<command>Show|Hide|Announce)\b")
+ANSI = re.compile(r"\x1b\[[0-9;]*m")
+GH_TOKEN = subprocess.run(
+    ["gh", "auth", "token"], check=True, capture_output=True, text=True
+).stdout.strip()
+# Inputs of every scene's video besides its own tape.
+INPUTS = ("_settings.tape", "env.sh", "setup", "demo.gitconfig", "themes.gitconfig")
+
+
+@dataclass(frozen=True)
+class Fragment:
+    text: str
+
+    @property
+    def id(self) -> str:
+        return digest(self.text)[:12]
+
+
+@dataclass(frozen=True)
+class Scene:
+    chapter: str
+    index: int
+    replayed: list[str]
+    lines: list[str]
+    # Recorded with the other theme: the terminal's and delta's.
+    other_theme: bool
+
+
+def main() -> None:
+    parser = argparse.ArgumentParser(description=__doc__)
+    commands = parser.add_subparsers(dest="command", required=True)
+    record = commands.add_parser("record", help="record chapters to out/")
+    record.add_argument("tapes", nargs="*", type=Path)
+    record.add_argument("--voice", choices=("elevenlabs", "me", "none"), default="none")
+    record.add_argument("--themes", nargs="+", choices=THEMES, default=list(THEMES))
+    record.add_argument("--jobs", type=int, default=4, help="scenes recorded at once")
+    for name, help in (
+        ("voice-list", "list each fragment's id, whether it is recorded, and its text"),
+        ("voice-record", "record the fragments that have no recording of the user"),
+    ):
+        commands.add_parser(name, help=help).add_argument("tapes", nargs="*", type=Path)
+    args = parser.parse_args()
+    tapes = [DEMO / tape.name for tape in args.tapes] or chapters()
+    match args.command:
+        case "record":
+            record_all(tapes, args.voice, args.themes, args.jobs)
+        case "voice-list":
+            slots = slots_of(tapes)
+            for fragment in fragments_of(tapes):
+                path = recording(fragment)
+                slot = slots[fragment.id] / 1000
+                if not path.exists():
+                    state = "missing"
+                elif duration_ms(path) + SPEECH_TAIL_MS > slots[fragment.id]:
+                    state = f"{duration_ms(path) / 1000:.1f}s, over"
+                else:
+                    state = "ok"
+                print(f"{fragment.id}  {slot:4.1f}s  {state:12}  {fragment.text}")
+        case "voice-record":
+            slots = slots_of(tapes)
+            for fragment in fragments_of(tapes):
+                if not recording(fragment).exists():
+                    record_fragment(fragment, slots[fragment.id])
+
+
+def chapters() -> list[Path]:
+    return sorted(tape for tape in DEMO.glob("*.tape") if not tape.name.startswith("_"))
+
+
+def announcements(tapes: list[Path]) -> list[tuple[Fragment, int]]:
+    """Each announcement of the tapes, with the milliseconds it is held when nothing is spoken."""
+    found: list[tuple[Fragment, int]] = []
+    for tape in tapes:
+        for line in tape.read_text().splitlines():
+            if match := ANNOUNCE.match(line):
+                given = match["duration"]
+                held = milliseconds(given) if given else DEFAULT_ANNOUNCE_MS
+                found.append((Fragment(match["text"]), held))
+    return found
+
+
+def fragments_of(tapes: list[Path]) -> list[Fragment]:
+    return list(
+        {fragment.id: fragment for fragment, _ in announcements(tapes)}.values()
+    )
+
+
+def slots_of(tapes: list[Path]) -> dict[str, int]:
+    """The milliseconds there are to say each fragment without making the video longer."""
+    slots: dict[str, int] = {}
+    for fragment, held in announcements(tapes):
+        slots.setdefault(fragment.id, held)
+    return slots
+
+
+def scenes_of(tape: Path) -> list[Scene]:
+    parts: list[tuple[list[str], bool]] = [([], False)]
+    for line in tape.read_text().splitlines():
+        if match := SCENE.match(line):
+            parts.append(([], bool(match["other_theme"])))
+        else:
+            parts[-1][0].append(line)
+    parts = [part for part in parts if any(line.strip() for line in part[0])]
+    return [
+        Scene(
+            tape.stem,
+            i,
+            [replayed(line) for lines, _ in parts[:i] for line in lines],
+            lines,
+            other_theme,
+        )
+        for i, (lines, other_theme) in enumerate(parts)
+    ]
+
+
+def replayed(line: str) -> str:
+    """`line` as it is replayed while hidden: without announcements or showing, and quick."""
+    if (
+        ANNOUNCE.match(line)
+        or line.strip() in ("Hide", "Show")
+        or line.startswith("Screenshot")
+    ):
+        return ""
+    return SLEEP.sub(REPLAY_SLEEP, line)
+
+
+def record_all(tapes: list[Path], voice: str, themes: list[str], jobs: int) -> None:
+    audio = {fragment.id: speech(fragment, voice) for fragment in fragments_of(tapes)}
+    inputs = inputs_digest()
+    (DEMO / "out").mkdir(exist_ok=True)
+    chapters = [(tape, theme, scenes_of(tape)) for tape in tapes for theme in themes]
+    with ThreadPoolExecutor(jobs) as pool:
+        recorded = {
+            (tape, theme): [
+                pool.submit(scene_video, scene, theme, audio, voice, inputs)
+                for scene in scenes
+            ]
+            for tape, theme, scenes in chapters
+        }
+    failed = False
+    for (tape, theme), scene_jobs in recorded.items():
+        errors = [job.exception() for job in scene_jobs if job.exception()]
+        for error in errors:
+            print(error, file=sys.stderr)
+        if errors:
+            failed = True
+            continue
+        join(
+            [job.result() for job in scene_jobs],
+            DEMO / "out" / f"{tape.stem}-{theme}.mp4",
+        )
+    sys.exit(1 if failed else 0)
+
+
+def inputs_digest() -> str:
+    """A digest of what affects every scene: the shared tapes and config, the themes, delta, and
+    betamax."""
+    parts = [(DEMO / name).read_text() for name in INPUTS]
+    parts += [(DEMO / f"{theme}.gitconfig").read_text() for theme in THEMES]
+    parts += [(DEMO / f"_{theme}.tape").read_text() for theme in THEMES]
+    parts.append(output(["betamax", "--version"]))
+    stat = DELTA.stat()
+    parts.append(f"{stat.st_mtime_ns} {stat.st_size}")
+    return digest("\0".join(parts))
+
+
+def output(command: list[str]) -> str:
+    return subprocess.run(command, check=True, capture_output=True, text=True).stdout
+
+
+def digest(text: str) -> str:
+    return hashlib.sha256(text.encode()).hexdigest()
+
+
+def speech(fragment: Fragment, voice: str) -> Path | None:
+    match voice:
+        case "none":
+            return None
+        case "me":
+            path = recording(fragment)
+            if not path.exists():
+                sys.exit(
+                    f"no recording of {fragment.id} {fragment.text!r}; run `demo voice-record`"
+                )
+            return path
+        case _:
+            return elevenlabs(fragment)
+
+
+def recording(fragment: Fragment) -> Path:
+    return DEMO / "voice" / "me" / f"{fragment.id}.wav"
+
+
+def elevenlabs(fragment: Fragment) -> Path:
+    path = DEMO / "voice" / "elevenlabs" / ELEVENLABS_VOICE / f"{fragment.id}.mp3"
+    if path.exists():
+        return path
+    key = os.environ.get("ELEVENLABS_API_KEY")
+    if not key:
+        sys.exit("ELEVENLABS_API_KEY is not set")
+    response = httpx.post(
+        f"https://api.elevenlabs.io/v1/text-to-speech/{ELEVENLABS_VOICE}",
+        params={"output_format": "mp3_44100_128"},
+        headers={"xi-api-key": key},
+        json={"text": fragment.text, "model_id": ELEVENLABS_MODEL},
+        timeout=60,
+    )
+    response.raise_for_status()
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_bytes(response.content)
+    return path
+
+
+def record_fragment(fragment: Fragment, slot_ms: int) -> None:
+    """Record the user saying `fragment`. Speaking for longer than `slot_ms` holds the
+    announcement, and so the video, for longer."""
+    path = recording(fragment)
+    path.parent.mkdir(parents=True, exist_ok=True)
+    print(f"\n{fragment.text}\n{slot_ms / 1000:.1f}s to say it.")
+    input("Press Enter, say it, then press Enter again.")
+    command = [
+        "ffmpeg",
+        "-loglevel",
+        "error",
+        "-y",
+        "-f",
+        "avfoundation",
+        "-i",
+        ":default",
+    ]
+    ffmpeg = subprocess.Popen([*command, str(path)], stdin=subprocess.PIPE)
+    input("Recording...")
+    ffmpeg.communicate(b"q")
+    spoken = duration_ms(path)
+    if spoken + SPEECH_TAIL_MS > slot_ms:
+        print(
+            f"{spoken / 1000:.1f}s is too long for {slot_ms / 1000:.1f}s; delete {path} to retry"
+        )
+
+
+def scene_video(
+    scene: Scene, theme: str, audio: dict[str, Path | None], voice: str, inputs: str
+) -> Path:
+    """The scene's video, from the cache, or recorded into it."""
+    body, spoken = timed(scene.lines, audio)
+    recorded_in = other(theme) if scene.other_theme else theme
+    tape = "\n".join(
+        [
+            f"Source _{recorded_in}.tape",
+            "Source _settings.tape",
+            "Hide",
+            'Type "source env.sh && clear" Enter',
+            *scene.replayed,
+            "Sleep 500ms",
+            "Show",
+            body,
+        ]
+    )
+    clips = [str(clip) for clip in spoken if clip]
+    key = digest("\0".join([inputs, theme, voice, tape, *map(file_digest, clips)]))
+    name = f"{scene.chapter}-{theme}-{scene.index:02}"
+    cached = DEMO / "work" / "scenes" / f"{name}-{key[:16]}.mp4"
+    if cached.exists():
+        return cached
+    work = DEMO / "work" / name
+    subprocess.run([DEMO / "setup", work, recorded_in], check=True, capture_output=True)
+    video = work / "scene.mp4"
+    starts = run_betamax(tape, work, video)
+    cached.parent.mkdir(parents=True, exist_ok=True)
+    mix(video, list(zip(starts, spoken, strict=True)), voice != "none", cached)
+    return cached
+
+
+def other(theme: str) -> str:
+    return next(other for other in THEMES if other != theme)
+
+
+def file_digest(path: str) -> str:
+    return hashlib.sha256(Path(path).read_bytes()).hexdigest()
+
+
+def timed(
+    lines: list[str], audio: dict[str, Path | None]
+) -> tuple[str, list[Path | None]]:
+    """`lines` with each `Announce` held at least as long as its audio and followed by a pause,
+    unless another follows it, and the audio of each."""
+    out: list[str] = []
+    spoken: list[Path | None] = []
+    for i, line in enumerate(lines):
+        if match := ANNOUNCE.match(line):
+            clip = audio[Fragment(match["text"]).id]
+            given = (
+                milliseconds(match["duration"])
+                if match["duration"]
+                else DEFAULT_ANNOUNCE_MS
+            )
+            needed = duration_ms(clip) + SPEECH_TAIL_MS if clip else 0
+            line = f'Announce@{max(given, needed)}ms "{match["text"]}"'
+            spoken.append(clip)
+            following = next((rest for rest in lines[i + 1 :] if rest.strip()), "")
+            if not ANNOUNCE.match(following):
+                line += f"\n{AFTER_ANNOUNCE}"
+        out.append(line)
+    return "\n".join(out) + "\n", spoken
+
+
+def milliseconds(duration: str) -> int:
+    if duration.endswith("ms"):
+        return int(float(duration[:-2]))
+    return int(float(duration.removesuffix("s")) * 1000)
+
+
+def duration_ms(path: Path) -> int:
+    command = [
+        "ffprobe",
+        "-v",
+        "error",
+        "-show_entries",
+        "format=duration",
+        "-of",
+        "csv=p=0",
+    ]
+    return round(float(output([*command, str(path)])) * 1000)
+
+
+def run_betamax(source: str, work: Path, video: Path) -> list[float]:
+    """Run betamax, and return the time in the video at which each `Announce` started.
+
+    betamax prints a line to stdout as it starts each command, and records only while shown, so
+    video time is the wall-clock time spent shown before the command.
+    """
+    env = {
+        "HOME": str(work / "home"),
+        "PATH": os.environ["PATH"],
+        "LANG": "en_US.UTF-8",
+        "DEMO_WORK": str(work / "delta"),
+        # gh, as in `gh pr diff`, cannot reach its keychain token under this HOME.
+        "GH_TOKEN": GH_TOKEN,
+    }
+    betamax = subprocess.Popen(
+        ["betamax", "run", "-o", video, "-"],
+        cwd=DEMO,
+        env=env,
+        stdin=subprocess.PIPE,
+        stdout=subprocess.PIPE,
+        stderr=subprocess.STDOUT,
+        text=True,
+    )
+    assert betamax.stdin is not None and betamax.stdout is not None
+    betamax.stdin.write(source)
+    betamax.stdin.close()
+    shown_since: float | None = None
+    shown = 0.0
+    starts: list[float] = []
+    log: list[str] = []
+    for line in betamax.stdout:
+        now = time.monotonic()
+        log.append(line)
+        match = PROGRESS.search(ANSI.sub("", line))
+        if not match:
+            continue
+        match match["command"]:
+            case "Show" if shown_since is None:
+                shown_since = now
+            case "Hide" if shown_since is not None:
+                shown += now - shown_since
+                shown_since = None
+            case "Announce":
+                starts.append(
+                    shown + (now - shown_since if shown_since is not None else 0.0)
+                )
+    (work / "betamax.log").write_text("".join(log))
+    if betamax.wait() != 0:
+        failure = [line for line in log if "INFO" not in line][-12:]
+        raise RuntimeError(f"betamax failed in {work.name}:\n{''.join(failure)}")
+    return starts
+
+
+def mix(
+    video: Path, spoken: list[tuple[float, Path | None]], voiced: bool, out: Path
+) -> None:
+    """`video` with the clips mixed in at their starts. A voiced video always has a sound track,
+    silent where nothing is said, so that voiced scenes join."""
+    clips = [(start, clip) for start, clip in spoken if clip]
+    if not voiced:
+        out.write_bytes(video.read_bytes())
+        return
+    inputs = ["-f", "lavfi", "-i", "anullsrc=r=44100:cl=mono"]
+    inputs += [arg for _, clip in clips for arg in ("-i", str(clip))]
+    delays = [
+        f"[{i + 2}:a]adelay={round(start * 1000)}:all=1[a{i}]"
+        for i, (start, _) in enumerate(clips)
+    ]
+    mixed = "[1:a]" + "".join(f"[a{i}]" for i in range(len(clips)))
+    graph = ";".join(
+        [*delays, f"{mixed}amix=inputs={len(clips) + 1}:normalize=0[voice]"]
+    )
+    subprocess.run(
+        ["ffmpeg", "-loglevel", "error", "-y", "-i", str(video), *inputs]
+        + ["-filter_complex", graph, "-map", "0:v", "-map", "[voice]", "-shortest"]
+        + [
+            "-c:v",
+            "copy",
+            "-c:a",
+            "aac",
+            "-ar",
+            "44100",
+            "-ac",
+            "1",
+            "-b:a",
+            "128k",
+            str(out),
+        ],
+        check=True,
+    )
+
+
+def join(scenes: list[Path], out: Path) -> None:
+    listing = out.with_suffix(".txt")
+    listing.write_text("".join(f"file '{scene}'\n" for scene in scenes))
+    subprocess.run(
+        [
+            "ffmpeg",
+            "-loglevel",
+            "error",
+            "-y",
+            "-f",
+            "concat",
+            "-safe",
+            "0",
+            "-i",
+            str(listing),
+        ]
+        + ["-c", "copy", str(out)],
+        check=True,
+    )
+    listing.unlink()
+
+
+if __name__ == "__main__":
+    main()
