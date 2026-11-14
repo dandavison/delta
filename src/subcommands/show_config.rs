@@ -197,8 +197,20 @@ fn write_config(config: &config::Config, writer: &mut dyn Write) -> std::io::Res
         line_numbers_minus_style = config.line_numbers_style_minusplus[Minus].to_painted_string(),
         line_numbers_zero_style = config.line_numbers_zero_style.to_painted_string(),
         line_numbers_plus_style = config.line_numbers_style_minusplus[Plus].to_painted_string(),
-        line_numbers_left_style = config.line_numbers_style_leftright[Left].to_painted_string(),
-        line_numbers_right_style = config.line_numbers_style_leftright[Right].to_painted_string(),
+        line_numbers_left_style = if config.line_numbers_style_leftright_is_line[Left] {
+            "line".to_string()
+        } else {
+            config.line_numbers_style_leftright[Left]
+                .to_painted_string()
+                .to_string()
+        },
+        line_numbers_right_style = if config.line_numbers_style_leftright_is_line[Right] {
+            "line".to_string()
+        } else {
+            config.line_numbers_style_leftright[Right]
+                .to_painted_string()
+                .to_string()
+        },
         line_numbers_left_format = format_option_value(&config.line_numbers_format[Left]),
         line_numbers_right_format = format_option_value(&config.line_numbers_format[Right]),
     )?;
