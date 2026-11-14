@@ -150,6 +150,27 @@ mod tests {
 
     const DELTA: &str = "/path to/delta";
 
+    fn os_args(args: &[&str]) -> Vec<OsString> {
+        args.iter().map(OsString::from).collect()
+    }
+
+    #[test]
+    fn test_deltas_options_given_to_delta_tui_say_where_they_go() {
+        let err = parse(os_args(&["--side-by-side"])).unwrap_err();
+        let message = error_message(&err);
+        assert!(message.contains("'--side-by-side'"), "{message}");
+        assert!(message.contains("[delta]"), "{message}");
+    }
+
+    #[test]
+    fn test_tui_after_other_arguments_says_it_must_come_first() {
+        let message = misplaced_tui(os_args(&["delta", "--side-by-side", "--tui"])).unwrap();
+        assert!(message.contains("first"), "{message}");
+        assert!(message.contains("[delta]"), "{message}");
+        assert_eq!(misplaced_tui(os_args(&["delta", "--tui"])), None);
+        assert_eq!(misplaced_tui(os_args(&["delta", "a", "b"])), None);
+    }
+
     #[test]
     fn test_renderers_without_config_file() {
         let config = configure("");
