@@ -12,6 +12,7 @@ use crate::cli;
 use crate::color::{self, ColorMode};
 use crate::delta::State;
 use crate::fatal;
+use crate::features::line_numbers;
 use crate::features::navigate;
 use crate::features::side_by_side::{self, ansifill, LeftRight};
 use crate::git_config::GitConfig;
@@ -96,6 +97,7 @@ pub struct Config {
     pub line_fill_method: BgFillMethod,
     pub line_numbers_format: LeftRight<String>,
     pub line_numbers_style_leftright: LeftRight<Style>,
+    pub line_numbers_style_leftright_is_line: LeftRight<bool>,
     pub line_numbers_style_minusplus: MinusPlus<Style>,
     pub line_numbers_zero_style: Style,
     pub line_numbers: bool,
@@ -383,6 +385,10 @@ impl From<cli::Opt> for Config {
             line_numbers_style_leftright: LeftRight::new(
                 styles["line-numbers-left-style"],
                 styles["line-numbers-right-style"],
+            ),
+            line_numbers_style_leftright_is_line: LeftRight::new(
+                line_numbers::is_line_style(&opt.line_numbers_left_style),
+                line_numbers::is_line_style(&opt.line_numbers_right_style),
             ),
             line_numbers_style_minusplus: MinusPlus::new(
                 styles["line-numbers-minus-style"],

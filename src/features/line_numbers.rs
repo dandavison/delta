@@ -65,9 +65,22 @@ pub fn make_feature() -> Vec<(String, OptionValueFunction)> {
     ])
 }
 
+/// Whether a --line-numbers-left-style / --line-numbers-right-style value is the special value
+/// "line", meaning the style of the line.
+pub fn is_line_style(style_string: &str) -> bool {
+    style_string.trim() == "line"
+}
+
+/// The line numbers of a line, and the styles of its two number fields.
+///
+/// Both fields take the style of the line: a removed line's fields are both in the minus style,
+/// an added line's both in the plus style. In side-by-side, each panel shows only its own field,
+/// and the panel opposite a removed or added line holds no line: its field takes the zero style,
+/// like the fields of an unchanged line, instead of the style of a line it does not show.
 pub fn linenumbers_and_styles<'a>(
     line_numbers_data: &'a mut LineNumbersData,
     state: &State,
+    side_by_side_panel: Option<PanelSide>,
     config: &'a config::Config,
     increment: bool,
 ) -> Option<(MinusPlus<Option<usize>>, MinusPlus<Style>)> {
@@ -78,28 +91,33 @@ pub fn linenumbers_and_styles<'a>(
         config.line_numbers_zero_style,
         config.line_numbers_style_minusplus[Plus],
     );
-    let ((minus_number, plus_number), (minus_style, plus_style)) = match state {
+    // The panel a removed (Left) or added (Right) line is shown in.
+    let (numbers, style, line_side) = match state {
         State::HunkMinus(_, _) => {
             line_numbers_data.line_number[Left] += increment as usize;
-            ((Some(nr_left), None), (minus_style, plus_style))
+            ((Some(nr_left), None), minus_style, Some(Left))
         }
-        State::HunkMinusWrapped => ((None, None), (minus_style, plus_style)),
+        State::HunkMinusWrapped => ((None, None), minus_style, Some(Left)),
         State::HunkZero(_, _) => {
             line_numbers_data.line_number[Left] += increment as usize;
             line_numbers_data.line_number[Right] += increment as usize;
-            ((Some(nr_left), Some(nr_right)), (zero_style, zero_style))
+            ((Some(nr_left), Some(nr_right)), zero_style, None)
         }
-        State::HunkZeroWrapped => ((None, None), (zero_style, zero_style)),
+        State::HunkZeroWrapped => ((None, None), zero_style, None),
         State::HunkPlus(_, _) => {
             line_numbers_data.line_number[Right] += increment as usize;
-            ((None, Some(nr_right)), (minus_style, plus_style))
+            ((None, Some(nr_right)), plus_style, Some(Right))
         }
-        State::HunkPlusWrapped => ((None, None), (minus_style, plus_style)),
+        State::HunkPlusWrapped => ((None, None), plus_style, Some(Right)),
         _ => return None,
     };
+    let style = match (side_by_side_panel, line_side) {
+        (Some(panel), Some(line_side)) if panel != line_side => zero_style,
+        _ => style,
+    };
     Some((
-        MinusPlus::new(minus_number, plus_number),
-        MinusPlus::new(minus_style, plus_style),
+        MinusPlus::new(numbers.0, numbers.1),
+        MinusPlus::new(style, style),
     ))
 }
 
@@ -273,7 +291,12 @@ fn format_and_paint_line_number_field<'a>(
 
     let format_data = &format_data[side];
     let plus_file = &line_numbers_data.plus_file;
-    let style = &config.line_numbers_style_leftright[side];
+    // The text around the number, e.g. the dividing characters.
+    let style = if config.line_numbers_style_leftright_is_line[side] {
+        &styles[side]
+    } else {
+        &config.line_numbers_style_leftright[side]
+    };
 
     let mut ansi_strings = Vec::new();
     let mut suffix = "";
@@ -721,6 +744,68 @@ pub mod tests {
         assert_eq!(lines.next().unwrap(), "  1 ⋮  1 │a = 1");
         assert_eq!(lines.next().unwrap(), "  2 ⋮    │b = 2");
         assert_eq!(lines.next().unwrap(), "    ⋮  2 │bb = 2");
+    }
+
+    /// Both number fields of a removed line are in the minus style, and both fields of an added
+    /// line in the plus style, also the field that holds no number.
+    #[test]
+    fn test_number_fields_take_the_style_of_the_line() {
+        DeltaTest::with_args(&[
+            "--line-numbers",
+            "--line-numbers-left-format",
+            "{nm:^4}⋮",
+            "--line-numbers-right-format",
+            "{np:^4}│",
+            "--line-numbers-left-style",
+            "blue",
+            "--line-numbers-right-style",
+            "blue",
+            "--line-numbers-minus-style",
+            "red",
+            "--line-numbers-plus-style",
+            "green",
+            "--line-numbers-zero-style",
+            "yellow",
+        ])
+        .explain_ansi()
+        .with_input(ONE_MINUS_ONE_PLUS_LINE_DIFF)
+        .expect_after_header(
+            r#"
+        (yellow)  1 (blue)⋮(yellow)  1 (blue)│(231)a (203)=(231) (141)1(normal)
+        (red)  2 (blue)⋮(red)    (blue)│(normal 124)b(normal 52) = 2(normal)
+        (green)    (blue)⋮(green)  2 (blue)│(231 28)bb(normal 22) (203)=(231) (141)2(normal)"#,
+        );
+    }
+
+    /// With --line-numbers-left-style=line and --line-numbers-right-style=line, the text around the
+    /// numbers is in the style of the line.
+    #[test]
+    fn test_left_right_style_line() {
+        DeltaTest::with_args(&[
+            "--line-numbers",
+            "--line-numbers-left-format",
+            "{nm:^4}⋮",
+            "--line-numbers-right-format",
+            "{np:^4}│",
+            "--line-numbers-left-style",
+            "line",
+            "--line-numbers-right-style",
+            "line",
+            "--line-numbers-minus-style",
+            "red",
+            "--line-numbers-plus-style",
+            "green",
+            "--line-numbers-zero-style",
+            "yellow",
+        ])
+        .explain_ansi()
+        .with_input(ONE_MINUS_ONE_PLUS_LINE_DIFF)
+        .expect_after_header(
+            r#"
+            (yellow)  1 ⋮  1 │(231)a (203)=(231) (141)1(normal)
+            (red)  2 ⋮    │(normal 124)b(normal 52) = 2(normal)
+            (green)    ⋮  2 │(231 28)bb(normal 22) (203)=(231) (141)2(normal)"#,
+        );
     }
 
     #[test]

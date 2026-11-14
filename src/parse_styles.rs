@@ -3,6 +3,7 @@ use std::collections::{HashMap, HashSet};
 use crate::cli;
 use crate::color;
 use crate::fatal;
+use crate::features::line_numbers;
 use crate::git_config::GitConfig;
 use crate::style::{self, Style};
 
@@ -251,8 +252,13 @@ fn make_hunk_styles(opt: &cli::Opt, styles: &mut HashMap<&str, StyleReference>) 
 
 fn make_line_number_styles(opt: &cli::Opt, styles: &mut HashMap<&str, StyleReference>) {
     let true_color = opt.computed.true_color;
+    // With the value "line" the style used is that of the line, so this one is unused.
     let line_numbers_left_style = style_from_str(
-        &opt.line_numbers_left_style,
+        if line_numbers::is_line_style(&opt.line_numbers_left_style) {
+            "auto"
+        } else {
+            &opt.line_numbers_left_style
+        },
         None,
         None,
         true_color,
@@ -283,8 +289,13 @@ fn make_line_number_styles(opt: &cli::Opt, styles: &mut HashMap<&str, StyleRefer
         opt.git_config(),
     );
 
+    // With the value "line" the style used is that of the line, so this one is unused.
     let line_numbers_right_style = style_from_str(
-        &opt.line_numbers_right_style,
+        if line_numbers::is_line_style(&opt.line_numbers_right_style) {
+            "auto"
+        } else {
+            &opt.line_numbers_right_style
+        },
         None,
         None,
         true_color,

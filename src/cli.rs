@@ -569,7 +569,11 @@ pub struct Opt {
     )]
     /// Style string for the left column of line numbers.
     ///
-    /// See STYLES and LINE NUMBERS sections.
+    /// This styles the text around the line numbers in --line-numbers-left-format, such as the
+    /// dividing characters. The special value "line" paints that text in the style of the line
+    /// instead: --line-numbers-minus-style in a removed line, --line-numbers-plus-style in an added
+    /// line, and --line-numbers-zero-style in an unchanged line. See STYLES and LINE NUMBERS
+    /// sections.
     pub line_numbers_left_style: String,
 
     #[arg(
@@ -611,7 +615,11 @@ pub struct Opt {
     )]
     /// Style string for the right column of line numbers.
     ///
-    /// See STYLES and LINE NUMBERS sections.
+    /// This styles the text around the line numbers in --line-numbers-right-format, such as the
+    /// dividing characters. The special value "line" paints that text in the style of the line
+    /// instead: --line-numbers-minus-style in a removed line, --line-numbers-plus-style in an added
+    /// line, and --line-numbers-zero-style in an unchanged line. See STYLES and LINE NUMBERS
+    /// sections.
     pub line_numbers_right_style: String,
 
     #[arg(
