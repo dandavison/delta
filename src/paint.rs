@@ -723,6 +723,21 @@ pub fn paint_minus_and_plus_lines(
     }
 }
 
+/// Split `line` after the truncated prefix used for syntax highlighting.
+/// If `truncated` is not a byte prefix of `line`, walk back to a char boundary
+/// so `str::split_at` cannot panic.
+fn split_at_truncated_prefix<'a>(line: &'a str, truncated: &str) -> (&'a str, &'a str) {
+    let mut mid = if line.starts_with(truncated) {
+        truncated.len()
+    } else {
+        truncated.len().min(line.len())
+    };
+    while mid > 0 && !line.is_char_boundary(mid) {
+        mid -= 1;
+    }
+    line.split_at(mid)
+}
+
 pub fn get_syntax_style_sections_for_lines<'a>(
     lines: &'a [(String, State)],
     highlighter: Option<&mut HighlightLines>,
@@ -749,9 +764,11 @@ pub fn get_syntax_style_sections_for_lines<'a>(
                 } else {
                     let line_syntax = ansi::truncate_str_short(line, config.max_syntax_length);
                     // Re-split to get references into `line` with correct lifetimes.
-                    // SAFETY: slicing the string is safe because `truncate_str_short` always
-                    // returns a prefix of the input and only cuts at grapheme borders.
-                    let (with_syntax, plain) = line.split_at(line_syntax.len());
+                    // Use a char-boundary index: truncate_str_short is supposed to return a
+                    // prefix, but its length is not always a valid split point in `line`
+                    // (see #2316, a U+FFFD in binary / PDF hunks).
+                    let (with_syntax, plain) =
+                        split_at_truncated_prefix(line, line_syntax.as_ref());
                     // Note: splitting a line and only feeding one half to the highlighter may
                     // result in wrong highlighting until it is reset the next hunk.
                     //
@@ -1169,5 +1186,36 @@ mod superimpose_style_sections {
                 vec![((*SYNTAX_STYLE, *SYNTAX_HIGHLIGHTED_STYLE), 'a')]
             );
         }
+    }
+}
+
+#[cfg(test)]
+mod truncated_prefix_tests {
+    use super::split_at_truncated_prefix;
+
+    #[test]
+    fn split_at_truncated_prefix_keeps_char_boundaries() {
+        let line = "ééé"; // each char is 2 bytes
+                          // A non-prefix length of 3 would panic on split_at.
+        let (head, tail) = split_at_truncated_prefix(line, "xxx");
+        assert!(line.is_char_boundary(head.len()));
+        assert_eq!(head, "é");
+        assert_eq!(tail, "éé");
+
+        let replacement = "�".repeat(500);
+        let mid = 1207; // inside a U+FFFD (bytes 1206..1209) as in #2316
+        let fake = "x".repeat(mid);
+        let (head, tail) = split_at_truncated_prefix(&replacement, &fake);
+        assert!(replacement.is_char_boundary(head.len()));
+        assert_eq!(head.len() + tail.len(), replacement.len());
+        assert_eq!(format!("{head}{tail}"), replacement);
+    }
+
+    #[test]
+    fn split_at_truncated_prefix_uses_real_prefix() {
+        let line = "abcdef";
+        let (head, tail) = split_at_truncated_prefix(line, "abcd");
+        assert_eq!(head, "abcd");
+        assert_eq!(tail, "ef");
     }
 }
