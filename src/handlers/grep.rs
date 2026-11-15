@@ -178,6 +178,7 @@ impl StateMachine<'_> {
                 "",
                 self.config,
                 "",
+                false,
             )?
         }
         if new_section {
@@ -242,6 +243,7 @@ impl StateMachine<'_> {
             grep_line.line_type.file_path_separator(),
             self.config,
             "",
+            false,
         )
     }
 
@@ -269,6 +271,7 @@ impl StateMachine<'_> {
                     grep_line.line_type.file_path_separator(),
                     self.config,
                     "",
+                    false,
                 )?
             }
             _ => {

@@ -211,46 +211,17 @@ impl StateMachine<'_> {
             write!(self.painter.writer, "{h_osc}")?;
             writeln!(self.painter.writer)?;
         } else {
-            let file = if self.plus_file == "/dev/null" {
-                &self.minus_file
-            } else {
-                &self.plus_file
-            };
-
-            // Add a blank line below the hunk-header-line for readability, unless
-            // color_only mode is active.
-            if !self.config.color_only {
-                // With nothing to show (no code fragment, file or line number) the
-                // hunk-header row is skipped. The blank line then carries the `h`
-                // record, so a host still learns where the hunk starts.
-                if !h_osc.is_empty() {
-                    let (row_line, row_file) = hunk_header_row_parts(
-                        code_fragment,
-                        line_numbers_and_hunk_lengths,
-                        line,
-                        file,
-                        &self.config.hunk_header_file_style,
-                        &self.config.hunk_header_line_number_style,
-                        &self.config.hunk_header_style_include_file_path,
-                        &self.config.hunk_header_style_include_line_number,
-                        &self.config.hunk_header_style_include_code_fragment,
-                        ":",
-                        self.config,
-                    );
-                    if row_line.is_empty() && row_file.is_empty() {
-                        write!(self.painter.writer, "{h_osc}")?;
-                    }
-                }
-                writeln!(self.painter.writer)?;
-            }
-
             write_line_of_code_with_optional_path_and_line_number(
                 code_fragment,
                 line_numbers_and_hunk_lengths,
                 None,
                 &mut self.painter,
                 line,
-                file,
+                if self.plus_file == "/dev/null" {
+                    &self.minus_file
+                } else {
+                    &self.plus_file
+                },
                 self.config.hunk_header_style.decoration_style,
                 &self.config.hunk_header_file_style,
                 &self.config.hunk_header_line_number_style,
@@ -261,6 +232,9 @@ impl StateMachine<'_> {
                 ":",
                 self.config,
                 &h_osc,
+                // Add a blank line above the hunk-header-line for readability, unless
+                // color_only mode is active.
+                !self.config.color_only,
             )?;
         };
         self.painter.set_highlighter();
@@ -370,23 +344,36 @@ pub fn write_line_of_code_with_optional_path_and_line_number(
     file_path_separator: &str,
     config: &Config,
     metadata_osc: &str,
+    blank_row_above: bool,
 ) -> std::io::Result<()> {
     let (mut draw_fn, _, decoration_ansi_term_style) = draw::get_draw_function(decoration_style);
-    let (line, file_with_line_number) = hunk_header_row_parts(
-        code_fragment,
-        line_numbers_and_hunk_lengths,
-        line,
+    let line = match (config.color_only, include_code_fragment) {
+        (true, _) => line.to_string(),
+        // When called from a ripgrep json context: No " " added, as this would prevent
+        // identifying that a newline already exists, and so another would be added.
+        (_, HunkHeaderIncludeCodeFragment::YesNoSpace) => code_fragment.to_string(),
+        (_, HunkHeaderIncludeCodeFragment::Yes) if !code_fragment.is_empty() => {
+            format!("{code_fragment} ")
+        }
+        _ => "".to_string(),
+    };
+
+    let plus_line_number = line_numbers_and_hunk_lengths[line_numbers_and_hunk_lengths.len() - 1].0;
+    let file_with_line_number = paint_file_path_with_line_number(
+        Some(plus_line_number),
         plus_file,
         file_style,
         line_number_style,
         include_file_path,
         include_line_number,
-        include_code_fragment,
         file_path_separator,
         config,
     );
 
     if !line.is_empty() || !file_with_line_number.is_empty() {
+        if blank_row_above {
+            writeln!(painter.writer)?;
+        }
         write_to_output_buffer(
             &file_with_line_number,
             file_path_separator,
@@ -413,50 +400,12 @@ pub fn write_line_of_code_with_optional_path_and_line_number(
             },
         )?;
         painter.output_buffer.clear();
+    } else if blank_row_above {
+        // There is no header row, so the blank row carries its metadata.
+        writeln!(painter.writer, "{metadata_osc}")?;
     }
 
     Ok(())
-}
-
-/// The code fragment text and the painted file path / line number that make up
-/// a hunk-header row. When both are empty no row is drawn.
-#[allow(clippy::too_many_arguments)]
-fn hunk_header_row_parts(
-    code_fragment: &str,
-    line_numbers_and_hunk_lengths: &[(usize, usize)],
-    line: &str,
-    plus_file: &str,
-    file_style: &Style,
-    line_number_style: &Style,
-    include_file_path: &HunkHeaderIncludeFilePath,
-    include_line_number: &HunkHeaderIncludeLineNumber,
-    include_code_fragment: &HunkHeaderIncludeCodeFragment,
-    file_path_separator: &str,
-    config: &Config,
-) -> (String, String) {
-    let line = match (config.color_only, include_code_fragment) {
-        (true, _) => line.to_string(),
-        // When called from a ripgrep json context: No " " added, as this would prevent
-        // identifying that a newline already exists, and so another would be added.
-        (_, HunkHeaderIncludeCodeFragment::YesNoSpace) => code_fragment.to_string(),
-        (_, HunkHeaderIncludeCodeFragment::Yes) if !code_fragment.is_empty() => {
-            format!("{code_fragment} ")
-        }
-        _ => "".to_string(),
-    };
-
-    let plus_line_number = line_numbers_and_hunk_lengths[line_numbers_and_hunk_lengths.len() - 1].0;
-    let file_with_line_number = paint_file_path_with_line_number(
-        Some(plus_line_number),
-        plus_file,
-        file_style,
-        line_number_style,
-        include_file_path,
-        include_line_number,
-        file_path_separator,
-        config,
-    );
-    (line, file_with_line_number)
 }
 
 #[allow(clippy::too_many_arguments)]
@@ -767,6 +716,52 @@ pub mod tests {
             integration_test_utils::run_delta(GIT_LOG_OUTPUT_WITH_NOT_A_HUNK_HEADER, &config);
         let output = strip_ansi_codes(&output);
         assert!(output.contains("@@@2021-12-05"));
+    }
+
+    #[test]
+    fn test_hunk_header_record_when_hunk_header_row_is_empty() {
+        // With no file, line number or code fragment to show, delta draws no
+        // hunk header row. The hunk's `h` record goes on the blank row above
+        // where the header row would be, so that a host can still see where
+        // the hunk starts.
+        let input = "\
+diff --git a/a.txt b/a.txt
+index 1111111..2222222 100644
+--- a/a.txt
++++ b/a.txt
+@@ -1,3 +1,3 @@
+ one
+-two
++TWO
+ three
+@@ -10,3 +10,3 @@
+ ten
+-eleven
++ELEVEN
+ twelve
+";
+        let config = integration_test_utils::make_config_from_args(&[
+            "--hunk-header-style",
+            "syntax",
+            "--file-style",
+            "omit",
+            "--file-decoration-style",
+            "none",
+        ]);
+        let output = integration_test_utils::run_delta_with_diff_line_metadata(input, &config);
+        let output = strip_ansi_codes(&output.replace("\x1b]1717;", "⟦").replace("\x1b\\", "⟧"));
+        insta::assert_snapshot!(output, @r"
+        ⟦1;h;1;;a.txt⟧
+        ⟦1;c;1;;a.txt⟧one
+        ⟦1;d;2;2;a.txt⟧two
+        ⟦1;a;2;;a.txt⟧TWO
+        ⟦1;c;3;;a.txt⟧three
+        ⟦1;h;10;;a.txt⟧
+        ⟦1;c;10;;a.txt⟧ten
+        ⟦1;d;11;11;a.txt⟧eleven
+        ⟦1;a;11;;a.txt⟧ELEVEN
+        ⟦1;c;12;;a.txt⟧twelve
+        ");
     }
 
     const GIT_LOG_OUTPUT_WITH_NOT_A_HUNK_HEADER: &str = "\
