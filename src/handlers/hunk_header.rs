@@ -53,6 +53,11 @@ pub enum HunkHeaderIncludeHunkLabel {
     No,
 }
 
+pub enum HunkHeaderIncludeBlankRowAbove {
+    Yes,
+    No,
+}
+
 // The output of `diff -u file1 file2` does not contain a header before the
 // `--- old.lua` / `+++ new.lua` block, and the hunk can of course contain lines
 // starting with '-- '. To avoid interpreting '--- lua comment' as a new header,
@@ -234,7 +239,11 @@ impl StateMachine<'_> {
                 &h_osc,
                 // Add a blank line above the hunk-header-line for readability, unless
                 // color_only mode is active.
-                !self.config.color_only,
+                if self.config.color_only {
+                    &HunkHeaderIncludeBlankRowAbove::No
+                } else {
+                    &HunkHeaderIncludeBlankRowAbove::Yes
+                },
             )?;
         };
         self.painter.set_highlighter();
@@ -344,7 +353,7 @@ pub fn write_line_of_code_with_optional_path_and_line_number(
     file_path_separator: &str,
     config: &Config,
     metadata_osc: &str,
-    blank_row_above: bool,
+    include_blank_row_above: &HunkHeaderIncludeBlankRowAbove,
 ) -> std::io::Result<()> {
     let (mut draw_fn, _, decoration_ansi_term_style) = draw::get_draw_function(decoration_style);
     let line = match (config.color_only, include_code_fragment) {
@@ -371,7 +380,7 @@ pub fn write_line_of_code_with_optional_path_and_line_number(
     );
 
     if !line.is_empty() || !file_with_line_number.is_empty() {
-        if blank_row_above {
+        if matches!(include_blank_row_above, HunkHeaderIncludeBlankRowAbove::Yes) {
             writeln!(painter.writer)?;
         }
         write_to_output_buffer(
@@ -400,7 +409,7 @@ pub fn write_line_of_code_with_optional_path_and_line_number(
             },
         )?;
         painter.output_buffer.clear();
-    } else if blank_row_above {
+    } else if matches!(include_blank_row_above, HunkHeaderIncludeBlankRowAbove::Yes) {
         // There is no header row, so the blank row carries its metadata.
         writeln!(painter.writer, "{metadata_osc}")?;
     }
