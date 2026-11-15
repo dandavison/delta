@@ -15,7 +15,7 @@ use crate::paint::{self, BgShouldFill, StyleSectionSpecifier};
 use crate::style::Style;
 use crate::utils::{process, tabs};
 
-use super::hunk_header::HunkHeaderIncludeHunkLabel;
+use super::hunk_header::{HunkHeaderIncludeBlankRowAbove, HunkHeaderIncludeHunkLabel};
 
 #[derive(Debug, PartialEq, Eq)]
 pub struct GrepLine<'b> {
@@ -178,6 +178,7 @@ impl StateMachine<'_> {
                 "",
                 self.config,
                 "",
+                &HunkHeaderIncludeBlankRowAbove::No,
             )?
         }
         if new_section {
@@ -242,6 +243,7 @@ impl StateMachine<'_> {
             grep_line.line_type.file_path_separator(),
             self.config,
             "",
+            &HunkHeaderIncludeBlankRowAbove::No,
         )
     }
 
@@ -269,6 +271,7 @@ impl StateMachine<'_> {
                     grep_line.line_type.file_path_separator(),
                     self.config,
                     "",
+                    &HunkHeaderIncludeBlankRowAbove::No,
                 )?
             }
             _ => {
