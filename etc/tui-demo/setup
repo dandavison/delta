@@ -1,0 +1,18 @@
+#!/usr/bin/env bash
+# Makes <dir>/delta a fresh clone of this repository at a fixed commit, for a tape to work in, and
+# <dir>/home a HOME whose git config is themes.gitconfig, demo.gitconfig and <theme>.gitconfig.
+set -euo pipefail
+demo=$(cd "$(dirname "$0")" && pwd)
+dir=$1 theme=$2
+rm -rf "$dir"
+git clone --quiet --shared "$(git -C "$demo" rev-parse --show-toplevel)" "$dir/delta"
+git -C "$dir/delta" remote remove origin
+git -C "$dir/delta" checkout --quiet -B main 3c2269c6b845913965575f11b0196d70ef5352f3
+mkdir "$dir/home"
+gitconfig=$dir/home/.gitconfig
+# Copies, so that what the TUI writes to git config while recording, such as a feature key set from
+# its list, does not change this repository's files.
+cp "$demo/themes.gitconfig" "$demo/demo.gitconfig" "$demo/$theme.gitconfig" "$dir/home/"
+git config --file "$gitconfig" --add include.path "$dir/home/themes.gitconfig"
+git config --file "$gitconfig" --add include.path "$dir/home/demo.gitconfig"
+git config --file "$gitconfig" --add include.path "$dir/home/$theme.gitconfig"

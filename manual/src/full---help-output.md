@@ -168,15 +168,21 @@ Options:
 
           [default: ""]
 
-      --diff-highlight
+      --diff-highlight[=<BOOL>]
           Emulate diff-highlight.
 
           <https://github.com/git/git/tree/master/contrib/diff-highlight>
 
-      --diff-so-fancy
+          [default: false]
+          [possible values: true, false]
+
+      --diff-so-fancy[=<BOOL>]
           Emulate diff-so-fancy.
 
           <https://github.com/so-fancy/diff-so-fancy>
+
+          [default: false]
+          [possible values: true, false]
 
       --diff-stat-align-width <N>
           Width allocated for file paths in a diff stat section.
@@ -196,7 +202,11 @@ Options:
           variable will be added to those specified in git config. E.g.
           DELTA_FEATURES=+side-by-side can be used to activate side-by-side
           temporarily (use DELTA_FEATURES=+ to go back to just the features
-          from git config).
+          from git config). A name preceded with - removes that feature, even
+          if git config turns it on, e.g. DELTA_FEATURES="+-side-by-side" or
+          --features=-side-by-side; removing a builtin feature such as
+          side-by-side or line-numbers also turns off the option of that
+          name.
 
       --file-added-label <STRING>
           Text to display before an added file path.
@@ -360,7 +370,7 @@ Options:
 
           [default: ""]
 
-      --hyperlinks
+      --hyperlinks[=<BOOL>]
           Render commit hashes, file names, and line numbers as hyperlinks.
 
           Following the hyperlink spec for terminal emulators:
@@ -375,6 +385,9 @@ Options:
           break e.g. --navigate). If you use tmux, version 3.4 or later is
           required. You may need to enable the hyperlinks feature in tmux's
           terminal-features option for your terminal.
+
+          [default: false]
+          [possible values: true, false]
 
       --hyperlinks-commit-link-format <FMT>
           Format string for commit hyperlinks (requires --hyperlinks).
@@ -418,11 +431,14 @@ Options:
           [default: true]
           [possible values: true, false]
 
-      --keep-plus-minus-markers
+      --keep-plus-minus-markers[=<BOOL>]
           Prefix added/removed lines with a +/- character, as git does.
 
           By default, delta does not emit any prefix, so code can be copied
           directly from delta's output.
+
+          [default: false]
+          [possible values: true, false]
 
       --light
           Use default colors appropriate for a light terminal background.
@@ -452,10 +468,13 @@ Options:
 
           [possible values: ansi, spaces]
 
-  -n, --line-numbers
+  -n, --line-numbers[=<BOOL>]
           Display line numbers next to the diff.
 
           See LINE NUMBERS section.
+
+          [default: false]
+          [possible values: true, false]
 
       --line-numbers-left-format <FMT>
           Format string for the left column of line numbers.
@@ -574,8 +593,8 @@ Options:
           This styles the decoration of the header above the diff between the
           ancestral commit and the 'ours' branch. See STYLES section. The
           style string should contain one of the special attributes 'box',
-          'ul' (underline), 'ol' (overline), or a combination ('ul ol' or 'box
-          ul').
+          'ul' (underline), 'ol' (overline), or a combination ('ul ol' or
+          'box ul').
 
           [default: box]
 
@@ -594,7 +613,8 @@ Options:
           This styles the decoration of the header above the diff between the
           ancestral commit and 'their' branch.  See STYLES section. The style
           string should contain one of the special attributes 'box', 'ul'
-          (underline), 'ol' (overline), or a combination ('ul ol' or 'box ul').
+          (underline), 'ol' (overline), or a combination ('ul ol' or 'box
+          ul').
 
           [default: box]
 
@@ -636,12 +656,15 @@ Options:
 
           [default: "normal auto"]
 
-      --navigate
+      --navigate[=<BOOL>]
           Activate diff navigation.
 
           Use n to jump forwards and N to jump backwards. To change the file
           labels used see --file-added-label, --file-copied-label,
           --file-modified-label, --file-removed-label, --file-renamed-label.
+
+          [default: false]
+          [possible values: true, false]
 
       --navigate-regex <REGEX>
           Regular expression defining navigation stop points
@@ -753,8 +776,24 @@ Options:
           To control the themes shown, use --dark or --light, or both, on the
           command line together with this option.
 
-  -s, --side-by-side
-          Display diffs in side-by-side layout
+  -s, --side-by-side[=<WHEN>]
+          Display diffs in side-by-side layout. Optionally, set the minimum
+          terminal width required to enable side-by-side mode (e.g.
+          --side-by-side=80). If the terminal is narrower than this value,
+          side-by-side mode will be disabled and delta will fall back to
+          unified diff. If --width is set, the minimum applies to that width
+          instead. Without a value (or with `true`), side-by-side is always
+          enabled.
+
+          With --side-by-side=hunk, side-by-side is decided per hunk: a hunk
+          that both removes and adds lines is displayed side-by-side, and a
+          hunk that only removes or only adds lines is displayed in a single
+          column, as is every hunk of an added or deleted file. A minimum
+          width can be combined with it, separated by a comma (e.g.
+          --side-by-side=hunk,140): below that width, every hunk is displayed
+          in a single column.
+
+          [default: false]
 
       --syntax-theme <SYNTAX_THEME>
           The syntax-highlighting theme to use.
@@ -787,6 +826,17 @@ Options:
 
           [default: auto]
           [possible values: auto, always, never]
+
+      --tui
+          Run gitu, an interactive git interface that uses delta to draw
+          diffs.
+
+          Must be the first argument; the arguments after it are gitu's (see
+          `delta --tui --help`). To use it as git's pager, set e.g.
+          pager.diff to `delta --tui`. See
+          <https://dandavison.github.io/delta/tui.html>.
+
+          [aliases: --gitu]
 
       --whitespace-error-style <STYLE>
           Style string for whitespace errors.
@@ -910,10 +960,18 @@ Features
   [delta]
       features = my-highlight-styles-colors-feature my-line-number-styles-feature
 
-  If more than one feature sets the same option, the last one wins.
+  If more than one feature sets the same option, the last one wins, with two
+  exceptions. A section with the same name as a builtin feature, such as
+  [delta "side-by-side"], beats every other feature while that builtin
+  feature is in effect. And what a switch feature (side-by-side,
+  line-numbers, keep-plus-minus-markers, navigate, hyperlinks) sets besides
+  its own option, such as side-by-side's line-number formats, is a default
+  that any of your features beats.
 
   If an option is present in the [delta] section, then features are not
-  considered at all.
+  considered at all. The exception is a switch feature named in --features or
+  DELTA_FEATURES, which is the same as its flag: DELTA_FEATURES=+side-by-side
+  turns side-by-side on even if [delta] has side-by-side = false.
 
   If you want an option to be fully overridable by a feature and also have a
   non default value when no features are used, then you need to define a

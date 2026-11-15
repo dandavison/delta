@@ -113,6 +113,9 @@ pub struct StateMachine<'a> {
     pub handled_diff_header_header_line_file_pair: Option<(String, String)>,
     pub blame_key_colors: HashMap<String, String>,
     pub minus_line_counter: AmbiguousDiffMinusCounter,
+    /// With `--color-only`, file header rows written before the file's path is
+    /// known (`write_color_only_header_row`).
+    pub held_header_rows: Vec<u8>,
     // With --side-by-side=hunk, the layout of the hunk whose header has been read but not yet
     // emitted. See look_ahead_at_hunk.
     pub hunk_side_by_side: Option<bool>,
@@ -150,6 +153,7 @@ impl<'a> StateMachine<'a> {
             config,
             blame_key_colors: HashMap::new(),
             minus_line_counter: AmbiguousDiffMinusCounter::not_needed(),
+            held_header_rows: Vec::new(),
             hunk_side_by_side: None,
         }
     }
@@ -177,6 +181,7 @@ impl<'a> StateMachine<'a> {
             }
         }
 
+        self.release_held_header_rows()?;
         self.handle_pending_line_with_diff_name()?;
         self.painter.paint_buffered_minus_and_plus_lines();
         self.painter.emit()?;
@@ -193,6 +198,12 @@ impl<'a> StateMachine<'a> {
             if self.line.starts_with("--- ") {
                 self.minus_line_counter = AmbiguousDiffMinusCounter::prepare_to_count();
             }
+        }
+
+        if !self.held_header_rows.is_empty()
+            && !handlers::diff_header::continues_file_header(&self.line)
+        {
+            self.release_held_header_rows()?;
         }
 
         // Every method named handle_* must return std::io::Result<bool>.
@@ -295,6 +306,11 @@ impl<'a> StateMachine<'a> {
     /// Emit unchanged any line that delta does not handle.
     pub fn emit_line_unchanged(&mut self) -> std::io::Result<bool> {
         self.painter.emit()?;
+        if self.config.color_only && self.is_file_header_row() {
+            let row = format!("{}\n", format_raw_line(&self.raw_line, self.config));
+            self.write_color_only_header_row(row.as_bytes())?;
+            return Ok(true);
+        }
         writeln!(
             self.painter.writer,
             "{}",
@@ -302,6 +318,12 @@ impl<'a> StateMachine<'a> {
         )?;
         let handled_line = true;
         Ok(handled_line)
+    }
+
+    fn is_file_header_row(&self) -> bool {
+        matches!(self.state, State::DiffHeader(_))
+            && (self.line.starts_with("diff ")
+                || handlers::diff_header::continues_file_header(&self.line))
     }
 
     /// Should a handle_* function be called on this element?

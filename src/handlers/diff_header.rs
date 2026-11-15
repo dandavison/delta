@@ -1,4 +1,5 @@
 use std::borrow::Cow;
+use std::io::Write;
 use std::path::Path;
 
 use unicode_segmentation::UnicodeSegmentation;
@@ -6,7 +7,6 @@ use unicode_segmentation::UnicodeSegmentation;
 use super::draw;
 use crate::config::Config;
 use crate::delta::{DiffType, Source, State, StateMachine};
-use crate::paint::Painter;
 use crate::{features, utils};
 
 // https://git-scm.com/docs/git-config#Documentation/git-config.txt-diffmnemonicPrefix
@@ -57,15 +57,16 @@ impl StateMachine<'_> {
         // (it connects the plus_file and minus_file),
         // and to call fn handle_generic_diff_header_header_line directly.
         if self.config.color_only {
-            let osc = self.diff_header_osc();
+            let mut row = Vec::new();
             write_generic_diff_header_header_line(
                 &self.line,
                 &self.raw_line,
-                &mut self.painter,
+                &mut row,
                 &mut self.mode_info,
                 self.config,
-                &osc,
+                "",
             )?;
+            self.write_color_only_header_row(&row)?;
             Ok(true)
         } else {
             Ok(false)
@@ -205,9 +206,8 @@ impl StateMachine<'_> {
     ///
     /// The path can still be unknown at some header rows -- a rename's rows
     /// before `rename to` has been parsed, or a `---` row that no `diff --git`
-    /// line pre-filled. Such rows carry no record (the spec makes tagging
-    /// every header row a recommendation, not a requirement): a record naming
-    /// a wrong or empty path would hand the host a second file identity.
+    /// line pre-filled. For those this is empty: a record naming a wrong or
+    /// empty path would hand the host a second file identity.
     pub(crate) fn diff_header_osc(&self) -> String {
         match self.painter.diff_line_metadata.as_ref() {
             Some(md) => {
@@ -232,6 +232,33 @@ impl StateMachine<'_> {
         }
     }
 
+    /// With `--color-only`, write a file header row carrying the file's `f`
+    /// record. A row written before the file's path is known (a rename's rows
+    /// before `rename to`, the `---` row of `diff -u`) is held, and written with
+    /// the record once the path is known.
+    pub(crate) fn write_color_only_header_row(&mut self, row: &[u8]) -> std::io::Result<()> {
+        if self.painter.diff_line_metadata.is_none() {
+            return self.painter.writer.write_all(row);
+        }
+        let osc = self.diff_header_osc();
+        if osc.is_empty() {
+            self.held_header_rows.extend_from_slice(row);
+            return Ok(());
+        }
+        let held = std::mem::take(&mut self.held_header_rows);
+        features::diff_line_metadata::write_with_header_osc(self.painter.writer, &osc, |w| {
+            w.write_all(&held)?;
+            w.write_all(row)
+        })
+    }
+
+    /// Write, without a record, the rows held for a file header that ended
+    /// with the file's path still unknown.
+    pub(crate) fn release_held_header_rows(&mut self) -> std::io::Result<()> {
+        let held = std::mem::take(&mut self.held_header_rows);
+        self.painter.writer.write_all(&held)
+    }
+
     /// Construct file change line from minus and plus file and write with DiffHeader styling.
     fn _handle_diff_header_header_line(&mut self, comparing: bool) -> std::io::Result<()> {
         let line = get_file_change_description_from_file_paths(
@@ -247,7 +274,7 @@ impl StateMachine<'_> {
         write_generic_diff_header_header_line(
             &line,
             &line,
-            &mut self.painter,
+            self.painter.writer,
             &mut self.mode_info,
             self.config,
             &osc,
@@ -291,7 +318,7 @@ impl StateMachine<'_> {
             write_generic_diff_header_header_line(
                 &line,
                 &line,
-                &mut self.painter,
+                self.painter.writer,
                 &mut self.mode_info,
                 self.config,
                 &osc,
@@ -314,7 +341,7 @@ impl StateMachine<'_> {
 pub fn write_generic_diff_header_header_line(
     line: &str,
     raw_line: &str,
-    painter: &mut Painter,
+    writer: &mut dyn Write,
     mode_info: &mut String,
     config: &Config,
     metadata_osc: &str,
@@ -329,23 +356,19 @@ pub fn write_generic_diff_header_header_line(
         draw::get_draw_function(config.file_style.decoration_style);
     if !config.color_only {
         // Maintain 1-1 correspondence between input and output lines.
-        writeln!(painter.writer)?;
+        writeln!(writer)?;
     }
-    crate::features::diff_line_metadata::write_with_header_osc(
-        painter.writer,
-        metadata_osc,
-        |w| {
-            draw_fn(
-                w,
-                &format!("{}{}", line, if pad { " " } else { "" }),
-                &format!("{}{}", raw_line, if pad { " " } else { "" }),
-                mode_info,
-                &config.decorations_width,
-                config.file_style,
-                decoration_ansi_term_style,
-            )
-        },
-    )?;
+    crate::features::diff_line_metadata::write_with_header_osc(writer, metadata_osc, |w| {
+        draw_fn(
+            w,
+            &format!("{}{}", line, if pad { " " } else { "" }),
+            &format!("{}{}", raw_line, if pad { " " } else { "" }),
+            mode_info,
+            &config.decorations_width,
+            config.file_style,
+            decoration_ansi_term_style,
+        )
+    })?;
     if !mode_info.is_empty() {
         mode_info.clear();
     }
@@ -353,8 +376,31 @@ pub fn write_generic_diff_header_header_line(
 }
 
 #[allow(clippy::tabs_in_doc_comments)]
+/// Whether `line` is one of the rows git writes after a `diff` row to head a
+/// file's diff (`git help diff`, "Generating patch text with -p").
+pub fn continues_file_header(line: &str) -> bool {
+    [
+        "index ",
+        "old mode ",
+        "new mode ",
+        "deleted file mode ",
+        "new file mode ",
+        "similarity index ",
+        "dissimilarity index ",
+        "rename from ",
+        "rename to ",
+        "copy from ",
+        "copy to ",
+        "--- ",
+        "+++ ",
+        "Binary files ",
+    ]
+    .iter()
+    .any(|prefix| line.starts_with(prefix))
+}
+
 /// Given input like
-/// "--- a/zero/one.rs	2019-11-20 06:16:08.000000000 +0100"
+/// "--- a/zero/one.rs\t2019-11-20 06:16:08.000000000 +0100"
 /// Return "one.rs"
 fn get_filename_from_marker_line(line: &str) -> Option<&str> {
     line.split('\t')
@@ -939,9 +985,9 @@ index 0000000..323fae0
     #[test]
     fn test_file_header_records_in_color_only_unified_diff() {
         // Plain `diff -u` input has no `diff --git` line, so at a `---` row the
-        // new-file path is not known yet: the row must carry no `f` record --
-        // in particular not an empty path (first file) or the previous file's
-        // (later files). Each `+++` row carries its file's record, and file 1's
+        // new-file path is not known yet. The row is held until the `+++` row
+        // names the file, and then carries that file's record -- not an empty
+        // path (first file) or the previous file's (later files). File 1's
         // content records must name file 1 even though delta's buffering emits
         // them after file 2's header rows (a delta `--color-only` quirk that
         // predates the metadata feature).
@@ -958,10 +1004,10 @@ index 0000000..323fae0
 +bar
 ";
         assert_snapshot!(visible_metadata_records(input, &["--color-only"]), @r"
-        --- old1.txt
+        ⟦1;f;;;new1.txt⟧--- old1.txt
         ⟦1;f;;;new1.txt⟧+++ new1.txt
         ⟦1;h;1;;new1.txt⟧@@ -1 +1 @@
-        --- old2.txt
+        ⟦1;f;;;new2.txt⟧--- old2.txt
         ⟦1;f;;;new2.txt⟧+++ new2.txt
         ⟦1;d;1;1;new1.txt⟧-foo
         ⟦1;a;1;;new1.txt⟧+bar
@@ -974,8 +1020,8 @@ index 0000000..323fae0
     #[test]
     fn test_file_header_records_for_rename_in_color_only_mode() {
         // For a rename the two paths in the `diff --git` line differ, so
-        // nothing pre-fills `plus_file`: until the `rename to` line is parsed
-        // the header rows must carry no `f` record rather than an empty path.
+        // nothing pre-fills `plus_file`: the header rows are held until the
+        // `rename to` row names the file, and then all carry its record.
         let input = "\
 diff --git a/old.txt b/new.txt
 similarity index 90%
@@ -983,10 +1029,46 @@ rename from old.txt
 rename to new.txt
 ";
         assert_snapshot!(visible_metadata_records(input, &["--color-only"]), @r"
-        diff --git a/old.txt b/new.txt
-        similarity index 90%
-        rename from old.txt
+        ⟦1;f;;;new.txt⟧diff --git a/old.txt b/new.txt
+        ⟦1;f;;;new.txt⟧similarity index 90%
+        ⟦1;f;;;new.txt⟧rename from old.txt
         ⟦1;f;;;new.txt⟧rename to new.txt
+        ");
+    }
+
+    #[test]
+    fn test_every_header_row_carries_the_file_record_in_color_only_mode() {
+        // Including the rows delta passes through unhandled, and the only rows
+        // of a binary file and a mode-only change.
+        let input = "\
+diff --git a/img.png b/img.png
+index 0000000..a5d0c46 100644
+Binary files a/img.png and b/img.png differ
+diff --git a/run.sh b/run.sh
+old mode 100644
+new mode 100755
+diff --git a/one.txt b/one.txt
+index 257cc56..5716ca5 100644
+--- a/one.txt
++++ b/one.txt
+@@ -1 +1 @@
+-foo
++bar
+";
+        assert_snapshot!(visible_metadata_records(input, &["--color-only"]), @r"
+        ⟦1;f;;;img.png⟧diff --git a/img.png b/img.png
+        ⟦1;f;;;img.png⟧index 0000000..a5d0c46 100644
+        ⟦1;f;;;img.png⟧Binary files a/img.png and b/img.png differ
+        ⟦1;f;;;run.sh⟧diff --git a/run.sh b/run.sh
+        ⟦1;f;;;run.sh⟧old mode 100644
+        ⟦1;f;;;run.sh⟧new mode 100755
+        ⟦1;f;;;one.txt⟧diff --git a/one.txt b/one.txt
+        ⟦1;f;;;one.txt⟧index 257cc56..5716ca5 100644
+        ⟦1;f;;;one.txt⟧--- a/one.txt
+        ⟦1;f;;;one.txt⟧+++ b/one.txt
+        ⟦1;h;1;;one.txt⟧@@ -1 +1 @@
+        ⟦1;d;1;1;one.txt⟧-foo
+        ⟦1;a;1;;one.txt⟧+bar
         ");
     }
 

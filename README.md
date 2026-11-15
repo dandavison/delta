@@ -15,7 +15,9 @@
 
 ## Get Started
 
-[Install it](https://dandavison.github.io/delta/installation.html) (the package is called "git-delta" in most package managers, but the executable is just `delta`) and add this to your `~/.gitconfig`:
+[Install it](https://dandavison.github.io/delta/installation.html) (the package is called
+"git-delta" in most package managers, but the executable is just `delta`) and add this to your
+`~/.gitconfig`:
 
 ```gitconfig
 [core]
@@ -42,18 +44,20 @@ git config --global delta.dark true  # or `delta.light true`, or omit for auto-d
 git config --global merge.conflictStyle zdiff3
 ```
 
-Delta has many features and is very customizable; please see `delta -h` (short help) or `delta --help` (full manual), or the [online user manual](https://dandavison.github.io/delta/).
+Delta has many features and is very customizable; please see `delta -h` (short help) or `delta
+--help` (full manual), or the [online user manual](https://dandavison.github.io/delta/).
 
 ## Features
 
-- Language syntax highlighting with the same syntax-highlighting themes as [bat](https://github.com/sharkdp/bat#readme)
-- Word-level diff highlighting using a Levenshtein edit inference algorithm
+- Interactive TUI (`--tui`)
+- Language syntax highlighting
+- Word-level diff highlighting
 - Side-by-side view with line-wrapping
 - Line numbering
 - `n` and `N` keybindings to move between files in large diffs, and between diffs in `log -p` views (`--navigate`)
 - Improved merge conflict display
 - Improved `git blame` display (syntax highlighting; `--hyperlinks` formats commits as links to hosting provider etc. Supported hosting providers are: GitHub, GitLab, SourceHut, Codeberg)
-- Syntax-highlights grep output from `rg`, `git grep`, `grep`, etc
+- Syntax-highlights grep output from `rg --json`, `rg`, `git grep`, `grep`, etc
 - Support for Git's `--color-moved` feature.
 - Code can be copied directly from the diff (`-/+` markers are removed by default).
 - `diff-highlight` and `diff-so-fancy` emulation modes
@@ -66,7 +70,9 @@ Delta has many features and is very customizable; please see `delta -h` (short h
 
 ## A syntax-highlighting pager for git, diff, and grep output
 
-Code evolves, and we all spend time studying diffs. Delta aims to make this both efficient and enjoyable: it allows you to make extensive changes to the layout and styling of diffs, as well as allowing you to stay arbitrarily close to the default git/diff output.
+Code evolves, and we all spend time studying diffs. Delta aims to make this both efficient and
+enjoyable: it allows you to make extensive changes to the layout and styling of diffs, as well as
+allowing you to stay arbitrarily close to the default git/diff output.
 
 <table align="center">
   <tr>
@@ -195,6 +201,14 @@ Side-by-side view wraps long lines automatically:
 <table><tr><td>
 <img width="600px" alt="image" src="https://github.com/dandavison/open-in-editor/assets/52205/d203d380-5acb-4296-aeb9-e38c73d6c27f">
 </td></tr></table>
+
+### TUI mode (experimental)
+
+[[User manual](https://dandavison.github.io/delta/tui.html)]
+
+`delta --tui` is an interactive git client and pager that renders with delta: navigate, fold, stage
+and discard in delta's output. It is based on [gitu](https://github.com/altsem/gitu) by altsem, a
+git client inspired by Magit, and is embedded via a [fork](https://github.com/dandavison/gitu).
 
 ### Installation and usage
 

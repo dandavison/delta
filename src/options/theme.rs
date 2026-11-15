@@ -25,9 +25,17 @@ use crate::color::{ColorMode, ColorMode::*};
 
 #[allow(non_snake_case)]
 pub fn set__color_mode__syntax_theme__syntax_set(opt: &mut cli::Opt, assets: HighlightingAssets) {
-    let (color_mode, syntax_theme_name) =
-        get_color_mode_and_syntax_theme_name(opt.syntax_theme.as_ref(), get_color_mode(opt));
+    let terminal_color_mode = if !opt.light && !opt.dark && should_detect_color_mode(opt) {
+        detect_color_mode()
+    } else {
+        None
+    };
+    let (color_mode, syntax_theme_name) = get_color_mode_and_syntax_theme_name(
+        opt.syntax_theme.as_ref(),
+        get_color_mode(opt, terminal_color_mode),
+    );
     opt.computed.color_mode = color_mode;
+    opt.computed.terminal_color_mode = terminal_color_mode;
 
     opt.computed.syntax_theme = if is_no_syntax_highlighting_syntax_theme_name(&syntax_theme_name) {
         None
@@ -80,13 +88,22 @@ fn get_color_mode_and_syntax_theme_name(
     }
 }
 
-fn get_color_mode(opt: &cli::Opt) -> Option<ColorMode> {
+/// `terminal_color_mode` is what the terminal said, if it was asked.
+fn get_color_mode(opt: &cli::Opt, terminal_color_mode: Option<ColorMode>) -> Option<ColorMode> {
     if opt.light {
         Some(Light)
     } else if opt.dark {
         Some(Dark)
     } else if should_detect_color_mode(opt) {
-        detect_color_mode()
+        terminal_color_mode
+    } else if opt.detect_dark_light == DetectDarkLight::Auto {
+        // Output that is not the terminal, as under `delta --tui`, which asks the
+        // terminal before it takes it over and says what it found.
+        match opt.env.terminal_color_mode.as_deref() {
+            Some("dark") => Some(Dark),
+            Some("light") => Some(Light),
+            _ => None,
+        }
     } else {
         None
     }
@@ -126,6 +143,7 @@ fn detect_color_mode() -> Option<ColorMode> {
 mod tests {
     use super::*;
     use crate::color;
+    use crate::env::DeltaEnv;
     use crate::tests::integration_test_utils;
 
     // TODO: Test influence of BAT_THEME env var. E.g. see utils::process::tests::FakeParentArgs.
@@ -206,5 +224,32 @@ mod tests {
                 color::get_plus_emph_background_color_default(expected_mode, is_true_color)
             );
         }
+    }
+
+    /// A delta whose output is not the terminal, as under `delta --tui`, cannot ask
+    /// the terminal its background, so it takes the background from whoever could.
+    #[test]
+    fn test_terminal_color_mode_from_env_var_when_stdout_is_not_the_terminal() {
+        let mode = |terminal: &str, args: &[&str]| {
+            integration_test_utils::make_options_from_args_and_git_config_with_custom_env(
+                DeltaEnv {
+                    bat_theme: Some("GitHub".into()),
+                    terminal_color_mode: Some(terminal.into()),
+                    ..DeltaEnv::default()
+                },
+                args,
+                None,
+                None,
+            )
+            .computed
+            .color_mode
+        };
+        assert_eq!(mode("dark", &[]), Dark);
+        assert_eq!(
+            mode("light", &["--syntax-theme", "Monokai Extended"]),
+            Light
+        );
+        assert_eq!(mode("dark", &["--light"]), Light);
+        assert_eq!(mode("dark", &["--detect-dark-light", "never"]), Light);
     }
 }

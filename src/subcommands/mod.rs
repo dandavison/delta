@@ -1,5 +1,7 @@
 // internal subcommands:
 pub mod generate_completion;
+#[cfg(feature = "gitu")]
+pub mod gitu;
 pub mod list_syntax_themes;
 pub mod parse_ansi;
 mod sample_diff;

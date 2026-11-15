@@ -6,3 +6,4 @@ title = "delta"
 
 [output.html]
 git-repository-url = "https://github.com/dandavison/delta"
+additional-js = ["gitconfig-highlight.js"]
