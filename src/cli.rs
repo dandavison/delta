@@ -978,7 +978,7 @@ pub struct Opt {
     /// Run delta as a live interactive git interface, based on gitu.
     ///
     /// See <https://dandavison.github.io/delta/tui.html>.
-    /// Must be the first argument; the arguments after it are gitu's (see `delta --tui --help`).
+    /// Must be the first argument (see `delta --tui --help` for possible subsequent arguments).
     /// To use it as git's pager, set e.g. pager.diff to `delta --tui`.
     pub tui: bool,
 
