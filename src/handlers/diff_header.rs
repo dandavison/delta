@@ -1019,6 +1019,32 @@ Only in dir1: g.txt
     }
 
     #[test]
+    fn test_hunk_header_record_when_hunk_header_row_is_skipped() {
+        // Without a code fragment after `@@`, and with neither file nor line
+        // number in the hunk header style, delta draws no hunk-header row. The
+        // `h` record must still be emitted (on the blank line above), so a host
+        // can tell where the hunk starts.
+        let input = "\
+--- a.txt
++++ b.txt
+@@ -1,3 +1,3 @@
+ one
+-two
++TWO
+ three
+";
+        assert_snapshot!(visible_metadata_records(input, &["--hunk-header-style", "syntax"]), @r"
+        ⟦1;f;;;b.txt⟧a.txt ⟶   b.txt
+        ⟦1;f;;;b.txt⟧───────────────────────────────────────────
+        ⟦1;h;1;;b.txt⟧
+        ⟦1;c;1;;b.txt⟧one
+        ⟦1;d;2;2;b.txt⟧two
+        ⟦1;a;2;;b.txt⟧TWO
+        ⟦1;c;3;;b.txt⟧three
+        ");
+    }
+
+    #[test]
     fn test_file_header_record_on_submodule_rows_names_the_submodule() {
         // A submodule's rows announce the submodule, whose path is nowhere but
         // on the row itself: `minus_file`/`plus_file` still hold the file above
