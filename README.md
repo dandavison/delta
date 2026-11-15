@@ -34,6 +34,20 @@
     conflictStyle = zdiff3
 ```
 
+<details>
+<summary>Commands to write the config</summary>
+
+```sh
+git config --global core.pager delta
+git config --global interactive.diffFilter 'delta --color-only'
+git config --global delta.navigate true
+git config --global delta.dark true  # or `delta.light true`, or omit for auto-detection
+git config --global merge.conflictStyle zdiff3
+```
+
+</details>
+
+
 Alternatively, delta can be used as a TUI based on [gitu](https://github.com/altsem/gitu), with many
 keybindings for exploring `git diff`, `git show`, and `git log` views, the ability to stage directly
 from delta-rendered diffs (including side-by-side), reorder and fixup commits in your native log
@@ -97,17 +111,6 @@ powerful way to use delta:
 
 </details>
 
-
-
-Or run:
-
-```sh
-git config --global core.pager delta
-git config --global interactive.diffFilter 'delta --color-only'
-git config --global delta.navigate true
-git config --global delta.dark true  # or `delta.light true`, or omit for auto-detection
-git config --global merge.conflictStyle zdiff3
-```
 
 Delta has many features and is very customizable; please see `delta -h` (short help) or `delta
 --help` (full manual), or the [online user manual](https://dandavison.github.io/delta/).
