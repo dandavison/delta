@@ -45,6 +45,33 @@ where
 
     let mut plus_index = 0; // plus lines emitted so far
 
+    // A line pair is homologous when its distance is small enough. When the two
+    // sides have equally many lines, a looser threshold applies: the pairing is
+    // the naive one either way, so there is nothing to lose by allowing it.
+    let is_homologous = |distance: f64| {
+        minus_lines.len() == plus_lines.len()
+            && distance <= max_line_distance_for_naively_paired_lines
+            || distance <= max_line_distance
+    };
+
+    // The distance between two lines, without keeping the annotations.
+    let line_distance = |minus_line: &str, plus_line: &str| {
+        let alignment = align::Alignment::new(
+            tokenize(minus_line, tokenization_regex),
+            tokenize(plus_line, tokenization_regex),
+        );
+        annotate(
+            alignment,
+            noop_deletions[0],
+            deletion,
+            noop_insertions[0],
+            insertion,
+            minus_line,
+            plus_line,
+        )
+        .2
+    };
+
     'minus_lines_loop: for (minus_index, minus_line) in minus_lines.iter().enumerate() {
         let mut considered = 0; // plus lines considered so far as match for minus_line
         for plus_line in &plus_lines[plus_index..] {
@@ -61,11 +88,30 @@ where
                 minus_line,
                 plus_line,
             );
-            if minus_lines.len() == plus_lines.len()
-                && distance <= max_line_distance_for_naively_paired_lines
-                || distance <= max_line_distance
-            {
+            if is_homologous(distance) {
                 // minus_line and plus_line are inferred to be a homologous pair.
+
+                // The plus lines this minus line skipped are emitted as unpaired below,
+                // so a later minus line cannot pair with them. If the next minus line is
+                // a better match for one of them than this pair is, leave this minus line
+                // unpaired instead: the stronger pair is the one worth keeping.
+                if considered > 0 {
+                    if let Some(next_minus_line) = minus_lines.get(minus_index + 1) {
+                        let better_skipped = plus_lines[plus_index..(plus_index + considered)]
+                            .iter()
+                            .map(|skipped_line| line_distance(next_minus_line, skipped_line))
+                            .filter(|skipped_distance| is_homologous(*skipped_distance))
+                            .fold(None, |best: Option<f64>, skipped_distance| {
+                                Some(best.map_or(skipped_distance, |b| b.min(skipped_distance)))
+                            });
+                        if matches!(better_skipped, Some(skipped) if skipped < distance) {
+                            annotated_minus_lines
+                                .push(vec![(noop_deletions[minus_index], minus_line)]);
+                            line_alignment.push((Some(minus_index), None));
+                            continue 'minus_lines_loop;
+                        }
+                    }
+                }
 
                 // Emit as unpaired the plus lines already considered and rejected
                 for plus_line in &plus_lines[plus_index..(plus_index + considered)] {
@@ -893,6 +939,49 @@ mod tests {
             ),
             1.0,
         );
+    }
+
+    // https://github.com/dandavison/delta/issues/2336: one deleted line matches a
+    // later added line, and the pair before them is nearly identical. Pairing the
+    // nearly identical lines keeps the word-level difference visible.
+    #[test]
+    fn test_infer_edits_prefers_the_nearly_identical_pair() {
+        let minus_lines = vec![
+            "    file, err := open(path)",
+            "// Lorem ipsum dolor sit amet, consectetur adipiscing elit. BEFORE",
+        ];
+        let plus_lines = vec![
+            "// Lorem ipsum dolor sit amet, consectetur adipiscing elit. AFTER",
+            "    st, err := stat(path)",
+        ];
+        let (annotated_minus_lines, annotated_plus_lines, line_alignment) = infer_edits(
+            minus_lines.clone(),
+            plus_lines.clone(),
+            minus_lines.iter().map(|_| MinusNoop).collect(),
+            Deletion,
+            plus_lines.iter().map(|_| PlusNoop).collect(),
+            Insertion,
+            &DEFAULT_TOKENIZATION_REGEXP,
+            0.6,
+            0.0,
+        );
+        assert_eq!(
+            line_alignment,
+            vec![(Some(0), None), (Some(1), Some(0)), (None, Some(1))]
+        );
+        // Only the paired comment lines carry within-line edits.
+        assert!(!annotated_minus_lines[0]
+            .iter()
+            .any(|(edit, _)| is_edit(edit)));
+        assert!(annotated_minus_lines[1]
+            .iter()
+            .any(|(edit, _)| is_edit(edit)));
+        assert!(annotated_plus_lines[0]
+            .iter()
+            .any(|(edit, _)| is_edit(edit)));
+        assert!(!annotated_plus_lines[1]
+            .iter()
+            .any(|(edit, _)| is_edit(edit)));
     }
 
     fn assert_edits(
