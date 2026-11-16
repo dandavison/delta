@@ -73,6 +73,10 @@ A fuller config, with ideas for making the TUI look nice. Each part is explained
     # Open every patch with its files folded.
     start-folded = true
 
+[delta-tui "general.views"]
+    # use H to bind features, views, and commands to hotkeys
+    ignore-whitespace = {command} -w
+
 [delta]
     # Must match the first line of the [pretty] formats above, so that each
     # commit is one cursor stop.
@@ -310,12 +314,14 @@ A view is a `git diff`, `git show` or `git log` of your own, opened from a key, 
 [delta-tui "general.views"]
     diff-since = git diff {commit}...
     word-diff = {command} --word-diff
+    ignore-whitespace = {command} -w
 [delta-tui "general.diff-renderer.feature-keys"]
     diff-since = D
     word-diff = W
+    ignore-whitespace = w
 ```
 
-The key opens the view on top of the one it is pressed on, as `right` opens a commit, and `left` goes back. `{commit}`, `{file}` and `{branch}` are filled in as for shell commands, but a view is not run by a shell: `{command}` is a word of its own there, standing for the words of the git command the screen is showing, so that a view such as `word-diff` above changes the command in view. A view is a git command the TUI shows, run again after each change, and `:`, `U` and `&` change it as they change any other. A view that is not `git diff`, `git show` or `git log` is refused. `H` lists views in a column of their own.
+The key opens the view on top of the one it is pressed on, as `right` opens a commit, and `left` goes back. `{commit}`, `{file}` and `{branch}` are filled in as for shell commands, but a view is not run by a shell: `{command}` is a word of its own there, standing for the words of the git command the screen is showing, so that a view such as `word-diff` or `ignore-whitespace` above changes the command in view. A view is a git command the TUI shows, run again after each change, and `:`, `U` and `&` change it as they change any other. A view that is not `git diff`, `git show` or `git log` is refused. `H` lists views in a column of their own.
 
 ## Log and commit formats
 

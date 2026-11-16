@@ -88,6 +88,10 @@ powerful way to use delta:
     # Open every patch with its files folded.
     start-folded = true
 
+[delta-tui "general.views"]
+    # use H to bind features, views, and commands to hotkeys
+    ignore-whitespace = {command} -w
+
 [delta]
     # Must match the first line of the [pretty] formats above, so that each
     # commit is one cursor stop.
