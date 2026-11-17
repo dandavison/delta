@@ -5,7 +5,7 @@ You can download an executable for your system:
 |
 [Linux (musl)](https://github.com/dandavison/delta/releases/download/0.20.1/delta-0.20.1-x86_64-unknown-linux-musl.tar.gz)
 |
-[MacOS](https://github.com/dandavison/delta/releases/download/0.20.1/delta-0.20.1-x86_64-apple-darwin.tar.gz)
+[MacOS](https://github.com/dandavison/delta/releases/download/0.20.1/delta-0.20.1-aarch64-apple-darwin.tar.gz)
 |
 [Windows](https://github.com/dandavison/delta/releases/download/0.20.1/delta-0.20.1-x86_64-pc-windows-msvc.zip)
 |
