@@ -22,6 +22,7 @@ use terminal_colorsaurus::{color_scheme, QueryOptions};
 
 use crate::cli::{self, DetectDarkLight};
 use crate::color::{ColorMode, ColorMode::*};
+use crate::tests::TESTING;
 
 #[allow(non_snake_case)]
 pub fn set__color_mode__syntax_theme__syntax_set(opt: &mut cli::Opt, assets: HighlightingAssets) {
@@ -112,7 +113,9 @@ fn get_color_mode(opt: &cli::Opt, terminal_color_mode: Option<ColorMode>) -> Opt
 /// See [`cli::Opt::detect_dark_light`] for a detailed explanation.
 fn should_detect_color_mode(opt: &cli::Opt) -> bool {
     match opt.detect_dark_light {
-        DetectDarkLight::Auto => opt.color_only || stdout().is_terminal(),
+        // Tests do not ask the terminal (see `detect_color_mode`), so they behave as if stdout
+        // were not a terminal, wherever they are run.
+        DetectDarkLight::Auto => opt.color_only || (!TESTING && stdout().is_terminal()),
         DetectDarkLight::Always => true,
         DetectDarkLight::Never => false,
     }
