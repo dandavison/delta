@@ -87,11 +87,10 @@ impl StateMachine<'_> {
             return Ok(false);
         }
 
-        let (mut path_or_mode, file_event) =
+        let (path_or_mode, file_event) =
             parse_diff_header_line(&self.line, self.source == Source::GitDiff);
 
-        utils::path::relativize_path_maybe(&mut path_or_mode, self.config);
-        self.minus_file = path_or_mode;
+        self.minus_file = self.relativize_path_maybe(path_or_mode);
         self.minus_file_event = file_event;
 
         if self.source == Source::DiffUnified {
@@ -129,11 +128,10 @@ impl StateMachine<'_> {
             return Ok(false);
         }
         let mut handled_line = false;
-        let (mut path_or_mode, file_event) =
+        let (path_or_mode, file_event) =
             parse_diff_header_line(&self.line, self.source == Source::GitDiff);
 
-        utils::path::relativize_path_maybe(&mut path_or_mode, self.config);
-        self.plus_file = path_or_mode;
+        self.plus_file = self.relativize_path_maybe(path_or_mode);
         self.plus_file_event = file_event;
         // For a removed file the plus file is /dev/null: keep the syntax set from the minus file.
         if let Some(filename) = get_filename_from_diff_header_line_file_path(&self.plus_file) {
@@ -222,6 +220,7 @@ impl StateMachine<'_> {
                 let file = file
                     .strip_suffix(super::diff_header_misc::BINARY_FILE_SUFFIX)
                     .unwrap_or(file);
+                let file = self.path_in_input(file);
                 if file.is_empty() {
                     String::new()
                 } else {
@@ -230,6 +229,24 @@ impl StateMachine<'_> {
             }
             None => String::new(),
         }
+    }
+
+    /// `path` relativized for display if config demands that (see
+    /// `utils::path::relativize_path_maybe`), remembering the path as the input has it when a host
+    /// negotiated OSC 1717 emission.
+    pub(crate) fn relativize_path_maybe(&mut self, path: String) -> String {
+        let mut relativized = path.clone();
+        utils::path::relativize_path_maybe(&mut relativized, self.config);
+        if relativized != path && self.painter.diff_line_metadata.is_some() {
+            self.paths_in_input.insert(relativized.clone(), path);
+        }
+        relativized
+    }
+
+    /// The path as the input has it, of `path` as delta displays it. A host matches OSC 1717
+    /// records against the input, so they carry this path.
+    pub(crate) fn path_in_input<'b>(&'b self, path: &'b str) -> &'b str {
+        self.paths_in_input.get(path).map_or(path, String::as_str)
     }
 
     /// With `--color-only`, write a file header row carrying the file's `f`

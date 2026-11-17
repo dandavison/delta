@@ -1,5 +1,4 @@
 use crate::delta::{DiffType, Source, State, StateMachine};
-use crate::utils::path::relativize_path_maybe;
 
 /// Display decoration appended in place to a binary file's `minus_file`/
 /// `plus_file`; `diff_header_osc` strips it again so the metadata record
@@ -35,11 +34,13 @@ impl StateMachine<'_> {
             }
 
             if self.minus_file != "/dev/null" {
-                relativize_path_maybe(&mut self.minus_file, self.config);
+                let path = std::mem::take(&mut self.minus_file);
+                self.minus_file = self.relativize_path_maybe(path);
                 self.minus_file.push_str(BINARY_FILE_SUFFIX);
             }
             if self.plus_file != "/dev/null" {
-                relativize_path_maybe(&mut self.plus_file, self.config);
+                let path = std::mem::take(&mut self.plus_file);
+                self.plus_file = self.relativize_path_maybe(path);
                 self.plus_file.push_str(BINARY_FILE_SUFFIX);
             }
             return Ok(true);
