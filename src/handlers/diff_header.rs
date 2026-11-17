@@ -983,6 +983,54 @@ index 0000000..323fae0
     }
 
     #[test]
+    fn test_records_carry_the_paths_in_the_input_under_relative_paths() {
+        // With relative-paths, delta draws a path relative to the directory git
+        // was run in (GIT_PREFIX), but a host matches each record against the
+        // patch, whose paths are relative to the repository root.
+        let input = "\
+diff --git a/a/b/f.txt b/a/b/f.txt
+index 1111111..2222222 100644
+--- a/a/b/f.txt
++++ b/a/b/f.txt
+@@ -1 +1 @@
+-foo
++bar
+diff --git a/top.txt b/top.txt
+index 1111111..2222222 100644
+--- a/top.txt
++++ b/top.txt
+@@ -1 +1 @@
+-foo
++bar
+";
+        let mut config = make_config_from_args(&["--relative-paths"]);
+        config.cwd_relative_to_repo_root = Some("a/".to_string());
+        let output = run_delta_with_diff_line_metadata(input, &config);
+        let output = crate::ansi::strip_ansi_codes(
+            &output.replace("\x1b]1717;", "⟦").replace("\x1b\\", "⟧"),
+        );
+        assert_snapshot!(output, @r"
+        ⟦1;f;;;a/b/f.txt⟧b/f.txt
+        ⟦1;f;;;a/b/f.txt⟧───────────────────────────────────────────
+
+        ⟦1;h;1;;a/b/f.txt⟧───┐
+        ⟦1;h;1;;a/b/f.txt⟧1: │
+        ⟦1;h;1;;a/b/f.txt⟧───┘
+        ⟦1;d;1;1;a/b/f.txt⟧foo
+        ⟦1;a;1;;a/b/f.txt⟧bar
+
+        ⟦1;f;;;top.txt⟧../top.txt
+        ⟦1;f;;;top.txt⟧───────────────────────────────────────────
+
+        ⟦1;h;1;;top.txt⟧───┐
+        ⟦1;h;1;;top.txt⟧1: │
+        ⟦1;h;1;;top.txt⟧───┘
+        ⟦1;d;1;1;top.txt⟧foo
+        ⟦1;a;1;;top.txt⟧bar
+        ");
+    }
+
+    #[test]
     fn test_file_header_records_in_color_only_unified_diff() {
         // Plain `diff -u` input has no `diff --git` line, so at a `---` row the
         // new-file path is not known yet. The row is held until the `+++` row
