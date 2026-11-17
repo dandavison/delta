@@ -1550,6 +1550,6 @@ mod tests {
     #[test]
     fn help_lists_tui() {
         let help = Opt::command().render_help().to_string();
-        assert!(help.contains("--tui"), "{help}");
+        assert!(help.contains("--tui"), "{}", help);
     }
 }
