@@ -41,12 +41,34 @@ impl Clone for GitConfig {
 /// The repository at or above `dir`, and the git config delta reads there: the repository's, or
 /// outside a repository the user's and the system's.
 pub fn open(dir: Option<&std::path::Path>) -> (Option<git2::Repository>, Option<git2::Config>) {
-    let repo = dir.and_then(|dir| git2::Repository::discover(dir).ok());
+    let repo = dir.and_then(|dir| {
+        git2::Repository::open_ext(
+            dir,
+            git2::RepositoryOpenFlags::FROM_ENV,
+            &[] as &[&std::ffi::OsStr],
+        )
+        .ok()
+    });
     let config = match &repo {
         Some(repo) => repo.config().ok(),
-        None => git2::Config::open_default().ok(),
+        None => open_config_from_env(),
     };
     (repo, config)
+}
+
+/// `Config::open_default` does not read `GIT_CONFIG_GLOBAL` or `GIT_CONFIG_SYSTEM`, and there is no
+/// repository to read them through outside a repository.
+fn open_config_from_env() -> Option<git2::Config> {
+    let mut config = git2::Config::open_default().ok()?;
+    for (env_var, level) in [
+        ("GIT_CONFIG_SYSTEM", git2::ConfigLevel::System),
+        ("GIT_CONFIG_GLOBAL", git2::ConfigLevel::Global),
+    ] {
+        if let Some(path) = std::env::var_os(env_var) {
+            let _ = config.add_file(Path::new(&path), level, true);
+        }
+    }
+    Some(config)
 }
 
 impl GitConfig {
@@ -289,7 +311,91 @@ impl GitConfigGet for f64 {
 #[cfg(test)]
 mod tests {
 
-    use super::parse_config_from_env_var_value;
+    use super::{open, parse_config_from_env_var_value};
+    use std::env;
+    use std::ffi::OsString;
+    use std::fs;
+    use std::path::PathBuf;
+    use std::sync::Mutex;
+    use std::time::{SystemTime, UNIX_EPOCH};
+
+    static ENV_LOCK: Mutex<()> = Mutex::new(());
+
+    struct EnvGuard {
+        name: &'static str,
+        old_value: Option<OsString>,
+    }
+
+    impl EnvGuard {
+        fn set(name: &'static str, value: impl AsRef<std::ffi::OsStr>) -> Self {
+            let old_value = env::var_os(name);
+            env::set_var(name, value);
+            Self { name, old_value }
+        }
+    }
+
+    impl Drop for EnvGuard {
+        fn drop(&mut self) {
+            match self.old_value.take() {
+                Some(value) => env::set_var(self.name, value),
+                None => env::remove_var(self.name),
+            }
+        }
+    }
+
+    struct TempDir(PathBuf);
+
+    impl TempDir {
+        fn new() -> Self {
+            let unique = SystemTime::now()
+                .duration_since(UNIX_EPOCH)
+                .unwrap()
+                .as_nanos();
+            let path = env::temp_dir().join(format!(
+                "delta-git-config-test-{}-{unique}",
+                std::process::id()
+            ));
+            fs::create_dir_all(&path).unwrap();
+            Self(path)
+        }
+    }
+
+    impl Drop for TempDir {
+        fn drop(&mut self) {
+            let _ = fs::remove_dir_all(&self.0);
+        }
+    }
+
+    fn write_config(dir: &TempDir) -> PathBuf {
+        let path = dir.0.join("gitconfig");
+        fs::write(&path, "[delta]\n    line-numbers = true\n").unwrap();
+        path
+    }
+
+    #[test]
+    fn test_open_uses_git_config_global_outside_repository() {
+        let _guard = ENV_LOCK.lock().unwrap();
+        let dir = TempDir::new();
+        let _env = EnvGuard::set("GIT_CONFIG_GLOBAL", write_config(&dir));
+
+        let (repo, config) = open(Some(&dir.0));
+
+        assert!(repo.is_none());
+        assert!(config.unwrap().get_bool("delta.line-numbers").unwrap());
+    }
+
+    #[test]
+    fn test_open_uses_git_config_global_inside_repository() {
+        let _guard = ENV_LOCK.lock().unwrap();
+        let dir = TempDir::new();
+        let _env = EnvGuard::set("GIT_CONFIG_GLOBAL", write_config(&dir));
+        drop(git2::Repository::init(&dir.0).unwrap());
+
+        let (repo, config) = open(Some(&dir.0));
+
+        assert!(repo.is_some());
+        assert!(config.unwrap().get_bool("delta.line-numbers").unwrap());
+    }
 
     #[test]
     fn test_parse_config_from_env_var_value() {
