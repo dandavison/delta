@@ -5,6 +5,7 @@ release: \
 	clean \
 	check-environment \
 	bump-version \
+	draft-release-notes \
 	create-github-release \
 	bump-version-in-documentation-links
 
@@ -30,6 +31,12 @@ $(BUMP_VERSION_SENTINEL):
 	git add Cargo.toml Cargo.lock
 	git commit -m "Bump version" || true
 	touch $(BUMP_VERSION_SENTINEL)
+
+
+draft-release-notes:
+	[ -n  "$$DELTA_OLD_VERSION" ]
+	[ -n  "$$DELTA_NEW_VERSION" ]
+	gh release create "$$DELTA_NEW_VERSION" --draft --generate-notes --notes-start-tag "$$DELTA_OLD_VERSION"
 
 
 CREATE_GITHUB_RELEASE_SENTINEL=.make-sentinels/create-github-release
@@ -58,5 +65,6 @@ $(BUMP_VERSION_IN_DOCUMENTATION_LINKS_SENTINEL):
 	release	\
 	check_environment \
 	bump-version \
+	draft-release-notes \
 	create-github-release \
 	bump-version-in-documentation-links
