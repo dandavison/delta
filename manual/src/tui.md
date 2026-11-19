@@ -45,6 +45,59 @@ The TUI is configured in git config, in the `[delta-tui]` section and its subsec
 
 Every setting is listed under [TUI config](#tui-config).
 
+## An example config
+
+A fuller config, with ideas for making the TUI look nice. Each part is explained in the sections below: [Log and commit formats](#log-and-commit-formats), [Color themes](#color-themes) and [TUI config](#tui-config).
+
+```gitconfig
+[pager]
+    diff = delta --tui
+    show = delta --tui
+    log = delta --tui
+
+# Everything below is optional: suggestions to show what is available.
+
+[pretty]
+    commit-format = tformat:%n%n▸ %h %C(blue)%an %C(blue)%ar%C(auto)%d%C(reset)%n%n    %C(green)%s%C(auto)
+    commit-format-full = tformat:%n%n▸ %h %C(blue)%an %C(blue)%ar%C(auto)%d%C(reset)%n%n%w(0,4,4)%C(green)%s%C(reset)%n%+b
+
+[delta-tui]
+    # Arguments of the git log and git show that the TUI runs itself
+    # (`l l`, `right` on a commit).
+    log-args = --stat
+    log-args = --date=relative
+    log-args = --pretty=commit-format
+    show-args = --pretty=commit-format-full
+    # Head each file with its `git diff --stat` row.
+    file-header = stat
+    # Open every patch with its files folded.
+    start-folded = true
+
+[delta-tui "general.views"]
+    # use H to bind features, views, and commands to hotkeys
+    ignore-whitespace = {command} -w
+
+[delta]
+    # Must match the first line of the [pretty] formats above, so that each
+    # commit is one cursor stop.
+    commit-regex = ^(▸|commit )
+    commit-decoration-style = blue ol
+    # Styles go in a feature rather than here, so that themes (`T`) can
+    # override them.
+    features = my-theme
+
+[delta "my-theme"]
+    file-decoration-style = magenta ul
+    file-added-label = •
+    file-modified-label = •
+    file-removed-label = •
+    file-renamed-label = •
+
+# delta's collection of themes, for `T` to step through:
+# [include]
+#     path = /path/to/delta/themes.gitconfig
+```
+
 ## Keys
 
 Everything the TUI does. `h` or `?` shows what is available for the row under the cursor. A binding is rebound in the TUI config by the name in the last column, e.g. `hide-file = ctrl+k` in `[delta-tui "bindings.root"]`.
@@ -261,12 +314,14 @@ A view is a `git diff`, `git show` or `git log` of your own, opened from a key, 
 [delta-tui "general.views"]
     diff-since = git diff {commit}...
     word-diff = {command} --word-diff
+    ignore-whitespace = {command} -w
 [delta-tui "general.diff-renderer.feature-keys"]
     diff-since = D
     word-diff = W
+    ignore-whitespace = w
 ```
 
-The key opens the view on top of the one it is pressed on, as `right` opens a commit, and `left` goes back. `{commit}`, `{file}` and `{branch}` are filled in as for shell commands, but a view is not run by a shell: `{command}` is a word of its own there, standing for the words of the git command the screen is showing, so that a view such as `word-diff` above changes the command in view. A view is a git command the TUI shows, run again after each change, and `:`, `U` and `&` change it as they change any other. A view that is not `git diff`, `git show` or `git log` is refused. `H` lists views in a column of their own.
+The key opens the view on top of the one it is pressed on, as `right` opens a commit, and `left` goes back. `{commit}`, `{file}` and `{branch}` are filled in as for shell commands, but a view is not run by a shell: `{command}` is a word of its own there, standing for the words of the git command the screen is showing, so that a view such as `word-diff` or `ignore-whitespace` above changes the command in view. A view is a git command the TUI shows, run again after each change, and `:`, `U` and `&` change it as they change any other. A view that is not `git diff`, `git show` or `git log` is refused. `H` lists views in a column of their own.
 
 ## Log and commit formats
 
