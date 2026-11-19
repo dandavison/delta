@@ -46,7 +46,20 @@ impl StateMachine<'_> {
             return Ok(false);
         }
         if let Some((commit, dirty)) = get_submodule_short_commit(&self.line) {
-            if let State::HunkHeader(_, _, _, _) = self.state {
+            if let State::HunkHeader(_, parsed_hunk_header, _, _) = &self.state {
+                // The row drawn below replaces the hunk, hunk header included,
+                // so it carries the hunk header's record.
+                if let Some(md) = self.painter.diff_line_metadata.as_mut() {
+                    let file = if self.plus_file == "/dev/null" {
+                        &self.minus_file
+                    } else {
+                        &self.plus_file
+                    };
+                    md.initialize_hunk(
+                        &parsed_hunk_header.line_numbers_and_hunk_lengths,
+                        file.clone(),
+                    );
+                }
                 self.state = State::SubmoduleShort(commit.to_owned());
             } else if let State::SubmoduleShort(minus_commit) = &self.state {
                 self.painter.emit()?;
@@ -69,7 +82,12 @@ impl StateMachine<'_> {
                     )
                 };
                 let dirty = if dirty { " (dirty)" } else { "" };
-                writeln!(self.painter.writer, "{range}{dirty}")?;
+                let osc = self
+                    .painter
+                    .diff_line_metadata
+                    .as_ref()
+                    .map_or(String::new(), |md| md.osc_for_hunk_header());
+                writeln!(self.painter.writer, "{osc}{range}{dirty}")?;
             }
         }
         Ok(true)
