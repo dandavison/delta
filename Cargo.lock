@@ -925,7 +925,7 @@ dependencies = [
 
 [[package]]
 name = "git-delta"
-version = "0.21.0"
+version = "0.21.1"
 dependencies = [
  "ansi_colours",
  "ansi_term",
