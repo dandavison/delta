@@ -61,6 +61,8 @@ powerful way to use delta:
     log = delta --tui
 ```
 
+See [below](#tui-mode) for videos.
+
 <details>
 <summary>A complete tui config with ideas for making it look nice</summary>
 
@@ -281,6 +283,73 @@ Side-by-side view wraps long lines automatically:
 `delta --tui` is an interactive git client and pager that renders with delta: navigate, fold, stage
 and discard in delta's output. It is based on [gitu](https://github.com/altsem/gitu) by altsem, a
 git client inspired by Magit, and is embedded via a [fork](https://github.com/dandavison/gitu).
+
+
+### git diff
+Folding files, side-by-side, color themes, line numbers.
+
+https://github.com/user-attachments/assets/8fc87bdd-ddca-4465-acd2-c1b8682b66f3
+
+### Changing what git diff shows
+Context lines, editing the git command, hiding files, whole functions, `gh pr diff`.
+
+https://github.com/user-attachments/assets/3979530a-53f0-4f22-ace5-742a73963eda
+
+### git log
+Searching, opening a commit, interactive rebase, `git log -p`.
+
+https://github.com/user-attachments/assets/b0886f1c-17bb-4a7b-a220-af067155ae19
+
+### Staging and committing
+Staging files, hunks and lines; committing and amending.
+
+https://github.com/user-attachments/assets/c5a4ba44-52b7-4b60-9cc2-82dbb4c471f1
+
+### More features
+Help, toggling delta features such as +/- markers, blame, filtering files.
+
+https://github.com/user-attachments/assets/caad6b67-1988-4171-b45a-66c4bc990d24
+
+### Your own views
+git commands of your own, opened from keys, with the commit or file under the cursor.
+
+https://github.com/user-attachments/assets/b0a33a5c-90c1-436e-8377-4dca761425a8
+
+<details>
+<summary><h2>Light-mode videos</h2></summary>
+
+
+### git diff
+Folding files, side-by-side, color themes, line numbers.
+
+https://github.com/user-attachments/assets/4818f448-5d5e-4cf3-88c9-ce3617c40773
+
+### Changing what git diff shows
+Context lines, editing the git command, hiding files, whole functions, `gh pr diff`.
+
+https://github.com/user-attachments/assets/b7399ee7-5c40-43ed-b7a4-aa6bbf0e4a3e
+
+### git log
+Searching, opening a commit, interactive rebase, `git log -p`.
+
+https://github.com/user-attachments/assets/550c0ce8-be3f-4b76-a4e6-fac835f126ca
+
+### Staging and committing
+Staging files, hunks and lines; committing and amending.
+
+https://github.com/user-attachments/assets/3f9d573a-f788-475d-8177-92c69047fe35
+
+### More features
+Help, toggling delta features such as +/- markers, blame, filtering files.
+
+https://github.com/user-attachments/assets/503c0608-a656-4e3c-b9d8-a32ec92b177a
+
+### Your own views
+git commands of your own, opened from keys, with the commit or file under the cursor.
+
+https://github.com/user-attachments/assets/25c31545-32ac-4442-997a-11fbaf051aee
+
+</details>
 
 
 ### Installation and usage
