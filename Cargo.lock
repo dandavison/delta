@@ -531,9 +531,9 @@ dependencies = [
 
 [[package]]
 name = "delta-gitu"
-version = "0.1.20"
+version = "0.1.21"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "9de7f224670a5917955f37d83e415677d131075f37453b02696e0c6642a3bddb"
+checksum = "5a7af9b0679e2089fa94bbd96df83274e51e2681713a0c5811c8d551cb335278"
 dependencies = [
  "anstyle-parse",
  "arboard",
