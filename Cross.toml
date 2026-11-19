@@ -1,0 +1,6 @@
+# With cross 0.2.5's i686 image (Ubuntu 16.04), every attempt to spawn a process fails with ENOSYS
+# on the ubuntu-26.04 GitHub runner. The image from cross's main branch does not have this problem.
+# The `main` tag is not pinned, so CI can change when cross publishes a new image; go back to a
+# versioned tag once a cross release after 0.2.5 includes the fix.
+[target.i686-unknown-linux-gnu]
+image = "ghcr.io/cross-rs/i686-unknown-linux-gnu:main"
