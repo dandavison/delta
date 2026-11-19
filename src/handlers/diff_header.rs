@@ -1163,6 +1163,27 @@ Submodule sub/mod a32f27c..2d9f921 (rewind):
     }
 
     #[test]
+    fn test_hunk_header_record_on_submodule_short_row() {
+        // With diff.submodule=short, delta draws the submodule's hunk as one
+        // row of commits. That row stands in for the hunk header, so it must
+        // carry the `h` record: without it a host cannot place the row.
+        let input = "\
+diff --git a/sub b/sub
+index 64a392c..676de96 160000
+--- a/sub
++++ b/sub
+@@ -1 +1 @@
+-Subproject commit 64a392c2ccaeea0acaef893ddb0024f3c939ffd9
++Subproject commit 676de96c0a8aefe32c4195376be47ebcce2b6703-dirty
+";
+        assert_snapshot!(visible_metadata_records(input, &[]), @r"
+        ⟦1;f;;;sub⟧sub
+        ⟦1;f;;;sub⟧───────────────────────────────────────────
+        ⟦1;h;1;;sub⟧64a392c2ccae..676de96c0a8a (dirty)
+        ");
+    }
+
+    #[test]
     fn test_no_file_header_record_on_an_unreadable_submodule_row() {
         // A row that opens with "Submodule " but states no submodule carries no
         // record: an empty path would hand the host a second file identity.
