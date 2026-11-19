@@ -45,21 +45,49 @@ impl StateMachine<'_> {
         if !self.test_submodule_short_line() || self.config.color_only {
             return Ok(false);
         }
-        if let Some(commit) = get_submodule_short_commit(&self.line) {
-            if let State::HunkHeader(_, _, _, _) = self.state {
+        if let Some((commit, dirty)) = get_submodule_short_commit(&self.line) {
+            if let State::HunkHeader(_, parsed_hunk_header, _, _) = &self.state {
+                // The row drawn below replaces the hunk, hunk header included,
+                // so it carries the hunk header's record.
+                if let Some(md) = self.painter.diff_line_metadata.as_mut() {
+                    let file = if self.plus_file == "/dev/null" {
+                        &self.minus_file
+                    } else {
+                        &self.plus_file
+                    };
+                    md.initialize_hunk(
+                        &parsed_hunk_header.line_numbers_and_hunk_lengths,
+                        file.clone(),
+                    );
+                }
                 self.state = State::SubmoduleShort(commit.to_owned());
             } else if let State::SubmoduleShort(minus_commit) = &self.state {
                 self.painter.emit()?;
-                writeln!(
-                    self.painter.writer,
-                    "{}..{}",
-                    self.config
-                        .minus_style
-                        .paint(minus_commit.chars().take(12).collect::<String>()),
-                    self.config
-                        .plus_style
-                        .paint(commit.chars().take(12).collect::<String>()),
-                )?;
+                // git writes "-dirty" after the new commit when the submodule's
+                // working tree has uncommitted changes or untracked files. When
+                // that is the only change, the two commits are the same.
+                let plus_commit = self
+                    .config
+                    .plus_style
+                    .paint(commit.chars().take(12).collect::<String>());
+                let range = if minus_commit == commit {
+                    plus_commit.to_string()
+                } else {
+                    format!(
+                        "{}..{}",
+                        self.config
+                            .minus_style
+                            .paint(minus_commit.chars().take(12).collect::<String>()),
+                        plus_commit,
+                    )
+                };
+                let dirty = if dirty { " (dirty)" } else { "" };
+                let osc = self
+                    .painter
+                    .diff_line_metadata
+                    .as_ref()
+                    .map_or(String::new(), |md| md.osc_for_hunk_header());
+                writeln!(self.painter.writer, "{osc}{range}{dirty}")?;
             }
         }
         Ok(true)
@@ -86,11 +114,12 @@ lazy_static! {
     ).unwrap();
 }
 
-pub fn get_submodule_short_commit(line: &str) -> Option<&str> {
-    match SUBMODULE_SHORT_LINE_REGEX.captures(line) {
-        Some(caps) => Some(caps.get(1).unwrap().as_str()),
-        None => None,
-    }
+/// The commit a "Subproject commit" row states, and whether the row marks the
+/// submodule's working tree as dirty.
+pub fn get_submodule_short_commit(line: &str) -> Option<(&str, bool)> {
+    SUBMODULE_SHORT_LINE_REGEX
+        .captures(line)
+        .map(|caps| (caps.get(1).unwrap().as_str(), caps.get(2).is_some()))
 }
 
 /// The submodule a "Submodule …" row names, for the rows that are the header of
@@ -146,5 +175,18 @@ mod tests {
         ] {
             assert_eq!(get_submodule_log_path(line), expected, "{line}");
         }
+    }
+
+    #[test]
+    fn test_get_submodule_short_commit_reports_dirty_state() {
+        const COMMIT: &str = "ca030fd1a02225a6fc1a834c480276d9c97a8c6f";
+
+        let line = format!("-Subproject commit {COMMIT}");
+        assert_eq!(get_submodule_short_commit(&line), Some((COMMIT, false)));
+
+        let line = format!("+Subproject commit {COMMIT}-dirty");
+        assert_eq!(get_submodule_short_commit(&line), Some((COMMIT, true)));
+
+        assert_eq!(get_submodule_short_commit("Subproject commit nope"), None);
     }
 }
