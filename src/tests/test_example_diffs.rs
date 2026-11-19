@@ -310,7 +310,21 @@ index 0123456..1234567 100644
                 r#"
             some_submodule
             ──────────────────────────────
-            ca030fd1a022..803be42ca46a"#,
+            ca030fd1a022..803be42ca46a (dirty)"#,
+            );
+    }
+
+    #[test]
+    fn test_dirty_submodule_with_same_commit_is_marked_dirty() {
+        DeltaTest::with_args(&["--width", "30"])
+            .with_input(SUBMODULE_DIRTY_SAME_COMMIT)
+            .inspect()
+            .expect_after_skip(
+                1,
+                r#"
+            some_submodule
+            ──────────────────────────────
+            ca030fd1a022..ca030fd1a022 (dirty)"#,
             );
     }
 
@@ -2705,6 +2719,16 @@ index ca030fd1a0..803be42ca4 160000
 @@ -1 +1 @@
 -Subproject commit ca030fd1a02225a6fc1a834c480276d9c97a8c6f
 +Subproject commit 803be42ca46af0fbc65b54a9abfb499389516939-dirty
+";
+
+    const SUBMODULE_DIRTY_SAME_COMMIT: &str = "\
+diff --git a/some_submodule b/some_submodule
+index ca030fd1a0..ca030fd1a0 160000
+--- a/some_submodule
++++ b/some_submodule
+@@ -1 +1 @@
+-Subproject commit ca030fd1a02225a6fc1a834c480276d9c97a8c6f
++Subproject commit ca030fd1a02225a6fc1a834c480276d9c97a8c6f-dirty
 ";
 
     // See etc/examples/662-submodules
