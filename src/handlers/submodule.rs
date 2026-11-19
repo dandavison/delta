@@ -45,27 +45,31 @@ impl StateMachine<'_> {
         if !self.test_submodule_short_line() || self.config.color_only {
             return Ok(false);
         }
-        if let Some((commit, is_dirty)) = get_submodule_short_commit(&self.line) {
+        if let Some((commit, dirty)) = get_submodule_short_commit(&self.line) {
             if let State::HunkHeader(_, _, _, _) = self.state {
                 self.state = State::SubmoduleShort(commit.to_owned());
             } else if let State::SubmoduleShort(minus_commit) = &self.state {
                 self.painter.emit()?;
-                let dirty_marker = if is_dirty {
-                    format!(" {}", self.config.plus_style.paint("(dirty)"))
+                // git writes "-dirty" after the new commit when the submodule's
+                // working tree has uncommitted changes or untracked files. When
+                // that is the only change, the two commits are the same.
+                let plus_commit = self
+                    .config
+                    .plus_style
+                    .paint(commit.chars().take(12).collect::<String>());
+                let range = if minus_commit == commit {
+                    plus_commit.to_string()
                 } else {
-                    String::new()
+                    format!(
+                        "{}..{}",
+                        self.config
+                            .minus_style
+                            .paint(minus_commit.chars().take(12).collect::<String>()),
+                        plus_commit,
+                    )
                 };
-                writeln!(
-                    self.painter.writer,
-                    "{}..{}{}",
-                    self.config
-                        .minus_style
-                        .paint(minus_commit.chars().take(12).collect::<String>()),
-                    self.config
-                        .plus_style
-                        .paint(commit.chars().take(12).collect::<String>()),
-                    dirty_marker,
-                )?;
+                let dirty = if dirty { " (dirty)" } else { "" };
+                writeln!(self.painter.writer, "{range}{dirty}")?;
             }
         }
         Ok(true)
@@ -92,9 +96,12 @@ lazy_static! {
     ).unwrap();
 }
 
+/// The commit a "Subproject commit" row states, and whether the row marks the
+/// submodule's working tree as dirty.
 pub fn get_submodule_short_commit(line: &str) -> Option<(&str, bool)> {
-    let caps = SUBMODULE_SHORT_LINE_REGEX.captures(line)?;
-    Some((caps.get(1).unwrap().as_str(), caps.get(2).is_some()))
+    SUBMODULE_SHORT_LINE_REGEX
+        .captures(line)
+        .map(|caps| (caps.get(1).unwrap().as_str(), caps.get(2).is_some()))
 }
 
 /// The submodule a "Submodule …" row names, for the rows that are the header of
