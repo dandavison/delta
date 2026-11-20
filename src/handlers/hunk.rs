@@ -394,6 +394,38 @@ mod tests {
             );
         }
 
+        #[test]
+        fn test_map_styles_line_ending_in_emph_is_filled_in_non_emph_style() {
+            DeltaTest::with_args(&[
+                "--side-by-side",
+                "--width",
+                "24",
+                "--line-numbers-left-format",
+                "",
+                "--line-numbers-right-format",
+                "",
+                "--minus-non-emph-style",
+                "normal red",
+                "--minus-emph-style",
+                "normal blue",
+                "--plus-non-emph-style",
+                "normal green",
+                "--plus-emph-style",
+                "normal yellow",
+                "--map-styles",
+                "#010102 => minus-non-emph-style, #010101 => minus-emph-style, \
+                 #010202 => plus-non-emph-style, #010201 => plus-emph-style",
+            ])
+            .explain_ansi()
+            .with_input(DIFF_ENDING_IN_PRIVATE_EMPH_COLOR)
+            .expect_after_skip(
+                7,
+                "
+(normal red)a (normal blue)b(normal red)         (normal green)a (normal yellow)c(normal)
+",
+            );
+        }
+
         // A diff whose lines a program other than git colored, with colors that git does not use.
         const DIFF_WITH_PRIVATE_COLORS: &str = "\
 diff --git a/file b/file
@@ -403,6 +435,17 @@ index 72943a1..f761ec1 100644
 @@ -1 +1 @@
 \x1b[38;2;1;1;1m-aaa\x1b[0m
 \x1b[38;2;1;2;1m+bbb\x1b[0m
+";
+
+        // As DIFF_WITH_PRIVATE_COLORS, with each line ending in a second color.
+        const DIFF_ENDING_IN_PRIVATE_EMPH_COLOR: &str = "\
+diff --git a/file b/file
+index 72943a1..f761ec1 100644
+--- a/file
++++ b/file
+@@ -1 +1 @@
+\x1b[38;2;1;1;2m-a \x1b[38;2;1;1;1mb\x1b[0m
+\x1b[38;2;1;2;2m+a \x1b[38;2;1;2;1mc\x1b[0m
 ";
 
         const GIT_DIFF_WITH_COLOR: &str = r#"\
