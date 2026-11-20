@@ -191,7 +191,7 @@ impl Config {
 impl From<cli::Opt> for Config {
     fn from(opt: cli::Opt) -> Self {
         let mut styles = parse_styles::parse_styles(&opt);
-        let styles_map = parse_styles::parse_styles_map(&opt);
+        let styles_map = parse_styles::parse_styles_map(&opt, &styles);
 
         let wrap_config = WrapConfig::from_opt(&opt, styles["inline-hint-style"]);
 

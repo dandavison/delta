@@ -41,14 +41,25 @@ pub fn parse_styles(opt: &cli::Opt) -> HashMap<String, Style> {
     resolved_styles
 }
 
-pub fn parse_styles_map(opt: &cli::Opt) -> Option<HashMap<style::AnsiTermStyleEqualityKey, Style>> {
+/// Parse `--map-styles`. A style it maps to may be one of delta's own `styles`, by name, such as
+/// `minus-emph-style`.
+pub fn parse_styles_map(
+    opt: &cli::Opt,
+    styles: &HashMap<String, Style>,
+) -> Option<HashMap<style::AnsiTermStyleEqualityKey, Style>> {
     if let Some(styles_map_str) = &opt.map_styles {
         let mut styles_map = HashMap::new();
         for pair_str in styles_map_str.split(',') {
             let mut style_strs = pair_str.split("=>").map(|s| s.trim());
             if let (Some(from_str), Some(to_str)) = (style_strs.next(), style_strs.next()) {
                 let from_style = parse_as_style_or_reference_to_git_config(from_str, opt);
-                let to_style = parse_as_style_or_reference_to_git_config(to_str, opt);
+                let to_style = match style_from_str(to_str, None, None, true, opt.git_config()) {
+                    StyleReference::Reference(style_ref) => match styles.get(&style_ref) {
+                        Some(style) => *style,
+                        None => parse_as_reference_to_git_config(&style_ref, opt),
+                    },
+                    StyleReference::Style(style) => style,
+                };
                 styles_map.insert(
                     style::ansi_term_style_equality_key(from_style.ansi_term_style),
                     to_style,
