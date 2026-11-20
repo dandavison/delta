@@ -97,6 +97,8 @@ pub struct StateMachine<'a> {
     pub source: Source,
     pub minus_file: String,
     pub plus_file: String,
+    /// Whether the current file is binary, as reported by a "Binary files ... differ" line.
+    pub binary_file: bool,
     pub minus_file_event: handlers::diff_header::FileEvent,
     pub plus_file_event: handlers::diff_header::FileEvent,
     pub diff_line: String,
@@ -143,6 +145,7 @@ impl<'a> StateMachine<'a> {
             source: Source::Unknown,
             minus_file: "".to_string(),
             plus_file: "".to_string(),
+            binary_file: false,
             minus_file_event: handlers::diff_header::FileEvent::NoEvent,
             plus_file_event: handlers::diff_header::FileEvent::NoEvent,
             diff_line: "".to_string(),
