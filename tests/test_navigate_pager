@@ -1,0 +1,89 @@
+#!/bin/bash
+
+set -euo pipefail
+
+DELTA_BIN=${1:-./target/release/delta}
+TEMPDIR=$(mktemp -d)
+trap 'rm -rf "$TEMPDIR"' EXIT
+
+# Keep pager history and user configuration isolated from the real home directory.
+export HOME="$TEMPDIR/home"
+export XDG_DATA_HOME="$HOME/data"
+export XDG_STATE_HOME="$HOME/state"
+export XDG_CONFIG_HOME="$HOME/config"
+export LESSHISTFILE="$HOME/lesshst"
+mkdir -p "$HOME"
+unset DELTA_PAGER PAGER DELTA_FEATURES DELTA_NAVIGATE
+export LESS='--jump-target=.1 --chop-long-lines'
+export PAGER_ARGS="$TEMPDIR/args"
+export PAGER_LESS="$TEMPDIR/less-env"
+
+# Capture the actual child pager's arguments without requiring a terminal.
+cat >"$TEMPDIR/less" <<'EOF'
+#!/bin/sh
+if [ "$1" = --version ]; then
+    echo 'less 668'
+    exit
+fi
+printf '%s\n' "$@" >"$PAGER_ARGS"
+printf '%s\n' "$LESS" >"$PAGER_LESS"
+cat
+EOF
+chmod +x "$TEMPDIR/less"
+cp "$TEMPDIR/less" "$TEMPDIR/other-pager"
+export PATH="$TEMPDIR:$PATH"
+
+run_delta() {
+    rm -f "$PAGER_ARGS" "$PAGER_LESS"
+    printf 'context\n' | "$DELTA_BIN" --no-gitconfig --paging="${PAGING:-always}" "$@" > /dev/null
+    diff -u <(printf '%s\n' "$LESS") "$PAGER_LESS"
+}
+
+assert_args() {
+    diff -u <(printf '%s\n' "$@") "$PAGER_ARGS"
+}
+
+# Navigation overrides LESS without changing the environment or other defaults.
+run_delta --navigate
+assert_args --jump-target=1 --RAW-CONTROL-CHARS
+run_delta
+assert_args --RAW-CONTROL-CHARS
+PAGING=auto run_delta --navigate
+assert_args --jump-target=1 --RAW-CONTROL-CHARS --quit-if-one-screen
+
+# Explicit delta pager arguments still take precedence, including a terminator.
+run_delta --navigate --pager 'less -R --jump-target=.3 --'
+assert_args --jump-target=1 -R --jump-target=.3 --
+DELTA_PAGER='less -R -j5 --' run_delta --navigate
+assert_args --jump-target=1 -R -j5 --
+run_delta --pager 'less -R --jump-target=.3 --'
+assert_args -R --jump-target=.3 --
+
+# Generic PAGER arguments continue to be replaced by delta's less defaults.
+PAGER='less -j5' run_delta --navigate
+assert_args --jump-target=1 --RAW-CONTROL-CHARS
+
+# Other pagers must not receive less-specific options.
+run_delta --navigate --pager "$TEMPDIR/other-pager custom-arg"
+assert_args custom-arg
+
+# A history-file error must not prevent setting the navigation jump target.
+touch "$TEMPDIR/not-a-directory"
+XDG_DATA_HOME="$TEMPDIR/not-a-directory" run_delta --navigate
+assert_args --jump-target=1 --RAW-CONTROL-CHARS
+
+# Theme navigation keeps its initial search and history pattern.
+cat >"$HOME/.gitconfig" <<'EOF'
+[delta "test-theme"]
+    dark = true
+EOF
+run_delta --show-themes --dark
+assert_args --jump-target=1 --RAW-CONTROL-CHARS +n
+grep -Fx '"^Theme:' "$XDG_DATA_HOME/delta/lesshst" > /dev/null
+
+# Paging disabled and an unavailable pager both retain stdout fallback.
+for paging in never always; do
+    output=$(printf 'context\n' | "$DELTA_BIN" --no-gitconfig --raw --navigate \
+        --paging="$paging" --pager "$TEMPDIR/missing-pager")
+    [ "$output" = context ]
+done
