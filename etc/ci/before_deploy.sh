@@ -70,10 +70,15 @@ make_deb() {
             gcc_prefix=""
             library_dir=""
             ;;
-        aarch64*)
+        aarch64-unknown-linux-gnu)
             architecture=arm64
             gcc_prefix="aarch64-linux-gnu-"
             library_dir="-l/usr/aarch64-linux-gnu/lib"
+            ;;
+        aarch64-unknown-linux-musl)
+            architecture=arm64
+            gcc_prefix=""
+            library_dir=""
             ;;
         arm*hf)
             architecture=armhf
