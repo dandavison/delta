@@ -228,6 +228,13 @@ impl<'a> DeltaTest<'a> {
             output: cooked,
         }
     }
+
+    /// Like `with_input`, but for input that is not valid UTF-8. Returns the
+    /// raw output bytes.
+    pub fn with_input_bytes(&self, input: &[u8]) -> Vec<u8> {
+        let _args = FakeParentArgs::for_scope(self.calling_process.as_deref().unwrap_or(""));
+        run_delta_bytes(input, &self.config)
+    }
 }
 
 pub struct DeltaTestOutput {
@@ -309,6 +316,15 @@ pub fn run_delta(input: &str, config: &config::Config) -> String {
     )
     .unwrap();
     String::from_utf8(writer).unwrap()
+}
+
+/// Like `run_delta`, but for input that is not valid UTF-8. Returns the raw
+/// output bytes.
+pub fn run_delta_bytes(input: &[u8], config: &config::Config) -> Vec<u8> {
+    let mut writer: Vec<u8> = Vec::new();
+
+    delta(ByteLines::new(BufReader::new(input)), &mut writer, config).unwrap();
+    writer
 }
 
 /// Like `run_delta`, but with per-line diff metadata emission (OSC 1717)

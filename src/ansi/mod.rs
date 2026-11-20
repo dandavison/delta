@@ -46,7 +46,20 @@ fn truncate_str_impl<'a>(
     };
     let mut used = measure_text_width(&result_tail);
     let mut result = String::new();
+    // `truncate_str_short` promises that its result is always a prefix of the
+    // input. Once the width budget is exhausted, nothing that follows the cut
+    // point may be appended: ANSI escape sequences after the cut used to be
+    // appended unconditionally, so the result was longer than the input prefix
+    // and callers that split the input at the result length (see
+    // paint::get_syntax_style_sections_for_lines) panicked on a
+    // non-char-boundary. `truncate_str` intentionally keeps trailing codes,
+    // so this stop only applies to the short variant (empty tail, no fill char).
+    let short = tail.is_empty() && fill2w.is_none();
+    let mut cut = false;
     for (t, is_ansi) in items {
+        if cut {
+            break;
+        }
         if !is_ansi {
             for g in t.graphemes(true) {
                 let width_of_grapheme = g.width();
@@ -65,6 +78,9 @@ fn truncate_str_impl<'a>(
                                 result.push(fillchar);
                             }
                         }
+                    }
+                    if short {
+                        cut = true;
                     }
                     break;
                 }
@@ -432,6 +448,24 @@ mod tests {
         assert_eq!(truncate_str_short(double, 0), "");
         assert_eq!(truncate_str_short(double, 1), "");
         assert_eq!(truncate_str_short(double, 2), double);
+    }
+
+    #[test]
+    fn test_truncate_str_short_is_always_a_prefix() {
+        // Escape sequences after the truncation cut must not be appended: the
+        // result must be a prefix of the input (see the SAFETY comment in
+        // paint::get_syntax_style_sections_for_lines, which splits the input
+        // at the truncated length). See
+        // https://github.com/dandavison/delta/issues/2316
+        assert_eq!(truncate_str_short("abcdefghij\x1b[K", 5), "abcde");
+        assert_eq!(
+            truncate_str_short("\x1b[31mabcdefghij\x1b[0m", 5),
+            "\x1b[31mabcde"
+        );
+        let line = format!("{}\x1b[K", "\u{FFFD}".repeat(500));
+        let truncated = truncate_str_short(&line, 400);
+        assert_eq!(truncated, "\u{FFFD}".repeat(400).as_str());
+        assert!(line.starts_with(&*truncated));
     }
 
     #[test]
