@@ -2,8 +2,9 @@ use std::borrow::Cow;
 use std::path::Path;
 
 use lazy_static::lazy_static;
-use regex::{Match, Matches, Regex};
+use regex::Regex;
 
+use crate::ansi;
 use crate::config::Config;
 use crate::features::OptionValueFunction;
 
@@ -32,50 +33,70 @@ pub fn format_commit_line_with_osc8_commit_hyperlink<'a>(
     line: &'a str,
     config: &Config,
 ) -> Cow<'a, str> {
-    // Given matches in a line, m = matches[0] and pos = 0: store line[pos..m.start()] first, then
-    // store the T(line[m.start()..m.end()]) match transformation, then set pos = m.end().
-    // Repeat for matches[1..]. Finally, store line[pos..].
     struct HyperlinkCommits<T>(T)
     where
         T: Fn(&str) -> String;
     impl<T: for<'b> Fn(&'b str) -> String> HyperlinkCommits<T> {
-        fn _m(&self, result: &mut String, line: &str, m: &Match, prev_pos: usize) -> usize {
-            result.push_str(&line[prev_pos..m.start()]);
-            let commit = &line[m.start()..m.end()];
-            // Do not link numbers, require at least one non-decimal:
-            if commit.contains(|c| matches!(c, 'a'..='f')) {
-                result.push_str(&format_osc8_hyperlink(&self.0(commit), commit));
+        fn with_input(&self, line: &str) -> Option<String> {
+            let has_ansi = line.contains('\u{1b}');
+            let visible_line = if has_ansi {
+                Cow::Owned(ansi::strip_ansi_codes(line))
             } else {
-                result.push_str(commit);
-            }
-            m.end()
-        }
-        fn with_input(&self, line: &str, m0: &Match, matches123: &mut Matches) -> String {
+                Cow::Borrowed(line)
+            };
             let mut result = String::new();
-            let mut pos = self._m(&mut result, line, m0, 0);
+            let mut pos = 0;
+            let mut found_match = false;
+
             // limit number of matches per line, an exhaustive `find_iter` is O(len(line) * len(regex)^2)
-            for m in matches123.take(12) {
-                pos = self._m(&mut result, line, &m, pos);
+            for m in COMMIT_HASH_REGEX.find_iter(visible_line.as_ref()).take(13) {
+                found_match = true;
+                let (start, end) = if has_ansi {
+                    // The match indices refer to `visible_line`. Map them back to the original line
+                    // so that the existing styling remains part of the displayed hyperlink text.
+                    let start = ansi::ansi_preserving_index(line, m.start()).unwrap_or(line.len());
+                    // Map the final hash byte, then advance to the exclusive end without absorbing
+                    // a trailing ANSI reset sequence into the hyperlink.
+                    let end = ansi::ansi_preserving_index(line, m.end() - 1)
+                        .map(|i| i + 1)
+                        .unwrap_or(line.len());
+                    (start, end)
+                } else {
+                    (m.start(), m.end())
+                };
+
+                result.push_str(&line[pos..start]);
+                let commit = &visible_line[m.start()..m.end()];
+                let display_commit = &line[start..end];
+                // Do not link numbers, require at least one non-decimal:
+                if commit.contains(|c| matches!(c, 'a'..='f')) {
+                    result.push_str(&format_osc8_hyperlink(&self.0(commit), display_commit));
+                } else {
+                    result.push_str(display_commit);
+                }
+                pos = end;
+            }
+
+            if !found_match {
+                return None;
             }
             result.push_str(&line[pos..]);
-            result
+            Some(result)
         }
     }
 
     if let Some(commit_link_format) = &config.hyperlinks_commit_link_format {
-        let mut matches = COMMIT_HASH_REGEX.find_iter(line);
-        if let Some(first_match) = matches.next() {
-            let result =
-                HyperlinkCommits(|commit_hash| commit_link_format.replace("{commit}", commit_hash))
-                    .with_input(line, &first_match, &mut matches);
+        if let Some(result) =
+            HyperlinkCommits(|commit_hash| commit_link_format.replace("{commit}", commit_hash))
+                .with_input(line)
+        {
             return Cow::from(result);
         }
     } else if let Some(config) = config.git_config() {
         if let Some(repo) = config.get_remote_url() {
-            let mut matches = COMMIT_HASH_REGEX.find_iter(line);
-            if let Some(first_match) = matches.next() {
-                let result = HyperlinkCommits(|commit_hash| repo.format_commit_url(commit_hash))
-                    .with_input(line, &first_match, &mut matches);
+            if let Some(result) =
+                HyperlinkCommits(|commit_hash| repo.format_commit_url(commit_hash)).with_input(line)
+            {
                 return Cow::from(result);
             }
         }
@@ -196,6 +217,13 @@ pub mod tests {
             "\u{1b}]8;;HERE:01234abcdf\u{1b}\\01234abcdf\u{1b}]8;;\u{1b}\\ \u{1b}]8;;\
         HERE:03043baf30\u{1b}\\03043baf30\u{1b}]8;;\u{1b}\\ \u{1b}]8;;HERE:12abcdef0\u{1b}\\\
         12abcdef0\u{1b}]8;;\u{1b}\\ 12345678"
+        );
+
+        let line = "\u{1b}[31mf85c46b\u{1b}[0m";
+        let result = format_commit_line_with_osc8_commit_hyperlink(line, &config);
+        assert_eq!(
+            result,
+            "\u{1b}[31m\u{1b}]8;;HERE:f85c46b\u{1b}\\f85c46b\u{1b}]8;;\u{1b}\\\u{1b}[0m"
         );
     }
 
