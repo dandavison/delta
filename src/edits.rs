@@ -31,6 +31,7 @@ pub fn infer_edits<'a, EditOperation>(
     tokenization_regex: &Regex,
     max_line_distance: f64,
     max_line_distance_for_naively_paired_lines: f64,
+    max_line_tokens: usize,
 ) -> (
     Vec<Vec<(EditOperation, &'a str)>>,  // annotated minus lines
     Vec<Vec<(EditOperation, &'a str)>>,  // annotated plus lines
@@ -48,19 +49,33 @@ where
     'minus_lines_loop: for (minus_index, minus_line) in minus_lines.iter().enumerate() {
         let mut considered = 0; // plus lines considered so far as match for minus_line
         for plus_line in &plus_lines[plus_index..] {
-            let alignment = align::Alignment::new(
-                tokenize(minus_line, tokenization_regex),
-                tokenize(plus_line, tokenization_regex),
-            );
-            let (annotated_minus_line, annotated_plus_line, distance) = annotate(
-                alignment,
-                noop_deletions[minus_index],
-                deletion,
-                noop_insertions[plus_index],
-                insertion,
-                minus_line,
-                plus_line,
-            );
+            let x = tokenize(minus_line, tokenization_regex);
+            let y = tokenize(plus_line, tokenization_regex);
+            // The alignment table has one cell per pair of tokens, so its size is quadratic in
+            // the length of the line. A minified line is long enough for that to dwarf the input
+            // by orders of magnitude, so beyond a token limit we keep the lines paired but
+            // decline to highlight within them. The distance is reported as zero so that the
+            // pair is accepted below: an unhighlighted pair is closer to the real thing than
+            // two lines wrongly treated as unrelated.
+            let (annotated_minus_line, annotated_plus_line, distance) =
+                if exceeds_token_limit(&x, &y, max_line_tokens) {
+                    (
+                        vec![(noop_deletions[minus_index], *minus_line)],
+                        vec![(noop_insertions[plus_index], *plus_line)],
+                        0.0,
+                    )
+                } else {
+                    let alignment = align::Alignment::new(x, y);
+                    annotate(
+                        alignment,
+                        noop_deletions[minus_index],
+                        deletion,
+                        noop_insertions[plus_index],
+                        insertion,
+                        minus_line,
+                        plus_line,
+                    )
+                };
             if minus_lines.len() == plus_lines.len()
                 && distance <= max_line_distance_for_naively_paired_lines
                 || distance <= max_line_distance
@@ -133,6 +148,12 @@ pub fn make_lines_have_homolog(
             .map(|(m, _)| m.is_some())
             .collect(),
     )
+}
+
+/// Is either line too long for the quadratic alignment table to be worth building?
+/// A limit of zero means no limit.
+fn exceeds_token_limit(x: &[&str], y: &[&str], max_line_tokens: usize) -> bool {
+    max_line_tokens > 0 && (x.len() > max_line_tokens || y.len() > max_line_tokens)
 }
 
 /// Split line into tokens for alignment. The alignment algorithm aligns sequences of substrings;
@@ -901,6 +922,22 @@ mod tests {
         expected_edits: Edits,
         max_line_distance: f64,
     ) {
+        assert_edits_with_token_limit(
+            minus_lines,
+            plus_lines,
+            expected_edits,
+            max_line_distance,
+            0,
+        )
+    }
+
+    fn assert_edits_with_token_limit(
+        minus_lines: Vec<&str>,
+        plus_lines: Vec<&str>,
+        expected_edits: Edits,
+        max_line_distance: f64,
+        max_line_tokens: usize,
+    ) {
         let (minus_lines, noop_deletions): (Vec<&str>, Vec<EditOperation>) =
             minus_lines.into_iter().map(|s| (s, MinusNoop)).unzip();
         let (plus_lines, noop_insertions): (Vec<&str>, Vec<EditOperation>) =
@@ -915,6 +952,7 @@ mod tests {
             &DEFAULT_TOKENIZATION_REGEXP,
             max_line_distance,
             0.0,
+            max_line_tokens,
         );
         // compare_annotated_lines(actual_edits, expected_edits);
         // TODO: test line alignment
@@ -963,6 +1001,95 @@ mod tests {
                 plus_total - plus_delta
             );
         }
+    }
+
+    // The alignment table has one cell per pair of tokens, so a line beyond the token limit
+    // must not be aligned within the line, but must still be paired and shown in full.
+
+    #[test]
+    fn test_infer_edits_token_limit_gives_up_within_line_diff() {
+        let minus_line = "a a a a a a a a a a b";
+        let plus_line = "a a a a a a a a a a c";
+        let minus_tokens = tokenize(minus_line, &DEFAULT_TOKENIZATION_REGEXP).len();
+        // The two lines do differ, so without the limit the change is highlighted.
+        assert_paired_edits(
+            vec![minus_line],
+            vec![plus_line],
+            (
+                vec![vec![(MinusNoop, "a a a a a a a a a a "), (Deletion, "b")]],
+                vec![vec![
+                    (PlusNoop, "a a a a a a a a a a"),
+                    (PlusNoop, " "),
+                    (Insertion, "c"),
+                ]],
+            ),
+        );
+        // With a limit below the token count, the lines are still paired, and each is
+        // returned whole and unhighlighted.
+        assert_edits_with_token_limit(
+            vec![minus_line],
+            vec![plus_line],
+            (
+                vec![vec![(MinusNoop, minus_line)]],
+                vec![vec![(PlusNoop, plus_line)]],
+            ),
+            1.0,
+            minus_tokens - 1,
+        );
+    }
+
+    #[test]
+    fn test_infer_edits_token_limit_does_not_change_lines_below_it() {
+        let minus_line = "a a a a a a a a a a b";
+        let plus_line = "a a a a a a a a a a c";
+        let minus_tokens = tokenize(minus_line, &DEFAULT_TOKENIZATION_REGEXP).len();
+        let expected = (
+            vec![vec![(MinusNoop, "a a a a a a a a a a "), (Deletion, "b")]],
+            vec![vec![
+                (PlusNoop, "a a a a a a a a a a"),
+                (PlusNoop, " "),
+                (Insertion, "c"),
+            ]],
+        );
+        // A limit at or above the token count leaves the within-line diff intact.
+        assert_edits_with_token_limit(
+            vec![minus_line],
+            vec![plus_line],
+            expected.clone(),
+            1.0,
+            minus_tokens,
+        );
+        assert_edits_with_token_limit(vec![minus_line], vec![plus_line], expected, 1.0, 0);
+    }
+
+    #[test]
+    fn test_infer_edits_token_limit_counts_the_longer_of_the_two_lines() {
+        let minus_line = "a a a a a a a a a a b";
+        let plus_line = "a a a a a a a a a a a a a c";
+        // The plus line alone is over the limit even though the minus line is under it.
+        let minus_tokens = tokenize(minus_line, &DEFAULT_TOKENIZATION_REGEXP).len();
+        assert_edits_with_token_limit(
+            vec![minus_line],
+            vec![plus_line],
+            (
+                vec![vec![(MinusNoop, minus_line)]],
+                vec![vec![(PlusNoop, plus_line)]],
+            ),
+            1.0,
+            minus_tokens,
+        );
+    }
+
+    #[test]
+    fn test_exceeds_token_limit() {
+        let x: Vec<&str> = vec!["a"; 10];
+        let y: Vec<&str> = vec!["a"; 20];
+        // A limit of zero means no limit.
+        assert!(!exceeds_token_limit(&x, &y, 0));
+        assert!(!exceeds_token_limit(&x, &y, 20));
+        assert!(exceeds_token_limit(&x, &y, 19));
+        // Either line being over the limit is enough.
+        assert!(exceeds_token_limit(&y, &x, 19));
     }
 
     fn summarize_annotated_line(sections: &AnnotatedLine) -> (usize, usize) {
