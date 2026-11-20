@@ -6,8 +6,8 @@
 //!    chosen for a light or dark terminal background. (`bat` has no equivalent.)
 //!
 //! Basically:
-//! 1. The theme is specified by the `--syntax-theme` option. If this isn't supplied then it is specified
-//!    by the `BAT_THEME` environment variable.
+//! 1. The theme is specified by the `--syntax-theme` option (also settable in git config as
+//!    `syntax-theme`). If neither is supplied then the `BAT_THEME` environment variable is used.
 //! 2. Light vs dark mode is specified by the `--light` or `--dark` options. If these aren't
 //!    supplied then it detected from the terminal. If this fails it is inferred from the chosen theme.
 //!
