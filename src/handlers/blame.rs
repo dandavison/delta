@@ -205,6 +205,8 @@ lazy_static! {
 ^
 (
     \^?[0-9a-f]{4,40} # commit hash (^ is 'boundary commit' marker)
+    |
+    \ {4,40}          # blanked commit hash of a boundary commit (git blame -b)
 )
 (?: [^(]+)?        # optional file name (unused; present if file has been renamed; TODO: inefficient?)
 [\ ]
@@ -395,6 +397,7 @@ mod tests {
             "ea82f2d0 (Dan Davison       2021-08-22 18:20:19 -0700 120)             let mut handled_line = self.handle_commit_meta_header_line()?",
             "b2257cfa (Dan Davison  2020-07-18 15:34:43 -0400   1) use std::borrow::Cow;",
             "^35876eaa (Nicholas Marriott 2009-06-01 22:58:49 +0000   38) /* Default grid cell data. */",
+            "         (Nicholas Marriott 2009-06-01 22:58:49 +0000   38) /* Default grid cell data. */",
         ] {
             let caps = BLAME_LINE_REGEX.captures(line);
             assert!(caps.is_some());
