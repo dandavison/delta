@@ -220,6 +220,7 @@ impl StateMachine<'_> {
                 code_fragment,
                 line_numbers_and_hunk_lengths,
                 None,
+                None,
                 &mut self.painter,
                 line,
                 if self.plus_file == "/dev/null" {
@@ -339,6 +340,7 @@ fn write_hunk_header_raw(
 pub fn write_line_of_code_with_optional_path_and_line_number(
     code_fragment: &str,
     line_numbers_and_hunk_lengths: &[(usize, usize)],
+    column_number: Option<usize>,
     style_sections: Option<StyleSectionSpecifier>,
     painter: &mut Painter,
     line: &str,
@@ -370,6 +372,7 @@ pub fn write_line_of_code_with_optional_path_and_line_number(
     let plus_line_number = line_numbers_and_hunk_lengths[line_numbers_and_hunk_lengths.len() - 1].0;
     let file_with_line_number = paint_file_path_with_line_number(
         Some(plus_line_number),
+        column_number,
         plus_file,
         file_style,
         line_number_style,
@@ -420,6 +423,7 @@ pub fn write_line_of_code_with_optional_path_and_line_number(
 #[allow(clippy::too_many_arguments)]
 fn paint_file_path_with_line_number(
     line_number: Option<usize>,
+    column_number: Option<usize>,
     plus_file: &str,
     file_style: &Style,
     line_number_style: &Style,
@@ -444,6 +448,7 @@ fn paint_file_path_with_line_number(
 
     paint::paint_file_path_with_line_number(
         line_number,
+        column_number,
         plus_file,
         false,
         separator,
@@ -586,6 +591,7 @@ pub mod tests {
 
         let result = paint_file_path_with_line_number(
             Some(3),
+            None,
             "some-file",
             &config.hunk_header_style,
             &config.hunk_header_line_number_style,
@@ -616,6 +622,7 @@ pub mod tests {
 
         let result = paint_file_path_with_line_number(
             Some(3),
+            None,
             &relative_path.to_string_lossy(),
             &config.hunk_header_style,
             &config.hunk_header_line_number_style,
@@ -649,6 +656,7 @@ pub mod tests {
 
         let result = paint_file_path_with_line_number(
             Some(3),
+            None,
             "some-file",
             &config.hunk_header_style,
             &config.hunk_header_line_number_style,
@@ -680,6 +688,7 @@ pub mod tests {
 
         let result = paint_file_path_with_line_number(
             Some(3),
+            None,
             "some-file",
             &config.hunk_header_style,
             &config.hunk_header_line_number_style,
@@ -704,6 +713,7 @@ pub mod tests {
 
         let result = paint_file_path_with_line_number(
             Some(3),
+            None,
             "δ some-file",
             &config.hunk_header_style,
             &config.hunk_header_line_number_style,
