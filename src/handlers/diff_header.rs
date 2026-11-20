@@ -12,12 +12,6 @@ use crate::{features, utils};
 // https://git-scm.com/docs/git-config#Documentation/git-config.txt-diffmnemonicPrefix
 const DIFF_PREFIXES: [&str; 6] = ["a/", "b/", "c/", "i/", "o/", "w/"];
 
-///
-/// Display decoration appended in place to a binary file's `minus_file`/
-/// `plus_file`; `diff_header_osc` strips it again so the metadata record
-/// carries the real path.
-const BINARY_FILE_SUFFIX: &str = " (binary file)";
-
 #[derive(Debug, PartialEq, Eq)]
 pub enum FileEvent {
     Added,
@@ -226,7 +220,7 @@ impl StateMachine<'_> {
                 // (`handle_diff_header_misc_line`); the record carries the
                 // real path.
                 let file = file
-                    .strip_suffix(BINARY_FILE_SUFFIX)
+                    .strip_suffix(super::diff_header_misc::BINARY_FILE_SUFFIX)
                     .unwrap_or(file);
                 if file.is_empty() {
                     String::new()
@@ -270,7 +264,6 @@ impl StateMachine<'_> {
         let line = get_file_change_description_from_file_paths(
             &self.minus_file,
             &self.plus_file,
-            self.binary_files,
             comparing,
             &self.minus_file_event,
             &self.plus_file_event,
@@ -505,7 +498,6 @@ fn _parse_file_path(path: &str, git_diff_name: bool) -> String {
 pub fn get_file_change_description_from_file_paths(
     minus_file: &str,
     plus_file: &str,
-    binary_files: bool,
     comparing: bool,
     minus_file_event: &FileEvent,
     plus_file_event: &FileEvent,
@@ -527,13 +519,21 @@ pub fn get_file_change_description_from_file_paths(
             plus_file
         )
     } else {
-        let format_file = |file| {
+        let format_file = |file: &str| {
+            // A binary file's path was decorated in place for display
+            // (`handle_diff_header_misc_line`); the hyperlink uses the real path.
+            let (file, suffix) =
+                match file.strip_suffix(super::diff_header_misc::BINARY_FILE_SUFFIX) {
+                    Some(file) => (file, super::diff_header_misc::BINARY_FILE_SUFFIX),
+                    None => (file, ""),
+                };
             let formatted_file = if let Some(regex_replacement) = &config.file_regex_replacement {
                 regex_replacement.execute(file)
             } else {
                 Cow::from(file)
             };
-            match (config.hyperlinks, utils::path::absolute_path(file, config)) {
+            let formatted_file = match (config.hyperlinks, utils::path::absolute_path(file, config))
+            {
                 (true, Some(absolute_path)) => features::hyperlinks::format_osc8_file_hyperlink(
                     absolute_path,
                     None,
@@ -541,10 +541,10 @@ pub fn get_file_change_description_from_file_paths(
                     config,
                 ),
                 _ => formatted_file,
-            }
+            };
+            format!("{formatted_file}{suffix}")
         };
-
-        let mut description = match (minus_file, plus_file, minus_file_event, plus_file_event) {
+        match (minus_file, plus_file, minus_file_event, plus_file_event) {
             (minus_file, plus_file, _, _) if minus_file == plus_file => format!(
                 "{}{}",
                 format_label(&config.file_modified_label),
@@ -572,12 +572,7 @@ pub fn get_file_change_description_from_file_paths(
                 config.right_arrow,
                 format_file(plus_file)
             ),
-        };
-
-        if binary_files {
-            description.push_str(BINARY_FILE_SUFFIX);
         }
-        description
     }
 }
 
@@ -1240,6 +1235,26 @@ Binary files a/img.png and b/img.png differ
         ⟦1;f;;;img.png⟧img.png (binary file)
         ⟦1;f;;;img.png⟧───────────────────────────────────────────
         ");
+    }
+
+    #[test]
+    fn test_binary_file_hyperlink_targets_the_real_path() {
+        let input = "\
+diff --git a/img.png b/img.png
+index 0000000..a5d0c46 100644
+Binary files a/img.png and b/img.png differ
+";
+        let path = utils::path::fake_delta_cwd_for_tests().join("img.png");
+        DeltaTest::with_args(&[
+            "--hyperlinks",
+            "--hyperlinks-file-link-format",
+            "file://{path}",
+        ])
+        .with_input(input)
+        .expect_raw_contains(&format!(
+            "\x1b]8;;file://{}\x1b\\img.png\x1b]8;;\x1b\\ (binary file)",
+            path.display()
+        ));
     }
 
     #[test]
