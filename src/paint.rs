@@ -366,13 +366,14 @@ impl<'p> Painter<'p> {
                 // Consider the following raw line, from git colorMoved:
                 // ␛[1;36m+␛[m␛[1;36mclass·X:·pass␛[m␊ The last style section returned by
                 // parse_style_sections will be a default style associated with the terminal newline
-                // character; we want the last "real" style.
-                diff_sections
-                    .iter()
-                    .rev()
-                    .filter(|(_, s)| s != &"\n")
+                // character; we want the last "real" style. A line whose colors map-styles maps to
+                // emph and non-emph styles is filled, as delta fills a line it styles itself, in its
+                // non-emph style.
+                let real_sections = || diff_sections.iter().rev().filter(|(_, s)| s != &"\n");
+                real_sections()
+                    .find(|(style, _)| !style.is_emph)
+                    .or_else(|| real_sections().next())
                     .map(|(style, _)| *style)
-                    .next()
                     .unwrap_or(config.null_style)
             }
             State::Blame(_) => diff_sections[0].0,
