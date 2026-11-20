@@ -373,6 +373,38 @@ mod tests {
             );
         }
 
+        #[test]
+        fn test_map_styles_to_delta_style_name() {
+            DeltaTest::with_args(&[
+                "--minus-emph-style",
+                "bold blue",
+                "--plus-emph-style",
+                "dim yellow",
+                "--map-styles",
+                "#010101 => minus-emph-style, #010201 => plus-emph-style",
+            ])
+            .explain_ansi()
+            .with_input(DIFF_WITH_PRIVATE_COLORS)
+            .expect_after_skip(
+                7,
+                "
+(bold blue)aaa(normal)
+(dim yellow)bbb(normal)
+",
+            );
+        }
+
+        // A diff whose lines a program other than git colored, with colors that git does not use.
+        const DIFF_WITH_PRIVATE_COLORS: &str = "\
+diff --git a/file b/file
+index 72943a1..f761ec1 100644
+--- a/file
++++ b/file
+@@ -1 +1 @@
+\x1b[38;2;1;1;1m-aaa\x1b[0m
+\x1b[38;2;1;2;1m+bbb\x1b[0m
+";
+
         const GIT_DIFF_WITH_COLOR: &str = r#"\
 [33mcommit 3ef7fba7258fe473f1d8befff367bb793c786107[m
 Author: Dan Davison <dandavison7@gmail.com>
