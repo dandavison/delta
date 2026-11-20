@@ -343,6 +343,34 @@ index 0123456..1234567 100644
     }
 
     #[test]
+    fn test_added_submodule_diff() {
+        DeltaTest::with_args(&["--width", "30"])
+            .with_input(SUBMODULE_ADDED)
+            .inspect()
+            .expect_after_skip(
+                1,
+                r#"
+            added: some_submodule
+            ──────────────────────────────
+            803be42ca46a"#,
+            );
+    }
+
+    #[test]
+    fn test_removed_submodule_diff() {
+        DeltaTest::with_args(&["--width", "30"])
+            .with_input(SUBMODULE_REMOVED)
+            .inspect()
+            .expect_after_skip(
+                1,
+                r#"
+            removed: some_submodule
+            ──────────────────────────────
+            ca030fd1a022"#,
+            );
+    }
+
+    #[test]
     fn test_submodule_diff_log() {
         // See etc/examples/662-submodules
         // diff.submodule = log
@@ -2752,6 +2780,26 @@ diff --git a/some_submodule b/some_submodule
 @@ -1 +1 @@
 -Subproject commit ca030fd1a02225a6fc1a834c480276d9c97a8c6f
 +Subproject commit ca030fd1a02225a6fc1a834c480276d9c97a8c6f-dirty
+";
+
+    const SUBMODULE_ADDED: &str = "\
+diff --git a/some_submodule b/some_submodule
+new file mode 160000
+index 0000000000..803be42ca4
+--- /dev/null
++++ b/some_submodule
+@@ -0,0 +1 @@
++Subproject commit 803be42ca46af0fbc65b54a9abfb499389516939
+";
+
+    const SUBMODULE_REMOVED: &str = "\
+diff --git a/some_submodule b/some_submodule
+deleted file mode 160000
+index ca030fd1a0..0000000000
+--- a/some_submodule
++++ /dev/null
+@@ -1 +0,0 @@
+-Subproject commit ca030fd1a02225a6fc1a834c480276d9c97a8c6f
 ";
 
     // See etc/examples/662-submodules
