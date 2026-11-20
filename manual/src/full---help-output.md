@@ -119,8 +119,10 @@ Options:
           Default language used for syntax highlighting.
 
           Used as a fallback when the language cannot be inferred from a
-          filename. It will typically make sense to set this in the
-          per-repository config file '.git/config'.
+          filename, nor from the first line of the file (e.g. a shebang such
+          as '#!/usr/bin/env python3', when the diff includes it). It will
+          typically make sense to set this in the per-repository config file
+          '.git/config'.
 
           [default: txt]
 
