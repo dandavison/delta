@@ -11,4 +11,8 @@ RUN /root/.cargo/bin/cargo build --release
 
 ENV PATH="${PWD}/target/release:${PATH}"
 
+# Add non-root user for security
+RUN groupadd -r appuser && useradd -r -g appuser appuser
+USER appuser
+
 CMD delta
