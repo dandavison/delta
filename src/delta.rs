@@ -116,6 +116,9 @@ pub struct StateMachine<'a> {
     /// With `--color-only`, file header rows written before the file's path is
     /// known (`write_color_only_header_row`).
     pub held_header_rows: Vec<u8>,
+    /// With relative-paths, each path delta has relativized for display, mapped to the path as
+    /// the input has it, which is what OSC 1717 records carry (`path_in_input`).
+    pub paths_in_input: HashMap<String, String>,
     // With --side-by-side=hunk, the layout of the hunk whose header has been read but not yet
     // emitted. See look_ahead_at_hunk.
     pub hunk_side_by_side: Option<bool>,
@@ -154,6 +157,7 @@ impl<'a> StateMachine<'a> {
             blame_key_colors: HashMap::new(),
             minus_line_counter: AmbiguousDiffMinusCounter::not_needed(),
             held_header_rows: Vec::new(),
+            paths_in_input: HashMap::new(),
             hunk_side_by_side: None,
         }
     }

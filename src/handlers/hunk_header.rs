@@ -191,13 +191,14 @@ impl StateMachine<'_> {
                 .initialize_hunk(line_numbers_and_hunk_lengths, self.plus_file.to_string());
         }
 
+        // Select the file path the same way the hunk-header line below does.
+        let file = if self.plus_file == "/dev/null" {
+            &self.minus_file
+        } else {
+            &self.plus_file
+        };
+        let file = self.path_in_input(file).to_owned();
         if let Some(md) = self.painter.diff_line_metadata.as_mut() {
-            // Select the file path the same way the hunk-header line below does.
-            let file = if self.plus_file == "/dev/null" {
-                self.minus_file.clone()
-            } else {
-                self.plus_file.clone()
-            };
             md.initialize_hunk(line_numbers_and_hunk_lengths, file);
         }
 

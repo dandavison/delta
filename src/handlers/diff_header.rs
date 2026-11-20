@@ -87,11 +87,10 @@ impl StateMachine<'_> {
             return Ok(false);
         }
 
-        let (mut path_or_mode, file_event) =
+        let (path_or_mode, file_event) =
             parse_diff_header_line(&self.line, self.source == Source::GitDiff);
 
-        utils::path::relativize_path_maybe(&mut path_or_mode, self.config);
-        self.minus_file = path_or_mode;
+        self.minus_file = self.relativize_path_maybe(path_or_mode);
         self.minus_file_event = file_event;
 
         if self.source == Source::DiffUnified {
@@ -129,11 +128,10 @@ impl StateMachine<'_> {
             return Ok(false);
         }
         let mut handled_line = false;
-        let (mut path_or_mode, file_event) =
+        let (path_or_mode, file_event) =
             parse_diff_header_line(&self.line, self.source == Source::GitDiff);
 
-        utils::path::relativize_path_maybe(&mut path_or_mode, self.config);
-        self.plus_file = path_or_mode;
+        self.plus_file = self.relativize_path_maybe(path_or_mode);
         self.plus_file_event = file_event;
         // For a removed file the plus file is /dev/null: keep the syntax set from the minus file.
         if let Some(filename) = get_filename_from_diff_header_line_file_path(&self.plus_file) {
@@ -222,6 +220,7 @@ impl StateMachine<'_> {
                 let file = file
                     .strip_suffix(super::diff_header_misc::BINARY_FILE_SUFFIX)
                     .unwrap_or(file);
+                let file = self.path_in_input(file);
                 if file.is_empty() {
                     String::new()
                 } else {
@@ -230,6 +229,24 @@ impl StateMachine<'_> {
             }
             None => String::new(),
         }
+    }
+
+    /// `path` relativized for display if config demands that (see
+    /// `utils::path::relativize_path_maybe`), remembering the path as the input has it when a host
+    /// negotiated OSC 1717 emission.
+    pub(crate) fn relativize_path_maybe(&mut self, path: String) -> String {
+        let mut relativized = path.clone();
+        utils::path::relativize_path_maybe(&mut relativized, self.config);
+        if relativized != path && self.painter.diff_line_metadata.is_some() {
+            self.paths_in_input.insert(relativized.clone(), path);
+        }
+        relativized
+    }
+
+    /// The path as the input has it, of `path` as delta displays it. A host matches OSC 1717
+    /// records against the input, so they carry this path.
+    pub(crate) fn path_in_input<'b>(&'b self, path: &'b str) -> &'b str {
+        self.paths_in_input.get(path).map_or(path, String::as_str)
     }
 
     /// With `--color-only`, write a file header row carrying the file's `f`
@@ -980,6 +997,54 @@ index 0000000..323fae0
         let config = make_config_from_args(args);
         let output = run_delta_with_diff_line_metadata(input, &config);
         crate::ansi::strip_ansi_codes(&output.replace("\x1b]1717;", "⟦").replace("\x1b\\", "⟧"))
+    }
+
+    #[test]
+    fn test_records_carry_the_paths_in_the_input_under_relative_paths() {
+        // With relative-paths, delta draws a path relative to the directory git
+        // was run in (GIT_PREFIX), but a host matches each record against the
+        // patch, whose paths are relative to the repository root.
+        let input = "\
+diff --git a/a/b/f.txt b/a/b/f.txt
+index 1111111..2222222 100644
+--- a/a/b/f.txt
++++ b/a/b/f.txt
+@@ -1 +1 @@
+-foo
++bar
+diff --git a/top.txt b/top.txt
+index 1111111..2222222 100644
+--- a/top.txt
++++ b/top.txt
+@@ -1 +1 @@
+-foo
++bar
+";
+        let mut config = make_config_from_args(&["--relative-paths"]);
+        config.cwd_relative_to_repo_root = Some("a/".to_string());
+        let output = run_delta_with_diff_line_metadata(input, &config);
+        let output = crate::ansi::strip_ansi_codes(
+            &output.replace("\x1b]1717;", "⟦").replace("\x1b\\", "⟧"),
+        );
+        assert_snapshot!(output, @r"
+        ⟦1;f;;;a/b/f.txt⟧b/f.txt
+        ⟦1;f;;;a/b/f.txt⟧───────────────────────────────────────────
+
+        ⟦1;h;1;;a/b/f.txt⟧───┐
+        ⟦1;h;1;;a/b/f.txt⟧1: │
+        ⟦1;h;1;;a/b/f.txt⟧───┘
+        ⟦1;d;1;1;a/b/f.txt⟧foo
+        ⟦1;a;1;;a/b/f.txt⟧bar
+
+        ⟦1;f;;;top.txt⟧../top.txt
+        ⟦1;f;;;top.txt⟧───────────────────────────────────────────
+
+        ⟦1;h;1;;top.txt⟧───┐
+        ⟦1;h;1;;top.txt⟧1: │
+        ⟦1;h;1;;top.txt⟧───┘
+        ⟦1;d;1;1;top.txt⟧foo
+        ⟦1;a;1;;top.txt⟧bar
+        ");
     }
 
     #[test]
