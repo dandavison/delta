@@ -1184,6 +1184,35 @@ index 64a392c..676de96 160000
     }
 
     #[test]
+    fn test_hunk_header_record_on_added_and_removed_submodule_short_rows() {
+        let input = "\
+diff --git a/new b/new
+new file mode 160000
+index 0000000..676de96
+--- /dev/null
++++ b/new
+@@ -0,0 +1 @@
++Subproject commit 676de96c0a8aefe32c4195376be47ebcce2b6703
+diff --git a/old b/old
+deleted file mode 160000
+index 64a392c..0000000
+--- a/old
++++ /dev/null
+@@ -1 +0,0 @@
+-Subproject commit 64a392c2ccaeea0acaef893ddb0024f3c939ffd9
+";
+        assert_snapshot!(visible_metadata_records(input, &[]), @r"
+        ⟦1;f;;;new⟧added: new
+        ⟦1;f;;;new⟧───────────────────────────────────────────
+        ⟦1;h;1;;new⟧676de96c0a8a
+
+        ⟦1;f;;;old⟧removed: old
+        ⟦1;f;;;old⟧───────────────────────────────────────────
+        ⟦1;h;0;;old⟧64a392c2ccae
+        ");
+    }
+
+    #[test]
     fn test_no_file_header_record_on_an_unreadable_submodule_row() {
         // A row that opens with "Submodule " but states no submodule carries no
         // record: an empty path would hand the host a second file identity.
