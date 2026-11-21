@@ -1,0 +1,12 @@
+Remove a wrapping div (difftastic README and homepage)
+
+difftastic: only `<div class="container-sm">` and `</div>` are removed, and the
+img's class value is changed. The rest of the img element is unchanged, although
+its indentation changed.
+
+Line diff: every line of the img element removed and added again.
+
+Shown at:
+https://github.com/Wilfred/difftastic#examples (second screenshot)
+https://difftastic.wilfred.me.uk/ (Visualise Wrapping Changes, second screenshot)
+

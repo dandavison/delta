@@ -1,0 +1,12 @@
+Move an import into an import list that is reformatted (difftastic README)
+
+difftastic: only the `mockable` import is removed, and `mockable,` and the comma
+after `errors` are added. The import of `isIgnoredFunction` and `errors`, now
+split over five lines, is unchanged.
+
+Line diff: two lines removed and five lines added.
+
+Shown at:
+https://github.com/Wilfred/difftastic#examples (third screenshot)
+https://difftastic.wilfred.me.uk/ (Ignore Formatting Changes)
+

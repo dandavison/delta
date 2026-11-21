@@ -1,0 +1,10 @@
+Insert a call between two others (difftastic manual, middle insertions)
+
+difftastic: only `unique(` and its closing `)` are added. `format(` and
+`sort(rows)` are unchanged.
+
+Line diff: one line removed and one added.
+
+Shown at:
+https://difftastic.wilfred.me.uk/tricky_cases.html#middle-insertions
+

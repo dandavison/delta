@@ -1,0 +1,10 @@
+Log the config only when asked to
+
+difftastic: only the `verbose: bool` parameter, `if verbose {` and its `}` are
+added. `log_config(&config);` is unchanged, although it is indented further.
+
+Line diff: the function's first line and the log_config line removed, and four
+lines added.
+
+Shown at: nowhere on the web; written for this showcase.
+

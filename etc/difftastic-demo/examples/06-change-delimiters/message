@@ -1,0 +1,10 @@
+Return a list instead of a tuple (difftastic manual, changing delimiters)
+
+difftastic: only the parentheses are removed and the brackets added.
+`width, height` is unchanged.
+
+Line diff: one line removed and one added.
+
+Shown at:
+https://difftastic.wilfred.me.uk/tricky_cases.html#changing-delimiters
+

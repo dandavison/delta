@@ -1,0 +1,14 @@
+Say which format the config file is in
+
+Released difftastic (0.72.0) marks every word of the comment as changed, so its
+view shows the comment as a line changed throughout. delta's own view does
+better here: it highlights only `TOML `.
+
+difftastic PR #1075, not yet merged, makes difftastic mark only `TOML`.
+
+Line diff: the comment line removed and added again.
+
+Shown at:
+https://github.com/Wilfred/difftastic/pull/1075
+https://github.com/Wilfred/difftastic/issues/658
+

@@ -1,0 +1,10 @@
+Split a call over lines, with a trailing comma (difftastic manual, trailing punctuation)
+
+difftastic: no syntactic changes. Splitting the arguments over lines and adding
+a trailing comma does not change the code.
+
+Line diff: one line removed and five added.
+
+Shown at:
+https://difftastic.wilfred.me.uk/tricky_cases.html#trailing-punctuation
+

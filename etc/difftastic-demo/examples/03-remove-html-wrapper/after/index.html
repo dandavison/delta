@@ -1,0 +1,624 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Difftastic, a structural diff</title>
+    <meta name="description" content="" />
+
+    <meta property="og:title" content="" />
+    <meta property="og:type" content="" />
+    <meta property="og:url" content="" />
+    <meta property="og:image" content="" />
+
+    <link rel="icon" href="/favicon.ico" sizes="any" />
+    <link rel="icon" href="/icon.svg" type="image/svg+xml" />
+    <link rel="apple-touch-icon" href="icon.png" />
+    <link
+      href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css"
+      rel="stylesheet"
+      integrity="sha384-T3c6CoIi6uLrA9TneNEoa7RxnatzjcDSCmG1MXxSR1GAsXEV/Dwwykc2MPK8M2HN"
+      crossorigin="anonymous"
+    />
+    <link
+      href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/all.min.css"
+      rel="stylesheet"
+    />
+
+    <link
+      rel="stylesheet"
+      href="https://cdn.jsdelivr.net/gh/devicons/devicon@v2.15.1/devicon.min.css"
+    />
+    <style>
+      html,
+      body,
+      .fw-bold,
+      h1,
+      h2,
+      h3,
+      h4,
+      h5,
+      h6 {
+        color: #f8f8f2 !important;
+      }
+
+      h1 {
+        font-family: "Fontdiner Swanky", serif;
+        text-shadow: 5px 5px #1d1b22;
+      }
+
+      html,
+      body {
+        background-color: #282a36;
+      }
+
+      object {
+        background-color: #f8f8f2;
+        border-radius: 25% 25%;
+        padding: 5px;
+      }
+
+      .red {
+        color: #ff5555;
+      }
+      .green {
+        color: #50fa7b;
+      }
+      .cyan {
+        color: #8be9fd;
+      }
+
+      .btn {
+        box-shadow: 5px 5px #1d1b22;
+      }
+
+      .btn.gray {
+        color: #f8f8f2;
+        background-color: #1d1b22;
+        border-color: #1d1b22;
+      }
+      .btn.red {
+        color: #282a36;
+        background-color: #ff5555;
+        border-color: #ff5555;
+      }
+      .btn.green {
+        color: #282a36;
+        background-color: #50fa7b;
+        border-color: #50fa7b;
+      }
+
+      a {
+        color: #50fa7b;
+      }
+      code {
+        color: #ff5555;
+      }
+
+      h3 {
+        line-height: 45px;
+      }
+
+      @media only screen and (min-width: 900px) {
+        .screenshot {
+          max-width: 800px;
+        }
+      }
+    </style>
+  </head>
+
+  <!-- simple project description website, in the style of
+       https://popper.js.org/ or
+       https://cdnjs.com/libraries/font-awesome TODO: Prefer a dark
+       theme. It feels more like code, and less like vanilla
+       boostrap. -->
+
+  <!-- Use https://devicon.dev/ for PL icons. -->
+
+  <body>
+    <div class="px-4 pt-5 text-center">
+      <h1 class="display-4 text-body-emphasis">
+        <span class="red">diff</span><span class="green">tastic</span>
+      </h1>
+
+      <div class="container-sm">
+        <img
+          src="difft_screenshot.png"
+          class="screenshot img-fluid mb-4"
+          alt="screenshot"
+        />
+      </div>
+    </div>
+
+    <div class="container px-4 py-5">
+      <h2>
+        focus on <span class="red">what</span>
+        <span class="green">changed</span>
+      </h2>
+
+      <img
+        src="difft_screenshot.png"
+        class="screenshot img-fluid mb-4"
+        alt="screenshot"
+      />
+    </div>
+
+    <div class="container px-4 py-5">
+      <h2>
+        ignore <span class="red">formatting</span>
+        <span class="green">changes</span>
+      </h2>
+
+      <div class="container-sm">
+        <img
+          src="difft_screenshot.png"
+          class="screenshot img-fluid mb-4"
+          alt="screenshot"
+        />
+      </div>
+    </div>
+
+    <div class="container px-4 py-5">
+      <h2>
+        understand <span class="red">wrapping</span>
+        <span class="green">changes</span>
+      </h2>
+
+      <img
+        src="difft_screenshot.png"
+        class="screenshot"
+      />
+    </div>
+
+    <div class="container px-4 py-5">
+      <h2>
+        <span class="red">align</span>
+        <span class="green">content</span>
+      </h2>
+
+      <div class="container-sm">
+        <img
+          src="difft_screenshot.png"
+          class="screenshot img-fluid mb-4"
+          alt="screenshot"
+        />
+      </div>
+      <p>
+        difftastic uses real line numbers, not
+        <code>@@ 123</code> syntax.
+      </p>
+    </div>
+
+    <div class="container px-4 py-5">
+      <h2>programming languages</h2>
+
+      <div
+        class="row row-cols-1 row-cols-sm-2 row-cols-md-3 row-cols-lg-4 g-4 py-5"
+      >
+        <div class="col d-flex align-items-start">
+          <div class="foo">
+            <object
+              class="me-3"
+              width="45px"
+              height="45px"
+              data="cplusplus.svg"
+              type="image/svg+xml"
+            ></object>
+          </div>
+
+          <div>
+            <h3 class="fw-bold mb-0 fs-4">
+              C++
+            </h3>
+          </div>
+        </div>
+
+        <div class="col d-flex align-items-start">
+          <object
+            class="me-3"
+            width="45px"
+            height="45px"
+            data="csharp.svg"
+            type="image/svg+xml"
+          ></object>
+          <div>
+            <h3 class="fw-bold mb-0 fs-4">
+              C#
+            </h3>
+          </div>
+        </div>
+
+        <div class="col d-flex align-items-start">
+          <object
+            class="me-3"
+            width="45px"
+            height="45px"
+            data="clojure.svg"
+            type="image/svg+xml"
+          ></object>
+
+          <div>
+            <h3 class="fw-bold mb-0 fs-4">
+              Clojure
+            </h3>
+          </div>
+        </div>
+
+        <div class="col d-flex align-items-start">
+          <object
+            class="me-3"
+            width="45px"
+            height="45px"
+            data="lisp.svg"
+            type="image/svg+xml"
+          ></object>
+
+          <div>
+            <h3 class="fw-bold mb-0 fs-4">
+              Common Lisp
+            </h3>
+          </div>
+        </div>
+
+        <div class="col d-flex align-items-start">
+          <object
+            class="me-3"
+            width="45px"
+            height="45px"
+            data="dart.svg"
+            type="image/svg+xml"
+          ></object>
+
+          <div>
+            <h3 class="fw-bold mb-0 fs-4">
+              Dart
+            </h3>
+          </div>
+        </div>
+
+        <div class="col d-flex align-items-start">
+          <object
+            class="me-3"
+            width="45px"
+            height="45px"
+            data="erlang.svg"
+            type="image/svg+xml"
+          ></object>
+
+          <div>
+            <h3 class="fw-bold mb-0 fs-4">
+              Erlang
+            </h3>
+          </div>
+        </div>
+
+        <div class="col d-flex align-items-start">
+          <object
+            class="me-3"
+            width="45px"
+            height="45px"
+            data="go.svg"
+            type="image/svg+xml"
+          ></object>
+
+          <div>
+            <h3 class="fw-bold mb-0 fs-4">
+              Go
+            </h3>
+          </div>
+        </div>
+
+        <div class="col d-flex align-items-start">
+          <object
+            class="me-3"
+            width="45px"
+            height="45px"
+            data="haskell.svg"
+            type="image/svg+xml"
+          ></object>
+
+          <div>
+            <h3 class="fw-bold mb-0 fs-4">
+              Haskell
+            </h3>
+          </div>
+        </div>
+
+        <div class="col d-flex align-items-start">
+          <object
+            class="me-3"
+            width="45px"
+            height="45px"
+            data="java.svg"
+            type="image/svg+xml"
+          ></object>
+
+          <div>
+            <h3 class="fw-bold mb-0 fs-4">
+              Java
+            </h3>
+          </div>
+        </div>
+
+        <div class="col d-flex align-items-start">
+          <object
+            class="me-3"
+            width="45px"
+            height="45px"
+            data="javascript.svg"
+            type="image/svg+xml"
+          ></object>
+
+          <div>
+            <h3 class="fw-bold mb-0 fs-4">
+              JavaScript
+            </h3>
+          </div>
+        </div>
+
+        <div class="col d-flex align-items-start">
+          <object
+            class="me-3"
+            width="45px"
+            height="45px"
+            data="kotlin.svg"
+            type="image/svg+xml"
+          ></object>
+
+          <div>
+            <h3 class="fw-bold mb-0 fs-4">
+              Kotlin
+            </h3>
+          </div>
+        </div>
+
+        <div class="col d-flex align-items-start">
+          <object
+            class="me-3"
+            width="45px"
+            height="45px"
+            data="lua.svg"
+            type="image/svg+xml"
+          ></object>
+
+          <div>
+            <h3 class="fw-bold mb-0 fs-4">
+              Lua
+            </h3>
+          </div>
+        </div>
+
+        <div class="col d-flex align-items-start">
+          <object
+            class="me-3"
+            width="45px"
+            height="45px"
+            data="ocaml.svg"
+            type="image/svg+xml"
+          ></object>
+
+          <div>
+            <h3 class="fw-bold mb-0 fs-4">
+              OCaml
+            </h3>
+          </div>
+        </div>
+
+        <div class="col d-flex align-items-start">
+          <object
+            class="me-3"
+            width="45px"
+            height="45px"
+            data="php.svg"
+            type="image/svg+xml"
+          ></object>
+
+          <div>
+            <h3 class="fw-bold mb-0 fs-4">
+              PHP
+            </h3>
+          </div>
+        </div>
+
+        <div class="col d-flex align-items-start">
+          <object
+            class="me-3"
+            width="45px"
+            height="45px"
+            data="python.svg"
+            type="image/svg+xml"
+          ></object>
+          <div>
+            <h3 class="fw-bold mb-0 fs-4">
+              Python
+            </h3>
+          </div>
+        </div>
+
+        <div class="col d-flex align-items-start">
+          <object
+            class="me-3"
+            width="45px"
+            height="45px"
+            data="r.svg"
+            type="image/svg+xml"
+          ></object>
+
+          <div>
+            <h3 class="fw-bold mb-0 fs-4">
+              R
+            </h3>
+          </div>
+        </div>
+
+        <div class="col d-flex align-items-start">
+          <object
+            class="me-3"
+            width="45px"
+            height="45px"
+            data="ruby.svg"
+            type="image/svg+xml"
+          ></object>
+
+          <div>
+            <h3 class="fw-bold mb-0 fs-4">
+              Ruby
+            </h3>
+          </div>
+        </div>
+
+        <div class="col d-flex align-items-start">
+          <object
+            class="me-3"
+            width="45px"
+            height="45px"
+            data="rust.svg"
+            type="image/svg+xml"
+          ></object>
+
+          <div>
+            <h3 class="fw-bold mb-0 fs-4">
+              Rust
+            </h3>
+          </div>
+        </div>
+
+        <div class="col d-flex align-items-start">
+          <object
+            class="me-3"
+            width="45px"
+            height="45px"
+            data="scala.svg"
+            type="image/svg+xml"
+          ></object>
+
+          <div>
+            <h3 class="fw-bold mb-0 fs-4">
+              Scala
+            </h3>
+          </div>
+        </div>
+
+        <div class="col d-flex align-items-start">
+          <object
+            class="me-3"
+            width="45px"
+            height="45px"
+            data="typescript.svg"
+            type="image/svg+xml"
+          ></object>
+
+          <div>
+            <h3 class="fw-bold mb-0 fs-4">
+              TypeScript
+            </h3>
+          </div>
+        </div>
+
+        <!-- end languages -->
+      </div>
+
+      <p>
+        See the full
+        <a href="https://difftastic.wilfred.me.uk/languages_supported.html"
+          >list of supported languages</a
+        >
+        in the manual.
+      </p>
+    </div>
+
+    <div class="container px-4 py-5">
+      <h2 class="pb-2">file formats</h2>
+
+      <div
+        class="row row-cols-1 row-cols-sm-2 row-cols-md-3 row-cols-lg-4 g-4 py-5"
+      >
+        <div class="col d-flex align-items-start">
+          <!-- https://www.svgrepo.com/svg/371192/curly-brackets -->
+          <object
+            class="me-3"
+            width="45px"
+            height="45px"
+            data="braces.svg"
+            type="image/svg+xml"
+          ></object>
+
+          <div>
+            <h3 class="fw-bold mb-0 fs-4">
+              HCL
+            </h3>
+          </div>
+        </div>
+
+        <div class="col d-flex align-items-start">
+          <object
+            class="me-3"
+            width="45px"
+            height="45px"
+            data="html5.svg"
+            type="image/svg+xml"
+          ></object>
+
+          <div>
+            <h3 class="fw-bold mb-0 fs-4">
+              HTML
+            </h3>
+          </div>
+        </div>
+
+        <div class="col d-flex align-items-start">
+          <object
+            class="me-3"
+            width="45px"
+            height="45px"
+            data="json.svg"
+            type="image/svg+xml"
+          ></object>
+
+          <div>
+            <h3 class="fw-bold mb-0 fs-4">
+              JSON
+            </h3>
+          </div>
+        </div>
+
+        <div class="col d-flex align-items-start">
+          <object
+            class="me-3"
+            width="45px"
+            height="45px"
+            data="yaml.svg"
+            type="image/svg+xml"
+          ></object>
+
+          <div>
+            <h3 class="fw-bold mb-0 fs-4">
+              YAML
+            </h3>
+          </div>
+        </div>
+        <!-- end formats -->
+      </div>
+
+      <p>
+        See the full
+        <a
+          href="https://difftastic.wilfred.me.uk/languages_supported.html#structured-text-formats"
+          >list of supported file formats</a
+        >
+        in the manual.
+      </p>
+    </div>
+
+    <link
+      rel="stylesheet"
+      href="https://fonts.googleapis.com/css?family=Fontdiner+Swanky"
+    />
+
+    <script
+      src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"
+      integrity="sha384-C6RzsynM9kWDrMNeT87bh95OGNyZPhcTNXj1NW7RuBCsyN/o0jlpcV8Qyq46cDfL"
+      crossorigin="anonymous"
+    ></script>
+  </body>
+</html>
