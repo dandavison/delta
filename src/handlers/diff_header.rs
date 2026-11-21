@@ -170,7 +170,11 @@ impl StateMachine<'_> {
         let mut handled_line = false;
         let (_mode_info, file_event) =
             parse_diff_header_line(&self.line, self.source == Source::GitDiff);
-        let name = get_repeated_file_path_from_diff_line(&self.diff_line).unwrap_or_default();
+        // A combined diff's binary file has no ---/+++ lines, so take its path from
+        // the `diff --cc` / `diff --combined` line too.
+        let name = get_repeated_file_path_from_diff_line(&self.diff_line)
+            .or_else(|| get_combined_diff_file_path_from_diff_line(&self.diff_line))
+            .unwrap_or_default();
         match file_event {
             FileEvent::Removed => {
                 self.minus_file = name;
@@ -460,6 +464,15 @@ pub fn get_repeated_file_path_from_diff_line(line: &str) -> Option<String> {
     None
 }
 
+/// Given input like "diff --cc src/my file.rs" or "diff --combined src/my file.rs"
+/// return Some("src/my file.rs"). A combined diff names one path, relative to the
+/// repository root, with no a/ or b/ prefix.
+pub fn get_combined_diff_file_path_from_diff_line(line: &str) -> Option<String> {
+    line.strip_prefix("diff --cc ")
+        .or_else(|| line.strip_prefix("diff --combined "))
+        .map(|path| _parse_file_path(path, false))
+}
+
 fn remove_surrounding_quotes(path: &str) -> &str {
     if path.starts_with('"') && path.ends_with('"') {
         // Indexing into the UTF-8 string is safe because of the previous test
@@ -575,6 +588,23 @@ mod tests {
         make_config_from_args, run_delta_with_diff_line_metadata, DeltaTest,
     };
     use insta::assert_snapshot;
+
+    #[test]
+    fn test_get_combined_diff_file_path() {
+        assert_eq!(
+            get_combined_diff_file_path_from_diff_line("diff --cc src/lib.rs"),
+            Some("src/lib.rs".to_string())
+        );
+        // A combined diff path has no a/ or b/ prefix, even if the file is under a/.
+        assert_eq!(
+            get_combined_diff_file_path_from_diff_line("diff --combined a/bin space.dat"),
+            Some("a/bin space.dat".to_string())
+        );
+        assert_eq!(
+            get_combined_diff_file_path_from_diff_line("diff --git a/x b/x"),
+            None
+        );
+    }
 
     #[test]
     fn test_get_filename_from_marker_line() {
@@ -1245,6 +1275,26 @@ Binary files a/img.png and b/img.png differ
         .with_input(input)
         .expect_raw_contains(&format!(
             "\x1b]8;;file://{}\x1b\\img.png\x1b]8;;\x1b\\ (binary file)",
+            path.display()
+        ));
+    }
+
+    #[test]
+    fn test_combined_diff_binary_file_hyperlink_targets_the_real_path() {
+        let input = "\
+diff --cc img.png
+index 0000000,a5d0c46..43b4462
+Binary files differ
+";
+        let path = utils::path::fake_delta_cwd_for_tests().join("img.png");
+        DeltaTest::with_args(&[
+            "--hyperlinks",
+            "--hyperlinks-file-link-format",
+            "file://{path}",
+        ])
+        .with_input(input)
+        .expect_raw_contains(&format!(
+            "\x1b]8;;file://{}\x1b\\img.png\x1b]8;;\x1b\\",
             path.display()
         ));
     }

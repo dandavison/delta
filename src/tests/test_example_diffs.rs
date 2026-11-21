@@ -408,6 +408,41 @@ index 0123456..1234567 100644
     }
 
     #[test]
+    fn test_combined_diff_binary_file_header_names_the_file() {
+        // In a combined (merge) diff, git writes a binary file's marker without paths:
+        // its only path is on the `diff --cc` / `diff --combined` line. Delta must
+        // still name the file.
+        for prefix in ["diff --cc", "diff --combined"] {
+            let input =
+                format!("{prefix} bin.dat\nindex f4af801,17a52e4..43b4462\nBinary files differ\n");
+            DeltaTest::with_args(&["--file-modified-label", "modified:"])
+                .with_input(&input)
+                .expect_contains("\nmodified: bin.dat (binary file)\n");
+        }
+    }
+
+    #[test]
+    fn test_combined_diff_binary_file_added_and_removed_headers_name_the_file() {
+        // A binary file added or deleted by the merge resolution carries the same
+        // pathless `Binary files differ` marker, after a `new file mode` /
+        // `deleted file mode` line.
+        for (input, expected) in [
+            (
+                "diff --cc added.bin\nindex 0000000,0000000..bdc955b\nnew file mode 100644\nBinary files differ\n",
+                "\nadded: added.bin (binary file)\n",
+            ),
+            (
+                "diff --cc gone.bin\nindex bdc955b,bdc955b..0000000\ndeleted file mode 100644,100644\nBinary files differ\n",
+                "\nremoved: gone.bin (binary file)\n",
+            ),
+        ] {
+            DeltaTest::with_args(&[])
+                .with_input(input)
+                .expect_contains(expected);
+        }
+    }
+
+    #[test]
     fn test_binary_files_differ_after_other() {
         let output = DeltaTest::with_args(&["--file-modified-label", "modified:"])
             .with_input(BINARY_FILES_DIFFER_AFTER_OTHER)
