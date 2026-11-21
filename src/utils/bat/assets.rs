@@ -10,8 +10,11 @@ use bat;
 use crate::utils;
 
 pub fn load_highlighting_assets() -> bat::assets::HighlightingAssets {
-    bat::assets::HighlightingAssets::from_cache(utils::bat::dirs::PROJECT_DIRS.cache_dir())
-        .unwrap_or_else(|_| bat::assets::HighlightingAssets::from_binary())
+    // Without a home directory there is no cache dir, so use the assets built into the binary.
+    utils::bat::dirs::PROJECT_DIRS
+        .as_ref()
+        .and_then(|dirs| bat::assets::HighlightingAssets::from_cache(dirs.cache_dir()).ok())
+        .unwrap_or_else(bat::assets::HighlightingAssets::from_binary)
 }
 
 pub fn list_languages() -> std::io::Result<()> {
