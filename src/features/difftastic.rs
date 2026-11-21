@@ -64,11 +64,13 @@ pub mod tests {
         );
 
         assert_eq!(opt.minus_style, "syntax auto");
-        assert_eq!(opt.minus_non_emph_style, "syntax");
         assert_eq!(opt.minus_emph_style, "syntax auto");
         assert_eq!(opt.plus_style, "syntax auto");
-        assert_eq!(opt.plus_non_emph_style, "syntax");
         assert_eq!(opt.plus_emph_style, "syntax auto");
         assert_eq!(opt.zero_style, "syntax");
+        // The lines delta pairs itself keep a background on their unmarked parts, so that a removed
+        // line with nothing marked on it still looks removed.
+        assert_eq!(opt.minus_non_emph_style, "minus-style");
+        assert_eq!(opt.plus_non_emph_style, "plus-style");
     }
 }
