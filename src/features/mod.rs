@@ -39,6 +39,10 @@ pub fn make_builtin_features() -> HashMap<String, BuiltinFeature> {
             diff_so_fancy::make_feature().into_iter().collect(),
         ),
         (
+            "difftastic".to_string(),
+            difftastic::make_feature().into_iter().collect(),
+        ),
+        (
             "hyperlinks".to_string(),
             hyperlinks::make_feature().into_iter().collect(),
         ),
@@ -89,6 +93,7 @@ pub mod color_only;
 pub mod diff_highlight;
 pub mod diff_line_metadata;
 pub mod diff_so_fancy;
+pub mod difftastic;
 pub mod hyperlinks;
 pub mod keep_plus_minus_markers;
 pub mod line_numbers;
