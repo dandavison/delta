@@ -64,6 +64,5 @@ video:
 DIFFTASTIC_DEMO_DIR ?= /tmp/difftastic-demo
 difftastic-demo: build
 	etc/difftastic-demo/make-repo $(DIFFTASTIC_DEMO_DIR)
-	cd $(DIFFTASTIC_DEMO_DIR) && $(CURDIR)/target/release/delta --tui -k ll
 
 .PHONY: bump-gitu build difftastic-demo format lint test unit-test end-to-end-test help-output release shell-completion version benchmark flamegraph chronologer video
