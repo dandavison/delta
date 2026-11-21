@@ -45,6 +45,14 @@ where
 
     let mut plus_index = 0; // plus lines emitted so far
 
+    // Whether the distance between two lines is small enough for them to be inferred to be a
+    // homologous pair.
+    let is_homologous = |distance: f64| {
+        minus_lines.len() == plus_lines.len()
+            && distance <= max_line_distance_for_naively_paired_lines
+            || distance <= max_line_distance
+    };
+
     'minus_lines_loop: for (minus_index, minus_line) in minus_lines.iter().enumerate() {
         let mut considered = 0; // plus lines considered so far as match for minus_line
         for plus_line in &plus_lines[plus_index..] {
@@ -61,10 +69,47 @@ where
                 minus_line,
                 plus_line,
             );
-            if minus_lines.len() == plus_lines.len()
-                && distance <= max_line_distance_for_naively_paired_lines
-                || distance <= max_line_distance
-            {
+            if is_homologous(distance) {
+                // The greedy pairing can claim a plus line that a later minus line matches
+                // much better. For example, if the first minus line is somewhat similar to
+                // the last plus line, it claims it, even though a skipped plus line is
+                // nearly identical to the next minus line (see #2336). In that case the
+                // nearly identical pair would never be considered, since pairing is
+                // monotonic. So, before accepting this pair, check whether a skipped plus
+                // line has a strictly better match among the later minus lines. If so,
+                // reject this candidate and let the later minus line claim the skipped
+                // plus line instead.
+                if considered > 0 {
+                    let mut has_better_future_match = false;
+                    'future_match: for later_minus_line in &minus_lines[minus_index + 1..] {
+                        for skipped_plus_line in &plus_lines[plus_index..plus_index + considered] {
+                            let future_alignment = align::Alignment::new(
+                                tokenize(later_minus_line, tokenization_regex),
+                                tokenize(skipped_plus_line, tokenization_regex),
+                            );
+                            // Only the distance is used here; the annotations are discarded.
+                            // (The distance does not depend on the annotation values.)
+                            let (_, _, future_distance) = annotate(
+                                future_alignment,
+                                noop_deletions[minus_index],
+                                deletion,
+                                noop_insertions[plus_index],
+                                insertion,
+                                later_minus_line,
+                                skipped_plus_line,
+                            );
+                            if future_distance < distance && is_homologous(future_distance) {
+                                has_better_future_match = true;
+                                break 'future_match;
+                            }
+                        }
+                    }
+                    if has_better_future_match {
+                        considered += 1;
+                        continue;
+                    }
+                }
+
                 // minus_line and plus_line are inferred to be a homologous pair.
 
                 // Emit as unpaired the plus lines already considered and rejected
@@ -928,6 +973,55 @@ mod tests {
             plus_lines.iter().map(|s| vec![(PlusNoop, *s)]).collect(),
         );
         assert_edits(minus_lines, plus_lines, expected_edits, max_line_distance)
+    }
+
+    // Regression test for https://github.com/dandavison/delta/issues/2336: the greedy
+    // pairing matched the first deleted line with the last added line, even though the
+    // second deleted line is nearly identical to the first added line. The nearly
+    // identical pair should win, so that the BEFORE -> AFTER change gets word-level
+    // highlighting.
+    #[test]
+    fn test_infer_edits_prefers_nearly_identical_later_pair() {
+        let minus_lines = vec![
+            "    file, err := open(path)",
+            "// Lorem ipsum dolor sit amet, consectetur adipiscing elit. BEFORE",
+        ];
+        let plus_lines = vec![
+            "// Lorem ipsum dolor sit amet, consectetur adipiscing elit. AFTER",
+            "    st, err := stat(path)",
+        ];
+        let (minus_lines, noop_deletions): (Vec<&str>, Vec<EditOperation>) =
+            minus_lines.into_iter().map(|s| (s, MinusNoop)).unzip();
+        let (plus_lines, noop_insertions): (Vec<&str>, Vec<EditOperation>) =
+            plus_lines.into_iter().map(|s| (s, PlusNoop)).unzip();
+        let (annotated_minus_lines, annotated_plus_lines, line_alignment) = infer_edits(
+            minus_lines,
+            plus_lines,
+            noop_deletions,
+            Deletion,
+            noop_insertions,
+            Insertion,
+            &DEFAULT_TOKENIZATION_REGEXP,
+            0.6,
+            0.0,
+        );
+        assert_eq!(
+            line_alignment,
+            vec![(Some(0), None), (Some(1), Some(0)), (None, Some(1))]
+        );
+        // The comment pair is highlighted word by word: BEFORE is deleted, AFTER inserted.
+        let deleted: String = annotated_minus_lines[1]
+            .iter()
+            .filter(|(op, _)| *op == Deletion)
+            .map(|(_, s)| *s)
+            .collect();
+        assert_eq!(deleted, "BEFORE");
+        let inserted: String = annotated_plus_lines[0]
+            .iter()
+            .filter(|(op, _)| *op == Insertion)
+            .map(|(_, s)| *s)
+            .collect();
+        assert_eq!(inserted, "AFTER");
     }
 
     // Assertions for a single pair of lines, considered as a homologous pair. We set
