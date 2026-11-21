@@ -41,12 +41,34 @@ impl Clone for GitConfig {
 /// The repository at or above `dir`, and the git config delta reads there: the repository's, or
 /// outside a repository the user's and the system's.
 pub fn open(dir: Option<&std::path::Path>) -> (Option<git2::Repository>, Option<git2::Config>) {
-    let repo = dir.and_then(|dir| git2::Repository::discover(dir).ok());
+    let repo = dir.and_then(|dir| {
+        git2::Repository::open_ext(
+            dir,
+            git2::RepositoryOpenFlags::FROM_ENV,
+            &[] as &[&std::ffi::OsStr],
+        )
+        .ok()
+    });
     let config = match &repo {
         Some(repo) => repo.config().ok(),
-        None => git2::Config::open_default().ok(),
+        None => open_config_from_env(),
     };
     (repo, config)
+}
+
+/// `Config::open_default` does not read `GIT_CONFIG_GLOBAL` or `GIT_CONFIG_SYSTEM`, and there is no
+/// repository to read them through outside a repository.
+fn open_config_from_env() -> Option<git2::Config> {
+    let mut config = git2::Config::open_default().ok()?;
+    for (env_var, level) in [
+        ("GIT_CONFIG_SYSTEM", git2::ConfigLevel::System),
+        ("GIT_CONFIG_GLOBAL", git2::ConfigLevel::Global),
+    ] {
+        if let Some(path) = std::env::var_os(env_var) {
+            let _ = config.add_file(Path::new(&path), level, true);
+        }
+    }
+    Some(config)
 }
 
 impl GitConfig {
