@@ -1,9 +1,54 @@
 use crate::features::OptionValueFunction;
 
 /// Styles for a diff drawn as difftastic sees it, as delta's TUI draws it while this feature is
-/// enabled.
+/// enabled. Only what changed has a background: a changed token has the emph background, and a
+/// line changed throughout has the line background. The rest of a changed line has none, so that
+/// it looks unchanged. All text is syntax-highlighted.
 pub fn make_feature() -> Vec<(String, OptionValueFunction)> {
-    vec![]
+    builtin_feature!([
+        (
+            "minus-style",
+            String,
+            None,
+            _opt => "syntax auto"
+        ),
+        (
+            "minus-non-emph-style",
+            String,
+            None,
+            _opt => "syntax"
+        ),
+        (
+            "minus-emph-style",
+            String,
+            None,
+            _opt => "syntax auto"
+        ),
+        (
+            "plus-style",
+            String,
+            None,
+            _opt => "syntax auto"
+        ),
+        (
+            "plus-non-emph-style",
+            String,
+            None,
+            _opt => "syntax"
+        ),
+        (
+            "plus-emph-style",
+            String,
+            None,
+            _opt => "syntax auto"
+        ),
+        (
+            "zero-style",
+            String,
+            None,
+            _opt => "syntax"
+        )
+    ])
 }
 
 #[cfg(test)]
