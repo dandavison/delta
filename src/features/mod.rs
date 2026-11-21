@@ -39,6 +39,10 @@ pub fn make_builtin_features() -> HashMap<String, BuiltinFeature> {
             diff_so_fancy::make_feature().into_iter().collect(),
         ),
         (
+            "difftastic".to_string(),
+            difftastic::make_feature().into_iter().collect(),
+        ),
+        (
             "hyperlinks".to_string(),
             hyperlinks::make_feature().into_iter().collect(),
         ),
@@ -89,6 +93,7 @@ pub mod color_only;
 pub mod diff_highlight;
 pub mod diff_line_metadata;
 pub mod diff_so_fancy;
+pub mod difftastic;
 pub mod hyperlinks;
 pub mod keep_plus_minus_markers;
 pub mod line_numbers;
@@ -108,7 +113,10 @@ pub mod tests {
 
     #[test]
     fn test_builtin_features_have_flags_and_these_set_features() {
-        let builtin_features = make_builtin_features();
+        let mut builtin_features = make_builtin_features();
+        // difftastic is enabled only by name, in features: only delta's TUI shows changes as
+        // difftastic sees them, so delta has no flag for it.
+        builtin_features.remove("difftastic");
         let mut args = vec!["delta".to_string()];
         args.extend(builtin_features.keys().map(|s| format!("--{s}")));
         let opt = cli::Opt::from_iter_and_git_config(&DeltaEnv::default(), args, None);
@@ -121,6 +129,13 @@ pub mod tests {
         for feature in builtin_features.keys() {
             assert!(features.contains(feature.as_str()))
         }
+    }
+
+    #[test]
+    fn test_difftastic_is_a_builtin_feature_without_a_flag() {
+        assert!(make_builtin_features().contains_key("difftastic"));
+        let args = ["delta", "--difftastic"].map(String::from);
+        assert!(<cli::Opt as clap::Parser>::try_parse_from(args).is_err());
     }
 
     #[test]

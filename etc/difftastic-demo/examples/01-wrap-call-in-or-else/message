@@ -1,0 +1,13 @@
+Wrap a call in or_else (difftastic README, first screenshot)
+
+difftastic: only `language_override`, `.or_else(||` and the closing `)` are
+added. `guess(path, guess_src)` and `.map(tsp::from_language);` are unchanged,
+although `.map` moved to a new line.
+
+Line diff: one line removed and three lines added.
+
+Shown at:
+https://github.com/Wilfred/difftastic#examples (first screenshot)
+https://difftastic.wilfred.me.uk/ (first screenshot)
+https://difftastic.wilfred.me.uk/introduction.html
+

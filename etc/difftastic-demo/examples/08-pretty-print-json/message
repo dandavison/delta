@@ -1,0 +1,9 @@
+Pretty-print the package file and bump the version
+
+difftastic: only the version string is changed. The reformatting from one line
+to ten is not a change.
+
+Line diff: one line removed and ten added.
+
+Shown at: nowhere on the web; written for this showcase.
+

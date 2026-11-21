@@ -1,0 +1,9 @@
+Separate the steps with blank lines (difftastic manual, novel blank lines)
+
+difftastic: no syntactic changes.
+
+Line diff: two blank lines added.
+
+Shown at:
+https://difftastic.wilfred.me.uk/tricky_cases.html#novel-blank-lines
+

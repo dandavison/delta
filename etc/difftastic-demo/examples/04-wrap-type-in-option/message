@@ -1,0 +1,9 @@
+Make two fields optional (difftastic homepage)
+
+difftastic: only `Option<` and `>` are added, on each of the two lines.
+
+Line diff: two lines removed and two added.
+
+Shown at:
+https://difftastic.wilfred.me.uk/ (Visualise Wrapping Changes, first screenshot)
+

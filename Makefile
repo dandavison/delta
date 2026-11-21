@@ -59,4 +59,10 @@ THEMES ?= light dark
 video:
 	etc/demo/demo record --voice $(VOICE) --themes $(THEMES)
 
-.PHONY: bump-gitu build format lint test unit-test end-to-end-test help-output release shell-completion version benchmark flamegraph chronologer video
+# Opens delta's TUI on a repo of examples comparing git's and difftastic's view of changes; see
+# etc/difftastic-demo/README.md.
+DIFFTASTIC_DEMO_DIR ?= /tmp/difftastic-demo
+difftastic-demo: build
+	etc/difftastic-demo/make-repo $(DIFFTASTIC_DEMO_DIR)
+
+.PHONY: bump-gitu build difftastic-demo format lint test unit-test end-to-end-test help-output release shell-completion version benchmark flamegraph chronologer video

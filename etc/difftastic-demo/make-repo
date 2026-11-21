@@ -1,0 +1,32 @@
+#!/usr/bin/env bash
+# Build a git repo at $1 for comparing git's and difftastic's view of changes in delta --tui.
+# The first commit adds the before version of every example in examples/; each later commit
+# changes one example, and its message says what difftastic shows and what a line diff shows.
+# An existing repo at $1 is replaced.
+#
+# The examples from difftastic's README and homepage use difftastic's demo_files (MIT license).
+set -euo pipefail
+REPO=$1
+HERE=$(cd "$(dirname "$0")" && pwd)
+
+git() { command git -c user.name="difftastic demo" -c user.email=demo@example.com "$@"; }
+
+rm -rf "$REPO"
+mkdir -p "$REPO"
+cd "$REPO"
+git init -q -b main
+
+for example in "$HERE"/examples/*/; do
+    name=$(basename "$example" | sed 's/^[0-9]*-//')
+    mkdir -p "$name"
+    cp "$example"before/* "$name/"
+done
+git add .
+git commit -q -F "$HERE/first-message"
+
+for example in "$HERE"/examples/*/; do
+    name=$(basename "$example" | sed 's/^[0-9]*-//')
+    cp "$example"after/* "$name/"
+    git add "$name"
+    git commit -q -F "$example/message"
+done
