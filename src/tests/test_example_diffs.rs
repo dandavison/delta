@@ -2343,52 +2343,6 @@ src/align.rs:71: impl<'a> Alignment<'a> { │
         "###);
     }
 
-    #[test]
-    fn test_removed_line_with_nothing_removed_from_it_is_drawn_as_removed() {
-        // The new line is the old line plus insertions, so the removed line has no emph sections.
-        // With a minus-non-emph-style that has no background, the removed line must still be
-        // painted in minus-style (with its background); otherwise it looks like an unchanged line.
-        let result = DeltaTest::with_args(&[
-            "--minus-style=syntax auto",
-            "--minus-non-emph-style=syntax",
-            "--minus-emph-style=syntax auto",
-            "--plus-style=syntax auto",
-            "--plus-non-emph-style=syntax",
-            "--plus-emph-style=syntax auto",
-            "--zero-style=syntax",
-        ])
-        .explain_ansi()
-        .with_input(GIT_DIFF_NOTHING_REMOVED_FROM_LINE);
-
-        assert_snapshot!(result.output, @r###"
-        (normal)
-        (blue)a.rs(normal)
-        (blue)───────────────────────────────────────────(normal)
-
-        (blue)───(blue)┐(normal)
-        (blue)1(normal): (blue)│(normal)
-        (blue)───(blue)┘(normal)
-        (203)pub(231) (81)struct(231) (149)C(231) {(normal)
-        (231 52)    (203)pub(231) name: String,(normal)
-        (231)    (203)pub(231) name: (149 28)Option(231)<(149)String(231 28)>(231),(normal)
-        (231)    (203)pub(231) size: (81)u32(231),(normal)
-        (231)}(normal)
-        "###);
-    }
-
-    const GIT_DIFF_NOTHING_REMOVED_FROM_LINE: &str = "\
-diff --git a/a.rs b/a.rs
-index 53f98b6..14d6caa 100644
---- a/a.rs
-+++ b/a.rs
-@@ -1,4 +1,4 @@
- pub struct C {
--    pub name: String,
-+    pub name: Option<String>,
-     pub size: u32,
- }
-";
-
     const GIT_DIFF_OF_WIDTH_81: &str = r#"
 --- a.rs
 +++ b.rs

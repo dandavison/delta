@@ -654,20 +654,7 @@ pub fn paint_minus_and_plus_lines(
         get_syntax_style_sections_for_lines(lines[Plus], highlighter.as_mut(), config),
     );
     let (mut diff_style_sections, line_alignment) = get_diff_style_sections(&lines, config);
-    let mut lines_have_homolog = edits::make_lines_have_homolog(&line_alignment);
-    if !side_by_side {
-        // A removed line that is paired with an added line but has no emph sections had nothing
-        // removed from it. In unified mode, painting it in minus-non-emph-style would make it look
-        // like an unchanged line if that style has no background, so paint it in minus-style.
-        for (line_has_homolog, sections) in lines_have_homolog[Minus]
-            .iter_mut()
-            .zip_eq(&diff_style_sections[Minus])
-        {
-            if !sections.iter().any(|(style, _)| style.is_emph) {
-                *line_has_homolog = false;
-            }
-        }
-    }
+    let lines_have_homolog = edits::make_lines_have_homolog(&line_alignment);
     Painter::update_diff_style_sections(
         lines[Minus],
         &mut diff_style_sections[Minus],
