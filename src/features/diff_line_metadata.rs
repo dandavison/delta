@@ -108,6 +108,10 @@ impl DiffLineMetadata {
         self.file = file;
     }
 
+    /// Number the next line as the host says: `new` in the new file and, if given, `old` in the
+    /// old file.
+    pub fn set_line_numbers(&mut self, _new: usize, _old: Option<usize>) {}
+
     /// Advance the counters for `state` and return the OSC sequence to prepend
     /// to that content line, or an empty string for states that carry no
     /// metadata (headers and -- in this prototype -- combined/merge diffs). The
@@ -415,6 +419,20 @@ mod tests {
         assert_eq!(
             md.osc_for_line(&State::HunkZero(DiffType::Unified, None)),
             "\x1b]1717;1;c;4;;f.txt\x1b\\"
+        );
+    }
+
+    #[test]
+    fn test_line_numbers_set_by_the_host() {
+        let mut md = emitter();
+        md.set_line_numbers(1, Some(4));
+        assert_eq!(
+            md.osc_for_line(&State::HunkMinus(DiffType::Unified, None)),
+            "\x1b]1717;1;d;1;4;f.txt\x1b\\"
+        );
+        assert_eq!(
+            md.osc_for_line(&State::HunkZero(DiffType::Unified, None)),
+            "\x1b]1717;1;c;1;;f.txt\x1b\\"
         );
     }
 

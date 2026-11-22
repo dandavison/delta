@@ -848,6 +848,32 @@ pub mod tests {
             );
     }
 
+    /// Where the host does not draw some old lines, the line numbers it gives the next line, in a
+    /// record before it, keep the hunk one hunk, drawn side by side, numbered as the host says.
+    #[test]
+    fn test_side_by_side_hunk_with_line_numbers_from_the_host() {
+        DeltaTest::with_args(&["--side-by-side=hunk", "--width", "40"])
+            .with_input(OLD_LINES_NOT_DRAWN_DIFF)
+            .expect_after_skip(
+                1,
+                r#"
+            #indent_mark
+            a.txt
+            ────────────────────────────────────────
+            
+            ───┐
+            1: │
+            ───┘
+            │  1 │a             │  1 │a
+            │  2 │b             │    │
+            │    │              │  2 │B
+            │  6 │c             │  3 │c
+            │  8 │d             │    │
+            │    │              │  4 │D
+            │  9 │e             │  5 │e"#,
+            );
+    }
+
     #[test]
     fn test_side_by_side_hunk_switches_layout_after_buffered_lines() {
         DeltaTest::with_args(&["--side-by-side=hunk", "--width", "40"])
@@ -965,6 +991,22 @@ index 0000000..3333333
 
     // As produced by git diff -U0: the first hunk ends with buffered minus and plus lines, and
     // the hunk lengths of 0 decide the layout of the next hunks without reading ahead.
+    /// Old lines 3-5 and 7 are not drawn.
+    const OLD_LINES_NOT_DRAWN_DIFF: &str = "\
+diff --git a/a.txt b/a.txt
+index 1111111..2222222 100644
+--- a/a.txt
++++ b/a.txt
+@@ -1,9 +1,5 @@
+ a
+-b
++B
+\x1b]1717;1;c;3;6;\x1b\\ c
+\x1b]1717;1;d;4;8;\x1b\\-d
++D
+ e
+";
+
     const ZERO_CONTEXT_DIFF: &str = "\
 diff --git a/a.txt b/a.txt
 index 1111111..2222222 100644
