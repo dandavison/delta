@@ -6,7 +6,9 @@ use std::sync::Arc;
 use std::{backtrace::Backtrace, env, panic};
 
 use ::gitu::cli::Args;
-use ::gitu::config::{self, ColorMode, Config, EnabledFeatures, RendererGitConfig};
+use ::gitu::config::{
+    self, ColorMode, Config, EnabledFeatures, RendererGitConfig, RendererOptions,
+};
 use ::gitu::{error::Error, term, Res};
 use clap::{CommandFactory, FromArgMatches};
 
@@ -131,8 +133,10 @@ fn use_delta_as_renderer(config: &mut Config, delta: &str) {
 
 /// Tell gitu what delta does with the user's config: the mode it renders in, so
 /// gitu can offer the themes for that mode first, how to ask which features the
-/// user's config enables, so gitu can show them as on and turn them off, and how
-/// delta opens git config, so that gitu offers themes delta can find.
+/// user's config enables, so gitu can show them as on and turn them off, how
+/// delta opens git config, so that gitu offers themes delta can find, and how to
+/// ask what the user's config sets options gitu draws with to, such as
+/// `comment-style`, so they are set as delta's own are.
 fn tell_gitu_about_delta(config: &mut Config, opt: &crate::cli::Opt) {
     let renderer = &mut config.general.diff_renderer;
     renderer.color_mode = Some(color_mode(opt));
@@ -144,6 +148,17 @@ fn tell_gitu_about_delta(config: &mut Config, opt: &crate::cli::Opt) {
         enabled_features(&env, GitConfig::try_create(&env))
     });
     renderer.git_config = RendererGitConfig::new(|dir| crate::git_config::open(Some(dir)).1);
+    renderer.options = RendererOptions::new(|dir, features, names| {
+        let env = crate::env::DeltaEnv::init();
+        let env = crate::env::DeltaEnv {
+            current_dir: Some(dir.to_path_buf()),
+            // gitu sets DELTA_FEATURES for the deltas it runs only when it turns features on
+            // or off; otherwise they take it from the environment, as this does.
+            features: features.map(String::from).or(env.features),
+            ..env
+        };
+        option_values(&env, GitConfig::try_create(&env), names)
+    });
 }
 
 /// The features that `git_config`, as it is now, enables, by delta's name: those it names, not
@@ -177,11 +192,26 @@ fn enabled_features(env: &crate::env::DeltaEnv, git_config: Option<GitConfig>) -
 /// one not set. The names are of options gitu draws with and delta does not use, such as
 /// `comment-style`; delta reads nothing but these values for them.
 fn option_values(
-    _env: &crate::env::DeltaEnv,
-    _git_config: Option<GitConfig>,
+    env: &crate::env::DeltaEnv,
+    git_config: Option<GitConfig>,
     names: &[&str],
 ) -> Vec<Option<String>> {
-    vec![None; names.len()]
+    // gitu has the terminal, so delta must not ask it its background.
+    let args = ["delta", "--detect-dark-light=never"];
+    let mut opt = crate::cli::Opt::from_iter_and_git_config(env, args, git_config);
+    let mut git_config = opt.git_config.take();
+    let builtin_features = crate::features::make_builtin_features();
+    names
+        .iter()
+        .map(|name| {
+            crate::options::get::get_option_value::<String>(
+                name,
+                &builtin_features,
+                &opt,
+                &mut git_config,
+            )
+        })
+        .collect()
 }
 
 /// delta's options as `git_config` and the terminal settle them. They are settled
