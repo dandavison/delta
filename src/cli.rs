@@ -983,6 +983,15 @@ pub struct Opt {
     /// The TUI is experimental: config and behavior may change backwards-incompatibly.
     pub tui: bool,
 
+    #[cfg(feature = "gitu")]
+    #[arg(long = "agent-instructions")]
+    /// Print instructions for AI agents on using delta.
+    ///
+    /// They are a skill: markdown with YAML front matter, which can be saved as a SKILL.md. For
+    /// now they cover reviewing code with a person in delta --tui. Same as
+    /// `delta --tui --agent-instructions`.
+    pub agent_instructions: bool,
+
     #[arg(
         long = "whitespace-error-style",
         default_value = "auto auto",
@@ -1538,6 +1547,7 @@ lazy_static! {
         "show-config",
         "show-syntax-themes",
         "tui",
+        "agent-instructions",
     ]
     .into_iter()
     .collect();
@@ -1552,5 +1562,12 @@ mod tests {
     fn help_lists_tui() {
         let help = Opt::command().render_help().to_string();
         assert!(help.contains("--tui"), "{}", help);
+    }
+
+    #[cfg(feature = "gitu")]
+    #[test]
+    fn help_lists_agent_instructions() {
+        let help = Opt::command().render_help().to_string();
+        assert!(help.contains("--agent-instructions"), "{}", help);
     }
 }

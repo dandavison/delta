@@ -20,6 +20,14 @@ fn test_tui_help_uses_tui() {
     assert!(help.contains("Usage: delta --tui"), "{}", help);
 }
 
+#[test]
+fn test_agent_instructions_are_the_tuis() {
+    let text = String::from_utf8(delta(&["--agent-instructions"]).stdout).unwrap();
+    assert!(text.starts_with("---\nname: "), "{}", text);
+    let tui = String::from_utf8(delta(&["--tui", "--agent-instructions"]).stdout).unwrap();
+    assert_eq!(text, tui);
+}
+
 fn delta(args: &[&str]) -> Output {
     Command::new(env!("CARGO_BIN_EXE_delta"))
         .args(args)

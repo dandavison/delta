@@ -116,6 +116,13 @@ pub fn run_app(
     }
     let opt = opt.unwrap_or_else(|| delta_unreachable("Opt is set"));
 
+    #[cfg(feature = "gitu")]
+    if opt.agent_instructions {
+        return Ok(subcommands::gitu::main([OsString::from(
+            "--agent-instructions",
+        )]));
+    }
+
     let subcommand_result = if let Some(shell) = opt.generate_completion {
         Some(subcommands::generate_completion::generate_completion_file(
             shell,
