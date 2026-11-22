@@ -168,6 +168,8 @@ pub fn run_app(
     let pager_cfg = (&config).into();
     let paging_mode = if capture_output.is_some() {
         PagingMode::Capture
+    } else if config.paging_mode != PagingMode::Always && !io::stdout().is_terminal() {
+        PagingMode::Never
     } else {
         config.paging_mode
     };
@@ -321,3 +323,4 @@ pub fn run_app(
 
     // `output_type` drop impl runs here
 }
+
