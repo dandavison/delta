@@ -51,7 +51,7 @@ git config --global merge.conflictStyle zdiff3
 Alternatively, delta can be used as a TUI based on [gitu](https://github.com/altsem/gitu), with many
 keybindings for exploring `git diff`, `git show`, and `git log` views, the ability to stage directly
 from delta-rendered diffs (including side-by-side), reorder and fixup commits in your native log
-view, and all of gitu's other git operations (commit, push, pull, frebase, etc). This is a much more
+view, and all of gitu's other git operations (commit, push, pull, rebase, etc). This is a much more
 powerful way to use delta:
 
 ```gitconfig
