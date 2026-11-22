@@ -172,6 +172,18 @@ fn enabled_features(env: &crate::env::DeltaEnv, git_config: Option<GitConfig>) -
         .collect()
 }
 
+/// What `git_config` sets each of `names` to, as delta takes its own options from git config
+/// and the features in force, with `env`'s features (`DELTA_FEATURES`) in force too: `None` for
+/// one not set. The names are of options gitu draws with and delta does not use, such as
+/// `comment-style`; delta reads nothing but these values for them.
+fn option_values(
+    _env: &crate::env::DeltaEnv,
+    _git_config: Option<GitConfig>,
+    names: &[&str],
+) -> Vec<Option<String>> {
+    vec![None; names.len()]
+}
+
 /// delta's options as `git_config` and the terminal settle them. They are settled
 /// before gitu takes over the terminal, so the terminal can still be asked.
 fn delta_options(env: &crate::env::DeltaEnv, git_config: Option<GitConfig>) -> crate::cli::Opt {
@@ -437,6 +449,65 @@ mod tests {
         let enabled = enabled_features(&env, Some(git_config));
         fs::remove_file(path).unwrap();
         enabled
+    }
+
+    /// What gitu is told `git_config` sets `names` to, with `features` in force as
+    /// `DELTA_FEATURES` gives them.
+    fn values_with(
+        git_config: &str,
+        features: Option<&str>,
+        names: &[&str],
+    ) -> Vec<Option<String>> {
+        let path = std::env::temp_dir().join(format!(
+            "delta-gitu-test-values-{}-{:?}.gitconfig",
+            std::process::id(),
+            std::thread::current().id()
+        ));
+        let env = crate::env::DeltaEnv {
+            features: features.map(String::from),
+            ..crate::env::DeltaEnv::default()
+        };
+        let git_config = crate::tests::integration_test_utils::make_git_config(
+            &env,
+            git_config.as_bytes(),
+            path.to_str().unwrap(),
+            false,
+        );
+        let values = option_values(&env, Some(git_config), names);
+        fs::remove_file(path).unwrap();
+        values
+    }
+
+    #[test]
+    fn test_gitu_is_told_an_option_set_in_the_delta_section() {
+        assert_eq!(
+            values_with(
+                "[delta]\n\tcomment-style = red bold\n",
+                None,
+                &["comment-style", "comment-author-style"],
+            ),
+            [Some("red bold".to_owned()), None]
+        );
+    }
+
+    #[test]
+    fn test_gitu_is_told_an_option_set_by_a_feature_git_config_enables() {
+        let git_config =
+            "[delta]\n\tfeatures = my-theme\n[delta \"my-theme\"]\n\tcomment-style = red\n";
+        assert_eq!(
+            values_with(git_config, None, &["comment-style"]),
+            [Some("red".to_owned())]
+        );
+    }
+
+    #[test]
+    fn test_gitu_is_told_an_option_set_by_a_feature_it_turns_on() {
+        let git_config = "[delta \"my-theme\"]\n\tcomment-style = red\n";
+        assert_eq!(values_with(git_config, None, &["comment-style"]), [None]);
+        assert_eq!(
+            values_with(git_config, Some("+my-theme"), &["comment-style"]),
+            [Some("red".to_owned())]
+        );
     }
 
     fn configure(toml: &str) -> Config {
