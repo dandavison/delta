@@ -168,6 +168,21 @@ impl<'p> Painter<'p> {
         };
     }
 
+    /// Number the next line as the host says, after painting the lines buffered so far: `new` in
+    /// the new file and, if given, `old` in the old file.
+    pub fn set_line_numbers(&mut self, new: usize, old: Option<usize>) {
+        self.paint_buffered_minus_and_plus_lines();
+        if let Some(data) = &mut self.line_numbers_data {
+            data.line_number[side_by_side::Right] = new;
+            if let Some(old) = old {
+                data.line_number[side_by_side::Left] = old;
+            }
+        }
+        if let Some(metadata) = &mut self.diff_line_metadata {
+            metadata.set_line_numbers(new, old);
+        }
+    }
+
     pub fn paint_buffered_minus_and_plus_lines(&mut self) {
         if self.minus_lines.is_empty() && self.plus_lines.is_empty() {
             return;

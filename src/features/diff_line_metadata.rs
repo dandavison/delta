@@ -58,6 +58,26 @@ fn handshake_for_version(version: u32) -> String {
     format!("{OSC};{version}{ST}")
 }
 
+/// If `raw_line` starts with a per-line record, remove the record and return the new-file line
+/// number and, if it has one, the old-file line number it gives the line. A host sends one when it
+/// shows its own view of a change in a unified diff, where line numbers that do not follow on from
+/// the previous line's could otherwise be expressed only by starting a new hunk. The record's type
+/// and file are not used: the line's marker gives its type. A line that does not start with a
+/// well-formed record is left as it is.
+pub fn strip_line_record(raw_line: &mut String) -> Option<(usize, Option<usize>)> {
+    let prefix = format!("{OSC};{SUPPORTED_VERSION};");
+    let (record, after) = raw_line.strip_prefix(&prefix)?.split_once(ST)?;
+    let mut fields = record.splitn(4, ';').skip(1);
+    let new = fields.next()?.parse().ok()?;
+    let old = match fields.next()? {
+        "" => None,
+        old => Some(old.parse().ok()?),
+    };
+    let record_len = raw_line.len() - after.len();
+    raw_line.drain(..record_len);
+    Some((new, old))
+}
+
 /// Tracks the current old-/new-file line numbers within a hunk and formats the
 /// per-line OSC sequence. One instance is held by the `Painter` (when emission
 /// is negotiated) and re-seeded at every hunk header.
@@ -110,7 +130,12 @@ impl DiffLineMetadata {
 
     /// Number the next line as the host says: `new` in the new file and, if given, `old` in the
     /// old file.
-    pub fn set_line_numbers(&mut self, _new: usize, _old: Option<usize>) {}
+    pub fn set_line_numbers(&mut self, new: usize, old: Option<usize>) {
+        self.new_line = new;
+        if let Some(old) = old {
+            self.old_line = old;
+        }
+    }
 
     /// Advance the counters for `state` and return the OSC sequence to prepend
     /// to that content line, or an empty string for states that carry no

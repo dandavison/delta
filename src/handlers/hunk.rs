@@ -5,6 +5,7 @@ use lazy_static::lazy_static;
 use crate::cli;
 use crate::config::{delta_unreachable, Config};
 use crate::delta::{DiffType, InMergeConflict, MergeParents, State, StateMachine};
+use crate::features::diff_line_metadata;
 use crate::paint::{prepare, prepare_raw_line};
 use crate::style;
 use crate::utils::process::{self, CallingProcess};
@@ -77,6 +78,10 @@ impl StateMachine<'_> {
         }
         if let State::HunkHeader(_, parsed_hunk_header, line, raw_line) = &self.state.clone() {
             self.emit_hunk_header_line(parsed_hunk_header, line, raw_line)?;
+        }
+        if let Some((new, old)) = diff_line_metadata::strip_line_record(&mut self.raw_line) {
+            // Removed and added lines on either side of the record are paired separately.
+            self.painter.set_line_numbers(new, old);
         }
         self.state = match new_line_state(&self.line, &self.raw_line, &self.state, self.config) {
             Some(HunkMinus(diff_type, raw_line)) => {
