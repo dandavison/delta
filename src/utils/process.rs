@@ -245,7 +245,11 @@ fn parse_command_line<'a>(args: impl Iterator<Item = &'a str>) -> CommandLine {
         } else if s == "--" {
             after_double_dash = true;
         } else if s.starts_with("--") {
-            long_options.insert(s.split('=').next().unwrap().to_owned());
+            let option = s.split('=').next().unwrap();
+            if option == "--no-heading" {
+                long_options.remove("--heading");
+            }
+            long_options.insert(option.to_owned());
         } else if let Some(suffix) = s.strip_prefix('-') {
             short_options.extend(suffix.chars().map(|c| format!("-{c}")));
         } else {
