@@ -3,8 +3,9 @@
 `delta --tui` is an interactive git client and pager whose diffs are rendered by delta. You can
 stage, fold and navigate delta's output whatever its layout: side-by-side, line numbers etc. do not
 prevent staging individual lines. It is based on [gitu](https://github.com/altsem/gitu) by altsem, a
-git client inspired by Magit, and is embedded via a [fork](https://github.com/dandavison/gitu). It
-is experimental. `--gitu` is an alias of `--tui`.
+git client inspired by Magit, and is embedded via a [fork](https://github.com/dandavison/gitu).
+
+**The TUI is experimental: config and behavior may change backwards-incompatibly.**
 
 See the [README TUI section](https://github.com/dandavison/delta/#tui-mode) for videos.
 

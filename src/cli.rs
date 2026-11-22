@@ -980,6 +980,7 @@ pub struct Opt {
     /// See <https://dandavison.github.io/delta/tui.html>.
     /// Must be the first argument (see `delta --tui --help` for possible subsequent arguments).
     /// To use it as git's pager, set e.g. pager.diff to `delta --tui`.
+    /// The TUI is experimental: config and behavior may change backwards-incompatibly.
     pub tui: bool,
 
     #[arg(
