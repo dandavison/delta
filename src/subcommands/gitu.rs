@@ -47,6 +47,13 @@ pub fn main(args: impl IntoIterator<Item = OsString>) -> i32 {
     }
 }
 
+/// Whether this delta-gitu has `--agent-instructions`.
+pub fn has_agent_instructions() -> bool {
+    Args::command()
+        .get_arguments()
+        .any(|arg| arg.get_long() == Some("agent-instructions"))
+}
+
 fn parse(args: impl IntoIterator<Item = OsString>) -> Result<Args, clap::Error> {
     let matches = Args::command()
         .name("delta --tui")

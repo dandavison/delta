@@ -118,6 +118,12 @@ pub fn run_app(
 
     #[cfg(feature = "gitu")]
     if opt.agent_instructions {
+        // FIXME: revert this. delta-gitu 0.1.27 does not have --agent-instructions, so until delta
+        // depends on one that does, delta --agent-instructions prints nothing and exits 0 instead
+        // of failing.
+        if !subcommands::gitu::has_agent_instructions() {
+            return Ok(0);
+        }
         return Ok(subcommands::gitu::main([OsString::from(
             "--agent-instructions",
         )]));
