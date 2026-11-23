@@ -388,7 +388,13 @@ A setting's name is its name in the TOML file with dashes for underscores and do
 
 A list is the key given once per item, and takes the items of `[delta]` and of every feature in force. Commands, views and feature keys are lists whose items start with a name, as in `command = open-pr gh pr view --web {commit}`; of two with the same name, the one in `[delta]`, or else in the later feature, wins. A binding is `bind = <menu>.<action> <key>`, one key per item, and the keys given replace the action's default ones. A boolean or number is read as git reads one (`yes`, `4m`). A style is written as delta writes one: attributes, then a foreground and a background color.
 
-A `[delta-tui]` section in git config is an error: its settings go in `[delta]`.
+Earlier versions of the TUI read its settings from git config's `[delta-tui]` sections. A `[delta-tui]` section in git config is now an error, and the TUI does not start. To convert one, run
+
+```sh
+delta --tui --migrate-old-config
+```
+
+which prints the settings in your `[delta-tui]` sections as they go in `[delta]`, with the file each is in, for you to replace them with. This option is temporary: it will be removed in a future release.
 
 Values below are the defaults except where marked as an example.
 
