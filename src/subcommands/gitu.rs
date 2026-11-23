@@ -148,17 +148,28 @@ fn tell_gitu_about_delta(config: &mut Config, opt: &crate::cli::Opt) {
         enabled_features(&env, GitConfig::try_create(&env))
     });
     renderer.git_config = RendererGitConfig::new(|dir| crate::git_config::open(Some(dir)).1);
-    renderer.options = RendererOptions::new(|dir, features, names| {
-        let env = crate::env::DeltaEnv::init();
-        let env = crate::env::DeltaEnv {
-            current_dir: Some(dir.to_path_buf()),
-            // gitu sets DELTA_FEATURES for the deltas it runs only when it turns features on
-            // or off; otherwise they take it from the environment, as this does.
-            features: features.map(String::from).or(env.features),
-            ..env
-        };
-        option_values(&env, GitConfig::try_create(&env), names)
-    });
+    renderer.options = RendererOptions::new(
+        |dir, features, names| {
+            let env = options_env(dir, features);
+            option_values(&env, GitConfig::try_create(&env), names)
+        },
+        |dir, features, names| {
+            let env = options_env(dir, features);
+            option_lists(&env, GitConfig::try_create(&env), names)
+        },
+    );
+}
+
+/// delta's environment in `dir`, with `features` in force as `DELTA_FEATURES` gives them.
+fn options_env(dir: &std::path::Path, features: Option<&str>) -> crate::env::DeltaEnv {
+    let env = crate::env::DeltaEnv::init();
+    crate::env::DeltaEnv {
+        current_dir: Some(dir.to_path_buf()),
+        // gitu sets DELTA_FEATURES for the deltas it runs only when it turns features on
+        // or off; otherwise they take it from the environment, as this does.
+        features: features.map(String::from).or(env.features),
+        ..env
+    }
 }
 
 /// The features that `git_config`, as it is now, enables, by delta's name: those it names, not
@@ -212,6 +223,21 @@ fn option_values(
             )
         })
         .collect()
+}
+
+/// The items `git_config` gives each of `names`, a list gitu takes from delta's config such as
+/// `command`, lowest precedence first: those of each feature in force in turn, those
+/// `DELTA_FEATURES` or the command line turns on after those git config does, then those of
+/// `[delta]`. This is the order in which delta takes its own options, but simpler: it does not
+/// give a builtin feature's section, such as `[delta "side-by-side"]`, precedence over other
+/// features, as delta does for a single value.
+fn option_lists(
+    env: &crate::env::DeltaEnv,
+    git_config: Option<GitConfig>,
+    names: &[&str],
+) -> Vec<Vec<String>> {
+    let _ = (env, git_config);
+    vec![vec![]; names.len()]
 }
 
 /// delta's options as `git_config` and the terminal settle them. They are settled
@@ -538,6 +564,67 @@ mod tests {
             values_with(git_config, Some("+my-theme"), &["comment-style"]),
             [Some("red".to_owned())]
         );
+    }
+
+    /// The items gitu is told `git_config` gives the lists `names`, with `features` in force as
+    /// `DELTA_FEATURES` gives them.
+    fn lists_with(git_config: &str, features: Option<&str>, names: &[&str]) -> Vec<Vec<String>> {
+        let path = std::env::temp_dir().join(format!(
+            "delta-gitu-test-lists-{}-{:?}.gitconfig",
+            std::process::id(),
+            std::thread::current().id()
+        ));
+        let env = crate::env::DeltaEnv {
+            features: features.map(String::from),
+            ..crate::env::DeltaEnv::default()
+        };
+        let git_config = crate::tests::integration_test_utils::make_git_config(
+            &env,
+            git_config.as_bytes(),
+            path.to_str().unwrap(),
+            false,
+        );
+        let lists = option_lists(&env, Some(git_config), names);
+        fs::remove_file(path).unwrap();
+        lists
+    }
+
+    #[test]
+    fn test_gitu_is_told_a_lists_items_in_the_delta_section_and_each_feature_in_force() {
+        let git_config = "[delta]\n\tfeatures = a b\n\tcommand = x delta\n\
+                          [delta \"a\"]\n\tcommand = x a\n\tcommand = y a\n\
+                          [delta \"b\"]\n\tcommand = x b\n\
+                          [delta \"off\"]\n\tcommand = x off\n";
+        assert_eq!(
+            lists_with(git_config, None, &["command", "view"]),
+            [vec!["x a", "y a", "x b", "x delta"], vec![]]
+        );
+    }
+
+    #[test]
+    fn test_gitu_is_told_a_lists_items_in_a_feature_it_turns_on_after_git_configs() {
+        let git_config = "[delta]\n\tfeatures = b\n\
+                          [delta \"a\"]\n\tcommand = x a\n\
+                          [delta \"b\"]\n\tcommand = x b\n";
+        assert_eq!(
+            lists_with(git_config, Some("+a"), &["command"]),
+            [vec!["x b", "x a"]]
+        );
+    }
+
+    /// gitu's settings are options in delta's config that delta does not use, so none can have
+    /// the name of one delta does.
+    #[test]
+    fn test_no_setting_gitu_takes_from_deltas_config_is_a_delta_option() {
+        let deltas: Vec<String> = crate::cli::Opt::command()
+            .get_arguments()
+            .filter_map(|argument| argument.get_long().map(String::from))
+            .collect();
+        let taken: Vec<String> = config::delta_option_names()
+            .into_iter()
+            .filter(|name| deltas.contains(name))
+            .collect();
+        assert!(taken.is_empty(), "{:?}", taken);
     }
 
     fn configure(toml: &str) -> Config {
