@@ -78,7 +78,16 @@ See [below](#tui-mode) for videos.
     commit-format = tformat:%n%n▸ %h %C(blue)%an %C(blue)%ar%C(auto)%d%C(reset)%n%n    %C(green)%s%C(auto)
     commit-format-full = tformat:%n%n▸ %h %C(blue)%an %C(blue)%ar%C(auto)%d%C(reset)%n%n%w(0,4,4)%C(green)%s%C(reset)%n%+b
 
-[delta-tui]
+[delta]
+    # Must match the first line of the [pretty] formats above, so that each
+    # commit is one cursor stop.
+    commit-regex = ^(▸|commit )
+    commit-decoration-style = blue ol
+    # Styles go in a feature rather than here, so that themes (`T`) can
+    # override them.
+    features = my-theme
+
+    # The TUI's own settings. delta itself does not use them.
     # Arguments of the git log and git show that the TUI runs itself
     # (`l l`, `right` on a commit).
     log-args = --stat
@@ -89,19 +98,8 @@ See [below](#tui-mode) for videos.
     file-header = stat
     # Open every patch with its files folded.
     start-folded = true
-
-[delta-tui "general.views"]
-    # use H to bind features, views, and commands to hotkeys
-    ignore-whitespace = {command} -w
-
-[delta]
-    # Must match the first line of the [pretty] formats above, so that each
-    # commit is one cursor stop.
-    commit-regex = ^(▸|commit )
-    commit-decoration-style = blue ol
-    # Styles go in a feature rather than here, so that themes (`T`) can
-    # override them.
-    features = my-theme
+    # A view of your own; use H to bind features, views, and commands to keys.
+    view = ignore-whitespace {command} -w
 
 [delta "my-theme"]
     file-decoration-style = magenta ul

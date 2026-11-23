@@ -1,7 +1,7 @@
 Hide
 # Unstaged changes: the OSC-1717 commit's changes to src, over the commit before it. Recent
 # commits are shown so that the commit and the amend can be seen.
-Type "git checkout -q -b osc-1717 42a3e1a~ && git checkout 42a3e1a -- src && git reset -q -N && git config delta-tui.recent-commits-limit 3 && clear" Enter
+Type "git checkout -q -b osc-1717 42a3e1a~ && git checkout 42a3e1a -- src && git reset -q -N && git config delta.recent-commits-limit 3 && clear" Enter
 Sleep 500ms
 Show
 
@@ -53,7 +53,7 @@ Sleep 3s
 Announce@3s "To use delta's TUI as shown in this video put the following in git config:"
 Hide
 Type "q" Sleep 1s
-Type "clear; show_config \"# For the recent commits this video shows:\" \"[delta-tui]\" \"    recent-commits-limit = 3\"" Enter
+Type "clear; show_config \"# For the recent commits this video shows:\" \"[delta]\" \"    recent-commits-limit = 3\"" Enter
 Sleep 1s
 Show
 Sleep 8s

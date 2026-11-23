@@ -1,6 +1,6 @@
 # The git config of every recording, with the themes of this directory's themes.gitconfig, and
-# light.gitconfig or dark.gitconfig. The [pretty] and [delta-tui] sections are the owner's
-# delta-tui.gitconfig, and [delta] the owner's delta settings.
+# light.gitconfig or dark.gitconfig. The [pretty] section and the second [delta] section are the
+# owner's TUI settings, and the first [delta] section the owner's delta settings.
 [user]
     name = Dan Davison
     email = dandavison7@gmail.com
@@ -47,8 +47,8 @@ commit-format-full = tformat:%n%n▸ %h %C(blue)%an %C(blue)%ar%C(auto)%d%C(rese
 
 
 # delta --tui (the TUI). A key is its gitu config path, with dashes for
-# underscores; no subsection means "general". A list is one line per item.
-[delta-tui]
+# underscores and dots, less "general". A list is one line per item.
+[delta]
     collapsed-sections = branch_status
     recent-commits-limit = 0
     stash-list-limit = 0
@@ -60,7 +60,5 @@ commit-format-full = tformat:%n%n▸ %h %C(blue)%an %C(blue)%ar%C(auto)%d%C(rese
     show-args = --pretty=commit-format-full
     file-header = stat
     start-folded = true
-
-# delta's diff-so-fancy look, offered by theme mode after the themes.
-[delta-tui "general.diff-renderer"]
-    builtin-themes = diff-so-fancy
+    # delta's diff-so-fancy look, offered by theme mode after the themes.
+    diff-renderer-builtin-themes = diff-so-fancy

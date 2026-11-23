@@ -17,8 +17,8 @@ show_config() {
     fi
     {
         awk -v file_style="$file_style" '
-            /^\[/ { skip = ($0 ~ /^\[(user|core)\]/ || $0 ~ /^\[delta-tui "general\.diff-renderer"\]/) }
-            skip || /^ *#/ { next }
+            /^\[/ { skip = ($0 ~ /^\[(user|core)\]/) }
+            skip || /^ *#/ || /diff-renderer-builtin-themes/ { next }
             file_style != "" && /^ +file-style = / { print "    file-style = \"" file_style "\""; next }
             { print }
         ' "$demo/demo.gitconfig"

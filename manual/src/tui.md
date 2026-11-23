@@ -40,10 +40,10 @@ Other basics: `j` / `k` move by line and `ctrl+down` / `ctrl+up` by file, hunk o
 
 ## Configuration
 
-The TUI is configured in git config, in the `[delta-tui]` section and its subsections, beside your `[delta]` section. For example, to open every diff as a list of its files, one row each, which `tab` or `right` unfolds:
+The TUI is configured in git config, beside delta's own options: in your `[delta]` section, or in a `[delta "feature"]` section of your own. For example, to open every diff as a list of its files, one row each, which `tab` or `right` unfolds:
 
 ```gitconfig
-[delta-tui]
+[delta]
     # Head each file with its `git diff --stat` row.
     file-header = stat
     # Open every patch with its files folded.
@@ -68,7 +68,16 @@ A fuller config, with ideas for making the TUI look nice. Each part is explained
     commit-format = tformat:%n%n▸ %h %C(blue)%an %C(blue)%ar%C(auto)%d%C(reset)%n%n    %C(green)%s%C(auto)
     commit-format-full = tformat:%n%n▸ %h %C(blue)%an %C(blue)%ar%C(auto)%d%C(reset)%n%n%w(0,4,4)%C(green)%s%C(reset)%n%+b
 
-[delta-tui]
+[delta]
+    # Must match the first line of the [pretty] formats above, so that each
+    # commit is one cursor stop.
+    commit-regex = ^(▸|commit )
+    commit-decoration-style = blue ol
+    # Styles go in a feature rather than here, so that themes (`T`) can
+    # override them.
+    features = my-theme
+
+    # The TUI's own settings. delta itself does not use them.
     # Arguments of the git log and git show that the TUI runs itself
     # (`l l`, `right` on a commit).
     log-args = --stat
@@ -79,19 +88,8 @@ A fuller config, with ideas for making the TUI look nice. Each part is explained
     file-header = stat
     # Open every patch with its files folded.
     start-folded = true
-
-[delta-tui "general.views"]
-    # use H to bind features, views, and commands to hotkeys
-    ignore-whitespace = {command} -w
-
-[delta]
-    # Must match the first line of the [pretty] formats above, so that each
-    # commit is one cursor stop.
-    commit-regex = ^(▸|commit )
-    commit-decoration-style = blue ol
-    # Styles go in a feature rather than here, so that themes (`T`) can
-    # override them.
-    features = my-theme
+    # A view of your own; use H to bind features, views, and commands to keys.
+    view = ignore-whitespace {command} -w
 
 [delta "my-theme"]
     file-decoration-style = magenta ul
@@ -107,7 +105,7 @@ A fuller config, with ideas for making the TUI look nice. Each part is explained
 
 ## Keys
 
-Everything the TUI does. `h` or `?` shows what is available for the row under the cursor. A binding is rebound in the TUI config by the name in the last column, e.g. `hide-file = ctrl+k` in `[delta-tui "bindings.root"]`.
+Everything the TUI does. `h` or `?` shows what is available for the row under the cursor. A binding is rebound in the TUI config by the name in the last column, e.g. `bind = root.hide-file ctrl+k` in `[delta]`.
 
 ### Moving and searching
 
@@ -255,9 +253,10 @@ Movement and folding in the list are bound separately from the main view, as `re
 ```gitconfig
 # These are the defaults. Keys set here replace all of them. A key that is
 # already bound is refused.
-[delta-tui "general.diff-renderer.feature-keys"]
-    side-by-side = S
-    line-numbers = L
+[delta]
+    feature-key = side-by-side S
+    feature-key = line-numbers L
+    feature-key = difftastic *
 ```
 
 ## Color themes
@@ -279,10 +278,10 @@ A theme cannot change a setting made in `[delta]` itself, since those win over e
 delta's builtin features can be offered as themes too:
 
 ```gitconfig
-[delta-tui "general.diff-renderer"]
-    builtin-themes = diff-so-fancy
+[delta]
+    diff-renderer-builtin-themes = diff-so-fancy
     # Set by theme mode; or set it yourself.
-    theme = my-theme
+    diff-renderer-theme = my-theme
 ```
 
 ## Shell commands
@@ -290,23 +289,23 @@ delta's builtin features can be offered as themes too:
 Shell commands of your own can be run from a key, with the commit, file or branch under the cursor:
 
 ```gitconfig
-[delta-tui "general.commands"]
-    open-pr = gh pr view --web {commit}
-    test-file = cargo test -- {file}
+[delta]
+    command = open-pr gh pr view --web {commit}
+    command = test-file cargo test -- {file}
 ```
 
 `H` lists them in a column of their own, and a key is set for one as for a feature; `?` lists it by its name. Or set the key yourself, beside the feature keys:
 
 ```gitconfig
-[delta-tui "general.diff-renderer.feature-keys"]
-    open-pr = o
+[delta]
+    feature-key = open-pr p
 ```
 
 The key runs the command with `sh -c` in the repository's root, so pipes, redirection and the rest of POSIX shell syntax work. It has `COLUMNS` and `DELTA_FEATURES` set as the TUI sets them for the delta it draws with, so a delta it runs draws as the screen is drawn, with the features and theme chosen in the TUI, though without the TUI's folds and counted stat rows. For example, to open the screen's git command as a web page (git drops colors in a pipe, hence `--color=always`):
 
 ```gitconfig
-[delta-tui "general.commands"]
-    html = {command} --color=always | delta | aha > /tmp/diff.html && open /tmp/diff.html
+[delta]
+    command = html {command} --color=always | delta | aha > /tmp/diff.html && open /tmp/diff.html
 ```
 
 `{commit}`, `{file}` and `{branch}` are filled in, quoted for the shell, from the row under the cursor: a commit, a file or a line of its diff, or a branch (or a commit a branch points to). `{command}` is the git command the screen is showing, as `:` shows it. A command using one that is not there is not run, and says which. The TUI stays usable while the command runs, and redraws its views when it exits.
@@ -318,14 +317,13 @@ The command's output is not shown, unless with `--debug`; a command that fails s
 A view is a `git diff`, `git show` or `git log` of your own, opened from a key, with the commit, file or branch under the cursor:
 
 ```gitconfig
-[delta-tui "general.views"]
-    diff-since = git diff {commit}...
-    word-diff = {command} --word-diff
-    ignore-whitespace = {command} -w
-[delta-tui "general.diff-renderer.feature-keys"]
-    diff-since = D
-    word-diff = W
-    ignore-whitespace = w
+[delta]
+    view = diff-since git diff {commit}...
+    view = word-diff {command} --word-diff
+    view = ignore-whitespace {command} -w
+    feature-key = diff-since D
+    feature-key = word-diff W
+    feature-key = ignore-whitespace w
 ```
 
 The key opens the view on top of the one it is pressed on, as `right` opens a commit, and `left` goes back. `{commit}`, `{file}` and `{branch}` are filled in as for shell commands, but a view is not run by a shell: `{command}` is a word of its own there, standing for the words of the git command the screen is showing, so that a view such as `word-diff` or `ignore-whitespace` above changes the command in view. A view is a git command the TUI shows, run again after each change, and `:`, `U` and `&` change it as they change any other. A view that is not `git diff`, `git show` or `git log` is refused. `H` lists views in a column of their own.
@@ -338,14 +336,13 @@ The key opens the view on top of the one it is pressed on, as `right` opens a co
 [delta]
     commit-regex = ^(▸|commit )
     commit-decoration-style = blue ol
-[pretty]
-    commit-format = tformat:%n%n▸ %h %C(blue)%an %C(blue)%ar%C(auto)%d%C(reset)%n%n    %C(green)%s%C(auto)
-    commit-format-full = tformat:%n%n▸ %h %C(blue)%an %C(blue)%ar%C(auto)%d%C(reset)%n%n%w(0,4,4)%C(green)%s%C(reset)%n%+b
-[delta-tui]
     log-args = --stat
     log-args = --date=relative
     log-args = --pretty=commit-format
     show-args = --pretty=commit-format-full
+[pretty]
+    commit-format = tformat:%n%n▸ %h %C(blue)%an %C(blue)%ar%C(auto)%d%C(reset)%n%n    %C(green)%s%C(auto)
+    commit-format-full = tformat:%n%n▸ %h %C(blue)%an %C(blue)%ar%C(auto)%d%C(reset)%n%n%w(0,4,4)%C(green)%s%C(reset)%n%+b
 ```
 
 and, for `git log` typed at the command line, a shell alias:
@@ -373,28 +370,51 @@ export GH_PAGER='delta --tui'
 
 ## TUI config
 
-Besides git config's `delta-tui` section, the TUI reads a TOML file, `~/.config/gitu/config.toml` (or `--config <file>`); where both set something, git config wins. The diff renderer is always delta, whatever either says. See the [default config](https://github.com/dandavison/gitu/blob/main/src/default_config.toml) for every setting and binding.
+Besides git config, the TUI reads a TOML file, `~/.config/gitu/config.toml` (or `--config <file>`); where both set something, git config wins. The diff renderer is always delta, whatever either says. See the [default config](https://github.com/dandavison/gitu/blob/main/src/default_config.toml) for every setting and binding.
 
-A setting's name in git config is its name in the TOML file with dashes for underscores. Settings under `[general]` go in `[delta-tui]`; others go in a subsection named by their path: `diff_renderer.features` is `features` in `[delta-tui "general.diff-renderer"]`, and `[style] hunk_header` is `hunk-header` in `[delta-tui "style"]`. A list is the key given once per item. A boolean or number is read as git reads one (`yes`, `4m`). A style is written as delta writes one: attributes, then a foreground and a background color. The bindings of menu arguments (such as `commit_menu.--all`) can be set only in the TOML file, since git config names cannot start with `-`.
+In git config, the TUI's settings are options in delta's config that delta itself does not use, and they are taken as delta takes its own: from `[delta]`, which wins, or from a `[delta "feature"]` section of a feature in force, where a later feature wins over an earlier one. So a feature can hold TUI settings beside delta's, and they are in force while the feature is, including when its key turns it on or off in the TUI. To keep the TUI's settings apart from delta's, put them in a feature of your own:
+
+```gitconfig
+[delta]
+    features = tui
+[delta "tui"]
+    file-header = stat
+    start-folded = true
+```
+
+Settings used only when a view opens do not change in views already open when a feature is turned on or off: `hide`, `log-args`, `show-args`, `collapsed-sections` and `start-folded`.
+
+A setting's name is its name in the TOML file with dashes for underscores and dots, less `general`: `[general] start_folded` is `start-folded` and `diff_renderer.features` is `diff-renderer-features`. A style's name ends with `-style`: `[style] menu.active_arg` is `menu-active-arg-style`. `[style] hunk_header` cannot be set in git config, since `hunk-header-style` is delta's own option.
+
+A list is the key given once per item, and takes the items of `[delta]` and of every feature in force. Commands, views and feature keys are lists whose items start with a name, as in `command = open-pr gh pr view --web {commit}`; of two with the same name, the one in `[delta]`, or else in the later feature, wins. A binding is `bind = <menu>.<action> <key>`, one key per item, and the keys given replace the action's default ones. A boolean or number is read as git reads one (`yes`, `4m`). A style is written as delta writes one: attributes, then a foreground and a background color.
+
+Earlier versions of the TUI read its settings from git config's `[delta-tui]` sections. A `[delta-tui]` section in git config is now an error, and the TUI does not start. To convert one, run
+
+```sh
+delta --tui --migrate-old-config
+```
+
+which prints the settings in your `[delta-tui]` sections as a `[delta]` section, to replace them with. This option is temporary: it will be removed in a future release.
 
 Values below are the defaults except where marked as an example.
 
 ### Features listed by `H`
 
 ```gitconfig
-[delta-tui "general.diff-renderer"]
+[delta]
     # Features offered by `H`. `*` and `?` match the `[delta "name"]` features
     # in your git config. These are the defaults:
-    features = side-by-side
-    features = line-numbers
-    features = plus-minus-markers
-    features = *
+    diff-renderer-features = side-by-side
+    diff-renderer-features = line-numbers
+    diff-renderer-features = plus-minus-markers
+    diff-renderer-features = difftastic
+    diff-renderer-features = *
 ```
 
 ### Other settings
 
 ```gitconfig
-[delta-tui]
+[delta]
     # Arguments to the `git log` run by `l l` and `l o`, also used for the
     # commits in the rebase instruction list. See "Log and commit formats" above.
     # Example:
@@ -429,32 +449,26 @@ Values below are the defaults except where marked as an example.
     max-input-bytes = 2000000
     mouse-support = false
     mouse-scroll-lines = 3
-[delta-tui "general.confirm-quit"]
-    enabled = false
-[delta-tui "general.always-show-help"]
+    confirm-quit-enabled = false
     # Always show the key help at the bottom of the screen.
-    enabled = false
-[delta-tui "general.refresh-on-file-change"]
+    always-show-help-enabled = false
     # Refresh the status view when files change.
-    enabled = true
+    refresh-on-file-change-enabled = true
 
-# Each binding is the key given once per key; the binding names are in the
-# tables under Keys above. Examples:
-[delta-tui "bindings.root"]
-    quit = q
-    quit = ctrl+c
-[delta-tui "bindings.rebase-todo"]
-    rebase-todo-drop = d
-    rebase-todo-drop = ctrl+k
+    # A binding is its menu and action, then a key, once per key; the binding
+    # names are in the tables under Keys above. Examples:
+    bind = root.quit q
+    bind = root.quit ctrl+c
+    bind = rebase-todo.rebase-todo-drop d
+    bind = rebase-todo.rebase-todo-drop ctrl+k
+    bind = commit-menu.--all -A
 
-# Colors are a name ("blue"), a hex value ("#0086b3") or a 256-color index.
-# Examples:
-[delta-tui "style"]
-    cursor = blue
-    selection-line = bold
-    section-header = yellow
-[delta-tui "style.rebase-todo"]
-    drop = bold red
+    # Colors are a name ("blue"), a hex value ("#0086b3") or a 256-color index.
+    # Examples:
+    cursor-style = blue
+    selection-line-style = bold
+    section-header-style = yellow
+    rebase-todo-drop-style = bold red
 ```
 
 The same in the TOML file:
@@ -479,4 +493,3 @@ rebase_todo.drop = { fg = "red", mods = "BOLD" }
 - delta does not mark merge conflict rows or `\ No newline at end of file` rows, so the TUI does not show them.
 - Output beyond `max-input-bytes` is dropped; a row at the end says so.
 - A shell alias (`!…`) is not recognised as the git command it runs.
-- A feature key cannot be set in git config for a feature whose name has capitals, since git lowercases config names. For the same reason, the name of a shell command or view given in git config is lowercased.

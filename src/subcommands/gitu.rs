@@ -47,6 +47,13 @@ pub fn main(args: impl IntoIterator<Item = OsString>) -> i32 {
     }
 }
 
+/// Whether this delta-gitu has `--agent-instructions`.
+pub fn has_agent_instructions() -> bool {
+    Args::command()
+        .get_arguments()
+        .any(|arg| arg.get_long() == Some("agent-instructions"))
+}
+
 fn parse(args: impl IntoIterator<Item = OsString>) -> Result<Args, clap::Error> {
     let matches = Args::command()
         .name("delta --tui")
@@ -148,17 +155,28 @@ fn tell_gitu_about_delta(config: &mut Config, opt: &crate::cli::Opt) {
         enabled_features(&env, GitConfig::try_create(&env))
     });
     renderer.git_config = RendererGitConfig::new(|dir| crate::git_config::open(Some(dir)).1);
-    renderer.options = RendererOptions::new(|dir, features, names| {
-        let env = crate::env::DeltaEnv::init();
-        let env = crate::env::DeltaEnv {
-            current_dir: Some(dir.to_path_buf()),
-            // gitu sets DELTA_FEATURES for the deltas it runs only when it turns features on
-            // or off; otherwise they take it from the environment, as this does.
-            features: features.map(String::from).or(env.features),
-            ..env
-        };
-        option_values(&env, GitConfig::try_create(&env), names)
-    });
+    renderer.options = RendererOptions::new(
+        |dir, features, names| {
+            let env = options_env(dir, features);
+            option_values(&env, GitConfig::try_create(&env), names)
+        },
+        |dir, features, names| {
+            let env = options_env(dir, features);
+            option_lists(&env, GitConfig::try_create(&env), names)
+        },
+    );
+}
+
+/// delta's environment in `dir`, with `features` in force as `DELTA_FEATURES` gives them.
+fn options_env(dir: &std::path::Path, features: Option<&str>) -> crate::env::DeltaEnv {
+    let env = crate::env::DeltaEnv::init();
+    crate::env::DeltaEnv {
+        current_dir: Some(dir.to_path_buf()),
+        // gitu sets DELTA_FEATURES for the deltas it runs only when it turns features on
+        // or off; otherwise they take it from the environment, as this does.
+        features: features.map(String::from).or(env.features),
+        ..env
+    }
 }
 
 /// The features that `git_config`, as it is now, enables, by delta's name: those it names, not
@@ -210,6 +228,51 @@ fn option_values(
                 &opt,
                 &mut git_config,
             )
+        })
+        .collect()
+}
+
+/// The items `git_config` gives each of `names`, a list gitu takes from delta's config such as
+/// `command`, lowest precedence first: those of each feature in force in turn, those
+/// `DELTA_FEATURES` or the command line turns on after those git config does, then those of
+/// `[delta]`. This is the order in which delta takes its own options, but simpler: it does not
+/// give a builtin feature's section, such as `[delta "side-by-side"]`, precedence over other
+/// features, as delta does for a single value.
+fn option_lists(
+    env: &crate::env::DeltaEnv,
+    git_config: Option<GitConfig>,
+    names: &[&str],
+) -> Vec<Vec<String>> {
+    // gitu has the terminal, so delta must not ask it its background.
+    let args = ["delta", "--detect-dark-light=never"];
+    let mut opt = crate::cli::Opt::from_iter_and_git_config(env, args, git_config);
+    let Some(git_config) = opt.git_config.take() else {
+        return vec![vec![]; names.len()];
+    };
+    let features: Vec<&str> = opt
+        .features
+        .as_deref()
+        .unwrap_or_default()
+        .split_whitespace()
+        .collect();
+    let from_command_line =
+        |feature: &&&str| opt.computed.command_line_features.contains(**feature);
+    let sections: Vec<String> = features
+        .iter()
+        .filter(|feature| !from_command_line(feature))
+        .chain(features.iter().filter(from_command_line))
+        .map(|feature| format!("delta.{feature}"))
+        .chain(["delta".to_owned()])
+        .collect();
+    names
+        .iter()
+        .map(|name| {
+            let mut items = vec![];
+            for section in &sections {
+                let regex = format!("^{}\\.{}$", regex::escape(section), regex::escape(name));
+                git_config.for_each(&regex, |_, value| items.extend(value.map(String::from)));
+            }
+            items
         })
         .collect()
 }
@@ -538,6 +601,153 @@ mod tests {
             values_with(git_config, Some("+my-theme"), &["comment-style"]),
             [Some("red".to_owned())]
         );
+    }
+
+    /// The items gitu is told `git_config` gives the lists `names`, with `features` in force as
+    /// `DELTA_FEATURES` gives them.
+    fn lists_with(git_config: &str, features: Option<&str>, names: &[&str]) -> Vec<Vec<String>> {
+        let path = std::env::temp_dir().join(format!(
+            "delta-gitu-test-lists-{}-{:?}.gitconfig",
+            std::process::id(),
+            std::thread::current().id()
+        ));
+        let env = crate::env::DeltaEnv {
+            features: features.map(String::from),
+            ..crate::env::DeltaEnv::default()
+        };
+        let git_config = crate::tests::integration_test_utils::make_git_config(
+            &env,
+            git_config.as_bytes(),
+            path.to_str().unwrap(),
+            false,
+        );
+        let lists = option_lists(&env, Some(git_config), names);
+        fs::remove_file(path).unwrap();
+        lists
+    }
+
+    #[test]
+    fn test_gitu_is_told_a_lists_items_in_the_delta_section_and_each_feature_in_force() {
+        let git_config = "[delta]\n\tfeatures = a b\n\tcommand = x delta\n\
+                          [delta \"a\"]\n\tcommand = x a\n\tcommand = y a\n\
+                          [delta \"b\"]\n\tcommand = x b\n\
+                          [delta \"off\"]\n\tcommand = x off\n";
+        assert_eq!(
+            lists_with(git_config, None, &["command", "view"]),
+            [vec!["x a", "y a", "x b", "x delta"], vec![]]
+        );
+    }
+
+    #[test]
+    fn test_gitu_is_told_a_lists_items_in_a_feature_it_turns_on_after_git_configs() {
+        let git_config = "[delta]\n\tfeatures = b\n\
+                          [delta \"a\"]\n\tcommand = x a\n\
+                          [delta \"b\"]\n\tcommand = x b\n";
+        assert_eq!(
+            lists_with(git_config, Some("+a"), &["command"]),
+            [vec!["x b", "x a"]]
+        );
+    }
+
+    /// gitu's settings are options in delta's config that delta does not use, so none can have
+    /// the name of one delta does.
+    #[test]
+    fn test_no_setting_gitu_takes_from_deltas_config_is_a_delta_option() {
+        let deltas: Vec<String> = crate::cli::Opt::command()
+            .get_arguments()
+            .filter_map(|argument| argument.get_long().map(String::from))
+            .collect();
+        let taken: Vec<String> = config::delta_option_names()
+            .into_iter()
+            .filter(|name| deltas.contains(name))
+            .collect();
+        assert!(taken.is_empty(), "{:?}", taken);
+    }
+
+    /// The TUI's config as gitu resolves it from `git_config` through delta's own resolution of
+    /// options, with `features` in force as `DELTA_FEATURES` gives them.
+    fn tui_config_with(git_config: &str, features: Option<&str>) -> Config {
+        let path = std::env::temp_dir().join(format!(
+            "delta-gitu-test-tui-config-{}-{:?}.gitconfig",
+            std::process::id(),
+            std::thread::current().id()
+        ));
+        crate::tests::integration_test_utils::make_git_config(
+            &crate::env::DeltaEnv::default(),
+            git_config.as_bytes(),
+            path.to_str().unwrap(),
+            false,
+        );
+        let env_with = |features: Option<&str>| crate::env::DeltaEnv {
+            features: features.map(String::from),
+            ..crate::env::DeltaEnv::default()
+        };
+        let git_config_at = |path: &std::path::Path| {
+            Some(GitConfig::from_path(
+                &crate::env::DeltaEnv::default(),
+                path,
+                false,
+            ))
+        };
+        let mut config = configure("");
+        let (values_path, lists_path) = (path.clone(), path.clone());
+        config.general.diff_renderer.options = RendererOptions::new(
+            move |_, features, names| {
+                option_values(&env_with(features), git_config_at(&values_path), names)
+            },
+            move |_, features, names| {
+                option_lists(&env_with(features), git_config_at(&lists_path), names)
+            },
+        );
+        let resolved = config.resolved(&std::env::temp_dir(), features).unwrap();
+        fs::remove_file(path).unwrap();
+        resolved
+    }
+
+    /// A feature holding TUI settings: a setting, a style, a command and the command's key.
+    const TUI_FEATURE: &str = "[delta \"tui\"]\n\
+                               \tstart-folded = true\n\
+                               \thash-style = red\n\
+                               \tcommand = hello echo hello\n\
+                               \tfeature-key = hello t\n";
+
+    /// gitu's style types are its own, so the style is read from how it prints.
+    fn is_red(style: &config::StyleConfigEntry) -> bool {
+        format!("{style:?}").contains("fg: Some(Red)")
+    }
+
+    fn holds_the_tui_feature(config: &Config) -> bool {
+        config.general.start_folded
+            && is_red(&config.style.hash)
+            && config.general.commands.get("hello").map(String::as_str) == Some("echo hello")
+            && config.general.diff_renderer.feature_keys.get("hello") == Some(&'t')
+    }
+
+    #[test]
+    fn test_the_tuis_settings_in_a_feature_git_config_enables_are_in_force() {
+        let git_config = format!("[delta]\n\tfeatures = tui\n{TUI_FEATURE}");
+        assert!(holds_the_tui_feature(&tui_config_with(&git_config, None)));
+    }
+
+    #[test]
+    fn test_the_tuis_settings_in_a_feature_turned_on_by_delta_features_are_in_force() {
+        assert!(holds_the_tui_feature(&tui_config_with(
+            TUI_FEATURE,
+            Some("+tui")
+        )));
+    }
+
+    #[test]
+    fn test_the_tuis_settings_in_a_feature_not_in_force_are_not() {
+        let config = tui_config_with(TUI_FEATURE, None);
+        assert!(!config.general.start_folded);
+        assert!(!is_red(&config.style.hash));
+        assert!(config.general.commands.is_empty());
+        assert!(!config
+            .general
+            .diff_renderer
+            .feature_keys
+            .contains_key("hello"));
     }
 
     fn configure(toml: &str) -> Config {
