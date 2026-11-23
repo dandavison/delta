@@ -20,7 +20,10 @@ fn test_tui_help_uses_tui() {
     assert!(help.contains("Usage: delta --tui"), "{}", help);
 }
 
+// FIXME: stop ignoring this when delta depends on a delta-gitu that has --agent-instructions, and
+// revert the change that makes delta --agent-instructions print nothing until then.
 #[test]
+#[ignore]
 fn test_agent_instructions_are_the_tuis() {
     let text = String::from_utf8(delta(&["--agent-instructions"]).stdout).unwrap();
     assert!(text.starts_with("---\nname: "), "{}", text);
