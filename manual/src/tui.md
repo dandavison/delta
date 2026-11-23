@@ -394,7 +394,7 @@ Earlier versions of the TUI read its settings from git config's `[delta-tui]` se
 delta --tui --migrate-old-config
 ```
 
-which prints the settings in your `[delta-tui]` sections as they go in `[delta]`, with the file each is in, for you to replace them with. This option is temporary: it will be removed in a future release.
+which prints the settings in your `[delta-tui]` sections as a `[delta]` section, to replace them with. This option is temporary: it will be removed in a future release.
 
 Values below are the defaults except where marked as an example.
 
