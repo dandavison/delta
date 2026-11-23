@@ -3,9 +3,9 @@ Hide
 # this clone's own git config, so that a key set from the feature list is written there and not to
 # demo.gitconfig.
 Type "git checkout -q -b blame 76905c8e && git branch -q -f main 76905c8e~" Enter
-Type "git config delta-tui.general.diff-renderer.feature-keys.side-by-side S" Enter
-Type "git config delta-tui.general.diff-renderer.feature-keys.line-numbers L" Enter
-Type "git config delta-tui.general.diff-renderer.feature-keys.plus-minus-markers + && clear" Enter
+Type "git config --add delta.feature-key 'side-by-side S'" Enter
+Type "git config --add delta.feature-key 'line-numbers L'" Enter
+Type "git config --add delta.feature-key 'plus-minus-markers +' && clear" Enter
 Sleep 500ms
 Show
 
