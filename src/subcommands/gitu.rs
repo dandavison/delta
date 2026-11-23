@@ -236,8 +236,38 @@ fn option_lists(
     git_config: Option<GitConfig>,
     names: &[&str],
 ) -> Vec<Vec<String>> {
-    let _ = (env, git_config);
-    vec![vec![]; names.len()]
+    // gitu has the terminal, so delta must not ask it its background.
+    let args = ["delta", "--detect-dark-light=never"];
+    let mut opt = crate::cli::Opt::from_iter_and_git_config(env, args, git_config);
+    let Some(git_config) = opt.git_config.take() else {
+        return vec![vec![]; names.len()];
+    };
+    let features: Vec<&str> = opt
+        .features
+        .as_deref()
+        .unwrap_or_default()
+        .split_whitespace()
+        .collect();
+    let from_command_line =
+        |feature: &&&str| opt.computed.command_line_features.contains(**feature);
+    let sections: Vec<String> = features
+        .iter()
+        .filter(|feature| !from_command_line(feature))
+        .chain(features.iter().filter(from_command_line))
+        .map(|feature| format!("delta.{feature}"))
+        .chain(["delta".to_owned()])
+        .collect();
+    names
+        .iter()
+        .map(|name| {
+            let mut items = vec![];
+            for section in &sections {
+                let regex = format!("^{}\\.{}$", regex::escape(section), regex::escape(name));
+                git_config.for_each(&regex, |_, value| items.extend(value.map(String::from)));
+            }
+            items
+        })
+        .collect()
 }
 
 /// delta's options as `git_config` and the terminal settle them. They are settled
