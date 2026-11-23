@@ -657,6 +657,92 @@ mod tests {
         assert!(taken.is_empty(), "{:?}", taken);
     }
 
+    /// The TUI's config as gitu resolves it from `git_config` through delta's own resolution of
+    /// options, with `features` in force as `DELTA_FEATURES` gives them.
+    fn tui_config_with(git_config: &str, features: Option<&str>) -> Config {
+        let path = std::env::temp_dir().join(format!(
+            "delta-gitu-test-tui-config-{}-{:?}.gitconfig",
+            std::process::id(),
+            std::thread::current().id()
+        ));
+        crate::tests::integration_test_utils::make_git_config(
+            &crate::env::DeltaEnv::default(),
+            git_config.as_bytes(),
+            path.to_str().unwrap(),
+            false,
+        );
+        let env_with = |features: Option<&str>| crate::env::DeltaEnv {
+            features: features.map(String::from),
+            ..crate::env::DeltaEnv::default()
+        };
+        let git_config_at = |path: &std::path::Path| {
+            Some(GitConfig::from_path(
+                &crate::env::DeltaEnv::default(),
+                path,
+                false,
+            ))
+        };
+        let mut config = configure("");
+        let (values_path, lists_path) = (path.clone(), path.clone());
+        config.general.diff_renderer.options = RendererOptions::new(
+            move |_, features, names| {
+                option_values(&env_with(features), git_config_at(&values_path), names)
+            },
+            move |_, features, names| {
+                option_lists(&env_with(features), git_config_at(&lists_path), names)
+            },
+        );
+        let resolved = config.resolved(&std::env::temp_dir(), features).unwrap();
+        fs::remove_file(path).unwrap();
+        resolved
+    }
+
+    /// A feature holding TUI settings: a setting, a style, a command and the command's key.
+    const TUI_FEATURE: &str = "[delta \"tui\"]\n\
+                               \tstart-folded = true\n\
+                               \thash-style = red\n\
+                               \tcommand = hello echo hello\n\
+                               \tfeature-key = hello t\n";
+
+    /// gitu's style types are its own, so the style is read from how it prints.
+    fn is_red(style: &config::StyleConfigEntry) -> bool {
+        format!("{style:?}").contains("fg: Some(Red)")
+    }
+
+    fn holds_the_tui_feature(config: &Config) -> bool {
+        config.general.start_folded
+            && is_red(&config.style.hash)
+            && config.general.commands.get("hello").map(String::as_str) == Some("echo hello")
+            && config.general.diff_renderer.feature_keys.get("hello") == Some(&'t')
+    }
+
+    #[test]
+    fn test_the_tuis_settings_in_a_feature_git_config_enables_are_in_force() {
+        let git_config = format!("[delta]\n\tfeatures = tui\n{TUI_FEATURE}");
+        assert!(holds_the_tui_feature(&tui_config_with(&git_config, None)));
+    }
+
+    #[test]
+    fn test_the_tuis_settings_in_a_feature_turned_on_by_delta_features_are_in_force() {
+        assert!(holds_the_tui_feature(&tui_config_with(
+            TUI_FEATURE,
+            Some("+tui")
+        )));
+    }
+
+    #[test]
+    fn test_the_tuis_settings_in_a_feature_not_in_force_are_not() {
+        let config = tui_config_with(TUI_FEATURE, None);
+        assert!(!config.general.start_folded);
+        assert!(!is_red(&config.style.hash));
+        assert!(config.general.commands.is_empty());
+        assert!(!config
+            .general
+            .diff_renderer
+            .feature_keys
+            .contains_key("hello"));
+    }
+
     fn configure(toml: &str) -> Config {
         let path = config_file(toml);
         let mut config = config::init_config(Some(path.clone())).unwrap();
