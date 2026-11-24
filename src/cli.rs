@@ -1557,11 +1557,15 @@ lazy_static! {
 mod tests {
     use super::*;
 
+    /// The help says to run the TUI with `delta tui`. `--tui` and `--gitu` still run it, as delta
+    /// 0.22.0 did, but are not listed.
     #[cfg(feature = "gitu")]
     #[test]
-    fn help_lists_tui() {
+    fn help_says_to_run_the_tui_with_delta_tui() {
         let help = Opt::command().render_help().to_string();
-        assert!(help.contains("--tui"), "{}", help);
+        assert!(help.contains("delta tui"), "{}", help);
+        assert!(!help.contains("--tui"), "{}", help);
+        assert!(!help.contains("--gitu"), "{}", help);
     }
 
     #[cfg(feature = "gitu")]

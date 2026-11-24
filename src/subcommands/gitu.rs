@@ -326,8 +326,17 @@ mod tests {
     #[test]
     fn test_tui_as_the_first_argument_is_the_tui() {
         assert!(is_tui(&"tui".into()));
+        // As delta 0.22.0 ran it.
+        assert!(is_tui(&"--tui".into()));
+        assert!(is_tui(&"--gitu".into()));
         assert_eq!(misplaced_tui(os_args(&["delta", "tui"])), None);
         assert_eq!(misplaced_tui(os_args(&["delta", "a", "tui"])), None);
+    }
+
+    #[test]
+    fn test_the_tuis_help_says_delta_tui() {
+        let help = parse(os_args(&["--help"])).unwrap_err().render().to_string();
+        assert!(help.contains("Usage: delta tui"), "{help}");
     }
 
     #[test]
