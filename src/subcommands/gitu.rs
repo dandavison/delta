@@ -313,6 +313,15 @@ mod tests {
         assert!(message.contains("[delta]"), "{}", message);
     }
 
+    /// `delta tui` is `delta --tui`, as `delta git` and `delta rg` run git and rg: as delta's first
+    /// argument only, so that a file named tui after another is a file to diff.
+    #[test]
+    fn test_tui_as_the_first_argument_is_the_tui() {
+        assert!(is_tui(&"tui".into()));
+        assert_eq!(misplaced_tui(os_args(&["delta", "tui"])), None);
+        assert_eq!(misplaced_tui(os_args(&["delta", "a", "tui"])), None);
+    }
+
     #[test]
     fn test_tui_after_other_arguments_says_it_must_come_first() {
         let message = misplaced_tui(os_args(&["delta", "--side-by-side", "--tui"])).unwrap();
