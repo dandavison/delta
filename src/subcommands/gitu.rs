@@ -1,5 +1,5 @@
-//! `delta --tui` (alias `--gitu`): gitu, an interactive git client and pager,
-//! with delta as its renderer.
+//! `delta tui`, or `delta --tui` (alias `--gitu`): gitu, an interactive git
+//! client and pager, with delta as its renderer.
 
 use std::ffi::OsString;
 use std::sync::Arc;
@@ -23,8 +23,8 @@ by Magit, embedded via the delta-gitu fork (https://github.com/dandavison/gitu).
 const DELTA_OPTIONS_GO_IN_GIT_CONFIG: &str = "delta's own options cannot be given with --tui. \
 Set them in git config's [delta] section, or turn delta features on and off in the TUI with S, L and H.";
 
-/// Run gitu with `args`, which start after `--tui` or `--gitu`, returning the
-/// exit code.
+/// Run gitu with `args`, which start after `tui`, `--tui` or `--gitu`,
+/// returning the exit code.
 pub fn main(args: impl IntoIterator<Item = OsString>) -> i32 {
     let args = match parse(args) {
         Ok(args) => args,
@@ -81,12 +81,20 @@ pub fn misplaced_tui(args: impl IntoIterator<Item = OsString>) -> Option<String>
     if args.next().is_some_and(|arg| is_tui(&arg)) {
         return None;
     }
-    args.any(|arg| is_tui(&arg)).then(|| {
+    args.any(|arg| is_tui_option(&arg)).then(|| {
         format!("--tui must be delta's first argument, as in `delta --tui`. {DELTA_OPTIONS_GO_IN_GIT_CONFIG}")
     })
 }
 
+/// Whether `arg`, as delta's first argument, runs the TUI: `tui`, as `git` and
+/// `rg` run those programs, or `--tui`, or its alias `--gitu`.
 pub fn is_tui(arg: &OsString) -> bool {
+    arg == "tui" || is_tui_option(arg)
+}
+
+/// Whether `arg` is `--tui` or its alias `--gitu`, which delta would take as one
+/// of its own options anywhere but first.
+fn is_tui_option(arg: &OsString) -> bool {
     arg == "--tui" || arg == "--gitu"
 }
 
