@@ -5,6 +5,10 @@
 // by color, adds gutters), so that identity cannot be recovered from the
 // painted text alone -- the pager, which still has it at render time, states it.
 //
+// The protocol, and the section numbers ("spec §N") cited in this file, are
+// those of
+// https://github.com/stefanhaller/diff-line-metadata-spec/blob/main/diff-line-metadata-osc-1717.md
+//
 // This is gated on the OSC1717 environment variable: the host advertises the
 // protocol versions it understands and delta emits the highest mutually-
 // understood one. When the variable is unset (i.e. delta is not running under
