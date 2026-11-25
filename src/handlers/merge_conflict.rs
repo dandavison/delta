@@ -501,6 +501,32 @@ ancestor ⟶   HEAD │
         );
     }
 
+    #[test]
+    fn test_merge_conflict_on_a_hunks_first_line_keeps_the_hunk_header() {
+        let config = integration_test_utils::make_config_from_args(&[
+            "--file-style",
+            "omit",
+            "--file-decoration-style",
+            "none",
+            "--hunk-header-style",
+            "raw",
+            "--hunk-header-decoration-style",
+            "none",
+        ]);
+        let output = integration_test_utils::run_delta_with_diff_line_metadata(
+            GIT_TOY_MERGE_CONFLICT_NO_CONTEXT,
+            &config,
+        );
+        assert_eq!(
+            recorded_rows(&output),
+            [
+                "⟦1;h;1;;file⟧@@@ -1,1 -1,1 +1,6 @@@",
+                "⟦1;a;2;;file⟧a",
+                "⟦1;a;5;;file⟧b",
+            ]
+        );
+    }
+
     const GIT_MERGE_CONFLICT_WITH_REMOVED_LINE: &str = "\
 diff --cc f
 index 7dcdb15,b097ba1..0000000
