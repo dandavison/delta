@@ -368,6 +368,113 @@ ancestor ⟶   HEAD │
         }
     }
 
+    /// The OSC 1717 records on each row of `output`, in order, with the row's
+    /// text after them; rows with no record are left out.
+    fn recorded_rows(output: &str) -> Vec<String> {
+        strip_ansi_codes(&output.replace("\x1b]1717;", "⟦").replace("\x1b\\", "⟧"))
+            .lines()
+            .filter(|row| row.contains('⟦'))
+            .map(|row| row.trim_end().to_string())
+            .collect()
+    }
+
+    #[test]
+    fn test_combined_diff_rows_carry_the_working_tree_line() {
+        // Each row of a combined diff is identified by its line in the working
+        // tree, as git numbers them after `+` in the hunk header. A line no
+        // longer in the working tree is identified by its line in the first
+        // parent that has it. The rows delta draws for a conflict are the
+        // lines between the markers, the ancestor's twice, once against each
+        // side.
+        let config = integration_test_utils::make_config_from_args(&[
+            "--file-style",
+            "omit",
+            "--file-decoration-style",
+            "none",
+            "--hunk-header-style",
+            "omit",
+        ]);
+        let output = integration_test_utils::run_delta_with_diff_line_metadata(
+            GIT_MERGE_CONFLICT_WITH_REMOVED_LINE,
+            &config,
+        );
+        assert_eq!(
+            recorded_rows(&output),
+            [
+                "⟦1;h;1;;f⟧",
+                "⟦1;c;1;;f⟧  a",
+                "⟦1;d;2;2;f⟧- b",
+                "⟦1;c;2;;f⟧  c",
+                "⟦1;a;6;;f⟧hello",
+                "⟦1;a;4;;f⟧hi",
+                "⟦1;a;6;;f⟧hello",
+                "⟦1;a;8;;f⟧hey",
+                "⟦1;c;10;;f⟧  z",
+            ]
+        );
+    }
+
+    #[test]
+    fn test_combined_diff_rows_carry_the_working_tree_line_side_by_side() {
+        let config = integration_test_utils::make_config_from_args(&[
+            "--side-by-side",
+            "--width",
+            "40",
+            "--file-style",
+            "omit",
+            "--file-decoration-style",
+            "none",
+            "--hunk-header-style",
+            "omit",
+        ]);
+        let output = integration_test_utils::run_delta_with_diff_line_metadata(
+            GIT_MERGE_CONFLICT_WITH_REMOVED_LINE,
+            &config,
+        );
+        let records: Vec<Vec<String>> = recorded_rows(&output)
+            .iter()
+            .map(|row| {
+                row.split('⟦')
+                    .skip(1)
+                    .map(|record| record.split('⟧').next().unwrap().to_string())
+                    .collect()
+            })
+            .collect();
+        assert_eq!(
+            records,
+            [
+                vec!["1;h;1;;f"],
+                vec!["1;c;1;;f", "1;c;1;;f"],
+                vec!["1;d;2;2;f"],
+                vec!["1;c;2;;f", "1;c;2;;f"],
+                vec!["1;a;6;;f"],
+                vec!["1;a;4;;f"],
+                vec!["1;a;6;;f"],
+                vec!["1;a;8;;f"],
+                vec!["1;c;10;;f", "1;c;10;;f"],
+            ]
+        );
+    }
+
+    const GIT_MERGE_CONFLICT_WITH_REMOVED_LINE: &str = "\
+diff --cc f
+index 7dcdb15,b097ba1..0000000
+--- a/f
++++ b/f
+@@@ -1,5 -1,4 +1,10 @@@
+  a
+- b
+  c
+++<<<<<<< HEAD
+ +hi
+++||||||| e41ea67
+++hello
+++=======
++ hey
+++>>>>>>> other
+  z
+";
+
     const GIT_TOY_MERGE_CONFLICT_NO_CONTEXT: &str = "\
 diff --cc file
 index 6178079,7898192..0000000
