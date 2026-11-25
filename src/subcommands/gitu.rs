@@ -8,6 +8,7 @@ use std::{backtrace::Backtrace, env, panic};
 use ::gitu::cli::Args;
 use ::gitu::config::{
     self, ColorMode, Config, EnabledFeatures, RendererGitConfig, RendererOptions,
+    RendererSideBySide,
 };
 use ::gitu::{error::Error, term, Res};
 use clap::{CommandFactory, FromArgMatches};
@@ -151,7 +152,9 @@ fn use_delta_as_renderer(config: &mut Config, delta: &str) {
 /// user's config enables, so gitu can show them as on and turn them off, how
 /// delta opens git config, so that gitu offers themes delta can find, and how to
 /// ask what the user's config sets options gitu draws with to, such as
-/// `comment-style`, so they are set as delta's own are.
+/// `comment-style`, so they are set as delta's own are, and how to ask whether
+/// delta draws side by side at a width, so that gitu lays out difftastic's view
+/// as delta draws it.
 fn tell_gitu_about_delta(config: &mut Config, opt: &crate::cli::Opt) {
     let renderer = &mut config.general.diff_renderer;
     renderer.color_mode = Some(color_mode(opt));
@@ -173,6 +176,23 @@ fn tell_gitu_about_delta(config: &mut Config, opt: &crate::cli::Opt) {
             option_lists(&env, GitConfig::try_create(&env), names)
         },
     );
+    renderer.side_by_side = RendererSideBySide::new(|dir, features, columns| {
+        let env = crate::env::DeltaEnv {
+            columns: Some(columns.to_string()),
+            ..options_env(dir, features)
+        };
+        draws_side_by_side(&env, GitConfig::try_create(&env))
+    });
+}
+
+/// Whether delta draws side by side in `env`, whose `COLUMNS` is the width it draws at: a
+/// minimum width such as `side-by-side = 120` must be met.
+fn draws_side_by_side(env: &crate::env::DeltaEnv, git_config: Option<GitConfig>) -> bool {
+    // gitu has the terminal, so delta must not ask it its background.
+    let args = ["delta", "--detect-dark-light=never"];
+    crate::cli::Opt::from_iter_and_git_config(env, args, git_config)
+        .computed
+        .side_by_side
 }
 
 /// delta's environment in `dir`, with `features` in force as `DELTA_FEATURES` gives them.
