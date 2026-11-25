@@ -423,6 +423,55 @@ mod tests {
         assert_eq!(git_config.get_bool("delta.mine.dark").ok(), Some(true));
     }
 
+    /// gitu is told whether delta draws side by side at a width, with features in force as
+    /// `DELTA_FEATURES` gives them, so that difftastic's view is laid out as delta draws it.
+    #[test]
+    fn test_gitu_is_told_whether_delta_draws_side_by_side_at_a_width() {
+        let cases = [
+            ("[delta]\n    side-by-side = 120\n", None, 119, false),
+            ("[delta]\n    side-by-side = 120\n", None, 120, true),
+            (
+                "[delta]\n    side-by-side = 120\n",
+                Some("-side-by-side"),
+                200,
+                false,
+            ),
+            ("[delta]\n", Some("+side-by-side"), 80, true),
+            ("[delta]\n", None, 200, false),
+        ];
+        for (git_config, features, columns, expected) in cases {
+            assert_eq!(
+                side_by_side_with(git_config, features, columns),
+                expected,
+                "{git_config:?} {features:?} {columns}"
+            );
+        }
+    }
+
+    /// Whether gitu is told delta draws side by side with `git_config` and `features` in force as
+    /// `DELTA_FEATURES` gives them, at a width of `columns`.
+    fn side_by_side_with(git_config: &str, features: Option<&str>, columns: usize) -> bool {
+        let path = std::env::temp_dir().join(format!(
+            "delta-gitu-test-side-by-side-{}-{:?}.gitconfig",
+            std::process::id(),
+            std::thread::current().id()
+        ));
+        let env = crate::env::DeltaEnv {
+            features: features.map(String::from),
+            columns: Some(columns.to_string()),
+            ..crate::env::DeltaEnv::default()
+        };
+        let git_config = crate::tests::integration_test_utils::make_git_config(
+            &env,
+            git_config.as_bytes(),
+            path.to_str().unwrap(),
+            false,
+        );
+        let side_by_side = draws_side_by_side(&env, Some(git_config));
+        fs::remove_file(path).unwrap();
+        side_by_side
+    }
+
     /// gitu is told the features the user's config enables, so that it shows them
     /// as on and turns them off when toggled.
     #[test]
