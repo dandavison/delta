@@ -7,6 +7,7 @@ use super::draw;
 use crate::cli;
 use crate::config::{self, delta_unreachable};
 use crate::delta::{DiffType, InMergeConflict, MergeParents, State, StateMachine};
+use crate::features::diff_line_metadata::Record;
 use crate::minusplus::MinusPlus;
 use crate::paint::{self, prepare};
 use crate::style::Style;
@@ -28,6 +29,8 @@ pub type MergeConflictLines = MergeConflictCommits<Vec<(String, State)>>;
 
 pub type MergeConflictCommitNames = MergeConflictCommits<Option<String>>;
 
+pub type MergeConflictRecords = MergeConflictCommits<Vec<Record>>;
+
 impl StateMachine<'_> {
     pub fn handle_merge_conflict_line(&mut self) -> std::io::Result<bool> {
         use DiffType::*;
@@ -40,8 +43,20 @@ impl StateMachine<'_> {
         }
 
         match self.state.clone() {
-            HunkHeader(Combined(merge_parents, InMergeConflict::No), _, _, _)
-            | HunkMinus(Combined(merge_parents, InMergeConflict::No), _)
+            HunkHeader(
+                Combined(merge_parents, InMergeConflict::No),
+                parsed_hunk_header,
+                line,
+                raw_line,
+            ) => {
+                // The hunk's first line is the conflict's: the hunk header is drawn
+                // with the first line, which the conflict takes.
+                if parse_merge_marker(&self.line, "++<<<<<<<").is_some() {
+                    self.emit_hunk_header_line(&parsed_hunk_header, &line, &raw_line)?;
+                }
+                handled_line = self.enter_merge_conflict(&merge_parents)
+            }
+            HunkMinus(Combined(merge_parents, InMergeConflict::No), _)
             | HunkZero(Combined(merge_parents, InMergeConflict::No), _)
             | HunkPlus(Combined(merge_parents, InMergeConflict::No), _) => {
                 handled_line = self.enter_merge_conflict(&merge_parents)
@@ -76,11 +91,21 @@ impl StateMachine<'_> {
         Ok(handled_line)
     }
 
+    /// Advance the OSC 1717 line counters past the current line, which is in a
+    /// merge conflict, and return its record.
+    fn read_conflict_line(&mut self, merge_parents: &MergeParents) -> Option<Record> {
+        let n_parents = DiffType::Combined(merge_parents.clone(), InMergeConflict::Yes).n_parents();
+        let prefix = self.line.get(..n_parents).unwrap_or(&self.line);
+        let metadata = self.painter.diff_line_metadata.as_mut()?;
+        Some(metadata.read_combined_line(prefix))
+    }
+
     fn enter_merge_conflict(&mut self, merge_parents: &MergeParents) -> bool {
         use State::*;
         if let Some(commit) = parse_merge_marker(&self.line, "++<<<<<<<") {
-            self.state = MergeConflict(merge_parents.clone(), Ours);
             self.painter.merge_conflict_commit_names[Ours] = Some(commit.to_string());
+            self.read_conflict_line(merge_parents);
+            self.state = MergeConflict(merge_parents.clone(), Ours);
             true
         } else {
             false
@@ -90,8 +115,9 @@ impl StateMachine<'_> {
     fn enter_ancestral(&mut self, merge_parents: &MergeParents) -> bool {
         use State::*;
         if let Some(commit) = parse_merge_marker(&self.line, "++|||||||") {
-            self.state = MergeConflict(merge_parents.clone(), Ancestral);
             self.painter.merge_conflict_commit_names[Ancestral] = Some(commit.to_string());
+            self.read_conflict_line(merge_parents);
+            self.state = MergeConflict(merge_parents.clone(), Ancestral);
             true
         } else {
             false
@@ -101,6 +127,7 @@ impl StateMachine<'_> {
     fn enter_theirs(&mut self, merge_parents: &MergeParents) -> bool {
         use State::*;
         if self.line.starts_with("++=======") {
+            self.read_conflict_line(merge_parents);
             self.state = MergeConflict(merge_parents.clone(), Theirs);
             true
         } else {
@@ -111,6 +138,7 @@ impl StateMachine<'_> {
     fn exit_merge_conflict(&mut self, merge_parents: &MergeParents) -> std::io::Result<bool> {
         if let Some(commit) = parse_merge_marker(&self.line, "++>>>>>>>") {
             self.painter.merge_conflict_commit_names[Theirs] = Some(commit.to_string());
+            self.read_conflict_line(merge_parents);
             self.paint_buffered_merge_conflict_lines(merge_parents)?;
             Ok(true)
         } else {
@@ -120,7 +148,13 @@ impl StateMachine<'_> {
 
     fn store_line(&mut self, commit: MergeConflictCommit, state: State) -> bool {
         use State::*;
-        if let HunkMinus(diff_type, _) | HunkZero(diff_type, _) | HunkPlus(diff_type, _) = &state {
+        if let HunkMinus(diff_type @ DiffType::Combined(merge_parents, _), _)
+        | HunkZero(diff_type @ DiffType::Combined(merge_parents, _), _)
+        | HunkPlus(diff_type @ DiffType::Combined(merge_parents, _), _) = &state
+        {
+            if let Some(record) = self.read_conflict_line(merge_parents) {
+                self.painter.merge_conflict_records[commit.clone()].push(record);
+            }
             let line = prepare(&self.line, diff_type.n_parents(), self.config);
             self.painter.merge_conflict_lines[commit].push((line, state));
             true
@@ -153,13 +187,19 @@ impl StateMachine<'_> {
                 self.config,
             )?;
             self.painter.emit()?;
+            if let Some(metadata) = self.painter.diff_line_metadata.as_mut() {
+                metadata.hold_conflict_lines(
+                    &self.painter.merge_conflict_records[Ancestral],
+                    &self.painter.merge_conflict_records[derived_commit_type],
+                );
+            }
             paint::paint_minus_and_plus_lines(
                 MinusPlus::new(
                     &self.painter.merge_conflict_lines[Ancestral],
                     &self.painter.merge_conflict_lines[derived_commit_type],
                 ),
                 &mut self.painter.line_numbers_data,
-                &mut None,
+                &mut self.painter.diff_line_metadata.as_mut(),
                 &mut self.painter.highlighter,
                 &mut self.painter.output_buffer,
                 self.painter.side_by_side,
@@ -174,6 +214,7 @@ impl StateMachine<'_> {
             self.config,
         )?;
         self.painter.merge_conflict_lines.clear();
+        self.painter.merge_conflict_records.clear();
         self.state = HunkZero(Combined(merge_parents.clone(), InMergeConflict::No), None);
         Ok(())
     }
@@ -291,6 +332,22 @@ impl MergeConflictLines {
     }
 }
 
+impl MergeConflictRecords {
+    pub fn new() -> Self {
+        Self {
+            ours: Vec::new(),
+            ancestral: Vec::new(),
+            theirs: Vec::new(),
+        }
+    }
+
+    fn clear(&mut self) {
+        self[Ours].clear();
+        self[Ancestral].clear();
+        self[Theirs].clear();
+    }
+}
+
 impl MergeConflictCommitNames {
     pub fn new() -> Self {
         Self {
@@ -367,6 +424,139 @@ ancestor ⟶   HEAD │
             );
         }
     }
+
+    /// The OSC 1717 records on each row of `output`, in order, with the row's
+    /// text after them; rows with no record are left out.
+    fn recorded_rows(output: &str) -> Vec<String> {
+        strip_ansi_codes(&output.replace("\x1b]1717;", "⟦").replace("\x1b\\", "⟧"))
+            .lines()
+            .filter(|row| row.contains('⟦'))
+            .map(|row| row.trim_end().to_string())
+            .collect()
+    }
+
+    #[test]
+    fn test_combined_diff_rows_carry_the_working_tree_line() {
+        // Each row of a combined diff is identified by its line in the working
+        // tree, as git numbers them after `+` in the hunk header. A line no
+        // longer in the working tree is identified by its line in the first
+        // parent that has it. The rows delta draws for a conflict are the
+        // lines between the markers, the ancestor's twice, once against each
+        // side.
+        let config = integration_test_utils::make_config_from_args(&[
+            "--file-style",
+            "omit",
+            "--file-decoration-style",
+            "none",
+            "--hunk-header-style",
+            "omit",
+        ]);
+        let output = integration_test_utils::run_delta_with_diff_line_metadata(
+            GIT_MERGE_CONFLICT_WITH_REMOVED_LINE,
+            &config,
+        );
+        assert_eq!(
+            recorded_rows(&output),
+            [
+                "⟦1;h;1;;f⟧",
+                "⟦1;c;1;;f⟧  a",
+                "⟦1;d;2;2;f⟧- b",
+                "⟦1;c;2;;f⟧  c",
+                "⟦1;a;6;;f⟧hello",
+                "⟦1;a;4;;f⟧hi",
+                "⟦1;a;6;;f⟧hello",
+                "⟦1;a;8;;f⟧hey",
+                "⟦1;c;10;;f⟧  z",
+            ]
+        );
+    }
+
+    #[test]
+    fn test_combined_diff_rows_carry_the_working_tree_line_side_by_side() {
+        let config = integration_test_utils::make_config_from_args(&[
+            "--side-by-side",
+            "--width",
+            "40",
+            "--file-style",
+            "omit",
+            "--file-decoration-style",
+            "none",
+            "--hunk-header-style",
+            "omit",
+        ]);
+        let output = integration_test_utils::run_delta_with_diff_line_metadata(
+            GIT_MERGE_CONFLICT_WITH_REMOVED_LINE,
+            &config,
+        );
+        let records: Vec<Vec<String>> = recorded_rows(&output)
+            .iter()
+            .map(|row| {
+                row.split('⟦')
+                    .skip(1)
+                    .map(|record| record.split('⟧').next().unwrap().to_string())
+                    .collect()
+            })
+            .collect();
+        assert_eq!(
+            records,
+            [
+                vec!["1;h;1;;f"],
+                vec!["1;c;1;;f", "1;c;1;;f"],
+                vec!["1;d;2;2;f"],
+                vec!["1;c;2;;f", "1;c;2;;f"],
+                vec!["1;a;6;;f"],
+                vec!["1;a;4;;f"],
+                vec!["1;a;6;;f"],
+                vec!["1;a;8;;f"],
+                vec!["1;c;10;;f", "1;c;10;;f"],
+            ]
+        );
+    }
+
+    #[test]
+    fn test_merge_conflict_on_a_hunks_first_line_keeps_the_hunk_header() {
+        let config = integration_test_utils::make_config_from_args(&[
+            "--file-style",
+            "omit",
+            "--file-decoration-style",
+            "none",
+            "--hunk-header-style",
+            "raw",
+            "--hunk-header-decoration-style",
+            "none",
+        ]);
+        let output = integration_test_utils::run_delta_with_diff_line_metadata(
+            GIT_TOY_MERGE_CONFLICT_NO_CONTEXT,
+            &config,
+        );
+        assert_eq!(
+            recorded_rows(&output),
+            [
+                "⟦1;h;1;;file⟧@@@ -1,1 -1,1 +1,6 @@@",
+                "⟦1;a;2;;file⟧a",
+                "⟦1;a;5;;file⟧b",
+            ]
+        );
+    }
+
+    const GIT_MERGE_CONFLICT_WITH_REMOVED_LINE: &str = "\
+diff --cc f
+index 7dcdb15,b097ba1..0000000
+--- a/f
++++ b/f
+@@@ -1,5 -1,4 +1,10 @@@
+  a
+- b
+  c
+++<<<<<<< HEAD
+ +hi
+++||||||| e41ea67
+++hello
+++=======
++ hey
+++>>>>>>> other
+  z
+";
 
     const GIT_TOY_MERGE_CONFLICT_NO_CONTEXT: &str = "\
 diff --cc file

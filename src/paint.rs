@@ -45,6 +45,8 @@ pub struct Painter<'p> {
     pub diff_line_metadata: Option<DiffLineMetadata>,
     pub merge_conflict_lines: merge_conflict::MergeConflictLines,
     pub merge_conflict_commit_names: merge_conflict::MergeConflictCommitNames,
+    // The OSC 1717 records of the lines in `merge_conflict_lines`, when emitted.
+    pub merge_conflict_records: merge_conflict::MergeConflictRecords,
 }
 
 // How the background of a line is filled up to the end
@@ -113,6 +115,7 @@ impl<'p> Painter<'p> {
             diff_line_metadata: DiffLineMetadata::from_env(),
             merge_conflict_lines: merge_conflict::MergeConflictLines::new(),
             merge_conflict_commit_names: merge_conflict::MergeConflictCommitNames::new(),
+            merge_conflict_records: merge_conflict::MergeConflictRecords::new(),
         }
     }
 
@@ -208,7 +211,8 @@ impl<'p> Painter<'p> {
                 self.config,
                 &mut self.line_numbers_data.as_mut(),
                 &mut self.diff_line_metadata.as_mut(),
-                painted_prefix(state, self.config),
+                &state,
+                painted_prefix(state.clone(), self.config),
                 BgShouldFill::With(BgFillMethod::Spaces),
             );
         } else {
