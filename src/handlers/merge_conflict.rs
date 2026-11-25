@@ -43,8 +43,20 @@ impl StateMachine<'_> {
         }
 
         match self.state.clone() {
-            HunkHeader(Combined(merge_parents, InMergeConflict::No), _, _, _)
-            | HunkMinus(Combined(merge_parents, InMergeConflict::No), _)
+            HunkHeader(
+                Combined(merge_parents, InMergeConflict::No),
+                parsed_hunk_header,
+                line,
+                raw_line,
+            ) => {
+                // The hunk's first line is the conflict's: the hunk header is drawn
+                // with the first line, which the conflict takes.
+                if parse_merge_marker(&self.line, "++<<<<<<<").is_some() {
+                    self.emit_hunk_header_line(&parsed_hunk_header, &line, &raw_line)?;
+                }
+                handled_line = self.enter_merge_conflict(&merge_parents)
+            }
+            HunkMinus(Combined(merge_parents, InMergeConflict::No), _)
             | HunkZero(Combined(merge_parents, InMergeConflict::No), _)
             | HunkPlus(Combined(merge_parents, InMergeConflict::No), _) => {
                 handled_line = self.enter_merge_conflict(&merge_parents)
