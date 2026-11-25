@@ -78,7 +78,19 @@ impl StateMachine<'_> {
         if let State::HunkHeader(_, parsed_hunk_header, line, raw_line) = &self.state.clone() {
             self.emit_hunk_header_line(parsed_hunk_header, line, raw_line)?;
         }
-        self.state = match new_line_state(&self.line, &self.raw_line, &self.state, self.config) {
+        let new_state = new_line_state(&self.line, &self.raw_line, &self.state, self.config);
+        if let (
+            Some(
+                HunkMinus(Combined(MergeParents::Prefix(prefix), _), _)
+                | HunkZero(Combined(MergeParents::Prefix(prefix), _), _)
+                | HunkPlus(Combined(MergeParents::Prefix(prefix), _), _),
+            ),
+            Some(metadata),
+        ) = (&new_state, self.painter.diff_line_metadata.as_mut())
+        {
+            metadata.hold_combined_line(prefix);
+        }
+        self.state = match new_state {
             Some(HunkMinus(diff_type, raw_line)) => {
                 if let HunkPlus(_, _) = self.state {
                     // We have just entered a new subhunk; process the previous one

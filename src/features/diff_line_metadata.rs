@@ -20,10 +20,12 @@
 // Ghostty, VS Code, ConEmu, urxvt); none of them interpret it, so a terminal that
 // is not a participating host skips it harmlessly.
 
+use std::collections::VecDeque;
 use std::io::{self, Write};
 use std::sync::OnceLock;
 
-use crate::delta::{DiffType, State};
+use crate::config::delta_unreachable;
+use crate::delta::{DiffType, InMergeConflict, State};
 
 /// Highest protocol version this build of delta knows how to emit.
 const SUPPORTED_VERSION: u32 = 1;
@@ -62,6 +64,9 @@ fn handshake_for_version(version: u32) -> String {
     format!("{OSC};{version}{ST}")
 }
 
+/// A content line's record: (`type_char`, `new_line`, `old_line`).
+pub type Record = (char, usize, Option<usize>);
+
 /// Tracks the current old-/new-file line numbers within a hunk and formats the
 /// per-line OSC sequence. One instance is held by the `Painter` (when emission
 /// is negotiated) and re-seeded at every hunk header.
@@ -69,24 +74,35 @@ pub struct DiffLineMetadata {
     version: u32,
     old_line: usize,
     new_line: usize,
+    /// In a combined diff, the line number in each parent.
+    parent_lines: Vec<usize>,
     file: String,
-    /// The record (`type_char`, `new_line`, `old_line`) most recently emitted
-    /// for a primary content line, so a wrapped continuation row can re-emit it
-    /// without advancing the counters. Set by every primary line; read by the
-    /// wrapped row(s) that immediately follow it.
-    last_record: Option<(char, usize, Option<usize>)>,
+    /// The record most recently emitted for a primary content line, so a
+    /// wrapped continuation row can re-emit it without advancing the counters.
+    /// Set by every primary line; read by the wrapped row(s) that immediately
+    /// follow it.
+    last_record: Option<Record>,
+    /// The records of a combined diff's lines, by the kind delta draws them
+    /// as, in the order git wrote them. delta draws a run of changed lines with
+    /// the removed ones first, so a line's record is worked out when delta
+    /// reads the line and taken when delta draws it.
+    combined: CombinedRecords,
+    /// The records for the lines of a merge conflict that delta is drawing:
+    /// those it draws as removed (the ancestor's) and as added (one side's).
+    conflict: CombinedRecords,
+}
+
+#[derive(Default)]
+struct CombinedRecords {
+    minus: VecDeque<Record>,
+    zero: VecDeque<Record>,
+    plus: VecDeque<Record>,
 }
 
 impl DiffLineMetadata {
     /// Returns an emitter iff the host negotiated a protocol version.
     pub fn from_env() -> Option<Self> {
-        negotiated_version().map(|version| Self {
-            version,
-            old_line: 0,
-            new_line: 0,
-            file: String::new(),
-            last_record: None,
-        })
+        negotiated_version().map(Self::new)
     }
 
     /// A version-1 emitter regardless of environment. Tests cannot go through
@@ -94,28 +110,84 @@ impl DiffLineMetadata {
     /// so an env var set by one test would leak into all others.
     #[cfg(test)]
     pub fn v1_for_tests() -> Self {
+        Self::new(1)
+    }
+
+    fn new(version: u32) -> Self {
         Self {
-            version: 1,
+            version,
             old_line: 0,
             new_line: 0,
+            parent_lines: Vec::new(),
             file: String::new(),
             last_record: None,
+            combined: CombinedRecords::default(),
+            conflict: CombinedRecords::default(),
         }
     }
 
     /// Seed the line-number counters and file path at a hunk header. Mirrors
     /// `LineNumbersData::initialize_hunk`: the first entry is the old-file start,
-    /// the last is the new-file start.
+    /// the last is the new-file start. In a combined diff the entries before
+    /// the last are each parent's start.
     pub fn initialize_hunk(&mut self, line_numbers: &[(usize, usize)], file: String) {
-        self.old_line = line_numbers[0].0;
-        self.new_line = line_numbers[line_numbers.len() - 1].0;
+        let (new, parents) = line_numbers.split_last().unwrap();
+        self.old_line = parents[0].0;
+        self.new_line = new.0;
+        self.parent_lines = parents.iter().map(|(start, _)| *start).collect();
         self.file = file;
+    }
+
+    /// Advance the counters past a line of a combined diff whose prefix (one
+    /// column per parent) is `prefix`, and return its record. A line in the
+    /// working tree is identified by its line there, as `a` if a parent lacks
+    /// it and as `c` if not. A line no longer in the working tree is a `d`,
+    /// identified by its line in the first parent that has it. That is not
+    /// unique when two parents lose different lines with the same number.
+    pub fn read_combined_line(&mut self, prefix: &str) -> Record {
+        let record = match prefix.find('-') {
+            Some(parent) => ('d', self.new_line, Some(self.parent_lines[parent])),
+            None if prefix.contains('+') => ('a', self.new_line, None),
+            None => ('c', self.new_line, None),
+        };
+        let column = if record.0 == 'd' { '-' } else { ' ' };
+        for (parent, c) in prefix.chars().enumerate() {
+            if c == column {
+                self.parent_lines[parent] += 1;
+            }
+        }
+        if record.0 != 'd' {
+            self.new_line += 1;
+        }
+        record
+    }
+
+    /// Hold the record of a line of a combined diff outside a merge conflict
+    /// until delta draws the line.
+    pub fn hold_combined_line(&mut self, prefix: &str) {
+        let record = self.read_combined_line(prefix);
+        match record.0 {
+            'd' => self.combined.minus.push_back(record),
+            'a' => self.combined.plus.push_back(record),
+            _ => self.combined.zero.push_back(record),
+        }
+    }
+
+    /// Hold the records of the lines of a merge conflict delta is about to
+    /// draw as one diff: `minus` drawn as removed, `plus` as added.
+    pub fn hold_conflict_lines(&mut self, minus: &[Record], plus: &[Record]) {
+        self.conflict = CombinedRecords {
+            minus: minus.iter().copied().collect(),
+            zero: VecDeque::new(),
+            plus: plus.iter().copied().collect(),
+        };
     }
 
     /// Advance the counters for `state` and return the OSC sequence to prepend
     /// to that content line, or an empty string for states that carry no
-    /// metadata (headers and -- in this prototype -- combined/merge diffs). The
-    /// counter arithmetic mirrors `line_numbers::linenumbers_and_styles`.
+    /// metadata (headers). The counter arithmetic mirrors
+    /// `line_numbers::linenumbers_and_styles`. A line of a combined diff takes
+    /// the record held for it as delta read it.
     ///
     /// A wrapped continuation row (`Hunk*Wrapped`, produced when side-by-side
     /// wraps a long line into several output rows) re-emits the record of the
@@ -146,6 +218,21 @@ impl DiffLineMetadata {
                 self.old_line += 1;
                 record
             }
+            HunkMinus(DiffType::Combined(_, in_conflict), _) => self
+                .held(in_conflict)
+                .minus
+                .pop_front()
+                .unwrap_or_else(no_record),
+            HunkZero(DiffType::Combined(_, in_conflict), _) => self
+                .held(in_conflict)
+                .zero
+                .pop_front()
+                .unwrap_or_else(no_record),
+            HunkPlus(DiffType::Combined(_, in_conflict), _) => self
+                .held(in_conflict)
+                .plus
+                .pop_front()
+                .unwrap_or_else(no_record),
             HunkZeroWrapped | HunkMinusWrapped | HunkPlusWrapped => match self.last_record {
                 Some(record) => record,
                 None => return String::new(),
@@ -160,6 +247,13 @@ impl DiffLineMetadata {
             version = self.version,
             file = self.file,
         )
+    }
+
+    fn held(&mut self, in_conflict: &InMergeConflict) -> &mut CombinedRecords {
+        match in_conflict {
+            InMergeConflict::No => &mut self.combined,
+            InMergeConflict::Yes => &mut self.conflict,
+        }
     }
 
     /// The `h` (hunk-header) record for the current hunk. `initialize_hunk` has
@@ -193,6 +287,10 @@ impl DiffLineMetadata {
     pub fn osc_for_commit(&self, commit: &str) -> String {
         format!("{OSC};{version};C;;;{commit}{ST}", version = self.version)
     }
+}
+
+fn no_record() -> Record {
+    delta_unreachable("A line of a combined diff was drawn with no OSC 1717 record held for it.")
 }
 
 /// The commit a commit-header line names: the first token after whatever

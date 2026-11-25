@@ -7,6 +7,7 @@ use super::draw;
 use crate::cli;
 use crate::config::{self, delta_unreachable};
 use crate::delta::{DiffType, InMergeConflict, MergeParents, State, StateMachine};
+use crate::features::diff_line_metadata::Record;
 use crate::minusplus::MinusPlus;
 use crate::paint::{self, prepare};
 use crate::style::Style;
@@ -27,6 +28,8 @@ pub struct MergeConflictCommits<T> {
 pub type MergeConflictLines = MergeConflictCommits<Vec<(String, State)>>;
 
 pub type MergeConflictCommitNames = MergeConflictCommits<Option<String>>;
+
+pub type MergeConflictRecords = MergeConflictCommits<Vec<Record>>;
 
 impl StateMachine<'_> {
     pub fn handle_merge_conflict_line(&mut self) -> std::io::Result<bool> {
@@ -76,11 +79,21 @@ impl StateMachine<'_> {
         Ok(handled_line)
     }
 
+    /// Advance the OSC 1717 line counters past the current line, which is in a
+    /// merge conflict, and return its record.
+    fn read_conflict_line(&mut self, merge_parents: &MergeParents) -> Option<Record> {
+        let n_parents = DiffType::Combined(merge_parents.clone(), InMergeConflict::Yes).n_parents();
+        let prefix = self.line.get(..n_parents).unwrap_or(&self.line);
+        let metadata = self.painter.diff_line_metadata.as_mut()?;
+        Some(metadata.read_combined_line(prefix))
+    }
+
     fn enter_merge_conflict(&mut self, merge_parents: &MergeParents) -> bool {
         use State::*;
         if let Some(commit) = parse_merge_marker(&self.line, "++<<<<<<<") {
-            self.state = MergeConflict(merge_parents.clone(), Ours);
             self.painter.merge_conflict_commit_names[Ours] = Some(commit.to_string());
+            self.read_conflict_line(merge_parents);
+            self.state = MergeConflict(merge_parents.clone(), Ours);
             true
         } else {
             false
@@ -90,8 +103,9 @@ impl StateMachine<'_> {
     fn enter_ancestral(&mut self, merge_parents: &MergeParents) -> bool {
         use State::*;
         if let Some(commit) = parse_merge_marker(&self.line, "++|||||||") {
-            self.state = MergeConflict(merge_parents.clone(), Ancestral);
             self.painter.merge_conflict_commit_names[Ancestral] = Some(commit.to_string());
+            self.read_conflict_line(merge_parents);
+            self.state = MergeConflict(merge_parents.clone(), Ancestral);
             true
         } else {
             false
@@ -101,6 +115,7 @@ impl StateMachine<'_> {
     fn enter_theirs(&mut self, merge_parents: &MergeParents) -> bool {
         use State::*;
         if self.line.starts_with("++=======") {
+            self.read_conflict_line(merge_parents);
             self.state = MergeConflict(merge_parents.clone(), Theirs);
             true
         } else {
@@ -111,6 +126,7 @@ impl StateMachine<'_> {
     fn exit_merge_conflict(&mut self, merge_parents: &MergeParents) -> std::io::Result<bool> {
         if let Some(commit) = parse_merge_marker(&self.line, "++>>>>>>>") {
             self.painter.merge_conflict_commit_names[Theirs] = Some(commit.to_string());
+            self.read_conflict_line(merge_parents);
             self.paint_buffered_merge_conflict_lines(merge_parents)?;
             Ok(true)
         } else {
@@ -120,7 +136,13 @@ impl StateMachine<'_> {
 
     fn store_line(&mut self, commit: MergeConflictCommit, state: State) -> bool {
         use State::*;
-        if let HunkMinus(diff_type, _) | HunkZero(diff_type, _) | HunkPlus(diff_type, _) = &state {
+        if let HunkMinus(diff_type @ DiffType::Combined(merge_parents, _), _)
+        | HunkZero(diff_type @ DiffType::Combined(merge_parents, _), _)
+        | HunkPlus(diff_type @ DiffType::Combined(merge_parents, _), _) = &state
+        {
+            if let Some(record) = self.read_conflict_line(merge_parents) {
+                self.painter.merge_conflict_records[commit.clone()].push(record);
+            }
             let line = prepare(&self.line, diff_type.n_parents(), self.config);
             self.painter.merge_conflict_lines[commit].push((line, state));
             true
@@ -153,13 +175,19 @@ impl StateMachine<'_> {
                 self.config,
             )?;
             self.painter.emit()?;
+            if let Some(metadata) = self.painter.diff_line_metadata.as_mut() {
+                metadata.hold_conflict_lines(
+                    &self.painter.merge_conflict_records[Ancestral],
+                    &self.painter.merge_conflict_records[derived_commit_type],
+                );
+            }
             paint::paint_minus_and_plus_lines(
                 MinusPlus::new(
                     &self.painter.merge_conflict_lines[Ancestral],
                     &self.painter.merge_conflict_lines[derived_commit_type],
                 ),
                 &mut self.painter.line_numbers_data,
-                &mut None,
+                &mut self.painter.diff_line_metadata.as_mut(),
                 &mut self.painter.highlighter,
                 &mut self.painter.output_buffer,
                 self.painter.side_by_side,
@@ -174,6 +202,7 @@ impl StateMachine<'_> {
             self.config,
         )?;
         self.painter.merge_conflict_lines.clear();
+        self.painter.merge_conflict_records.clear();
         self.state = HunkZero(Combined(merge_parents.clone(), InMergeConflict::No), None);
         Ok(())
     }
@@ -276,6 +305,22 @@ impl<T> IndexMut<MergeConflictCommit> for MergeConflictCommits<T> {
 }
 
 impl MergeConflictLines {
+    pub fn new() -> Self {
+        Self {
+            ours: Vec::new(),
+            ancestral: Vec::new(),
+            theirs: Vec::new(),
+        }
+    }
+
+    fn clear(&mut self) {
+        self[Ours].clear();
+        self[Ancestral].clear();
+        self[Theirs].clear();
+    }
+}
+
+impl MergeConflictRecords {
     pub fn new() -> Self {
         Self {
             ours: Vec::new(),

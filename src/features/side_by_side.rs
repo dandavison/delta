@@ -258,6 +258,7 @@ pub fn paint_zero_lines_side_by_side<'a>(
     config: &Config,
     line_numbers_data: &mut Option<&mut line_numbers::LineNumbersData>,
     diff_line_metadata: &mut Option<&mut DiffLineMetadata>,
+    line_state: &State,
     painted_prefix: Option<ansi_term::ANSIString>,
     background_color_extends_to_terminal_width: BgShouldFill,
 ) {
@@ -282,9 +283,11 @@ pub fn paint_zero_lines_side_by_side<'a>(
         // before each panel's cell. Compute it once so the counters advance a
         // single step for the line; a wrapped continuation row re-emits the
         // line's record (osc_for_line handles this) so it, too, is identified.
+        // The line's own state, since a combined diff's line takes its record from
+        // it; the states here are drawn as a unified diff's.
         let osc = diff_line_metadata
             .as_mut()
-            .map(|md| md.osc_for_line(&state))
+            .map(|md| md.osc_for_line(if line_index == 0 { line_state } else { &state }))
             .unwrap_or_default();
         for panel_side in &[Left, Right] {
             let (mut panel_line, panel_line_is_empty) = Painter::paint_line(
