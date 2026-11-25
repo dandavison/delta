@@ -5,7 +5,7 @@ Set Padding 14
 Set FontSize 24
 Set Columns 200
 Set Rows 56
-Set WindowTitle "delta --tui"
+Set WindowTitle "delta tui"
 Set KeyboardOverlay Input
 Set KeyboardOverlayLocation CaptionRow
 Set KeyboardOverlayFontSize 52

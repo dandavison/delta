@@ -98,7 +98,7 @@ fn get_color_mode(opt: &cli::Opt, terminal_color_mode: Option<ColorMode>) -> Opt
     } else if should_detect_color_mode(opt) {
         terminal_color_mode
     } else if opt.detect_dark_light == DetectDarkLight::Auto {
-        // Output that is not the terminal, as under `delta --tui`, which asks the
+        // Output that is not the terminal, as under `delta tui`, which asks the
         // terminal before it takes it over and says what it found.
         match opt.env.terminal_color_mode.as_deref() {
             Some("dark") => Some(Dark),
@@ -229,7 +229,7 @@ mod tests {
         }
     }
 
-    /// A delta whose output is not the terminal, as under `delta --tui`, cannot ask
+    /// A delta whose output is not the terminal, as under `delta tui`, cannot ask
     /// the terminal its background, so it takes the background from whoever could.
     #[test]
     fn test_terminal_color_mode_from_env_var_when_stdout_is_not_the_terminal() {

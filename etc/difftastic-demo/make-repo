@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Build a git repo at $1 for comparing git's and difftastic's view of changes in delta --tui.
+# Build a git repo at $1 for comparing git's and difftastic's view of changes in delta tui.
 # The first commit adds the before version of every example in examples/; each later commit
 # changes one example, and its message says what difftastic shows and what a line diff shows.
 # An existing repo at $1 is replaced.

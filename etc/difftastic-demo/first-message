@@ -1,6 +1,6 @@
 Add the before version of every example
 
 Each later commit changes one example. Its message says what difftastic shows
-for the change, and what a line diff shows. In delta --tui, * switches between
+for the change, and what a line diff shows. In delta tui, * switches between
 the two.
 

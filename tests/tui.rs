@@ -16,8 +16,11 @@ fn test_gitu_is_an_alias_of_tui() {
 
 #[test]
 fn test_tui_help_uses_tui() {
-    let help = String::from_utf8(delta(&["--tui", "--help"]).stdout).unwrap();
-    assert!(help.contains("Usage: delta --tui"), "{}", help);
+    // --tui, as delta 0.22.0 ran the TUI, still does.
+    for tui in ["tui", "--tui"] {
+        let help = String::from_utf8(delta(&[tui, "--help"]).stdout).unwrap();
+        assert!(help.contains("Usage: delta tui"), "{}", help);
+    }
 }
 
 // FIXME: stop ignoring this when delta depends on a delta-gitu that has --agent-instructions, and
@@ -27,7 +30,7 @@ fn test_tui_help_uses_tui() {
 fn test_agent_instructions_are_the_tuis() {
     let text = String::from_utf8(delta(&["--agent-instructions"]).stdout).unwrap();
     assert!(text.starts_with("---\nname: "), "{}", text);
-    let tui = String::from_utf8(delta(&["--tui", "--agent-instructions"]).stdout).unwrap();
+    let tui = String::from_utf8(delta(&["tui", "--agent-instructions"]).stdout).unwrap();
     assert_eq!(text, tui);
 }
 

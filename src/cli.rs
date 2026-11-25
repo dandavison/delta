@@ -29,7 +29,8 @@ const TERM_FALLBACK_WIDTH: usize = 79;
 #[derive(Parser)]
 #[command(
     name = "delta",
-    about = "A viewer for git and diff output",
+    about = "A viewer for git and diff output. \
+             `delta tui` runs it as an interactive git client and pager: see `delta tui --help`.",
     version,
     color = ColorChoice::Always,
     // output is wrapped by delta later:
@@ -974,13 +975,9 @@ pub struct Opt {
     pub true_color: String,
 
     #[cfg(feature = "gitu")]
-    #[arg(long = "tui", visible_alias = "gitu")]
-    /// Run delta as a live interactive git interface, based on gitu.
-    ///
-    /// See <https://dandavison.github.io/delta/tui.html>.
-    /// Must be the first argument (see `delta --tui --help` for possible subsequent arguments).
-    /// To use it as git's pager, set e.g. pager.diff to `delta --tui`.
-    /// The TUI is experimental: config and behavior may change backwards-incompatibly.
+    #[arg(long = "tui", alias = "gitu", hide = true)]
+    /// What `delta tui` was in delta 0.22.0, which runs the TUI as `delta tui` does, as delta's
+    /// first argument. It is not listed, so that `delta tui` is the way the help gives.
     pub tui: bool,
 
     #[cfg(feature = "gitu")]
@@ -988,8 +985,8 @@ pub struct Opt {
     /// Print instructions for AI agents on using delta.
     ///
     /// They are a skill: markdown with YAML front matter, which can be saved as a SKILL.md. For
-    /// now they cover reviewing code with a person in delta --tui. Same as
-    /// `delta --tui --agent-instructions`.
+    /// now they cover reviewing code with a person in delta tui. Same as
+    /// `delta tui --agent-instructions`.
     pub agent_instructions: bool,
 
     #[arg(

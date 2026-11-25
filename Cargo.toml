@@ -65,7 +65,7 @@ xdg = "2.4.1"
 
 [features]
 default = ["gitu"]
-# `delta --tui`: an interactive git client and pager, with delta as its renderer.
+# `delta tui`: an interactive git client and pager, with delta as its renderer.
 gitu = ["dep:delta-gitu", "dep:log", "dep:simple-logging"]
 
 [lints.rust]

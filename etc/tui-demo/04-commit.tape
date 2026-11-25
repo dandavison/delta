@@ -6,8 +6,8 @@ Sleep 500ms
 Show
 
 Announce@4s "How to use delta's TUI: staging & committing" "delta's TUI is based on https://github.com/altsem/gitu"
-Announce "delta --tui opens the status view"
-Type "delta --tui" Sleep 500ms Enter
+Announce "delta tui opens the status view"
+Type "delta tui" Sleep 500ms Enter
 Wait+Screen /Unstaged changes/
 Hide
 Type "S"

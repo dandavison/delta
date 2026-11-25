@@ -1,5 +1,5 @@
-//! `delta tui`, or `delta --tui` (alias `--gitu`): gitu, an interactive git
-//! client and pager, with delta as its renderer.
+//! `delta tui`: gitu, an interactive git client and pager, with delta as its
+//! renderer. `delta --tui` and `delta --gitu`, as delta 0.22.0 ran it, still do.
 
 use std::ffi::OsString;
 use std::sync::Arc;
@@ -19,8 +19,8 @@ const ABOUT: &str = "An interactive git client and pager, with delta as its rend
 Based on gitu by altsem (https://github.com/altsem/gitu), a git client inspired \
 by Magit, embedded via the delta-gitu fork (https://github.com/dandavison/gitu).";
 
-/// Where delta's own options go, for a user who gave them to `delta --tui`.
-const DELTA_OPTIONS_GO_IN_GIT_CONFIG: &str = "delta's own options cannot be given with --tui. \
+/// Where delta's own options go, for a user who gave them to `delta tui`.
+const DELTA_OPTIONS_GO_IN_GIT_CONFIG: &str = "delta's own options cannot be given with delta tui. \
 Set them in git config's [delta] section, or turn delta features on and off in the TUI with S, L and H.";
 
 /// Run gitu with `args`, which start after `tui`, `--tui` or `--gitu`,
@@ -56,10 +56,10 @@ pub fn has_agent_instructions() -> bool {
 
 fn parse(args: impl IntoIterator<Item = OsString>) -> Result<Args, clap::Error> {
     let matches = Args::command()
-        .name("delta --tui")
-        .bin_name("delta --tui")
+        .name("delta tui")
+        .bin_name("delta tui")
         .about(ABOUT)
-        .try_get_matches_from(std::iter::once("delta --tui".into()).chain(args))?;
+        .try_get_matches_from(std::iter::once("delta tui".into()).chain(args))?;
     Args::from_arg_matches(&matches)
 }
 
@@ -82,7 +82,7 @@ pub fn misplaced_tui(args: impl IntoIterator<Item = OsString>) -> Option<String>
         return None;
     }
     args.any(|arg| is_tui_option(&arg)).then(|| {
-        format!("--tui must be delta's first argument, as in `delta --tui`. {DELTA_OPTIONS_GO_IN_GIT_CONFIG}")
+        format!("To run the TUI, tui must be delta's first argument, as in `delta tui`. {DELTA_OPTIONS_GO_IN_GIT_CONFIG}")
     })
 }
 
@@ -335,7 +335,10 @@ mod tests {
 
     #[test]
     fn test_the_tuis_help_says_delta_tui() {
-        let help = parse(os_args(&["--help"])).unwrap_err().render().to_string();
+        let help = parse(os_args(&["--help"]))
+            .unwrap_err()
+            .render()
+            .to_string();
         assert!(help.contains("Usage: delta tui"), "{help}");
     }
 
