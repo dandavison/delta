@@ -160,6 +160,45 @@ mod tests {
     }
 
     #[test]
+    fn test_removed_lines_do_not_affect_syntax_of_added_lines() {
+        // Use color-only so that we can refer to the line numbers from the input diff.
+        // Syntax-highlight removed lines too, so that they are parsed.
+        let config = integration_test_utils::make_config_from_args(&[
+            "--color-only",
+            "--minus-style",
+            "syntax",
+            "--plus-style",
+            "syntax",
+            "--plus-emph-style",
+            "syntax",
+        ]);
+        let input = r#"diff --git a/a.py b/a.py
+--- a/a.py
++++ b/a.py
+@@ -1,2 +1,2 @@
+-x = """
++x = 1
+ y = 2
+"#;
+        let output = integration_test_utils::run_delta(input, &config);
+        // The string opened by the removed line must not continue into the following lines.
+        for (line_number, line, state) in [
+            (5, "x = 1", State::HunkPlus(DiffType::Unified, None)),
+            (6, "y = 2", State::HunkZero(DiffType::Unified, None)),
+        ] {
+            ansi_test_utils::assert_line_has_syntax_highlighted_substring(
+                &output,
+                line_number,
+                1,
+                line,
+                "a.py",
+                state,
+                &config,
+            );
+        }
+    }
+
+    #[test]
     fn test_full_filename_used_to_detect_language() {
         let config = integration_test_utils::make_config_from_args(&[
             "--color-only",

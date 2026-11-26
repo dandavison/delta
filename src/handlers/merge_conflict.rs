@@ -176,6 +176,8 @@ impl StateMachine<'_> {
             &mut self.painter,
             self.config,
         )?;
+        // Each side is diffed against the ancestor, from the state before the conflict.
+        let syntax_state = self.painter.syntax_state.save();
         for (derived_commit_type, header_style) in &[
             (Ours, self.config.merge_conflict_ours_diff_header_style),
             (Theirs, self.config.merge_conflict_theirs_diff_header_style),
@@ -193,6 +195,7 @@ impl StateMachine<'_> {
                     &self.painter.merge_conflict_records[derived_commit_type],
                 );
             }
+            self.painter.syntax_state.restore(&syntax_state);
             paint::paint_minus_and_plus_lines(
                 MinusPlus::new(
                     &self.painter.merge_conflict_lines[Ancestral],
@@ -200,7 +203,7 @@ impl StateMachine<'_> {
                 ),
                 &mut self.painter.line_numbers_data,
                 &mut self.painter.diff_line_metadata.as_mut(),
-                &mut self.painter.highlighter,
+                &mut self.painter.syntax_state,
                 &mut self.painter.output_buffer,
                 self.painter.side_by_side,
                 self.config,
