@@ -4,9 +4,46 @@ use std::io::Write;
 
 use ansi_term::ANSIString;
 use itertools::Itertools;
-use syntect::easy::HighlightLines;
-use syntect::highlighting::Style as SyntectStyle;
-use syntect::parsing::{SyntaxReference, SyntaxSet};
+use syntect::highlighting::{
+    HighlightIterator, HighlightState, Highlighter, Style as SyntectStyle, Theme,
+};
+use syntect::parsing::{ParseState, ScopeStack, SyntaxReference, SyntaxSet};
+
+/// Wrapper around `syntect`'s highlighter that constructs the compiled
+/// `Highlighter` (and sorted theme scope rules) once and reuses it across
+/// hunk/file resets instead of re-sorting the theme on every `set_highlighter`.
+pub struct ReusableHighlightLines<'a> {
+    highlighter: Highlighter<'a>,
+    parse_state: ParseState,
+    highlight_state: HighlightState,
+}
+
+impl<'a> ReusableHighlightLines<'a> {
+    pub fn new(syntax: &SyntaxReference, theme: &'a Theme) -> Self {
+        let highlighter = Highlighter::new(theme);
+        let highlight_state = HighlightState::new(&highlighter, ScopeStack::new());
+        Self {
+            highlighter,
+            parse_state: ParseState::new(syntax),
+            highlight_state,
+        }
+    }
+
+    pub fn reset(&mut self, syntax: &SyntaxReference) {
+        self.parse_state = ParseState::new(syntax);
+        self.highlight_state = HighlightState::new(&self.highlighter, ScopeStack::new());
+    }
+
+    pub fn highlight_line<'b>(
+        &mut self,
+        line: &'b str,
+        syntax_set: &SyntaxSet,
+    ) -> Result<Vec<(SyntectStyle, &'b str)>, syntect::Error> {
+        let ops = self.parse_state.parse_line(line, syntax_set)?;
+        let iter = HighlightIterator::new(&mut self.highlight_state, &ops, line, &self.highlighter);
+        Ok(iter.collect())
+    }
+}
 
 use crate::cli;
 use crate::config::{self, delta_unreachable, Config};
@@ -30,7 +67,7 @@ pub struct Painter<'p> {
     pub plus_lines: Vec<(String, State)>,
     pub writer: &'p mut dyn Write,
     pub syntax: &'p SyntaxReference,
-    pub highlighter: Option<HighlightLines<'p>>,
+    pub highlighter: Option<ReusableHighlightLines<'p>>,
     pub config: &'p config::Config,
     // Whether the lines being painted are laid out side-by-side. Starts out as
     // config.side_by_side, but can be changed between hunks.
@@ -167,8 +204,13 @@ impl<'p> Painter<'p> {
 
     pub fn set_highlighter(&mut self) {
         if let Some(ref syntax_theme) = self.config.syntax_theme {
-            self.highlighter = Some(HighlightLines::new(self.syntax, syntax_theme))
-        };
+            match self.highlighter {
+                Some(ref mut highlighter) => highlighter.reset(self.syntax),
+                None => {
+                    self.highlighter = Some(ReusableHighlightLines::new(self.syntax, syntax_theme));
+                }
+            }
+        }
     }
 
     pub fn paint_buffered_minus_and_plus_lines(&mut self) {
@@ -401,13 +443,15 @@ impl<'p> Painter<'p> {
 
     /// Emit line with ANSI sequences that extend the background color to the terminal width.
     pub fn right_fill_background_color(line: &mut String, fill_style: Style) {
+        use std::fmt::Write as _;
         // HACK: How to properly incorporate the ANSI_CSI_CLEAR_TO_EOL into ansi_strings?
-        line.push_str(&ansi_term::ANSIStrings(&[fill_style.paint("")]).to_string());
-        if line
-            .to_lowercase()
-            .ends_with(&ansi::ANSI_SGR_RESET.to_lowercase())
+        let _ = write!(line, "{}", ansi_term::ANSIStrings(&[fill_style.paint("")]));
+        let reset_len = ansi::ANSI_SGR_RESET.len();
+        if line.len() >= reset_len
+            && line.as_bytes()[line.len() - reset_len..]
+                .eq_ignore_ascii_case(ansi::ANSI_SGR_RESET.as_bytes())
         {
-            line.truncate(line.len() - ansi::ANSI_SGR_RESET.len());
+            line.truncate(line.len() - reset_len);
         }
         line.push_str(ansi::ANSI_CSI_CLEAR_TO_EOL);
         line.push_str(ansi::ANSI_SGR_RESET);
@@ -478,7 +522,7 @@ impl<'p> Painter<'p> {
             }
 
             if !text.is_empty() {
-                ansi_strings.push(section_style.paint(text.as_str()));
+                ansi_strings.push(section_style.paint(text.as_ref()));
             }
             handled_prefix = true;
         }
@@ -648,7 +692,7 @@ pub fn paint_minus_and_plus_lines(
     lines: MinusPlus<&Vec<(String, State)>>,
     line_numbers_data: &mut Option<LineNumbersData>,
     diff_line_metadata: &mut Option<&mut DiffLineMetadata>,
-    highlighter: &mut Option<HighlightLines>,
+    highlighter: &mut Option<ReusableHighlightLines>,
     output_buffer: &mut String,
     side_by_side: bool,
     config: &config::Config,
@@ -730,7 +774,7 @@ pub fn paint_minus_and_plus_lines(
 
 pub fn get_syntax_style_sections_for_lines<'a>(
     lines: &'a [(String, State)],
-    highlighter: Option<&mut HighlightLines>,
+    highlighter: Option<&mut ReusableHighlightLines>,
     config: &config::Config,
 ) -> Vec<LineSections<'a, SyntectStyle>> {
     let mut line_sections = Vec::new();
@@ -949,10 +993,32 @@ fn style_sections_contain_more_than_one_style(sections: &[(Style, &str)]) -> boo
 }
 
 mod superimpose_style_sections {
+    use std::borrow::Cow;
+
     use syntect::highlighting::Style as SyntectStyle;
 
     use crate::style::Style;
     use crate::utils::bat::terminal::to_ansi_color;
+
+    #[inline]
+    fn make_superimposed_style(
+        syntect_style: SyntectStyle,
+        style: Style,
+        true_color: bool,
+        null_syntect_style: SyntectStyle,
+    ) -> Style {
+        if style.is_syntax_highlighted && syntect_style != null_syntect_style {
+            Style {
+                ansi_term_style: ansi_term::Style {
+                    foreground: to_ansi_color(syntect_style.foreground, true_color),
+                    ..style.ansi_term_style
+                },
+                ..style
+            }
+        } else {
+            style
+        }
+    }
 
     // We have two different annotations of the same line:
     // `syntax_style_sections` contains foreground styles computed by syntect,
@@ -960,26 +1026,99 @@ mod superimpose_style_sections {
     // within-line edits. The delta styles may assign a foreground color, or
     // they may indicate that the foreground color comes from syntax
     // highlighting (the is_syntax_highlighting attribute on style::Style). This
-    // function takes in the two input streams and outputs one stream with a
-    // single style assigned to each character.
-    pub fn superimpose_style_sections(
-        syntax_style_sections: &[(SyntectStyle, &str)],
-        diff_style_sections: &[(Style, &str)],
+    // function sweeps both slice streams in lockstep without per-character
+    // intermediate vectors and outputs coalesced styled sections.
+    pub fn superimpose_style_sections<'a>(
+        syntax_style_sections: &[(SyntectStyle, &'a str)],
+        diff_style_sections: &[(Style, &'a str)],
         true_color: bool,
         null_syntect_style: SyntectStyle,
-    ) -> Vec<(Style, String)> {
-        coalesce(
-            superimpose(
-                explode(syntax_style_sections)
-                    .iter()
-                    .zip(explode(diff_style_sections))
-                    .collect::<Vec<(&(SyntectStyle, char), (Style, char))>>(),
-            ),
-            true_color,
-            null_syntect_style,
-        )
+    ) -> Vec<(Style, Cow<'a, str>)> {
+        let mut coalesced: Vec<(Style, Cow<'a, str>)> =
+            Vec::with_capacity(syntax_style_sections.len() + diff_style_sections.len());
+
+        let mut si = 0;
+        let mut s_off = 0;
+        let mut di = 0;
+        let mut d_off = 0;
+
+        let mut current: Option<((SyntectStyle, Style), Cow<'a, str>)> = None;
+
+        loop {
+            while si < syntax_style_sections.len() && s_off == syntax_style_sections[si].1.len() {
+                si += 1;
+                s_off = 0;
+            }
+            while di < diff_style_sections.len() && d_off == diff_style_sections[di].1.len() {
+                di += 1;
+                d_off = 0;
+            }
+            if si >= syntax_style_sections.len() || di >= diff_style_sections.len() {
+                break;
+            }
+
+            let (syntax_style, s_str) = syntax_style_sections[si];
+            let (diff_style, d_str) = diff_style_sections[di];
+            let s_rem = &s_str[s_off..];
+            let d_rem = &d_str[d_off..];
+            let take = s_rem.len().min(d_rem.len());
+
+            if s_rem.as_bytes()[..take] != d_rem.as_bytes()[..take] {
+                for (c1, c2) in s_rem.chars().zip(d_rem.chars()) {
+                    if c1 != c2 {
+                        panic!(
+                            "String mismatch encountered while superimposing style sections: '{}' vs '{}'",
+                            c1, c2
+                        );
+                    }
+                }
+                unreachable!();
+            }
+
+            let chunk = &s_rem[..take];
+            s_off += take;
+            d_off += take;
+
+            let pair = (syntax_style, diff_style);
+            match current {
+                Some((cur_pair, ref mut cur_text)) if cur_pair == pair => {
+                    cur_text.to_mut().push_str(chunk);
+                }
+                Some((cur_pair, cur_text)) => {
+                    let style = make_superimposed_style(
+                        cur_pair.0,
+                        cur_pair.1,
+                        true_color,
+                        null_syntect_style,
+                    );
+                    coalesced.push((style, cur_text));
+                    current = Some((pair, Cow::Borrowed(chunk)));
+                }
+                None => {
+                    current = Some((pair, Cow::Borrowed(chunk)));
+                }
+            }
+        }
+
+        if let Some((cur_pair, mut cur_text)) = current {
+            // TODO: This is not the ideal location for the following code.
+            if cur_text.ends_with('\n') {
+                // Remove the terminating newline whose presence was necessary for the syntax
+                // highlighter to work correctly.
+                match cur_text {
+                    Cow::Borrowed(s) => cur_text = Cow::Borrowed(&s[..s.len() - 1]),
+                    Cow::Owned(ref mut s) => s.truncate(s.len() - 1),
+                }
+            }
+            let style =
+                make_superimposed_style(cur_pair.0, cur_pair.1, true_color, null_syntect_style);
+            coalesced.push((style, cur_text));
+        }
+
+        coalesced
     }
 
+    #[cfg(test)]
     fn explode<T>(style_sections: &[(T, &str)]) -> Vec<(T, char)>
     where
         T: Copy,
@@ -993,6 +1132,7 @@ mod superimpose_style_sections {
         exploded
     }
 
+    #[cfg(test)]
     #[allow(clippy::type_complexity)]
     fn superimpose(
         style_section_pairs: Vec<(&(SyntectStyle, char), (Style, char))>,
@@ -1008,51 +1148,6 @@ mod superimpose_style_sections {
             superimposed.push(((*syntax_style, style), *char_1));
         }
         superimposed
-    }
-
-    fn coalesce(
-        style_sections: Vec<((SyntectStyle, Style), char)>,
-        true_color: bool,
-        null_syntect_style: SyntectStyle,
-    ) -> Vec<(Style, String)> {
-        let make_superimposed_style = |(syntect_style, style): (SyntectStyle, Style)| {
-            if style.is_syntax_highlighted && syntect_style != null_syntect_style {
-                Style {
-                    ansi_term_style: ansi_term::Style {
-                        foreground: to_ansi_color(syntect_style.foreground, true_color),
-                        ..style.ansi_term_style
-                    },
-                    ..style
-                }
-            } else {
-                style
-            }
-        };
-        let mut coalesced: Vec<(Style, String)> = Vec::new();
-        let mut style_sections = style_sections.iter();
-        if let Some((style_pair, c)) = style_sections.next() {
-            let mut current_string = c.to_string();
-            let mut current_style_pair = style_pair;
-            for (style_pair, c) in style_sections {
-                if style_pair != current_style_pair {
-                    let style = make_superimposed_style(*current_style_pair);
-                    coalesced.push((style, current_string));
-                    current_string = String::new();
-                    current_style_pair = style_pair;
-                }
-                current_string.push(*c);
-            }
-
-            // TODO: This is not the ideal location for the following code.
-            if current_string.ends_with('\n') {
-                // Remove the terminating newline whose presence was necessary for the syntax
-                // highlighter to work correctly.
-                current_string.truncate(current_string.len() - 1);
-            }
-            let style = make_superimposed_style(*current_style_pair);
-            coalesced.push((style, current_string));
-        }
-        coalesced
     }
 
     #[cfg(test)]
@@ -1124,7 +1219,7 @@ mod superimpose_style_sections {
         fn test_superimpose_style_sections_1() {
             let sections_1 = vec![(*SYNTAX_STYLE, "ab")];
             let sections_2 = vec![(*SYNTAX_HIGHLIGHTED_STYLE, "ab")];
-            let superimposed = vec![(*SUPERIMPOSED_STYLE, "ab".to_string())];
+            let superimposed = vec![(*SUPERIMPOSED_STYLE, Cow::Borrowed("ab"))];
             assert_eq!(
                 superimpose_style_sections(&sections_1, &sections_2, true, SyntectStyle::default()),
                 superimposed
@@ -1138,7 +1233,7 @@ mod superimpose_style_sections {
                 (*SYNTAX_HIGHLIGHTED_STYLE, "a"),
                 (*SYNTAX_HIGHLIGHTED_STYLE, "b"),
             ];
-            let superimposed = vec![(*SUPERIMPOSED_STYLE, String::from("ab"))];
+            let superimposed = vec![(*SUPERIMPOSED_STYLE, Cow::Owned(String::from("ab")))];
             assert_eq!(
                 superimpose_style_sections(&sections_1, &sections_2, true, SyntectStyle::default()),
                 superimposed
@@ -1149,7 +1244,7 @@ mod superimpose_style_sections {
         fn test_superimpose_style_sections_3() {
             let sections_1 = vec![(*SYNTAX_STYLE, "ab")];
             let sections_2 = vec![(*NON_SYNTAX_HIGHLIGHTED_STYLE, "ab")];
-            let superimposed = vec![(*NON_SYNTAX_HIGHLIGHTED_STYLE, "ab".to_string())];
+            let superimposed = vec![(*NON_SYNTAX_HIGHLIGHTED_STYLE, Cow::Borrowed("ab"))];
             assert_eq!(
                 superimpose_style_sections(&sections_1, &sections_2, true, SyntectStyle::default()),
                 superimposed

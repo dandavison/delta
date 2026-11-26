@@ -19,10 +19,16 @@ pub const ANSI_SGR_UNDERLINE: &str = "\x1b[4m";
 pub const OSC8_HYPERLINK_END: &str = "\x1b]8;;\x1b\\";
 
 pub fn strip_ansi_codes(s: &str) -> String {
+    if !s.as_bytes().iter().any(|&b| b == 0x1b || b == 0x7f) {
+        return s.to_owned();
+    }
     strip_ansi_codes_from_strings_iterator(ansi_strings_iterator(s))
 }
 
 pub fn measure_text_width(s: &str) -> usize {
+    if !s.as_bytes().iter().any(|&b| b == 0x1b || b == 0x7f) {
+        return s.width();
+    }
     ansi_strings_iterator(s).fold(0, |acc, (element, is_ansi)| {
         acc + if is_ansi { 0 } else { element.width() }
     })
@@ -187,6 +193,9 @@ pub fn parse_style_sections(s: &str) -> Vec<(ansi_term::Style, &str)> {
 
 // Return the first CSI element, if any, as an `ansi_term::Style`.
 pub fn parse_first_style(s: &str) -> Option<ansi_term::Style> {
+    if !s.as_bytes().contains(&0x1b) {
+        return None;
+    }
     AnsiElementIterator::new(s).find_map(|el| match el {
         Element::Sgr(style, _, _) => Some(style),
         _ => None,
@@ -194,6 +203,9 @@ pub fn parse_first_style(s: &str) -> Option<ansi_term::Style> {
 }
 
 pub fn string_starts_with_ansi_style_sequence(s: &str) -> bool {
+    if !s.as_bytes().starts_with(b"\x1b[") {
+        return false;
+    }
     AnsiElementIterator::new(s)
         .next()
         .map(|el| matches!(el, Element::Sgr(_, _, _)))
@@ -204,6 +216,9 @@ pub fn string_starts_with_ansi_style_sequence(s: &str) -> bool {
 /// counts bytes in non-ANSI-escape-sequence content only. All ANSI escape sequences in the
 /// original string are preserved.
 pub fn ansi_preserving_slice(s: &str, start: usize) -> String {
+    if !s.as_bytes().contains(&0x1b) {
+        return s[start.min(s.len())..].to_owned();
+    }
     AnsiElementIterator::new(s)
         .scan(0, |index, element| {
             // `index` is the index in non-ANSI-escape-sequence content.

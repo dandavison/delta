@@ -1,3 +1,6 @@
+use std::cmp::Ordering;
+use std::collections::HashMap;
+
 use regex::Regex;
 
 use unicode_segmentation::UnicodeSegmentation;
@@ -5,6 +8,109 @@ use unicode_width::UnicodeWidthStr;
 
 use crate::align;
 use crate::minusplus::MinusPlus;
+
+struct TokenizedLine<'a> {
+    tokens: Vec<&'a str>,
+    ids: Vec<u32>,
+    ascii_printable: bool,
+    trim_width: u32,
+    nonws_width_sum: u32,
+    nonws_sorted_ids: Vec<u32>,
+}
+
+fn tokenize_and_intern<'a>(
+    line: &'a str,
+    regex: &Regex,
+    interner: &mut HashMap<&'a str, u32>,
+    token_widths: &mut Vec<u32>,
+) -> TokenizedLine<'a> {
+    let tokens = tokenize(line, regex);
+    let ascii_printable = line
+        .bytes()
+        .all(|b| (0x20..=0x7e).contains(&b) || matches!(b, b'\t' | b'\n' | b'\r'));
+    let trim_width = if ascii_printable {
+        line.trim()
+            .bytes()
+            .filter(|&b| (0x20..=0x7e).contains(&b))
+            .count() as u32
+    } else {
+        0
+    };
+
+    let mut ids = Vec::with_capacity(tokens.len());
+    let mut nonws_sorted_ids = if ascii_printable {
+        Vec::with_capacity(tokens.len())
+    } else {
+        Vec::new()
+    };
+    let mut nonws_width_sum = 0u32;
+
+    for &tok in &tokens {
+        let id = *interner.entry(tok).or_insert_with(|| {
+            let next_id = token_widths.len() as u32;
+            let w = if !tok.is_empty() && tok.bytes().all(|b| (0x21..=0x7e).contains(&b)) {
+                tok.len() as u32
+            } else {
+                0
+            };
+            token_widths.push(w);
+            next_id
+        });
+        ids.push(id);
+        if ascii_printable {
+            let w = token_widths[id as usize];
+            if w > 0 {
+                nonws_sorted_ids.push(id);
+                nonws_width_sum += w;
+            }
+        }
+    }
+    nonws_sorted_ids.sort_unstable();
+
+    TokenizedLine {
+        tokens,
+        ids,
+        ascii_printable,
+        trim_width,
+        nonws_width_sum,
+        nonws_sorted_ids,
+    }
+}
+
+/// Returns true only when it is mathematically impossible for `a` and `b` to
+/// have edit distance `<= threshold`.
+#[inline]
+fn exceeds_distance_lower_bound(
+    a: &TokenizedLine<'_>,
+    b: &TokenizedLine<'_>,
+    token_widths: &[u32],
+    threshold: f64,
+) -> bool {
+    if !a.ascii_printable || !b.ascii_printable || threshold >= 1.0 {
+        return false;
+    }
+    let max_denom = a.trim_width + b.trim_width;
+    if max_denom == 0 {
+        return false;
+    }
+    let mut shared_w = 0u32;
+    let (mut ia, mut ib) = (0, 0);
+    let a_ids = &a.nonws_sorted_ids;
+    let b_ids = &b.nonws_sorted_ids;
+    while ia < a_ids.len() && ib < b_ids.len() {
+        match a_ids[ia].cmp(&b_ids[ib]) {
+            Ordering::Equal => {
+                shared_w += token_widths[a_ids[ia] as usize];
+                ia += 1;
+                ib += 1;
+            }
+            Ordering::Less => ia += 1,
+            Ordering::Greater => ib += 1,
+        }
+    }
+    let min_unmatched = (a.nonws_width_sum - shared_w) + (b.nonws_width_sum - shared_w);
+    (min_unmatched as f64) > threshold * (max_denom as f64) + 1e-9
+}
 
 /// Infer the edit operations responsible for the differences between a collection of old and new
 /// lines. A "line" is a string. An annotated line is a Vec of (op, &str) pairs, where the &str
@@ -39,21 +145,60 @@ pub fn infer_edits<'a, EditOperation>(
 where
     EditOperation: Copy + PartialEq + std::fmt::Debug,
 {
-    let mut annotated_minus_lines = Vec::<Vec<(EditOperation, &str)>>::new();
-    let mut annotated_plus_lines = Vec::<Vec<(EditOperation, &str)>>::new();
-    let mut line_alignment = Vec::<(Option<usize>, Option<usize>)>::new();
+    let mut annotated_minus_lines =
+        Vec::<Vec<(EditOperation, &str)>>::with_capacity(minus_lines.len());
+    let mut annotated_plus_lines =
+        Vec::<Vec<(EditOperation, &str)>>::with_capacity(plus_lines.len());
+    let mut line_alignment =
+        Vec::<(Option<usize>, Option<usize>)>::with_capacity(minus_lines.len() + plus_lines.len());
 
     let mut plus_index = 0; // plus lines emitted so far
+    let threshold = if minus_lines.len() == plus_lines.len() {
+        max_line_distance.max(max_line_distance_for_naively_paired_lines)
+    } else {
+        max_line_distance
+    };
+
+    let mut interner: HashMap<&'a str, u32> = HashMap::new();
+    let mut token_widths: Vec<u32> = Vec::new();
+    let mut tokenized_plus: Vec<Option<TokenizedLine<'a>>> =
+        (0..plus_lines.len()).map(|_| None).collect();
+    let mut workspace = align::AlignWorkspace::new();
 
     'minus_lines_loop: for (minus_index, minus_line) in minus_lines.iter().enumerate() {
+        if plus_index >= plus_lines.len() {
+            annotated_minus_lines.push(vec![(noop_deletions[minus_index], minus_line)]);
+            line_alignment.push((Some(minus_index), None));
+            continue;
+        }
+        let minus_tok = tokenize_and_intern(
+            minus_line,
+            tokenization_regex,
+            &mut interner,
+            &mut token_widths,
+        );
         let mut considered = 0; // plus lines considered so far as match for minus_line
-        for plus_line in &plus_lines[plus_index..] {
-            let alignment = align::Alignment::new(
-                tokenize(minus_line, tokenization_regex),
-                tokenize(plus_line, tokenization_regex),
-            );
+        for (rel_idx, plus_line) in plus_lines[plus_index..].iter().enumerate() {
+            let abs_plus_idx = plus_index + rel_idx;
+            let plus_tok = tokenized_plus[abs_plus_idx].get_or_insert_with(|| {
+                tokenize_and_intern(
+                    plus_line,
+                    tokenization_regex,
+                    &mut interner,
+                    &mut token_widths,
+                )
+            });
+
+            if exceeds_distance_lower_bound(&minus_tok, plus_tok, &token_widths, threshold) {
+                considered += 1;
+                continue;
+            }
+
+            let coalesced_ops = workspace.coalesced_operations_for(&minus_tok.ids, &plus_tok.ids);
             let (annotated_minus_line, annotated_plus_line, distance) = annotate(
-                alignment,
+                coalesced_ops,
+                &minus_tok.tokens,
+                &plus_tok.tokens,
                 noop_deletions[minus_index],
                 deletion,
                 noop_insertions[plus_index],
@@ -61,10 +206,7 @@ where
                 minus_line,
                 plus_line,
             );
-            if minus_lines.len() == plus_lines.len()
-                && distance <= max_line_distance_for_naively_paired_lines
-                || distance <= max_line_distance
-            {
+            if distance <= threshold {
                 // minus_line and plus_line are inferred to be a homologous pair.
 
                 // Emit as unpaired the plus lines already considered and rejected
@@ -135,21 +277,33 @@ pub fn make_lines_have_homolog(
     )
 }
 
+#[inline]
+fn push_graphemes<'a>(tokens: &mut Vec<&'a str>, seg: &'a str) {
+    if seg.is_ascii() && !seg.as_bytes().contains(&b'\r') {
+        for i in 0..seg.len() {
+            tokens.push(&seg[i..i + 1]);
+        }
+    } else {
+        for t in seg.graphemes(true) {
+            tokens.push(t);
+        }
+    }
+}
+
 /// Split line into tokens for alignment. The alignment algorithm aligns sequences of substrings;
 /// not individual characters.
 fn tokenize<'a>(line: &'a str, regex: &Regex) -> Vec<&'a str> {
     // Starting with "", see comment in Alignment::new(). Historical note: Replacing the '+/-'
     // prefix with a space implicitly generated this.
-    let mut tokens = vec![""];
+    let mut tokens = Vec::with_capacity(line.len().min(64) + 2);
+    tokens.push("");
     let mut offset = 0;
     for m in regex.find_iter(line) {
         if offset == 0 && m.start() > 0 {
             tokens.push("");
         }
         // Align separating text as multiple single-character tokens.
-        for t in line[offset..m.start()].graphemes(true) {
-            tokens.push(t);
-        }
+        push_graphemes(&mut tokens, &line[offset..m.start()]);
         tokens.push(&line[m.start()..m.end()]);
         offset = m.end();
     }
@@ -157,9 +311,7 @@ fn tokenize<'a>(line: &'a str, regex: &Regex) -> Vec<&'a str> {
         if offset == 0 {
             tokens.push("");
         }
-        for t in line[offset..line.len()].graphemes(true) {
-            tokens.push(t);
-        }
+        push_graphemes(&mut tokens, &line[offset..line.len()]);
     }
     tokens
 }
@@ -170,9 +322,12 @@ fn tokenize<'a>(line: &'a str, regex: &Regex) -> Vec<&'a str> {
 // This function doesn't return "coalesced" annotations: i.e. they're often are runs of consecutive
 // occurrences of the same operation. Since it is returning &strs pointing into the memory of the
 // original line, it's not possible to coalesce them in this function.
+#[allow(clippy::too_many_arguments)]
 #[allow(clippy::type_complexity)]
 fn annotate<'a, Annotation>(
-    alignment: align::Alignment<'a>,
+    coalesced_ops: &[(align::Operation, usize)],
+    x_tokens: &[&'a str],
+    y_tokens: &[&'a str],
     noop_deletion: Annotation,
     deletion: Annotation,
     noop_insertion: Annotation,
@@ -211,15 +366,15 @@ where
         &line[old_offset..*line_offset]
     };
     let mut minus_section = |n: usize, offset: &mut usize| {
-        get_section(n, &mut minus_line_offset, offset, &alignment.x, minus_line)
+        get_section(n, &mut minus_line_offset, offset, x_tokens, minus_line)
     };
     let mut plus_section = |n: usize, offset: &mut usize| {
-        get_section(n, &mut plus_line_offset, offset, &alignment.y, plus_line)
+        get_section(n, &mut plus_line_offset, offset, y_tokens, plus_line)
     };
     let distance_contribution = |section: &str| UnicodeWidthStr::width(section.trim());
 
     let (mut minus_op_prev, mut plus_op_prev) = (noop_deletion, noop_insertion);
-    for (op, n) in alignment.coalesced_operations() {
+    for &(op, n) in coalesced_ops {
         match op {
             align::Operation::Deletion => {
                 let minus_section = minus_section(n, &mut x_offset);
@@ -237,7 +392,7 @@ where
                 let coalesce_space_with_previous = is_space
                     && ((minus_op_prev == deletion
                         && plus_op_prev == insertion
-                        && (x_offset < alignment.x.len() - 1 || y_offset < alignment.y.len() - 1))
+                        && (x_offset < x_tokens.len() - 1 || y_offset < y_tokens.len() - 1))
                         || (minus_op_prev == noop_deletion && plus_op_prev == noop_insertion));
                 annotated_minus_line.push((
                     if coalesce_space_with_previous {
