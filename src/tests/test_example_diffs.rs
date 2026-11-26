@@ -1092,6 +1092,76 @@ src/align.rs
     }
 
     #[test]
+    fn test_color_only_highlights_word_changes_in_reflowed_prose() {
+        let config = integration_test_utils::make_config_from_args(&[
+            "--color-only",
+            "--syntax-theme",
+            "none",
+            "--minus-emph-style",
+            "red",
+            "--plus-emph-style",
+            "green",
+        ]);
+        // `before` and `after` are context lines around the changed lines.
+        for (extension, before, prefix, after) in [
+            ("cpp", "", "\t// ", ""),
+            ("rs", "", "/// ", ""),
+            ("go", "", "// ", ""),
+            ("sh", "", "# ", ""),
+            ("py", "", "    # ", ""),
+            ("hs", "", "-- ", ""),
+            ("lua", "", "-- ", ""),
+            ("md", "", "", ""),
+            ("md", "", "  ", ""),
+            ("txt", "", "", ""),
+            // A docstring that opens in a context line.
+            ("py", "    \"\"\"Summary.\n", "    ", "    \"\"\"\n"),
+            ("c", "/*\n", " * ", " */\n"),
+            ("js", "/**\n", " * ", " */\n"),
+            ("hs", "{-\n", "   ", "-}\n"),
+        ] {
+            let context_count = before.lines().count() + after.lines().count();
+            let old_count = 2 + context_count;
+            let new_count = 3 + context_count;
+            let context = |line: &str| {
+                line.lines()
+                    .map(|line| format!(" {line}\n"))
+                    .collect::<String>()
+            };
+            let (before, after) = (context(before), context(after));
+            let input = format!(
+                "diff --git a/a.{extension} b/a.{extension}\n\
+                 --- a/a.{extension}\n\
+                 +++ b/a.{extension}\n\
+                 @@ -1,{old_count} +1,{new_count} @@\n\
+                 {before}\
+                 -{prefix}Use the old method for every\n\
+                 -{prefix}request in the queue.\n\
+                 +{prefix}Use the improved method\n\
+                 +{prefix}for every request in\n\
+                 +{prefix}the queue.\n\
+                 {after}"
+            );
+            let output = integration_test_utils::run_delta(&input, &config);
+            assert_eq!(strip_ansi_codes(&output), input);
+            let emphasized: Vec<_> = output
+                .lines()
+                .flat_map(ansi::parse_style_sections)
+                .filter_map(|(style, text)| {
+                    (style == config.minus_emph_style.ansi_term_style
+                        || style == config.plus_emph_style.ansi_term_style)
+                        .then_some(text)
+                })
+                .collect();
+            assert_eq!(
+                emphasized,
+                ["old", "improved"],
+                "{extension} {before:?} {prefix:?}"
+            );
+        }
+    }
+
+    #[test]
     fn test_color_only_output_is_in_one_to_one_correspondence_with_input() {
         let user_suppliable_configs: &[&[&str]] = &[
             &["--color-only", "--light"],

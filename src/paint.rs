@@ -23,6 +23,7 @@ use crate::style::Style;
 use crate::{ansi, style};
 use crate::{edits, utils, utils::tabs};
 
+mod reflow;
 mod syntax_state;
 
 pub use syntax_state::SyntaxState;
@@ -659,12 +660,18 @@ pub fn paint_minus_and_plus_lines(
     side_by_side: bool,
     config: &config::Config,
 ) {
-    let syntax_style_sections = MinusPlus::new(
-        syntax_state.side_lines(Minus, lines[Minus], config),
-        syntax_state.side_lines(Plus, lines[Plus], config),
-    );
+    let [(minus_syntax, minus_prose), (plus_syntax, plus_prose)] =
+        [Minus, Plus].map(|side| syntax_state.side_lines(side, lines[side], config));
+    let syntax_style_sections = MinusPlus::new(minus_syntax, plus_syntax);
     let (mut diff_style_sections, line_alignment) = get_diff_style_sections(&lines, config);
-    let lines_have_homolog = edits::make_lines_have_homolog(&line_alignment);
+    let mut lines_have_homolog = edits::make_lines_have_homolog(&line_alignment);
+    reflow::highlight(
+        &lines,
+        &MinusPlus::new(minus_prose, plus_prose),
+        &mut diff_style_sections,
+        &mut lines_have_homolog,
+        config,
+    );
     Painter::update_diff_style_sections(
         lines[Minus],
         &mut diff_style_sections[Minus],
