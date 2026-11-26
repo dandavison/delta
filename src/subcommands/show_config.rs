@@ -224,6 +224,7 @@ fn write_config(config: &config::Config, writer: &mut dyn Write) -> std::io::Res
     navigate-regex                = {navigate_regex}
     pager                         = {pager}
     paging                        = {paging_mode}
+    prose-reflow                  = {prose_reflow}
     side-by-side                  = {side_by_side}
     syntax-theme                  = {syntax_theme}
     width                         = {width}
@@ -247,6 +248,12 @@ fn write_config(config: &config::Config, writer: &mut dyn Write) -> std::io::Res
             PagingMode::Never => "never",
             PagingMode::QuitIfOneScreen => "auto",
             PagingMode::Capture => unreachable!("capture can not be set"),
+        },
+        // The setting as resolved for the syntax theme in use.
+        prose_reflow = if config.prose_reflow {
+            "always"
+        } else {
+            "never"
         },
         side_by_side = match (config.side_by_side, config.side_by_side_scope) {
             (true, cli::SideBySideScope::Hunk) => "hunk".to_string(),

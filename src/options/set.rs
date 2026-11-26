@@ -237,6 +237,7 @@ pub fn set_options(
             plus_emph_style,
             plus_empty_line_marker_style,
             plus_non_emph_style,
+            prose_reflow,
             raw,
             relative_paths,
             show_colors,

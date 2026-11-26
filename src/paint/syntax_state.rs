@@ -107,19 +107,27 @@ impl<'p> SyntaxState<'p> {
         lines: &'a [(String, State)],
         config: &Config,
     ) -> (Vec<LineSections<'a, SyntectStyle>>, Vec<Option<ProseLine>>) {
-        if lines.is_empty() {
-            return Default::default();
-        }
-        self.in_step = false;
         let highlight = lines
             .iter()
             .any(|(_, state)| Painter::should_compute_syntax_highlighting(state, config));
+        if lines.is_empty() || !self.should_parse(highlight, config) {
+            return lines
+                .iter()
+                .map(|(line, _)| (unstyled(line, config), None))
+                .unzip();
+        }
+        self.in_step = false;
         lines
             .iter()
             .map(|(line, _)| {
                 self.sides[side].parse_line(line, self.highlighter.as_ref(), highlight, config)
             })
             .unzip()
+    }
+
+    // Skipping lines leaves the state behind, which only matters for analysis.
+    fn should_parse(&self, highlight: bool, config: &Config) -> bool {
+        config.prose_reflow || (highlight && self.highlighter.is_some())
     }
 
     /// Parse a context line, which both sides share.
@@ -130,6 +138,9 @@ impl<'p> SyntaxState<'p> {
         config: &Config,
     ) -> LineSections<'a, SyntectStyle> {
         let highlight = Painter::should_compute_syntax_highlighting(state, config);
+        if !self.should_parse(highlight, config) {
+            return unstyled(line, config);
+        }
         let highlighter = self.highlighter.as_ref();
         let (sections, _) = self
             .sides
