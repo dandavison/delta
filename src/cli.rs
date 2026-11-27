@@ -38,6 +38,16 @@ const TERM_FALLBACK_WIDTH: usize = 79;
     max_term_width = usize::MAX,
 )]
 pub struct Opt {
+    #[cfg(feature = "gitu")]
+    #[arg(long = "agent-instructions", hide = true)]
+    /// Print instructions for AI agents on using delta.
+    ///
+    /// They are a skill: markdown with YAML front matter, which can be saved as a SKILL.md. For
+    /// now they cover reviewing code with a person in delta tui. Same as
+    /// `delta tui --agent-instructions`, which is experimental: it is refused unless git config's
+    /// `[delta]` section has `experimental = true`, and is not listed.
+    pub agent_instructions: bool,
+
     #[arg(long = "blame-code-style", value_name = "STYLE")]
     /// Style string for the code section of a git blame line.
     ///
@@ -979,16 +989,6 @@ pub struct Opt {
     /// What `delta tui` was in delta 0.22.0, which runs the TUI as `delta tui` does, as delta's
     /// first argument. It is not listed, so that `delta tui` is the way the help gives.
     pub tui: bool,
-
-    #[cfg(feature = "gitu")]
-    #[arg(long = "agent-instructions", hide = true)]
-    /// Print instructions for AI agents on using delta.
-    ///
-    /// They are a skill: markdown with YAML front matter, which can be saved as a SKILL.md. For
-    /// now they cover reviewing code with a person in delta tui. Same as
-    /// `delta tui --agent-instructions`, which is experimental: it is refused unless git config's
-    /// `[delta]` section has `experimental = true`, and is not listed.
-    pub agent_instructions: bool,
 
     #[arg(
         long = "whitespace-error-style",
