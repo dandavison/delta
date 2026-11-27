@@ -1,0 +1,106 @@
+name: PyPI
+
+# Builds a wheel per platform, each containing the delta executable, and uploads them with an sdist.
+# Both indexes use trusted publishing: PyPI trusts cd.yml (which calls this workflow) and TestPyPI
+# trusts this workflow.
+# cd.yml calls this with repository: pypi for release tags; run it manually to upload to TestPyPI.
+# Neither index accepts a second upload of the same version, so a TestPyPI upload of a version that
+# is already there fails.
+
+on:
+  workflow_call:
+    inputs:
+      repository:
+        type: string
+        required: true
+  workflow_dispatch:
+    inputs:
+      repository:
+        type: choice
+        options: [testpypi]
+        default: testpypi
+
+env:
+  # Build libgit2 from source rather than linking a system libgit2 found by pkg-config.
+  LIBGIT2_NO_PKG_CONFIG: 1
+
+jobs:
+  linux:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        include:
+          - { target: x86_64, manylinux: auto }
+          - { target: aarch64, manylinux: auto }
+          - { target: armv7, manylinux: auto }
+          - { target: i686, manylinux: auto }
+          - { target: x86_64, manylinux: musllinux_1_2 }
+          - { target: aarch64, manylinux: musllinux_1_2 }
+    steps:
+      - uses: actions/checkout@v4
+      - uses: PyO3/maturin-action@v1
+        with:
+          target: ${{ matrix.target }}
+          manylinux: ${{ matrix.manylinux }}
+          args: --release --out dist
+      - uses: actions/upload-artifact@v4
+        with:
+          name: wheels-linux-${{ matrix.target }}-${{ matrix.manylinux }}
+          path: dist
+
+  macos:
+    runs-on: macos-latest
+    strategy:
+      matrix:
+        target: [x86_64-apple-darwin, aarch64-apple-darwin]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: PyO3/maturin-action@v1
+        with:
+          target: ${{ matrix.target }}
+          args: --release --out dist
+      - uses: actions/upload-artifact@v4
+        with:
+          name: wheels-${{ matrix.target }}
+          path: dist
+
+  windows:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: PyO3/maturin-action@v1
+        with:
+          target: x86_64-pc-windows-msvc
+          args: --release --out dist
+      - uses: actions/upload-artifact@v4
+        with:
+          name: wheels-x86_64-pc-windows-msvc
+          path: dist
+
+  sdist:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: PyO3/maturin-action@v1
+        with:
+          command: sdist
+          args: --out dist
+      - uses: actions/upload-artifact@v4
+        with:
+          name: sdist
+          path: dist
+
+  upload:
+    needs: [linux, macos, windows, sdist]
+    runs-on: ubuntu-latest
+    # Trusted publishing: the index accepts the job's OIDC token instead of an API token.
+    permissions:
+      id-token: write
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          path: dist
+          merge-multiple: true
+      - uses: pypa/gh-action-pypi-publish@release/v1
+        with:
+          repository-url: ${{ inputs.repository == 'testpypi' && 'https://test.pypi.org/legacy/' || 'https://upload.pypi.org/legacy/' }}

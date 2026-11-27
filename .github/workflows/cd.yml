@@ -99,6 +99,15 @@ jobs:
       version: ${{ github.ref_name }}
     secrets: inherit
 
+  publish-to-pypi:
+    needs: ci
+    uses: ./.github/workflows/pypi.yml
+    permissions:
+      contents: read
+      id-token: write
+    with:
+      repository: pypi
+
   publish-to-cargo:
     name: Publishing to Cargo
     runs-on: ubuntu-latest
