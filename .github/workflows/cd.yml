@@ -102,9 +102,11 @@ jobs:
   publish-to-pypi:
     needs: ci
     uses: ./.github/workflows/pypi.yml
+    permissions:
+      contents: read
+      id-token: write
     with:
       repository: pypi
-    secrets: inherit
 
   publish-to-cargo:
     name: Publishing to Cargo

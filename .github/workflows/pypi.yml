@@ -1,6 +1,8 @@
 name: PyPI
 
 # Builds a wheel per platform, each containing the delta executable, and uploads them with an sdist.
+# Both indexes use trusted publishing: PyPI trusts cd.yml (which calls this workflow) and TestPyPI
+# trusts this workflow.
 # cd.yml calls this with repository: pypi for release tags; run it manually to upload to TestPyPI.
 # Neither index accepts a second upload of the same version, so a TestPyPI upload of a version that
 # is already there fails.
@@ -15,7 +17,7 @@ on:
     inputs:
       repository:
         type: choice
-        options: [testpypi, pypi]
+        options: [testpypi]
         default: testpypi
 
 env:
@@ -91,19 +93,14 @@ jobs:
   upload:
     needs: [linux, macos, windows, sdist]
     runs-on: ubuntu-latest
+    # Trusted publishing: the index accepts the job's OIDC token instead of an API token.
+    permissions:
+      id-token: write
     steps:
       - uses: actions/download-artifact@v4
         with:
           path: dist
           merge-multiple: true
-      - name: Upload to PyPI
-        if: inputs.repository == 'pypi'
-        uses: pypa/gh-action-pypi-publish@release/v1
+      - uses: pypa/gh-action-pypi-publish@release/v1
         with:
-          password: ${{ secrets.PYPI_API_TOKEN }}
-      - name: Upload to TestPyPI
-        if: inputs.repository == 'testpypi'
-        uses: pypa/gh-action-pypi-publish@release/v1
-        with:
-          repository-url: https://test.pypi.org/legacy/
-          password: ${{ secrets.TEST_PYPI_API_TOKEN }}
+          repository-url: ${{ inputs.repository == 'testpypi' && 'https://test.pypi.org/legacy/' || 'https://upload.pypi.org/legacy/' }}
