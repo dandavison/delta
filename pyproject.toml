@@ -1,0 +1,27 @@
+# Builds platform-specific wheels that contain the compiled delta executable, so that
+# `pip install git-delta` / `uv tool install git-delta` installs delta without a Rust toolchain.
+[build-system]
+requires = ["maturin>=1.9,<2.0"]
+build-backend = "maturin"
+
+[project]
+name = "git-delta"
+description = "A syntax-highlighting pager for git, diff, grep, and blame output"
+readme = "README.md"
+license = "MIT"
+authors = [{ name = "Dan Davison", email = "dandavison7@gmail.com" }]
+dynamic = ["version"]
+classifiers = [
+    "Environment :: Console",
+    "Programming Language :: Rust",
+    "Topic :: Software Development :: Version Control :: Git",
+]
+
+[project.urls]
+Homepage = "https://github.com/dandavison/delta"
+Documentation = "https://dandavison.github.io/delta/"
+Repository = "https://github.com/dandavison/delta"
+
+[tool.maturin]
+bindings = "bin"
+strip = true
