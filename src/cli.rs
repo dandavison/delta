@@ -1565,10 +1565,12 @@ mod tests {
         assert!(!help.contains("--gitu"), "{}", help);
     }
 
+    /// `--agent-instructions` is for an experimental feature of the TUI, which refuses it unless
+    /// git config's `[delta]` section has `experimental = true`, so the help doesn't list it.
     #[cfg(feature = "gitu")]
     #[test]
-    fn help_lists_agent_instructions() {
+    fn help_does_not_list_agent_instructions() {
         let help = Opt::command().render_help().to_string();
-        assert!(help.contains("--agent-instructions"), "{}", help);
+        assert!(!help.contains("--agent-instructions"), "{}", help);
     }
 }
