@@ -981,12 +981,13 @@ pub struct Opt {
     pub tui: bool,
 
     #[cfg(feature = "gitu")]
-    #[arg(long = "agent-instructions")]
+    #[arg(long = "agent-instructions", hide = true)]
     /// Print instructions for AI agents on using delta.
     ///
     /// They are a skill: markdown with YAML front matter, which can be saved as a SKILL.md. For
     /// now they cover reviewing code with a person in delta tui. Same as
-    /// `delta tui --agent-instructions`.
+    /// `delta tui --agent-instructions`, which is experimental: it is refused unless git config's
+    /// `[delta]` section has `experimental = true`, and is not listed.
     pub agent_instructions: bool,
 
     #[arg(
