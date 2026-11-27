@@ -26,11 +26,13 @@ env:
 
 jobs:
   linux:
-    runs-on: ubuntu-latest
+    # The manylinux2014 i686 image cannot resolve hostnames on ubuntu-26.04 (ubuntu-latest).
+    runs-on: ubuntu-24.04
     strategy:
+      fail-fast: false
       matrix:
         include:
-          - { target: x86_64, manylinux: auto }
+          - { target: x86_64, manylinux: auto, test: true }
           - { target: aarch64, manylinux: auto }
           - { target: armv7, manylinux: auto }
           - { target: i686, manylinux: auto }
@@ -42,7 +44,12 @@ jobs:
         with:
           target: ${{ matrix.target }}
           manylinux: ${{ matrix.manylinux }}
-          args: --release --out dist
+          args: --release --locked --out dist
+      - uses: astral-sh/setup-uv@v10.4.0
+        if: matrix.test
+      - name: Install and run the wheel
+        if: matrix.test
+        run: uvx --from dist/*.whl delta --version
       - uses: actions/upload-artifact@v4
         with:
           name: wheels-linux-${{ matrix.target }}-${{ matrix.manylinux }}
@@ -51,6 +58,7 @@ jobs:
   macos:
     runs-on: macos-latest
     strategy:
+      fail-fast: false
       matrix:
         target: [x86_64-apple-darwin, aarch64-apple-darwin]
     steps:
@@ -58,7 +66,13 @@ jobs:
       - uses: PyO3/maturin-action@v1
         with:
           target: ${{ matrix.target }}
-          args: --release --out dist
+          args: --release --locked --out dist
+      # The runner is arm64, so it can run only the aarch64 wheel.
+      - uses: astral-sh/setup-uv@v10.4.0
+        if: matrix.target == 'aarch64-apple-darwin'
+      - name: Install and run the wheel
+        if: matrix.target == 'aarch64-apple-darwin'
+        run: uvx --from dist/*.whl delta --version
       - uses: actions/upload-artifact@v4
         with:
           name: wheels-${{ matrix.target }}
@@ -71,7 +85,11 @@ jobs:
       - uses: PyO3/maturin-action@v1
         with:
           target: x86_64-pc-windows-msvc
-          args: --release --out dist
+          args: --release --locked --out dist
+      - uses: astral-sh/setup-uv@v10.4.0
+      - name: Install and run the wheel
+        shell: bash
+        run: uvx --from dist/*.whl delta --version
       - uses: actions/upload-artifact@v4
         with:
           name: wheels-x86_64-pc-windows-msvc
@@ -101,6 +119,5 @@ jobs:
         with:
           path: dist
           merge-multiple: true
-      - uses: pypa/gh-action-pypi-publish@release/v1
-        with:
-          repository-url: ${{ inputs.repository == 'testpypi' && 'https://test.pypi.org/legacy/' || 'https://upload.pypi.org/legacy/' }}
+      - uses: astral-sh/setup-uv@v10.4.0
+      - run: uv publish --trusted-publishing always --publish-url ${{ inputs.repository == 'testpypi' && 'https://test.pypi.org/legacy/' || 'https://upload.pypi.org/legacy/' }} dist/*
