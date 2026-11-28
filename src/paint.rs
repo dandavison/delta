@@ -4,7 +4,7 @@ use std::io::Write;
 
 use ansi_term::ANSIString;
 use itertools::Itertools;
-use syntect::easy::HighlightLines;
+use syntect::highlighting::Highlighter;
 use syntect::highlighting::Style as SyntectStyle;
 use syntect::parsing::{SyntaxReference, SyntaxSet};
 
@@ -23,6 +23,11 @@ use crate::style::Style;
 use crate::{ansi, style};
 use crate::{edits, utils, utils::tabs};
 
+mod reflow;
+mod syntax_state;
+
+pub use syntax_state::SyntaxState;
+
 pub type LineSections<'a, S> = Vec<(S, &'a str)>;
 
 pub struct Painter<'p> {
@@ -30,7 +35,7 @@ pub struct Painter<'p> {
     pub plus_lines: Vec<(String, State)>,
     pub writer: &'p mut dyn Write,
     pub syntax: &'p SyntaxReference,
-    pub highlighter: Option<HighlightLines<'p>>,
+    pub syntax_state: SyntaxState<'p>,
     pub config: &'p config::Config,
     // Whether the lines being painted are laid out side-by-side. Starts out as
     // config.side_by_side, but can be changed between hunks.
@@ -107,7 +112,7 @@ impl<'p> Painter<'p> {
             plus_lines: Vec::new(),
             output_buffer: String::new(),
             syntax: default_syntax,
-            highlighter: None,
+            syntax_state: SyntaxState::new(default_syntax, None),
             writer,
             config,
             side_by_side: config.side_by_side,
@@ -166,9 +171,10 @@ impl<'p> Painter<'p> {
     }
 
     pub fn set_highlighter(&mut self) {
-        if let Some(ref syntax_theme) = self.config.syntax_theme {
-            self.highlighter = Some(HighlightLines::new(self.syntax, syntax_theme))
-        };
+        self.syntax_state = SyntaxState::new(
+            self.syntax,
+            self.config.syntax_theme.as_ref().map(Highlighter::new),
+        );
     }
 
     pub fn paint_buffered_minus_and_plus_lines(&mut self) {
@@ -179,7 +185,7 @@ impl<'p> Painter<'p> {
             MinusPlus::new(&self.minus_lines, &self.plus_lines),
             &mut self.line_numbers_data,
             &mut self.diff_line_metadata.as_mut(),
-            &mut self.highlighter,
+            &mut self.syntax_state,
             &mut self.output_buffer,
             self.side_by_side,
             self.config,
@@ -191,7 +197,9 @@ impl<'p> Painter<'p> {
     pub fn paint_zero_line(&mut self, line: &str, state: State) {
         let lines = &[(line.to_string(), state.clone())];
         let syntax_style_sections =
-            get_syntax_style_sections_for_lines(lines, self.highlighter.as_mut(), self.config);
+            vec![self
+                .syntax_state
+                .context_line(&lines[0].0, &state, self.config)];
         let mut diff_style_sections = vec![vec![(self.config.zero_style, lines[0].0.as_str())]]; // TODO: compute style from state
         Painter::update_diff_style_sections(
             lines,
@@ -319,8 +327,7 @@ impl<'p> Painter<'p> {
         background_color_extends_to_terminal_width: BgShouldFill,
     ) {
         let lines = vec![(tabs::expand(line, &self.config.tab_cfg), state)];
-        let syntax_style_sections =
-            get_syntax_style_sections_for_lines(&lines, self.highlighter.as_mut(), self.config);
+        let syntax_style_sections = self.syntax_state.highlight_lines(&lines, self.config);
         let diff_style_sections = match style_sections {
             StyleSectionSpecifier::Style(style) => vec![vec![(style, lines[0].0.as_str())]],
             StyleSectionSpecifier::StyleSections(style_sections) => vec![style_sections],
@@ -648,17 +655,23 @@ pub fn paint_minus_and_plus_lines(
     lines: MinusPlus<&Vec<(String, State)>>,
     line_numbers_data: &mut Option<LineNumbersData>,
     diff_line_metadata: &mut Option<&mut DiffLineMetadata>,
-    highlighter: &mut Option<HighlightLines>,
+    syntax_state: &mut SyntaxState,
     output_buffer: &mut String,
     side_by_side: bool,
     config: &config::Config,
 ) {
-    let syntax_style_sections = MinusPlus::new(
-        get_syntax_style_sections_for_lines(lines[Minus], highlighter.as_mut(), config),
-        get_syntax_style_sections_for_lines(lines[Plus], highlighter.as_mut(), config),
-    );
+    let [(minus_syntax, minus_prose), (plus_syntax, plus_prose)] =
+        [Minus, Plus].map(|side| syntax_state.side_lines(side, lines[side], config));
+    let syntax_style_sections = MinusPlus::new(minus_syntax, plus_syntax);
     let (mut diff_style_sections, line_alignment) = get_diff_style_sections(&lines, config);
-    let lines_have_homolog = edits::make_lines_have_homolog(&line_alignment);
+    let mut lines_have_homolog = edits::make_lines_have_homolog(&line_alignment);
+    reflow::highlight(
+        &lines,
+        &MinusPlus::new(minus_prose, plus_prose),
+        &mut diff_style_sections,
+        &mut lines_have_homolog,
+        config,
+    );
     Painter::update_diff_style_sections(
         lines[Minus],
         &mut diff_style_sections[Minus],
@@ -726,65 +739,6 @@ pub fn paint_minus_and_plus_lines(
             );
         }
     }
-}
-
-pub fn get_syntax_style_sections_for_lines<'a>(
-    lines: &'a [(String, State)],
-    highlighter: Option<&mut HighlightLines>,
-    config: &config::Config,
-) -> Vec<LineSections<'a, SyntectStyle>> {
-    let mut line_sections = Vec::new();
-    match (
-        highlighter,
-        lines
-            .iter()
-            .any(|(_, state)| Painter::should_compute_syntax_highlighting(state, config)),
-    ) {
-        (Some(highlighter), true) => {
-            for (line, _) in lines.iter() {
-                // Fast but simple length comparison. Overcounts non-printable ansi
-                // characters or wider UTF-8, but `truncate_str_short` in the
-                // else branch corrects that.
-                if line.len() < config.max_syntax_length || config.max_syntax_length == 0 {
-                    line_sections.push(
-                        highlighter
-                            .highlight_line(line, &config.syntax_set)
-                            .unwrap(),
-                    );
-                } else {
-                    let line_syntax = ansi::truncate_str_short(line, config.max_syntax_length);
-                    // Re-split to get references into `line` with correct lifetimes.
-                    // SAFETY: slicing the string is safe because `truncate_str_short` always
-                    // returns a prefix of the input and only cuts at grapheme borders.
-                    let (with_syntax, plain) = line.split_at(line_syntax.len());
-                    // Note: splitting a line and only feeding one half to the highlighter may
-                    // result in wrong highlighting until it is reset the next hunk.
-                    //
-                    // Also, as lines are no longer newline terminated they might not be
-                    // highlighted correctly, and because of lifetimes inserting '\n' here is not
-                    // possible, also see `prepare()`.
-                    line_sections.push(
-                        highlighter
-                            .highlight_line(with_syntax, &config.syntax_set)
-                            .unwrap(),
-                    );
-
-                    if !plain.is_empty() {
-                        line_sections
-                            .last_mut()
-                            .unwrap()
-                            .push((config.null_syntect_style, plain));
-                    }
-                }
-            }
-        }
-        _ => {
-            for (line, _) in lines.iter() {
-                line_sections.push(vec![(config.null_syntect_style, line.as_str())])
-            }
-        }
-    }
-    line_sections
 }
 
 /// Get background styles to represent diff for minus and plus lines in buffer.

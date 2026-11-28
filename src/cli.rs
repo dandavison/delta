@@ -879,6 +879,20 @@ pub struct Opt {
     /// See STYLES section.
     pub plus_style: String,
 
+    #[arg(
+        long = "prose-reflow",
+        default_value = "auto",
+        value_name = "auto|always|never",
+        value_parser = ["auto", "always", "never"],
+    )]
+    /// Whether to highlight wording changes across rewrapped prose.
+    ///
+    /// When a comment, docstring, or paragraph of text is rewrapped, highlight only the words that
+    /// changed, rather than every word that moved to another line. Finding prose requires parsing
+    /// the syntax of every line, including those that aren't syntax-highlighted; "auto" does so
+    /// only when a syntax theme is in use.
+    pub prose_reflow: String,
+
     #[arg(long = "raw")]
     /// Do not alter the input in any way.
     ///

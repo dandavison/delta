@@ -181,11 +181,7 @@ pub mod ansi_test_utils {
         painter.set_syntax(Some(filename_for_highlighting));
         painter.set_highlighter();
         let lines = vec![(line.to_string(), state)];
-        let syntax_style_sections = paint::get_syntax_style_sections_for_lines(
-            &lines,
-            painter.highlighter.as_mut(),
-            config,
-        );
+        let syntax_style_sections = painter.syntax_state.highlight_lines(&lines, config);
         let diff_style_sections = vec![vec![(syntax_highlighted_style, lines[0].0.as_str())]];
         paint::Painter::paint_lines(
             &lines,

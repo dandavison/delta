@@ -160,6 +160,45 @@ mod tests {
     }
 
     #[test]
+    fn test_removed_lines_do_not_affect_syntax_of_added_lines() {
+        // Use color-only so that we can refer to the line numbers from the input diff.
+        // Syntax-highlight removed lines too, so that they are parsed.
+        let config = integration_test_utils::make_config_from_args(&[
+            "--color-only",
+            "--minus-style",
+            "syntax",
+            "--plus-style",
+            "syntax",
+            "--plus-emph-style",
+            "syntax",
+        ]);
+        let input = r#"diff --git a/a.py b/a.py
+--- a/a.py
++++ b/a.py
+@@ -1,2 +1,2 @@
+-x = """
++x = 1
+ y = 2
+"#;
+        let output = integration_test_utils::run_delta(input, &config);
+        // The string opened by the removed line must not continue into the following lines.
+        for (line_number, line, state) in [
+            (5, "x = 1", State::HunkPlus(DiffType::Unified, None)),
+            (6, "y = 2", State::HunkZero(DiffType::Unified, None)),
+        ] {
+            ansi_test_utils::assert_line_has_syntax_highlighted_substring(
+                &output,
+                line_number,
+                1,
+                line,
+                "a.py",
+                state,
+                &config,
+            );
+        }
+    }
+
+    #[test]
     fn test_full_filename_used_to_detect_language() {
         let config = integration_test_utils::make_config_from_args(&[
             "--color-only",
@@ -1050,6 +1089,111 @@ src/align.rs
             9,
             "@@ -71,11 +71,8 @@ impl<'a> Alignment<'a> {",
         );
+    }
+
+    /// The emphasized words in a diff that rewraps a two-line paragraph onto three lines.
+    /// `before` and `after` are context lines around the changed lines.
+    fn reflow_emphasis(
+        args: &[&str],
+        extension: &str,
+        before: &str,
+        prefix: &str,
+        after: &str,
+    ) -> Vec<String> {
+        let args = [
+            &[
+                "--color-only",
+                "--minus-emph-style",
+                "red",
+                "--plus-emph-style",
+                "green",
+            ],
+            args,
+        ]
+        .concat();
+        let config = integration_test_utils::make_config_from_args(&args);
+        let context_count = before.lines().count() + after.lines().count();
+        let old_count = 2 + context_count;
+        let new_count = 3 + context_count;
+        let context = |line: &str| {
+            line.lines()
+                .map(|line| format!(" {line}\n"))
+                .collect::<String>()
+        };
+        let (before, after) = (context(before), context(after));
+        let input = format!(
+            "diff --git a/a.{extension} b/a.{extension}\n\
+             --- a/a.{extension}\n\
+             +++ b/a.{extension}\n\
+             @@ -1,{old_count} +1,{new_count} @@\n\
+             {before}\
+             -{prefix}Use the old method for every\n\
+             -{prefix}request in the queue.\n\
+             +{prefix}Use the improved method\n\
+             +{prefix}for every request in\n\
+             +{prefix}the queue.\n\
+             {after}"
+        );
+        let output = integration_test_utils::run_delta(&input, &config);
+        assert_eq!(strip_ansi_codes(&output), input);
+        output
+            .lines()
+            .flat_map(ansi::parse_style_sections)
+            .filter(|(style, _)| {
+                *style == config.minus_emph_style.ansi_term_style
+                    || *style == config.plus_emph_style.ansi_term_style
+            })
+            .map(|(_, text)| text.to_string())
+            .collect()
+    }
+
+    #[test]
+    fn test_color_only_highlights_word_changes_in_reflowed_prose() {
+        let args = ["--syntax-theme", "none", "--prose-reflow", "always"];
+        for (extension, before, prefix, after) in [
+            ("cpp", "", "\t// ", ""),
+            ("rs", "", "/// ", ""),
+            ("go", "", "// ", ""),
+            ("sh", "", "# ", ""),
+            ("py", "", "    # ", ""),
+            ("hs", "", "-- ", ""),
+            ("lua", "", "-- ", ""),
+            ("md", "", "", ""),
+            ("md", "", "  ", ""),
+            ("txt", "", "", ""),
+            // A docstring that opens in a context line.
+            ("py", "    \"\"\"Summary.\n", "    ", "    \"\"\"\n"),
+            ("c", "/*\n", " * ", " */\n"),
+            ("js", "/**\n", " * ", " */\n"),
+            ("hs", "{-\n", "   ", "-}\n"),
+        ] {
+            assert_eq!(
+                reflow_emphasis(&args, extension, before, prefix, after),
+                ["old", "improved"],
+                "{extension} {before:?} {prefix:?}"
+            );
+        }
+    }
+
+    #[test]
+    fn test_prose_reflow_option() {
+        let reflowed = ["old", "improved"];
+        for (args, expected_reflow) in [
+            (&[][..], true),
+            (&["--prose-reflow", "never"][..], false),
+            (&["--syntax-theme", "none"][..], false),
+            (
+                &["--syntax-theme", "none", "--prose-reflow", "always"][..],
+                true,
+            ),
+        ] {
+            let emphasized = reflow_emphasis(args, "py", "", "# ", "");
+            assert_eq!(
+                emphasized == reflowed,
+                expected_reflow,
+                "{args:?}: {emphasized:?}"
+            );
+        }
     }
 
     #[test]

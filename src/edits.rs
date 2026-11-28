@@ -107,7 +107,7 @@ where
 
 // Return `None` if there is no trailing whitespace.
 // Return `Some(content)` where content is trimmed if there was some trailing whitespace
-fn get_contents_before_trailing_whitespace(line: &str) -> Option<&str> {
+pub(crate) fn get_contents_before_trailing_whitespace(line: &str) -> Option<&str> {
     let content = line.trim_end();
     // if line has a trailing newline, do not consider it as a 'trailing whitespace'
     if !content.is_empty() && content != line.trim_end_matches('\n') {
@@ -137,7 +137,7 @@ pub fn make_lines_have_homolog(
 
 /// Split line into tokens for alignment. The alignment algorithm aligns sequences of substrings;
 /// not individual characters.
-fn tokenize<'a>(line: &'a str, regex: &Regex) -> Vec<&'a str> {
+pub(crate) fn tokenize<'a>(line: &'a str, regex: &Regex) -> Vec<&'a str> {
     // Starting with "", see comment in Alignment::new(). Historical note: Replacing the '+/-'
     // prefix with a space implicitly generated this.
     let mut tokens = vec![""];
@@ -280,7 +280,7 @@ where
     )
 }
 
-fn compute_distance(d_numer: f64, d_denom: f64) -> f64 {
+pub(crate) fn compute_distance(d_numer: f64, d_denom: f64) -> f64 {
     if d_denom > 0.0 {
         d_numer / d_denom
     } else {
