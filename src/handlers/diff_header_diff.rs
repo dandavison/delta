@@ -1,5 +1,7 @@
 use crate::delta::{DiffType, InMergeConflict, MergeParents, State, StateMachine};
-use crate::handlers::diff_header::{get_repeated_file_path_from_diff_line, FileEvent};
+use crate::handlers::diff_header::{
+    get_combined_diff_file_path_from_diff_line, get_repeated_file_path_from_diff_line, FileEvent,
+};
 
 impl StateMachine<'_> {
     #[inline]
@@ -33,7 +35,11 @@ impl StateMachine<'_> {
         // But for modified binary files which are not added, removed or renamed, there
         // are no minus and plus lines. Without the code below, in such cases the file names
         // would remain unchanged from the previous diff, or empty for the very first diff.
-        let name = get_repeated_file_path_from_diff_line(&self.line).unwrap_or_default();
+        // A combined diff's binary marker is just "Binary files differ", without paths, so
+        // the path must come from the `diff --cc` / `diff --combined` line.
+        let name = get_repeated_file_path_from_diff_line(&self.line)
+            .or_else(|| get_combined_diff_file_path_from_diff_line(&self.line))
+            .unwrap_or_default();
         self.minus_file.clone_from(&name);
         self.plus_file.clone_from(&name);
         self.binary_file = false;
