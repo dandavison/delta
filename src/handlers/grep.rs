@@ -684,7 +684,8 @@ pub fn parse_grep_line(line: &str) -> Option<GrepLine<'_>> {
             // `path=code` grep line. Skip heuristic parsing entirely.
             process::CallingProcess::GitGrep(command_line)
                 if command_line.short_options.contains("-h")
-                    || command_line.long_options.contains("--no-filename") =>
+                    || command_line.long_options.contains("--no-filename")
+                    || command_line.long_options.contains("--heading") =>
             {
                 None
             }
@@ -753,6 +754,7 @@ mod tests {
     use crate::handlers::grep::{
         parse_grep_line, parse_raw_grep_line, GrepLine, GrepType, LineType,
     };
+    use crate::tests::integration_test_utils::DeltaTest;
     use crate::utils::process::tests::FakeParentArgs;
 
     #[test]
@@ -1214,6 +1216,18 @@ mod tests {
                 submatches: None,
             })
         );
+    }
+
+    #[test]
+    fn test_git_grep_heading_preserves_hyphens() {
+        let input = "\x1b[35mfoo-bar/example.txt\x1b[m\n\
+                     \x1b[32m1\x1b[m\x1b[36m:\x1b[m\x1b[1;31mhello\x1b[m truncate\n";
+
+        let output = DeltaTest::with_args(&[])
+            .with_calling_process("git grep --color=always -n --heading hello")
+            .with_input(input);
+
+        assert_eq!(output.raw_output, input);
     }
 
     #[test]
