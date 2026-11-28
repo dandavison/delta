@@ -14,7 +14,6 @@ pub const ANSI_CSI_CLEAR_TO_EOL: &str = "\x1b[0K";
 pub const ANSI_CSI_CLEAR_TO_BOL: &str = "\x1b[1K";
 pub const ANSI_SGR_BOLD: &str = "\x1b[1m";
 pub const ANSI_SGR_RESET: &str = "\x1b[0m";
-pub const ANSI_SGR_REVERSE: &str = "\x1b[7m";
 pub const ANSI_SGR_UNDERLINE: &str = "\x1b[4m";
 pub const OSC8_HYPERLINK_END: &str = "\x1b]8;;\x1b\\";
 
