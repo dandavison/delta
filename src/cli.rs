@@ -1175,7 +1175,7 @@ That means: For removed lines, syntax-highlight the text, and make it bold, and 
 
 The available attributes are: 'blink', 'bold', 'dim', 'hidden', 'italic', 'reverse', 'strike', and 'ul' (or 'underline').
 
-The attribute 'omit' is supported by commit-style, file-style, and hunk-header-style, meaning to remove the element entirely from the output.
+The attribute 'omit' is supported by commit-style, file-style, hunk-header-style, minus-style, plus-style, and zero-style, meaning to remove the element entirely from the output. The lines that remain keep their line numbers in the diff.
 
 A complete description of the style string syntax follows:
 

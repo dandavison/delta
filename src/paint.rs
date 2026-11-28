@@ -171,25 +171,62 @@ impl<'p> Painter<'p> {
         };
     }
 
+    /// Paint the buffered removed and added lines. Lines whose style is `omit` are not drawn, and
+    /// take no part in pairing the others, but are counted: the lines drawn after them are
+    /// numbered as if they were drawn.
     pub fn paint_buffered_minus_and_plus_lines(&mut self) {
-        if self.minus_lines.is_empty() && self.plus_lines.is_empty() {
-            return;
-        }
-        paint_minus_and_plus_lines(
-            MinusPlus::new(&self.minus_lines, &self.plus_lines),
-            &mut self.line_numbers_data,
-            &mut self.diff_line_metadata.as_mut(),
-            &mut self.highlighter,
-            &mut self.output_buffer,
-            self.side_by_side,
-            self.config,
+        let minus_lines = std::mem::take(&mut self.minus_lines);
+        let plus_lines = std::mem::take(&mut self.plus_lines);
+        let omitted = MinusPlus::new(
+            self.config.minus_style.is_omitted,
+            self.config.plus_style.is_omitted,
         );
-        self.minus_lines.clear();
-        self.plus_lines.clear();
+        if omitted[Minus] {
+            self.count_lines_not_drawn(&minus_lines, &[side_by_side::Left]);
+        }
+        let none = Vec::new();
+        let drawn = MinusPlus::new(
+            if omitted[Minus] { &none } else { &minus_lines },
+            if omitted[Plus] { &none } else { &plus_lines },
+        );
+        if !drawn[Minus].is_empty() || !drawn[Plus].is_empty() {
+            paint_minus_and_plus_lines(
+                drawn,
+                &mut self.line_numbers_data,
+                &mut self.diff_line_metadata.as_mut(),
+                &mut self.highlighter,
+                &mut self.output_buffer,
+                self.side_by_side,
+                self.config,
+            );
+        }
+        if omitted[Plus] {
+            self.count_lines_not_drawn(&plus_lines, &[side_by_side::Right]);
+        }
     }
 
+    /// Advance the line numbers of `sides`, and the per-line diff metadata, past `lines`, which
+    /// are not drawn.
+    fn count_lines_not_drawn(&mut self, lines: &[(String, State)], sides: &[PanelSide]) {
+        if let Some(data) = &mut self.line_numbers_data {
+            for side in sides {
+                data.line_number[*side] += lines.len();
+            }
+        }
+        if let Some(metadata) = &mut self.diff_line_metadata {
+            for (_, state) in lines {
+                metadata.osc_for_line(state);
+            }
+        }
+    }
+
+    /// Paint an unchanged line, or, if `zero-style` is `omit`, count it without drawing it.
     pub fn paint_zero_line(&mut self, line: &str, state: State) {
         let lines = &[(line.to_string(), state.clone())];
+        if self.config.zero_style.is_omitted {
+            self.count_lines_not_drawn(lines, &[side_by_side::Left, side_by_side::Right]);
+            return;
+        }
         let syntax_style_sections =
             get_syntax_style_sections_for_lines(lines, self.highlighter.as_mut(), self.config);
         let mut diff_style_sections = vec![vec![(self.config.zero_style, lines[0].0.as_str())]]; // TODO: compute style from state

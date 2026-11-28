@@ -489,7 +489,13 @@ Options:
       --line-numbers-left-style <STYLE>
           Style string for the left column of line numbers.
 
-          See STYLES and LINE NUMBERS sections.
+          This styles the text around the line numbers in
+          --line-numbers-left-format, such as the dividing characters. The
+          special value "line" paints that text in the style of the line
+          instead: --line-numbers-minus-style in a removed line,
+          --line-numbers-plus-style in an added line, and
+          --line-numbers-zero-style in an unchanged line. See STYLES and LINE
+          NUMBERS sections.
 
           [default: auto]
 
@@ -522,7 +528,13 @@ Options:
       --line-numbers-right-style <STYLE>
           Style string for the right column of line numbers.
 
-          See STYLES and LINE NUMBERS sections.
+          This styles the text around the line numbers in
+          --line-numbers-right-format, such as the dividing characters. The
+          special value "line" paints that text in the style of the line
+          instead: --line-numbers-minus-style in a removed line,
+          --line-numbers-plus-style in an added line, and
+          --line-numbers-zero-style in an unchanged line. See STYLES and LINE
+          NUMBERS sections.
 
           [default: auto]
 
@@ -828,15 +840,22 @@ Options:
           [possible values: auto, always, never]
 
       --tui
-          Run gitu, an interactive git interface that uses delta to draw
-          diffs.
+          Run delta as a live interactive git interface, based on gitu.
 
-          Must be the first argument; the arguments after it are gitu's (see
-          `delta --tui --help`). To use it as git's pager, set e.g.
-          pager.diff to `delta --tui`. See
-          <https://dandavison.github.io/delta/tui.html>.
+          See <https://dandavison.github.io/delta/tui.html>. Must be the
+          first argument (see `delta --tui --help` for possible subsequent
+          arguments). To use it as git's pager, set e.g. pager.diff to `delta
+          --tui`. The TUI is experimental: config and behavior may change
+          backwards-incompatibly.
 
           [aliases: --gitu]
+
+      --agent-instructions
+          Print instructions for AI agents on using delta.
+
+          They are a skill: markdown with YAML front matter, which can be
+          saved as a SKILL.md. For now they cover reviewing code with a
+          person in delta --tui. Same as `delta --tui --agent-instructions`.
 
       --whitespace-error-style <STYLE>
           Style string for whitespace errors.
@@ -1017,8 +1036,10 @@ Styles
   The available attributes are: 'blink', 'bold', 'dim', 'hidden', 'italic',
   'reverse', 'strike', and 'ul' (or 'underline').
 
-  The attribute 'omit' is supported by commit-style, file-style, and
-  hunk-header-style, meaning to remove the element entirely from the output.
+  The attribute 'omit' is supported by commit-style, file-style,
+  hunk-header-style, minus-style, plus-style, and zero-style, meaning to
+  remove the element entirely from the output. The lines that remain keep
+  their line numbers in the diff.
 
   A complete description of the style string syntax follows:
 
