@@ -1,10 +1,14 @@
+#[cfg(test)]
 use std::cmp::max;
-use std::collections::VecDeque;
 
-const DELETION_COST: usize = 2;
-const INSERTION_COST: usize = 2;
+const DELETION_COST: u32 = 2;
+const INSERTION_COST: u32 = 2;
 // extra cost for starting a new group of changed tokens
-const INITIAL_MISMATCH_PENALTY: usize = 1;
+const INITIAL_MISMATCH_PENALTY: u32 = 1;
+
+const OP_NOOP: u8 = 0;
+const OP_DELETION: u8 = 1;
+const OP_INSERTION: u8 = 2;
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum Operation {
@@ -15,139 +19,221 @@ pub enum Operation {
 
 use Operation::*;
 
-/// Needleman-Wunsch / Wagner-Fischer table for computation of edit distance and associated
-/// alignment.
-#[derive(Clone, Debug)]
-struct Cell {
-    parent: usize,
-    operation: Operation,
-    cost: usize,
+#[inline]
+fn decode_op(op: u8) -> Operation {
+    match op {
+        OP_NOOP => NoOp,
+        OP_DELETION => Deletion,
+        _ => Insertion,
+    }
 }
 
+/// Reusable scratch buffers for Needleman-Wunsch / Wagner-Fischer alignment.
+#[derive(Debug, Default)]
+pub struct AlignWorkspace {
+    ops: Vec<u8>,
+    prev_cost: Vec<u32>,
+    curr_cost: Vec<u32>,
+    rle_buf: Vec<(Operation, usize)>,
+}
+
+impl AlignWorkspace {
+    pub fn new() -> Self {
+        Self::default()
+    }
+
+    /// Fill the row-major 1-byte-per-cell operation table and return coalesced
+    /// (run-length encoded) edit operations.
+    pub fn coalesced_operations_for<T: PartialEq>(
+        &mut self,
+        x: &[T],
+        y: &[T],
+    ) -> &[(Operation, usize)] {
+        let _ = self.fill_table(x, y);
+        let cols = x.len() + 1;
+
+        // Trace back directly into run-length encoded operations without intermediate VecDeque.
+        self.rle_buf.clear();
+        let mut col = x.len();
+        let mut row = y.len();
+        let mut cur_op = self.ops[row * cols + col];
+        let mut cur_count = 0usize;
+
+        loop {
+            let op = self.ops[row * cols + col];
+            if op == cur_op {
+                cur_count += 1;
+            } else {
+                self.rle_buf.push((decode_op(cur_op), cur_count));
+                cur_op = op;
+                cur_count = 1;
+            }
+            if col == 0 || row == 0 {
+                break;
+            }
+            match op {
+                OP_INSERTION => row -= 1,
+                OP_DELETION => col -= 1,
+                _ => {
+                    col -= 1;
+                    row -= 1;
+                }
+            }
+            if col == 0 && row == 0 {
+                break;
+            }
+        }
+        if cur_count > 0 {
+            self.rle_buf.push((decode_op(cur_op), cur_count));
+        }
+        self.rle_buf.reverse();
+        &self.rle_buf
+    }
+
+    fn fill_table<T: PartialEq>(&mut self, x: &[T], y: &[T]) -> usize {
+        let cols = x.len() + 1;
+        let rows = y.len() + 1;
+        let total = rows * cols;
+
+        if self.ops.len() < total {
+            self.ops.resize(total, 0);
+        }
+        if self.prev_cost.len() < cols {
+            self.prev_cost.resize(cols, 0);
+            self.curr_cost.resize(cols, 0);
+        }
+
+        // Row 0: (0, 0) is NoOp with cost 0; (i, 0) for i >= 1 is Deletion with parent 0.
+        self.ops[0] = OP_NOOP;
+        self.prev_cost[0] = 0;
+        for i in 1..cols {
+            self.ops[i] = OP_DELETION;
+            self.prev_cost[i] = i as u32 * DELETION_COST + INITIAL_MISMATCH_PENALTY;
+        }
+
+        // Row-major fill: each cell only needs the previous cost row, the previous op row,
+        // and the cell immediately to its left (kept in registers).
+        for (j, y_j) in y.iter().enumerate() {
+            let prev_row_start = j * cols;
+            let (prev_ops, curr_ops_slice) =
+                self.ops[prev_row_start..prev_row_start + 2 * cols].split_at_mut(cols);
+            let curr_ops = &mut curr_ops_slice[..cols];
+            let prev_cost = &self.prev_cost[..cols];
+            let curr_cost = &mut self.curr_cost[..cols];
+
+            let mut left_cost = (j as u32 + 1) * INSERTION_COST + INITIAL_MISMATCH_PENALTY;
+            let mut left_op = OP_INSERTION;
+            curr_cost[0] = left_cost;
+            curr_ops[0] = OP_INSERTION;
+
+            for (i, x_i) in x.iter().enumerate() {
+                let col = i + 1;
+                let up_cost = prev_cost[col];
+                let up_op = prev_ops[col];
+                let ins_cost = up_cost + INSERTION_COST + u32::from(up_op == OP_NOOP);
+                let del_cost = left_cost + DELETION_COST + u32::from(left_op == OP_NOOP);
+
+                // Tie-break order matches original: Insertion, then Deletion, then NoOp.
+                let mut best_cost = ins_cost;
+                let mut best_op = OP_INSERTION;
+                if del_cost < best_cost {
+                    best_cost = del_cost;
+                    best_op = OP_DELETION;
+                }
+                if x_i == y_j {
+                    let diag_cost = prev_cost[i];
+                    if diag_cost < best_cost {
+                        best_cost = diag_cost;
+                        best_op = OP_NOOP;
+                    }
+                }
+
+                curr_cost[col] = best_cost;
+                curr_ops[col] = best_op;
+                left_cost = best_cost;
+                left_op = best_op;
+            }
+
+            std::mem::swap(&mut self.prev_cost, &mut self.curr_cost);
+        }
+
+        self.prev_cost[x.len()] as usize
+    }
+}
+
+#[cfg(test)]
 #[derive(Debug)]
 pub struct Alignment<'a> {
     pub x: Vec<&'a str>,
     pub y: Vec<&'a str>,
-    table: Vec<Cell>,
+    ops: Vec<u8>,
     dim: [usize; 2],
+    last_cost: usize,
 }
 
+#[cfg(test)]
 impl<'a> Alignment<'a> {
     /// Fill table for Levenshtein distance / alignment computation
     pub fn new(x: Vec<&'a str>, y: Vec<&'a str>) -> Self {
-        // TODO: Something downstream of the alignment algorithm requires that the first token in
-        // both x and y is "", so this is explicitly inserted in `tokenize()`.
         let dim = [y.len() + 1, x.len() + 1];
-        let table = vec![
-            Cell {
-                parent: 0,
-                operation: NoOp,
-                cost: 0
-            };
-            dim[0] * dim[1]
-        ];
-        let mut alignment = Self { x, y, table, dim };
+        let mut alignment = Self {
+            x,
+            y,
+            ops: vec![0; dim[0] * dim[1]],
+            dim,
+            last_cost: 0,
+        };
         alignment.fill();
         alignment
     }
 
     /// Fill table for Levenshtein distance / alignment computation
     pub fn fill(&mut self) {
-        // x is written along the top of the table; y is written down the left side of the
-        // table. Also, we insert a 0 in cell (0, 0) of the table, so x and y are shifted by one
-        // position. Therefore, the element corresponding to (x[i], y[j]) is in column (i + 1) and
-        // row (j + 1); the index of this element is given by index(i, j).
-        for i in 1..self.dim[1] {
-            self.table[i] = Cell {
-                parent: 0,
-                operation: Deletion,
-                cost: i * DELETION_COST + INITIAL_MISMATCH_PENALTY,
-            };
-        }
-        for j in 1..self.dim[0] {
-            self.table[j * self.dim[1]] = Cell {
-                parent: 0,
-                operation: Insertion,
-                cost: j * INSERTION_COST + INITIAL_MISMATCH_PENALTY,
-            };
-        }
-
-        for (i, x_i) in self.x.iter().enumerate() {
-            for (j, y_j) in self.y.iter().enumerate() {
-                let (left, diag, up) =
-                    (self.index(i, j + 1), self.index(i, j), self.index(i + 1, j));
-                // The order of the candidates matters if two of them have the
-                // same cost as in that case we choose the first one. Consider
-                // insertions and deletions before matches in order to group
-                // changes together. Insertions are preferred to deletions in
-                // order to highlight moved tokens as a deletion followed by an
-                // insertion (as the edit sequence is read backwards we need to
-                // choose the insertion first)
-                let candidates = [
-                    Cell {
-                        parent: up,
-                        operation: Insertion,
-                        cost: self.mismatch_cost(up, INSERTION_COST),
-                    },
-                    Cell {
-                        parent: left,
-                        operation: Deletion,
-                        cost: self.mismatch_cost(left, DELETION_COST),
-                    },
-                    Cell {
-                        parent: diag,
-                        operation: NoOp,
-                        cost: if x_i == y_j {
-                            self.table[diag].cost
-                        } else {
-                            usize::MAX
-                        },
-                    },
-                ];
-                let index = self.index(i + 1, j + 1);
-                self.table[index] = candidates
-                    .iter()
-                    .min_by_key(|cell| cell.cost)
-                    .unwrap()
-                    .clone();
-            }
-        }
-    }
-
-    fn mismatch_cost(&self, parent: usize, basic_cost: usize) -> usize {
-        self.table[parent].cost
-            + basic_cost
-            + if self.table[parent].operation == NoOp {
-                INITIAL_MISMATCH_PENALTY
-            } else {
-                0
-            }
+        let mut ws = AlignWorkspace {
+            ops: std::mem::take(&mut self.ops),
+            prev_cost: Vec::new(),
+            curr_cost: Vec::new(),
+            rle_buf: Vec::new(),
+        };
+        self.last_cost = ws.fill_table(&self.x, &self.y);
+        self.ops = ws.ops;
     }
 
     /// Read edit operations from the table.
     pub fn operations(&self) -> Vec<Operation> {
-        let mut ops = VecDeque::with_capacity(max(self.x.len(), self.y.len()));
-        let mut cell = &self.table[self.index(self.x.len(), self.y.len())];
+        let cols = self.dim[1];
+        let mut ops = Vec::with_capacity(max(self.x.len(), self.y.len()) + 1);
+        let mut col = self.x.len();
+        let mut row = self.y.len();
         loop {
-            ops.push_front(cell.operation);
-            if cell.parent == 0 {
+            let op = self.ops[row * cols + col];
+            ops.push(decode_op(op));
+            if col == 0 || row == 0 {
                 break;
             }
-            cell = &self.table[cell.parent];
+            match op {
+                OP_INSERTION => row -= 1,
+                OP_DELETION => col -= 1,
+                _ => {
+                    col -= 1;
+                    row -= 1;
+                }
+            }
+            if col == 0 && row == 0 {
+                break;
+            }
         }
-        Vec::from(ops)
+        ops.reverse();
+        ops
     }
 
+    #[allow(dead_code)]
     pub fn coalesced_operations(&self) -> Vec<(Operation, usize)> {
         run_length_encode(self.operations())
     }
-
-    // Row-major storage of 2D array.
-    fn index(&self, i: usize, j: usize) -> usize {
-        j * self.dim[1] + i
-    }
 }
 
+#[cfg(test)]
 fn run_length_encode<T>(sequence: Vec<T>) -> Vec<(T, usize)>
 where
     T: Copy,
@@ -405,42 +491,7 @@ mod tests {
 
         /// Compute levenshtein distance from the filled table.
         pub fn levenshtein_distance(&self) -> usize {
-            self.table[self.index(self.x.len(), self.y.len())].cost
-        }
-
-        #[allow(dead_code)]
-        fn format_cell(&self, cell: &Cell) -> String {
-            let parent = &self.table[cell.parent];
-            let op = match cell.operation {
-                Deletion => "-",
-                Insertion => "+",
-                NoOp => ".",
-            };
-            format!("{}{}{}", parent.cost, op, cell.cost)
-        }
-
-        #[allow(dead_code)]
-        fn print(&self) {
-            println!("x: {:?}", self.x);
-            println!("y: {:?}", self.y);
-            println!();
-            print!("      ");
-            for j in 0..self.dim[1] {
-                print!("{}     ", if j > 0 { self.x[j - 1] } else { " " })
-            }
-            println!();
-
-            for i in 0..self.dim[0] {
-                for j in 0..self.dim[1] {
-                    if j == 0 {
-                        print!("{}     ", if i > 0 { self.y[i - 1] } else { " " })
-                    }
-                    let cell = &self.table[self.index(j, i)];
-                    print!("{}   ", self.format_cell(cell));
-                }
-                println!();
-            }
-            println!();
+            self.last_cost
         }
     }
 }
