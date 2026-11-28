@@ -188,6 +188,8 @@ fn parse_ansi_term_style(
             style.is_underline = true;
         } else if word == "line-number" || word == "file" || word == "omit-code-fragment" {
             // Allow: these are meaningful in hunk-header-style.
+        } else if word == "diffstat" {
+            // Allow: this is meaningful in file-style to delta tui.
         } else if !seen_foreground {
             if word == "syntax" {
                 is_syntax_highlighted = true;
@@ -402,6 +404,24 @@ mod tests {
                 false,
                 true,
                 true
+            )
+        );
+    }
+
+    /// `diffstat` is meaningful in file-style to delta tui, and is ignored by delta.
+    #[test]
+    fn test_parse_ansi_term_style_with_special_diffstat_attribute() {
+        assert_eq!(
+            parse_ansi_term_style("diffstat bold blue", None, false, None),
+            (
+                ansi_term::Style {
+                    foreground: Some(ansi_term::Color::Blue),
+                    is_bold: true,
+                    ..ansi_term::Style::new()
+                },
+                false,
+                false,
+                false
             )
         );
     }

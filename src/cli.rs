@@ -308,6 +308,8 @@ pub struct Opt {
     /// Style string for the file section.
     ///
     /// See STYLES section. The style 'omit' can be used to remove the file section from the output.
+    /// The special attribute 'diffstat' makes delta tui head each file with its `git diff --stat`
+    /// row; delta itself ignores it.
     pub file_style: String,
 
     #[arg(long = "file-transformation", value_name = "SED_CMD")]
