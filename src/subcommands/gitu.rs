@@ -359,7 +359,7 @@ mod tests {
             .unwrap_err()
             .render()
             .to_string();
-        assert!(help.contains("Usage: delta tui"), "{help}");
+        assert!(help.contains("Usage: delta tui"), "{}", help);
     }
 
     #[test]
