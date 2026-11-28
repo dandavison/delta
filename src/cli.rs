@@ -30,7 +30,7 @@ const TERM_FALLBACK_WIDTH: usize = 79;
 #[command(
     name = "delta",
     about = "A viewer for git and diff output. \
-             `delta tui` runs it as an interactive git client and pager: see `delta tui --help`.",
+             `delta tui` (experimental) runs it in interactive mode.",
     version,
     color = ColorChoice::Always,
     // output is wrapped by delta later:
@@ -988,8 +988,7 @@ pub struct Opt {
 
     #[cfg(feature = "gitu")]
     #[arg(long = "tui", alias = "gitu", hide = true)]
-    /// What `delta tui` was in delta 0.22.0, which runs the TUI as `delta tui` does, as delta's
-    /// first argument. It is not listed, so that `delta tui` is the way the help gives.
+    /// --tui and --gitu are aliases for `delta tui`. They are not listed in help output.
     pub tui: bool,
 
     #[arg(
