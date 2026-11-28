@@ -127,7 +127,7 @@ _delta() {
 '-V[Print version]' \
 '--version[Print version]' \
 '::minus_file -- First file to be compared when delta is being used in diff mode:_files' \
-'::plus_file -- Second file to be compared when delta is being used in diff mode:_files' \
+'*::plus_file -- Second file to be compared when delta is being used in diff mode:_files' \
 && ret=0
 }
 
